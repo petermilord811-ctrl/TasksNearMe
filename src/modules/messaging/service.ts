@@ -76,11 +76,23 @@ export async function ensureThread(db: Writer, link: ThreadLink, now: Date): Pro
   return thread.id;
 }
 
-/** A booking update or notice in a thread ("Jordan is on the way"). */
-export async function postEvent(db: Writer, link: ThreadLink, kind: 'status' | 'system', event: Pick<TimelineEvent, 'type' | 'params'>, now: Date): Promise<void> {
+/**
+ * A booking update or notice in a thread ("Jordan is on the way"). `actorUserId`: the person whose act it records
+ * (the client who paid, the helper on the way). It isn't news to them, so it doesn't count as unread for them (sweep
+ * MN8): their read mark moves past it, but only when nothing else in the conversation is unread for them, so a
+ * message they haven't seen yet never reads as seen. Without one (the system's own notices), it's unread for both.
+ */
+export async function postEvent(db: Writer, link: ThreadLink, kind: 'status' | 'system', event: Pick<TimelineEvent, 'type' | 'params'>, now: Date, actorUserId?: string | null): Promise<void> {
   const threadId = await ensureThread(db, link, now);
-  await db.insert(messages).values({ id: newId('msg'), threadId, kind, event, createdAt: now });
+  const id = newId('msg');
+  await db.insert(messages).values({ id, threadId, kind, event, createdAt: now });
   await db.update(threads).set({ lastMessageAt: now }).where(eq(threads.id, threadId));
+  if (!actorUserId) return;
+  const unreadBefore = sql`exists (select 1 from ${messages} where ${messages.threadId} = ${threadId} and ${messages.id} <> ${id} and (${messages.senderUserId} is null or ${messages.senderUserId} <> ${actorUserId}) and (${threadParticipants.lastReadAt} is null or ${messages.createdAt} > ${threadParticipants.lastReadAt}))`;
+  await db
+    .update(threadParticipants)
+    .set({ lastReadAt: now })
+    .where(and(eq(threadParticipants.threadId, threadId), eq(threadParticipants.userId, actorUserId), sql`not ${unreadBefore}`));
 }
 
 // ---- What each thread is about ----------------------------------------------------------------------

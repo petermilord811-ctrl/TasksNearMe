@@ -6,7 +6,7 @@ import { runBookingAction } from '@/modules/bookings/hub';
 import { bookings } from '@/modules/bookings/schema';
 import { canViewRelatedFile } from '@/modules/files/related-access';
 import { blocks, threads } from '@/modules/messaging/schema';
-import { bookingThreadLink, ensureThread, getInbox, getThreadPage, offerThreadId, sendMessage } from '@/modules/messaging/service';
+import { bookingThreadLink, ensureThread, getInbox, getThreadPage, offerThreadId, postEvent, sendMessage, unreadMessageCount } from '@/modules/messaging/service';
 import { getPublishedPolicy } from '@/modules/markets/queries';
 import { cancelTask } from '@/modules/offers/owner';
 import { offers } from '@/modules/offers/schema';
@@ -181,5 +181,29 @@ describe('booking threads', () => {
     // Paid: shown.
     await db.update(bookings).set({ status: 'confirmed', confirmedAt: now(), cancelReason: null, canceledAt: null }).where(eq(bookings.id, 'bkg_mn3'));
     expect(JSON.stringify((await getThreadPage(db, client, thread, now()))?.messages)).toContain('512-555-0188');
+  });
+
+  it("doesn't count a status line as unread for the person whose act it records, unless something else is unread for them (sweep MN8)", async () => {
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    const policy = await getPublishedPolicy(desk!.marketId, db);
+    const client = await throwawayClient(db, 'usr_mn8_client');
+    const helper = await throwawayClient(db, 'usr_mn8_helper', 'usr_jordan');
+    await db.insert(tasks).values({ ...desk!, id: 'tsk_mn8', slug: 'mn8-desk', posterUserId: client, status: 'assigned', offerCount: 0, version: 2 });
+    await db.insert(bookings).values({ id: 'bkg_mn8', taskId: 'tsk_mn8', posterUserId: client, helperUserId: helper, marketId: desk!.marketId, policyVersionId: policy!.id, status: 'confirmed', confirmedAt: now(), startAt: new Date(Date.now() + 2 * 86_400_000) });
+    const link = bookingThreadLink({ id: 'bkg_mn8', taskId: 'tsk_mn8', posterUserId: client, helperUserId: helper });
+    // The client pays: "booked" is news to the helper, not to the client.
+    await postEvent(db, link, 'system', { type: 'booked' }, now(), client);
+    expect(await unreadMessageCount(db, client)).toBe(0);
+    expect(await unreadMessageCount(db, helper)).toBe(1);
+    // The helper's own "on my way", while the client's message waits unread for him: his read mark stays where it was,
+    // so the message isn't taken as read (the line counts for him this once).
+    await sendMessage(db, client, await ensureThread(db, link, now()), { body: 'The gate code is 4321.', attachmentIds: [] }, now());
+    await postEvent(db, link, 'status', { type: 'on_my_way' }, now(), helper);
+    expect(await unreadMessageCount(db, helper)).toBe(3);
+    expect(await unreadMessageCount(db, client)).toBe(1);
+    // Without an actor (the system's own notices), it's unread for both, as before.
+    await postEvent(db, link, 'system', { type: 'auto_approved' }, now());
+    expect(await unreadMessageCount(db, client)).toBe(2);
+    expect(await unreadMessageCount(db, helper)).toBe(4);
   });
 });
