@@ -172,17 +172,26 @@ export async function moderateTask(db: Db, staff: StaffActor, taskId: string, in
         await tx.insert(auditLog).values(audit('task.restore'));
       });
       break;
-    case 'close_task':
-      await db.transaction(async (tx) => {
-        await tx.update(tasks).set({ status: 'canceled', offerCount: 0, updatedAt: now, version: task.version + 1 }).where(eq(tasks.id, task.id));
+    case 'close_task': {
+      const closed = await db.transaction(async (tx) => {
+        // Still open and unbooked as it's written, not only when the page loaded: a booking made meanwhile wins (SEC24).
+        const [row] = await tx
+          .update(tasks)
+          .set({ status: 'canceled', offerCount: 0, updatedAt: now, version: task.version + 1 })
+          .where(and(eq(tasks.id, task.id), eq(tasks.status, 'open'), sql`not exists (select 1 from ${bookings} where ${bookings.taskId} = ${tasks.id} and ${bookings.status} <> 'canceled')`))
+          .returning({ id: tasks.id });
+        if (!row) return false;
         const declined = await tx.update(offers).set({ status: 'declined', closedAt: now, updatedAt: now }).where(and(eq(offers.taskId, task.id), inArray(offers.status, ACTIVE_OFFERS))).returning({ id: offers.id, helperUserId: offers.helperUserId });
         // The task is canceled for the helpers whose offers were open too: each hears it once.
         await tx.insert(outboxEvents).values([{ id: newId('evt'), type: 'task.canceled', aggregateType: 'task', aggregateId: task.id, payload: { taskId: task.id, reason: 'staff' } }, ...declinedForCancel(task.id, declined)]);
         await tx.insert(auditLog).values(audit('task.close'));
+        return true;
       });
+      if (!closed) return { result: { ok: false, code: 'version_conflict' } };
       // Direct invites for the task end too, and let go of the client's card now (repeats review #11).
       await closeTaskInvites(db, task.id, now);
       break;
+    }
     case 'remove_photo': {
       if (!loaded.photoRows.some(({ file }) => file.id === action.photoId)) return { result: { ok: false, code: 'not_found' } };
       await db.transaction(async (tx) => {
