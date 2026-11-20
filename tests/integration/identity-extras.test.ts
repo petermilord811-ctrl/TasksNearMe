@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { and, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, or, sql } from 'drizzle-orm';
 import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { IdDocumentReader } from '@/integrations/ai/id-document-reader';
@@ -104,8 +104,15 @@ const sameLicense: IdDocumentReader = {
 };
 
 const capturesOf = (userId: string) => db.select().from(identityCaptures).where(eq(identityCaptures.userId, userId)).orderBy(identityCaptures.createdAt);
+/** In the order they were written: without ORDER BY, Postgres may return them either way. */
 const identityEvents = async (userId: string) =>
-  (await db.select({ payload: outboxEvents.payload }).from(outboxEvents).where(and(eq(outboxEvents.type, 'verification.updated'), eq(outboxEvents.aggregateId, userId))))
+  (
+    await db
+      .select({ payload: outboxEvents.payload })
+      .from(outboxEvents)
+      .where(and(eq(outboxEvents.type, 'verification.updated'), eq(outboxEvents.aggregateId, userId)))
+      .orderBy(asc(outboxEvents.createdAt), asc(outboxEvents.id))
+  )
     .map((row) => row.payload)
     .filter((payload) => payload.track === 'identity');
 const bookable = async (userId: string, now: Date) => computeOnboarding((await loadOnboardingState(db, userId, now)).facts).progress.bookable;
