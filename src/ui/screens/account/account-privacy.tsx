@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button, buttonVariants } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 import { forgetPersonalDrafts } from '@/ui/lib/personal-drafts';
+import { forgetThisPushDevice } from '@/ui/components/push/use-push-device';
 import { useAccountAction } from './use-account-action';
 
 /**
@@ -89,11 +90,12 @@ export function AccountPrivacy({ privacy, handlers }: {
   </div>;
 }
 
-export function AccountSignOut({ onSignOut }: Pick<AccountHandlers, 'onSignOut'>) {
+/** Signing out takes this device's notifications off the account first (sweep MN5), then forgets the tab's drafts. */
+export function AccountSignOut({ onSignOut, onRemovePushSubscription }: Pick<AccountHandlers, 'onSignOut'> & Partial<Pick<AccountHandlers, 'onRemovePushSubscription'>>) {
   const t = useTranslations('account');
   const action = useAccountAction();
   return <div className="space-y-3">
-    <Button type="button" variant="outline" disabled={action.pending || Boolean(action.result?.ok)} aria-busy={action.pending} className="w-full sm:w-auto" onClick={() => { void action.run(async () => { const result = await onSignOut(); if (result.ok) forgetPersonalDrafts(); return result; }, undefined); }}>{action.pending ? <Spinner aria-hidden="true" /> : <LogOut aria-hidden="true" />}{t(action.pending ? 'signingOut' : 'signOut')}</Button>
+    <Button type="button" variant="outline" disabled={action.pending || Boolean(action.result?.ok)} aria-busy={action.pending} className="w-full sm:w-auto" onClick={() => { void action.run(async () => { await forgetThisPushDevice(onRemovePushSubscription); const result = await onSignOut(); if (result.ok) forgetPersonalDrafts(); return result; }, undefined); }}>{action.pending ? <Spinner aria-hidden="true" /> : <LogOut aria-hidden="true" />}{t(action.pending ? 'signingOut' : 'signOut')}</Button>
     <FormFeedback result={action.result} successMessage={t('signedOut')} />
   </div>;
 }

@@ -93,7 +93,7 @@ export function AccountScreen({ data, handlers, initialDialog }: {
         <AccountGroupSection id="privacy" title={t('groups.privacy')} summary={t('groups.summaries.privacy')}>
           {data.activity && handlers.onSaveActivity && <div className={cardClass}><Section headingLevel={3} title={t('activity.title')} description={t('activity.description')}><AccountActivity shown={data.activity.shown} onSave={handlers.onSaveActivity} /></Section></div>}
           <div className={cardClass}><Section headingLevel={3} title={t('privacy.title')} description={t('privacy.description')}><AccountPrivacy privacy={data.privacy} handlers={handlers} /></Section></div>
-          <AccountSignOut onSignOut={handlers.onSignOut} />
+          <AccountSignOut onSignOut={handlers.onSignOut} onRemovePushSubscription={handlers.onRemovePushSubscription} />
         </AccountGroupSection>
       </div>
     </div>

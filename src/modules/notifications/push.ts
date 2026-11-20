@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { pushSubscriptionInputSchema, type ActionResult, type PushSetup, type PushSubscriptionInput } from '@/contracts';
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
@@ -44,6 +44,19 @@ export async function savePushSubscription(db: Db, userId: string, input: PushSu
     // The same browser: refresh its keys, and move it to whoever is signed in now.
     .onConflictDoUpdate({ target: pushSubscriptions.endpoint, set: values });
   return { ok: true, code: 'updated' };
+}
+
+/**
+ * Whose this browser's notifications are, as a signed-in page loads (sweep MN5). The person's own: ok. Another
+ * account's (it never signed out here, or its session ran out): that account stops getting them on this browser, and
+ * like nobody's, `not_found`, so the browser lets go of the subscription and its switch reads off until this person
+ * turns it on. A row this person saved meanwhile is never the one taken away.
+ */
+export async function checkPushSubscription(db: Db, userId: string, endpoint: string): Promise<ActionResult> {
+  const [row] = await db.select({ userId: pushSubscriptions.userId }).from(pushSubscriptions).where(eq(pushSubscriptions.endpoint, String(endpoint ?? ''))).limit(1);
+  if (row?.userId === userId) return { ok: true, code: 'updated' };
+  if (row) await db.delete(pushSubscriptions).where(and(eq(pushSubscriptions.endpoint, String(endpoint)), ne(pushSubscriptions.userId, userId)));
+  return { ok: false, code: 'not_found' };
 }
 
 export async function removePushSubscription(db: Db, userId: string, endpoint: string): Promise<ActionResult> {

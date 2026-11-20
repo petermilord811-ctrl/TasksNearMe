@@ -17,6 +17,7 @@ import { useLanguageSwitch } from './language-switch';
 import { getAppNav, type NavItem } from './nav';
 import { NAV_ICONS } from './nav-icons';
 import { forgetPersonalDrafts } from '@/ui/lib/personal-drafts';
+import { forgetThisPushDevice } from '@/ui/components/push/use-push-device';
 import { switchTheme, useEffectiveTheme } from './theme-toggle';
 
 /** The avatar: a soft ring that warms to the brand color while pointed at or open. */
@@ -29,9 +30,11 @@ export interface AccountMenuProps {
   onSwitchLanguage?: LanguageSwitchHandler;
   /** Members: the mode switch, which the bar shows from `sm` and this menu below it (audit M38). */
   onModeChange?: AppShellHandlers['onModeChange'];
+  /** Signing out takes this device's notifications off the account first (sweep MN5). */
+  onForgetPushDevice?: AppShellHandlers['onForgetPushDevice'];
 }
 
-export function AccountMenu({ viewer, onSignOut, onSwitchLanguage, onModeChange }: AccountMenuProps) {
+export function AccountMenu({ viewer, onSignOut, onSwitchLanguage, onModeChange, onForgetPushDevice }: AccountMenuProps) {
   const t = useTranslations('shell');
   // The initials, also shown when the photo can't be loaded (plan 9.3).
   const initials = <span aria-hidden="true" className={cn(AVATAR, 'inline-flex items-center justify-center text-sm font-semibold text-secondary-foreground')}>{viewer.initials}</span>;
@@ -54,6 +57,9 @@ export function AccountMenu({ viewer, onSignOut, onSwitchLanguage, onModeChange 
     setMessage(null);
     let result: ActionResult;
     try {
+      // This device's notifications come off the account while it's still signed in, and the browser lets them go: the
+      // next person here gets none of this one's (sweep MN5).
+      await forgetThisPushDevice(onForgetPushDevice);
       result = await onSignOut();
       if (result.ok) forgetPersonalDrafts();
     } catch {

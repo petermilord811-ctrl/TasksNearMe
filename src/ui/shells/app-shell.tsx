@@ -19,6 +19,7 @@ import { Navigation } from './navigation';
 import { AppShellFrame, TabsOnly, type AppShellLayout } from './app-shell-layout';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { getAppNav } from './nav';
+import { PushDeviceGuard } from '@/ui/components/push/push-device-guard';
 
 export interface AppShellProps {
   viewer: SignedInViewer;
@@ -43,6 +44,7 @@ export function AppShell({ viewer, handlers, children, currentPath, layout, noti
   return <AppShellFrame layout={layout} className="paper flex min-h-dvh flex-col [--app-bottom-offset:0px]">
     <SkipLink />
     <ScrollbarActivity />
+    {handlers.onCheckPushDevice && <PushDeviceGuard viewerId={viewer.id} onCheck={handlers.onCheckPushDevice} />}
     <AppBar>
       <div className="mx-auto flex max-w-admin flex-wrap items-center gap-x-2 gap-y-2 px-gutter py-2 sm:flex-nowrap sm:gap-x-3 sm:py-2.5">
         <Logo animated />
@@ -58,7 +60,7 @@ export function AppShell({ viewer, handlers, children, currentPath, layout, noti
             <Bell aria-hidden="true" className="size-5" />
             {viewer.unreadNotifications > 0 && <span aria-hidden="true" className="absolute top-1 right-0.5 min-w-5 rounded-full bg-primary px-1.5 text-center text-[0.6875rem] leading-5 font-semibold text-primary-foreground tabular-nums ring-2 ring-background">{viewer.unreadNotifications}</span>}
           </Link>
-          <AccountMenu viewer={viewer} onSignOut={handlers.onSignOut} onSwitchLanguage={handlers.onSwitchLanguage} onModeChange={handlers.onModeChange} />
+          <AccountMenu viewer={viewer} onSignOut={handlers.onSignOut} onSwitchLanguage={handlers.onSwitchLanguage} onModeChange={handlers.onModeChange} {...(handlers.onForgetPushDevice ? { onForgetPushDevice: handlers.onForgetPushDevice } : {})} />
         </div>
       </div>
     </AppBar>

@@ -4,7 +4,7 @@ import type { NotificationType } from '@/contracts';
 import type { PushMessage, PushResult, PushSender, PushSubscriptionKeys } from '@/integrations/push/web-push';
 import { users } from '@/modules/accounts/schema';
 import { deliverNotifications, type DeliveryProviders } from '@/modules/notifications/delivery';
-import { isPushServiceEndpoint, removePushSubscription, savePushSubscription } from '@/modules/notifications/push';
+import { checkPushSubscription, isPushServiceEndpoint, removePushSubscription, savePushSubscription } from '@/modules/notifications/push';
 import { notificationDeliveries, notifications, pushSubscriptions } from '@/modules/notifications/schema';
 import { createDb } from '@/platform/db/connect';
 
@@ -117,6 +117,22 @@ describe('notifications on devices', () => {
     expect(await removePushSubscription(db, PERSON, PHONE_ENDPOINT)).toEqual({ ok: true, code: 'updated' });
     expect(await devicesOf(PERSON)).toEqual([]);
     answerFor = () => ({ status: 'sent' });
+  });
+
+  it("follows whoever is signed in on a browser: another account's subscription is dropped, the person's own kept (sweep MN5)", async () => {
+    const browser = 'https://fcm.googleapis.com/fcm/send/push-test-shared';
+    await savePushSubscription(db, OTHER, { endpoint: browser, keys }, 'Pixel', DAY);
+    expect(await checkPushSubscription(db, OTHER, browser)).toEqual({ ok: true, code: 'updated' });
+    // Pia signs in on Oli's browser without Oli signing out there: Oli stops getting notifications on it.
+    expect(await checkPushSubscription(db, PERSON, browser)).toEqual({ ok: false, code: 'not_found' });
+    expect(await devicesOf(OTHER)).toEqual([]);
+    // Nobody's now: the browser lets go of it too, so its switch reads off for Pia until she turns it on.
+    expect(await checkPushSubscription(db, PERSON, browser)).toEqual({ ok: false, code: 'not_found' });
+    await savePushSubscription(db, PERSON, { endpoint: browser, keys }, 'Pixel', DAY);
+    expect(await checkPushSubscription(db, PERSON, browser)).toEqual({ ok: true, code: 'updated' });
+    // Signing out takes it off her account first (the browser then unsubscribes).
+    expect(await removePushSubscription(db, PERSON, browser)).toEqual({ ok: true, code: 'updated' });
+    expect(await devicesOf(PERSON)).not.toContain(browser);
   });
 
   it('never pushes tips and news', async () => {

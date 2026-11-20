@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { act, cleanup, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -114,6 +114,25 @@ describe('AccountMenu', () => {
     await userEvent.click(within(menu).getByRole('menuitem', { name: 'Sign out' }));
     expect(await screen.findByText(feedback.error.unknown)).toBeVisible();
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it('takes this device off the account before signing out, so the next person here gets none of this one’s notifications (sweep MN5)', async () => {
+    const subscription = { endpoint: 'https://fcm.googleapis.com/fcm/send/menu', unsubscribe: vi.fn(async () => true) };
+    Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: { getRegistration: async () => ({ pushManager: { getSubscription: async () => subscription } }) } });
+    try {
+      const order: string[] = [];
+      const onForgetPushDevice = vi.fn(async (): Promise<ActionResult> => { order.push('forget'); return { ok: true, code: 'updated' }; });
+      const onSignOut = vi.fn(async (): Promise<ActionResult> => { order.push('sign out'); return { ok: true, code: 'updated' }; });
+      render(<NextIntlClientProvider locale="en" messages={uiMessages}><AccountMenu viewer={mayaShell} onSignOut={onSignOut} onForgetPushDevice={onForgetPushDevice} /></NextIntlClientProvider>);
+      const menu = await openMenu();
+      await userEvent.click(within(menu).getByRole('menuitem', { name: 'Sign out' }));
+      await waitFor(() => expect(push).toHaveBeenCalledExactlyOnceWith(routes.home()));
+      expect(onForgetPushDevice).toHaveBeenCalledExactlyOnceWith({ endpoint: subscription.endpoint });
+      expect(subscription.unsubscribe).toHaveBeenCalledOnce();
+      expect(order).toEqual(['forget', 'sign out']);
+    } finally {
+      Reflect.deleteProperty(navigator, 'serviceWorker');
+    }
   });
 
   it('honors an explicit success redirect', async () => {

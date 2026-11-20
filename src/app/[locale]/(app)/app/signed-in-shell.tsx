@@ -3,6 +3,7 @@ import { switchLanguageAction } from '@/modules/accounts/language-actions';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { setMode, signOut } from '@/modules/accounts/actions';
+import { checkPushSubscriptionAction, removePushSubscriptionAction } from '@/modules/notifications/actions';
 import { signUpUnfinished } from '@/modules/accounts/sign-up';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { unreadMessageCount } from '@/modules/messaging/service';
@@ -46,7 +47,7 @@ async function ViewerShell({ children }: { children: React.ReactNode }) {
   // from the request (getViewer set it), and a page about another market names that market's.
   return (
     <TimeZoneProvider timeZone={viewer.user.timeZone}>
-      <AppShell viewer={{ ...toSignedInViewer(viewer.user), unreadMessages, unreadNotifications }} notices={notices} handlers={{ onModeChange: setMode, onSignOut: signOut, onSwitchLanguage: switchLanguageAction }}>
+      <AppShell viewer={{ ...toSignedInViewer(viewer.user), unreadMessages, unreadNotifications }} notices={notices} handlers={{ onModeChange: setMode, onSignOut: signOut, onSwitchLanguage: switchLanguageAction, onCheckPushDevice: checkPushSubscriptionAction, onForgetPushDevice: removePushSubscriptionAction }}>
         {children}
       </AppShell>
     </TimeZoneProvider>

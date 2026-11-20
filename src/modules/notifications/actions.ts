@@ -14,7 +14,7 @@ import {
   saveNotificationPreference,
 } from './service';
 import { requestNow } from '@/platform/clock';
-import { removePushSubscription, savePushSubscription } from './push';
+import { checkPushSubscription, removePushSubscription, savePushSubscription } from './push';
 import { cancelAccountDeletion, requestAccountDeletion, requestDataExport } from '@/modules/privacy/requests';
 
 /** Server Actions behind the notifications and account pages (src/contracts/account.ts). */
@@ -80,6 +80,13 @@ export async function savePushSubscriptionAction(input: PushSubscriptionInput): 
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
   return savePushSubscription(db, userId, input, (await headers()).get('user-agent'), await requestNow());
+}
+
+/** AppShellHandlers.onCheckPushDevice: this browser's subscription as a signed-in page loads (sweep MN5). */
+export async function checkPushSubscriptionAction(input: { endpoint: string }): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  return checkPushSubscription(db, userId, String(input?.endpoint ?? ''));
 }
 
 export async function removePushSubscriptionAction(input: { endpoint: string }): Promise<ActionResult> {

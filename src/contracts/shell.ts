@@ -52,6 +52,14 @@ export interface AppShellHandlers {
   onModeChange: ActionHandler<{ mode: Mode }>;
   onSignOut: ActionHandler;
   onSwitchLanguage?: LanguageSwitchHandler;
+  /**
+   * This browser's notifications belong to whoever is signed in (sweep MN5). The shell checks its push subscription once
+   * a page load: ok `updated` when it's this person's; `not_found` when it isn't (another account's, which stops getting
+   * them here, or nobody's), and the browser lets go of it, so the device's switch reads off.
+   */
+  onCheckPushDevice?: ActionHandler<{ endpoint: string }>;
+  /** Signing out takes this browser's subscription off the account first (`onRemovePushSubscription`). */
+  onForgetPushDevice?: ActionHandler<{ endpoint: string }>;
 }
 
 export interface AdminShellHandlers {
