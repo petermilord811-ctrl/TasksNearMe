@@ -6,6 +6,8 @@ import { getBookingView, runBookingAction } from '@/modules/bookings/hub';
 import { bookings } from '@/modules/bookings/schema';
 import { offers } from '@/modules/offers/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
+import { getHelperProfile } from '@/modules/profiles/queries';
+import { reviews } from '@/modules/reviews/schema';
 import { getReviewPage, getSavedHelpers, setHelperSaved, submitReview } from '@/modules/reviews/service';
 import { supportCaseEvents, supportCaseReads, supportCases } from '@/modules/support/schema';
 import { getSupportCasePage, getSupportPage } from '@/modules/support/service';
@@ -55,6 +57,24 @@ describe('reviews', () => {
     expect(await getReviewPage(db, 'usr_maya', bookingId, new Date())).toBeNull();
     const late = await getReviewPage(db, 'usr_ruth', bookingId, new Date(Date.now() + 15 * DAY));
     expect(late?.unavailable).toBeUndefined(); // already reviewed: shown read-only
+  });
+});
+
+describe('review text on the public profile (sweep RV5)', () => {
+  it('masks contact details there, and keeps the review as written', async () => {
+    const written = 'Great work. Call me for more at 352-555-0101 or ruth@example.test';
+    const [mine] = await db.select().from(reviews).where(and(eq(reviews.bookingId, bookingId), eq(reviews.authorUserId, 'usr_ruth')));
+    await db.update(reviews).set({ body: written }).where(eq(reviews.id, mine!.id));
+    try {
+      const shown = (await getHelperProfile('sam-k', db))?.reviews.find((review) => review.id === mine!.id);
+      expect(shown?.body).toBeDefined();
+      expect(shown?.body).not.toContain('555-0101');
+      expect(shown?.body).not.toContain('ruth@example.test');
+      expect(shown?.body).toContain('Great work.');
+      expect((await db.select({ body: reviews.body }).from(reviews).where(eq(reviews.id, mine!.id)))[0]?.body).toBe(written);
+    } finally {
+      await db.update(reviews).set({ body: mine!.body }).where(eq(reviews.id, mine!.id));
+    }
   });
 });
 

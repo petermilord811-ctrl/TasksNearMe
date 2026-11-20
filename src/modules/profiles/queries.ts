@@ -17,6 +17,7 @@ import { HELPER_REVIEW_TAGS } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { areas, categories } from '@/modules/markets/schema';
 import { reviews } from '@/modules/reviews/schema';
+import { maskContactDetails } from '@/modules/trust/contact-masking';
 import { avatarPhoto, photoSrc } from '@/modules/files/photos';
 import { files } from '@/modules/tasks/schema';
 import { db } from '@/platform/db/client';
@@ -266,7 +267,8 @@ export async function getHelperProfile(handle: string, database: Db = db, rows: 
       id: review.id,
       rating: Math.min(5, Math.max(1, review.rating)) as PublicReviewView['rating'],
       tags: review.tags.filter((tag): tag is HelperReviewTag => tagSet.has(tag)),
-      ...(review.body ? { body: review.body } : {}),
+      // Public and indexed: contact details are masked, as in tasks, questions and posts (sweep RV5). Staff read it as written.
+      ...(review.body ? { body: maskContactDetails(review.body).text } : {}),
       author: { displayName: author.name, initials: initialsOf(author.firstName, author.lastName) },
       categorySlug: categorySlug as CategorySlug,
       publishedAt: (review.publishedAt ?? review.createdAt).toISOString(),

@@ -57,6 +57,7 @@ import { initialsOf } from '@/modules/profiles/queries';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { moderateTaskQuestion } from '@/modules/questions/service';
 import { taskQuestions } from '@/modules/questions/schema';
+import { recomputeBadges } from '@/modules/badges/service';
 import { recomputeRating } from '@/modules/reviews/service';
 import { reviews } from '@/modules/reviews/schema';
 import { categories, marketPolicies } from '@/modules/markets/schema';
@@ -494,8 +495,9 @@ async function reportedReviewOf(db: Db, staff: StaffActor, reviewId: string): Pr
 
 /**
  * Hides the case's reported review (off the profile and out of the helper's rating), or shows it again. The
- * reason goes in the audit log and, as an internal note, on the case. Returns the helper's handle when their
- * public profile changed, so the caller can refresh its cache.
+ * reason goes in the audit log and, as an internal note, on the case. The rating and the badges of the person it's
+ * about follow at once (sweep RV3: five-star, category pro and the client's five-star count published reviews).
+ * Returns the helper's handle when their public profile changed, so the caller can refresh its cache.
  */
 export async function moderateReportedReview(
   db: Db,
@@ -511,22 +513,26 @@ export async function moderateReportedReview(
   if (!ctx || !reviewId || !canModerateReviews(staff.roles)) return { ok: false, code: 'not_allowed' };
   const { visible, reason } = parsed.data;
 
-  return db.transaction(async (tx) => {
+  const changed = await db.transaction(async (tx) => {
     const [review] = await tx.select().from(reviews).where(eq(reviews.id, reviewId)).for('update');
-    if (!review) return { ok: false, code: 'not_found' } as const;
+    if (!review) return { result: { ok: false, code: 'not_found' } as const };
     const hidden = review.status === 'hidden';
-    if (visible !== hidden) return { ok: true, code: 'updated' } as const;
+    if (visible !== hidden) return { result: { ok: true, code: 'updated' } as const };
     await tx
       .update(reviews)
       .set(visible ? { status: review.publishedAt ? 'published' : 'submitted', hiddenReason: null } : { status: 'hidden', hiddenReason: reason })
       .where(eq(reviews.id, review.id));
     await tx.insert(supportCaseEvents).values({ id: newId('cev'), caseId: ctx.row.id, kind: 'note', authorUserId: staff.id, visibility: 'internal', body: reason, meta: { reviewAction: visible ? 'shown' : 'hidden' }, createdAt: now });
     await audit(tx, staff, visible ? 'review.shown' : 'review.hidden', ctx.row.id, now, { reason, targetType: 'review', targetId: review.id });
-    if (review.direction !== 'client_to_helper') return { ok: true, code: 'updated' } as const;
+    if (review.direction !== 'client_to_helper') return { result: { ok: true, code: 'updated' } as const, subjectUserId: review.subjectUserId };
     await recomputeRating(tx, review.subjectUserId);
     const [profile] = await tx.select({ handle: helperProfiles.handle }).from(helperProfiles).where(eq(helperProfiles.userId, review.subjectUserId)).limit(1);
-    return { ok: true, code: 'updated', ...(profile?.handle ? { helperHandle: profile.handle } : {}) } as const;
+    return { result: { ok: true, code: 'updated', ...(profile?.handle ? { helperHandle: profile.handle } : {}) } as const, subjectUserId: review.subjectUserId };
   });
+  // Badges read published reviews: once the change is in, theirs are brought up to date (a lower tier quietly, a
+  // tier won back announced, as any recompute does).
+  if (changed.subjectUserId) await recomputeBadges(db, changed.subjectUserId, now);
+  return changed.result;
 }
 
 // ---- A reported question on a task, or its answer (sweep QA2, QA3) ------------------------------------

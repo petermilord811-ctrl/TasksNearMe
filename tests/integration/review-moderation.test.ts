@@ -1,5 +1,8 @@
 import { and, eq, sql } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
+import { badgeCounts, tierFor } from '@/modules/badges/domain';
+import { userBadges } from '@/modules/badges/schema';
+import { loadBadgeFacts } from '@/modules/badges/service';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { getHelperProfile } from '@/modules/profiles/queries';
 import { reviews } from '@/modules/reviews/schema';
@@ -69,6 +72,32 @@ describe('a reported review on its case', () => {
 
     const actions = (await db.select({ action: auditLog.action, actor: auditLog.actorId }).from(auditLog).where(eq(auditLog.targetId, REVIEW))).map((row) => `${row.action}:${row.actor}`);
     expect(actions).toEqual(expect.arrayContaining(['review.hidden:usr_morgan', 'review.shown:usr_taylor']));
+  });
+
+  it("brings the badges of the person it's about up to date when it's hidden or shown (sweep RV3)", async () => {
+    const reporter = await throwawayClient(db, 'usr_revmod_badges');
+    expect(await reportTarget(db, reporter, 'review', REVIEW, { reason: 'harassment', details: 'This review is about the person, not the work they did.' }, new Date())).toEqual({ ok: true, code: 'submitted' });
+    const [found] = await db.select({ id: supportCases.id }).from(supportCases).where(and(eq(supportCases.openedByUserId, reporter), sql`${supportCases.context}->>'reviewId' = ${REVIEW}`));
+    const stored = async () => (await db.select().from(userBadges).where(and(eq(userBadges.userId, 'usr_lee'), eq(userBadges.code, 'five_star'), eq(userBadges.scope, ''))))[0];
+    const before = await stored();
+    const expected = async () => tierFor('five_star', badgeCounts(await loadBadgeFacts(db, 'usr_lee')).find((item) => item.code === 'five_star' && item.scope === '')?.count ?? 0);
+    try {
+      // A tier the reviews no longer support (what a hidden five-star review leaves behind until something recomputes).
+      await db
+        .insert(userBadges)
+        .values({ id: 'bdg_revmod_stale', userId: 'usr_lee', code: 'five_star', scope: '', tier: 3, tierEarnedAt: new Date(), createdAt: new Date(), updatedAt: new Date() })
+        .onConflictDoUpdate({ target: [userBadges.userId, userBadges.code, userBadges.scope], set: { tier: 3, revokedAt: null } });
+      expect(await moderateReportedReview(db, morgan, found!.id, { visible: false, reason }, new Date())).toMatchObject({ ok: true, code: 'updated' });
+      expect((await stored())?.tier).toBe(await expected());
+      expect((await stored())?.tier).toBeLessThan(3);
+
+      await db.update(userBadges).set({ tier: 3 }).where(and(eq(userBadges.userId, 'usr_lee'), eq(userBadges.code, 'five_star'), eq(userBadges.scope, '')));
+      expect(await moderateReportedReview(db, morgan, found!.id, { visible: true, reason: 'Appeal accepted: the review is about the work after all.' }, new Date())).toMatchObject({ ok: true, code: 'updated' });
+      expect((await stored())?.tier).toBe(await expected());
+    } finally {
+      if (before) await db.update(userBadges).set({ tier: before.tier, revokedAt: before.revokedAt }).where(eq(userBadges.id, (await stored())!.id));
+      else await db.delete(userBadges).where(and(eq(userBadges.userId, 'usr_lee'), eq(userBadges.code, 'five_star'), eq(userBadges.scope, '')));
+    }
   });
 
   it("is only for cases about a review", async () => {
