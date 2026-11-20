@@ -38,6 +38,10 @@ const deskRow: PublicTaskRow = {
 const AUSTIN = 'America/Chicago';
 
 describe('toTaskPublicView', () => {
+  it('masks contact details in a title, like the excerpt (titles posted before posting refused them, sweep PT8)', () => {
+    expect(toTaskPublicView({ ...deskRow, title: 'Desk build, call 512-555-0101' }).title).not.toContain('512-555');
+  });
+
   it('matches the canonical public desk task', () => {
     expect(toTaskPublicView(deskRow)).toEqual({ ...deskPublicTask, poster: { ...deskPublicTask.poster, ratingAsClient: undefined } });
   });

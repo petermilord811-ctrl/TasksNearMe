@@ -7,7 +7,7 @@ import type {
 } from '@/contracts';
 import { CATEGORY_SLUGS, TASK_BOARD_GROUPS, TASK_BOARD_POSTED, TASK_BOARD_Q_MAX, TASK_BOARD_SORTS, TASK_BOARD_TIMES, TASK_BOARD_VIEWS, TASK_BOARD_WHEN } from '@/contracts';
 import { isTaskType, taskTypeOf } from '@/shared/task-types';
-import { publicExcerpt } from '@/modules/trust/contact-masking';
+import { maskContactDetails, publicExcerpt } from '@/modules/trust/contact-masking';
 
 /** Pure projections from task rows to public contract types, and board query parsing. */
 
@@ -61,7 +61,8 @@ export function toTaskPublicView(row: PublicTaskRow): TaskPublicView {
   return {
     id: row.id,
     slug: row.slug,
-    title: row.title,
+    // Masked like the excerpt, for titles posted before posting refused contact details (sweep PT8).
+    title: maskContactDetails(row.title).text,
     categorySlug: row.categorySlug as CategorySlug,
     excerpt: publicExcerpt(row.description),
     location:

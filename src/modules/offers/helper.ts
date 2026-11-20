@@ -447,10 +447,11 @@ export async function getHelperTaskView(db: Db, userId: string, taskId: string, 
   return {
     task,
     description: seesDetails ? maskContactDetails(row.task.description).text : publicExcerpt(row.task.description),
-    details: seesDetails ? row.task.details : {},
+    // Free-text answers and the expense note are masked like the description, before a booking (sweep PT8).
+    details: seesDetails ? Object.fromEntries(Object.entries(row.task.details).map(([key, value]) => [key, typeof value === 'string' ? maskContactDetails(value).text : value])) : {},
     photos: photoRows.map(({ file }) => photoFromFile(file)),
     ...(seesDetails && row.task.expenseAllowanceCents > 0
-      ? { expenseAllowance: { amountCents: row.task.expenseAllowanceCents, description: row.task.expenseAllowanceNote ?? '' } }
+      ? { expenseAllowance: { amountCents: row.task.expenseAllowanceCents, description: maskContactDetails(row.task.expenseAllowanceNote ?? '').text } }
       : {}),
     ...(offerRow ? { myOffer: helperOfferView(offerRow, row.task, fees, now) } : {}),
     ...(blockedReason && !offerRow ? { blockedReason } : {}),

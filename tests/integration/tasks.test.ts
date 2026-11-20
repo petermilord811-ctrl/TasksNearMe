@@ -167,6 +167,10 @@ describe('posting a task', () => {
     const prohibited = await posting.post('usr_maya', { ...noPhotos, description: 'Assemble the desk and also rewire the light fixture above it.' });
     expect(prohibited).toEqual({ ok: false, result: { ok: false, code: 'validation_failed', fieldErrors: { description: ['prohibited'] } } });
 
+    // A title is public everywhere it goes: no phone numbers, emails or links in it (sweep 2026-11-20, PT8).
+    const titled = await posting.post('usr_maya', { ...noPhotos, title: 'Desk build, call 512-555-0101' });
+    expect(titled).toEqual({ ok: false, result: { ok: false, code: 'validation_failed', fieldErrors: { title: ['contact_details'] } } });
+
     const waco = await posting.post('usr_maya', { ...noPhotos, location: { mode: 'local', placeId: 'plc_waco_100' } });
     expect(waco).toEqual({ ok: false, result: { ok: false, code: 'validation_failed', fieldErrors: { 'location.placeId': ['not_supported'] } } });
 

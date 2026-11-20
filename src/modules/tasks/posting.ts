@@ -17,7 +17,7 @@ import { users } from '../accounts/schema';
 import { fuzzedPublicPoint, inServiceArea, nearestArea } from '../markets/geo';
 import { getMarketView, getPublishedPolicy, listCategoryViews } from '../markets/queries';
 import { areas, categories, markets } from '../markets/schema';
-import { findProhibitedPhrase } from '../trust/contact-masking';
+import { findProhibitedPhrase, maskContactDetails } from '../trust/contact-masking';
 import { GLOBAL_PROHIBITED_PHRASES } from '../trust/prohibited';
 import { readExactAddress } from './locations';
 import { templatesForCategories } from './templates';
@@ -242,6 +242,10 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
 
     const [category] = await db.select().from(categories).where(eq(categories.slug, draft.categorySlug)).limit(1);
     if (!category) return fail(fieldError('categorySlug', 'not_supported'));
+
+    // A title is public everywhere it goes (boards, the page's <title> and address, alerts), and unlike the description
+    // it isn't masked where it's shown: contact details stay out of it (sweep 2026-11-20, PT8).
+    if (maskContactDetails(draft.title).masked) return fail(fieldError('title', 'contact_details'));
 
     const text = [draft.title, draft.description, ...Object.values(draft.details).map(String)].join(' ');
     if (findProhibitedPhrase(text, [...GLOBAL_PROHIBITED_PHRASES, ...category.prohibitedKeywords])) {
