@@ -16,7 +16,7 @@ import { recordCompensation } from '@/modules/earnings/service';
 import { marketPolicies } from '@/modules/markets/schema';
 import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { cancellationSummary, lateCancellation } from '@/modules/payments/fees';
-import { refundAcross, refundableCharges } from '@/modules/payments/refund-across';
+import { discretionaryRefundedCents, refundAcross, refundableCharges } from '@/modules/payments/refund-across';
 import { supportCases } from '@/modules/support/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { validationFailed } from '@/platform/actions/results';
@@ -225,7 +225,8 @@ export async function cancelBookingByStaff(deps: SheetDeps, staff: { id: string;
   if (staff.id === row.booking.posterUserId || staff.id === row.booking.helperUserId) return { ok: false, code: 'not_allowed' };
   const charges = await refundableCharges(deps.db, row.booking.id);
   const refund = charges.reduce((total, charge) => total + charge.remainingCents, 0);
-  if (!staffMayCancel(staff.roles, refund)) return { ok: false, code: 'not_allowed' };
+  // An agent's limit is per booking: what staff already gave back counts (security review).
+  if (!staffMayCancel(staff.roles, refund + (await discretionaryRefundedCents(deps.db, row.booking.id)))) return { ok: false, code: 'not_allowed' };
   if (!STAFF_CANCELABLE.includes(row.booking.status)) return { ok: false, code: 'not_allowed' };
   const role = staff.roles.find((candidate) => STAFF_CANCEL_LEADS.includes(candidate)) ?? staff.roles[0] ?? 'staff';
   return cancelWith(
@@ -268,7 +269,7 @@ export async function staffCancelView(db: Db, roles: readonly StaffRole[], booki
     const [people] = await db.select({ poster: bookings.posterUserId, helper: bookings.helperUserId }).from(bookings).where(eq(bookings.id, booking.id)).limit(1);
     party = people?.poster === staffId || people?.helper === staffId;
   }
-  return { refundCents, allowed: !party && staffMayCancel(roles, refundCents) };
+  return { refundCents, allowed: !party && staffMayCancel(roles, refundCents + (await discretionaryRefundedCents(db, booking.id))) };
 }
 
 export async function reportRunningLate(db: Db, userId: string, bookingId: string, minutes: LateByMinutes, now: Date): Promise<ActionResult> {

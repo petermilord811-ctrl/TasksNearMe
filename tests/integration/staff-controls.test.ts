@@ -164,11 +164,13 @@ describe('support cancels a booking', () => {
     expect(await cancelBookingByStaff(deps, morgan, BOOKING, { note: 'Trying a second time on purpose.' }, now)).toEqual({ ok: false, code: 'not_allowed' });
   });
 
-  it('refunds what is left of each charge after earlier refunds, and checks the agent’s limit on that (5.18)', async () => {
-    // $150 charged, $60 already given back as goodwill: $90 left, within an agent's $100 limit.
+  it('refunds what is left of each charge after earlier refunds, and counts those toward the agent’s limit (5.18)', async () => {
+    // $150 charged, $60 already given back as goodwill: $90 left. An agent's $100 is per booking, so the $60 counts and
+    // $150 is over it (security review): a lead cancels this one.
     await bookingWith('bkg_sc_left', [{ id: 'pay_sc_left', purpose: 'booking_funding', amountCents: 15000, refundedCents: 6000 }]);
-    expect(await staffCancelView(db, alex.roles, { id: 'bkg_sc_left', status: 'confirmed' })).toEqual({ refundCents: 9000, allowed: true });
-    expect(await cancelBookingByStaff(deps, alex, 'bkg_sc_left', { note: 'The client asked support to cancel this one.' }, now)).toEqual({ ok: true, code: 'canceled' });
+    expect(await staffCancelView(db, alex.roles, { id: 'bkg_sc_left', status: 'confirmed' })).toEqual({ refundCents: 9000, allowed: false });
+    expect(await cancelBookingByStaff(deps, alex, 'bkg_sc_left', { note: 'The client asked support to cancel this one.' }, now)).toEqual({ ok: false, code: 'not_allowed' });
+    expect(await cancelBookingByStaff(deps, morgan, 'bkg_sc_left', { note: 'The client asked support to cancel this one.' }, now)).toEqual({ ok: true, code: 'canceled' });
     const left = await db.select().from(refunds).where(eq(refunds.bookingId, 'bkg_sc_left'));
     expect(left.map((row) => [row.reason, row.amountCents, row.status]).sort()).toEqual([['cancellation', 9000, 'succeeded'], ['goodwill', 6000, 'succeeded']]);
     expect((await db.select().from(payments).where(eq(payments.id, 'pay_sc_left')))[0]!.status).toBe('refunded');

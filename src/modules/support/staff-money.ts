@@ -1,3 +1,4 @@
+import type { z } from 'zod';
 import { and, asc, desc, eq, gte, inArray, isNotNull, notInArray, or, sql } from 'drizzle-orm';
 import type {
   ActionResult,
@@ -34,7 +35,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { refundRequests, supportCases } from './schema';
-import { bookingMoneyFacts, caseRowsFor, conversationView, discretionaryRefundedCents, personSummaryOf, previewResolution, resolveCase, type StaffActor } from './staff';
+import { bookingMoneyFacts, caseRowsFor, conversationView, discretionaryRefundedCents, isBookingParty, personSummaryOf, previewResolution, resolveCase, type StaffActor } from './staff';
 import { MONEY_RESOLUTIONS, canApproveRefund, canWorkCases, refundLimitOf, type ResolutionMoney } from './staff-domain';
 import { refundAcross, refundableCharges, refundMade } from '@/modules/payments/refund-across';
 import { DOUBLE_SUBMIT_MS, serialized, submissionKeys } from '@/modules/payments/double-submit';
@@ -199,22 +200,28 @@ export async function resolveCaseWithMoney(
   if (!parsed.success) return validationFailed(parsed.error);
   if (!MONEY_RESOLUTIONS.includes(parsed.data.resolution)) return resolveCase(db, staff, caseId, version, parsed.data, now);
   if (!payments_) return { ok: false, code: 'not_allowed' };
-  const preview = await previewResolution(db, staff, caseId, parsed.data);
-  if (!preview.ok) return preview;
-  if (!preview.preview.withinLimit) return { ok: false, code: 'not_allowed' };
   const [row] = await db.select({ bookingId: supportCases.bookingId }).from(supportCases).where(eq(supportCases.id, String(caseId))).limit(1);
   if (!row?.bookingId) return { ok: false, code: 'not_allowed' };
-  const { posterRefundCents, helperReceivesCents, platformKeepsCents } = preview.preview;
-  const applied = await applyResolutionMoney(db, payments_, {
-    caseId: String(caseId),
-    bookingId: row.bookingId,
-    resolution: parsed.data.resolution,
-    moved: { posterRefundCents, helperReceivesCents, platformKeepsCents },
-    ...(parsed.data.settlePriceCents !== undefined ? { settlePriceCents: parsed.data.settlePriceCents } : {}),
-    now,
+  const bookingId = row.bookingId;
+  // One money decision per booking at a time, with the limit read inside (security review): two cases resolved together,
+  // or a case beside a staff refund, each saw the other's refund missing from the limit. A staff member who is on the
+  // case or its booking never gets here: their case doesn't load (staff.ts loadCase).
+  return serialized(db, `staff-refund:${bookingId}`, async (): Promise<ActionResult> => {
+    const preview = await previewResolution(db, staff, caseId, parsed.data);
+    if (!preview.ok) return preview;
+    if (!preview.preview.withinLimit) return { ok: false, code: 'not_allowed' };
+    const { posterRefundCents, helperReceivesCents, platformKeepsCents } = preview.preview;
+    const applied = await applyResolutionMoney(db, payments_, {
+      caseId: String(caseId),
+      bookingId,
+      resolution: parsed.data.resolution,
+      moved: { posterRefundCents, helperReceivesCents, platformKeepsCents },
+      ...(parsed.data.settlePriceCents !== undefined ? { settlePriceCents: parsed.data.settlePriceCents } : {}),
+      now,
+    });
+    if (!applied) return { ok: false, code: 'unknown' };
+    return resolveCase(db, staff, caseId, version, parsed.data, now, { moneyApplied: true });
   });
-  if (!applied) return { ok: false, code: 'unknown' };
-  return resolveCase(db, staff, caseId, version, parsed.data, now, { moneyApplied: true });
 }
 
 // ---- The staff booking page ---------------------------------------------------------------------------
@@ -245,7 +252,9 @@ export async function getAdminBooking(db: Db, staff: StaffActor, bookingId: stri
   const checklist = completion ? checklistView(found.view.categorySlug, completion.checklist) : undefined;
   const limit = refundLimitOf(staff.roles);
   const left = money ? money.chargedCents - money.refundedCents : 0;
-  const canRefund = canWorkCases(staff.roles) && limit > 0 && left > 0;
+  // Never on a booking of their own (security review): no refunds, no approvals.
+  const party = booking.posterUserId === staff.id || booking.helperUserId === staff.id;
+  const canRefund = canWorkCases(staff.roles) && limit > 0 && left > 0 && !party;
   const actions: AdminBookingPageData['actions'] = [];
   if (canRefund) actions.push('refund');
   if (canWorkCases(staff.roles)) actions.push('reveal_address');
@@ -281,12 +290,12 @@ export async function getAdminBooking(db: Db, staff: StaffActor, bookingId: stri
     ...(checklist ? { checklist } : {}),
     cases: await caseRowsFor(db, caseRows, now),
     ...(canRefund ? { refund: { maxCents: Math.min(left, limit), limitCents: limit, leftCents: left } } : {}),
-    refundRequests: await refundRequestRows(db, staff, requestRows),
+    refundRequests: await refundRequestRows(db, staff, requestRows, party),
     actions,
   };
 }
 
-async function refundRequestRows(db: Db, staff: StaffActor, rows: (typeof refundRequests.$inferSelect)[]): Promise<AdminBookingPageData['refundRequests']> {
+async function refundRequestRows(db: Db, staff: StaffActor, rows: (typeof refundRequests.$inferSelect)[], party: boolean): Promise<AdminBookingPageData['refundRequests']> {
   if (rows.length === 0) return [];
   const ids = [...new Set(rows.flatMap((row) => [row.requestedByUserId, ...(row.decidedByUserId ? [row.decidedByUserId] : [])]))];
   const names = new Map((await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, ids))).map((row) => [row.id, row.name]));
@@ -300,7 +309,7 @@ async function refundRequestRows(db: Db, staff: StaffActor, rows: (typeof refund
     status: row.status as 'pending' | 'approved' | 'declined',
     ...(row.decidedByUserId ? { decidedBy: names.get(row.decidedByUserId) ?? 'Staff' } : {}),
     ...(row.decidedAt ? { decidedAt: row.decidedAt.toISOString() } : {}),
-    canDecide: row.status === 'pending' && row.requestedByUserId !== staff.id && canApproveRefund(staff.roles, row.amountCents),
+    canDecide: !party && row.status === 'pending' && row.requestedByUserId !== staff.id && canApproveRefund(staff.roles, row.amountCents),
   }));
 }
 
@@ -310,6 +319,8 @@ export async function staffRefund(db: Db, payments_: PaymentProvider | null, sta
   if (!parsed.success) return validationFailed(parsed.error);
   if (!payments_ || !canWorkCases(staff.roles)) return { ok: false, code: 'not_allowed' };
   const id = String(bookingId);
+  // Never on a booking of their own (security review).
+  if (await isBookingParty(db, staff.id, id)) return { ok: false, code: 'not_allowed' };
   const { amountCents, reason, note } = parsed.data;
   // The same form sent twice moves the money once (money review #10): its key comes from what was asked, and one request
   // per booking runs at a time, so the second finds the first one's refund (or request) and answers the same.
@@ -401,18 +412,24 @@ export async function decideRefundRequest(db: Db, payments_: PaymentProvider | n
   const parsed = refundDecisionInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   if (!payments_) return { ok: false, code: 'not_allowed' };
-  const [request] = await db.select().from(refundRequests).where(and(eq(refundRequests.id, parsed.data.requestId), eq(refundRequests.bookingId, String(bookingId)))).limit(1);
+  // Never on a booking of their own; one money decision per booking at a time, the limit read inside (security review).
+  if (await isBookingParty(db, staff.id, String(bookingId))) return { ok: false, code: 'not_allowed' };
+  return serialized(db, `staff-refund:${bookingId}`, () => decideRefundRequestNow(db, payments_, staff, String(bookingId), parsed.data, now));
+}
+
+async function decideRefundRequestNow(db: Db, payments_: PaymentProvider, staff: StaffActor, bookingId: string, input: z.output<typeof refundDecisionInputSchema>, now: Date): Promise<ActionResult> {
+  const [request] = await db.select().from(refundRequests).where(and(eq(refundRequests.id, input.requestId), eq(refundRequests.bookingId, String(bookingId)))).limit(1);
   if (!request || request.status !== 'pending' || request.requestedByUserId === staff.id) return { ok: false, code: 'not_allowed' };
   // An approver's limit is per booking too: what was already refunded counts.
   if (!canApproveRefund(staff.roles, (await discretionaryRefundedCents(db, String(bookingId))) + request.amountCents)) return { ok: false, code: 'not_allowed' };
-  const approve = parsed.data.decision === 'approve';
+  const approve = input.decision === 'approve';
   if (approve) {
     const money = await bookingMoneyFacts(db, String(bookingId));
     if (!money || request.amountCents > money.chargedCents - money.refundedCents) return { ok: false, code: 'not_allowed' };
   }
   const [claimed] = await db
     .update(refundRequests)
-    .set({ status: approve ? 'approved' : 'declined', decidedByUserId: staff.id, decisionNote: parsed.data.note, decidedAt: now })
+    .set({ status: approve ? 'approved' : 'declined', decidedByUserId: staff.id, decisionNote: input.note, decidedAt: now })
     .where(and(eq(refundRequests.id, request.id), eq(refundRequests.status, 'pending')))
     .returning({ id: refundRequests.id });
   if (!claimed) return { ok: false, code: 'not_allowed' };
@@ -421,7 +438,7 @@ export async function decideRefundRequest(db: Db, payments_: PaymentProvider | n
     ok = await refundCharge(db, payments_, { bookingId: String(bookingId), amountCents: request.amountCents, reason: request.reason, idempotencyKey: `refund:${bookingId}:approved:${request.id}`, now });
   }
   await audit(db, staff, approve ? 'booking.refund_approved' : 'booking.refund_declined', 'booking', String(bookingId), now, {
-    reason: parsed.data.note,
+    reason: input.note,
     metadata: { requestId: request.id, amountCents: request.amountCents, requestedBy: request.requestedByUserId, ok },
   });
   return ok ? { ok: true, code: 'updated' } : { ok: false, code: 'unknown' };

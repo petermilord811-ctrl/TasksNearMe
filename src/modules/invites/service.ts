@@ -81,6 +81,17 @@ const pricingColumns = (pricing: PricingInput) => ({
   hoursCap: pricing.type === 'hourly' ? pricing.hoursCap : null,
 });
 
+/**
+ * An invite's or a counter's price as offers take it (security review): at least the category's minimum (a fixed price,
+ * or the rate times the estimated hours), and never more hours estimated than the cap.
+ */
+async function pricingRefused(db: Db, categorySlug: string, pricing: PricingInput): Promise<boolean> {
+  const [category] = await db.select({ minPriceCents: categories.minPriceCents }).from(categories).where(eq(categories.slug, categorySlug)).limit(1);
+  const minimum = category?.minPriceCents ?? 0;
+  if (pricing.type === 'fixed') return pricing.priceCents < minimum;
+  return pricing.estimatedHours > pricing.hoursCap || pricing.rateCents * pricing.estimatedHours < minimum;
+}
+
 /** Only helpers whose public profile is live can be requested (not paused, suspended, or closed accounts). */
 async function helperIdOf(db: Db, handle: string): Promise<string | null> {
   const [row] = await db
@@ -218,6 +229,7 @@ export async function requestHelper(deps: BookingDeps, posterId: string, handle:
   if (!helperId || helperId === posterId || (await isBlockedBetween(db, posterId, helperId))) return { ok: false, code: 'not_allowed' };
   const task = (await invitableTasks(db, posterId, helperId, now)).find((item) => item.id === parsed.data.taskId);
   if (!task) return { ok: false, code: 'validation_failed', fieldErrors: { taskId: ['invalid'] } };
+  if (await pricingRefused(db, task.categorySlug, parsed.data.pricing)) return { ok: false, code: 'validation_failed', fieldErrors: { pricing: ['out_of_range'] } };
   const start = new Date(parsed.data.start);
   if (start < new Date(task.windowStart) || start > new Date(task.windowEnd) || start.getTime() - now.getTime() < 2 * HOUR) {
     return { ok: false, code: 'validation_failed', fieldErrors: { start: ['invalid'] } };
@@ -543,6 +555,7 @@ export async function counterInvite(db: Db, payments_: PaymentProvider | null, h
   const helper = await loadHelperState(db, helperId, now);
   if (!helper.facts.bookableCategories.includes(task.categorySlug as CategorySlug)) return { ok: false, code: 'not_allowed' };
   const pricing = parsed.data.pricing ?? pricingFrom(invite.pricingType, invite.priceCents, invite.hourlyRateCents, invite.estimatedHours, invite.hoursCap);
+  if (await pricingRefused(db, task.categorySlug, pricing)) return { ok: false, code: 'validation_failed', fieldErrors: { pricing: ['out_of_range'] } };
   const start = parsed.data.start ? new Date(parsed.data.start) : invite.startAt;
   if (start < task.windowStart || start > task.windowEnd || start.getTime() - now.getTime() < 2 * HOUR) return { ok: false, code: 'validation_failed', fieldErrors: { start: ['invalid'] } };
   const counterBreakdown = quoteBreakdown(fees, pricing);

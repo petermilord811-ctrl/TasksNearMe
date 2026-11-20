@@ -353,6 +353,9 @@ export async function confirmBooking(
   try {
     hold = await db.transaction(async (tx) => {
       await tx.execute(sql`select id from tasks where id = ${ctx.task.id} for update`);
+      // Still open under the lock (security review): a cancel or another booking that landed after the page was read.
+      const [fresh] = await tx.select({ status: tasks.status }).from(tasks).where(eq(tasks.id, ctx.task.id)).limit(1);
+      if (fresh?.status !== 'open') throw new HoldConflict();
       let booking = await liveBooking(tx, ctx.task.id);
       if (booking && booking.status !== 'pending_funding') throw new HoldConflict();
       // The poster switched to another offer while a hold was open: release it.

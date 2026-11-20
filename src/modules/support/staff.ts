@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, notInArray, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, ne, notInArray, or, type SQL } from 'drizzle-orm';
 import type {
   ActionResult,
   AdminCaseEventView,
@@ -49,6 +49,7 @@ import {
 } from '@/contracts';
 import type { EmailProvider } from '@/integrations/email';
 import { staffRoles, users } from '@/modules/accounts/schema';
+import { discretionaryRefundedCents } from '@/modules/payments/refund-across';
 import { payments, refunds } from '@/modules/payments/schema';
 import { bookingCompletions, bookingTerms, bookings } from '@/modules/bookings/schema';
 import { photoFromFile } from '@/modules/files/uploads';
@@ -219,8 +220,27 @@ const ACTIVE_STATUSES = STATUS_FILTERS.active!;
 
 /** `/admin`: the queues and the viewer's open cases. */
 /** Without `verifications`: the page adds those (src/modules/verification/staff.ts). */
+/**
+ * Cases a staff member is part of never reach them (security review): ones they opened, ones about them, and ones about
+ * a booking of theirs. Somebody else handles those; until now a helper on staff could pay themselves in a dispute about
+ * their own work, or read who reported them.
+ */
+export function notInvolved(db: Db, staffId: string): SQL {
+  return and(
+    or(isNull(supportCases.openedByUserId), ne(supportCases.openedByUserId, staffId)),
+    or(isNull(supportCases.subjectUserId), ne(supportCases.subjectUserId, staffId)),
+    or(isNull(supportCases.bookingId), notInArray(supportCases.bookingId, db.select({ id: bookings.id }).from(bookings).where(or(eq(bookings.posterUserId, staffId), eq(bookings.helperUserId, staffId))))),
+  )!;
+}
+
+/** Whether a staff member is a party to this booking (they never act on its money or cases). */
+export async function isBookingParty(db: Db, staffId: string, bookingId: string): Promise<boolean> {
+  const [row] = await db.select({ id: bookings.id }).from(bookings).where(and(eq(bookings.id, bookingId), or(eq(bookings.posterUserId, staffId), eq(bookings.helperUserId, staffId)))).limit(1);
+  return Boolean(row);
+}
+
 export async function getAdminHome(db: Db, staff: StaffActor, now: Date): Promise<Omit<AdminHomeData, 'verifications'>> {
-  const open = await db.select().from(supportCases).where(inArray(supportCases.status, ACTIVE_STATUSES));
+  const open = await db.select().from(supportCases).where(and(inArray(supportCases.status, ACTIVE_STATUSES), notInvolved(db, staff.id)));
   const me = (await staffById(db, [staff.id])).get(staff.id);
   return {
     staff: me ?? { id: staff.id, displayName: 'Staff', initials: 'ST', roles: staff.roles },
@@ -252,7 +272,7 @@ export function parseAdminCaseFilters(params: Record<string, string | string[] |
 
 /** `/admin/cases`: response due soonest first; cases without a target after, newest first. Up to 100. */
 export async function getAdminCases(db: Db, staff: StaffActor, filters: AdminCaseFilters, now: Date): Promise<AdminCasesPageData> {
-  const conditions: SQL[] = [];
+  const conditions: SQL[] = [notInvolved(db, staff.id)];
   // Requests take every type the other queues don't (as `queueOf` does).
   if (filters.queue === 'requests') conditions.push(notInArray(supportCases.type, [...QUEUE_TYPES.disputes, ...QUEUE_TYPES.safety, ...QUEUE_TYPES.reports]));
   else if (filters.queue) conditions.push(inArray(supportCases.type, QUEUE_TYPES[filters.queue]));
@@ -262,7 +282,7 @@ export async function getAdminCases(db: Db, staff: StaffActor, filters: AdminCas
   const found = await db
     .select()
     .from(supportCases)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .where(and(...conditions))
     .orderBy(desc(supportCases.updatedAt))
     .limit(500);
   const rows = await caseRowsFor(db, found, now);
@@ -295,6 +315,8 @@ async function loadCase(db: Db, staff: StaffActor, caseId: string): Promise<Case
         .where(eq(bookings.id, row.bookingId))
         .limit(1)
     : [];
+  // Not a case of theirs (security review): every case action loads the case here, so none reaches them.
+  if ([row.openedByUserId, row.subjectUserId, booking?.posterUserId, booking?.helperUserId].includes(staff.id)) return null;
   const [people, paidRows] = await Promise.all([
     usersById(db, [...(row.openedByUserId ? [row.openedByUserId] : []), ...(row.subjectUserId ? [row.subjectUserId] : []), ...(booking ? [booking.posterUserId, booking.helperUserId] : [])]),
     booking
@@ -591,13 +613,7 @@ export async function moderateCaseQuestion(db: Db, staff: StaffActor, caseId: st
  * done). Blueprint 08's refund limits are per booking, so each new refund counts on top of these: five $100
  * goodwill refunds are a $500 decision, not five $100 ones.
  */
-export async function discretionaryRefundedCents(db: Db, bookingId: string): Promise<number> {
-  const rows = await db
-    .select({ amountCents: refunds.amountCents })
-    .from(refunds)
-    .where(and(eq(refunds.bookingId, bookingId), inArray(refunds.reason, ['goodwill', 'fraud', 'dispute_settlement']), inArray(refunds.status, ['pending', 'succeeded'])));
-  return rows.reduce((sum, row) => sum + row.amountCents, 0);
-}
+export { discretionaryRefundedCents };
 
 export async function bookingMoneyFacts(db: Db, bookingId: string): Promise<BookingMoneyFacts | null> {
   const [row] = await db
@@ -802,6 +818,8 @@ export async function addCaseNote(db: Db, staff: StaffActor, caseId: string, inp
   const ctx = await loadCase(db, staff, caseId);
   if (!ctx) return { ok: false, code: 'not_allowed' };
   await db.insert(supportCaseEvents).values({ id: newId('cev'), caseId: ctx.row.id, kind: 'note', authorUserId: staff.id, visibility: 'internal', body: parsed.data.body, createdAt: now });
+  // Audited like every other act on a case (security review).
+  await audit(db, staff, 'case.note_added', ctx.row.id, now);
   return { ok: true, code: 'saved' };
 }
 

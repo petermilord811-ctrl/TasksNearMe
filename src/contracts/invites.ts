@@ -25,11 +25,12 @@ const code = (value: FieldErrorCode) => value;
 export const invitePricingSchema = z.discriminatedUnion(
   'type',
   [
-    z.object({ type: z.literal('fixed'), priceCents: z.number(code('required')).int(code('invalid')).positive(code('invalid')) }),
+    // At most what an offer can carry ($100,000; $1,000 an hour; a day's work), like posting (security review).
+    z.object({ type: z.literal('fixed'), priceCents: z.number(code('required')).int(code('invalid')).positive(code('invalid')).max(10_000_000, code('out_of_range')) }),
     z.object({
       type: z.literal('hourly'),
-      rateCents: z.number(code('required')).int(code('invalid')).positive(code('invalid')),
-      estimatedHours: z.number(code('required')).positive(code('invalid')),
+      rateCents: z.number(code('required')).int(code('invalid')).positive(code('invalid')).max(100_000, code('out_of_range')),
+      estimatedHours: z.number(code('required')).positive(code('invalid')).max(24, code('out_of_range')),
       hoursCap: z.number(code('required')).positive(code('invalid')).max(24, code('too_long')),
     }),
   ],

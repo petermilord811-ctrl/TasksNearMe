@@ -168,3 +168,15 @@ export async function openRefundCase(db: Db, paymentId: string, reason: string, 
   });
   return caseId;
 }
+
+/**
+ * What staff gave back on a booking at their discretion (goodwill, fraud, a dispute settled with a refund), pending or
+ * done: it counts toward each person's per-booking refund limit (blueprint 08), staff cancellations included.
+ */
+export async function discretionaryRefundedCents(db: Db, bookingId: string): Promise<number> {
+  const rows = await db
+    .select({ amountCents: refunds.amountCents })
+    .from(refunds)
+    .where(and(eq(refunds.bookingId, bookingId), inArray(refunds.reason, ['goodwill', 'fraud', 'dispute_settlement']), inArray(refunds.status, ['pending', 'succeeded'])));
+  return rows.reduce((sum, row) => sum + row.amountCents, 0);
+}
