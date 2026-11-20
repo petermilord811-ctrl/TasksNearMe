@@ -65,18 +65,21 @@ export interface StaffGrantAnnouncement {
   reason: string;
 }
 
-/** Grant requests still waiting: each person's latest trail entry for a role, if it's a request within its window. */
+/**
+ * Grant requests still waiting: requests within their window that no decision names (`metadata.requestId`). Matched by
+ * id, not by which trail entry sorts last: a test clock can date a request and its decision alike, and ids are random.
+ * `grantStaffRole` refuses a second request while one waits, so at most one waits per person and role.
+ */
 async function pendingRequests(db: Db | Tx, now: Date): Promise<(TrailEntry & { role: StaffRole; requestedAt: string; expiresAt: string })[]> {
   const trail = await db
     .select({ id: auditLog.id, action: auditLog.action, actorId: auditLog.actorId, targetId: auditLog.targetId, reason: auditLog.reason, metadata: auditLog.metadata })
     .from(auditLog)
     .where(and(eq(auditLog.targetType, 'user'), inArray(auditLog.action, GRANT_TRAIL), gte(auditLog.at, new Date(now.getTime() - APPROVAL_MS).toISOString())))
     .orderBy(asc(auditLog.at), asc(auditLog.id));
-  const latest = new Map<string, TrailEntry>();
-  for (const entry of trail) latest.set(`${entry.targetId} ${String(entry.metadata.role)}`, entry);
-  return [...latest.values()].flatMap((entry) => {
+  const decided = new Set(trail.flatMap((entry) => (entry.action !== 'staff.grant_requested' && typeof entry.metadata.requestId === 'string' ? [entry.metadata.requestId] : [])));
+  return trail.flatMap((entry) => {
     const { role, requestedAt, expiresAt } = entry.metadata;
-    if (entry.action !== 'staff.grant_requested' || typeof role !== 'string' || !isRole(role) || typeof expiresAt !== 'string' || typeof requestedAt !== 'string') return [];
+    if (entry.action !== 'staff.grant_requested' || decided.has(entry.id) || typeof role !== 'string' || !isRole(role) || typeof expiresAt !== 'string' || typeof requestedAt !== 'string') return [];
     return new Date(expiresAt).getTime() > now.getTime() ? [{ ...entry, role, requestedAt, expiresAt }] : [];
   });
 }

@@ -135,6 +135,26 @@ describe('a second admin (security review SEC19)', () => {
     expect((await getAdminStaff(db, blake, later))!.pendingGrants.filter((grant) => grant.role === 'support_agent')).toEqual([]);
   });
 
+  it('reads a request and its decision dated at the same instant, as a test clock dates them', async () => {
+    // The test above dates its second request and the decline alike; which row sorted last was up to their random ids.
+    const at = new Date();
+    const expiresAt = new Date(at.getTime() + 48 * 3_600_000).toISOString();
+    const row = (id: string, action: string, actorId: string, metadata: Record<string, unknown>) => ({ id, at: at.toISOString(), actorId, actorRole: 'admin', action, targetType: 'user', targetId: 'usr_tmp_staff_a', reason, metadata });
+    const waiting = async () => (await getAdminStaff(db, blake, at))!.pendingGrants.filter((grant) => grant.role === 'support_lead' && grant.person.id === 'usr_tmp_staff_a');
+    // Ids chosen so the decline sorts before the request it decides.
+    await db.insert(auditLog).values(row('aud_zz_same_instant', 'staff.grant_requested', 'usr_riley', { role: 'support_lead', requestedAt: at.toISOString(), expiresAt }));
+    expect((await waiting()).map((grant) => grant.id)).toEqual(['aud_zz_same_instant']);
+    await db.insert(auditLog).values(row('aud_00_same_instant', 'staff.grant_declined', 'usr_tmp_staff_b', { role: 'support_lead', requestId: 'aud_zz_same_instant' }));
+    expect(await waiting()).toEqual([]);
+    // Asked again at that instant: the new request waits, whatever its id, until it's declined in turn.
+    expect(await grantStaffRole(db, riley, { email: 'tmp-staff-a@example.test', role: 'support_lead', reason }, at)).toEqual({ ok: true, code: 'sent' });
+    const [again] = await waiting();
+    expect(again).toMatchObject({ requestedAt: at.toISOString(), canDecide: true });
+    expect(await decideStaffGrant(db, blake, { requestId: again!.id, approve: false }, at)).toEqual({ ok: true, code: 'updated' });
+    expect(await waiting()).toEqual([]);
+    expect(await rolesOf('usr_tmp_staff_a')).not.toContain('support_lead');
+  });
+
   it('emails every admin, in their language', async () => {
     const outbox = createDevOutboxEmailProvider(db);
     expect(await announceStaffGrant({ db, email: outbox, appUrl: 'http://localhost:3000' }, { userId: 'usr_tmp_staff_a', role: 'finance', grantedById: 'usr_riley', approvedById: 'usr_tmp_staff_b', reason })).toBeGreaterThanOrEqual(2);
