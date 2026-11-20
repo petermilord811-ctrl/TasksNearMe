@@ -61,7 +61,8 @@ export function jobPostingNode(input: JobPostingFacts): JsonLdNode {
     title: task.title,
     description,
     datePosted: task.postedAt,
-    validThrough: task.schedule.windowEnd,
+    // Offers close when the window starts (blueprint 03), and the task leaves the board then (sweep 2026-11-20).
+    validThrough: task.schedule.windowStart,
     employmentType: 'CONTRACTOR',
     hiringOrganization: { '@type': 'Organization', name: 'confidential' },
     directApply: false,

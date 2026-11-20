@@ -59,7 +59,9 @@ describe('task search', () => {
       const ids = async (q: string) =>
         (await listBoardTasks(tx, { marketId: 'mkt_austin', query: parseTaskBoardQuery({ q, group: 'none' }), now: new Date() })).tasks.map((task) => task.id);
       for (const hidden of ['gmail', 'example.net', 'maya@', '352', '555', '0110', '352-555']) expect(await ids(hidden), hidden).not.toContain(id);
-      for (const shown of ['walnut', 'bookshelf', 'flat-pack', 'shelves', 'walnut bookshelf']) expect(await ids(shown), shown).toContain(id);
+      // The description's own words, each with "walnut", which only this task has: the seeded desk's description says
+      // "flat-pack" and "shelves" too, and open copies other files leave can fill the board's first page.
+      for (const shown of ['walnut', 'walnut bookshelf', 'walnut flat-pack', 'walnut shelves']) expect(await ids(shown), shown).toContain(id);
     });
   });
 });

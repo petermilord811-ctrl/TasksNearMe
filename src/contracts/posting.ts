@@ -335,8 +335,9 @@ export function createTaskDraftSchema(context: Pick<PostTaskPageData, 'rules' | 
         z.object({
           type: z.literal('hourly'),
           rateCents: z.number(FIELD('required')).int().positive(FIELD('required')),
-          estimatedHours: z.number(FIELD('required')).positive(FIELD('required')).multipleOf(0.5, FIELD('invalid')),
-          hoursCap: z.number(FIELD('required')).positive(FIELD('required')).multipleOf(0.5, FIELD('invalid')),
+          // At most a day's work, as offers, invites and changes take (sweep 2026-11-20: a longer estimate got no offer).
+          estimatedHours: z.number(FIELD('required')).positive(FIELD('required')).multipleOf(0.5, FIELD('invalid')).max(24, FIELD('out_of_range')),
+          hoursCap: z.number(FIELD('required')).positive(FIELD('required')).multipleOf(0.5, FIELD('invalid')).max(24, FIELD('out_of_range')),
         }),
       ]),
       expenseAllowance: z

@@ -654,12 +654,13 @@ export function buildDemoPlan(input: { now: Date; policies: DemoPolicies }): Dem
       // A client keeps at most three tasks open at once.
       if (lifecycle === 'open' && task.client.openCount >= 3) lifecycle = 'expired';
       const dayOffset = lifecycle === task.lifecycle ? timeline.get(task.id)! : lifecycle === 'confirmed' ? taskRng.int(1, 3) : -taskRng.int(1, 12);
-      const dayKey = addDayKey(today, dayOffset);
+      let dayKey = addDayKey(today, dayOffset);
       const flexible = lifecycle !== 'in_progress' && taskRng.chance(0.25);
 
       let windowStart: Date;
       let windowEnd: Date;
       let inProgressStart: Date | null = null;
+      let timed: [string, string] | null = null;
       if (lifecycle === 'in_progress') {
         const started = nowMs - taskRng.int(40, 110) * MINUTE;
         inProgressStart = new Date(Math.floor(started / (30 * MINUTE)) * 30 * MINUTE);
@@ -672,6 +673,18 @@ export function buildDemoPlan(input: { now: Date; policies: DemoPolicies }): Dem
         const [start, end] = taskRng.pick(windows);
         windowStart = at(dayKey, start);
         windowEnd = at(dayKey, end);
+        timed = [start, end];
+      }
+      // Open tasks follow posting (sweep 2026-11-20): a window starts no sooner than the 3-hour lead allows. Offers
+      // expire at its start and the boards drop the task then, so one already under way would be open in name only.
+      if (lifecycle === 'open' && windowStart.getTime() < nowMs + 3 * HOUR) {
+        const earliest = Math.ceil((nowMs + 3 * HOUR) / (30 * MINUTE)) * 30 * MINUTE;
+        if (flexible && earliest + 3 * HOUR <= windowEnd.getTime()) windowStart = new Date(earliest);
+        else {
+          dayKey = addDayKey(dayKey, 1);
+          windowStart = at(dayKey, flexible ? '00:00' : timed![0]);
+          windowEnd = at(dayKey, flexible ? '23:59' : timed![1]);
+        }
       }
 
       // When it was posted: like the posting form, the start is 3 hours to 14 days after posting.
@@ -727,7 +740,8 @@ export function buildDemoPlan(input: { now: Date; policies: DemoPolicies }): Dem
       // Offers: from helpers who could, submitted after posting.
       const startTimes = (() => {
         const out: Date[] = [];
-        const from = flexible ? at(dayKey, '09:00').getTime() : windowStart.getTime();
+        // Within the window, as the offer form allows (a flexible day today starts later than 9:00).
+        const from = flexible ? Math.max(at(dayKey, '09:00').getTime(), windowStart.getTime()) : windowStart.getTime();
         const until = flexible ? at(dayKey, '16:00').getTime() : windowEnd.getTime() - 30 * MINUTE;
         for (let t = from; t <= until; t += 30 * MINUTE) out.push(new Date(t));
         return out.length > 0 ? out : [windowStart];

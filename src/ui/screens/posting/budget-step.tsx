@@ -52,7 +52,7 @@ export function BudgetStep({ data }: { data: PostTaskPageData }) {
           const name = `budget.${key}` as const;
           const id = postingFieldId(name);
           return <PostingField key={key} name={name} label={t(`budget.${key}`)} hint={t(`budget.${key}Hint`)}>
-            <Input {...register(name, { setValueAs: (value: string) => value === '' || !Number.isFinite(Number(value)) ? -1 : Number(value) })} id={id} type="number" inputMode="decimal" min={0.5} step={0.5} value={Number.isFinite(budget[key]) && budget[key] >= 0 ? budget[key] : ''} aria-invalid={getFieldState(name, formState).invalid} aria-describedby={`${id}-hint ${id}-error`} className="tabular-nums" />
+            <Input {...register(name, { setValueAs: (value: string) => value === '' || !Number.isFinite(Number(value)) ? -1 : Number(value) })} id={id} type="number" inputMode="decimal" min={0.5} max={24} step={0.5} value={Number.isFinite(budget[key]) && budget[key] >= 0 ? budget[key] : ''} aria-invalid={getFieldState(name, formState).invalid} aria-describedby={`${id}-hint ${id}-error`} className="tabular-nums" />
           </PostingField>;
         })}</div>
       </div>}

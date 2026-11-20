@@ -22,6 +22,7 @@ const jordan: HelperOfferFacts = {
 const desk: TaskOfferFacts = {
   posterUserId: 'usr_maya',
   status: 'open',
+  windowStart: new Date('2026-11-21T16:00:00.000Z'),
   windowEnd: new Date('2026-11-21T19:00:00.000Z'),
   categorySlug: 'furniture-assembly',
   requiresBackgroundCheck: false,
@@ -37,7 +38,9 @@ describe('offer rules', () => {
   it('blocks in a fixed order: own task, closed, not bookable, category, background check, area', () => {
     expect(offerBlockedReason(jordan, { ...desk, posterUserId: 'usr_jordan', status: 'canceled' }, now)).toBe('own_task');
     expect(offerBlockedReason(jordan, { ...desk, status: 'assigned' }, now)).toBe('task_closed');
-    expect(offerBlockedReason(jordan, { ...desk, windowEnd: now }, now)).toBe('task_closed');
+    expect(offerBlockedReason(jordan, { ...desk, windowStart: now, windowEnd: now }, now)).toBe('task_closed');
+    // Offers expire at the window's start (blueprint 03): once it has started, one sent now would be dead on arrival.
+    expect(offerBlockedReason(jordan, { ...desk, windowStart: now, windowEnd: new Date(now.getTime() + 3_600_000) }, now)).toBe('task_closed');
     expect(offerBlockedReason({ ...jordan, bookableCategories: [] }, desk, now)).toBe('not_bookable');
     expect(offerBlockedReason({ ...jordan, suspended: true }, desk, now)).toBe('not_bookable');
     expect(offerBlockedReason(jordan, { ...desk, categorySlug: 'computer-help' }, now)).toBe('category_not_offered');

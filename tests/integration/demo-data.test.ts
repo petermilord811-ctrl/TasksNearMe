@@ -87,6 +87,7 @@ describe('the demo marketplace in the database', () => {
                 posterUserId: task.posterUserId,
                 status: task.status,
                 hidden: task.hiddenAt !== null,
+                windowStart: task.windowStart,
                 windowEnd: task.windowEnd,
                 categorySlug: category.slug as never,
                 requiresBackgroundCheck: category.requiresBackgroundCheck,
@@ -107,11 +108,13 @@ describe('the demo marketplace in the database', () => {
         const prairieTaskIds = new Set(later.tasks.filter((task) => task.marketId === 'mkt_demo_pp').map((task) => task.id));
         expect(findWork!.cards.every((card) => prairieTaskIds.has(card.task.id))).toBe(true);
 
-        // The public boards list each market's open tasks: Gainesville's with the base seed's, Pretty Prairie's exactly.
+        // The public boards list each market's open tasks whose window is still ahead (offers close at its start, sweep
+        // 2026-11-20): Gainesville's with the base seed's, Pretty Prairie's exactly. A booking the plan couldn't make
+        // leaves its task open after the start, as real data would.
         const gainesvilleBoard = await listBoardTasks(d, { marketId: 'mkt_gainesville', query: parseTaskBoardQuery({}), now: next });
-        expect(gainesvilleBoard.totalCount).toBeGreaterThanOrEqual(later.tasks.filter((task) => task.marketId === 'mkt_gainesville' && task.status === 'open').length);
+        expect(gainesvilleBoard.totalCount).toBeGreaterThanOrEqual(later.tasks.filter((task) => task.marketId === 'mkt_gainesville' && task.status === 'open' && task.windowStart > next).length);
         const prairieBoard = await listBoardTasks(d, { marketId: 'mkt_demo_pp', query: parseTaskBoardQuery({}), now: next });
-        expect(prairieBoard.totalCount).toBe(later.tasks.filter((task) => task.marketId === 'mkt_demo_pp' && task.status === 'open').length);
+        expect(prairieBoard.totalCount).toBe(later.tasks.filter((task) => task.marketId === 'mkt_demo_pp' && task.status === 'open' && task.windowStart > next).length);
 
         // A profile shows the rating its published reviews give, and the work it completed.
         const rated = later.people

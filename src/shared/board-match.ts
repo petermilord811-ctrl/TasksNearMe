@@ -71,7 +71,8 @@ export type BoardMatchQuery = Pick<TaskBoardQueryState, 'category' | 'type' | 'q
 /** `context.timeZone`: the board's market zone, whose clock "today" and "mornings" mean. */
 export function taskMatchesBoard(task: TaskPublicView, query: BoardMatchQuery, context: { now: Date; areaNames: ReadonlyMap<string, string>; timeZone: TimeZone }): boolean {
   const { now } = context;
-  if (task.status !== 'open' || Date.parse(task.schedule.windowEnd) <= now.getTime()) return false;
+  // Open for offers until the window starts, as the board itself lists (openIn, sweep 2026-11-20).
+  if (task.status !== 'open' || Date.parse(task.schedule.windowStart) <= now.getTime()) return false;
   if (query.category && task.categorySlug !== query.category) return false;
   if (query.category && query.type && task.taskType !== query.type) return false;
   if (query.q && !matchesKeywords(`${task.title} ${task.excerpt}`, query.q)) return false;

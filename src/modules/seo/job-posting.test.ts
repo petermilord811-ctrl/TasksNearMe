@@ -40,7 +40,8 @@ describe('jobPostingNode', () => {
       '@type': 'JobPosting',
       title: 'Assemble a desk (flat-pack, 1 item)',
       datePosted: deskPublicTask.postedAt,
-      validThrough: deskPublicTask.schedule.windowEnd,
+      // Until offers close, when the window starts: not its end.
+      validThrough: deskPublicTask.schedule.windowStart,
       employmentType: 'CONTRACTOR',
       hiringOrganization: { '@type': 'Organization', name: 'confidential' },
       directApply: false,

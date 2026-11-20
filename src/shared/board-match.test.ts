@@ -28,7 +28,9 @@ describe('taskMatchesBoard', () => {
   it('passes a new open task through an unfiltered board, and never a closed or past one', () => {
     expect(matches({})).toBe(true);
     expect(matches({}, { ...task, status: 'assigned' })).toBe(false);
-    expect(matches({}, { ...task, schedule: { ...task.schedule, windowEnd: '2026-11-17T14:00:00.000Z' } })).toBe(false);
+    expect(matches({}, { ...task, schedule: { ...task.schedule, windowStart: '2026-11-17T13:00:00.000Z', windowEnd: '2026-11-17T14:00:00.000Z' } })).toBe(false);
+    // Under way: offers closed at its start, so the board has dropped it (sweep 2026-11-20).
+    expect(matches({}, { ...task, schedule: { ...task.schedule, windowStart: '2026-11-17T14:30:00.000Z', windowEnd: '2026-11-17T18:00:00.000Z' } })).toBe(false);
   });
 
   it('checks the category and its task type', () => {

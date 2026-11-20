@@ -81,6 +81,11 @@ describe('task draft schema', () => {
     expect(
       errorsOf({ ...movingDraft, budget: { type: 'hourly', rateCents: 3500, estimatedHours: 2.25, hoursCap: 3 } }),
     ).toMatchObject({ 'budget.estimatedHours': 'invalid' });
+    // At most a day's work, as offers, invites and changes take (sweep 2026-11-20).
+    expect(
+      errorsOf({ ...movingDraft, budget: { type: 'hourly', rateCents: 3500, estimatedHours: 30, hoursCap: 32 } }),
+    ).toMatchObject({ 'budget.estimatedHours': 'out_of_range', 'budget.hoursCap': 'out_of_range' });
+    expect(errorsOf({ ...movingDraft, budget: { type: 'hourly', rateCents: 3500, estimatedHours: 24, hoursCap: 24 } })).toEqual({});
   });
 
   it('caps the expense allowance', () => {

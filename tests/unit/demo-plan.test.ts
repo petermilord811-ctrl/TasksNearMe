@@ -238,7 +238,7 @@ describe.each(plans)('the demo marketplace at %s', (_label, now, plan) => {
       // At the time it was made, on the task as it was then (open).
       const blocked = offerBlockedReason(
         { userId: offer.helperUserId, bookableCategories: bookable, offeredCategories: offered, suspended: false, serviceRadiusMiles: Math.round(helper.serviceRadiusKm! / KM_PER_MILE) },
-        { posterUserId: task.posterUserId, status: 'open', windowEnd: task.windowEnd, categorySlug: category.slug as CategorySlug, requiresBackgroundCheck: category.requiresBackgroundCheck, remote: task.mode === 'remote', distanceMiles: task.mode === 'remote' ? null : milesBetween({ lat: area.lat, lng: area.lng }, { lat: task.publicLat!, lng: task.publicLng! }) },
+        { posterUserId: task.posterUserId, status: 'open', windowStart: task.windowStart, windowEnd: task.windowEnd, categorySlug: category.slug as CategorySlug, requiresBackgroundCheck: category.requiresBackgroundCheck, remote: task.mode === 'remote', distanceMiles: task.mode === 'remote' ? null : milesBetween({ lat: area.lat, lng: area.lng }, { lat: task.publicLat!, lng: task.publicLng! }) },
         offer.createdAt,
       );
       expect(blocked, `${offer.id}`).toBeUndefined();

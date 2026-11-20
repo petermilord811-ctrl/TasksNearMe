@@ -111,6 +111,18 @@ describe('posting a task', () => {
     expect(task).toMatchObject({ mode: 'remote', locationId: null, publicLat: null, flexible: true });
   });
 
+  it('starts a flexible day today at the earliest start the lead time allows, not at midnight (sweep 2026-11-20)', async () => {
+    // Offers expire at the window's start: from midnight, every offer on it was dead on arrival.
+    const today = await posting.post('usr_ruth', { ...remoteHelpDraft, schedule: { date: '2026-11-17', flexible: true } });
+    expect(today.ok).toBe(true);
+    if (!today.ok) return;
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, today.taskId));
+    // 9:00 am in Austin plus the 3-hour lead: noon, through the end of the day.
+    expect(task?.windowStart.toISOString()).toBe('2026-11-17T18:00:00.000Z');
+    expect(task?.windowEnd.toISOString()).toBe('2026-11-18T05:59:00.000Z');
+    await db.update(tasks).set({ status: 'canceled' }).where(eq(tasks.id, today.taskId));
+  });
+
   it('lists open tasks on the board with filters', async () => {
     const [market] = await db.select({ id: areas.marketId }).from(areas).limit(1);
     // Every page (other tests leave open tasks of their own): the posted tasks are on the board.
@@ -133,6 +145,19 @@ describe('posting a task', () => {
     expect(today.tasks.map((t) => t.id)).not.toContain(posted.desk);
     const weekend = await listBoardTasks(db, { marketId: market!.id, query: { ...defaultQuery, when: 'this_weekend' }, now: NOW });
     expect(weekend.tasks.map((t) => t.id)).toContain(posted.desk);
+
+    // Listed until its window starts, where offers close; not while it runs (sweep 2026-11-20).
+    const deskIds = async (now: Date) => {
+      const found: string[] = [];
+      for (let page = 1; page < 20; page += 1) {
+        const result = await listBoardTasks(db, { marketId: market!.id, query: { ...defaultQuery, category: 'furniture-assembly', page }, now });
+        found.push(...result.tasks.map((t) => t.id));
+        if (result.tasks.length === 0 || found.length >= result.totalCount) break;
+      }
+      return found;
+    };
+    expect(await deskIds(new Date('2026-11-21T15:30:00.000Z'))).toContain(posted.desk);
+    expect(await deskIds(new Date('2026-11-21T16:30:00.000Z'))).not.toContain(posted.desk);
 
     const recent = await listRecentOpenTasks(db, { marketId: market!.id, categorySlug: 'furniture-assembly', limit: 3, now: NOW });
     expect(recent.every((t) => t.categorySlug === 'furniture-assembly')).toBe(true);
@@ -157,8 +182,13 @@ describe('posting a task', () => {
     expect(await posting.post(noPhone, noPhotos)).toEqual({ ok: false, result: { ok: false, code: 'not_allowed' } });
 
     const fresh = await newPoster('usr_fresh', { daysOld: 1 });
-    for (let i = 0; i < 3; i += 1) expect((await posting.post(fresh, noPhotos)).ok).toBe(true);
+    const first = await posting.post(fresh, noPhotos);
+    expect(first.ok).toBe(true);
+    for (let i = 0; i < 2; i += 1) expect((await posting.post(fresh, noPhotos)).ok).toBe(true);
     expect(await posting.post(fresh, noPhotos)).toEqual({ ok: false, result: { ok: false, code: 'limit_reached' } });
+    // A task whose window has ended reads as expired and no longer counts, though its row stays `open` (sweep 2026-11-20).
+    if (first.ok) await db.update(tasks).set({ windowStart: new Date(NOW.getTime() - 3 * 3_600_000), windowEnd: new Date(NOW.getTime() - 3_600_000) }).where(eq(tasks.id, first.taskId));
+    expect((await posting.post(fresh, noPhotos)).ok).toBe(true);
   });
 });
 

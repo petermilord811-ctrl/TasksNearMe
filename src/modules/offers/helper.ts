@@ -254,6 +254,7 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
         {
           posterUserId,
           status,
+          windowStart: new Date(view.schedule.windowStart),
           windowEnd,
           categorySlug: view.categorySlug,
           requiresBackgroundCheck: needsCheck.get(view.categorySlug) ?? false,
@@ -364,6 +365,7 @@ function taskFacts(row: { task: TaskRow; category: typeof categories.$inferSelec
     posterUserId: row.task.posterUserId,
     status: row.task.status,
     hidden: row.task.hiddenAt !== null,
+    windowStart: row.task.windowStart,
     windowEnd: row.task.windowEnd,
     categorySlug: row.category.slug as CategorySlug,
     requiresBackgroundCheck: row.category.requiresBackgroundCheck,

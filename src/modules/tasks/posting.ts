@@ -1,10 +1,11 @@
 import { randomBytes } from 'node:crypto';
-import { and, count, eq, inArray } from 'drizzle-orm';
+import { and, count, eq, gt, inArray } from 'drizzle-orm';
 import { posterIdentityRequirement } from '@/modules/trust/poster-risk';
 import type { ActionResult, AddressSuggestion, CategorySlug, PostTaskPageData, PostTaskRepeat, TaskDraftInput, TaskPostingRules, TimeZone } from '@/contracts';
 import { compactTaskDetails, createTaskDraftSchema, REPEAT_PLACE_PREFIX } from '@/contracts';
 import { GeocoderUnavailableError, type GeoPlace, type Geocoder } from '@/integrations/geocoding';
 import { fieldError, validationFailed } from '@/platform/actions/results';
+import { isUniqueViolation } from '@/platform/db/errors';
 import { auditLog } from '@/platform/audit/schema';
 import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
@@ -80,6 +81,9 @@ export function nextRepeatSchedule(
   }
   return { date: soonest ?? '', flexible: task.flexible, ...window };
 }
+
+/** Window starts fall on the half hour, as the offer form's start times do. */
+const HALF_HOUR_MS = 30 * 60_000;
 
 export function createTaskPosting({ db, geocoder, cipher, now = () => new Date() }: TaskPostingDeps) {
   async function loadPoster(userId: string) {
@@ -248,7 +252,9 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
       const [open] = await db
         .select({ value: count() })
         .from(tasks)
-        .where(and(eq(tasks.posterUserId, userId), eq(tasks.status, 'open')));
+        // Still open: a task whose window has ended stays `open` in the table (it reads as expired), and counting it
+        // kept a new client from posting again for the rest of the week (sweep 2026-11-20).
+        .where(and(eq(tasks.posterUserId, userId), eq(tasks.status, 'open'), gt(tasks.windowEnd, at)));
       if ((open?.value ?? 0) >= NEW_ACCOUNT.maxOpenTasks) return fail({ ok: false, code: 'limit_reached' });
     }
 
@@ -316,77 +322,92 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
       if (owned.length !== photoIds.length) return fail(fieldError('photoIds', 'invalid'));
     }
 
-    // When: the market's local window → UTC. A flexible day spans the whole day.
+    // When: the market's local window → UTC. A flexible day spans the whole day, from the earliest start the lead
+    // time allows when that's later (a flexible day today): offers expire at the window's start (blueprint 03), so a
+    // window that began at midnight took only dead offers (sweep 2026-11-20).
     const { date, flexible, startTime, endTime } = draft.schedule;
-    const windowStart = new Date(marketLocalToUtc(date, flexible ? '00:00' : startTime!, data.market.timeZone));
+    const dayStart = new Date(marketLocalToUtc(date, flexible ? '00:00' : startTime!, data.market.timeZone));
+    const earliest = new Date(Math.ceil((at.getTime() + data.rules.minLeadHours * 3_600_000) / HALF_HOUR_MS) * HALF_HOUR_MS);
+    const windowStart = flexible && dayStart < earliest ? earliest : dayStart;
     const windowEnd = new Date(marketLocalToUtc(date, flexible ? '23:59' : endTime!, data.market.timeZone));
 
     const taskId = newId('tsk');
-    const slug = `${slugPart(draft.title) || 'task'}-${location?.areaSlug ?? 'remote'}-${randomBytes(3).toString('hex').slice(0, 4)}`;
+    const slugBase = `${slugPart(draft.title) || 'task'}-${location?.areaSlug ?? 'remote'}`;
     const point = location ? fuzzedPublicPoint(location.center, taskId) : null;
 
-    await db.transaction(async (tx) => {
-      let locationId: string | null = null;
-      if (location) {
-        locationId = newId('loc');
-        await tx.insert(taskLocations).values({
-          id: locationId,
-          ownerUserId: userId,
-          addressEnc: location.addressEnc,
-          zip: location.zip,
-          areaId: location.areaId,
-          createdAt: at,
+    // The slug ends in 4 random characters, which can meet a task's of the same title in the same area ("Post again",
+    // regular visits): the insert then fails on the unique slug, so it tries another (sweep 2026-11-20).
+    let slug = '';
+    for (let attempt = 0; ; attempt += 1) {
+      slug = `${slugBase}-${randomBytes(3).toString('hex').slice(0, 4)}`;
+      try {
+        await db.transaction(async (tx) => {
+          let locationId: string | null = null;
+          if (location) {
+            locationId = newId('loc');
+            await tx.insert(taskLocations).values({
+              id: locationId,
+              ownerUserId: userId,
+              addressEnc: location.addressEnc,
+              zip: location.zip,
+              areaId: location.areaId,
+              createdAt: at,
+            });
+          }
+          await tx.insert(tasks).values({
+            id: taskId,
+            slug,
+            posterUserId: userId,
+            marketId: market.id,
+            categoryId: category.id,
+            title: draft.title,
+            description: draft.description,
+            details: draft.details,
+            mode: draft.location.mode,
+            status: 'open',
+            pricingType: draft.budget.type,
+            budgetCents: draft.budget.type === 'fixed' ? draft.budget.priceCents : null,
+            hourlyRateCents: draft.budget.type === 'hourly' ? draft.budget.rateCents : null,
+            estimatedHours: draft.budget.type === 'hourly' ? draft.budget.estimatedHours : null,
+            hoursCap: draft.budget.type === 'hourly' ? draft.budget.hoursCap : null,
+            expenseAllowanceCents: draft.expenseAllowance?.amountCents ?? 0,
+            expenseAllowanceNote: draft.expenseAllowance?.description ?? null,
+            windowStart,
+            windowEnd,
+            flexible,
+            locationId,
+            publicAreaId: location?.areaId ?? null,
+            publicLat: point?.lat ?? null,
+            publicLng: point?.lng ?? null,
+            publishedAt: at,
+            expiresAt: windowEnd,
+            createdAt: at,
+            updatedAt: at,
+          });
+          if (photoIds.length > 0) {
+            await tx.insert(taskPhotos).values(photoIds.map((fileId, position) => ({ taskId, fileId, position })));
+          }
+          await tx.insert(outboxEvents).values({
+            id: newId('evt'),
+            type: 'task.posted',
+            aggregateType: 'task',
+            aggregateId: taskId,
+            payload: { taskId, marketId: market.id, categorySlug: category.slug },
+          });
+          await tx.insert(auditLog).values({
+            id: newId('aud'),
+            actorId: userId,
+            actorRole: 'user',
+            action: 'task.posted',
+            targetType: 'task',
+            targetId: taskId,
+          });
         });
+        break;
+      } catch (error) {
+        if (!isUniqueViolation(error) || attempt >= 2) throw error;
       }
-      await tx.insert(tasks).values({
-        id: taskId,
-        slug,
-        posterUserId: userId,
-        marketId: market.id,
-        categoryId: category.id,
-        title: draft.title,
-        description: draft.description,
-        details: draft.details,
-        mode: draft.location.mode,
-        status: 'open',
-        pricingType: draft.budget.type,
-        budgetCents: draft.budget.type === 'fixed' ? draft.budget.priceCents : null,
-        hourlyRateCents: draft.budget.type === 'hourly' ? draft.budget.rateCents : null,
-        estimatedHours: draft.budget.type === 'hourly' ? draft.budget.estimatedHours : null,
-        hoursCap: draft.budget.type === 'hourly' ? draft.budget.hoursCap : null,
-        expenseAllowanceCents: draft.expenseAllowance?.amountCents ?? 0,
-        expenseAllowanceNote: draft.expenseAllowance?.description ?? null,
-        windowStart,
-        windowEnd,
-        flexible,
-        locationId,
-        publicAreaId: location?.areaId ?? null,
-        publicLat: point?.lat ?? null,
-        publicLng: point?.lng ?? null,
-        publishedAt: at,
-        expiresAt: windowEnd,
-        createdAt: at,
-        updatedAt: at,
-      });
-      if (photoIds.length > 0) {
-        await tx.insert(taskPhotos).values(photoIds.map((fileId, position) => ({ taskId, fileId, position })));
-      }
-      await tx.insert(outboxEvents).values({
-        id: newId('evt'),
-        type: 'task.posted',
-        aggregateType: 'task',
-        aggregateId: taskId,
-        payload: { taskId, marketId: market.id, categorySlug: category.slug },
-      });
-      await tx.insert(auditLog).values({
-        id: newId('aud'),
-        actorId: userId,
-        actorRole: 'user',
-        action: 'task.posted',
-        targetType: 'task',
-        targetId: taskId,
-      });
-    });
+    }
     return { ok: true, taskId, slug };
   }
 

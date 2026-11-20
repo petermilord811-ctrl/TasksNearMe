@@ -72,11 +72,13 @@ export function toRow(row: Row): PublicTaskRow {
 }
 
 /**
- * Open, not past, and not hidden by staff: what the board, the feeds and the public pages list. `rows: 'real'` leaves
+ * Open for offers, and not hidden by staff: what the board, the feeds and the public pages list. A task leaves them
+ * when its window starts, where offers expire (blueprint 03); listed until its end, it took offers that were dead on
+ * arrival (sweep 2026-11-20). Its poster's own lists don't use this. `rows: 'real'` leaves
  * sample tasks out, for the public where samples are hidden (src/shared/sample-data.ts); signed-in readers keep `all`.
  */
 export function openIn(marketId: string, now: Date, rows: RowScope = 'all'): SQL[] {
-  const conditions = [eq(tasks.marketId, marketId), eq(tasks.status, 'open'), gt(tasks.windowEnd, now), isNull(tasks.hiddenAt)];
+  const conditions = [eq(tasks.marketId, marketId), eq(tasks.status, 'open'), gt(tasks.windowStart, now), isNull(tasks.hiddenAt)];
   const real = rowScopeCondition(rows, tasks.id);
   return real ? [...conditions, real] : conditions;
 }
