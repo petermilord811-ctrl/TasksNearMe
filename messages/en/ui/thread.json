@@ -126,6 +126,7 @@
   "newMessages": "New messages",
   "loadEarlier": "Load earlier messages",
   "loadingEarlier": "Loading earlier messages…",
+  "loadedEarlier": "{count, plural, one {Loaded # earlier message} other {Loaded # earlier messages}}",
   "actions": {
     "label": "Reply or react to {name}",
     "reply": "Reply"

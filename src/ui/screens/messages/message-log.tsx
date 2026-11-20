@@ -56,6 +56,21 @@ function EarlierLabel() {
   return pending ? <><Spinner aria-hidden="true" />{t('loadingEarlier')}</> : <><ArrowUp aria-hidden="true" />{t('loadEarlier')}</>;
 }
 
+/** A line for screen readers: earlier messages loaded above (how many), or one new message. */
+type Announcement = { key: string; message?: MessageView; earlierCount?: number };
+
+/** What's new to say between two renders' messages (sweep MN11): earlier ones loaded above, then each new one not your own. */
+function newAnnouncements(before: MessageView[], now: MessageView[]): Announcement[] {
+  const out: Announcement[] = [];
+  const firstId = before[0]?.id;
+  const earlier = firstId ? now.findIndex((message) => message.id === firstId) : -1;
+  if (earlier > 0) out.push({ key: `earlier-${now[0]!.id}`, earlierCount: earlier });
+  const lastId = before.at(-1)?.id;
+  const last = lastId ? now.findIndex((message) => message.id === lastId) : -1;
+  if (last >= 0) for (const message of now.slice(last + 1)) if (message.sender !== 'me') out.push({ key: message.id, message });
+  return out;
+}
+
 /** Refresh preserves draft state; only readers already at the bottom follow incoming messages. */
 /** Messages from the same person within this long read as one group: their name once, tighter spacing. */
 const GROUP_MS = 5 * 60_000;
@@ -100,6 +115,16 @@ export function MessageLog({ messages, earlierHref, otherParty, now, seenMessage
     };
   }, [router]);
 
+  // What a screen reader hears (sweep MN11): the conversation itself isn't a live region, so earlier messages loaded above
+  // are one line ("Loaded 12 earlier messages") and new ones from the other person, or the app, are read out as they
+  // come. Your own aren't (you just sent them); the first messages on opening aren't either. Worked out as the messages
+  // change, from the ones before (React's pattern for keeping what an earlier render had).
+  const [heard, setHeard] = useState<{ messages: MessageView[]; announcements: Announcement[] }>({ messages, announcements: [] });
+  if (heard.messages !== messages) {
+    const next = newAnnouncements(heard.messages, messages);
+    setHeard({ messages, announcements: next.length > 0 ? [...heard.announcements, ...next].slice(-5) : heard.announcements });
+  }
+
   // Earlier messages come in above the ones shown (sweep MN11): the reader stays where they were.
   const shown = useRef({ firstId: messages[0]?.id, height: 0 });
   useLayoutEffect(() => {
@@ -119,7 +144,12 @@ export function MessageLog({ messages, earlierHref, otherParty, now, seenMessage
     days.set(key, day);
   }
 
-  return <div ref={logRef} role="log" aria-label={t('log')} aria-live="polite" aria-relevant="additions text" tabIndex={0}
+  return <>
+  <div aria-live="polite" aria-relevant="additions" className="sr-only">
+    {heard.announcements.map((item) => <p key={item.key}>{item.message ? <>{item.message.sender === 'them' ? otherParty.displayName : t('system')}: <MessageContent message={item.message} /></> : t('loadedEarlier', { count: item.earlierCount ?? 0 })}</p>)}
+  </div>
+  {/* Not a live region (aria-live off; a log is polite by default): the line above announces what's new. */}
+  <div ref={logRef} role="log" aria-label={t('log')} aria-live="off" tabIndex={0}
     onScroll={(event) => {
       const log = event.currentTarget;
       atBottom.current = log.scrollHeight - log.scrollTop - log.clientHeight <= 40;
@@ -210,5 +240,6 @@ export function MessageLog({ messages, earlierHref, otherParty, now, seenMessage
         })}
       </ol>
     </section>)}
-  </div>;
+  </div>
+  </>;
 }

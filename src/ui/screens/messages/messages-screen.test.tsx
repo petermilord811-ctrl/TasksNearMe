@@ -128,11 +128,12 @@ describe('ThreadScreen', () => {
     }
   });
 
-  it('keeps contact segments masked and uses timeline copy inside a polite message log', () => {
+  it('keeps contact segments masked and uses timeline copy inside the message log, which announces nothing itself', () => {
     const { container } = thread();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     const log = screen.getByRole('log');
-    expect(log).toHaveAttribute('aria-live', 'polite');
+    // New messages are announced by their own polite line (sweep MN11): the log's implicit live region is off.
+    expect(log).toHaveAttribute('aria-live', 'off');
     expect(within(log).getByText('•••-•••-0134 (hidden until booking)')).toBeVisible();
     expect(within(log).getByText('•••@••• (hidden until booking)')).toBeVisible();
     expect(log).toHaveTextContent('Offer received · $50.00');
@@ -246,6 +247,29 @@ describe('ThreadScreen', () => {
     view.rerender(threadView(deskBookingThreadPageData));
     expect(log.scrollTop).toBe(400);
     expect(screen.queryByRole('link', { name: 'Load earlier messages' })).toBeNull();
+  });
+
+  it('announces earlier messages loaded above as one line, and new ones from the other person as they come (sweep MN11)', () => {
+    // Every live region on the page and what it says (a log or status without aria-live is polite by default).
+    const live = () => [...document.querySelectorAll('[aria-live]:not([aria-live="off"]), [role="log"]:not([aria-live]), [role="status"]:not([aria-live]), [role="alert"]:not([aria-live])')].map((region) => region.textContent ?? '');
+    const added = (before: string[], after: string[]) => {
+      expect(after).toHaveLength(before.length);
+      return after.flatMap((text, index) => (text === before[index] ? [] : [text.startsWith(before[index]!) ? text.slice(before[index]!.length) : text]));
+    };
+    const latest = { ...deskBookingThreadPageData, messages: deskBookingThreadPageData.messages.slice(2), earlier: { from: 'msg_1' } };
+    const view = thread(latest);
+    const opened = live();
+    // Opening it says none of its messages.
+    expect(opened.join(' ')).not.toContain('Here is the desk');
+    // Two earlier messages come in above: one line, and none of their words.
+    view.rerender(threadView(deskBookingThreadPageData));
+    const loaded = live();
+    expect(added(opened, loaded)).toEqual(['Loaded 2 earlier messages']);
+    // A new message from Jordan is read out, with his name; your own isn't.
+    const theirs: MessageView = { id: 'msg_new_theirs', sender: 'them', kind: 'text', segments: [{ kind: 'text', text: 'Parking in the driveway?' }], attachments: [], createdAt: '2026-11-21T16:01:00.000Z' };
+    const mine: MessageView = { ...theirs, id: 'msg_new_mine', sender: 'me', segments: [{ kind: 'text', text: 'Yes, go ahead.' }], createdAt: '2026-11-21T16:02:00.000Z' };
+    view.rerender(threadView({ ...deskBookingThreadPageData, messages: [...deskBookingThreadPageData.messages, theirs, mine] }));
+    expect(added(loaded, live())).toEqual(['Jordan T.: Parking in the driveway?']);
   });
 
   it('opens at the latest message and follows new messages only when already at the bottom', () => {
