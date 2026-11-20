@@ -70,6 +70,8 @@ import { offers } from './schema';
  */
 
 const ACTIVE: OfferStatus[] = ['pending', 'stale'];
+/** Account statuses whose tasks stay open to offers (tasks/queries.ts openIn lists the same). */
+const POSTER_ACTIVE = new Set(['active', 'restricted']);
 /** Offers that ended without a booking: the helper may offer on the task again (an expired one is a routine case). */
 export const CLOSED_OFFER_STATUSES: readonly OfferStatus[] = ['expired', 'declined', 'withdrawn'];
 const isClosedOffer = (status: OfferStatus) => CLOSED_OFFER_STATUSES.includes(status);
@@ -332,9 +334,10 @@ export async function helperOfferStates(db: Db, userId: string, taskIds: string[
   const [state, rows, latest] = await Promise.all([
     loadHelperState(db, userId, now),
     db
-      .select({ task: tasks, category: categories })
+      .select({ task: tasks, category: categories, posterStatus: users.status })
       .from(tasks)
       .innerJoin(categories, eq(categories.id, tasks.categoryId))
+      .innerJoin(users, eq(users.id, tasks.posterUserId))
       .where(inArray(tasks.id, taskIds)),
     latestOffersOf(db, userId, taskIds, now),
   ]);
@@ -352,17 +355,19 @@ export async function helperOfferStates(db: Db, userId: string, taskIds: string[
 
 async function taskWithCategory(db: Db, taskId: string) {
   const [row] = await db
-    .select({ task: tasks, category: categories })
+    .select({ task: tasks, category: categories, posterStatus: users.status })
     .from(tasks)
     .innerJoin(categories, eq(categories.id, tasks.categoryId))
+    .innerJoin(users, eq(users.id, tasks.posterUserId))
     .where(eq(tasks.id, taskId))
     .limit(1);
   return row ?? null;
 }
 
-function taskFacts(row: { task: TaskRow; category: typeof categories.$inferSelect }, distanceMiles: number | null): TaskOfferFacts {
+function taskFacts(row: { task: TaskRow; category: typeof categories.$inferSelect; posterStatus: string }, distanceMiles: number | null): TaskOfferFacts {
   return {
     posterUserId: row.task.posterUserId,
+    posterInactive: !POSTER_ACTIVE.has(row.posterStatus),
     status: row.task.status,
     hidden: row.task.hiddenAt !== null,
     windowStart: row.task.windowStart,

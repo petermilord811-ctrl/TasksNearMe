@@ -352,8 +352,17 @@ export async function cancelTask(db: Db, userId: string, taskId: string, reason:
   const task = await ownedTask(db, userId, taskId);
   if (!task) return { ok: false, code: 'not_found' };
   if (task.status !== 'open') return { ok: false, code: 'not_allowed' };
-  await db.transaction(async (tx) => {
-    await tx.update(tasks).set({ status: 'canceled', offerCount: 0, updatedAt: now, version: task.version + 1 }).where(eq(tasks.id, taskId));
+  // Not while a booking's payment is under way (the bank step): it could still confirm and book the task (sweep PT7).
+  const [funding] = await db.select({ id: bookings.id }).from(bookings).where(and(eq(bookings.taskId, taskId), eq(bookings.status, 'pending_funding'))).limit(1);
+  if (funding) return { ok: false, code: 'not_allowed' };
+  const canceled = await db.transaction(async (tx) => {
+    // Only from open: a booking that confirmed meanwhile keeps its task (sweep PT7; settle() checks the other way).
+    const [row] = await tx
+      .update(tasks)
+      .set({ status: 'canceled', offerCount: 0, updatedAt: now, version: task.version + 1 })
+      .where(and(eq(tasks.id, taskId), eq(tasks.status, 'open')))
+      .returning({ id: tasks.id });
+    if (!row) return false;
     const declined = await tx
       .update(offers)
       .set({ status: 'declined', closedAt: now, updatedAt: now })
@@ -373,6 +382,7 @@ export async function cancelTask(db: Db, userId: string, taskId: string, reason:
       targetId: taskId,
       reason,
     });
+    return true;
   });
-  return { ok: true, code: 'canceled' };
+  return canceled ? { ok: true, code: 'canceled' } : { ok: false, code: 'not_allowed' };
 }

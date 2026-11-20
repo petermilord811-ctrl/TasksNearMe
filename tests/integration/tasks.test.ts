@@ -158,6 +158,15 @@ describe('posting a task', () => {
     };
     expect(await deskIds(new Date('2026-11-21T15:30:00.000Z'))).toContain(posted.desk);
     expect(await deskIds(new Date('2026-11-21T16:30:00.000Z'))).not.toContain(posted.desk);
+    // Not while its poster is suspended; back once reinstated (sweep PT10).
+    const [poster] = await db.select({ id: tasks.posterUserId }).from(tasks).where(eq(tasks.id, posted.desk!));
+    await db.update(users).set({ status: 'suspended' }).where(eq(users.id, poster!.id));
+    try {
+      expect(await deskIds(NOW)).not.toContain(posted.desk);
+    } finally {
+      await db.update(users).set({ status: 'active' }).where(eq(users.id, poster!.id));
+    }
+    expect(await deskIds(NOW)).toContain(posted.desk);
 
     const recent = await listRecentOpenTasks(db, { marketId: market!.id, categorySlug: 'furniture-assembly', limit: 3, now: NOW });
     expect(recent.every((t) => t.categorySlug === 'furniture-assembly')).toBe(true);

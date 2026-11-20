@@ -78,7 +78,14 @@ export function toRow(row: Row): PublicTaskRow {
  * sample tasks out, for the public where samples are hidden (src/shared/sample-data.ts); signed-in readers keep `all`.
  */
 export function openIn(marketId: string, now: Date, rows: RowScope = 'all'): SQL[] {
-  const conditions = [eq(tasks.marketId, marketId), eq(tasks.status, 'open'), gt(tasks.windowStart, now), isNull(tasks.hiddenAt)];
+  const conditions = [
+    eq(tasks.marketId, marketId),
+    eq(tasks.status, 'open'),
+    gt(tasks.windowStart, now),
+    isNull(tasks.hiddenAt),
+    // Not while its poster can't use their account: suspended, banned or deleted (sweep PT10). Reinstated, it's back.
+    sql`exists (select 1 from ${users} where ${users.id} = ${tasks.posterUserId} and ${users.status} in ('active', 'restricted'))`,
+  ];
   const real = rowScopeCondition(rows, tasks.id);
   return real ? [...conditions, real] : conditions;
 }

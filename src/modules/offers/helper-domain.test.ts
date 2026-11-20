@@ -41,6 +41,8 @@ describe('offer rules', () => {
     expect(offerBlockedReason(jordan, { ...desk, windowStart: now, windowEnd: now }, now)).toBe('task_closed');
     // Offers expire at the window's start (blueprint 03): once it has started, one sent now would be dead on arrival.
     expect(offerBlockedReason(jordan, { ...desk, windowStart: now, windowEnd: new Date(now.getTime() + 3_600_000) }, now)).toBe('task_closed');
+    // Its poster suspended, banned or deleted: closed, as the feeds leave it out (sweep PT10).
+    expect(offerBlockedReason(jordan, { ...desk, posterInactive: true }, now)).toBe('task_closed');
     expect(offerBlockedReason({ ...jordan, bookableCategories: [] }, desk, now)).toBe('not_bookable');
     expect(offerBlockedReason({ ...jordan, suspended: true }, desk, now)).toBe('not_bookable');
     expect(offerBlockedReason(jordan, { ...desk, categorySlug: 'computer-help' }, now)).toBe('category_not_offered');

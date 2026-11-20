@@ -70,6 +70,8 @@ export interface TaskOfferFacts {
   status: TaskStatus | string;
   /** Hidden by staff (UI-033): no offers, like a closed task. */
   hidden?: boolean;
+  /** Its poster can't use their account (suspended, banned or deleted): no offers, as the feeds leave it out (sweep PT10). */
+  posterInactive?: boolean;
   /** Offers close here: they expire at the window's start (blueprint 03), so one sent later would be dead on arrival. */
   windowStart: Date;
   windowEnd: Date;
@@ -83,7 +85,7 @@ export interface TaskOfferFacts {
 /** Why this helper can't offer on this task, or undefined when they can. Checked in this order. */
 export function offerBlockedReason(helper: HelperOfferFacts, task: TaskOfferFacts, now: Date): OfferBlockedReason | undefined {
   if (task.posterUserId === helper.userId) return 'own_task';
-  if (task.status !== 'open' || task.hidden || task.windowStart <= now) return 'task_closed';
+  if (task.status !== 'open' || task.hidden || task.posterInactive || task.windowStart <= now) return 'task_closed';
   if (helper.suspended || helper.bookableCategories.length === 0) return 'not_bookable';
   if (!helper.offeredCategories.includes(task.categorySlug)) return 'category_not_offered';
   if (!helper.bookableCategories.includes(task.categorySlug)) {
