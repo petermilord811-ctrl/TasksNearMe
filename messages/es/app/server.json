@@ -144,6 +144,7 @@
         "task_expired": "Publícala de nuevo con otra fecha: lo que escribiste se conserva.",
         "booking_confirmed": "Todo, incluido el chat con la otra persona, está en la página de la reserva.",
         "booking_canceled": "La página de la reserva te dice qué sigue, incluido cualquier reembolso.",
+        "booking_canceled_receipt": "Los detalles siguen en la página de la reserva.",
         "helper_on_the_way": "Sigue el avance y escríbele desde la página de la reserva.",
         "helper_running_late": "Si la nueva hora no te funciona, escríbele desde la página de la reserva.",
         "cant_access": "Escríbele desde la página de la reserva para que pueda entrar.",
@@ -208,6 +209,7 @@
       "task_expired": "El horario de {title} pasó sin reserva.",
       "booking_confirmed": "Tu reserva para {title} está confirmada.",
       "booking_canceled": "Tu reserva para {title} fue cancelada.",
+      "booking_canceled_receipt": "Cancelaste {by, select, helper {la reserva} other {tu reserva}} para {title}{hasDate, select, yes { del {date}} other {}}.",
       "helper_on_the_way": "{actorName} va en camino para {title}.",
       "helper_running_late": "{actorName} llega {hasMinutes, select, yes {{minutes, plural, one {# minuto} other {# minutos}} } other {}}tarde a {title}.",
       "helper_arrived": "{actorName} llegó para {title}.",
@@ -260,7 +262,11 @@
       "saved_search_match": "Nueva tarea para tu búsqueda {search}: {title}.",
       "saved_search_digest": "{count, plural, one {# tarea nueva para tu búsqueda {search}} other {# tareas nuevas para tu búsqueda {search}}}."
     },
-    "pushTitle": "TasksNearMe"
+    "pushTitle": "TasksNearMe",
+    "receipt": {
+      "money": "{money, select, refund {Te devolvemos {amount} a tu medio de pago. Tu banco puede tardar de 5 a 10 días hábiles en mostrarlo.} late_refund {Te devolvemos {amount} a tu medio de pago, y el resto es para {actorName} por cancelar tarde. Tu banco puede tardar de 5 a 10 días hábiles en mostrarlo.} no_refund {La cancelación gratis ya había terminado, así que esta reserva no tiene reembolso.} not_charged {No se te cobró nada, así que no hay nada que reembolsar.} client_refunded {A {actorName} le devolvemos {amount}.} client_not_charged {A {actorName} todavía no se le había cobrado.} compensation {Sumamos {amount} a tus ganancias por tu tiempo.} other {}}",
+      "told": "Ya se lo avisamos a {actorName}."
+    }
   },
   "emails": {
     "footer": {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NOTIFICATION_TOPICS, NOTIFICATION_TYPES } from '@/contracts';
-import { NOTIFICATION_TOPIC, planDelivery, preferenceOn, quietHoursEnd } from './delivery-domain';
+import { cancelReceiptMoney, channelsFor, NOTIFICATION_TOPIC, planDelivery, preferenceOn, quietHoursEnd } from './delivery-domain';
 
 const at = (iso: string) => new Date(iso);
 
@@ -69,5 +69,30 @@ describe('notification delivery rules', () => {
     expect(planDelivery({ type: 'offer_received', channel: 'email', enabled: false, hasAddress: true, now: day, timeZone: AUSTIN })).toEqual({ action: 'skip', reason: 'preference_off' });
     expect(planDelivery({ type: 'helper_arrived', channel: 'sms', enabled: true, hasAddress: false, now: day, timeZone: AUSTIN })).toEqual({ action: 'skip', reason: 'no_verified_phone' });
     expect(planDelivery({ type: 'offer_received', channel: 'email', enabled: true, hasAddress: false, now: day, timeZone: AUSTIN })).toEqual({ action: 'skip', reason: 'no_email' });
+  });
+});
+
+describe('the cancellation receipt (the owner\'s choice, 2026-11-20)', () => {
+  it('goes by email only, as a booking email (always on, no unsubscribe)', () => {
+    expect(channelsFor('booking_canceled_receipt')).toEqual(['email']);
+    expect(channelsFor('booking_canceled')).toEqual(['email', 'sms', 'push']);
+    expect(NOTIFICATION_TOPIC.booking_canceled_receipt).toBe('bookings');
+  });
+
+  it("says what happens to the money for whoever canceled", () => {
+    const paid = { refundCents: 5400, compensationCents: 0, paid: true };
+    // The client: their refund (part of it after free cancellation), none, or nothing charged yet.
+    expect(cancelReceiptMoney('poster', { ...paid, reason: 'poster_early' })).toEqual({ money: 'refund', amountCents: 5400 });
+    expect(cancelReceiptMoney('poster', { ...paid, reason: 'poster_late', refundCents: 2700, compensationCents: 2700 })).toEqual({ money: 'late_refund', amountCents: 2700 });
+    expect(cancelReceiptMoney('poster', { ...paid, reason: 'poster_late', refundCents: 0 })).toEqual({ money: 'no_refund' });
+    expect(cancelReceiptMoney('poster', { reason: 'poster_early', refundCents: 0, compensationCents: 0, paid: false })).toEqual({ money: 'not_charged' });
+    // The helper: the client's refund, or what they're paid for their time when the client wasn't there.
+    expect(cancelReceiptMoney('helper', { ...paid, reason: 'helper' })).toEqual({ money: 'client_refunded', amountCents: 5400 });
+    expect(cancelReceiptMoney('helper', { reason: 'helper', refundCents: 0, compensationCents: 0, paid: false })).toEqual({ money: 'client_not_charged' });
+    expect(cancelReceiptMoney('helper', { reason: 'poster_no_show', refundCents: 2700, compensationCents: 2700, paid: true })).toEqual({ money: 'compensation', amountCents: 2700 });
+    expect(cancelReceiptMoney('helper', { reason: 'poster_no_show', refundCents: 0, compensationCents: 0, paid: true })).toEqual({});
+    // An event that doesn't carry the refund: no money line, rather than a wrong one.
+    expect(cancelReceiptMoney('poster', { reason: 'poster_early', paid: true })).toEqual({});
+    expect(cancelReceiptMoney('helper', { reason: 'helper', paid: true })).toEqual({});
   });
 });

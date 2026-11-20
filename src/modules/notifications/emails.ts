@@ -20,6 +20,8 @@ export interface NotificationEmailInput {
   topic: NotificationTopic;
   /** What happened, already worded ("Your booking for … is confirmed."). */
   sentence: string;
+  /** More about it, a paragraph each, under the sentence (a receipt's refund). */
+  details?: readonly string[];
   target: AttentionTarget;
   /** The page it's about (absolute, in the recipient's language). */
   url: string;
@@ -37,7 +39,7 @@ export interface NotificationEmail {
 }
 
 export function renderNotificationEmail(input: NotificationEmailInput): NotificationEmail {
-  const { type, topic, sentence, target, url, userId, appUrl, locale = DEFAULT_LOCALE } = input;
+  const { type, topic, sentence, details = [], target, url, userId, appUrl, locale = DEFAULT_LOCALE } = input;
   const t = tFor(locale);
   // Not every type has a next step (the sentence says it all).
   const nextKey = `next.${type}` as 'next.offer_received';
@@ -52,6 +54,7 @@ export function renderNotificationEmail(input: NotificationEmailInput): Notifica
   const body = `<tr><td class="card-pad" style="padding:36px 40px 32px;">
 <p style="margin:0 0 10px;font-family:${EMAIL_FONT};font-size:12px;line-height:16px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:${EMAIL_COLORS.primary};">${esc(topicName)}</p>
 <h1 class="h1 ink" style="margin:0;font-family:${EMAIL_DISPLAY_FONT};font-size:26px;line-height:33px;font-weight:800;letter-spacing:-0.5px;color:${EMAIL_COLORS.ink};">${esc(sentence)}</h1>
+${details.map((line) => `<p class="ink" style="margin:12px 0 0;font-family:${EMAIL_FONT};font-size:16px;line-height:24px;color:${EMAIL_COLORS.ink};">${esc(line)}</p>`).join('\n')}
 ${next ? `<p class="muted" style="margin:12px 0 0;font-family:${EMAIL_FONT};font-size:16px;line-height:24px;color:${EMAIL_COLORS.muted};">${esc(next)}</p>` : ''}
 <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:24px;"><tr><td>${emailButton({ href: url, label: cta })}</td></tr></table>
 </td></tr>`;
@@ -61,6 +64,7 @@ ${next ? `<p class="muted" style="margin:12px 0 0;font-family:${EMAIL_FONT};font
 
   const text = [
     sentence,
+    ...details,
     ...(next ? [next] : []),
     t('open', { url }),
     unsubscribeUrl ? t('textOptionalFooter', { topic: t(`topicEmails.${topic}`), settingsUrl, unsubscribeUrl }) : t('textLockedFooter', { settingsUrl }),
@@ -69,7 +73,7 @@ ${next ? `<p class="muted" style="margin:12px 0 0;font-family:${EMAIL_FONT};font
   return {
     subject: sentence,
     text,
-    html: emailLayout({ title: sentence, preheader: next ?? sentence, appUrl, body, footer, lang: locale }),
+    html: emailLayout({ title: sentence, preheader: details[0] ?? next ?? sentence, appUrl, body, footer, lang: locale }),
     ...(locked
       ? {}
       : { headers: { 'List-Unsubscribe': `<${oneClickUnsubscribeUrl(appUrl, userId, topic)}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' } }),

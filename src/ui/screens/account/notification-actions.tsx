@@ -22,6 +22,7 @@ const icons: Record<NotificationType, LucideIcon> = {
   task_expired: CalendarOff,
   booking_confirmed: CalendarCheck,
   booking_canceled: CalendarX,
+  booking_canceled_receipt: CalendarX,
   helper_on_the_way: Navigation,
   helper_running_late: Clock,
   helper_arrived: MapPin,

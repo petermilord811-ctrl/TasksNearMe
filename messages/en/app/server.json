@@ -144,6 +144,7 @@
         "task_expired": "Post it again with a new date: what you wrote is kept.",
         "booking_confirmed": "Everything about it, including the chat with the other person, is on the booking page.",
         "booking_canceled": "The booking page says what happens next, including any refund.",
+        "booking_canceled_receipt": "Its details stay on the booking page.",
         "helper_on_the_way": "Follow along and message them from the booking page.",
         "helper_running_late": "If the new time doesn't work, message them from the booking page.",
         "cant_access": "Message them from the booking page so they can get in.",
@@ -208,6 +209,7 @@
       "task_expired": "The time for {title} passed with no booking.",
       "booking_confirmed": "Your booking for {title} is confirmed.",
       "booking_canceled": "Your booking for {title} was canceled.",
+      "booking_canceled_receipt": "You canceled {by, select, helper {the booking} other {your booking}} for {title}{hasDate, select, yes { on {date}} other {}}.",
       "helper_on_the_way": "{actorName} is on the way for {title}.",
       "helper_running_late": "{actorName} is running {hasMinutes, select, yes {{minutes, plural, one {# minute} other {# minutes}} } other {}}late for {title}.",
       "helper_arrived": "{actorName} has arrived for {title}.",
@@ -260,7 +262,11 @@
       "saved_search_match": "New task for your search {search}: {title}.",
       "saved_search_digest": "{count, plural, one {# new task for your search {search}} other {# new tasks for your search {search}}}."
     },
-    "pushTitle": "TasksNearMe"
+    "pushTitle": "TasksNearMe",
+    "receipt": {
+      "money": "{money, select, refund {{amount} is going back to how you paid. Banks can take 5 to 10 business days to show it.} late_refund {{amount} is going back to how you paid, and the rest goes to {actorName} for the late cancellation. Banks can take 5 to 10 business days to show it.} no_refund {Free cancellation had ended, so this booking isn't refunded.} not_charged {Nothing was charged, so there's nothing to refund.} client_refunded {{actorName} gets {amount} back.} client_not_charged {{actorName} hadn't been charged yet.} compensation {{amount} for your time is added to your earnings.} other {}}",
+      "told": "We've let {actorName} know."
+    }
   },
   "emails": {
     "footer": {

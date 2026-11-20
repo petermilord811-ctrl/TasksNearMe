@@ -34,6 +34,7 @@ const copy: Record<NotificationType, RegExp> = {
   task_expired: /ended with no booking/,
   booking_confirmed: /is confirmed/,
   booking_canceled: /was canceled/,
+  booking_canceled_receipt: /You canceled/,
   helper_on_the_way: /is on the way/,
   helper_running_late: /running 10 minutes late/,
   helper_arrived: /has arrived/,

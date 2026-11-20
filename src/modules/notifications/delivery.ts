@@ -14,7 +14,7 @@ import { newId } from '@/platform/db/ids';
 import { formatDate, formatDateTime, formatMoney } from '@/shared/format';
 import { localizedPath } from '@/shared/locale';
 import { pushSenderFromEnv, type PushMessage, type PushSender } from '@/integrations/push/web-push';
-import { DELIVERY_CHANNELS, missingAddressReason, NOTIFICATION_TOPIC, planDelivery, preferenceOn, pushOn, RETRY_MINUTES, URGENT_TYPES, type DeliveryChannel } from './delivery-domain';
+import { channelsFor, missingAddressReason, NOTIFICATION_TOPIC, planDelivery, preferenceOn, pushOn, RETRY_MINUTES, URGENT_TYPES, type DeliveryChannel } from './delivery-domain';
 import { renderNotificationEmail } from './emails';
 import { emailSuppressions, notificationDeliveries, notificationPreferences, notifications, pushSubscriptions } from './schema';
 
@@ -123,7 +123,13 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
   });
   const url = `${appUrl()}${localizedPath(pathOf(row.target), locale)}`;
   const type = row.type as NotificationType;
-  const email = renderNotificationEmail({ type, topic: NOTIFICATION_TOPIC[type], sentence, target: row.target, url, userId: row.userId, appUrl: appUrl(), locale });
+  // A cancellation receipt also says what happens to the money, and that the other person was told.
+  const actorName = row.actorName ?? t('actorFallback');
+  const details =
+    type === 'booking_canceled_receipt'
+      ? [t('receipt.money', { money: params.money ?? 'other', amount: params.amountCents === undefined ? '' : formatMoney(params.amountCents), actorName }), t('receipt.told', { actorName })].filter((line) => line !== '')
+      : [];
+  const email = renderNotificationEmail({ type, topic: NOTIFICATION_TOPIC[type], sentence, details, target: row.target, url, userId: row.userId, appUrl: appUrl(), locale });
   return { ...email, sms: t('sms', { sentence, url }), push: { title: t('pushTitle'), body: sentence, url, ...(row.id ? { tag: row.id } : {}) } };
 }
 
@@ -270,7 +276,8 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
     const topic: NotificationTopic | undefined = NOTIFICATION_TOPIC[notification.type as NotificationType];
     if (!topic) continue;
     const stale = await staleMessage(db, notification);
-    for (const channel of DELIVERY_CHANNELS) {
+    // A receipt goes by email only (no rows for the other channels).
+    for (const channel of channelsFor(notification.type as NotificationType)) {
       // Push only where it's set up (no rows otherwise).
       if (channel === 'push' && !providers.push) continue;
       const to = addressOf(person, channel);

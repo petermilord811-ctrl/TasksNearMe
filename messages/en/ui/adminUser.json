@@ -110,6 +110,7 @@
     "task_expired": "Task expired",
     "booking_confirmed": "Booking confirmed",
     "booking_canceled": "Booking canceled",
+    "booking_canceled_receipt": "Cancellation receipt (email)",
     "helper_on_the_way": "Helper on the way",
     "helper_running_late": "Helper running late",
     "helper_arrived": "Helper arrived",

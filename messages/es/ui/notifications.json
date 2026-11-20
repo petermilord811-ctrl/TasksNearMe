@@ -23,6 +23,7 @@
     "task_expired": "{title} terminó sin reserva",
     "booking_confirmed": "Tu reserva para {title} está confirmada",
     "booking_canceled": "Tu reserva para {title} se canceló",
+    "booking_canceled_receipt": "Cancelaste tu reserva para {title}",
     "helper_on_the_way": "{actorName} va en camino para {title}",
     "helper_running_late": "{actorName} se retrasa {hasMinutes, select, yes {{minutes, plural, one {# minuto} other {# minutos}} } other {}}para {title}",
     "helper_arrived": "{actorName} llegó para {title}",

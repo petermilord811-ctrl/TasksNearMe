@@ -1,4 +1,4 @@
-import { NOTIFICATION_CHANNELS, type NotificationChannel, type NotificationTopic, type NotificationType, type TimeZone } from '@/contracts';
+import { NOTIFICATION_CHANNELS, type CancelReceiptMoney, type NotificationChannel, type NotificationTopic, type NotificationType, type TimeZone } from '@/contracts';
 import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
 
 /**
@@ -16,6 +16,7 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   task_expired: 'offers',
   booking_confirmed: 'bookings',
   booking_canceled: 'bookings',
+  booking_canceled_receipt: 'bookings',
   helper_on_the_way: 'bookings',
   helper_running_late: 'bookings',
   helper_arrived: 'bookings',
@@ -72,6 +73,30 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   saved_search_match: 'task_alerts',
   saved_search_digest: 'task_alerts',
 };
+
+/**
+ * Types that go by email only: never in the bell (made read, and left out of the notifications page) and never as a text
+ * or a push. The cancellation receipt (the owner's choice, 2026-11-20): the person did it on screen, so it's a record.
+ */
+export const EMAIL_ONLY_TYPES: ReadonlySet<NotificationType> = new Set<NotificationType>(['booking_canceled_receipt']);
+
+/**
+ * What a cancellation receipt says about the money, for the person who canceled (`by`): from the event's refund and
+ * compensation, and whether the booking was ever paid (`confirmed_at`). No line when there's nothing to say.
+ */
+export function cancelReceiptMoney(by: 'poster' | 'helper', event: { reason?: string; refundCents?: number; compensationCents?: number; paid: boolean }): { money?: CancelReceiptMoney; amountCents?: number } {
+  const { refundCents, compensationCents = 0 } = event;
+  if (by === 'poster') {
+    if (!event.paid) return { money: 'not_charged' };
+    // An event that doesn't say: nothing said, rather than a wrong "no refund".
+    if (refundCents === undefined) return {};
+    if (refundCents <= 0) return { money: 'no_refund' };
+    return { money: event.reason === 'poster_late' ? 'late_refund' : 'refund', amountCents: refundCents };
+  }
+  if (compensationCents > 0) return { money: 'compensation', amountCents: compensationCents };
+  if (!event.paid) return { money: 'client_not_charged' };
+  return refundCents !== undefined && refundCents > 0 ? { money: 'client_refunded', amountCents: refundCents } : {};
+}
 
 /** Day-of updates that can't wait until morning (a 7 am start's 2 h reminder comes at 5 am): texted even in quiet hours. */
 export const URGENT_TYPES: ReadonlySet<NotificationType> = new Set<NotificationType>([
@@ -134,6 +159,8 @@ export function quietHoursEnd(now: Date, timeZone: TimeZone): Date | null {
 export type DeliveryChannel = NotificationChannel | 'push';
 export const DELIVERY_CHANNELS: readonly DeliveryChannel[] = [...NOTIFICATION_CHANNELS, 'push'];
 export const pushOn = (topic: NotificationTopic) => topic !== 'tips_and_news';
+/** The channels a type goes by. */
+export const channelsFor = (type: NotificationType): readonly DeliveryChannel[] => (EMAIL_ONLY_TYPES.has(type) ? ['email'] : DELIVERY_CHANNELS);
 
 export type DeliveryPlan =
   | { action: 'send' }

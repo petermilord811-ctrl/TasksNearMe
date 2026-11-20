@@ -5,7 +5,9 @@ import { confirmBooking } from '@/modules/bookings/confirm';
 import { bookingTerms } from '@/modules/bookings/schema';
 import { invites } from '@/modules/invites/schema';
 import { getThreadPage, offerThreadId, sendMessage, unreadMessageCount } from '@/modules/messaging/service';
-import { notifications } from '@/modules/notifications/schema';
+import type { EmailMessage } from '@/integrations/email';
+import { deliverNotifications } from '@/modules/notifications/delivery';
+import { notificationDeliveries, notifications } from '@/modules/notifications/schema';
 import { communityPosts } from '@/modules/community/schema';
 import { blocks } from '@/modules/messaging/schema';
 import {
@@ -137,10 +139,47 @@ describe('change and invite notifications', () => {
       { id: 'evt_mn10_change_by_lee', type: 'change.applied', aggregateType: 'booking', aggregateId: bookingId, payload: { bookingId, changeId: 'chg_mn10', actorUserId: 'usr_lee' } },
     ]);
     await dispatchAll();
-    const told = async (eventId: string) => (await db.select({ userId: notifications.userId }).from(notifications).where(eq(notifications.sourceEventId, eventId))).map((row) => row.userId).sort();
+    const told = async (eventId: string) => (await db.select({ userId: notifications.userId, type: notifications.type }).from(notifications).where(eq(notifications.sourceEventId, eventId))).filter((row) => row.type !== 'booking_canceled_receipt').map((row) => row.userId).sort();
     expect(await told('evt_mn10_canceled_by_chris')).toEqual(['usr_lee']);
     expect(await told('evt_mn10_canceled_by_system')).toEqual(['usr_chris', 'usr_lee']);
     expect(await told('evt_mn10_change_by_lee')).toEqual(['usr_chris']);
+  });
+
+  it("sends whoever canceled a receipt by email only, in their language, never in the bell (the owner's choice, 2026-11-20)", async () => {
+    await db.insert(outboxEvents).values([
+      {
+        id: 'evt_receipt_by_chris',
+        type: 'booking.canceled',
+        aggregateType: 'booking',
+        aggregateId: bookingId,
+        payload: { bookingId, actorUserId: 'usr_chris', reason: 'poster_early', refundCents: 6480, helperCompensationCents: 0, posterUserId: 'usr_chris', helperUserId: 'usr_lee' },
+      },
+      // The system's own cancel names nobody: no receipt, both are told.
+      { id: 'evt_receipt_by_system', type: 'booking.canceled', aggregateType: 'booking', aggregateId: bookingId, payload: { bookingId, actorUserId: null, reason: 'funding_failed', refundCents: 0 } },
+    ]);
+    await dispatchAll();
+    const rows = await db.select().from(notifications).where(inArray(notifications.sourceEventId, ['evt_receipt_by_chris', 'evt_receipt_by_system']));
+    expect(rows.map((row) => `${row.sourceEventId} ${row.userId} ${row.type}`).sort()).toEqual([
+      'evt_receipt_by_chris usr_chris booking_canceled_receipt',
+      'evt_receipt_by_chris usr_lee booking_canceled',
+      'evt_receipt_by_system usr_chris booking_canceled',
+      'evt_receipt_by_system usr_lee booking_canceled',
+    ]);
+    const receipt = rows.find((row) => row.type === 'booking_canceled_receipt')!;
+    expect(receipt).toMatchObject({ title: 'Assemble a desk (flat-pack, 1 item)', actorName: 'Lee M.', params: { by: 'poster', money: 'refund', amountCents: 6480 } });
+    // Never in the bell: made read, and not on the notifications page.
+    expect(receipt.readAt).not.toBeNull();
+    expect((await getNotificationsPage(db, 'usr_chris', new Date())).notifications.map((item) => item.id)).not.toContain(receipt.id);
+
+    // By email only: no text or push rows.
+    const emails: EmailMessage[] = [];
+    await deliverNotifications(db, new Date(), { email: { name: 'test', async send(message) { emails.push(message); } }, sms: { name: 'test', async send() {} }, push: null }, 10_000);
+    const deliveries = await db.select().from(notificationDeliveries).where(eq(notificationDeliveries.notificationId, receipt.id));
+    expect(deliveries.map((row) => `${row.channel} ${row.status}`)).toEqual(['email sent']);
+    const email = emails.find((message) => message.idempotencyKey === deliveries[0]?.id);
+    expect(email).toMatchObject({ to: 'chris@example.test', subject: expect.stringMatching(/^You canceled your booking for Assemble a desk \(flat-pack, 1 item\) on /) });
+    expect(email?.text).toContain('$64.80 is going back to how you paid.');
+    expect(email?.text).toContain("We've let Lee M. know.");
   });
 
   it('tells the helper about an invite, and the client about a counter and an acceptance', async () => {

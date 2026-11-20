@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNull, ne, notInArray, or, sql } from 'drizzle-orm';
 import type {
   AccountPageData,
   AccountProfileInput,
@@ -30,7 +30,7 @@ import { outboxEvents } from '@/platform/outbox/schema';
 import { communityPosts } from '@/modules/community/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
 import { instantSearchMatches } from '@/modules/searches/service';
-import { isLockedPreference, preferenceOn } from './delivery-domain';
+import { cancelReceiptMoney, EMAIL_ONLY_TYPES, isLockedPreference, preferenceOn } from './delivery-domain';
 import { privacyViewOf } from '@/modules/privacy/requests';
 import { requestIdentityAfterNameChange } from '@/modules/verification/tracks';
 import { pushSetup } from './push';
@@ -77,7 +77,7 @@ async function taskTitle(db: Db, taskId: string | undefined): Promise<string | u
 async function bookingContext(db: Db, bookingId: string | undefined) {
   if (!bookingId) return null;
   const [row] = await db
-    .select({ id: bookings.id, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId, title: tasks.title, marketId: bookings.marketId })
+    .select({ id: bookings.id, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId, title: tasks.title, marketId: bookings.marketId, startAt: bookings.startAt, confirmedAt: bookings.confirmedAt })
     .from(bookings)
     .innerJoin(tasks, eq(tasks.id, bookings.taskId))
     .where(eq(bookings.id, bookingId))
@@ -235,10 +235,25 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
           const hours = typeof p.hours === 'number' ? p.hours : undefined;
           return [forPoster('approval_reminder', hours ? { params: { hours } } : {})];
         }
-        case 'booking.canceled':
+        case 'booking.canceled': {
           // Not the person who canceled: they did it on screen, and an urgent text or push about it was noise (sweep
           // MN10). A cancel by the system (unpaid, a missed deadline) names nobody and tells both.
-          return [forPoster('booking_canceled'), forHelper('booking_canceled')].filter((item) => item.userId !== text(p.actorUserId));
+          const actor = text(p.actorUserId);
+          const told = [forPoster('booking_canceled'), forHelper('booking_canceled')].filter((item) => item.userId !== actor);
+          // The one who canceled gets a receipt by email instead (the owner's choice, 2026-11-20): what was canceled, on
+          // the booking's clock, and what happens to the money.
+          const by = actor === booking.posterUserId ? 'poster' : actor === booking.helperUserId ? 'helper' : null;
+          if (!by) return told;
+          const reason = text(p.reason);
+          const money = cancelReceiptMoney(by, {
+            ...(reason ? { reason } : {}),
+            ...(typeof p.refundCents === 'number' ? { refundCents: p.refundCents } : {}),
+            ...(typeof p.helperCompensationCents === 'number' ? { compensationCents: p.helperCompensationCents } : {}),
+            paid: booking.confirmedAt !== null,
+          });
+          const params: NotificationView['params'] = { by, at: booking.startAt.toISOString(), timeZone: await marketTimeZone(db, booking.marketId), ...money };
+          return [...told, by === 'poster' ? forPoster('booking_canceled_receipt', { params }) : forHelper('booking_canceled_receipt', { params })];
+        }
         case 'booking.tipped': {
           const cents = typeof p.amountCents === 'number' ? p.amountCents : undefined;
           return [forHelper('tip_received', cents ? { params: { amountCents: cents } } : {})];
@@ -499,6 +514,8 @@ async function deliver(db: Db, event: EventRow, onlyUserId?: string): Promise<nu
           target: item.target,
           sourceEventId: event.id,
           createdAt: new Date(event.createdAt),
+          // An email-only one (a receipt) is never unread in the bell.
+          ...(EMAIL_ONLY_TYPES.has(item.type) ? { readAt: new Date(event.createdAt) } : {}),
         })
         .onConflictDoNothing({ target: [notifications.sourceEventId, notifications.userId] })
         .returning({ id: notifications.id });
@@ -567,7 +584,8 @@ export async function getNotificationsPage(db: Db, userId: string, now: Date): P
   await remindUpcomingBookings(db, now, { userId });
   await dispatchNotifications(db, now);
   await deliverPending(db, userId);
-  const rows = await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt)).limit(50);
+  // Email-only ones (receipts) aren't for the bell.
+  const rows = await db.select().from(notifications).where(and(eq(notifications.userId, userId), notInArray(notifications.type, [...EMAIL_ONLY_TYPES]))).orderBy(desc(notifications.createdAt)).limit(50);
   return {
     notifications: rows.map((row) => ({
       id: row.id,

@@ -27,6 +27,12 @@ export const NOTIFICATION_TYPES = [
   'task_expired',
   'booking_confirmed',
   'booking_canceled',
+  /**
+   * Email only, never in the bell or on a device: the receipt for the person who canceled a booking themselves (the
+   * owner's choice, 2026-11-20). What was canceled (`title`, `params.at`), the money (`params.money`, with
+   * `params.amountCents`), and that the other person (`actorName`) was told.
+   */
+  'booking_canceled_receipt',
   'helper_on_the_way',
   'helper_running_late',
   'helper_arrived',
@@ -124,6 +130,14 @@ export const NOTIFICATION_TYPES = [
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
+/**
+ * A cancellation receipt's money line: the client's refund (`late_refund`: part of it, the rest paying the helper for a
+ * late cancellation), no refund, nothing charged yet; the helper's view of the client's refund, or what the helper is
+ * paid for their time (a client who wasn't there).
+ */
+export const CANCEL_RECEIPT_MONEY = ['refund', 'late_refund', 'no_refund', 'not_charged', 'client_refunded', 'client_not_charged', 'compensation'] as const;
+export type CancelReceiptMoney = (typeof CANCEL_RECEIPT_MONEY)[number];
+
 export interface NotificationView {
   id: string;
   type: NotificationType;
@@ -132,7 +146,7 @@ export interface NotificationView {
   /** Who did it ("Jordan T."). */
   actorName?: string;
   /** `at` and `day` are on the clock of `timeZone`, the market of the booking or series it's about (completion plan 8.1). */
-  params?: { amountCents?: Cents; minutes?: number; hours?: number; days?: number; track?: VerificationTrack; at?: ISODateTime; day?: string; by?: 'poster' | 'helper' | 'payment' | 'system'; badge?: BadgeCode; tier?: number; count?: number; on?: 'post' | 'reply'; search?: string; timeZone?: TimeZone };
+  params?: { amountCents?: Cents; minutes?: number; hours?: number; days?: number; track?: VerificationTrack; at?: ISODateTime; day?: string; by?: 'poster' | 'helper' | 'payment' | 'system'; badge?: BadgeCode; tier?: number; count?: number; on?: 'post' | 'reply'; search?: string; timeZone?: TimeZone; money?: CancelReceiptMoney };
   /** Where it leads (same targets as the home's attention items). */
   target: AttentionTarget;
   createdAt: ISODateTime;

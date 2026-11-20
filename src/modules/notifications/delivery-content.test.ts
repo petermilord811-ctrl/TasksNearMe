@@ -73,3 +73,46 @@ describe('in Spanish', () => {
     expect(deliveryContent(paused, 'es', 'America/New_York').subject).toContain('sáb, 5 de dic');
   });
 });
+
+describe('the cancellation receipt (the owner\'s choice, 2026-11-20)', () => {
+  const receipt = {
+    type: 'booking_canceled_receipt' as const,
+    title: 'Assemble a desk',
+    actorName: 'Jordan T.',
+    target: { kind: 'booking' as const, bookingId: 'bkg_desk' },
+    userId: 'usr_maya',
+  };
+  const at = { at: '2026-11-21T16:00:00.000Z', timeZone: 'America/Chicago' as const };
+
+  it('says what was canceled, the refund, and that the other person knows', () => {
+    const content = deliveryContent({ ...receipt, params: { ...at, by: 'poster', money: 'refund', amountCents: 5400 } });
+    expect(content.subject).toBe('You canceled your booking for Assemble a desk on Sat, Nov 21 · 10:00 am.');
+    expect(content.text).toContain('$54.00 is going back to how you paid.');
+    expect(content.text).toContain("We've let Jordan T. know.");
+    expect(content.html).toContain('$54.00 is going back to how you paid.');
+    expect(content.html).toContain('/app/bookings/bkg_desk');
+    // A booking email: always on, so no unsubscribe link or header.
+    expect(content.headers).toBeUndefined();
+    expect(content.text).not.toContain('unsubscribe');
+  });
+
+  it('words each money line, for the client and for the helper', () => {
+    const line = (params: Parameters<typeof deliveryContent>[0]['params'], actorName = 'Jordan T.') => deliveryContent({ ...receipt, actorName, params: { ...at, ...params } }).text.split('\n\n')[1];
+    expect(line({ by: 'poster', money: 'late_refund', amountCents: 2700 })).toBe('$27.00 is going back to how you paid, and the rest goes to Jordan T. for the late cancellation. Banks can take 5 to 10 business days to show it.');
+    expect(line({ by: 'poster', money: 'no_refund' })).toBe("Free cancellation had ended, so this booking isn't refunded.");
+    expect(line({ by: 'poster', money: 'not_charged' })).toBe("Nothing was charged, so there's nothing to refund.");
+    expect(line({ by: 'helper', money: 'client_refunded', amountCents: 5400 }, 'Maya R.')).toBe('Maya R. gets $54.00 back.');
+    expect(line({ by: 'helper', money: 'client_not_charged' }, 'Maya R.')).toBe("Maya R. hadn't been charged yet.");
+    expect(line({ by: 'helper', money: 'compensation', amountCents: 2700 }, 'Maya R.')).toBe('$27.00 for your time is added to your earnings.');
+    expect(deliveryContent({ ...receipt, params: { ...at, by: 'helper' } }).subject).toBe('You canceled the booking for Assemble a desk on Sat, Nov 21 · 10:00 am.');
+  });
+
+  it('is written in Spanish for a Spanish reader, with Spanish links', () => {
+    const content = deliveryContent({ ...receipt, title: 'Armar un escritorio', params: { ...at, by: 'poster', money: 'refund', amountCents: 5400 } }, 'es');
+    expect(content.subject).toMatch(/^Cancelaste tu reserva para Armar un escritorio del /);
+    expect(content.text).toContain('Te devolvemos $54.00 a tu medio de pago.');
+    expect(content.text).toContain('Ya se lo avisamos a Jordan T.');
+    expect(content.text).toContain('/es/app/bookings/bkg_desk');
+    expect(content.html).toContain('<html lang="es"');
+  });
+});
