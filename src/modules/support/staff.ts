@@ -53,7 +53,7 @@ import { staffRoles, users } from '@/modules/accounts/schema';
 import { discretionaryRefundedCents } from '@/modules/payments/refund-across';
 import { payments, refunds } from '@/modules/payments/schema';
 import { bookingCompletions, bookingTerms, bookings } from '@/modules/bookings/schema';
-import { photoFromFile } from '@/modules/files/uploads';
+import { staffPhotoFromFile } from '@/modules/files/staff-file-token';
 import { messages, threadParticipants, threads } from '@/modules/messaging/schema';
 import { initialsOf } from '@/modules/profiles/queries';
 import { helperProfiles } from '@/modules/profiles/schema';
@@ -393,7 +393,10 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
   const contextTitle = row.context?.threadId ? (contextTask?.title ?? summary.subject) : undefined;
   const fileIds = [...new Set([...row.fileIds, ...events.flatMap((event) => event.fileIds)])];
   const fileRows = fileIds.length > 0 ? await db.select().from(files).where(inArray(files.id, fileIds)) : [];
-  const photoOf = new Map(fileRows.map((file) => [file.id, photoFromFile(file)]));
+  // The case is why this staff member sees its photos: each through a token for them and this case, and the load is
+  // audited once (security review SEC24; files/staff-file-token.ts).
+  const photoOf = new Map(fileRows.map((file) => [file.id, staffPhotoFromFile(file, staff, `case:${row.id}`, now)]));
+  if (fileRows.length > 0) await audit(db, staff, 'case.files_viewed', row.id, now, { metadata: { files: fileRows.length } });
   const money = ctx.booking ? await bookingMoneyFacts(db, ctx.booking.id) : null;
   const reportedReview = row.context?.reviewId ? await reportedReviewOf(db, staff, row.context.reviewId) : null;
   const reportedQuestion = row.context?.questionId ? await reportedQuestionOf(db, staff, row.context.questionId, row.context.answer === true) : null;
@@ -912,11 +915,12 @@ export async function revealCaseConversation(db: Db, staff: StaffActor, caseId: 
   if (!thread) return { ok: false, code: 'not_allowed' };
   await audit(db, staff, 'case.view_conversation', ctx.row.id, now, { reason: parsed.data.reason, targetType: 'thread', targetId: thread.id });
 
-  return { ok: true, conversation: await conversationView(db, thread) };
+  return { ok: true, conversation: await conversationView(db, thread, { staff, context: `reveal:case:${ctx.row.id}`, now }) };
 }
 
 /** A conversation as written (staff see what was masked for the other person), oldest first. */
-export async function conversationView(db: Db, thread: typeof threads.$inferSelect): Promise<AdminConversationView> {
+/** `access`: who revealed it and where; its photos open through tokens for them and that context (SEC24). */
+export async function conversationView(db: Db, thread: typeof threads.$inferSelect, access: { staff: StaffActor; context: string; now: Date }): Promise<AdminConversationView> {
   const [participants, rows, [task]] = await Promise.all([
     db.select({ userId: threadParticipants.userId }).from(threadParticipants).where(eq(threadParticipants.threadId, thread.id)),
     db.select().from(messages).where(eq(messages.threadId, thread.id)).orderBy(asc(messages.createdAt)),
@@ -925,7 +929,7 @@ export async function conversationView(db: Db, thread: typeof threads.$inferSele
   const people = await usersById(db, participants.map((row) => row.userId));
   const fileIds = [...new Set(rows.flatMap((row) => row.attachmentFileIds))];
   const fileRows = fileIds.length > 0 ? await db.select().from(files).where(inArray(files.id, fileIds)) : [];
-  const photoOf = new Map(fileRows.map((file) => [file.id, photoFromFile(file)]));
+  const photoOf = new Map(fileRows.map((file) => [file.id, staffPhotoFromFile(file, access.staff, access.context, access.now)]));
   return {
     title: task?.title ?? 'Conversation',
     people: [...people.values()].map(personSummaryOf),

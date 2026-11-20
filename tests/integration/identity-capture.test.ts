@@ -149,8 +149,8 @@ describe('sending the photos', () => {
       expect(metadata.exif).toBeUndefined();
       expect(opened.toString('latin1')).not.toContain('Secret Person');
       // Never through the general file route, for anyone.
-      expect(canViewFile(file, { userId: MAIN, isStaff: false })).toBe(false);
-      expect(canViewFile(file, { userId: 'usr_taylor', isStaff: true })).toBe(false);
+      expect(canViewFile(file, { userId: MAIN })).toBe(false);
+      expect(canViewFile(file, { userId: 'usr_taylor' })).toBe(false);
     }
     // One set in review at a time; the provider's double check waits for the approval.
     expect(await submitIdentityCapture(deps, MAIN, await captureForm('drivers_license'), at(0.01))).toEqual({ ok: false, code: 'not_allowed' });

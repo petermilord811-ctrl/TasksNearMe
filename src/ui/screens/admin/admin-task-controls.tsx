@@ -92,7 +92,7 @@ function ModerationForm({ actionId, data, handlers, onBusy, onCancel, onSuccess,
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">{data.photos.map((photo, index) => <li key={photo.id}>
         <label className="block cursor-pointer space-y-1 rounded-xl border border-foreground/[0.1] p-1.5 transition-[border-color,box-shadow] duration-200 hover:border-foreground/[0.25] has-[:checked]:border-primary has-[:checked]:ring-[3px] has-[:checked]:ring-ring/30">
           {/* The visible "Photo N" names the choice; the thumbnail is decoration inside the label. */}
-          <Image src={photo.src} alt="" width={photo.width ?? 400} height={photo.height ?? 300} className="aspect-4/3 w-full rounded-md object-cover" />
+          <Image unoptimized src={photo.src} alt="" width={photo.width ?? 400} height={photo.height ?? 300} className="aspect-4/3 w-full rounded-md object-cover" />
           <span className="flex min-h-11 items-center gap-2 px-1 text-sm"><input type="radio" value={photo.id} disabled={pending} {...form.register('photoId')} className="size-4 accent-primary" />{t('dialog.photoOption', { number: index + 1 })}</span>
         </label>
       </li>)}</ul>

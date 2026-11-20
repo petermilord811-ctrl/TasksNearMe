@@ -166,8 +166,8 @@ describe('the profile photo', () => {
     const second = await setProfilePhoto({ db, storage }, userId, await portrait());
     if (!second.ok) throw new Error(second.code);
     expect(await isCurrentProfilePhoto(db, file!)).toBe(false);
-    expect(canViewFile(file!, { userId: 'usr_maya', isStaff: false })).toBe(false);
-    expect(canViewFile(file!, { userId, isStaff: false })).toBe(true);
+    expect(canViewFile(file!, { userId: 'usr_maya' })).toBe(false);
+    expect(canViewFile(file!, { userId })).toBe(true);
 
     expect(await removeProfilePhoto(db, userId, new Date())).toEqual({ ok: true, code: 'updated' });
     const [current] = await db.select().from(files).where(eq(files.id, second.photo.id));

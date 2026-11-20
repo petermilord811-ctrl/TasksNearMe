@@ -19,4 +19,9 @@ describe('isLocalRequest', () => {
     expect(isLocalRequest(request({ host: 'localhost.evil.test', 'x-forwarded-for': '127.0.0.1' }))).toBe(false);
     expect(isLocalRequest(request({}))).toBe(false);
   });
+
+  it('needs the request’s own Host: Next’s image sub-request has none, only forwarded headers Next filled (SEC23)', () => {
+    expect(isLocalRequest(request({ 'x-forwarded-for': '127.0.0.1', 'x-forwarded-host': 'localhost' }))).toBe(false);
+    expect(isLocalRequest(request({ 'x-forwarded-host': 'localhost:3000' }))).toBe(false);
+  });
 });

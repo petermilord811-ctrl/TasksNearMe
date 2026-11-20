@@ -7,6 +7,11 @@
  * Next fills `x-forwarded-for` with the socket's address only when it's missing; a proxy sets it to the
  * visitor's address and passes the public host along. So a local request has only loopback addresses there
  * and a loopback host; anything else came from outside.
+ *
+ * The request's own Host is required (security review SEC23). Next fills `x-forwarded-host` too, also for its image
+ * optimizer's sub-request (`/_next/image?url=/…`), which has no Host and inherits the proxy's loopback socket: from
+ * the forwarded headers alone, a visitor's image request through the public address would look local. Nothing local
+ * needs that sub-request, so a request without a Host isn't local.
  */
 
 const LOOPBACK_ADDRESSES = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
@@ -21,6 +26,8 @@ function hostnameOf(host: string): string {
 export function isLocalRequest(header: (name: string) => string | null | undefined): boolean {
   const forwardedFor = (header('x-forwarded-for') ?? '').split(',').map((part) => part.trim()).filter(Boolean);
   if (forwardedFor.some((address) => !LOOPBACK_ADDRESSES.has(address))) return false;
-  const hosts = [header('host'), header('x-forwarded-host')].filter((value): value is string => Boolean(value));
-  return hosts.length > 0 && hosts.every((host) => LOOPBACK_HOSTS.has(hostnameOf(host)));
+  const host = header('host');
+  if (!host || !LOOPBACK_HOSTS.has(hostnameOf(host))) return false;
+  const forwardedHost = header('x-forwarded-host');
+  return !forwardedHost || LOOPBACK_HOSTS.has(hostnameOf(forwardedHost));
 }

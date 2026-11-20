@@ -402,7 +402,7 @@ export async function revealBookingConversation(db: Db, staff: StaffActor, booki
     .limit(1);
   if (!handling) return { ok: false, code: 'not_allowed' };
   await audit(db, staff, 'booking.view_conversation', 'thread', thread.id, now, { reason: parsed.data.reason, metadata: { bookingId } });
-  return { ok: true, conversation: await conversationView(db, thread) };
+  return { ok: true, conversation: await conversationView(db, thread, { staff, context: `reveal:booking:${bookingId}`, now }) };
 }
 
 /**

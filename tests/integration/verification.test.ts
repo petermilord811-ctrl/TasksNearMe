@@ -231,8 +231,8 @@ describe('helper onboarding', () => {
     expect(await removeWorkSample(db, 'usr_maya', second.sample.id)).toEqual({ ok: false, code: 'not_found' });
     // Its photo is no longer public (security review 2026-11-20): a link someone kept opens for its owner and staff only.
     const [photo] = await db.select().from(files).where(eq(files.id, kept!.fileId));
-    expect(canViewFile(photo!, { userId: null, isStaff: false })).toBe(false);
-    expect(canViewFile(photo!, { userId, isStaff: false })).toBe(true);
+    expect(canViewFile(photo!, { userId: null })).toBe(false);
+    expect(canViewFile(photo!, { userId })).toBe(true);
     editor = await getProfileEditorData(db, userId, now());
     expect(editor?.workSamples).toHaveLength(1);
     expect(editor?.values.area).toEqual({ where: 'market', areaId: 'area_mueller', serviceRadiusMiles: 5, remoteOk: false, homeZip: '', homeCity: '' });

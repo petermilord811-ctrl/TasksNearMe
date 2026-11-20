@@ -13,7 +13,7 @@ import {
 } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { bookings } from '@/modules/bookings/schema';
-import { photoFromFile } from '@/modules/files/uploads';
+import { staffPhotoFromFile } from '@/modules/files/staff-file-token';
 import { areas, categories, markets } from '@/modules/markets/schema';
 import { offers } from '@/modules/offers/schema';
 import { declinedForCancel } from '@/modules/offers/closing';
@@ -125,7 +125,8 @@ export async function getAdminTaskPage(db: Db, staff: StaffActor, taskId: string
       ...(task.hiddenAt && hider ? { hidden: { reason: task.hiddenReason ?? '', at: task.hiddenAt.toISOString(), by: hider } } : {}),
     },
     poster: { ...personSummaryOf(poster), email: poster.email },
-    photos: loaded.photoRows.map(({ file }) => photoFromFile(file)),
+    // Moderators see a task's photos through tokens for them and this task (security review SEC24).
+    photos: loaded.photoRows.map(({ file }) => staffPhotoFromFile(file, staff, `moderation:task:${task.id}`, now)),
     ...(loaded.bookingId ? { bookingId: loaded.bookingId } : {}),
     cases: await caseRowsFor(db, caseRows, now),
     categories: loaded.otherCategories,

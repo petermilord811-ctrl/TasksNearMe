@@ -131,8 +131,8 @@ describe('proof of address', () => {
     expect(metadata.exif).toBeUndefined();
     expect(stored!.toString('latin1')).not.toContain('Secret Person');
     // Not served by the general file route, not even to its owner or staff.
-    expect(canViewFile(file!, { userId: id, isStaff: false })).toBe(false);
-    expect(canViewFile(file!, { userId: 'usr_taylor', isStaff: true })).toBe(false);
+    expect(canViewFile(file!, { userId: id })).toBe(false);
+    expect(canViewFile(file!, { userId: 'usr_taylor' })).toBe(false);
     // One proof at a time.
     expect(await submitAddressProof(deps, id, proofForm(valid, await photoFile()), at(0))).toEqual({ ok: false, code: 'not_allowed' });
     expect((await loadOnboardingState(db, id, at(0))).address).toMatchObject({ status: 'in_review', verified: false });

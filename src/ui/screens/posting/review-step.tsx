@@ -99,7 +99,7 @@ export function ReviewStep({ data, handlers, values, photos, selectedAddress }: 
         {values.expenseAllowance && <ReviewLine label={t('review.allowance')}><span className="block tabular-nums">{formatMoney(values.expenseAllowance.amountCents)}</span><span className="block">{values.expenseAllowance.description}</span></ReviewLine>}
       </dl>
       {visiblePhotos.length > 0 ? <div className="grid grid-cols-2 gap-3">
-        {visiblePhotos.map((photo, index) => photo ? <Image key={values.photoIds[index]} src={photo.src} alt={photo.alt || t('review.photoAlt', { number: index + 1, total: visiblePhotos.length })} width={photo.width ?? 800} height={photo.height ?? 600} className="aspect-[4/3] w-full rounded-2xl border border-foreground/[0.07] object-cover dark:border-white/[0.06]" /> : <p key={values.photoIds[index]} className="flex min-h-24 items-center rounded-2xl border bg-muted p-3 text-sm">{t('review.savedPhoto', { number: index + 1 })}</p>)}
+        {visiblePhotos.map((photo, index) => photo ? <Image key={values.photoIds[index]} unoptimized src={photo.src} alt={photo.alt || t('review.photoAlt', { number: index + 1, total: visiblePhotos.length })} width={photo.width ?? 800} height={photo.height ?? 600} className="aspect-[4/3] w-full rounded-2xl border border-foreground/[0.07] object-cover dark:border-white/[0.06]" /> : <p key={values.photoIds[index]} className="flex min-h-24 items-center rounded-2xl border bg-muted p-3 text-sm">{t('review.savedPhoto', { number: index + 1 })}</p>)}
       </div> : <p className="text-sm text-muted-foreground">{t('review.noPhotos')}</p>}
     </section>
 
