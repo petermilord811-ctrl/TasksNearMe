@@ -193,7 +193,8 @@ export const routes = {
     bookingReview: (bookingId: string) => `/app/bookings/${enc(bookingId)}/review`,
     bookingCalendar: (bookingId: string) => `/app/bookings/${enc(bookingId)}/calendar.ics`,
     messages: () => '/app/messages',
-    thread: (threadId: string) => `/app/messages/${enc(threadId)}`,
+    /** A conversation; `from` (its `earlier`): from that message on, after "Load earlier messages" (sweep MN11). */
+    thread: (threadId: string, page: { from?: string } = {}) => withQuery(`/app/messages/${enc(threadId)}`, { from: page.from }),
     /**
      * The neighborhood portal (plan 9.10): posts and tasks near you, as a Feed or a List, over one set of filters.
      * Defaults (near you, everything, any time, `hot`, the Feed, by neighborhood, page 1) are left out, in a fixed

@@ -87,7 +87,8 @@
     },
     "withList": "Conversation beside the list, with new messages marked",
     "repliesReactions": "Replies quoting a message, reactions and saved replies",
-    "loading": "Conversation · loading"
+    "loading": "Conversation · loading",
+    "earlier": "Long conversation, with earlier messages to load"
   },
   "composer": {
     "label": "Message",
@@ -123,6 +124,8 @@
     }
   },
   "newMessages": "New messages",
+  "loadEarlier": "Load earlier messages",
+  "loadingEarlier": "Loading earlier messages…",
   "actions": {
     "label": "Reply or react to {name}",
     "reply": "Reply"

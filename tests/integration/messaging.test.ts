@@ -5,7 +5,8 @@ import { confirmBooking } from '@/modules/bookings/confirm';
 import { runBookingAction } from '@/modules/bookings/hub';
 import { bookings } from '@/modules/bookings/schema';
 import { canViewRelatedFile } from '@/modules/files/related-access';
-import { blocks, threads } from '@/modules/messaging/schema';
+import type { ThreadPageData } from '@/contracts';
+import { blocks, messages, threads } from '@/modules/messaging/schema';
 import { bookingThreadLink, ensureThread, getInbox, getThreadPage, offerThreadId, postEvent, sendMessage, unreadMessageCount } from '@/modules/messaging/service';
 import { getPublishedPolicy } from '@/modules/markets/queries';
 import { cancelTask } from '@/modules/offers/owner';
@@ -205,5 +206,37 @@ describe('booking threads', () => {
     await postEvent(db, link, 'system', { type: 'auto_approved' }, now());
     expect(await unreadMessageCount(db, client)).toBe(2);
     expect(await unreadMessageCount(db, helper)).toBe(4);
+  });
+});
+
+describe('long conversations (sweep MN11)', () => {
+  it('shows the latest 100, then 100 more each time from "Load earlier messages", skipping none', async () => {
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    const [offer] = await db.select().from(offers).where(eq(offers.id, 'off_jordan'));
+    await db.insert(tasks).values({ ...desk!, id: 'tsk_mn11', slug: 'mn11-desk', posterUserId: 'usr_ruth', status: 'open', offerCount: 1, version: 1 });
+    await db.insert(offers).values({ ...offer!, id: 'off_mn11', taskId: 'tsk_mn11', status: 'pending', revision: 1, expiresAt: new Date(Date.now() + 86_400_000) });
+    const thread = (await offerThreadId(db, 'off_mn11', now()))!;
+    // 250 messages a minute apart; the last two share a moment (in time, then id).
+    const id = (n: number) => `msg_mn11_${String(n).padStart(3, '0')}`;
+    const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, index) => id(from + index));
+    const start = Date.now() - 300 * 60_000;
+    await db.insert(messages).values(
+      Array.from({ length: 250 }, (_, index) => ({ id: id(index + 1), threadId: thread, senderUserId: index % 2 ? 'usr_ruth' : 'usr_jordan', kind: 'text', body: `Message ${index + 1}`, createdAt: new Date(start + Math.min(index + 1, 249) * 60_000) })),
+    );
+    const page = async (from?: string) => (await getThreadPage(db, 'usr_ruth', thread, now(), from ? { from } : {}))!;
+    const ids = (data: ThreadPageData) => data.messages.map((message) => message.id);
+
+    const latest = await page();
+    expect(ids(latest)).toEqual(range(151, 250));
+    expect(latest.earlier).toEqual({ from: id(51) });
+    const more = await page(latest.earlier!.from);
+    expect(ids(more)).toEqual(range(51, 250));
+    expect(more.earlier).toEqual({ from: id(1) });
+    const all = await page(more.earlier!.from);
+    expect(ids(all)).toEqual(range(1, 250));
+    expect(all.earlier).toBeUndefined();
+    // Another conversation's message: the latest page, as without one.
+    const [elsewhere] = await db.select({ id: messages.id }).from(messages).where(eq(messages.threadId, offerThread)).limit(1);
+    expect(ids(await page(elsewhere!.id))).toEqual(range(151, 250));
   });
 });

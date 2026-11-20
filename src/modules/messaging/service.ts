@@ -46,6 +46,8 @@ import { messageReactions, messages, savedReplies, threadParticipants, threads }
 const DAY = 86_400_000;
 const SEND_RATE_LIMIT = { limit: 60, windowSeconds: 3600 };
 const PAGE_SIZE = 100;
+/** The most one page of a conversation shows, the latest ones, however far back "Load earlier messages" went. */
+const MAX_SHOWN = 1_000;
 const LIVE_BOOKING_STATUSES = ['confirmed', 'in_progress', 'completion_submitted', 'disputed', 'completed'];
 
 type ThreadRow = typeof threads.$inferSelect;
@@ -341,13 +343,36 @@ async function readMessageNotifications(db: Writer, userId: string, threadId: st
     .where(and(eq(notifications.userId, userId), eq(notifications.type, 'message_received'), isNull(notifications.readAt), sql`${notifications.target}->>'threadId' = ${threadId}`));
 }
 
-/** One conversation for a participant (null for anyone else). Opening it marks it read. */
-export async function getThreadPage(db: Db, userId: string, threadId: string, now: Date): Promise<ThreadPageData | null> {
+/**
+ * A conversation's order is by time, then id (status lines can share a moment), compared in the database at its full
+ * precision: the messages from message `id` on, and those before it.
+ */
+const fromMessage = (id: string) => sql`(${messages.createdAt}, ${messages.id}) >= (select m.created_at, m.id from ${messages} m where m.id = ${id})`;
+const beforeMessage = (id: string) => sql`(${messages.createdAt}, ${messages.id}) < (select m.created_at, m.id from ${messages} m where m.id = ${id})`;
+
+/**
+ * One conversation for a participant (null for anyone else). Opening it marks it read. It shows the latest 100 messages,
+ * or, after "Load earlier messages" (`from`, a message of it: sweep MN11), everything from that message on, up to the
+ * latest 1,000; `earlier` says where the 100 before the first one shown start.
+ */
+export async function getThreadPage(db: Db, userId: string, threadId: string, now: Date, page: { from?: string } = {}): Promise<ThreadPageData | null> {
   const [thread] = await db.select().from(threads).where(eq(threads.id, threadId)).limit(1);
   if (!thread) return null;
   const found = await summaryOf(db, thread, userId, now);
   if (!found) return null;
-  const rows = (await db.select().from(messages).where(eq(messages.threadId, thread.id)).orderBy(desc(messages.createdAt)).limit(PAGE_SIZE)).reverse();
+  // Another conversation's message, or none: the latest page, as without one.
+  const [from] = page.from ? await db.select({ id: messages.id }).from(messages).where(and(eq(messages.id, String(page.from)), eq(messages.threadId, thread.id))).limit(1) : [];
+  const rows = (
+    await db
+      .select()
+      .from(messages)
+      .where(and(eq(messages.threadId, thread.id), ...(from ? [fromMessage(from.id)] : [])))
+      .orderBy(desc(messages.createdAt), desc(messages.id))
+      .limit(from ? MAX_SHOWN : PAGE_SIZE)
+  ).reverse();
+  const earlier = rows[0]
+    ? (await db.select({ id: messages.id }).from(messages).where(and(eq(messages.threadId, thread.id), beforeMessage(rows[0].id))).orderBy(desc(messages.createdAt), desc(messages.id)).limit(PAGE_SIZE)).at(-1)
+    : undefined;
   const fileIds = [...new Set(rows.flatMap((row) => row.attachmentFileIds))];
   const photoRows = fileIds.length ? await db.select().from(files).where(inArray(files.id, fileIds)) : [];
   const photos = new Map(photoRows.map((file) => [file.id, file]));
@@ -404,6 +429,7 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   return {
     thread: { ...found.summary, unreadCount: 0 },
     messages: rows.map(withExtras),
+    ...(earlier ? { earlier: { from: earlier.id } } : {}),
     ...(replies.length ? { savedReplies: replies } : {}),
     ...(presence ? { presence } : {}),
     ...(mutual && lastMine && theirs?.lastReadAt && theirs.lastReadAt >= lastMine.createdAt ? { seenMessageId: lastMine.id } : {}),

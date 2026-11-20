@@ -1,9 +1,10 @@
 'use client';
 
 import Image from 'next/image';
+import Link, { useLinkStatus } from 'next/link';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Expand } from 'lucide-react';
+import { ArrowUp, Expand } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionHandler, ISODateTime, MessageReaction, MessageView, PersonSummary, Photo } from '@/contracts';
 import { MESSAGE_REACTIONS } from '@/contracts/messaging';
@@ -14,6 +15,8 @@ import { useFormat } from '@/ui/lib/format';
 import { useRealtimeConnected } from '@/ui/lib/realtime';
 import { MaskedText } from '@/ui/components/messaging/masked-text';
 import { cn } from '@/ui/lib/utils';
+import { buttonVariants } from '@/ui/primitives/button';
+import { Spinner } from '@/ui/primitives/spinner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/ui/primitives/dialog';
 
 function MessagePhoto({ photo, number, count, sender }: { photo: Photo; number: number; count: number; sender: string }) {
@@ -46,11 +49,18 @@ function MessageContent({ message }: { message: MessageView }) {
   })}</>;
 }
 
+/** The link's label: while the earlier messages load, a spinner says so (a link's own state, so it's in it). */
+function EarlierLabel() {
+  const t = useTranslations('thread');
+  const { pending } = useLinkStatus();
+  return pending ? <><Spinner aria-hidden="true" />{t('loadingEarlier')}</> : <><ArrowUp aria-hidden="true" />{t('loadEarlier')}</>;
+}
+
 /** Refresh preserves draft state; only readers already at the bottom follow incoming messages. */
 /** Messages from the same person within this long read as one group: their name once, tighter spacing. */
 const GROUP_MS = 5 * 60_000;
 
-export function MessageLog({ messages, otherParty, now, seenMessageId, firstUnreadId, onReact, canReply = false, className }: { messages: MessageView[]; otherParty: PersonSummary; now: ISODateTime; seenMessageId?: string; firstUnreadId?: string; onReact?: ActionHandler<{ messageId: string; emoji: MessageReaction; on: boolean }>; /** Reply only where one can be sent: not in a closed or blocked conversation. */ canReply?: boolean; className?: string }) {
+export function MessageLog({ messages, earlierHref, otherParty, now, seenMessageId, firstUnreadId, onReact, canReply = false, className }: { messages: MessageView[]; /** "Load earlier messages" (sweep MN11): this conversation from 100 messages earlier. */ earlierHref?: string; otherParty: PersonSummary; now: ISODateTime; seenMessageId?: string; firstUnreadId?: string; onReact?: ActionHandler<{ messageId: string; emoji: MessageReaction; on: boolean }>; /** Reply only where one can be sent: not in a closed or blocked conversation. */ canReply?: boolean; className?: string }) {
   const { formatDate, formatDateTime, formatRelative, formatTime, dayKey } = useFormat();
   const t = useTranslations('thread');
   const router = useRouter();
@@ -90,10 +100,15 @@ export function MessageLog({ messages, otherParty, now, seenMessageId, firstUnre
     };
   }, [router]);
 
+  // Earlier messages come in above the ones shown (sweep MN11): the reader stays where they were.
+  const shown = useRef({ firstId: messages[0]?.id, height: 0 });
   useLayoutEffect(() => {
     const log = logRef.current;
     if (!log) return;
-    log.scrollTop = atBottom.current ? log.scrollHeight : scrollTop.current;
+    const before = shown.current;
+    const earlierCameIn = before.firstId !== undefined && messages[0]?.id !== before.firstId && messages.some((message) => message.id === before.firstId);
+    log.scrollTop = earlierCameIn ? scrollTop.current + log.scrollHeight - before.height : atBottom.current ? log.scrollHeight : scrollTop.current;
+    shown.current = { firstId: messages[0]?.id, height: log.scrollHeight };
   }, [messages]);
 
   const days = new Map<string, MessageView[]>();
@@ -109,8 +124,14 @@ export function MessageLog({ messages, otherParty, now, seenMessageId, firstUnre
       const log = event.currentTarget;
       atBottom.current = log.scrollHeight - log.scrollTop - log.clientHeight <= 40;
       scrollTop.current = log.scrollTop;
+      // Photos and reactions change the height between renders too.
+      shown.current.height = log.scrollHeight;
     }}
     className={cn('space-y-6 overflow-y-auto overscroll-contain px-3 py-4 [overflow-anchor:none] sm:px-5 sm:py-5', className)}>
+    {earlierHref && <p className="flex justify-center">
+      {/* The same page with more above (replace: Back still leaves the conversation); it keeps its place (scroll). */}
+      <Link href={earlierHref} replace scroll={false} prefetch={false} className={buttonVariants({ variant: 'outline', size: 'sm', className: 'min-h-11 rounded-full sm:min-h-9' })}><EarlierLabel /></Link>
+    </p>}
     {messages.length === 0 && <p className="py-10 text-center text-sm text-muted-foreground">{t('empty')}</p>}
     {Array.from(days, ([day, entries]) => <section key={day} aria-label={formatDate(entries[0]!.createdAt, { withYear: true })} className="space-y-3">
       {/* A day separator, not a sticky chip: a sticky one covered photos while scrolling (UI-021). */}

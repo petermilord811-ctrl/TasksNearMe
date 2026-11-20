@@ -231,6 +231,23 @@ describe('ThreadScreen', () => {
     expect(navigation.refresh).toHaveBeenCalledTimes(2);
   });
 
+  it('offers "Load earlier messages" by a route-built link, and keeps the reader in place as they come in (sweep MN11)', () => {
+    let height = 900;
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(() => height);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(300);
+    const latest = { ...deskBookingThreadPageData, messages: deskBookingThreadPageData.messages.slice(2), earlier: { from: 'msg_1' } };
+    const view = thread(latest);
+    expect(screen.getByRole('link', { name: 'Load earlier messages' })).toHaveAttribute('href', routes.app.thread(latest.thread.id, { from: 'msg_1' }));
+    // The reader scrolls up to it, and the earlier messages come in above what they were reading.
+    const log = screen.getByRole('log');
+    log.scrollTop = 0;
+    fireEvent.scroll(log);
+    height = 1300;
+    view.rerender(threadView(deskBookingThreadPageData));
+    expect(log.scrollTop).toBe(400);
+    expect(screen.queryByRole('link', { name: 'Load earlier messages' })).toBeNull();
+  });
+
   it('opens at the latest message and follows new messages only when already at the bottom', () => {
     let height = 900;
     vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(() => height);

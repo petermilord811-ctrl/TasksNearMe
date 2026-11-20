@@ -121,10 +121,18 @@ export interface ComposerRules {
   maxPhotoMegabytes: number;
 }
 
-/** `/app/messages/[threadId]`: one conversation (the latest 100 messages, oldest first). */
+/**
+ * `/app/messages/[threadId]`: one conversation, oldest first. Its latest 100 messages, or after "Load earlier messages"
+ * everything from `earlier.from` on (up to the latest 1,000).
+ */
 export interface ThreadPageData {
   thread: ThreadSummary;
   messages: MessageView[];
+  /**
+   * There are earlier messages (sweep MN11): "Load earlier messages" opens `routes.app.thread(thread.id, earlier)`, the
+   * same conversation from 100 messages before the first one shown.
+   */
+  earlier?: { from: string };
   composer: ComposerRules;
   /**
    * The other person's activity (completion plan 7.1), coarse on purpose: "Active now" or "Active today".

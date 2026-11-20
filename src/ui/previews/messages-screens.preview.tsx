@@ -3,7 +3,7 @@ import {
   type ActionResult, type AppShellHandlers, type InboxPageData, type PreviewEntry, type ThreadHandlers, type ThreadPageData,
 } from '@/contracts';
 import {
-  blockedThreadPageData, closedThreadPageData, deskBookingThreadPageData, deskOfferThreadPageData, expiredOfferThreadPageData,
+  blockedThreadPageData, closedThreadPageData, deskBookingThreadPageData, deskOfferThreadPageData, earlierThreadPageData, expiredOfferThreadPageData,
   fakeHandler, fakeThreadHandlers, inboxEmptyData, jordanInboxPageData, jordanShell, mayaInboxPageData,
   mayaShell, movingOfferThreadForHelper, taskCanceledOfferThreadPageData, taskCanceledThreadForHelperPageData,
 } from '@/fixtures';
@@ -55,6 +55,8 @@ export const messagesScreenPreviews: PreviewEntry[] = [
     { ...movingOfferThreadForHelper, lastMessage: undefined },
   ] }),
   threadPreview('booking', threadCopy.previews.booking, deskBookingThreadPageData),
+  // A long conversation: "Load earlier messages" above its latest 100 (sweep MN11).
+  threadPreview('earlier', threadCopy.previews.earlier, earlierThreadPageData),
   threadPreview('offer-masked', threadCopy.previews['offer-masked'], deskOfferThreadPageData),
   threadPreview('closed', threadCopy.previews.closed, closedThreadPageData),
   threadPreview('closed-expired', threadCopy.previews.closedExpired, expiredOfferThreadPageData),

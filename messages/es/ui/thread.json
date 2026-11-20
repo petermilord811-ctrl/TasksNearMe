@@ -87,7 +87,8 @@
     },
     "withList": "Conversación junto a la lista, con los mensajes nuevos marcados",
     "repliesReactions": "Respuestas que citan un mensaje, reacciones y respuestas guardadas",
-    "loading": "Conversación · cargando"
+    "loading": "Conversación · cargando",
+    "earlier": "Conversación larga, con mensajes anteriores por cargar"
   },
   "composer": {
     "label": "Mensaje",
@@ -123,6 +124,8 @@
     }
   },
   "newMessages": "Mensajes nuevos",
+  "loadEarlier": "Cargar mensajes anteriores",
+  "loadingEarlier": "Cargando mensajes anteriores…",
   "actions": {
     "label": "Responder o reaccionar a {name}",
     "reply": "Responder"

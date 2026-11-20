@@ -16,16 +16,17 @@ import { ThreadSkeleton } from '@/ui/screens/messages/thread-skeleton';
 export const metadata: Metadata = { title: 'Conversation', robots: { index: false } };
 
 /**
- * One conversation for its two people (anyone else: not found). Opening it marks it read. On wide screens the
+ * One conversation for its two people (anyone else: not found). Opening it marks it read. `?from=` ("Load earlier
+ * messages", sweep MN11) shows it from an earlier message on. On wide screens the
  * conversations sit beside it, and they're rendered apart from it: the list isn't inside the conversation's Suspense
  * boundary, so opening one from Messages keeps a list on screen the whole way (the old one until the new one is in)
  * and only the conversation's pane shows its skeleton while it loads.
  */
-function ThreadPage({ params }: PageProps<'/[locale]/app/messages/[threadId]'>) {
-  return <Conversations params={params} />;
+function ThreadPage({ params, searchParams }: PageProps<'/[locale]/app/messages/[threadId]'>) {
+  return <Conversations params={params} searchParams={searchParams} />;
 }
 
-async function Conversations({ params }: Pick<PageProps<'/[locale]/app/messages/[threadId]'>, 'params'>) {
+async function Conversations({ params, searchParams }: Pick<PageProps<'/[locale]/app/messages/[threadId]'>, 'params' | 'searchParams'>) {
   const [{ threadId }, viewer] = await Promise.all([params, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.thread(threadId)));
   const now = await requestNow();
@@ -34,17 +35,17 @@ async function Conversations({ params }: Pick<PageProps<'/[locale]/app/messages/
   const beside = threads.length > 0;
   const conversation = (
     <Suspense fallback={<ThreadSkeleton pane={beside} />}>
-      <Thread params={params} wide={beside} />
+      <Thread params={params} searchParams={searchParams} wide={beside} />
     </Suspense>
   );
   return beside ? <ThreadPanes inbox={threads} currentId={threadId} now={now.toISOString()}>{conversation}</ThreadPanes> : conversation;
 }
 
-async function Thread({ params, wide }: Pick<PageProps<'/[locale]/app/messages/[threadId]'>, 'params'> & { wide: boolean }) {
-  const [{ threadId }, viewer] = await Promise.all([params, getViewer()]);
+async function Thread({ params, searchParams, wide }: Pick<PageProps<'/[locale]/app/messages/[threadId]'>, 'params' | 'searchParams'> & { wide: boolean }) {
+  const [{ threadId }, { from }, viewer] = await Promise.all([params, searchParams, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.thread(threadId)));
   const now = await requestNow();
-  const [data, subject] = await Promise.all([getThreadPage(db, viewer.user.id, threadId, now), getReportSubject(db, viewer.user.id, threadId)]);
+  const [data, subject] = await Promise.all([getThreadPage(db, viewer.user.id, threadId, now, typeof from === 'string' ? { from } : {}), getReportSubject(db, viewer.user.id, threadId)]);
   if (!data) notFound();
   return (
     <ThreadContent

@@ -115,6 +115,9 @@ export const jordanInboxPageData: InboxPageData = {
 };
 export const inboxEmptyData: InboxPageData = { threads: [] };
 
+/** A long conversation (regular visits gain lines every visit): earlier messages to load above these (sweep MN11). */
+export const earlierThreadPageData: ThreadPageData = { ...deskBookingThreadPageData, earlier: { from: 'msg_0' } };
+
 /** Lee withdrew: the thread stays readable, but nobody can send. */
 export const closedThreadPageData: ThreadPageData = { ...deskOfferThreadPageData, composer: { ...composer, canSend: false, disabledReason: 'closed' } };
 export const blockedThreadPageData: ThreadPageData = { ...deskOfferThreadPageData, composer: { ...composer, canSend: false, disabledReason: 'blocked' } };
