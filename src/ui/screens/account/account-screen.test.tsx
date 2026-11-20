@@ -289,7 +289,7 @@ describe('AccountScreen', () => {
     mount(mayaAccountData, { onSignOut });
     await userEvent.click(screen.getByRole('button', { name: 'Sign out' }));
     await waitFor(() => expect(navigation.push).toHaveBeenCalledExactlyOnceWith(routes.home()));
-    expect(onSignOut).toHaveBeenCalledExactlyOnceWith(undefined);
+    expect(onSignOut).toHaveBeenCalledExactlyOnceWith();
   });
 
   it('handles a rejected sign-out request and leaves the control available to retry', async () => {
