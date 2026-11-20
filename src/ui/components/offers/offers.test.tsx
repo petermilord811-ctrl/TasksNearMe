@@ -62,6 +62,37 @@ describe('OfferCard and OfferComparison', () => {
     expect(container.textContent).not.toContain('1234 Example Lane');
   });
 
+  it('shows when an offer expires only while it can be booked, or when an expired one did', () => {
+    const live: [OfferView, RegExp][] = [
+      [deskOfferJordan, /^Expires /],
+      [deskOfferSamStale, /^Expires /],
+      [{ ...deskOfferJordan, status: 'expired', actions: [] }, /^Expired /],
+    ];
+    for (const [offer, line] of live) {
+      const view = card(offer);
+      expect(screen.getByText(line)).toBeVisible();
+      view.unmount();
+    }
+    // Declined, withdrawn, booked, or its task canceled: the expiry means nothing any more (sweep D9 follow-up).
+    const closed: OfferView[] = [
+      { ...deskOfferJordan, status: 'declined', actions: [] },
+      { ...deskOfferJordan, status: 'withdrawn', actions: [] },
+      { ...deskOfferJordan, status: 'accepted', actions: [] },
+      { ...deskOfferJordan, status: 'declined', actions: [], taskCanceled: true },
+    ];
+    for (const offer of closed) {
+      const view = card(offer);
+      expect(screen.queryByText(/^Expire[sd] /)).not.toBeInTheDocument();
+      view.unmount();
+    }
+  });
+
+  it("badges an offer its task's cancellation closed 'Task canceled', not 'Not selected'", () => {
+    card({ ...deskOfferJordan, status: 'declined', isNew: false, actions: [], taskCanceled: true });
+    expect(screen.getByText('Task canceled')).toBeVisible();
+    expect(screen.queryByText('Not selected')).not.toBeInTheDocument();
+  });
+
   it('covers every offer status and uses the approved glossary', () => {
     for (const value of OFFER_STATUSES) expect(status.offer).toHaveProperty(value === 'pending' ? 'pending_poster' : value, expect.any(String));
     expect(JSON.stringify(offers)).not.toMatch(/\b(hire|bid|wages)\b/i);

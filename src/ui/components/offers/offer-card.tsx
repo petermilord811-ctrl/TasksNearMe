@@ -35,7 +35,7 @@ export const hasMessage = (segments: MessageSegment[]) => segments.some((segment
 export function OfferCard({ offer, now, selectable, onAction }: OfferCardProps) {
   const { formatDateTime } = useFormat();
   const t = useTranslations('offers');
-  const status = useOfferStatus(offer.status, 'poster');
+  const status = useOfferStatus(offer.status, 'poster', { taskCanceled: offer.taskCanceled });
   const id = useId();
   const selected = Boolean(selectable?.selected);
 

@@ -70,6 +70,18 @@ describe('OfferDetailScreen', () => {
     expect(screen.queryByText('Not selected')).not.toBeInTheDocument();
   });
 
+  it('shows the expiry only while the offer can be booked: a closed one says what happened instead', () => {
+    const live = show();
+    expect(screen.getByText(/^Expires /)).toBeVisible();
+    live.unmount();
+    const closed: OfferView[] = [deskOfferTaskCanceledDetailData.offer, deskOfferSamExpired, { ...deskOfferDetailData.offer, status: 'withdrawn', actions: [] }, { ...deskOfferDetailData.offer, status: 'declined', actions: [] }];
+    for (const offer of closed) {
+      const view = show(offer);
+      expect(screen.queryByText(/^Expire[sd] /)).not.toBeInTheDocument();
+      view.unmount();
+    }
+  });
+
   it('keeps the control busy during submission and announces a failed result', async () => {
     let finish: (result: ActionResult) => void = () => {};
     show(deskOfferDetailData.offer, vi.fn(() => new Promise<ActionResult>((resolve) => { finish = resolve; })));

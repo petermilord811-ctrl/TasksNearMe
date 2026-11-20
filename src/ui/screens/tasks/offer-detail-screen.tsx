@@ -53,7 +53,8 @@ export function OfferDetailScreen({ data, handlers, now }: OfferDetailScreenProp
         {offer.message.some((segment) => segment.kind === 'masked') && <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">{t('maskedNote')}</p>}
       </div>
       <div className="space-y-2"><h3 className="text-[17px]/6 font-semibold">{t('brings')}</h3><OfferBrings brings={offer.brings} /></div>
-      <OfferExpiry offer={offer} now={now} />
+      {/* Live offers only: a closed one's notice above says what happened (an expired one, when). */}
+      {open && <OfferExpiry offer={offer} now={now} />}
     </section>
     {open && <PriceBreakdown breakdown={offer.breakdown} variant="poster" title={t('breakdownTitle')} />}
     {open && <p className="text-sm text-muted-foreground">{t('paymentNote')}</p>}
