@@ -129,6 +129,20 @@ function DashboardLists({ data, liveMap }: { data: DashboardData; liveMap: boole
   </section>;
 }
 
+/** A helper's first visit once they can be booked (J-H9): the way to a first task, with how many are near them. */
+function FirstWorkCard({ nearbyCount }: { nearbyCount: number }) {
+  const t = useTranslations('home.firstWork');
+  return <section aria-labelledby="home-first-work" className="relative isolate overflow-hidden rounded-[1.375rem] border border-foreground/[0.08] bg-card p-5 shadow-[0_18px_40px_-28px_rgb(40_20_5/0.35)] sm:p-6 dark:border-white/[0.08]">
+    <span aria-hidden="true" className="mb-4 grid size-12 place-items-center rounded-2xl bg-brand-soft text-primary [&_svg]:size-6"><Search /></span>
+    <h2 id="home-first-work" className="font-display text-xl leading-tight font-semibold tracking-[-0.015em]">{t('title')}</h2>
+    <p className="mt-2 max-w-prose text-[15px] leading-6 text-pretty text-muted-foreground">{t('body', { count: nearbyCount })}</p>
+    <div className="mt-5 flex flex-wrap gap-3">
+      <Link href={routes.app.findWork()} className={buttonVariants()}>{t('find')}</Link>
+      <Link href={routes.app.helperProfile()} className={buttonVariants({ variant: 'outline' })}>{t('profile')}</Link>
+    </div>
+  </section>;
+}
+
 /** A client's first visit (J-C1): the way in, in place of empty lists, their filters and an all-caught-up note. */
 function FirstTaskCard() {
   const t = useTranslations('home.firstRun');
@@ -155,26 +169,29 @@ export function DashboardScreen({ data, now, handlers, liveMap = true, initialAi
   const { timeZone } = useFormat();
   const hour = Number(marketClockTime(now, timeZone).split(':')[0]);
   const period = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
+  // A first visit (a client's, J-C1, or a helper's who can be booked, J-H9): its card instead of "nothing" everywhere.
+  const firstVisit = Boolean(data.firstRun || data.firstWork);
 
   return <div className="mx-auto w-full max-w-content space-y-6">
     <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div className="min-w-0">
         <h1 className="font-display text-[1.75rem] leading-[1.12] font-semibold tracking-[-0.03em] text-balance lg:text-[2.125rem]">{t(`greeting.${period}`, { firstName: data.firstName })}</h1>
         {/* Two facts side by side, each whole when the line wraps (no separator left dangling). A first visit has neither. */}
-        {!data.firstRun && <ul className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[15px] leading-6 text-muted-foreground">
+        {!firstVisit && <ul className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[15px] leading-6 text-muted-foreground">
           <li className={cn('inline-flex items-center gap-1.5', data.summary.needsYou > 0 && 'font-semibold text-foreground')}>
             <BellDot aria-hidden="true" className={cn('size-4 shrink-0', data.summary.needsYou > 0 && 'text-primary')} />{t('summary.needsYou', { count: data.summary.needsYou })}
           </li>
           <li className="inline-flex items-center gap-1.5"><CalendarDays aria-hidden="true" className="size-4 shrink-0" />{t('summary.upcoming', { count: data.summary.upcoming })}</li>
         </ul>}
       </div>
-      {data.earnings && <EarningsGlance earnings={data.earnings} />}
+      {data.earnings && !data.firstWork && <EarningsGlance earnings={data.earnings} />}
     </header>
 
     {data.firstRun && <FirstTaskCard />}
+    {data.firstWork && <FirstWorkCard nearbyCount={data.firstWork.nearbyCount} />}
 
     {/* What needs the person first; then the search, right above the lists it searches. */}
-    {(!data.firstRun || data.attention.length > 0) && <section aria-labelledby="home-attention" className="space-y-3">
+    {(!firstVisit || data.attention.length > 0) && <section aria-labelledby="home-attention" className="space-y-3">
       <SectionTitle id="home-attention">{t('sections.attention')}</SectionTitle>
       {data.attention.length > 0
         ? <AttentionList items={data.attention} now={now} />
@@ -185,6 +202,6 @@ export function DashboardScreen({ data, now, handlers, liveMap = true, initialAi
 
     <DashboardSearch data={data} {...(handlers?.onAiSearch ? { onAiSearch: handlers.onAiSearch } : {})} {...(initialAiAnswer ? { initialAnswer: initialAiAnswer } : {})} />
 
-    {(!data.firstRun || data.query.q) && <DashboardLists data={data} liveMap={liveMap} />}
+    {(!firstVisit || data.query.q) && <DashboardLists data={data} liveMap={liveMap} />}
   </div>;
 }

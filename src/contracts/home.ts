@@ -281,6 +281,13 @@ export interface DashboardData {
    * until there's something to show or the person searches (journeys on a phone, J-C1).
    */
   firstRun?: boolean;
+  /**
+   * A helper's first visit once they can be booked: no offer sent and no booking yet, ever (`isHelperFirstRun`). The
+   * page leads with finding a first task (`nearbyCount`: open tasks near them, as Find work counts them); the "nothing"
+   * lines, the empty earnings, the all-caught-up note and the empty lists stay out until there's something to show or
+   * the person searches (journeys on a phone, J-H9).
+   */
+  firstWork?: { nearbyCount: number };
 }
 
 // ---- AI search ("describe what you need") ---------------------------------------------------------

@@ -20,6 +20,12 @@
     "post": "Post a task",
     "browse": "Find helpers"
   },
+  "firstWork": {
+    "title": "Find your first task",
+    "body": "{count, plural, =0 {No open tasks near you match your services right now. New ones come in every day, and Find work can tell you when they do.} one {# open task near you matches your services. Your first offer takes a tap.} other {# open tasks near you match your services. Your first offer takes a tap.}}",
+    "find": "Find work",
+    "profile": "Your helper profile"
+  },
   "earnings": {
     "upcoming": "Earned, not paid out yet",
     "onTheWay": "On the way",

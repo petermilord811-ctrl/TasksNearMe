@@ -42,6 +42,7 @@ import {
   dashboardSummary,
   dashboardTabsFor,
   isDashboardFirstRun,
+  isHelperFirstRun,
   nearbyItem,
   ownTaskItem,
   receivedOfferItem,
@@ -358,6 +359,8 @@ export async function getDashboard(db: Db, viewer: DashboardViewer, query: Dashb
     ...(helper?.feed?.waitingFor ? { waitingFor: helper.feed.waitingFor } : {}),
     aiSearch: access,
     ...(isDashboardFirstRun(viewer.mode, sides, itemsOf) ? { firstRun: true } : {}),
+    // A new helper who can be booked (and isn't waiting for their city) is shown the way to a first task (J-H9).
+    ...(helper && helper.feed && !helper.feed.waitingFor && isHelperFirstRun(viewer.mode, helper.state.setup.bookable, itemsOf) ? { firstWork: { nearbyCount: helper.feed.totalCount } } : {}),
   };
 }
 

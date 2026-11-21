@@ -25,6 +25,7 @@ import {
   priyaDashboardData,
   priyaDashboardWaitingData,
   ruthDashboardData,
+  danaDashboardFirstWorkData,
 } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import enEarnings from '../../../../messages/en/ui/earnings.json';
@@ -283,6 +284,26 @@ describe('a first visit (journeys on a phone, J-C1)', () => {
     cleanup();
     renderDashboard({ ...ruthDashboardData, query: { ...ruthDashboardData.query, q: 'desk' } });
     expect(screen.getByRole('region', { name: 'Your tasks, offers and bookings' })).toBeInTheDocument();
+  });
+});
+
+describe('a helper’s first visit once they can be booked (journeys on a phone, J-H9)', () => {
+  it('leads with finding a first task and how many are near, without "nothing" lines, empty earnings or empty lists', () => {
+    renderDashboard(danaDashboardFirstWorkData);
+    const card = region('Find your first task');
+    expect(card.getByText('1 open task near you matches your services. Your first offer takes a tap.')).toBeVisible();
+    expect(card.getByRole('link', { name: 'Find work' })).toHaveAttribute('href', routes.app.findWork());
+    expect(card.getByRole('link', { name: 'Your helper profile' })).toHaveAttribute('href', routes.app.helperProfile());
+    expect(screen.queryByText('Nothing needs you right now')).not.toBeInTheDocument();
+    expect(screen.queryByText('Earned, not paid out yet')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Needs your attention' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Your tasks, offers and bookings' })).not.toBeInTheDocument();
+    expect(screen.getByRole('search')).toBeInTheDocument();
+  });
+
+  it('says when nothing is near yet', () => {
+    renderDashboard({ ...danaDashboardFirstWorkData, firstWork: { nearbyCount: 0 } });
+    expect(region('Find your first task').getByText(/No open tasks near you match your services right now/)).toBeVisible();
   });
 });
 

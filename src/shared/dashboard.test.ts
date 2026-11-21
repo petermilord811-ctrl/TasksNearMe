@@ -28,6 +28,7 @@ import {
   dashboardTabsFor,
   filterDashboardItems,
   isDashboardFirstRun,
+  isHelperFirstRun,
   matchesDate,
   matchesKeyword,
   nearbyItem,
@@ -182,6 +183,14 @@ describe('a first visit (journeys on a phone, J-C1)', () => {
     expect(isDashboardFirstRun('helper', { client: false, helper: true }, none)).toBe(false);
     expect(ruthDashboardData.firstRun).toBe(true);
     expect(mayaDashboardData.firstRun).toBeUndefined();
+  });
+
+  it('marks a helper’s first visit only once they can be booked, with no offer or booking yet (journeys on a phone, J-H9)', () => {
+    const none = { offers: [], bookings: [] };
+    expect(isHelperFirstRun('helper', true, none)).toBe(true);
+    expect(isHelperFirstRun('helper', false, none)).toBe(false);
+    expect(isHelperFirstRun('poster', true, none)).toBe(false);
+    expect(isHelperFirstRun('helper', true, { offers: jordanOfferItems, bookings: [] })).toBe(false);
   });
 });
 

@@ -20,6 +20,12 @@
     "post": "Publicar una tarea",
     "browse": "Buscar ayudantes"
   },
+  "firstWork": {
+    "title": "Encuentra tu primera tarea",
+    "body": "{count, plural, =0 {Ahora no hay tareas abiertas cerca de ti para tus servicios. Llegan nuevas cada día, y Buscar trabajo puede avisarte cuando aparezcan.} one {# tarea abierta cerca de ti encaja con tus servicios. Tu primera oferta es un toque.} other {# tareas abiertas cerca de ti encajan con tus servicios. Tu primera oferta es un toque.}}",
+    "find": "Buscar trabajo",
+    "profile": "Tu perfil de ayudante"
+  },
   "earnings": {
     "upcoming": "Ganado, aún sin pagar",
     "onTheWay": "En camino",

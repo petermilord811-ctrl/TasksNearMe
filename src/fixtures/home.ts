@@ -167,6 +167,17 @@ export const ruthDashboardData: DashboardData = dashboardOf({ firstName: 'Ruth',
 
 /** Jordan's jobs (his first tab): the desk today and the move tomorrow; his earnings beside the greeting. */
 export const jordanDashboardData: DashboardData = dashboardOf(jordanBase);
+
+/** A helper's first visit once they can be booked (J-H9): no offer or booking yet, one task nearby. */
+export const danaDashboardFirstWorkData: DashboardData = dashboardOf({
+  firstName: 'Dana',
+  mode: 'helper',
+  sides: { client: false, helper: true },
+  attention: [],
+  itemsOf: { nearby: jordanNearbyItems.slice(0, 1) },
+  now: DASHBOARD_HELPER_NOW,
+  extra: { firstWork: { nearbyCount: 1 }, earnings: { upcomingCents: 0, onTheWayCents: 0 } },
+});
 /** The tasks he could take, on the map of East Austin and around. */
 export const jordanDashboardNearbyMapData: DashboardData = dashboardOf({ ...jordanBase, query: { tab: 'nearby', view: 'map' } });
 /** His offers: the ones waiting on clients; accepted, declined and expired ones are under Done. */

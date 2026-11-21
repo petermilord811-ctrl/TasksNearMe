@@ -170,6 +170,14 @@ export function isDashboardFirstRun(mode: Mode, sides: { client: boolean; helper
   return mode === 'poster' && !sides.helper && itemsOf.tasks.length === 0 && itemsOf.offers.length === 0 && itemsOf.bookings.length === 0;
 }
 
+/**
+ * A helper's first visit once they can be booked (journeys on a phone, J-H9): no offer sent and no booking, ever. The page
+ * then leads with finding a first task instead of "nothing" lines, empty earnings and empty lists.
+ */
+export function isHelperFirstRun(mode: Mode, bookable: boolean, itemsOf: Readonly<Record<'offers' | 'bookings', readonly DashboardItem[]>>): boolean {
+  return mode === 'helper' && bookable && itemsOf.offers.length === 0 && itemsOf.bookings.length === 0;
+}
+
 /** A map helps when the items are in two or more neighborhoods (a client's own tasks at home don't need one). */
 export function dashboardMapHelps(items: readonly DashboardItem[]): boolean {
   return new Set(items.flatMap((item) => (item.location.kind === 'local' ? [item.location.areaName] : []))).size >= 2;
