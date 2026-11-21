@@ -5,26 +5,43 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, LazyMotion, domMax, m } from 'motion/react';
 import { useTranslations } from 'next-intl';
+import { ArrowUp, House } from 'lucide-react';
 import { LngLat, LngLatBounds, Map as MapLibreMap, Marker, getVersion, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl';
-import { CATEGORY_SLUGS, routes, type LandingMapData, type TaskMapPin } from '@/contracts';
-import type { LatLng } from '@/shared/geo';
+import { CATEGORY_SLUGS, routes, type LandingMapData, type MapArea, type TaskMapPin } from '@/contracts';
+import { formatMoney } from '@/shared/format';
+import { distanceMiles, roundMiles, type LatLng } from '@/shared/geo';
 import { usePrefersReducedMotion } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
 import { addAreaGlowLayers, createAreaGlow, type AreaGlow } from './area-glow';
-import { applyRestyle, preparedBaseStyle } from './base-style';
+import { applyRestyle, CLOCK_GLOW_LAYER, preparedBaseStyle } from './base-style';
+import { clockColors, isDarkColor, lightAt, roadGlowOpacity, sameLight, type ClockLight } from './clock';
+import { buildRoadGraph, reachedRoads, ROAD_MPH, type RoadLine } from './drive-times';
+import { simplifyPath, usableOutline, type ScreenPoint } from './lasso';
+import type { MapPulse } from './live';
+import { areaCells, ringBounds, type AreaCell } from './neighborhoods';
 import { watchPlainWheel, type WheelHint } from './wheel-hint';
-import type { MapFocusRequest, MapLayers } from './explorer-state';
-import { arrivalCamera, arrivalProgress, circleBounds, circleRing, METERS_PER_MILE, outsideCircle, type MapCamera, type ViewBounds } from './map-math';
+import type { ArrivalSource } from './arrival';
+import { DEFAULT_LAYERS as DEFAULT_VIEW_LAYERS, type MapFocusRequest, type MapLayers } from './explorer-state';
+import { arrivalCamera, BLOOM_MAX, bloomOffsets, circleBounds, circleRing, edgeMarker, medianCents, METERS_PER_MILE, outsideCircle, type EdgeBox, type MapCamera, type ViewBounds } from './map-math';
 import { PinCardBody, pinPrice } from './pin-card';
-import { CHIP_ZOOM, ClusterMarker, PinMarker } from './pin-markers';
-import { extrusionLayers, firstSymbolLayer, readMapColors, restylePlan } from './restyle';
-import { FADE_VERTICAL } from './static-map';
+import { BloomBadge, CHIP_ZOOM, ClusterMarker, PinMarker } from './pin-markers';
+import { extrusionLayers, firstSymbolLayer, readMapColors, restylePlan, type MapColors } from './restyle';
+import { FADE_TOP, FADE_VERTICAL } from './static-map';
 
 export interface MapControls {
   zoomBy: (delta: number) => void;
   /** Turns the map back to north (and flat again, unless the 3D buildings are on). */
   resetNorth: () => void;
+  /** What the map shows: its four corners ([lng, lat], clockwise from the top left), for the minimap. */
+  corners: () => [number, number][];
+  /** Runs `listener` after the camera moves (once a frame at most); returns the way to stop. */
+  onMove: (listener: () => void) => () => void;
+  /** Brings a point to the middle of the map (the minimap's press or drag). */
+  centerOn: (point: LatLng, animate?: boolean) => void;
 }
+
+/** How the drive times are doing: off, worked out, or nothing to show (no roads near the visitor on the map). */
+export type DriveTimesState = 'off' | 'ready' | 'none';
 
 type Padding = { top: number; right: number; bottom: number; left: number };
 
@@ -44,6 +61,8 @@ export interface MapViewProps {
   onHighlight: (id: string | null) => void;
   onPick?: (id: string | null) => void;
   userPoint?: LatLng;
+  /** How sure the browser is of `userPoint` (meters): a soft circle around the visitor's dot. */
+  userAccuracy?: number;
   milesById?: Map<string, number>;
   /** Only tasks this close to the visitor count: the others quiet down and a ring shows the distance. */
   withinMiles?: number | null;
@@ -53,16 +72,26 @@ export interface MapViewProps {
   onFailed: () => void;
   /** Room the page's panels take over the map (fractions of its size): the camera keeps clear of them. */
   padding?: Padding;
-  /** `all`: soft on every side; `vertical`: soft at the top and bottom only (full width); `none`: full screen. */
-  fade?: 'all' | 'vertical' | 'none';
+  /**
+   * `all`: soft on every side; `vertical`: soft at the top and bottom only (full width); `top`: soft at the top only
+   * (the page fades the bottom); `none`: full screen.
+   */
+  fade?: 'all' | 'vertical' | 'top' | 'none';
   /** The city view's zoom (and where clearing a pick returns to). */
   homeZoom?: number;
   /**
-   * The task the hero's town showed first: the map opens close and tilted over it (as the town looked) and,
-   * as its section scrolls into place, pulls back and flattens into the city view. It stops following the
-   * scroll the moment the visitor uses the map. Not with reduced motion.
+   * The task the hero's town showed first: the map opens close and tilted over it (as the town looked) and, as
+   * `arrivalSource` runs from 0 to 1 (the page's pinned scroll, or a short play on phones), pulls back and
+   * flattens into the city view. It stops following the moment the visitor uses the map, and finishes the source.
+   * Not with reduced motion, and not without a source.
    */
   arrival?: { taskId: string; point: LatLng } | null;
+  arrivalSource?: ArrivalSource | null;
+  /**
+   * Room kept clear at the top and bottom (pixels) for the marker that points to the visitor when they're off the
+   * map (the top bar, a button along the bottom). Left and right follow `padding`.
+   */
+  edgeInsets?: { top: number; bottom: number };
   layers?: MapLayers;
   fullscreen?: boolean;
   request?: MapFocusRequest | null;
@@ -74,6 +103,25 @@ export interface MapViewProps {
   onBearing?: (bearing: number) => void;
   /** A plain wheel over the map (it scrolls the page): the page can say how to zoom. */
   onBlockedWheel?: () => void;
+  /** Tasks that just arrived: they drop in. */
+  arrivals?: ReadonlySet<string>;
+  /** Soft pulses where something just happened (a new task, an offer, a booking). */
+  pulses?: MapPulse[];
+  /** Where `userPoint` comes from: the device, or a signed-in helper's home neighborhood (`homeAreaName`). */
+  userSource?: 'device' | 'home';
+  homeAreaName?: string;
+  /** The picked neighborhood (by name): its outline stays lit. */
+  selectedArea?: string | null;
+  /** A click on the map picks the neighborhood there (the picked one again lets it go). */
+  onPickArea?: (area: MapArea | null) => void;
+  /** Drawing an outline to watch an area: drags draw instead of moving the map. */
+  drawing?: boolean;
+  /** The outline drawn ([lng, lat], closed), or null when it was too small to use. */
+  onDrawn?: (outline: [number, number][] | null) => void;
+  /** Neighborhoods an outline took in (by name), lit while the visitor decides. */
+  watchAreas?: string[] | null;
+  /** How the drive times are doing (the page shows their key, or why there's nothing). */
+  onDriveTimes?: (state: DriveTimesState) => void;
 }
 
 // Bundling moves maplibre-gl into a chunk, so point it at its worker explicitly (served by the app).
@@ -95,7 +143,26 @@ const EASE_OUT = 'cubic-bezier(0.22, 1, 0.36, 1)';
 const FIT_MAX_ZOOM = 13;
 /** The arrival's first view: close over the task's area, tilted like the town (seen from the south-east). */
 const ARRIVAL = { zoom: 14.2, pitch: 52, bearing: -45 };
+/** Going to the visitor: at least this close (their streets, and the tasks around them). */
+const YOU_ZOOM = 12.6;
+/** A flight longer than this (another city, another country) is a jump instead (MapLibre's `maxDuration`). */
+const YOU_MAX_FLIGHT_MS = 2600;
+/** The accuracy circle shows only in this range (meters): tighter is the dot itself, wider says nothing useful. */
+const ACCURACY_RANGE = { min: 25, max: 2500 };
+/** The off-map marker's half size (it stays fully inside its box). */
+const EDGE_HALF = { x: 62, y: 20 };
 const CLUSTER_MAX_ZOOM = 12;
+const AREAS = 'areas';
+const DRIVE = 'drive-times';
+/** A home neighborhood is drawn as a soft area about this wide (its center isn't the house). */
+const HOME_AREA_METERS = 900;
+/** The pointer rests this long over a neighborhood before its card shows. */
+const AREA_CARD_DELAY_MS = 280;
+/** Drive times: the roads reached within these many minutes. */
+const DRIVE_BANDS = [10, 20];
+const DRIVE_REVEAL_MS = 1100;
+/** The map's light is checked against the clock this often. */
+const CLOCK_CHECK_MS = 5 * 60_000;
 /** A chip's rough width for its price (DM Sans digits), for laying chips out without overlaps. */
 const chipWidth = (price: string) => 44 + price.length * 7.2;
 const EMPTY = { type: 'FeatureCollection' as const, features: [] };
@@ -178,6 +245,7 @@ export function MapLibreView({
   onHighlight,
   onPick,
   userPoint,
+  userAccuracy,
   milesById,
   withinMiles = null,
   onReady,
@@ -186,13 +254,25 @@ export function MapLibreView({
   fade = 'all',
   homeZoom = 10.3,
   arrival = null,
-  layers = { mode: 'pins', buildings: false, serviceArea: true },
+  arrivalSource = null,
+  edgeInsets,
+  layers = DEFAULT_VIEW_LAYERS,
   fullscreen = false,
   request = null,
   onControls,
   onView,
   onBearing,
   onBlockedWheel,
+  arrivals,
+  pulses,
+  userSource = 'device',
+  homeAreaName,
+  selectedArea = null,
+  onPickArea,
+  drawing = false,
+  onDrawn,
+  watchAreas = null,
+  onDriveTimes,
 }: MapViewProps) {
   const t = useTranslations('landing.map');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -211,6 +291,8 @@ export function MapLibreView({
   const glow = useRef<AreaGlow | null>(null);
   const [arrivalLit, setArrivalLit] = useState<string | null>(null);
   const reduced = usePrefersReducedMotion();
+  /** The camera has stopped following the arrival (or has landed): the off-map marker for the visitor may show. */
+  const [settled, setSettled] = useState(() => !(arrival && arrivalSource && !arrivalSource.finished() && !reduced));
   const records = useRef(new Map<string, MarkerRecord>());
   const gate = useRef<WheelHint | null>(null);
   const stopArrival = useRef<() => void>(() => {});
@@ -221,10 +303,27 @@ export function MapLibreView({
   const homeView = useRef<MapCamera | null>(null);
   const labels = { map: label ?? t('layerTasks'), twoFingers: t('twoFingers'), ctrlZoom: t('ctrlZoom'), cmdZoom: t('cmdZoom') };
   const perHour = (rate: string) => t('perHour', { rate });
-  const latest = useRef({ onHighlight, onPick, onReady, onFailed, onControls, onView, onBearing, onBlockedWheel, pins, padding, reduced, arrival, homeZoom, labels, perHour, lit: litTaskId, first: [] as string[] });
+  const latest = useRef({ onHighlight, onPick, onReady, onFailed, onControls, onView, onBearing, onBlockedWheel, onPickArea, onDrawn, onDriveTimes, pins, padding, reduced, arrival, arrivalSource, edgeInsets, userPoint, withinMiles, homeZoom, labels, perHour, layers, selectedArea, drawing, picked: pickedTaskId, lit: litTaskId, first: [] as string[] });
   useEffect(() => {
-    latest.current = { onHighlight, onPick, onReady, onFailed, onControls, onView, onBearing, onBlockedWheel, pins, padding, reduced, arrival, homeZoom, labels, perHour, lit: litTaskId, first: [litTaskId, pickedTaskId, arrivalLit].filter((id): id is string => Boolean(id)) };
+    latest.current = { onHighlight, onPick, onReady, onFailed, onControls, onView, onBearing, onBlockedWheel, onPickArea, onDrawn, onDriveTimes, pins, padding, reduced, arrival, arrivalSource, edgeInsets, userPoint, withinMiles, homeZoom, labels, perHour, layers, selectedArea, drawing, picked: pickedTaskId, lit: litTaskId, first: [litTaskId, pickedTaskId, arrivalLit].filter((id): id is string => Boolean(id)) };
   });
+  /** The neighborhoods' areas on this map (their order is their feature ids). */
+  const cells = useMemo(() => areaCells(map.areas, map.center, map.serviceRadiusMiles * 1.15), [map.areas, map.center, map.serviceRadiusMiles]);
+  const cellsRef = useRef<AreaCell[]>(cells);
+  useEffect(() => {
+    cellsRef.current = cells;
+  }, [cells]);
+  /** The neighborhood whose card shows (the pointer has rested on it), by its index in `cells`. */
+  const [areaCard, setAreaCard] = useState<number | null>(null);
+  const areaCardRef = useRef<HTMLDivElement>(null);
+  const placeAreaCard = useRef<(point: { x: number; y: number }) => void>(() => {});
+  /** Where the pointer last was over the map (the card opens there, even if it hasn't moved since). */
+  const lastAreaPoint = useRef<{ x: number; y: number } | null>(null);
+  /** Repaints the map's light (the clock, or the switch that turns it off). */
+  const repaintLight = useRef<() => void>(() => {});
+  /** A cluster fanned out: its key, where it is, and its tasks. */
+  const [bloomState, setBloom] = useState<{ key: string; at: [number, number]; ids: string[] } | null>(null);
+  const bloomRef = useRef<HTMLDivElement>(null);
   /**
    * Leaving a pin or its card: after a short grace (time to reach the card, or the next pin), let go of that task,
    * unless something else lit another one meanwhile (the list, another pin).
@@ -236,6 +335,8 @@ export function MapLibreView({
     }, 260);
   };
   const pinsById = useMemo(() => new Map(pins.map((pin) => [pin.id, pin])), [pins]);
+  // A bloom whose tasks went (a new time filter, a booking) is closed.
+  const bloom = bloomState && bloomState.ids.every((id) => pinsById.has(id)) ? bloomState : null;
 
   // Create the map once.
   useEffect(() => {
@@ -245,13 +346,20 @@ export function MapLibreView({
     const start = latest.current;
     // The city view: framed on the tasks once the map knows its size (until then, the market's center).
     let home: MapCamera = { center: map.center, zoom: start.homeZoom, pitch: 0, bearing: 0 };
-    const opening = start.arrival && !start.reduced ? { center: start.arrival.point, ...ARRIVAL } : null;
+    const source = start.arrivalSource;
+    const opening = start.arrival && source && !source.finished() && !start.reduced ? { center: start.arrival.point, ...ARRIVAL } : null;
     const arrived = (camera: MapCamera) => ({ center: [camera.center.lng, camera.center.lat] as [number, number], zoom: camera.zoom, pitch: camera.pitch, bearing: camera.bearing });
-    const progressNow = () => arrivalProgress(container.getBoundingClientRect().top, window.innerHeight);
+    const progressNow = () => source?.get() ?? 1;
     let first = opening ? arrivalCamera(progressNow(), opening, home) : home;
+    // The map's light follows the market's clock (warm at sunset, roads lit at night), unless switched off.
+    let light: ClockLight = lightAt(new Date(), map.center);
+    const palette = (): MapColors => {
+      const base = readMapColors(container);
+      return latest.current.layers.clock ? clockColors(base, light, isDarkColor(base.land)) : base;
+    };
     // The base style arrives already in the page's palette (prefetched, or restyled as it's committed), so the
     // tiles are parsed, the labels placed and the shaders compiled once, for the look the map keeps.
-    const colors = readMapColors(container);
+    const colors = palette();
     const prepared = preparedBaseStyle(map.styleUrl, colors);
 
     let instance: MapLibreMap;
@@ -295,38 +403,46 @@ export function MapLibreView({
     const systemTheme = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null;
     let stopSystemTheme = () => {};
     let extrusions: string[] = [];
+    let stopHover = () => {};
+    let clockTimer = 0;
 
-    // ---- The arrival: the camera follows the scroll until the visitor takes over ----
+    // ---- The arrival: the camera follows the page's arrival (`arrivalSource`) until the visitor takes over ----
     let arriving = Boolean(opening);
-    let arrivalFrame = 0;
     let landed = !opening;
+    let unfollow = () => {};
     const reportView = (force = false) => {
       if (arriving && !force) return;
       const bounds = instance.getBounds();
       latest.current.onView?.({ west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth() });
     };
-    const followScroll = () => {
-      arrivalFrame = 0;
-      if (!arriving || !opening) return;
-      const progress = progressNow();
-      landed = progress >= 0.999;
-      instance.jumpTo(arrived(arrivalCamera(progress, opening, home)));
-      setArrivalLit(progress < 0.9 ? (latest.current.arrival?.taskId ?? null) : null);
-      // Landed on the city view: the list can follow what the map shows.
-      if (progress >= 0.999 && instance.loaded()) reportView(true);
-    };
-    const onScroll = () => {
-      if (arriving && !arrivalFrame) arrivalFrame = requestAnimationFrame(followScroll);
-    };
-    stopArrival.current = () => {
+    /** The camera stops following (where it is now stays). */
+    const endArrival = () => {
       if (!arriving) return;
       arriving = false;
-      cancelAnimationFrame(arrivalFrame);
-      window.removeEventListener('scroll', onScroll);
+      unfollow();
       setArrivalLit(null);
+      setSettled(true);
       // Stopped on the city view: the list can follow it now. Stopped part-way: the next move reports.
       if (landed) reportView();
       reportBearing();
+    };
+    const followArrival = (progress: number) => {
+      if (!arriving || !opening) return;
+      landed = progress >= 0.999;
+      instance.jumpTo(arrived(arrivalCamera(progress, opening, home)));
+      setArrivalLit(progress < 0.9 ? (latest.current.arrival?.taskId ?? null) : null);
+      setSettled(landed);
+      // Finished elsewhere (focus in the explorer, a pick): landed for good.
+      if (source?.finished()) {
+        endArrival();
+        return;
+      }
+      // Landed on the city view: the list can follow what the map shows.
+      if (landed && instance.loaded()) reportView(true);
+    };
+    stopArrival.current = () => {
+      endArrival();
+      latest.current.arrivalSource?.finish();
     };
     // Which way the map faces, for the compass (not while the arrival turns it with the scroll).
     let bearingFrame = 0;
@@ -342,10 +458,7 @@ export function MapLibreView({
     instance.on('rotate', () => {
       if (!bearingFrame) bearingFrame = requestAnimationFrame(reportBearing);
     });
-    if (arriving) {
-      window.addEventListener('scroll', onScroll, { passive: true });
-      arrivalFrame = requestAnimationFrame(followScroll);
-    }
+    if (arriving && source) unfollow = source.subscribe(followArrival);
     // Any gesture on the map is the visitor taking over.
     const takeOver = (event: { originalEvent?: unknown }) => {
       if (event.originalEvent) stopArrival.current();
@@ -399,7 +512,7 @@ export function MapLibreView({
       applyPadding();
       home = frameHome();
       homeView.current = home;
-      if (arriving) followScroll();
+      if (arriving) followArrival(progressNow());
     });
     sized.observe(container);
     // Setting the map up (sources, layers, markers) waits for the style and the first full render ('load'). On a
@@ -427,7 +540,7 @@ export function MapLibreView({
      */
     const paintBase = () => {
       const styleLayers = (instance.getStyle().layers ?? []) as never;
-      for (const step of restylePlan(styleLayers, readMapColors(container))) {
+      for (const step of restylePlan(styleLayers, palette())) {
         if (step.kind !== 'paint' || step.property === 'fill-extrusion-opacity') continue;
         try {
           instance.setPaintProperty(step.layer, step.property as never, step.value as never);
@@ -456,13 +569,19 @@ export function MapLibreView({
       const set = (layer: string, property: string, value: unknown) => {
         if (instance.getLayer(layer)) instance.setPaintProperty(layer, property as never, value as never);
       };
-      set('you-halo', 'circle-color', violet);
-      set('you-dot', 'circle-color', violet);
-      set('you-dot', 'circle-stroke-color', css(container, '--card', '#ffffff'));
+      set('you-accuracy-fill', 'fill-color', violet);
+      set('you-accuracy-line', 'line-color', violet);
       set('you-radius-fill', 'fill-color', violet);
       set('you-radius-line', 'line-color', violet);
       set('service-line', 'line-color', ring);
       set('service-outside-fill', 'fill-color', land);
+      for (const layer of ['areas-fill', 'areas-line', 'areas-glow']) set(layer, layer === 'areas-fill' ? 'fill-color' : 'line-color', violet);
+      set('drive-glow', 'line-color', violet);
+      set('drive-line', 'line-color', ['match', ['get', 'band'], DRIVE_BANDS[0]!, violet, ring]);
+      // The roads lit at night: warm, and only while the map follows the clock.
+      const dark = isDarkColor(css(container, '--map-land', '#efe5d7'));
+      set(CLOCK_GLOW_LAYER, 'line-color', dark ? '#ff9a4a' : '#ffb35c');
+      set(CLOCK_GLOW_LAYER, 'line-opacity', latest.current.layers.clock ? roadGlowOpacity(light) : 0);
       set(HEAT, 'heatmap-color', [
         'interpolate',
         ['linear'],
@@ -514,11 +633,21 @@ export function MapLibreView({
         }
       }
       let changed = false;
+      const current = new Set(latest.current.pins.map((pin) => pin.id));
       for (const [key, record] of recordsNow) {
         if (next.has(key)) continue;
-        record.marker.remove();
         recordsNow.delete(key);
         changed = true;
+        // A task that left the map (filtered out, booked): a copy of its face fades away (React takes the face
+        // itself away at once). One that merged into a cluster just goes.
+        const face = record.element.firstElementChild;
+        if (record.kind === 'pin' && record.pinId && !current.has(record.pinId) && face instanceof HTMLElement && !latest.current.reduced) {
+          const ghost = face.cloneNode(true) as HTMLElement;
+          ghost.style.pointerEvents = 'none';
+          record.element.appendChild(ghost);
+          ghost.animate([{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.55)' }], { duration: 260, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' });
+          window.setTimeout(() => record.marker.remove(), 280);
+        } else record.marker.remove();
       }
       for (const [key, view] of next) {
         if (recordsNow.has(key)) continue;
@@ -596,6 +725,38 @@ export function MapLibreView({
       });
       instance.addLayer({ id: 'service-outside-fill', type: 'fill', source: OUTSIDE, paint: { 'fill-color': '#efe5d7', 'fill-opacity': 0.42 } }, before);
       instance.addLayer({ id: 'service-line', type: 'line', source: SERVICE, paint: { 'line-color': '#8b5cf6', 'line-opacity': 0.55, 'line-width': 1.6, 'line-dasharray': [1, 3] }, layout: { 'line-cap': 'round' } }, before);
+      // The neighborhoods: each the part of the city nearest its center (how tasks are named). Invisible until one
+      // is pointed at, picked, or taken in by a drawn outline (feature state, so lighting one is a paint change).
+      instance.addSource(AREAS, {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: cellsRef.current.map((cell, index) => ({ type: 'Feature', id: index, properties: { name: cell.name }, geometry: { type: 'Polygon', coordinates: [cell.ring] } })) },
+      });
+      const lit = (watch: number, selected: number, hover: number) => ['case', ['boolean', ['feature-state', 'watch'], false], watch, ['boolean', ['feature-state', 'selected'], false], selected, ['boolean', ['feature-state', 'hover'], false], hover, 0];
+      instance.addLayer({ id: 'areas-fill', type: 'fill', source: AREAS, paint: { 'fill-color': '#6d4ef5', 'fill-opacity': lit(0.13, 0.05, 0.07) as never } }, before);
+      instance.addLayer({ id: 'areas-glow', type: 'line', source: AREAS, layout: { 'line-join': 'round' }, paint: { 'line-color': '#6d4ef5', 'line-width': 8, 'line-blur': 6, 'line-opacity': lit(0.42, 0.3, 0.2) as never } }, before);
+      instance.addLayer({ id: 'areas-line', type: 'line', source: AREAS, layout: { 'line-join': 'round' }, paint: { 'line-color': '#6d4ef5', 'line-width': 1.6, 'line-opacity': lit(0.95, 0.85, 0.6) as never } }, before);
+      // Drive times from the visitor: the roads reached within 10 and 20 minutes (faded in by `revealDrive`).
+      instance.addSource(DRIVE, { type: 'geojson', data: EMPTY });
+      instance.addLayer(
+        {
+          id: 'drive-glow',
+          type: 'line',
+          source: DRIVE,
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': '#6d4ef5', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 5, 13, 10, 16, 18], 'line-blur': ['interpolate', ['linear'], ['zoom'], 9, 3, 16, 10], 'line-opacity': 0 },
+        },
+        before,
+      );
+      instance.addLayer(
+        {
+          id: 'drive-line',
+          type: 'line',
+          source: DRIVE,
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': '#6d4ef5', 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1.4, 13, 2.6, 16, 4.5], 'line-opacity': 0 },
+        },
+        before,
+      );
       instance.addLayer(
         {
           id: HEAT,
@@ -621,8 +782,9 @@ export function MapLibreView({
       });
       // An invisible layer keeps the task source loaded (the pins themselves are HTML markers).
       instance.addLayer({ id: 'tasks-anchor', type: 'circle', source: TASKS, paint: { 'circle-radius': 1, 'circle-opacity': 0 } });
-      instance.addLayer({ id: 'you-halo', type: 'circle', source: YOU, paint: { 'circle-radius': 22, 'circle-color': '#7c5cff', 'circle-opacity': 0.16 } });
-      instance.addLayer({ id: 'you-dot', type: 'circle', source: YOU, paint: { 'circle-radius': 7.5, 'circle-color': '#7c5cff', 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 3 } });
+      // How sure the browser is of the visitor's place: a soft circle under their dot (an HTML marker, below).
+      instance.addLayer({ id: 'you-accuracy-fill', type: 'fill', source: YOU, paint: { 'fill-color': '#7c5cff', 'fill-opacity': 0.08 } }, before);
+      instance.addLayer({ id: 'you-accuracy-line', type: 'line', source: YOU, paint: { 'line-color': '#7c5cff', 'line-opacity': 0.28, 'line-width': 1 } }, before);
       paintOverlays();
       syncExtrusions();
 
@@ -650,11 +812,69 @@ export function MapLibreView({
       instance.on('move', () => {
         if (performance.now() - lastLayout > 140) scheduleLayout();
       });
+      // A click on the map: a task's open card closes; otherwise the neighborhood there is picked (again: let go).
       instance.on('click', (event) => {
         const target = event.originalEvent.target;
-        if (target instanceof Element && target.closest('.tnm-marker')) return;
+        if (target instanceof Element && target.closest('.tnm-marker, .tnm-bloom')) return;
+        if (latest.current.drawing) return;
+        setBloom(null);
+        const hadPick = Boolean(latest.current.picked);
         latest.current.onPick?.(null);
+        const pickArea = latest.current.onPickArea;
+        if (hadPick || !pickArea || !instance.getLayer('areas-fill')) return;
+        const hit = instance.queryRenderedFeatures(event.point, { layers: ['areas-fill'] })[0];
+        const cell = typeof hit?.id === 'number' ? cellsRef.current[hit.id] : undefined;
+        if (!cell) return;
+        const area = map.areas.find((item) => item.name === cell.name) ?? null;
+        pickArea(area && area.name === latest.current.selectedArea ? null : area);
       });
+
+      // Pointing at a neighborhood (a mouse over the map itself, not a pin): its outline glows at once, and its card
+      // shows once the pointer rests there. Not while drawing, over a task's card, or zoomed far out.
+      let hoveredCell = -1;
+      let cardTimer = 0;
+      const hoverCell = (index: number) => {
+        if (index === hoveredCell) return;
+        if (hoveredCell >= 0) instance.setFeatureState({ source: AREAS, id: hoveredCell }, { hover: false });
+        hoveredCell = index;
+        if (index >= 0) instance.setFeatureState({ source: AREAS, id: index }, { hover: true });
+        window.clearTimeout(cardTimer);
+        setAreaCard(null);
+        if (index >= 0) cardTimer = window.setTimeout(() => setAreaCard(index), AREA_CARD_DELAY_MS);
+      };
+      instance.on('mousemove', (event) => {
+        const onMap = event.originalEvent.target === instance.getCanvas();
+        // A pin's card lit by passing over it goes as the pointer leaves the pin (only a picked task's stays open).
+        const { drawing: busy, picked } = latest.current;
+        // Not while the camera is still pulling back (landed, it may still follow the scroll: that's fine).
+        if (!onMap || (arriving && !landed) || busy || picked || instance.getZoom() < 9.6 || !instance.getLayer('areas-fill')) {
+          hoverCell(-1);
+          return;
+        }
+        const hit = instance.queryRenderedFeatures(event.point, { layers: ['areas-fill'] })[0];
+        hoverCell(typeof hit?.id === 'number' ? hit.id : -1);
+        lastAreaPoint.current = { x: event.point.x, y: event.point.y };
+        placeAreaCard.current(event.point);
+      });
+      instance.getCanvas().addEventListener('mouseleave', () => hoverCell(-1));
+      instance.on('dragstart', () => hoverCell(-1));
+      instance.on('zoomstart', () => setBloom(null));
+      stopHover = () => {
+        window.clearTimeout(cardTimer);
+        hoverCell(-1);
+      };
+
+      // The clock: the map's light is checked every few minutes and repainted when it has visibly changed.
+      repaintLight.current = () => {
+        paintBase();
+        paintOverlays();
+      };
+      clockTimer = window.setInterval(() => {
+        const next = lightAt(new Date(), map.center);
+        if (sameLight(next, light)) return;
+        light = next;
+        if (latest.current.layers.clock) repaintLight.current();
+      }, CLOCK_CHECK_MS);
 
       // The theme can change while the map is open (the page's switch, or the system's setting): repaint the
       // base and the overlays (the pins use CSS colors).
@@ -680,9 +900,37 @@ export function MapLibreView({
           stopArrival.current();
           instance.easeTo({ bearing: 0, ...(lastBuildings.current ? {} : { pitch: 0 }), duration: latest.current.reduced ? 0 : 520 });
         },
+        corners: () => {
+          const box = instance.getContainer();
+          const width = box.clientWidth;
+          const height = box.clientHeight;
+          return ([[0, 0], [width, 0], [width, height], [0, height]] as [number, number][]).map(([x, y]) => {
+            const at = instance.unproject([x, y]);
+            return [at.lng, at.lat] as [number, number];
+          });
+        },
+        onMove: (listener) => {
+          let frame = 0;
+          const onMoved = () => {
+            if (!frame)
+              frame = requestAnimationFrame(() => {
+                frame = 0;
+                listener();
+              });
+          };
+          instance.on('move', onMoved);
+          return () => {
+            cancelAnimationFrame(frame);
+            instance.off('move', onMoved);
+          };
+        },
+        centerOn: (point, animate = false) => {
+          stopArrival.current();
+          instance.easeTo({ center: [point.lng, point.lat], duration: animate && !latest.current.reduced ? 450 : 0 });
+        },
       });
       latest.current.onReady();
-      if (arriving) followScroll();
+      if (arriving) followArrival(progressNow());
       else reportView();
     };
     instance.on('load', setUpMap);
@@ -707,10 +955,12 @@ export function MapLibreView({
       window.clearTimeout(giveUp);
       window.clearTimeout(styleGrace);
       window.clearTimeout(clearTimer.current);
-      cancelAnimationFrame(arrivalFrame);
+      unfollow();
       cancelAnimationFrame(bearingFrame);
       cancelAnimationFrame(layoutFrame);
-      window.removeEventListener('scroll', onScroll);
+      window.clearInterval(clockTimer);
+      stopHover();
+      repaintLight.current = () => {};
       themeWatch?.disconnect();
       stopSystemTheme();
       sized.disconnect();
@@ -801,21 +1051,353 @@ export function MapLibreView({
     live.fitBounds(bounds, { padding: 64, maxZoom: FIT_MAX_ZOOM, duration });
   }, [live, selectedCategory, pins, map.center.lat, map.center.lng, reduced, homeZoom]);
 
-  // The visitor shared their location: show it and frame what's near (or their chosen distance).
+  // Where the visitor is: their dot (an HTML marker that breathes, so it reads as live), how sure the browser is
+  // (a soft circle), and their chosen distance. Finding them never moves the map by itself (the page found them
+  // without a press, or they walked a few steps): only asking to see it does (a press, the off-map marker, a
+  // distance), below.
+  const [youElement] = useState(() => {
+    const element = document.createElement('div');
+    element.className = 'tnm-you';
+    element.setAttribute('aria-hidden', 'true');
+    // The dot never stands in the way of a pin under it.
+    element.style.pointerEvents = 'none';
+    return element;
+  });
+  const youMarker = useRef<Marker | null>(null);
+  const hasYou = Boolean(userPoint);
+  useEffect(() => {
+    const at = latest.current.userPoint;
+    if (!live || live !== mapRef.current || !at) return;
+    const marker = new Marker({ element: youElement, anchor: 'center', pitchAlignment: 'viewport', rotationAlignment: 'viewport' }).setLngLat([at.lng, at.lat]).addTo(live);
+    youMarker.current = marker;
+    return () => {
+      marker.remove();
+      youMarker.current = null;
+    };
+  }, [live, hasYou, youElement]);
   useEffect(() => {
     if (!live || live !== mapRef.current) return;
-    (live.getSource(YOU) as GeoJSONSource | undefined)?.setData(
-      userPoint ? { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [userPoint.lng, userPoint.lat] } }] } : EMPTY,
-    );
+    if (userPoint) youMarker.current?.setLngLat([userPoint.lng, userPoint.lat]);
+    // A home neighborhood is an area, not a spot: drawn as a soft circle about its size. The device's place gets how
+    // sure the browser is.
+    const home = userSource === 'home';
+    const sure = userPoint && userAccuracy !== undefined && userAccuracy >= ACCURACY_RANGE.min && userAccuracy <= ACCURACY_RANGE.max;
+    const ring = userPoint && home ? circleRing(userPoint, HOME_AREA_METERS, 72) : userPoint && sure ? circleRing(userPoint, userAccuracy, 64) : null;
+    (live.getSource(YOU) as GeoJSONSource | undefined)?.setData(ring ? polygon([ring]) : EMPTY);
     (live.getSource(RADIUS) as GeoJSONSource | undefined)?.setData(userPoint && withinMiles ? polygon([circleRing(userPoint, withinMiles * METERS_PER_MILE, 120)]) : EMPTY);
-    if (!userPoint) return;
+  }, [live, userPoint, userAccuracy, withinMiles, userSource]);
+
+  /** Shows the visitor: their chosen distance whole, or their streets (a long way off, it jumps there). */
+  const showYou = (point: LatLng) => {
+    if (!live || live !== mapRef.current) return;
     stopArrival.current();
-    const duration = reduced ? 0 : 1100;
-    if (withinMiles) {
-      const box = circleBounds(userPoint, withinMiles * METERS_PER_MILE);
-      live.fitBounds([box.west, box.south, box.east, box.north], { padding: 36, duration });
-    } else live.easeTo({ center: [userPoint.lng, userPoint.lat], zoom: 11.6, ...(lastBuildings.current ? {} : { pitch: 0, bearing: 0 }), duration });
-  }, [live, userPoint, withinMiles, reduced]);
+    const duration = reduced ? 0 : 1300;
+    const distance = latest.current.withinMiles;
+    if (distance) {
+      const box = circleBounds(point, distance * METERS_PER_MILE);
+      live.fitBounds([box.west, box.south, box.east, box.north], { padding: 36, duration, maxDuration: YOU_MAX_FLIGHT_MS });
+      return;
+    }
+    live.flyTo({ center: [point.lng, point.lat], zoom: Math.max(live.getZoom(), YOU_ZOOM), ...(lastBuildings.current ? {} : { pitch: 0, bearing: 0 }), duration, maxDuration: YOU_MAX_FLIGHT_MS });
+  };
+  const showYouRef = useRef(showYou);
+  useEffect(() => {
+    showYouRef.current = showYou;
+  });
+
+  // A new distance from the visitor frames it (a choice the visitor just made).
+  const framedDistance = useRef<number | null | undefined>(undefined);
+  useEffect(() => {
+    if (!live || live !== mapRef.current) return;
+    const first = framedDistance.current === undefined;
+    if (framedDistance.current === withinMiles) return;
+    framedDistance.current = withinMiles;
+    if (first || !withinMiles || !latest.current.userPoint) return;
+    showYouRef.current(latest.current.userPoint);
+  }, [live, withinMiles]);
+
+  // The off-map marker: while the visitor's place is outside what the map shows (behind the page's panels counts
+  // as outside), a pill sits on the map's edge on the line toward it, pointing there, with how far it is from the
+  // middle of the map; a press goes there. It's placed by hand as the map moves (no re-render per frame).
+  const edgeRef = useRef<HTMLButtonElement>(null);
+  const arrowRef = useRef<SVGSVGElement>(null);
+  const [edgeMiles, setEdgeMiles] = useState<number | null>(null);
+  const placeEdge = useRef<() => void>(() => {});
+  useEffect(() => {
+    if (!live || live !== mapRef.current || !userPoint || !settled) return;
+    let frame = 0;
+    const place = () => {
+      frame = 0;
+      const element = edgeRef.current;
+      const container = live.getContainer();
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      const room = paddingFor(latest.current.padding, width, height);
+      const insets = latest.current.edgeInsets ?? { top: 14, bottom: 14 };
+      // Left and right: clear of the page's panels (the explorer); top: the page's bar; bottom: what the camera keeps
+      // clear there (the full screen's cards) or the page's own buttons, within the part of the map a screen shows.
+      const visible = Math.min(height, window.innerHeight);
+      const box: EdgeBox = {
+        left: Math.max(14, room.left * 0.4),
+        right: width - Math.max(14, room.right + 10),
+        top: insets.top,
+        bottom: visible - Math.max(insets.bottom, room.bottom - (height - visible), 14),
+      };
+      const at = live.project([userPoint.lng, userPoint.lat]);
+      // Behind a tilted camera there's no place on the screen: no marker.
+      const spot = Number.isFinite(at.x) && Number.isFinite(at.y) ? edgeMarker(at, box) : null;
+      if (!spot) {
+        setEdgeMiles(null);
+        return;
+      }
+      const center = live.getCenter();
+      const miles = roundMiles(distanceMiles({ lat: center.lat, lng: center.lng }, userPoint));
+      setEdgeMiles((current) => (current === miles ? current : miles));
+      if (!element) return;
+      // The pill stays whole inside the box; its arrow keeps pointing at the place itself.
+      const x = Math.min(Math.max(spot.x, box.left + EDGE_HALF.x), box.right - EDGE_HALF.x);
+      const y = Math.min(Math.max(spot.y, box.top + EDGE_HALF.y), box.bottom - EDGE_HALF.y);
+      element.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0) translate(-50%, -50%)`;
+      const angle = Math.atan2(at.y - y, at.x - x);
+      if (arrowRef.current) arrowRef.current.style.transform = `rotate(${angle + Math.PI / 2}rad)`;
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(place);
+    };
+    placeEdge.current = place;
+    schedule();
+    live.on('move', schedule);
+    live.on('resize', schedule);
+    window.addEventListener('resize', schedule, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      placeEdge.current = () => {};
+      live.off('move', schedule);
+      live.off('resize', schedule);
+      window.removeEventListener('resize', schedule);
+    };
+  }, [live, userPoint, settled, padding, edgeInsets?.top, edgeInsets?.bottom, fullscreen]);
+  // Shown only while the visitor is off the map, the camera has settled, and their place is known.
+  const edgeShown = edgeMiles !== null && Boolean(userPoint) && settled;
+  // The marker's first frame: placed as soon as it's shown.
+  useLayoutEffect(() => {
+    if (edgeShown) placeEdge.current();
+  }, [edgeShown]);
+
+  // The picked neighborhood's outline stays lit, and so do the ones a drawn outline took in (framed once drawn).
+  useEffect(() => {
+    if (!live || live !== mapRef.current || !live.getSource(AREAS)) return;
+    cellsRef.current.forEach((cell, index) => {
+      live.setFeatureState({ source: AREAS, id: index }, { selected: cell.name === selectedArea, watch: Boolean(watchAreas?.includes(cell.name)) });
+    });
+  }, [live, selectedArea, watchAreas, cells]);
+  useEffect(() => {
+    if (!live || live !== mapRef.current || !watchAreas || watchAreas.length === 0) return;
+    const bounds = new LngLatBounds();
+    for (const cell of cellsRef.current) if (watchAreas.includes(cell.name)) for (const [lng, lat] of cell.ring) bounds.extend([lng, lat]);
+    if (bounds.isEmpty()) return;
+    stopArrival.current();
+    live.fitBounds(bounds, { padding: 56, maxZoom: 13.4, duration: reduced ? 0 : 900 });
+  }, [live, watchAreas, reduced]);
+
+  // The pointed-at neighborhood's card sits by the pointer (moved by hand, no re-render per move), placed as it opens.
+  useLayoutEffect(() => {
+    placeAreaCard.current = (point) => {
+      const element = areaCardRef.current;
+      const box = live?.getContainer();
+      if (!element || !box) return;
+      // Clear of the panel on the map's right (the explorer): near it, the card opens on the pointer's left.
+      const right = box.clientWidth - paddingFor(latest.current.padding, box.clientWidth, box.clientHeight).right - 12;
+      const x = point.x + 18 + element.offsetWidth <= right ? point.x + 18 : point.x - 18 - element.offsetWidth;
+      const y = Math.min(point.y + 20, Math.min(box.clientHeight, window.innerHeight) - element.offsetHeight - 12);
+      element.style.transform = `translate3d(${Math.max(8, Math.round(x))}px, ${Math.max(8, Math.round(y))}px, 0)`;
+    };
+    if (areaCard !== null && lastAreaPoint.current) placeAreaCard.current(lastAreaPoint.current);
+  }, [live, areaCard]);
+  const shownCell = areaCard !== null ? cells[areaCard] : undefined;
+  const cardArea = shownCell ? map.areas.find((area) => area.name === shownCell.name) : undefined;
+  const cellPins = shownCell ? pins.filter((pin) => pin.areaName === shownCell.name) : [];
+  const fixedPrices = cellPins.flatMap((pin) => (pin.budget.type === 'fixed' ? [pin.budget.priceCents] : []));
+  const hourlyRates = cellPins.flatMap((pin) => (pin.budget.type === 'hourly' ? [pin.budget.rateCents] : []));
+  const typicalFixed = medianCents(fixedPrices);
+  const typicalHourly = typicalFixed === null ? medianCents(hourlyRates) : null;
+
+  // Drive times from the visitor: the roads reached within 10 and 20 minutes, worked out here from the roads the map
+  // has loaded (again after a move brings in more), fading in outward from them the first time.
+  useEffect(() => {
+    if (!live || live !== mapRef.current) return;
+    const source = live.getSource(DRIVE) as GeoJSONSource | undefined;
+    if (!source) return;
+    const origin = layers.driveTimes ? userPoint : undefined;
+    if (!origin) {
+      source.setData(EMPTY);
+      // Faded right out, so turning them on again fades in from nothing.
+      for (const layer of ['drive-glow', 'drive-line']) if (live.getLayer(layer)) live.setPaintProperty(layer, 'line-opacity', 0);
+      latest.current.onDriveTimes?.('off');
+      return;
+    }
+    const roads = Object.entries(live.getStyle().sources ?? {}).find(([, spec]) => spec.type === 'vector')?.[0];
+    if (!roads) {
+      latest.current.onDriveTimes?.('none');
+      return;
+    }
+    let revealed = false;
+    let frame = 0;
+    let timer = 0;
+    const opacity = (glow: boolean, upTo: number) => ['case', ['<=', ['get', 'minutes'], upTo], ['match', ['get', 'band'], DRIVE_BANDS[0]!, glow ? 0.34 : 0.95, glow ? 0.16 : 0.6], 0];
+    const show = (upTo: number) => {
+      if (live.getLayer('drive-glow')) live.setPaintProperty('drive-glow', 'line-opacity', opacity(true, upTo) as never);
+      if (live.getLayer('drive-line')) live.setPaintProperty('drive-line', 'line-opacity', opacity(false, upTo) as never);
+    };
+    const reveal = () => {
+      const end = DRIVE_BANDS[DRIVE_BANDS.length - 1]! + 1;
+      if (latest.current.reduced) {
+        show(end);
+        return;
+      }
+      const start = performance.now();
+      const step = (now: number) => {
+        const t = Math.min(1, (now - start) / DRIVE_REVEAL_MS);
+        show(end * (1 - Math.pow(1 - t, 2)));
+        frame = t < 1 ? requestAnimationFrame(step) : 0;
+      };
+      frame = requestAnimationFrame(step);
+    };
+    const compute = () => {
+      timer = 0;
+      const lines: RoadLine[] = [];
+      for (const feature of live.querySourceFeatures(roads, { sourceLayer: 'transportation' })) {
+        const className = String(feature.properties?.class ?? '');
+        if (!(className in ROAD_MPH)) continue;
+        const geometry = feature.geometry;
+        if (geometry.type === 'LineString') lines.push({ coordinates: geometry.coordinates as [number, number][], className });
+        else if (geometry.type === 'MultiLineString') for (const part of geometry.coordinates) lines.push({ coordinates: part as [number, number][], className });
+      }
+      const stretches = reachedRoads(buildRoadGraph(lines, origin), DRIVE_BANDS);
+      source.setData({
+        type: 'FeatureCollection',
+        features: stretches.map((stretch) => ({ type: 'Feature' as const, properties: { band: stretch.band, minutes: stretch.minutes }, geometry: { type: 'LineString' as const, coordinates: stretch.coordinates } })),
+      });
+      latest.current.onDriveTimes?.(stretches.length > 0 ? 'ready' : 'none');
+      if (!revealed && stretches.length > 0) {
+        revealed = true;
+        reveal();
+      } else if (revealed) show(DRIVE_BANDS[DRIVE_BANDS.length - 1]! + 1);
+    };
+    const schedule = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(compute, 650);
+    };
+    if (live.areTilesLoaded()) compute();
+    else live.once('idle', compute);
+    live.on('moveend', schedule);
+    return () => {
+      window.clearTimeout(timer);
+      cancelAnimationFrame(frame);
+      live.off('moveend', schedule);
+      live.off('idle', compute);
+    };
+  }, [live, layers.driveTimes, userPoint]);
+
+  // The map follows the clock, or stops (a paint change only).
+  const followsClock = layers.clock;
+  const firstClock = useRef(true);
+  useEffect(() => {
+    if (!live || live !== mapRef.current) return;
+    if (firstClock.current) {
+      firstClock.current = false;
+      return;
+    }
+    repaintLight.current();
+  }, [live, followsClock]);
+
+  // Live pulses: soft rings where something just happened (a new task, an offer, a booking), at the task's public
+  // area, each with a word that rises and fades. Not with reduced motion.
+  const pulseMarkers = useRef(new Map<number, Marker>());
+  useEffect(() => {
+    if (!live || live !== mapRef.current) return;
+    const shown = pulseMarkers.current;
+    const keys = new Set((pulses ?? []).map((pulse) => pulse.key));
+    for (const [key, marker] of shown) {
+      if (keys.has(key)) continue;
+      marker.remove();
+      shown.delete(key);
+    }
+    if (reduced) return;
+    const container = live.getContainer();
+    for (const pulse of pulses ?? []) {
+      if (shown.has(pulse.key)) continue;
+      const color = pulse.kind === 'offer' ? css(container, '--violet', '#6d4ef5') : pulse.kind === 'booked' ? css(container, '--success', '#16a34a') : css(container, `--cat-${pulse.category}`, '#8b5cf6');
+      const words = pulse.kind === 'offer' ? t('pulseOffer') : pulse.kind === 'booked' ? t('pulseBooked') : t('pulseNew');
+      shown.set(pulse.key, new Marker({ element: pulseElement(color, words), anchor: 'center', pitchAlignment: 'viewport', rotationAlignment: 'viewport' }).setLngLat([pulse.point.lng, pulse.point.lat]).addTo(live));
+    }
+  }, [live, pulses, reduced, t]);
+  useEffect(() => {
+    const shown = pulseMarkers.current;
+    return () => {
+      for (const marker of shown.values()) marker.remove();
+      shown.clear();
+    };
+  }, []);
+
+  // A cluster in bloom: its tasks fanned out in a ring around it, which follows the map as it moves. A click
+  // elsewhere, Escape, or zooming closes it; the cluster's own button again zooms in, as before.
+  const bloomPins = useMemo(() => (bloom ? bloom.ids.flatMap((id) => pinsById.get(id) ?? []) : []), [bloom, pinsById]);
+  /** Where each task of the bloom sits, from the cluster's middle (pixels): its card opens there. */
+  const bloomSpots = useMemo(() => {
+    const offsets = bloomOffsets(bloomPins.length);
+    return new Map(bloomPins.map((pin, index) => [pin.id, offsets[index]!]));
+  }, [bloomPins]);
+  useLayoutEffect(() => {
+    const element = bloomRef.current;
+    if (!live || live !== mapRef.current || !bloom || !element) return;
+    const place = () => {
+      const at = live.project(bloom.at);
+      element.style.transform = `translate3d(${Math.round(at.x)}px, ${Math.round(at.y)}px, 0)`;
+    };
+    place();
+    live.on('move', place);
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setBloom(null);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      live.off('move', place);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [live, bloom]);
+
+  // Drawing an outline to watch an area: the pointer draws (the map stays put), and letting go hands the outline over.
+  const lassoRef = useRef<SVGPathElement>(null);
+  const lassoPoints = useRef<ScreenPoint[]>([]);
+  const lassoPointer = useRef<number | null>(null);
+  useEffect(() => {
+    if (!drawing) {
+      lassoPoints.current = [];
+      lassoRef.current?.setAttribute('d', '');
+    }
+  }, [drawing]);
+  const drawPath = () => {
+    const points = lassoPoints.current;
+    if (!lassoRef.current) return;
+    lassoRef.current.setAttribute('d', points.length > 1 ? `M${points.map((p) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join('L')}Z` : '');
+  };
+  const finishLasso = () => {
+    lassoPointer.current = null;
+    const thin = simplifyPath(lassoPoints.current, 3);
+    if (!live || !usableOutline(thin)) {
+      lassoPoints.current = [];
+      drawPath();
+      latest.current.onDrawn?.(null);
+      return;
+    }
+    const ring = thin.map((point) => {
+      const at = live.unproject([point.x, point.y]);
+      return [at.lng, at.lat] as [number, number];
+    });
+    ring.push(ring[0]!);
+    latest.current.onDrawn?.(ring);
+  };
 
   // The explorer asked to show a neighborhood, or one task (its card opens), or to peek at a task (keyboard
   // focus in the list): the map glides to it only if it's out of sight (behind the panels counts as out).
@@ -833,10 +1415,19 @@ export function MapLibreView({
       live.easeTo({ center: [pin.point.lng, pin.point.lat], duration: reduced ? 0 : 700 });
       return;
     }
+    if (request.kind === 'you') {
+      showYouRef.current(request.point);
+      return;
+    }
     stopArrival.current();
     const duration = reduced ? 0 : 1000;
     if (request.kind === 'area') {
-      live.flyTo({ center: [request.point.lng, request.point.lat], zoom: 13.4, pitch: live.getPitch(), duration });
+      // The whole neighborhood (as the map draws it), or its center when it has no area on this map.
+      const cell = cellsRef.current.find((item) => Math.abs(item.point.lat - request.point.lat) < 1e-9 && Math.abs(item.point.lng - request.point.lng) < 1e-9);
+      if (cell) {
+        const box = ringBounds(cell.ring);
+        live.fitBounds([box.west, box.south, box.east, box.north], { padding: 48, maxZoom: 13.6, duration });
+      } else live.flyTo({ center: [request.point.lng, request.point.lat], zoom: 13.4, pitch: live.getPitch(), duration });
       return;
     }
     const pin = pins.find((item) => item.id === request.id);
@@ -874,7 +1465,10 @@ export function MapLibreView({
     if (!live || live !== mapRef.current || !cardPin || !element) return;
     const lngLat: [number, number] = [cardPin.point.lng, cardPin.point.lat];
     const place = (glide: boolean) => {
-      const at = live.project(lngLat);
+      const projected = live.project(lngLat);
+      // A task of a cluster in bloom: its card opens where it sits in the ring.
+      const spot = bloom && bloomSpots.get(cardPin.id);
+      const at = spot ? { x: live.project(bloom.at).x + spot.x, y: live.project(bloom.at).y + spot.y } : projected;
       // Keep the card inside the map's width (it's 256 px wide, centered on the pin).
       const width = live.getContainer().clientWidth;
       const x = Math.min(Math.max(at.x, CARD_HALF_WIDTH_PX), Math.max(CARD_HALF_WIDTH_PX, width - CARD_HALF_WIDTH_PX));
@@ -894,9 +1488,9 @@ export function MapLibreView({
     return () => {
       live.off('move', follow);
     };
-    // The card moves when its task changes; `cardPin` is looked up from the same pins.
+    // The card moves when its task changes (or the bloom it's in); `cardPin` is looked up from the same pins.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [live, cardPinId]);
+  }, [live, cardPinId, bloom, bloomSpots]);
 
   useEffect(() => {
     relayout.current();
@@ -910,6 +1504,24 @@ export function MapLibreView({
     }
   }, [markers, shownId, pickedTaskId]);
 
+  // Tasks a filter just brought back (not new ones: they drop in): they fade in rather than pop.
+  const knownPins = useRef<Set<string> | null>(null);
+  const [entering, setEntering] = useState<ReadonlySet<string>>(() => new Set());
+  useEffect(() => {
+    const ids = new Set(pins.map((pin) => pin.id));
+    const before = knownPins.current;
+    knownPins.current = ids;
+    if (!before || reduced) return;
+    const back = [...ids].filter((id) => !before.has(id) && !arrivals?.has(id));
+    if (back.length === 0) return;
+    const start = window.setTimeout(() => setEntering(new Set(back)), 0);
+    const end = window.setTimeout(() => setEntering(new Set()), 900);
+    return () => {
+      window.clearTimeout(start);
+      window.clearTimeout(end);
+    };
+  }, [pins, reduced, arrivals]);
+
   const outside = useMemo(() => {
     if (!userPoint || !withinMiles || !milesById) return null;
     return new Set(pins.filter((pin) => (milesById.get(pin.id) ?? 0) > withinMiles).map((pin) => pin.id));
@@ -919,7 +1531,7 @@ export function MapLibreView({
   return (
     <div className="relative size-full">
       {/* MapLibre's own CSS positions its container, so it gets a plain full-size box inside ours. */}
-      <div className={cn('absolute inset-0', fade === 'all' && 'map-fade')} style={fade === 'vertical' ? FADE_VERTICAL : undefined}>
+      <div className={cn('absolute inset-0', fade === 'all' && 'map-fade')} style={fade === 'vertical' ? FADE_VERTICAL : fade === 'top' ? FADE_TOP : undefined}>
         <div ref={containerRef} className="size-full" />
       </div>
       {markers.map((view) => {
@@ -931,10 +1543,25 @@ export function MapLibreView({
               label={view.label}
               activeCategory={activeCategory}
               hidden={heat}
+              blooming={bloom?.key === view.key}
               onExpand={async () => {
                 const source = live?.getSource(TASKS) as GeoJSONSource | undefined;
                 if (!live || !source || view.clusterId === undefined) return;
                 stopArrival.current();
+                // A few tasks fan out around the cluster (a second press, or a big cluster, zooms in as before).
+                if (bloom?.key !== view.key && (view.total ?? 0) <= BLOOM_MAX) {
+                  try {
+                    const leaves = await source.getClusterLeaves(view.clusterId, BLOOM_MAX, 0);
+                    const ids = leaves.map((leaf) => String(leaf.properties?.pinId)).filter((id) => pinsById.has(id));
+                    if (ids.length > 1) {
+                      setBloom({ key: view.key, at: view.at, ids });
+                      return;
+                    }
+                  } catch {
+                    /* the cluster went away: zoom in instead */
+                  }
+                }
+                setBloom(null);
                 const zoom = await source.getClusterExpansionZoom(view.clusterId);
                 live.easeTo({ center: view.at, zoom: zoom + 0.35, duration: reduced ? 0 : 700 });
               }}
@@ -953,7 +1580,8 @@ export function MapLibreView({
             lit={pin.id === shownId}
             picked={pin.id === pickedTaskId}
             quiet={(activeCategory !== null && pin.categorySlug !== activeCategory) || Boolean(outside?.has(pin.id))}
-            hidden={heat}
+            hidden={heat || Boolean(bloom?.ids.includes(pin.id))}
+            appear={arrivals?.has(pin.id) ? 'drop' : entering.has(pin.id) ? 'fade' : undefined}
             onEnter={() => {
               window.clearTimeout(clearTimer.current);
               onHighlight(pin.id);
@@ -968,6 +1596,108 @@ export function MapLibreView({
           view.key,
         );
       })}
+      {hasYou && createPortal(userSource === 'home' ? <HomeDot label={homeAreaName ? t('homeAt', { area: homeAreaName }) : t('home')} /> : <YouDot label={t('you')} />, youElement)}
+      {/* The visitor is off the map: a pill on its edge points there, and goes there. */}
+      {userPoint && (
+        <button
+          ref={edgeRef}
+          type="button"
+          onClick={() => showYou(userPoint)}
+          aria-hidden={!edgeShown}
+          tabIndex={edgeShown ? 0 : -1}
+          aria-label={edgeMiles !== null ? t(userSource === 'home' ? 'homeEdgeLabel' : 'youEdgeLabel', { miles: edgeMiles }) : undefined}
+          title={edgeMiles !== null ? t(userSource === 'home' ? 'homeEdgeLabel' : 'youEdgeLabel', { miles: edgeMiles }) : undefined}
+          className={cn(
+            'glass absolute top-0 left-0 z-[6] inline-flex h-10 items-center gap-2 rounded-full pr-3.5 pl-1.5 text-xs font-semibold whitespace-nowrap text-foreground shadow-overlay transition-[opacity,scale] duration-300 ease-[var(--ease-out)] will-change-transform hover:text-violet active:scale-95',
+            edgeShown ? 'scale-100 opacity-100' : 'pointer-events-none scale-90 opacity-0',
+          )}
+        >
+          <span aria-hidden="true" className="relative grid size-7 shrink-0 place-items-center rounded-full bg-violet text-white">
+            <span className="absolute inset-0 animate-[live-ping_2.6s_var(--ease-out)_infinite] rounded-full bg-violet motion-reduce:animate-none" />
+            <ArrowUp ref={arrowRef} className="relative size-3.5" />
+          </span>
+          {edgeMiles !== null && t(userSource === 'home' ? 'homeEdge' : 'youEdge', { miles: edgeMiles })}
+        </button>
+      )}
+      {/* A neighborhood pointed at: its card by the pointer (decorative; the explorer's picker and the list are the
+          accessible way to the same neighborhoods). */}
+      {shownCell && (
+        <div ref={areaCardRef} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 z-[9] will-change-transform">
+          <div className="glass w-56 rounded-2xl px-3.5 py-3 text-xs shadow-overlay motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-95">
+            <p className="font-display text-sm font-semibold text-foreground">{shownCell.name}</p>
+            <p className="mt-1 text-muted-foreground">
+              {t('areaCardTasks', { count: cellPins.length })}
+              {typicalFixed !== null && ` · ${t('areaCardTypical', { price: formatMoney(typicalFixed) })}`}
+              {typicalHourly !== null && ` · ${t('areaCardTypical', { price: perHour(formatMoney(typicalHourly)) })}`}
+            </p>
+            {cardArea && cardArea.helperCount > 0 && <p className="mt-0.5 text-muted-foreground">{t('areaCardHelpers', { count: cardArea.helperCount })}</p>}
+            <p className="mt-1.5 font-semibold text-violet">{shownCell.name === selectedArea ? t('areaCardPicked') : t('areaCardHint')}</p>
+          </div>
+        </div>
+      )}
+      {/* A cluster in bloom: its tasks in a ring around it, each one lights its card like a pin. */}
+      {bloom && bloomPins.length > 0 && (
+        <div ref={bloomRef} aria-hidden="true" className="tnm-bloom pointer-events-none absolute top-0 left-0 z-[5] size-0">
+          <svg className="pointer-events-none absolute -top-40 -left-40 size-80 overflow-visible" viewBox="-160 -160 320 320" aria-hidden="true" focusable="false">
+            {bloomPins.map((pin) => {
+              const spot = bloomSpots.get(pin.id)!;
+              return <line key={pin.id} x1="0" y1="0" x2={spot.x} y2={spot.y} stroke={`var(--cat-${pin.categorySlug})`} strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.55" className={reduced ? undefined : 'motion-safe:animate-in motion-safe:fade-in motion-safe:duration-300'} />;
+            })}
+          </svg>
+          {bloomPins.map((pin, index) => (
+            <BloomBadge
+              key={pin.id}
+              pin={pin}
+              at={bloomSpots.get(pin.id)!}
+              order={index}
+              lit={pin.id === shownId || pin.id === pickedTaskId}
+              reduced={reduced}
+              onEnter={() => {
+                window.clearTimeout(clearTimer.current);
+                onHighlight(pin.id);
+              }}
+              onLeave={() => letGoSoon(pin.id)}
+              onPick={() => onPick?.(pin.id)}
+            />
+          ))}
+        </div>
+      )}
+      {/* Drawing an outline to watch an area: the pointer draws, the map stays put. */}
+      {drawing && (
+        <div
+          className="absolute inset-0 z-[8] cursor-crosshair touch-none"
+          onPointerDown={(event) => {
+            if (event.button !== 0 && event.pointerType === 'mouse') return;
+            event.preventDefault();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            lassoPointer.current = event.pointerId;
+            const box = event.currentTarget.getBoundingClientRect();
+            lassoPoints.current = [{ x: event.clientX - box.left, y: event.clientY - box.top }];
+            drawPath();
+          }}
+          onPointerMove={(event) => {
+            if (lassoPointer.current !== event.pointerId) return;
+            const box = event.currentTarget.getBoundingClientRect();
+            const point = { x: event.clientX - box.left, y: event.clientY - box.top };
+            const last = lassoPoints.current[lassoPoints.current.length - 1];
+            if (last && Math.hypot(point.x - last.x, point.y - last.y) < 3) return;
+            lassoPoints.current.push(point);
+            drawPath();
+          }}
+          onPointerUp={(event) => {
+            if (lassoPointer.current === event.pointerId) finishLasso();
+          }}
+          onPointerCancel={() => {
+            lassoPointer.current = null;
+            lassoPoints.current = [];
+            drawPath();
+          }}
+        >
+          <svg className="pointer-events-none absolute inset-0 size-full" aria-hidden="true" focusable="false">
+            <path ref={lassoRef} fill="color-mix(in oklab, var(--violet) 12%, transparent)" stroke="var(--violet)" strokeWidth="2.5" strokeLinejoin="round" strokeDasharray="7 6" />
+          </svg>
+        </div>
+      )}
       <LazyMotion features={domMax}>
         <AnimatePresence>
           {cardPin && (
@@ -975,7 +1705,9 @@ export function MapLibreView({
             // the map is the accessible way to the same task.
             <div key="card" ref={cardRef} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 z-10 size-0">
               <m.div
-                className={cn('pointer-events-auto absolute left-0 w-64 -translate-x-1/2', cardPlacement === 'below' ? 'top-[26px]' : 'bottom-[26px]')}
+                // A pointed-at task's card is a preview: clicks go through it to the pins under it. A picked one's
+                // takes them (its link, its close button).
+                className={cn('absolute left-0 w-64 -translate-x-1/2', cardPin.id === pickedTaskId ? 'pointer-events-auto' : 'pointer-events-none', cardPlacement === 'below' ? 'top-[26px]' : 'bottom-[26px]')}
                 style={{ transformOrigin: cardPlacement === 'below' ? '50% 0%' : '50% 100%' }}
                 initial={reduced ? false : { opacity: 0, scale: 0.93, y: cardPlacement === 'below' ? -8 : 8 }}
                 animate={{ opacity: 1, scale: 1, y: 0, transition: reduced ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 32, mass: 0.75 } }}
@@ -1012,5 +1744,62 @@ export function MapLibreView({
         </AnimatePresence>
       </LazyMotion>
     </div>
+  );
+}
+
+/** A signed-in helper's home neighborhood on the map: a house in a violet badge, with its name under it (still: a home
+ * doesn't move, so nothing breathes). */
+function HomeDot({ label }: { label: string }) {
+  return (
+    <span className="relative grid size-8 place-items-center">
+      <span className="relative grid size-7 place-items-center rounded-[10px] border-2 border-white bg-violet text-white shadow-[0_3px_12px_rgb(0_0_0/0.35)]">
+        <House className="size-3.5" />
+      </span>
+      <span className="absolute top-[calc(100%+3px)] left-1/2 -translate-x-1/2 rounded-full bg-violet px-1.5 text-[10px] leading-4 font-semibold whitespace-nowrap text-white shadow-[0_2px_6px_rgb(0_0_0/0.25)]">{label}</span>
+    </span>
+  );
+}
+
+/**
+ * A live pulse's element (a MapLibre marker): two soft rings that open out from the task's area, and a word that rises
+ * and fades ("New task", "New offer", "Booked"). Drawn by hand with the Web Animations API; it never takes clicks.
+ */
+function pulseElement(color: string, words: string): HTMLDivElement {
+  const element = document.createElement('div');
+  element.className = 'tnm-pulse';
+  element.setAttribute('aria-hidden', 'true');
+  element.style.cssText = 'pointer-events:none;position:relative;width:0;height:0;';
+  const ring = (delay: number) => {
+    const circle = document.createElement('span');
+    circle.style.cssText = `position:absolute;left:-22px;top:-22px;width:44px;height:44px;border-radius:9999px;border:2px solid ${color};background:color-mix(in oklab, ${color} 16%, transparent);opacity:0;`;
+    element.appendChild(circle);
+    circle.animate([{ transform: 'scale(0.35)', opacity: 0.95 }, { transform: 'scale(2.6)', opacity: 0 }], { duration: 1900, delay, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards' });
+  };
+  ring(0);
+  ring(380);
+  const label = document.createElement('span');
+  label.textContent = words;
+  label.style.cssText = `position:absolute;left:0;top:-30px;transform:translateX(-50%);white-space:nowrap;border-radius:9999px;padding:1px 8px;font-size:11px;font-weight:600;line-height:18px;color:#fff;background:${color};box-shadow:0 4px 12px -4px rgb(0 0 0 / 0.4);opacity:0;`;
+  element.appendChild(label);
+  label.animate(
+    [
+      { transform: 'translate(-50%, 6px)', opacity: 0 },
+      { transform: 'translate(-50%, 0)', opacity: 1, offset: 0.18 },
+      { transform: 'translate(-50%, -4px)', opacity: 1, offset: 0.72 },
+      { transform: 'translate(-50%, -14px)', opacity: 0 },
+    ],
+    { duration: 2200, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards' },
+  );
+  return element;
+}
+
+/** The visitor on the live map: a violet dot that breathes (it's live), and a small "You" under it. */
+function YouDot({ label }: { label: string }) {
+  return (
+    <span className="relative grid size-6 place-items-center">
+      <span className="absolute inset-0 animate-[live-ping_2.6s_var(--ease-out)_infinite] rounded-full bg-violet/50 motion-reduce:animate-none" />
+      <span className="relative size-[18px] rounded-full border-[3px] border-white bg-violet shadow-[0_2px_10px_rgb(0_0_0/0.35)]" />
+      <span className="absolute top-[calc(100%+3px)] left-1/2 -translate-x-1/2 rounded-full bg-violet px-1.5 text-[10px] leading-4 font-semibold whitespace-nowrap text-white shadow-[0_2px_6px_rgb(0_0_0/0.25)]">{label}</span>
+    </span>
   );
 }

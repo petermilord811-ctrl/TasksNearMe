@@ -1,10 +1,12 @@
 import 'server-only';
-import { and, asc, count, countDistinct, eq, gt, isNotNull, lt } from 'drizzle-orm';
+import { and, asc, count, countDistinct, eq, gt, inArray, isNotNull, lt } from 'drizzle-orm';
 import { cacheLife, cacheTag } from 'next/cache';
 import type {
   BecomeHelperPageData,
   CategoryPageData,
   CategorySlug,
+  CitylessHomeData,
+  CityStatus,
   CostGuidePageData,
   HomePageData,
   ISODateTime,
@@ -28,7 +30,7 @@ import {
 } from '@/modules/markets/queries';
 import { users } from '@/modules/accounts/schema';
 import { availabilityPosts } from '@/modules/availability/schema';
-import { areas as areaTable } from '@/modules/markets/schema';
+import { areas as areaTable, markets as marketTable } from '@/modules/markets/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { countPublicHelpers, getHelperProfile, listActiveHelperHandles, listPublicHelpers } from '@/modules/profiles/queries';
 import { countOpenTasks, findPublicTask, listRecentOpenTasks } from '@/modules/tasks/queries';
@@ -38,6 +40,7 @@ import { db } from '@/platform/db/client';
 import { WELCOME_PROGRAM } from '@/modules/rewards/programs';
 import { rowScopeCondition, type RowScope } from '@/shared/sample-data';
 import { normalizeZip } from '@/shared/us-zip';
+import { taskMapPinOf } from '@/shared/map-pins';
 import { buildBecomeHelperPageData, buildPricingPageData, landingFeeExamples } from './page-data';
 import { quoteBreakdown } from '@/modules/payments/fees';
 import { citiesComingNext, WAITLIST_TAG, waitlistDemand } from './waitlist';
@@ -77,11 +80,11 @@ async function loadMarketPage(slug: string, rows: RowScope): Promise<WithNow<Mar
   return { data: { market: view, categories, recentTasks, featuredHelpers }, now: now.toISOString() };
 }
 
-export async function getHomePageData(rows: RowScope): Promise<WithNow<HomePageData> | null> {
+export async function getHomePageData(rows: RowScope, slug: string = DEFAULT_MARKET_SLUG): Promise<WithNow<HomePageData> | null> {
   'use cache';
   cacheLife('minutes');
-  cacheTag(marketTag(DEFAULT_MARKET_SLUG));
-  const page = await loadMarketPage(DEFAULT_MARKET_SLUG, rows);
+  cacheTag(marketTag(slug));
+  const page = await loadMarketPage(slug, rows);
   if (!page) return null;
   // Pricing transparency and the founding reward, from the same sources as /pricing and /become-a-helper.
   const { market, policy } = await defaultMarketPolicy();
@@ -142,33 +145,24 @@ const MAP_PINS = 60;
 const KM_PER_MILE = 1.609344;
 
 async function landingMap(market: { id: string; centerLat: number; centerLng: number; serviceRadiusKm: number }, rows: RowScope): Promise<LandingMapData> {
-  const [open, areaRows] = await Promise.all([
+  const [open, areaRows, helperRows] = await Promise.all([
     listRecentOpenTasks(db, { marketId: market.id, limit: MAP_PINS, now: new Date(), rows }),
     db
-      .select({ name: areaTable.name, lat: areaTable.centerLat, lng: areaTable.centerLng })
+      .select({ id: areaTable.id, name: areaTable.name, slug: areaTable.slug, lat: areaTable.centerLat, lng: areaTable.centerLng })
       .from(areaTable)
       .where(eq(areaTable.marketId, market.id))
       .orderBy(asc(areaTable.name)),
+    // Helpers per neighborhood for its card on the map: active, ID verified, active accounts (counts only), of `rows`.
+    db
+      .select({ areaId: helperProfiles.areaId, value: count() })
+      .from(helperProfiles)
+      .innerJoin(users, eq(users.id, helperProfiles.userId))
+      .innerJoin(areaTable, eq(areaTable.id, helperProfiles.areaId))
+      .where(and(eq(areaTable.marketId, market.id), eq(helperProfiles.status, 'active'), isNotNull(helperProfiles.idVerifiedAt), eq(users.status, 'active'), rowScopeCondition(rows, users.id)))
+      .groupBy(helperProfiles.areaId),
   ]);
-  const pins: TaskMapPin[] = open.flatMap((task) =>
-    task.location.kind === 'local'
-      ? [
-          {
-            id: task.id,
-            slug: task.slug,
-            title: task.title,
-            categorySlug: task.categorySlug,
-            areaName: task.location.areaName,
-            point: task.location.publicPoint,
-            radiusMeters: task.location.radiusMeters,
-            budget: task.budget,
-            windowStart: task.schedule.windowStart,
-            offerCount: task.offerCount,
-            postedAt: task.postedAt,
-          },
-        ]
-      : [],
-  );
+  const helpersByArea = new Map(helperRows.map((row) => [row.areaId, row.value]));
+  const pins: TaskMapPin[] = open.flatMap((task) => taskMapPinOf(task) ?? []);
   return {
     center: { lat: market.centerLat, lng: market.centerLng },
     serviceRadiusMiles: Math.round(market.serviceRadiusKm / KM_PER_MILE),
@@ -176,7 +170,7 @@ async function landingMap(market: { id: string; centerLat: number; centerLng: nu
     // detail the map shows close in (street names, neighborhoods, footprints, 3D buildings, a few places).
     styleUrl: process.env.MAP_STYLE_URL || 'https://tiles.openfreemap.org/styles/liberty',
     attribution: process.env.MAP_ATTRIBUTION || 'OpenFreeMap © OpenMapTiles Data from OpenStreetMap',
-    areas: areaRows.map((row) => ({ name: row.name, point: { lat: row.lat, lng: row.lng } })),
+    areas: areaRows.map((row) => ({ name: row.name, slug: row.slug, point: { lat: row.lat, lng: row.lng }, helperCount: helpersByArea.get(row.id) ?? 0 })),
     pins,
   };
 }
@@ -268,8 +262,14 @@ export async function listCategorySlugs(marketSlug: string): Promise<string[]> {
   return market ? (await listCategoryViews(market.id)).map((c) => c.slug) : [];
 }
 
+/**
+ * The default market and its published policy, for the pages that state the fees and the programs (pricing, become a
+ * helper, the waitlist's gift card, the home page). Whatever the market's status: paused, its fees and flags still
+ * hold, and those pages must keep answering (launch rehearsal J-L1: pausing the first city took /pricing,
+ * /become-a-helper and /waitlist down with the home page).
+ */
 async function defaultMarketPolicy() {
-  const market = await findPublicMarket(DEFAULT_MARKET_SLUG);
+  const [market] = await db.select().from(marketTable).where(eq(marketTable.slug, DEFAULT_MARKET_SLUG)).limit(1);
   if (!market) throw new Error(`Default market "${DEFAULT_MARKET_SLUG}" is missing. Run npm run db:seed.`);
   const policy = await getPublishedPolicy(market.id);
   if (!policy) throw new Error(`Market "${market.slug}" has no published policy.`);
@@ -313,6 +313,32 @@ export async function getWaitlistPageData(rows: RowScope): Promise<Omit<Waitlist
     defaultMarketPolicy().then(({ market }) => getFlags(market.id)),
   ]);
   return { markets, comingNext, ...(flags['reward.welcome'] ? { helperReward: { amountCents: WELCOME_PROGRAM.amountCents } } : {}) };
+}
+
+const CITY_ORDER: Record<string, number> = { live: 0, prelaunch: 1, paused: 2 };
+
+/**
+ * The home page without its city (the default city paused, or none open; launch rehearsal J-L1): every real city
+ * with its status, live first, then opening soon, then paused for now (alphabetical within each), and the waitlist's
+ * data. The demo marketplace's cities only for signed-in testers, as on the waitlist page.
+ */
+export async function getCitylessHomeData(rows: RowScope): Promise<CitylessHomeData> {
+  'use cache';
+  cacheLife('minutes');
+  cacheTag('markets');
+  cacheTag(WAITLIST_TAG);
+  const [marketRows, waitlist] = await Promise.all([
+    db
+      .select({ id: marketTable.id, slug: marketTable.slug, name: marketTable.name, state: marketTable.state, status: marketTable.status })
+      .from(marketTable)
+      .where(inArray(marketTable.status, ['live', 'prelaunch', 'paused'])),
+    getWaitlistPageData(rows),
+  ]);
+  const cities = marketRows
+    .filter((market) => rows === 'all' || !market.id.startsWith('mkt_demo_'))
+    .map((market) => ({ slug: market.slug, name: market.name, state: market.state, status: market.status as CityStatus['status'] }))
+    .sort((a, b) => (CITY_ORDER[a.status] ?? 9) - (CITY_ORDER[b.status] ?? 9) || a.name.localeCompare(b.name));
+  return { cities, waitlist };
 }
 
 /**

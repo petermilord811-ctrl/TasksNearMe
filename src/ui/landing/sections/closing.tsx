@@ -6,7 +6,7 @@ import type { Season } from '@/shared/seasons';
 import { HoverLift, Magnetic, Reveal } from '@/ui/motion';
 import { SeasonOrnament } from '../season-ornament';
 
-/** The brand's gradient: the card's color outside a season (each season has its own, globals.css "Seasons"). */
+/** The brand's gradient: the card's color outside a season (each season has its own, landing.css "Seasons"). */
 const BRAND_GRADIENT = 'linear-gradient(120deg, #3b1d8f, #7a2bd1 30%, #d2357a 62%, #ff7a45)';
 
 /**

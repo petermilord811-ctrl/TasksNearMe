@@ -34,7 +34,7 @@ import { usePrefersReducedMotion } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
 import { CATEGORY_ICONS } from '../category-icons';
 import { useLandingHandlers } from '../landing-handlers';
-import { MAP_SECTION_ID, useOptionalLanding } from '../landing-state';
+import { scrollToMap, useOptionalLanding } from '../landing-state';
 import { ConfidenceBars, confidenceLevel, moveWithArrows, TypewriterHint, useReveal, useSpeechInput } from './assistant-parts';
 import { RewardBadge } from './reward-badge';
 import { useSeason } from '../season';
@@ -306,7 +306,7 @@ export function useHeroAssistant({ data, now, mode, area }: { data: HomePageData
     if (!category) return;
     landing?.selectCategory(category);
     close();
-    document.getElementById(MAP_SECTION_ID)?.scrollIntoView?.({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    scrollToMap();
   };
 
   return {

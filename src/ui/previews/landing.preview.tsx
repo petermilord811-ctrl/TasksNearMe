@@ -1,6 +1,8 @@
-import type { CategorySlug, HomePageData, PreviewEntry } from '@/contracts';
+// The landing's own styles: its route imports them (src/app/[locale]/(public)/page.tsx), so its previews do too.
+import '@/ui/landing/landing.css';
+import type { CategorySlug, HomePageData, PreviewEntry, WaitlistInput } from '@/contracts';
 import { routes } from '@/contracts';
-import { homeEmptyMapData, homeNoListingsData, homeNoRewardData, homePageData, previewSuggestTaskWithAi, publicViewer } from '@/fixtures';
+import { citylessHomeData, fakeHandler, homeEmptyMapData, homeNoListingsData, homeNoRewardData, homePageData, previewSuggestTaskWithAi, publicViewer } from '@/fixtures';
 import type { LatLng } from '@/shared/geo';
 import type { Season } from '@/shared/seasons';
 import { LandingHandlersProvider } from '@/ui/landing/landing-handlers';
@@ -8,7 +10,7 @@ import { LandingProvider } from '@/ui/landing/landing-state';
 import { MapSection } from '@/ui/landing/map-section';
 import { MapCardRail } from '@/ui/landing/map/card-rail';
 import { MapExplorerProvider } from '@/ui/landing/map/explorer-state';
-import { HomeScreen, HomeScreenSkeleton } from '@/ui/screens/public';
+import { CitylessHomeScreen, HomeScreen, HomeScreenSkeleton } from '@/ui/screens/public';
 import { PublicShell } from '@/ui/shells/public-shell';
 import copy from '../../../messages/en/ui/landing.json';
 
@@ -121,5 +123,19 @@ export const landingPreviews: PreviewEntry[] = [
   map('component-landing-map/outside-area', copy.previews.mapOutside, { location: inDallas }),
   map('component-landing-map/category', copy.previews.mapCategory, { category: 'yard-cleanup' }),
   rail('component-landing-map/card-row', copy.previews.mapRail),
+  // The home page while its city isn't open (launch rehearsal J-L1): no counts or map, the cities, the waitlist.
+  ...(['light', 'dark'] as const).map((theme) => ({
+    id: theme === 'light' ? 'screen-home/no-city' : 'screen-home/no-city-dark',
+    group: copy.previews.group,
+    title: theme === 'light' ? copy.previews.noCity : copy.previews.noCityDark,
+    layout: 'fullscreen' as const,
+    render: () => (
+      <div data-theme={theme} className="bg-background text-foreground">
+        <PublicShell viewer={publicViewer} currentPath={routes.home()} variant="landing">
+          <CitylessHomeScreen data={citylessHomeData} handlers={{ onJoin: fakeHandler<WaitlistInput>({ ok: true, code: 'submitted' }) }} />
+        </PublicShell>
+      </div>
+    ),
+  })),
   rail('component-landing-map/card-row-dark', copy.previews.mapRailDark, 'dark'),
 ];

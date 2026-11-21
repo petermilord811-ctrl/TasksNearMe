@@ -1,5 +1,6 @@
 'use client';
 
+import { useLayoutEffect, useRef } from 'react';
 import { CATEGORY_SLUGS, type TaskMapPin } from '@/contracts';
 import { cn } from '@/ui/lib/utils';
 import { CATEGORY_ICONS } from '../category-icons';
@@ -23,6 +24,7 @@ export function PinMarker({
   picked,
   quiet,
   hidden,
+  appear,
   onEnter,
   onLeave,
   onPick,
@@ -35,11 +37,30 @@ export function PinMarker({
   picked: boolean;
   quiet: boolean;
   hidden: boolean;
+  /** How it comes onto the map: `drop` (a task posted just now), `fade` (a filter brought it back), or simply there. */
+  appear?: 'drop' | 'fade';
   onEnter: () => void;
   onLeave: () => void;
   onPick: () => void;
 }) {
   const Icon = CATEGORY_ICONS[pin.categorySlug];
+  const rootRef = useRef<HTMLDivElement>(null);
+  const firstAppear = useRef(appear);
+  // Played once, as it mounts (the map's own marker keeps its position on the outer element).
+  useLayoutEffect(() => {
+    const element = rootRef.current;
+    if (!element || !firstAppear.current || typeof element.animate !== 'function') return;
+    if (firstAppear.current === 'drop') {
+      element.animate(
+        [
+          { transform: 'translateY(-34px) scale(0.6)', opacity: 0 },
+          { transform: 'translateY(3px) scale(1.08)', opacity: 1, offset: 0.62 },
+          { transform: 'translateY(0) scale(1)', opacity: 1 },
+        ],
+        { duration: 760, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      );
+    } else element.animate([{ opacity: 0, transform: 'scale(0.7)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 320, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+  }, []);
   const color = `var(--cat-${pin.categorySlug})`;
   // Lit, the chip fills with a deeper shade of its color, so its white price reads (4.5:1).
   const strong = `color-mix(in oklab, ${color} 68%, black)`;
@@ -47,6 +68,7 @@ export function PinMarker({
   const near = chip || on;
   return (
     <div
+      ref={rootRef}
       className={cn(
         'relative grid place-items-center transition-[opacity,filter,transform] duration-300 ease-[var(--ease-out)]',
         quiet && !on && 'opacity-25 saturate-50',
@@ -95,7 +117,24 @@ export function PinMarker({
  * in the middle, and the neighborhood's name beside it when they share one. A click zooms in until they come
  * apart. A picked category keeps its arc bright.
  */
-export function ClusterMarker({ counts, total, label, activeCategory, hidden, onExpand }: { counts: number[]; total: number; label?: string; activeCategory: string | null; hidden: boolean; onExpand: () => void }) {
+export function ClusterMarker({
+  counts,
+  total,
+  label,
+  activeCategory,
+  hidden,
+  blooming = false,
+  onExpand,
+}: {
+  counts: number[];
+  total: number;
+  label?: string;
+  activeCategory: string | null;
+  hidden: boolean;
+  /** Its tasks are fanned out around it: it stays as their middle, a little quieter. */
+  blooming?: boolean;
+  onExpand: () => void;
+}) {
   const size = label ? 40 : total >= 25 ? 58 : total >= 10 ? 52 : 46;
   const radius = 19;
   const circumference = 2 * Math.PI * radius;
@@ -113,6 +152,7 @@ export function ClusterMarker({ counts, total, label, activeCategory, hidden, on
         'inline-flex cursor-pointer items-center rounded-full bg-card shadow-[0_10px_26px_-12px_rgb(0_0_0/0.55)] transition-[opacity,transform] duration-300 ease-[var(--ease-out)] hover:scale-[1.05] active:scale-95',
         label && 'gap-1.5 py-1 pr-3 pl-1',
         activeCount === 0 && 'opacity-35',
+        blooming && 'scale-90 ring-2 ring-violet/40',
         hidden && 'pointer-events-none scale-75 opacity-0',
       )}
     >
@@ -142,6 +182,68 @@ export function ClusterMarker({ counts, total, label, activeCategory, hidden, on
         <span className={cn('relative font-display leading-none font-semibold tabular-nums', label ? 'text-[13px]' : 'text-[15px]')}>{activeCount ?? total}</span>
       </span>
       {label && <span className="text-[13px] font-semibold whitespace-nowrap">{label}</span>}
+    </button>
+  );
+}
+
+/**
+ * One task of a cluster in bloom: a round badge in its category's color with its icon, fanned out from the cluster
+ * (`at`, pixels from its middle). Pointing at it lights its card, as a pin does; a click picks it. It springs out in
+ * turn (`order`), unless motion is reduced. Decorative, like the pins: the list is the accessible way to the tasks.
+ */
+export function BloomBadge({
+  pin,
+  at,
+  order,
+  lit,
+  reduced,
+  onEnter,
+  onLeave,
+  onPick,
+}: {
+  pin: TaskMapPin;
+  at: { x: number; y: number };
+  order: number;
+  lit: boolean;
+  reduced: boolean;
+  onEnter: () => void;
+  onLeave: () => void;
+  onPick: () => void;
+}) {
+  const Icon = CATEGORY_ICONS[pin.categorySlug];
+  const color = `var(--cat-${pin.categorySlug})`;
+  const ref = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element || reduced || typeof element.animate !== 'function') return;
+    element.animate(
+      [
+        { transform: 'translate(-50%, -50%) translate(0px, 0px) scale(0.3)', opacity: 0 },
+        { transform: `translate(-50%, -50%) translate(${at.x}px, ${at.y}px) scale(1)`, opacity: 1 },
+      ],
+      { duration: 420, delay: order * 22, easing: 'cubic-bezier(0.34, 1.4, 0.64, 1)', fill: 'backwards' },
+    );
+    // Only as it opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <button
+      ref={ref}
+      type="button"
+      tabIndex={-1}
+      onPointerEnter={onEnter}
+      onPointerLeave={onLeave}
+      onClick={(event) => {
+        event.stopPropagation();
+        onPick();
+      }}
+      className={cn(
+        'pointer-events-auto absolute top-0 left-0 grid size-[34px] cursor-pointer place-items-center rounded-full border-[2.5px] bg-card shadow-[0_8px_18px_-8px_rgb(0_0_0/0.55)] transition-[box-shadow,background-color,color] duration-200',
+        lit && 'text-white',
+      )}
+      style={{ transform: `translate(-50%, -50%) translate(${at.x}px, ${at.y}px)`, borderColor: color, ...(lit ? { background: `color-mix(in oklab, ${color} 68%, black)` } : { color }) }}
+    >
+      <Icon aria-hidden="true" className="size-4" />
     </button>
   );
 }

@@ -53,7 +53,7 @@ function MarketCard({ market, onSetMarketStatus, marketDialog }: { market: Admin
     t(`confirm.leads.${action.id}`, { name, from: market.status }),
     ...(action.helpersIn > 0 ? [t('confirm.helpersIn', { count: action.helpersIn })] : []),
     ...(action.id === 'live' ? [t('confirm.waitlistEmails', { count: action.waitlistEmails }), t('confirm.accountsTold', { count: action.accountsTold })] : []),
-    // Pausing the home page's city takes the home page down with it (launch rehearsal J-L1).
+    // Pausing the home page's city leaves the home page without a city (launch rehearsal J-L1).
     ...(action.id === 'paused' && market.homePage ? [t('confirm.homePage', { name })] : []),
   ].join(' ');
   return <li aria-labelledby={headingId} className={cn(adminSection, 'min-w-0 space-y-4', market.openingRefused && 'border-warning/40 dark:border-warning/40')}>

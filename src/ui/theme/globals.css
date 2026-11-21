@@ -575,13 +575,6 @@ html[data-motion="on"] [data-reveal]:not([data-revealed]) .draw-on-reveal { stro
   background-clip: text;
   color: transparent;
 }
-/* The landing map's soft edges: it melts into the page instead of sitting in a box. */
-@utility map-fade {
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent), linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
-  -webkit-mask-composite: source-in;
-  mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent), linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
-  mask-composite: intersect;
-}
 @utility glass {
   background: var(--glass);
   -webkit-backdrop-filter: blur(18px) saturate(1.6);
@@ -631,17 +624,6 @@ html[data-theme-switch]::view-transition-new(root) {
   backdrop-filter: blur(14px) saturate(1.4);
   box-shadow: 0 10px 30px -12px rgb(0 0 0 / 0.35), inset 0 0 0 1px color-mix(in oklab, var(--foreground) 8%, transparent);
 }
-@media (hover: hover) and (pointer: fine) {
-  [data-map-cursor] .maplibregl-cooperative-gesture-screen { display: none; }
-}
-
-/* The live map's cursors (TaskMap marks its frame with `data-map-cursor`). A soft violet lens to look around
-   with; a lens with a plus once the wheel zooms the map (after a click on it); while dragging, the lens with
-   arrows. Each has a white halo, so it reads on light and dark maps; the browser's own cursor is the fallback.
-   Pins, chips and controls keep the pointing hand. */
-[data-map-cursor] .maplibregl-canvas-container.maplibregl-interactive { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='9.5' fill='rgba(124,92,255,0.10)' stroke='white' stroke-width='4'/%3E%3Ccircle cx='16' cy='16' r='9.5' fill='none' stroke='%237c5cff' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='2.4' fill='%237c5cff' stroke='white' stroke-width='1.4'/%3E%3C/svg%3E") 16 16, grab; }
-[data-map-cursor] .maplibregl-canvas-container.maplibregl-interactive:active,
-[data-map-cursor][data-map-dragging] .maplibregl-canvas-container.maplibregl-interactive { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Cg stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 3.5l-2.6 2.8M16 3.5l2.6 2.8M16 28.5l-2.6-2.8M16 28.5l2.6-2.8M3.5 16l2.8-2.6M3.5 16l2.8 2.6M28.5 16l-2.8-2.6M28.5 16l-2.8 2.6' stroke='white' stroke-width='3.6'/%3E%3Cpath d='M16 3.5l-2.6 2.8M16 3.5l2.6 2.8M16 28.5l-2.6-2.8M16 28.5l2.6-2.8M3.5 16l2.8-2.6M3.5 16l2.8 2.6M28.5 16l-2.8-2.6M28.5 16l-2.8 2.6' stroke='%237c5cff' stroke-width='1.8'/%3E%3C/g%3E%3Ccircle cx='16' cy='16' r='7' fill='rgba(124,92,255,0.30)' stroke='white' stroke-width='3.6'/%3E%3Ccircle cx='16' cy='16' r='7' fill='rgba(124,92,255,0.30)' stroke='%237c5cff' stroke-width='1.8'/%3E%3C/svg%3E") 16 16, grabbing; }
 
 /* The brand mark (BrandMark): pointed at or focused, its one line draws itself again and a light sweeps the tile. */
 @media (prefers-reduced-motion: no-preference) {
@@ -735,35 +717,6 @@ html[data-language-switch] #main::after {
   }
 }
 
-/* ---- Landing assistant (src/ui/landing/hero/hero-assistant.tsx) ---------------------------------
-   A soft "AI" ring around the hero's input while it's in use (it turns only then), a sparkle that twinkles now and
-   then (paused off screen), a typing caret, a shimmer while AI writes, and a pulse while the microphone listens.
-   Nothing moves under reduced motion. */
-@property --assistant-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-@keyframes assistant-spin { to { --assistant-angle: 360deg; } }
-@keyframes assistant-twinkle {
-  0%, 74%, 100% { transform: none; opacity: 1; }
-  80% { transform: scale(1.28) rotate(16deg); opacity: 1; }
-  88% { transform: scale(0.9) rotate(-8deg); opacity: 0.8; }
-}
-@keyframes assistant-caret { 0%, 45% { opacity: 1; } 55%, 100% { opacity: 0; } }
-@keyframes assistant-shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
-@keyframes assistant-listen { 0% { transform: scale(0.8); opacity: 0.55; } 100% { transform: scale(1.9); opacity: 0; } }
-@utility assistant-ring {
-  background: conic-gradient(from var(--assistant-angle), var(--violet), #f472b6, #fb923c, #38bdf8, var(--violet));
-}
-@utility assistant-shimmer {
-  background-image: linear-gradient(90deg, color-mix(in oklab, var(--foreground) 6%, transparent) 0%, color-mix(in oklab, var(--violet) 22%, transparent) 50%, color-mix(in oklab, var(--foreground) 6%, transparent) 100%);
-  background-size: 220% 100%;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .assistant-ring[data-active] { animation: assistant-spin 3.6s linear infinite; }
-  .assistant-twinkle:not([data-paused]) { animation: assistant-twinkle 4.2s var(--ease-out) infinite; }
-  .assistant-caret { animation: assistant-caret 1s steps(1) infinite; }
-  .assistant-shimmer { animation: assistant-shimmer 1.4s linear infinite; }
-  .assistant-listen::after { animation: assistant-listen 1.2s var(--ease-out) infinite; }
-}
-
 /* ---- App UI (src/ui/shells, src/ui/primitives) -------------------------------------------------
    The signed-in app and the staff area in the landing page's language: paper under the page, a glass bar on
    top, soft layered shadows, and overlays that open and close with motion. The enter and exit utilities are
@@ -840,7 +793,7 @@ html[data-language-switch] #main::after {
    the root whenever anything was added to the page, such as a menu or a toast (speed on a phone). */
 html { scroll-padding-top: calc(var(--app-header-offset, -0.75rem) + 0.75rem); }
 
-/* ---- Landing sections ---- */
+/* ---- Landing sections: the landing's own styles are in src/ui/landing/landing.css ---- */
 /* HoverLift (src/ui/motion/hover-lift.tsx): everything here reads its one spring, `--hover` (0–1), so a card's
    light, rim, shadow, icon and arrow move together and turn back smoothly halfway. */
 .lift-light {
@@ -864,227 +817,3 @@ html { scroll-padding-top: calc(var(--app-header-offset, -0.75rem) + 0.75rem); }
 .lift-arrow-x { transform: translate3d(calc(var(--hover, 0) * 5px), 0, 0) scale(calc(1 + var(--hover, 0) * 0.06)); }
 .lift-fade { opacity: calc(0.62 + var(--hover, 0) * 0.38); }
 .lift-number { color: var(--foreground); opacity: calc(0.1 + var(--hover, 0) * 0.2); transform: translate3d(calc(var(--hover, 0) * 3px), 0, 0); }
-
-/* A live count's dot: a soft ping, like the map's pins. */
-.live-dot { position: relative; display: inline-block; width: 0.4rem; height: 0.4rem; border-radius: 9999px; }
-.live-dot::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: inherit; animation: live-ping 2.6s var(--ease-out) infinite; }
-@keyframes live-ping { 0% { transform: scale(1); opacity: 0.55; } 70%, 100% { transform: scale(3.2); opacity: 0; } }
-
-/* Text links: the underline draws in from the left and the arrow springs forward. */
-.arrow-link-text { background: linear-gradient(currentColor, currentColor) 0 100% / 0 1.5px no-repeat; padding-bottom: 1px; transition: background-size 520ms var(--ease-out); }
-.arrow-link-icon { transition: transform 620ms cubic-bezier(0.34, 1.45, 0.64, 1); }
-@media (hover: hover) {
-  .arrow-link:hover .arrow-link-text { background-size: 100% 1.5px; }
-  .arrow-link:hover .arrow-link-icon { transform: translateX(4px); }
-}
-.arrow-link:focus-visible .arrow-link-text { background-size: 100% 1.5px; }
-
-/* Pill calls to action: a deeper shadow and an arrow that springs forward; a press sinks them. */
-.cta-pill { transition: box-shadow 520ms var(--ease-out), transform 420ms cubic-bezier(0.34, 1.45, 0.64, 1); }
-.cta-pill-light { box-shadow: 0 16px 36px -14px rgb(0 0 0 / 0.6); }
-.cta-arrow { transition: transform 620ms cubic-bezier(0.34, 1.45, 0.64, 1); }
-.cta-ghost { transition: background-color 520ms var(--ease-out), border-color 520ms var(--ease-out), transform 420ms cubic-bezier(0.34, 1.45, 0.64, 1); }
-@media (hover: hover) {
-  .cta-pill:hover { box-shadow: 0 18px 36px -16px rgb(0 0 0 / 0.5); }
-  .cta-pill-light:hover { box-shadow: 0 22px 44px -16px rgb(0 0 0 / 0.65); }
-  .cta-pill:hover .cta-arrow { transform: translateX(4px); }
-  .cta-ghost:hover { background-color: rgb(255 255 255 / 0.12); border-color: rgb(255 255 255 / 0.7); }
-}
-.cta-pill:active, .cta-ghost:active { transform: scale(0.97); transition-duration: 160ms; }
-
-/* The helper points: the icon gives a little nod when its line is pointed at. */
-.point-icon { transition: transform 560ms cubic-bezier(0.34, 1.45, 0.64, 1); }
-@media (hover: hover) { .point-row:hover .point-icon { transform: translateY(-2px) rotate(-8deg) scale(1.08); } }
-
-/* Bars that fill once their section is revealed. */
-.reveal-fill { transform-origin: left; transition: transform 1.3s var(--ease-out) 250ms; }
-html[data-motion="on"] [data-reveal]:not([data-revealed]) .reveal-fill { transform: scaleX(0); }
-
-/* Neighborhood chips: rise on hover with a soft shadow, sink on press. */
-.area-chip { transition: transform 480ms cubic-bezier(0.34, 1.45, 0.64, 1), box-shadow 480ms var(--ease-out), border-color 400ms var(--ease-out), background-color 400ms var(--ease-out); }
-.area-chip-pin { transition: transform 520ms cubic-bezier(0.34, 1.45, 0.64, 1), color 300ms var(--ease-out); }
-@media (hover: hover) {
-  .area-chip:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -14px rgb(0 0 0 / 0.45); border-color: color-mix(in oklab, var(--violet) 35%, transparent); background-color: var(--card); }
-  .area-chip:hover .area-chip-pin { transform: translateY(-1px) scale(1.15); color: var(--violet); }
-}
-.area-chip:active { transform: scale(0.97); transition-duration: 160ms; }
-
-/* Trust pictures (aria-hidden): they follow the card's `--hover`, and loop while it's pointed at. */
-.trust-badge { transform: scale(calc(0.86 + var(--hover, 0) * 0.18)) rotate(calc((1 - var(--hover, 0)) * -14deg)); }
-.trust-id { transform: translate3d(0, calc(var(--hover, 0) * -3px), 0) rotate(calc(-2deg + var(--hover, 0) * 2deg)); }
-.trust-scan { position: absolute; inset-block: 0; left: 0; width: 45%; pointer-events: none; opacity: 0; background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--violet) 20%, transparent), transparent); transform: translateX(-120%); }
-[data-hovered] .trust-scan { animation: trust-scan 1.9s var(--ease-out) infinite; }
-@keyframes trust-scan { 0% { transform: translateX(-120%); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateX(260%); opacity: 0; } }
-.trust-area { transform-box: fill-box; transform-origin: center; transform: scale(calc(0.94 + var(--hover, 0) * 0.1)); }
-[data-hovered] .trust-area { animation: trust-dash 5s linear infinite; }
-@keyframes trust-dash { to { stroke-dashoffset: -60; } }
-.trust-chip { transform: translate3d(0, calc(var(--hover, 0) * -3px), 0); }
-.trust-flow-fill { transform: scaleX(calc(0.2 + var(--hover, 0) * 0.8)); }
-.trust-flow-dot { position: absolute; top: 50%; left: 0; width: 0.5rem; height: 0.5rem; margin-top: -0.25rem; border-radius: 9999px; background: var(--card); box-shadow: 0 0 0 2px var(--violet), 0 0 12px var(--violet); opacity: 0; }
-[data-hovered] .trust-flow-dot { animation: trust-flow 2.4s var(--ease-out) infinite; }
-@keyframes trust-flow { 0% { left: 0; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { left: calc(100% - 0.5rem); opacity: 0; } }
-.trust-node { transform: translate3d(0, calc(var(--hover, 0) * -2px), 0) scale(calc(1 + var(--hover, 0) * 0.06)); }
-.trust-review { filter: blur(calc((1 - var(--hover, 0)) * 3px)); transform: translate3d(0, calc(var(--hover, 0) * -3px), 0); }
-.trust-lock { opacity: calc(1 - var(--hover, 0)); transform: scale(calc(1 - var(--hover, 0) * 0.35)); }
-
-/* The questions: each opens and closes smoothly to its answer's height; the open one rises a little. */
-.landing-faq .faq-item { transition: background-color 500ms var(--ease-out), border-color 500ms var(--ease-out), box-shadow 600ms var(--ease-out), transform 600ms cubic-bezier(0.34, 1.3, 0.64, 1); }
-@media (hover: hover) { .landing-faq .faq-item:hover { border-color: color-mix(in oklab, var(--foreground) 14%, transparent); background-color: var(--card); } }
-.landing-faq .faq-item[data-state="open"] { background-color: var(--card); box-shadow: var(--card-shadow), 0 18px 40px -26px rgb(24 14 44 / 0.35); transform: translateY(-2px); }
-.landing-faq [data-slot="accordion-content"][data-state="open"] { animation: faq-open 460ms var(--ease-out); }
-.landing-faq [data-slot="accordion-content"][data-state="closed"] { animation: faq-close 300ms var(--ease-out); }
-@keyframes faq-open { from { height: 0; opacity: 0; } to { height: var(--radix-accordion-content-height); opacity: 1; } }
-@keyframes faq-close { from { height: var(--radix-accordion-content-height); opacity: 1; } to { height: 0; opacity: 0; } }
-
-@media (prefers-reduced-motion: reduce) {
-  .live-dot::after, [data-hovered] .trust-scan, [data-hovered] .trust-area, [data-hovered] .trust-flow-dot { animation: none; }
-  .landing-faq [data-slot="accordion-content"] { animation: none !important; }
-  .arrow-link-text, .arrow-link-icon, .cta-pill, .cta-arrow, .cta-ghost, .point-icon, .reveal-fill, .area-chip, .area-chip-pin, .landing-faq .faq-item { transition: none; }
-}
-
-/* ---- Landing map ---- */
-/* A task's area on the drawn map fades and grows in, like the live map's (`area-glow.ts`). */
-@keyframes tnm-area-in { from { opacity: 0; transform: scale(0.86); } to { opacity: 1; transform: none; } }
-
-/* ---- 3D town ---- */
-/* The hero town's cards (frosted glass over the town). Their entrance animates only themselves (an ancestor
-   fading would switch the glass's blur off until it ends) and keeps nothing once it's over (`backwards`), so
-   their own states apply: pointed at (the card or its pin), they rise on a soft spring and glow; quieted by
-   another category, they fade back. */
-.town-card {
-  --town-spring: linear(0, 0.009, 0.035 2.1%, 0.141 4.4%, 0.723 15.5%, 0.938 21.4%, 1.017 27.2%, 1.031 31.6%, 1.025 37.6%, 1.004 51.5%, 0.998 63.9%, 1);
-  transition: translate 620ms var(--town-spring), scale 620ms var(--town-spring), opacity 450ms var(--ease-out), box-shadow 450ms var(--ease-out);
-  animation: town-card-in 640ms var(--ease-out) backwards;
-  animation-delay: var(--enter-delay, 0ms);
-}
-.town-card.is-lit { translate: 0 -4px; box-shadow: var(--glass-shadow), inset 0 1px 0 rgb(255 255 255 / 0.3), 0 24px 50px -26px var(--violet); }
-/* Pointed at through a still box around it (`.town-card-hit`), so a card rising from under the pointer stays pointed at. */
-@media (hover: hover) {
-  .town-card-hit:hover > .town-card { translate: 0 -4px; box-shadow: var(--glass-shadow), inset 0 1px 0 rgb(255 255 255 / 0.3), 0 24px 50px -26px var(--violet); }
-}
-.town-card.is-quiet { opacity: 0.35; scale: 0.98; }
-.town-card:active { scale: 0.97; transition-duration: 150ms; }
-@keyframes town-card-in { from { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.95); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) {
-  .town-card { animation: none; transition-duration: 0ms; }
-}
-
-/* The town's skeleton (minimap/town-skeleton.tsx): its land in quiet shades of the page (tops lighter than the
-   sides, as lit from above; the terraces a touch deeper than the plate), the water fainter, and a soft light
-   sweeping across while the 3D town gets ready. */
-.town-skeleton {
-  --town-skeleton-top: color-mix(in oklab, var(--foreground) 6%, var(--background));
-  --town-skeleton-terrace: color-mix(in oklab, var(--foreground) 8.5%, var(--background));
-  --town-skeleton-side: color-mix(in oklab, var(--foreground) 13%, var(--background));
-  --town-skeleton-water: color-mix(in oklab, var(--foreground) 4%, var(--background));
-  --town-skeleton-sheen: rgb(255 255 255 / 0.75);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .town-skeleton {
-    --town-skeleton-top: color-mix(in oklab, var(--foreground) 11%, var(--background));
-    --town-skeleton-terrace: color-mix(in oklab, var(--foreground) 8.5%, var(--background));
-    --town-skeleton-side: color-mix(in oklab, var(--foreground) 5%, var(--background));
-    --town-skeleton-water: color-mix(in oklab, var(--foreground) 3%, var(--background));
-    --town-skeleton-sheen: rgb(255 255 255 / 0.08);
-  }
-}
-[data-theme="dark"] .town-skeleton {
-  --town-skeleton-top: color-mix(in oklab, var(--foreground) 11%, var(--background));
-  --town-skeleton-terrace: color-mix(in oklab, var(--foreground) 8.5%, var(--background));
-  --town-skeleton-side: color-mix(in oklab, var(--foreground) 5%, var(--background));
-  --town-skeleton-water: color-mix(in oklab, var(--foreground) 3%, var(--background));
-  --town-skeleton-sheen: rgb(255 255 255 / 0.08);
-}
-.town-skeleton-water { fill: var(--town-skeleton-water); }
-.town-skeleton-side { fill: var(--town-skeleton-side); }
-.town-skeleton-top-0, .town-skeleton-top-1 { fill: var(--town-skeleton-terrace); }
-.town-skeleton-top-2 { fill: var(--town-skeleton-top); }
-.town-skeleton-sheen-stop { stop-color: var(--town-skeleton-sheen); }
-.town-skeleton-sheen { animation: town-skeleton-sheen 2.8s cubic-bezier(0.45, 0, 0.25, 1) 0.35s infinite; }
-@keyframes town-skeleton-sheen { from { transform: translateX(0); } 72%, to { transform: translateX(var(--sheen-travel)); } }
-@media (prefers-reduced-motion: reduce) {
-  .town-skeleton-sheen { display: none; }
-}
-
-/* ---- Seasons ------------------------------------------------------------------------------------------------
-   The landing dresses for the season (HomeScreen's `data-season`: fall, winter, spring, summer; src/shared/seasons.ts).
-   Only the atmosphere changes: the hero's sky (`.hero-haze`, beside the brand's own breath of light), the map's
-   parks, land and water (the map reads its colors as it loads, so these stay plain colors), and the closing card's
-   gradient. The town and the weather over the hero take the season in their own code. The brand's colors, the words
-   and the cards stay as they are. Each season has light and dark values (dark: the OS setting unless the page is
-   set light, or `data-theme="dark"`). */
-.hero-haze {
-  background:
-    radial-gradient(72% 58% at 82% -4%, var(--season-sky, transparent), transparent 70%),
-    radial-gradient(44% 38% at 12% 16%, var(--season-glow, color-mix(in oklab, var(--iri-1) 9%, transparent)), transparent 72%),
-    radial-gradient(36% 30% at 34% 6%, color-mix(in oklab, var(--iri-3) 7%, transparent), transparent 74%);
-}
-/* Late fall: a low golden sun, olive-gold parks. Plum to amber on the closing card. */
-[data-season="fall"] {
-  --season-sky: rgb(255 186 112 / 0.26);
-  --season-glow: rgb(255 150 80 / 0.12);
-  --map-park: #e2e0b9;
-  --map-land: #f0e3d0;
-  --closing-gradient: linear-gradient(120deg, #3a1532, #7a2442 30%, #c4462b 62%, #f08a33);
-}
-/* Winter: a cold clear sky, snow on the land and in the parks, icy water. Night blue to ice on the closing card. */
-[data-season="winter"] {
-  --season-sky: rgb(168 196 245 / 0.55);
-  --season-glow: rgb(186 206 248 / 0.46);
-  --map-land: #edf0f4;
-  --map-park: #f7f9fb;
-  --map-water: #b9d9ec;
-  --map-building: #e2e7ee;
-  --map-road-casing: #d6dde6;
-  --map-road-major: #f2d6c8;
-  --map-civic: #e8ecf2;
-  --closing-gradient: linear-gradient(120deg, #0f1b4c, #26389a 30%, #5b55c8 60%, #7d8fe0);
-}
-/* Spring: blossom pink in the sky, fresh green parks. The brand's violet into blossom on the closing card. */
-[data-season="spring"] {
-  --season-sky: rgb(255 186 216 / 0.28);
-  --season-glow: rgb(198 234 176 / 0.22);
-  --map-park: #d2eec2;
-  --closing-gradient: linear-gradient(120deg, #3b1d8f, #8235cf 30%, #cf3f8c 62%, #f07aa0);
-}
-/* Summer: sunshine, deep green parks, bright water. Deep sea through dusk to sunset on the closing card. (Each
-   card gradient keeps its white words at least as readable as the brand's, wherever the slow drift takes it.) */
-[data-season="summer"] {
-  --season-sky: rgb(255 212 104 / 0.32);
-  --season-glow: rgb(130 214 240 / 0.16);
-  --map-park: #c8e6b4;
-  --map-water: #96d4f0;
-  --closing-gradient: linear-gradient(120deg, #0d3b66, #1f5aa8 24%, #6a46b8 42%, #b83f8e 56%, #d2453a 72%, #f59a3a);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) [data-season="fall"] { --season-sky: rgb(255 140 70 / 0.09); --season-glow: rgb(255 120 60 / 0.07); --map-park: #26281b; --map-land: #1b1712; }
-  :root:not([data-theme="light"]) [data-season="winter"] {
-    --season-sky: rgb(120 156 255 / 0.16);
-    --season-glow: rgb(140 170 255 / 0.1);
-    --map-land: #191c22;
-    --map-park: #232832;
-    --map-water: #18304f;
-    --map-building: #21252c;
-    --map-road: #2c3038;
-    --map-road-casing: #0f1114;
-    --map-road-major: #3a3431;
-    --map-civic: #1f2229;
-  }
-  :root:not([data-theme="light"]) [data-season="spring"] { --season-sky: rgb(255 130 190 / 0.1); --season-glow: rgb(140 220 150 / 0.06); --map-park: #1b3123; }
-  :root:not([data-theme="light"]) [data-season="summer"] { --season-sky: rgb(210 240 120 / 0.07); --season-glow: rgb(90 190 230 / 0.07); --map-park: #16301f; --map-water: #17375c; }
-}
-[data-theme="dark"] [data-season="fall"] { --season-sky: rgb(255 140 70 / 0.09); --season-glow: rgb(255 120 60 / 0.07); --map-park: #26281b; --map-land: #1b1712; }
-[data-theme="dark"] [data-season="winter"] {
-  --season-sky: rgb(120 156 255 / 0.16);
-  --season-glow: rgb(140 170 255 / 0.1);
-  --map-land: #191c22;
-  --map-park: #232832;
-  --map-water: #18304f;
-  --map-building: #21252c;
-  --map-road: #2c3038;
-  --map-road-casing: #0f1114;
-  --map-road-major: #3a3431;
-  --map-civic: #1f2229;
-}
-[data-theme="dark"] [data-season="spring"] { --season-sky: rgb(255 130 190 / 0.1); --season-glow: rgb(140 220 150 / 0.06); --map-park: #1b3123; }
-[data-theme="dark"] [data-season="summer"] { --season-sky: rgb(210 240 120 / 0.07); --season-glow: rgb(90 190 230 / 0.07); --map-park: #16301f; --map-water: #17375c; }

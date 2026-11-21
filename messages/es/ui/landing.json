@@ -190,7 +190,74 @@
     "emptyFilteredBody": "Prueba con una distancia mayor, aleja el mapa o muestra todo.",
     "showEverything": "Mostrar todo",
     "approximate": "Zona aproximada",
-    "nearMe": "Ver tareas cerca de mí"
+    "nearMe": "Ver tareas cerca de mí",
+    "you": "Tú",
+    "youEdge": "Tú · {miles, number} mi",
+    "youEdgeLabel": "Estás a {miles, number} mi del centro del mapa. Mostrar dónde estás",
+    "showMe": "Mostrar dónde estoy",
+    "home": "Casa",
+    "homeAt": "Casa · {area}",
+    "homeEdge": "Casa · {miles, number} mi",
+    "homeEdgeLabel": "Tu zona de casa está a {miles, number} mi del centro del mapa. Mostrarla",
+    "nearHome": "Tareas cerca de tu casa",
+    "showHome": "Mostrar mi zona",
+    "homeNote": "Empezamos desde tu zona, {area}.",
+    "homeDenied": "Tu navegador no compartió tu ubicación, así que el mapa sigue en tu zona.",
+    "homeUseDevice": "Usar dónde estoy ahora",
+    "pulseNew": "Tarea nueva",
+    "pulseOffer": "Oferta nueva",
+    "pulseBooked": "Reservada",
+    "areaCardTasks": "{count, plural, =0 {No hay tareas abiertas} one {# tarea abierta} other {# tareas abiertas}}",
+    "areaCardTypical": "normalmente {price}",
+    "areaCardHelpers": "{count, plural, one {# ayudante trabaja desde aquí} other {# ayudantes trabajan desde aquí}}",
+    "areaCardHint": "Haz clic para ver sus tareas",
+    "areaCardPicked": "Mostrando sus tareas. Haz clic otra vez para ver todas",
+    "watchArea": "Vigilar una zona",
+    "watchDraw": "Dibuja un círculo alrededor de la zona que quieres vigilar.",
+    "watchTooSmall": "Ese círculo es muy pequeño. Dibuja alrededor de una zona más grande.",
+    "watchCancel": "Cancelar",
+    "watchTitle": "Vigilar {areas}",
+    "watchAnd": " y ",
+    "watchMany": "{first} y {count, plural, one {# más} other {# más}}",
+    "watchBody": "Te avisamos cuando se publiquen tareas nuevas allí. Los avisos van por barrio, nunca por lugar exacto.",
+    "watchAlerts": "Recibir avisos",
+    "watchAgain": "Dibujar otra vez",
+    "watchClose": "Cerrar",
+    "liveNew": "Nueva",
+    "liveNewTask": "{title} en {area}",
+    "liveShow": "Ver",
+    "liveDismiss": "Cerrar",
+    "layerDrive": "Tiempos en auto",
+    "layerClock": "Luz según la hora",
+    "layerMinimap": "Minimapa",
+    "driveFromYou": "En auto desde ti, aprox.:",
+    "driveFromHome": "En auto desde tu zona, aprox.:",
+    "driveMinutes": "{minutes} min",
+    "driveNone": "Aún no hay calles a tu alrededor en el mapa",
+    "whenLabel": "Cuándo",
+    "when": {
+      "any": "Cuando sea",
+      "today": "Hoy",
+      "this_weekend": "Este fin de semana",
+      "this_week": "Esta semana"
+    },
+    "emptyAreaTitle": "Nada abierto en {area} ahora mismo",
+    "emptyWhen": {
+      "today": "No hay tareas abiertas hoy",
+      "this_weekend": "No hay tareas abiertas este fin de semana",
+      "this_week": "No hay tareas abiertas esta semana"
+    },
+    "jumpPicked": "Barrio: {area}. Cambiarlo",
+    "jumpClear": "Mostrar toda la ciudad, no solo {area}",
+    "clock": {
+      "day": "De día en {market} · {time}",
+      "golden": "Hora dorada en {market} · {time}",
+      "dusk": "Atardecer en {market} · {time}",
+      "dawn": "Amanecer en {market} · {time}",
+      "night": "Noche en {market} · {time}"
+    },
+    "withinHomeLabel": "Distancia desde tu casa",
+    "countMatching": "{count, plural, =0 {No hay tareas abiertas} one {# tarea abierta} other {# tareas abiertas}} en {market}"
   },
   "categories": {
     "eyebrow": "Lo que más se reserva",
@@ -399,7 +466,9 @@
     "mark": "Marca: el isotipo en tamaños pequeños",
     "palette": "Marca: paleta",
     "type": "Marca: tipografía",
-    "motion": "Marca: tokens de movimiento"
+    "motion": "Marca: tokens de movimiento",
+    "noCity": "Página de inicio, sin ciudad abierta (en pausa)",
+    "noCityDark": "Página de inicio, sin ciudad abierta, oscuro"
   },
   "assistant": {
     "label": "Describe la tarea con la que necesitas ayuda",
@@ -467,5 +536,23 @@
       "tvMounting": "Aún no ofrecemos instalación de TV: requiere sus propias verificaciones de seguridad. Estantes, escritorios y anclar muebles a la pared cuentan como armado de muebles.",
       "licensedTrade": "Los trabajos eléctricos, de plomería y de gas requieren un profesional con licencia, por eso no se ofrecen aquí. Si parte de tu tarea es otra cosa, elige abajo el tipo de ayuda más cercano."
     }
+  },
+  "cityless": {
+    "eyebrow": "Abrimos ciudad por ciudad",
+    "subtitle": "Publica lo que necesitas, acuerda el precio desde el principio y reserva a un ayudante local verificado. Abrimos una ciudad a la vez: dinos dónde estás y te escribiremos cuando abramos allí.",
+    "joinCta": "Unirme a la lista de espera",
+    "helperCta": "Quiero ser ayudante",
+    "citiesTitle": "Dónde estamos",
+    "citiesBody": "Abrimos ciudad por ciudad, con ayudantes verificados listos antes de la primera tarea.",
+    "status": {
+      "live": "Abierto",
+      "prelaunch": "Abre pronto",
+      "paused": "En pausa por ahora"
+    },
+    "cityName": "{city}, {state}",
+    "cityLink": "Ver {city}",
+    "noCities": "Nos estamos preparando para abrir nuestra primera ciudad.",
+    "waitlistTitle": "Dinos dónde estás",
+    "waitlistBody": "Deja tu correo y tu código postal. Te escribiremos cuando abramos cerca de ti, y nada más."
   }
 }

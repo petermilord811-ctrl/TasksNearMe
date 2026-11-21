@@ -1,23 +1,30 @@
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState, type ComponentType, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ComponentType, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
+import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
-import { Building2, Expand, Flame, Layers, Loader2, LocateFixed, MapPinned, Minus, Move, Navigation2, Plus, RotateCw, Shrink, Target, X, ZoomIn } from 'lucide-react';
-import type { LandingMapData } from '@/contracts';
+import { BellRing, Building2, Car, Expand, Flame, Layers, Lasso, Loader2, LocateFixed, Map as MapGlyph, MapPinned, Minus, Move, Navigation2, Plus, RotateCw, Shrink, Sparkles, SunMoon, Target, X, ZoomIn } from 'lucide-react';
+import { routes, type LandingMapData, type MapArea } from '@/contracts';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { distanceMiles, roundMiles } from '@/shared/geo';
 import { useFinePointer } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
 import { whenHeroReady } from '../hero-ready';
 import { useLanding } from '../landing-state';
+import { ARRIVAL_PANELS_AT, type ArrivalSource } from './arrival';
 import { prefetchBaseStyle } from './base-style';
-import { MAP_FRAME_ATTRIBUTE, useOptionalMapExplorer, type MapLayers } from './explorer-state';
+import { DEFAULT_LAYERS, MAP_FRAME_ATTRIBUTE, useOptionalMapExplorer, type MapLayers } from './explorer-state';
 import { MapCardRail } from './card-rail';
-import type { MapControls, MapViewProps } from './maplibre-view';
+import { listOrigin } from './map-math';
+import type { DriveTimesState, MapControls, MapViewProps } from './maplibre-view';
+import { sitesInOutline } from './neighborhoods';
 import { StaticMap } from './static-map';
+
+/** The minimap loads with the live map, only where it shows (wide screens with a mouse, full screen). */
+const MapMinimap = dynamic(() => import('./minimap').then((module) => module.MapMinimap), { ssr: false });
 
 export type MapMode = 'interactive' | 'static';
 
-const DEFAULT_LAYERS: MapLayers = { mode: 'pins', buildings: false, serviceArea: true };
 /** The longest the live map waits for the hero's town to say it's drawn. */
 const HERO_WAIT_MS = 6000;
 /**
@@ -42,29 +49,63 @@ const HERO_SETTLE_MS = 400;
 export function TaskMap({
   map,
   market,
+  marketSlug,
   mode = 'interactive',
   variant = 'card',
   padding,
   arrival,
+  arrivalSource,
+  edgeInsets,
+  fillFade = 'vertical',
+  watchRef,
+  controlsRow = false,
   controlsClassName,
+  minimapClassName,
+  noteClassName,
   className,
 }: {
   map: LandingMapData;
   /** The market's name, for the map's accessible name. */
   market?: string;
+  /** The market's slug: "Watch an area" saves a search of its task board. */
+  marketSlug?: string;
   mode?: MapMode;
   variant?: 'card' | 'fill';
   padding?: MapViewProps['padding'];
   /** The task the map opens on (the hero's first task): see `MapViewProps.arrival`. */
   arrival?: MapViewProps['arrival'];
+  /** How far the page's arrival has come (see `arrival.ts`): the camera follows it. */
+  arrivalSource?: ArrivalSource | null;
+  /** Room kept clear at the top and bottom for the marker that points to the visitor: see `MapViewProps.edgeInsets`. */
+  edgeInsets?: MapViewProps['edgeInsets'];
+  /** `fill`: soft at the top and bottom, or at the top only when the page fades the bottom itself. */
+  fillFade?: 'vertical' | 'top';
+  /**
+   * What says the visitor is heading for the map (its approach starts the live map): the frame itself, unless the
+   * page pins the map to the window (then it's always "in view", and the page's own box around it says it instead).
+   */
+  watchRef?: RefObject<HTMLElement | null>;
+  /** The controls in one row (wide screens, where a column would reach the heading on short screens). */
+  controlsRow?: boolean;
   controlsClassName?: string;
+  /** Where the minimap sits (wide screens; full screen puts it in the top-left corner). */
+  minimapClassName?: string;
+  /** Where the map's notes sit: a new task, drawing an area, the area to watch. */
+  noteClassName?: string;
   className?: string;
 }) {
   const t = useTranslations('landing.map');
   // Pointing at a category quiets the other pins; picking one also flies the map to its tasks.
-  const { activeCategory, selectedCategory, litTaskId, focusedTaskId, setHighlightedTaskId, pickTask, location, requestLocation } = useLanding();
+  const { activeCategory, selectedCategory, litTaskId, focusedTaskId, setHighlightedTaskId, pickTask, location, locateDevice, locating, area, pickArea } = useLanding();
   const explorer = useOptionalMapExplorer();
   const userPoint = location.status === 'granted' ? location.point : undefined;
+  const userAccuracy = location.status === 'granted' ? location.accuracy : undefined;
+  const userSource = location.status === 'granted' ? (location.source ?? 'device') : undefined;
+  // The live tasks in the chosen time (the explorer's), or the page's own outside it.
+  const pinsShown = explorer?.mapPins ?? map.pins;
+  const [driveState, setDriveState] = useState<DriveTimesState>('off');
+  /** A drawn outline was too small to use: say so, and keep drawing. */
+  const [drawTooSmall, setDrawTooSmall] = useState(false);
   const frameRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const openRef = useRef<HTMLButtonElement>(null);
@@ -88,13 +129,27 @@ export function TaskMap({
   const [localLayers, setLocalLayers] = useState<MapLayers>(DEFAULT_LAYERS);
   const hintTimer = useRef<number | undefined>(undefined);
   const fill = variant === 'fill';
+  const row = controlsRow && !fullscreen;
+  // While the arrival runs (the camera pulling back from the hero's task), the map's own buttons wait: they come in
+  // with the explorer, in the arrival's second half. Only a change of side re-renders.
+  const [arriving, setArriving] = useState(false);
+  useEffect(() => {
+    if (!arrivalSource) return;
+    const stop = arrivalSource.subscribe((progress) => setArriving(!arrivalSource.finished() && progress < ARRIVAL_PANELS_AT));
+    return () => {
+      stop();
+    };
+  }, [arrivalSource]);
+  const waiting = arriving && !fullscreen;
   const label = market ? t('mapLabel', { market }) : undefined;
   const layers = explorer?.layers ?? localLayers;
   const setLayers = explorer?.setLayers ?? setLocalLayers;
 
+  // Distances on the pins' cards only for a visitor in or near the market (`listOrigin`).
+  const origin = listOrigin(map, userPoint);
   const milesById = useMemo(
-    () => (userPoint ? new Map(map.pins.map((pin) => [pin.id, roundMiles(distanceMiles(userPoint, pin.point))])) : undefined),
-    [userPoint, map.pins],
+    () => (origin ? new Map(pinsShown.map((pin) => [pin.id, roundMiles(distanceMiles(origin, pin.point))])) : undefined),
+    [origin, pinsShown],
   );
 
   // When to load the live map: only once the visitor heads for it, so a visit that never scrolls down fetches no
@@ -104,7 +159,7 @@ export function TaskMap({
   // asking it to show something also starts it (below). Either way in an idle moment.
   useEffect(() => {
     if (mode === 'static') return;
-    const frame = frameRef.current;
+    const frame = watchRef?.current ?? frameRef.current;
     if (!frame) return;
     let started = false;
     let approaching = false;
@@ -207,6 +262,11 @@ export function TaskMap({
   useEffect(() => {
     setLiveReady?.(liveReady);
   }, [liveReady, setLiveReady]);
+  // The visitor has come to the map: its tasks are kept live from now on (even if the live map can't run here).
+  const setNearMap = explorer?.setNear;
+  useEffect(() => {
+    if (load) setNearMap?.(true);
+  }, [load, setNearMap]);
 
   // Full screen: the page stops scrolling behind it, Escape closes it, and focus stays inside until it does.
   useEffect(() => {
@@ -279,7 +339,7 @@ export function TaskMap({
       }}
       onPointerMove={pointerOver ? followPointer : (event) => mouseOnLive && event.pointerType === 'mouse' && onMouseEnter(event)}
       onPointerLeave={() => setPointerOver(false)}
-      // The map's own cursors (globals.css): a lens to look around, with a plus once the wheel zooms it.
+      // The map's own cursors (landing.css): a lens to look around, with a plus once the wheel zooms it.
       data-map-cursor={fill && liveReady ? 'explore' : undefined}
       role={fullscreen ? 'dialog' : undefined}
       aria-modal={fullscreen ? true : undefined}
@@ -303,7 +363,7 @@ export function TaskMap({
           userPoint={userPoint}
           milesById={milesById}
           withinMiles={explorer?.withinMiles ?? null}
-          fade={fill ? 'vertical' : 'all'}
+          fade={fill ? fillFade : 'all'}
           frame={fill ? 'wide' : 'card'}
           padding={padding}
         />
@@ -314,7 +374,7 @@ export function TaskMap({
             key={attempt}
             map={map}
             label={label}
-            pins={map.pins}
+            pins={pinsShown}
             activeCategory={activeCategory}
             selectedCategory={selectedCategory}
             litTaskId={litTaskId}
@@ -322,12 +382,15 @@ export function TaskMap({
             onHighlight={setHighlightedTaskId}
             onPick={pickTask}
             userPoint={userPoint}
+            userAccuracy={userAccuracy}
             milesById={milesById}
             withinMiles={explorer?.withinMiles ?? null}
             padding={fullscreen ? FULLSCREEN_PADDING : padding}
-            fade={fullscreen ? 'none' : fill ? 'vertical' : 'all'}
+            fade={fullscreen ? 'none' : fill ? fillFade : 'all'}
             homeZoom={fill ? 11 : 10.3}
             arrival={arrival}
+            arrivalSource={arrivalSource}
+            edgeInsets={fullscreen ? FULLSCREEN_EDGE : edgeInsets}
             layers={layers}
             fullscreen={fullscreen}
             request={explorer?.request ?? null}
@@ -340,12 +403,44 @@ export function TaskMap({
             onBlockedWheel={() => fine && showHint('blocked', 1800)}
             onReady={() => setReady(true)}
             onFailed={() => setFailed(true)}
+            arrivals={explorer?.arrivals}
+            pulses={explorer?.pulses}
+            userSource={userSource}
+            homeAreaName={location.status === 'granted' ? location.areaName : undefined}
+            selectedArea={area?.name ?? null}
+            onPickArea={pickArea}
+            drawing={Boolean(explorer?.drawing)}
+            onDrawn={(outline) => {
+              if (!explorer) return;
+              if (!outline) {
+                setDrawTooSmall(true);
+                return;
+              }
+              const taken = sitesInOutline(map.areas, outline);
+              setDrawTooSmall(false);
+              explorer.setDrawing(false);
+              explorer.setWatchAreas(taken.length > 0 ? taken : null);
+            }}
+            watchAreas={explorer?.watchAreas?.map((item) => item.name) ?? null}
+            onDriveTimes={setDriveState}
           />
         </div>
       )}
 
       {fill && liveReady && controls && (
-        <div className={cn('absolute z-[2] flex flex-col items-end gap-2', fullscreen ? 'right-[max(1rem,env(safe-area-inset-right))] bottom-[calc(9.75rem+env(safe-area-inset-bottom))]' : controlsClassName)}>
+        <div
+          // Waiting, they're out of reach for the keyboard too (focus in the explorer lands the arrival, and they come).
+          inert={waiting || undefined}
+          className={cn(
+            // While an area is being drawn, the buttons stay above the drawing layer (one of them stops it).
+            'absolute flex gap-2 transition-opacity duration-500 ease-[var(--ease-out)]',
+            // Above the minimap too, so the layers menu (it opens upward in a row) is never under it.
+            explorer?.drawing ? 'z-[9]' : 'z-[3]',
+            row ? 'flex-row items-center' : 'flex-col items-end',
+            waiting && 'pointer-events-none opacity-0',
+            fullscreen ? 'right-[max(1rem,env(safe-area-inset-right))] bottom-[calc(9.75rem+env(safe-area-inset-bottom))]' : controlsClassName,
+          )}
+        >
           {/* How the map moves here (the wheel scrolls the page; Ctrl/⌘ + wheel zooms the map). */}
           <div
             aria-hidden="true"
@@ -357,22 +452,45 @@ export function TaskMap({
           >
             <HintChip hint={hint} />
           </div>
-          {/* Tasks around me: asks for the location the first time (only on this press; it stays on this device),
-              then brings the map back to it. The list switches to nearest first by itself. */}
+          {/* Tasks around me: asks for the location if the page hasn't found it yet (it stays on this device), then
+              brings the map to it. The list switches to nearest first by itself. */}
           <button
             type="button"
-            onClick={() => {
-              if (location.status === 'granted') explorer?.requestFocus({ kind: 'area', point: location.point });
-              else requestLocation();
-            }}
-            disabled={location.status === 'locating'}
+            onClick={locateDevice}
+            disabled={locating}
             aria-label={t('nearMe')}
             title={t('nearMe')}
-            className={cn('glass inline-flex size-11 items-center justify-center rounded-full transition-transform hover:text-foreground active:scale-95 disabled:opacity-70', location.status === 'granted' ? 'text-violet' : 'text-foreground/80')}
+            className={cn('glass inline-flex size-11 items-center justify-center rounded-full transition-transform hover:text-foreground active:scale-95 disabled:opacity-70', userSource === 'device' ? 'text-violet' : 'text-foreground/80')}
           >
-            {location.status === 'locating' ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : <LocateFixed aria-hidden="true" className="size-4" />}
+            {locating ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : <LocateFixed aria-hidden="true" className="size-4" />}
           </button>
-          <LayersControl layers={layers} onChange={setLayers} />
+          <LayersControl
+            layers={layers}
+            onChange={(next) => {
+              // Drive times are measured from the visitor: turning them on without a place asks for it.
+              if (next.driveTimes && !layers.driveTimes && !userPoint) locateDevice();
+              setLayers(next);
+            }}
+            above={row}
+            minimapOffered={fill && fine}
+          />
+          {/* Watch an area: draw around part of the map, then get alerts for new tasks in its neighborhoods. */}
+          {explorer && marketSlug && (
+            <button
+              type="button"
+              onClick={() => {
+                setDrawTooSmall(false);
+                explorer.setWatchAreas(null);
+                explorer.setDrawing(!explorer.drawing);
+              }}
+              aria-pressed={explorer.drawing}
+              aria-label={t('watchArea')}
+              title={t('watchArea')}
+              className={cn('glass inline-flex size-11 items-center justify-center rounded-full transition-transform hover:text-foreground active:scale-95', explorer.drawing || explorer.watchAreas ? 'text-violet' : 'text-foreground/80')}
+            >
+              <BellRing aria-hidden="true" className="size-4" />
+            </button>
+          )}
           <button
             ref={openRef}
             type="button"
@@ -397,24 +515,67 @@ export function TaskMap({
             </button>
           )}
           {/* Touch screens pinch to zoom: no + and − crowding the map there. */}
-          <div role="group" aria-label={t('zoomLabel')} className="glass flex flex-col overflow-hidden rounded-full [@media(pointer:coarse)]:hidden">
+          <div role="group" aria-label={t('zoomLabel')} className={cn('glass flex overflow-hidden rounded-full [@media(pointer:coarse)]:hidden', row ? 'flex-row-reverse items-center' : 'flex-col')}>
             <button type="button" onClick={() => controls.zoomBy(1)} aria-label={t('zoomIn')} className="inline-flex size-11 items-center justify-center text-foreground/80 transition-colors hover:bg-foreground/[0.05] hover:text-foreground active:scale-95">
               <Plus aria-hidden="true" className="size-4" />
             </button>
-            <span aria-hidden="true" className="mx-2.5 h-px bg-foreground/10" />
+            <span aria-hidden="true" className={row ? 'my-2.5 h-6 w-px bg-foreground/10' : 'mx-2.5 h-px bg-foreground/10'} />
             <button type="button" onClick={() => controls.zoomBy(-1)} aria-label={t('zoomOut')} className="inline-flex size-11 items-center justify-center text-foreground/80 transition-colors hover:bg-foreground/[0.05] hover:text-foreground active:scale-95">
               <Minus aria-hidden="true" className="size-4" />
             </button>
           </div>
+          {/* Drive times' key: an estimate from the roads' speeds, and from where (the device, or home). */}
+          {layers.driveTimes && userPoint && driveState !== 'off' && (
+            <p role="status" className="glass inline-flex min-h-11 items-center gap-2.5 rounded-full px-3.5 text-xs font-medium whitespace-nowrap text-foreground">
+              <Car aria-hidden="true" className="size-3.5 text-violet" />
+              {driveState === 'none' ? (
+                t('driveNone')
+              ) : (
+                <>
+                  <span>{userSource === 'home' ? t('driveFromHome') : t('driveFromYou')}</span>
+                  <span className="inline-flex items-center gap-1"><span aria-hidden="true" className="h-1 w-4 rounded-full bg-violet" />{t('driveMinutes', { minutes: 10 })}</span>
+                  <span className="inline-flex items-center gap-1"><span aria-hidden="true" className="h-1 w-4 rounded-full bg-[var(--iri-3)] opacity-70" />{t('driveMinutes', { minutes: 20 })}</span>
+                </>
+              )}
+            </p>
+          )}
         </div>
       )}
 
-      {/* The same hint at the mouse pointer while it's over the map. */}
-      {mouseOnLive && (
-        <div ref={bubbleRef} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 z-[3] transition-transform duration-150 ease-out will-change-transform">
-          <div className={cn('transition-[opacity,scale] duration-200', hint && pointerOver ? 'scale-100 opacity-100' : 'scale-95 opacity-0')}>
-            <HintChip hint={hint} />
-          </div>
+      {/* The minimap: the whole service area, with the part the map shows framed (a mouse only; full screen too). */}
+      {fill && liveReady && controls && layers.minimap && fine && (!waiting || fullscreen) && !explorer?.drawing && !explorer?.watchAreas && (
+        <MapMinimap
+          map={map}
+          pins={pinsShown}
+          controls={controls}
+          userPoint={userPoint}
+          selectedArea={area?.name ?? null}
+          className={cn('absolute z-[2] hidden transition-opacity duration-500 lg:block', fullscreen ? 'top-4 left-4 block' : minimapClassName)}
+        />
+      )}
+
+      {/* Watching an area: drawing it, then its neighborhoods and "Get alerts". Wide screens: in the minimap's place
+          (it steps aside meanwhile); phones and full screen: at the top of the map. */}
+      {fill && liveReady && explorer && (explorer.drawing || (explorer.watchAreas && marketSlug)) && (
+        // Above the drawing layer (its Cancel), under a task's card.
+        <div className={cn('pointer-events-none absolute z-[9] flex w-[min(24rem,calc(100%-2rem))]', fullscreen ? 'top-[4.25rem] left-1/2 -translate-x-1/2 justify-center' : noteClassName)}>
+          {explorer.drawing ? (
+            <div role="status" className="glass pointer-events-auto flex w-full items-center gap-3 rounded-2xl py-2 pr-2 pl-3.5 text-sm shadow-overlay">
+              <Lasso aria-hidden="true" className="size-4 shrink-0 text-violet" />
+              <p className="min-w-0 flex-1 text-[13px] leading-snug font-medium">{drawTooSmall ? t('watchTooSmall') : t('watchDraw')}</p>
+              <button type="button" onClick={() => explorer.setDrawing(false)} className="inline-flex min-h-10 shrink-0 items-center rounded-full px-3 text-[13px] font-semibold text-foreground/80 hover:bg-foreground/[0.06] hover:text-foreground">
+                {t('watchCancel')}
+              </button>
+            </div>
+          ) : explorer.watchAreas && marketSlug ? (
+            <WatchAreaPanel areas={explorer.watchAreas} marketSlug={marketSlug} category={selectedCategory} onAgain={() => { explorer.setWatchAreas(null); explorer.setDrawing(true); }} onClose={() => explorer.setWatchAreas(null)} />
+          ) : null}
+        </div>
+      )}
+      {/* A task posted just now, on phones and in full screen (wide screens show it in the explorer, by the list). */}
+      {fill && liveReady && explorer && !explorer.drawing && !explorer.watchAreas && (
+        <div className={cn('pointer-events-none absolute z-[9] flex w-[min(24rem,calc(100%-2rem))] justify-center', fullscreen ? 'top-[4.25rem] left-1/2 -translate-x-1/2' : 'top-3 left-1/2 -translate-x-1/2 lg:hidden')}>
+          <LiveTaskNote className="pointer-events-auto w-full empty:pointer-events-none" />
         </div>
       )}
 
@@ -424,14 +585,18 @@ export function TaskMap({
         <button
           type="button"
           onClick={() => setFullscreen(true)}
-          className="glass absolute bottom-12 left-1/2 z-[2] inline-flex min-h-11 -translate-x-1/2 items-center gap-2 rounded-full px-5 text-sm font-semibold whitespace-nowrap text-foreground shadow-overlay transition-transform active:scale-95 lg:hidden"
+          inert={waiting || undefined}
+          className={cn(
+            'glass absolute bottom-12 left-1/2 z-[2] inline-flex min-h-11 -translate-x-1/2 items-center gap-2 rounded-full px-5 text-sm font-semibold whitespace-nowrap text-foreground shadow-overlay transition-[opacity,transform] duration-500 active:scale-95 lg:hidden',
+            waiting && 'pointer-events-none opacity-0',
+          )}
         >
           <Expand aria-hidden="true" className="size-4 text-violet" />
           {t('exploreMap')}
         </button>
       )}
       {/* Full screen: the tasks as a row of cards along the bottom, in step with the pins. */}
-      {fill && liveReady && fullscreen && <MapCardRail map={map} className="absolute inset-x-0 bottom-0 z-[2]" />}
+      {fill && liveReady && fullscreen && <MapCardRail map={explorer ? { ...map, pins: pinsShown } : map} className="absolute inset-x-0 bottom-0 z-[2]" />}
       {fill && failed && mode !== 'static' && (
         <div className={cn('absolute z-[2] flex flex-col items-end gap-2', controlsClassName)}>
           <button
@@ -463,6 +628,8 @@ export function TaskMap({
 
 /** Full screen: room for the row of task cards along the bottom (fractions of the map), so no pin hides under it. */
 const FULLSCREEN_PADDING = { top: 0.1, right: 0.06, bottom: 0.26, left: 0.06 };
+/** Full screen: the off-map marker stays clear of the close button (the cards' room comes from the padding). */
+const FULLSCREEN_EDGE = { top: 76, bottom: 14 };
 
 type Hint = 'intro' | 'blocked';
 
@@ -494,7 +661,7 @@ function firstVisitToMap(): boolean {
 }
 
 /** The layers: the tasks as pins or as a glow of where help is needed, 3D buildings, and the service area. */
-function LayersControl({ layers, onChange }: { layers: MapLayers; onChange: (layers: MapLayers) => void }) {
+function LayersControl({ layers, onChange, above = false, minimapOffered = false }: { layers: MapLayers; onChange: (layers: MapLayers) => void; above?: boolean; minimapOffered?: boolean }) {
   const t = useTranslations('landing.map');
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -553,7 +720,8 @@ function LayersControl({ layers, onChange }: { layers: MapLayers; onChange: (lay
         role="group"
         aria-label={t('layers')}
         hidden={!open}
-        className="glass absolute right-[calc(100%+0.5rem)] bottom-0 w-60 rounded-2xl p-2 shadow-overlay lg:right-auto lg:left-[calc(100%+0.5rem)]"
+        // Beside its button in a column; above it in a row (it would cover the row's other buttons).
+        className={cn('glass absolute w-60 rounded-2xl p-2 shadow-overlay', above ? 'bottom-[calc(100%+0.5rem)] left-0' : 'right-[calc(100%+0.5rem)] bottom-0 lg:right-auto lg:left-[calc(100%+0.5rem)]')}
       >
         <p className="px-2.5 pt-1 pb-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">{t('layersShow')}</p>
         <div role="radiogroup" aria-label={t('layersShow')}>
@@ -563,8 +731,86 @@ function LayersControl({ layers, onChange }: { layers: MapLayers; onChange: (lay
         <span aria-hidden="true" className="mx-2.5 my-1.5 block h-px bg-foreground/10" />
         {option(layers.buildings, Building2, t('layerBuildings'), () => onChange({ ...layers, buildings: !layers.buildings }), 'switch')}
         {option(layers.serviceArea, Target, t('layerService'), () => onChange({ ...layers, serviceArea: !layers.serviceArea }), 'switch')}
+        {option(layers.driveTimes, Car, t('layerDrive'), () => onChange({ ...layers, driveTimes: !layers.driveTimes }), 'switch')}
+        {option(layers.clock, SunMoon, t('layerClock'), () => onChange({ ...layers, clock: !layers.clock }), 'switch')}
+        {minimapOffered && <div className="max-lg:hidden">{option(layers.minimap, MapGlyph, t('layerMinimap'), () => onChange({ ...layers, minimap: !layers.minimap }), 'switch')}</div>}
       </div>
     </div>
   );
 }
 
+
+/**
+ * The area to watch: the neighborhoods a drawn outline took in, and "Get alerts" (a saved search of the task board for
+ * them, with the picked category, where the visitor names it and picks instant or daily alerts; signing in first if
+ * they aren't). Alerts match a task's neighborhood only, never its place.
+ */
+function WatchAreaPanel({ areas, marketSlug, category, onAgain, onClose }: { areas: MapArea[]; marketSlug: string; category: LandingMapData['pins'][number]['categorySlug'] | null; onAgain: () => void; onClose: () => void }) {
+  const t = useTranslations('landing.map');
+  const names = areas.length <= 2 ? areas.map((item) => item.name).join(t('watchAnd')) : t('watchMany', { first: areas[0]!.name, count: areas.length - 1 });
+  const href = routes.app.newSavedSearch(routes.taskBoard(marketSlug, { areas: areas.map((item) => item.slug), ...(category ? { category } : {}) }));
+  return (
+    <div className="glass pointer-events-auto w-full rounded-2xl p-3 text-sm shadow-overlay motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
+      <div className="flex items-start gap-2.5">
+        <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-violet text-white"><BellRing className="size-3.5" /></span>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold">{t('watchTitle', { areas: names })}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{t('watchBody')}</p>
+        </div>
+        <button type="button" onClick={onClose} aria-label={t('watchClose')} className="-mt-1 -mr-1 grid size-9 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground">
+          <X aria-hidden="true" className="size-4" />
+        </button>
+      </div>
+      <div className="mt-2.5 flex items-center gap-2">
+        <Link href={href} rel="nofollow" className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-foreground px-4 text-[13px] font-semibold text-background transition-transform active:scale-95">
+          <BellRing aria-hidden="true" className="size-3.5" />
+          {t('watchAlerts')}
+        </Link>
+        <button type="button" onClick={onAgain} className="inline-flex min-h-10 items-center rounded-full px-3 text-[13px] font-semibold text-foreground/80 hover:bg-foreground/[0.06] hover:text-foreground">
+          {t('watchAgain')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A task posted a moment ago (the market's live stream): "New · Hang three picture frames in Duckpond", with Show (the
+ * map flies to it and opens its card) and a way to dismiss it. It goes by itself after a few seconds. Announced
+ * politely. Nothing without the map explorer.
+ */
+export function LiveTaskNote({ className }: { className?: string }) {
+  const t = useTranslations('landing.map');
+  const explorer = useOptionalMapExplorer();
+  const { pickTask } = useLanding();
+  const latest = explorer?.latest ?? null;
+  return (
+    <div aria-live="polite" className={className}>
+      {latest && explorer && (
+        <div key={latest.id} className="glass flex w-full items-center gap-3 rounded-2xl py-2 pr-2 pl-3 text-sm shadow-overlay motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
+          <span aria-hidden="true" className="relative grid size-8 shrink-0 place-items-center rounded-full bg-violet text-white">
+            <span className="absolute inset-0 animate-[live-ping_2.6s_var(--ease-out)_infinite] rounded-full bg-violet motion-reduce:animate-none" />
+            <Sparkles className="relative size-3.5" />
+          </span>
+          <p className="min-w-0 flex-1 truncate text-[13px] leading-snug">
+            <span className="font-semibold">{t('liveNew')}</span> {t('liveNewTask', { title: latest.title, area: latest.areaName })}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              pickTask(latest.id);
+              explorer.requestFocus({ kind: 'task', id: latest.id });
+              explorer.dismissLatest();
+            }}
+            className="inline-flex min-h-10 shrink-0 items-center rounded-full bg-foreground px-3.5 text-[13px] font-semibold text-background transition-transform active:scale-95"
+          >
+            {t('liveShow')}
+          </button>
+          <button type="button" onClick={explorer.dismissLatest} aria-label={t('liveDismiss')} className="grid size-9 shrink-0 place-items-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground">
+            <X aria-hidden="true" className="size-4" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

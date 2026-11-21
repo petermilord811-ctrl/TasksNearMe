@@ -109,6 +109,7 @@ export function applyRestyle<T extends StyleSpecification>(style: T, colors: Map
     }
   }
   style.layers = layers.filter((layer) => layer.type === 'fill-extrusion' || layer.layout?.visibility !== 'none') as T['layers'];
+  addClockGlow(style.layers as Layer[]);
   // The 3D buildings stay "visible" and are faded by opacity alone (0 while the map is flat, which MapLibre doesn't
   // draw at all): switching a layer's visibility re-parses every tile of its source, mid-scroll.
   for (const layer of style.layers as Layer[]) {
@@ -117,6 +118,36 @@ export function applyRestyle<T extends StyleSpecification>(style: T, colors: Map
     layer.paint = { ...(layer.paint ?? {}), 'fill-extrusion-opacity': 0 };
   }
   return style;
+}
+
+/**
+ * The major roads' glow at night (the map follows the market's clock, `clock.ts`): a soft, wide line over the roads
+ * and under the labels, at 0 by day. Part of the style from the start, so lighting it is a paint change only (adding
+ * a layer to the tiles' source later would parse every tile again).
+ */
+export const CLOCK_GLOW_LAYER = 'clock-road-glow';
+
+function addClockGlow(layers: Layer[]) {
+  if (layers.some((layer) => layer.id === CLOCK_GLOW_LAYER)) return;
+  const road = layers.find((layer) => layer.type === 'line' && (layer as { 'source-layer'?: string })['source-layer'] === 'transportation') as (Layer & { source?: string }) | undefined;
+  if (!road?.source) return;
+  const at = layers.findIndex((layer) => layer.type === 'symbol');
+  const glow = {
+    id: CLOCK_GLOW_LAYER,
+    type: 'line',
+    source: road.source,
+    'source-layer': 'transportation',
+    minzoom: 8,
+    filter: ['match', ['get', 'class'], ['motorway', 'trunk', 'primary', 'secondary', 'tertiary'], true, false],
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: {
+      'line-color': '#ffb35c',
+      'line-width': ['interpolate', ['linear'], ['zoom'], 9, 2.5, 12, 6, 15, 14],
+      'line-blur': ['interpolate', ['linear'], ['zoom'], 9, 2, 15, 9],
+      'line-opacity': 0,
+    },
+  } as unknown as Layer;
+  layers.splice(at < 0 ? layers.length : at, 0, glow);
 }
 
 /**

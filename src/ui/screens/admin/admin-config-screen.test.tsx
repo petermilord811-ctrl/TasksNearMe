@@ -192,12 +192,12 @@ describe('the Markets section (plan 8.2)', () => {
     expect(handlers.onSetMarketStatus).not.toHaveBeenCalled();
   });
 
-  it('warns that pausing the home page’s city takes the home page down, and says how to roll back instead (launch rehearsal J-L1)', async () => {
+  it('warns that pausing the home page’s city leaves the home page without a city, and says how to roll back instead (launch rehearsal J-L1)', async () => {
     const user = userEvent.setup();
     mount({ ...adminConfigData, markets: adminConfigData.markets.map((market) => (market.id === 'mkt_tulsa' ? { ...market, homePage: true } : market)) });
     await user.click(card('Tulsa, OK').getByRole('button', { name: 'Pause Tulsa' }));
     const dialog = within(await screen.findByRole('alertdialog', { name: 'Pause Tulsa?' }));
-    expect(dialog.getByText(/Tulsa is the home page's city: while it's paused, the home page answers "not found" too, and the pricing, become-a-helper and waitlist pages fail\. To roll back a launch, move it to pre-launch instead/)).toBeInTheDocument();
+    expect(dialog.getByText(/Tulsa is the home page's city: while it's paused, the home page shows no city's tasks or map, only the cities, the waitlist and how it works\. To roll back a launch, move it to pre-launch instead/)).toBeInTheDocument();
     await user.click(dialog.getByRole('button', { name: 'Cancel' }));
     await user.click(card('Austin, TX').getByRole('button', { name: 'Pause Austin' }));
     expect(within(await screen.findByRole('alertdialog', { name: 'Pause Austin?' })).queryByText(/home page's city/)).not.toBeInTheDocument();

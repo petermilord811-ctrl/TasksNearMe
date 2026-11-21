@@ -166,12 +166,16 @@ describe('the market and home pages', () => {
     expect(allReal(shown.map.pins.map((pin) => pin.id))).toBe(true);
     expect(shown.map.pins.map((pin) => pin.id)).toContain(taskId);
     expect(allReal(shown.featuredHelpers.map((helper) => helper.id))).toBe(true);
-    // Configuration is never filtered: the same areas and categories for both.
+    // Configuration is never filtered: the same areas (names, slugs, centers) and categories for both. Each area's
+    // helper count on the map is data, like the hero's: real helpers only for the public, and they add up to it.
     const testers = (await getHomePageData(TESTERS))!.data;
     expect(testers.helpers.verified).toBe(await verifiedHelpers(false));
     expect(testers.helpers.verified).toBeGreaterThan(shown.helpers.verified);
     expect(testers.map.pins.map((pin) => pin.id)).toContain(taskId);
-    expect(shown.map.areas).toEqual(testers.map.areas);
+    const places = (list: typeof shown.map.areas) => list.map(({ helperCount: _count, ...area }) => area);
+    expect(places(shown.map.areas)).toEqual(places(testers.map.areas));
+    expect(shown.map.areas.reduce((sum, area) => sum + area.helperCount, 0)).toBe(shown.helpers.verified);
+    expect(testers.map.areas.reduce((sum, area) => sum + area.helperCount, 0)).toBe(testers.helpers.verified);
     expect(shown.categories).toEqual(testers.categories);
   });
 });

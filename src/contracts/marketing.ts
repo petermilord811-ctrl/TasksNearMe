@@ -121,14 +121,33 @@ export interface TaskMapPin {
   radiusMeters: number;
   budget: PricingInput;
   windowStart: ISODateTime;
+  /** The window's end (the map's Today / This weekend / This week keep a task whose window touches the range). */
+  windowEnd: ISODateTime;
   offerCount: number;
   /** When it was posted (the hero's line of new tasks says "12 min ago"). */
   postedAt: ISODateTime;
 }
 
-/** A neighborhood of the market, by its approximate center (for "go to a neighborhood" on the map). */
+/**
+ * A neighborhood of the market, by its approximate center (for "go to a neighborhood" on the map). Each task is named
+ * after the neighborhood whose center is nearest, so the map draws each one as the part of the city nearest its
+ * center. `slug` is the board's `area` filter (and a saved search's). `helperCount`: active helpers with a verified ID
+ * who work from it (a count only).
+ */
 export interface MapArea {
   name: string;
+  slug: string;
+  point: { lat: number; lng: number };
+  helperCount: number;
+}
+
+/**
+ * A signed-in helper's home on the landing page's map: the neighborhood of the home address they gave for their
+ * address check (its center, never the address), shown only to them. The map starts from it instead of asking the
+ * browser where they are.
+ */
+export interface MapHome {
+  areaName: string;
   point: { lat: number; lng: number };
 }
 
@@ -298,6 +317,24 @@ export interface WaitlistCity {
   /** Waitlist entries plus waiting helpers. */
   people: number;
   helpersWaiting: number;
+}
+
+/** A city we're in, about to open, or paused for now, for the home page when its own city isn't open. */
+export interface CityStatus {
+  slug: string;
+  name: string;
+  state: string;
+  status: MarketView['status'];
+}
+
+/**
+ * The home page when the default city isn't public (paused, or none open; launch rehearsal J-L1): no city's counts or
+ * map, but every city with its status (live first; paused ones aren't linked, their pages answer 404), the waitlist
+ * sign-up (its page's data), and how it works.
+ */
+export interface CitylessHomeData {
+  cities: CityStatus[];
+  waitlist: Omit<WaitlistPageData, 'initialZip' | 'demand' | 'from'>;
 }
 
 /** `/waitlist`: people outside the cities we're open in leave their email, ZIP and city. */

@@ -1,4 +1,4 @@
-﻿import type { CategorySlug, HomePageData, ISODateTime } from '@/contracts';
+﻿import type { CategorySlug, HomePageData, ISODateTime, MapHome } from '@/contracts';
 import type { LatLng } from '@/shared/geo';
 import { seasonAt, type Season } from '@/shared/seasons';
 import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
@@ -21,22 +21,24 @@ export interface HomeScreenProps {
   /** The season to dress for: a `?season=` link (to see another season's look) and previews. Otherwise the
    * market's own, on its calendar at `now`. */
   season?: Season;
+  /** A signed-in helper's home neighborhood: the map starts from it instead of asking the browser where they are. */
+  home?: MapHome;
 }
 
 /**
  * The landing page (UI-036): one shared state so the hero canvas, the floating cards, the categories, the
  * map and its list respond to each other; scroll reveals switched on by `MotionRoot`.
  *
- * It dresses for the season (`data-season`, globals.css "Seasons"): late fall now, snow from December, blossoms
+ * It dresses for the season (`data-season`, landing.css "Seasons"): late fall now, snow from December, blossoms
  * in spring, full green in summer. The hero's town, sky and weather, the map's parks and water, and the closing
  * card follow it, and the task assistant's examples are the season's. The brand, the words and the data don't
  * change.
  */
-export function HomeScreen({ data, now, mapMode = 'interactive', initialLocation, initialCategory, season: chosen }: HomeScreenProps) {
+export function HomeScreen({ data, now, mapMode = 'interactive', initialLocation, initialCategory, season: chosen, home }: HomeScreenProps) {
   const season = chosen ?? seasonAt(now, data.market.timeZone);
   return (
     <SeasonProvider season={season}>
-      <LandingProvider initialLocation={initialLocation} initialCategory={initialCategory}>
+      <LandingProvider initialLocation={initialLocation} initialCategory={initialCategory} home={home}>
         <MotionRoot />
         {/* One paper under the whole page (a faint marble), so no section starts or stops a background. */}
         <div className="paper" data-season={season}>

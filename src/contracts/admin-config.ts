@@ -145,7 +145,7 @@ export interface AdminMarketRow {
    * opens); once it's open, they came in and still have to choose one.
    */
   helpersWaiting: number;
-  /** The city the home page shows (DEFAULT_MARKET_SLUG): while it's paused, the home page answers "not found" too. */
+  /** The city the home page shows (DEFAULT_MARKET_SLUG): while it's paused, the home page shows no city (the cities, the waitlist, how it works). */
   homePage: boolean;
   /**
    * Its waitlist: `entries` whose ZIP it covers, and its "we're open" email (completion plan 8.3): `told` got it,

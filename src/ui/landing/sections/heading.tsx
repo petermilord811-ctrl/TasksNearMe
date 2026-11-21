@@ -19,7 +19,7 @@ export function Heading({ id, eyebrow, title, accent, body, align = 'left', clas
 
 /**
  * A text link with an arrow: on hover the underline draws in from the left and the arrow springs forward
- * (`arrow-link` in globals.css); still on touch and with reduced motion.
+ * (`arrow-link` in landing.css); still on touch and with reduced motion.
  */
 export function ArrowLink({ href, children, className }: { href: string; children: ReactNode; className?: string }) {
   return (

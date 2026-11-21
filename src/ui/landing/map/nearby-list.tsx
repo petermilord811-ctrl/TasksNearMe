@@ -12,7 +12,7 @@ import { cn } from '@/ui/lib/utils';
 import { CATEGORY_ICONS } from '../category-icons';
 import { useLanding } from '../landing-state';
 import { MAP_FRAME_ATTRIBUTE, useOptionalMapExplorer } from './explorer-state';
-import { effectiveSort, nearbyPins } from './map-math';
+import { effectiveSort, listOrigin, nearbyPins } from './map-math';
 import { pinPrice } from './pin-card';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -38,18 +38,22 @@ export function NearbyList({ map, limit = 7, fill = false, className }: { map: L
   const { formatDate } = useFormat();
   const t = useTranslations('landing.map');
   const categories = useTranslations('helperCard.categories');
-  const { selectedCategory, litTaskId, highlightedTaskId, focusedTaskId, setHighlightedTaskId, pickTask, location } = useLanding();
+  const { selectedCategory, litTaskId, highlightedTaskId, focusedTaskId, setHighlightedTaskId, pickTask, location, area, pickArea } = useLanding();
   const explorer = useOptionalMapExplorer();
   const reduced = usePrefersReducedMotion();
-  const from = location.status === 'granted' ? location.point : undefined;
+  const from = listOrigin(map, location.status === 'granted' ? location.point : undefined);
   const sort = effectiveSort(explorer?.sortChoice ?? undefined, from);
   const withinMiles = from ? (explorer?.withinMiles ?? null) : null;
   const bounds = explorer?.followMap ? explorer.view : null;
+  // The explorer's time (today, this weekend…) and the picked neighborhood narrow the list too.
+  const when = explorer?.whenRange ?? null;
+  const areaName = area?.name ?? null;
   const rows = useMemo(
-    () => nearbyPins(map.pins, { from, category: selectedCategory, limit, sort, withinMiles, bounds }),
-    [map.pins, from, selectedCategory, limit, sort, withinMiles, bounds],
+    () => nearbyPins(map.pins, { from, category: selectedCategory, limit, sort, withinMiles, bounds, when, areaName }),
+    [map.pins, from, selectedCategory, limit, sort, withinMiles, bounds, when, areaName],
   );
-  // Narrowed to nothing by the distance or the map (there are tasks, just not here): offer to widen.
+  // Narrowed to nothing by the distance, the map, the time or the neighborhood (there are tasks, just not here): offer
+  // to widen.
   const narrowed = rows.length === 0 && nearbyPins(map.pins, { category: selectedCategory, limit: 1 }).length > 0;
   const glide = reduced ? { duration: 0 } : spring.bloom;
   const listLabel = sort === 'nearest' ? t('listNearYou') : sort === 'price' ? t('listByPrice') : sort === 'pay' ? t('listByPay') : t('listNewest');
@@ -121,13 +125,17 @@ export function NearbyList({ map, limit = 7, fill = false, className }: { map: L
         >
           {narrowed ? (
             <>
-              <p className="font-display text-lg font-semibold">{withinMiles ? t('emptyWithinTitle', { miles: withinMiles }) : t('emptyInViewTitle')}</p>
+              <p className="font-display text-lg font-semibold">
+                {withinMiles ? t('emptyWithinTitle', { miles: withinMiles }) : areaName ? t('emptyAreaTitle', { area: areaName }) : explorer && explorer.when !== 'any' ? t(`emptyWhen.${explorer.when}`) : t('emptyInViewTitle')}
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">{t('emptyFilteredBody')}</p>
               <button
                 type="button"
                 onClick={() => {
                   explorer?.setWithinMiles(null);
                   explorer?.setFollowMap(false);
+                  explorer?.setWhen('any');
+                  if (areaName) pickArea(null);
                 }}
                 className="mt-4 inline-flex min-h-11 items-center rounded-full bg-foreground px-5 text-sm font-semibold text-background transition-transform active:scale-[0.97]"
               >
@@ -189,7 +197,11 @@ export function NearbyList({ map, limit = 7, fill = false, className }: { map: L
                           {picked && !reduced && <span className="absolute inset-0 rounded-full opacity-40 [animation:pulse-ring_1.6s_var(--ease-out)_3]" style={{ background: `var(--cat-${pin.categorySlug})` }} />}
                         </span>
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate font-medium">{pin.title}</span>
+                          <span className="flex min-w-0 items-center gap-1.5">
+                            <span className="truncate font-medium">{pin.title}</span>
+                            {/* Posted a moment ago (the market's live stream): marked new while it settles in. */}
+                            {explorer?.arrivals.has(pin.id) && <span className="shrink-0 rounded-full bg-violet px-1.5 text-[10px] leading-4 font-semibold text-white">{t('liveNew')}</span>}
+                          </span>
                           <span className="block truncate text-xs text-muted-foreground">
                             {categories(pin.categorySlug)} · {pin.areaName} · {formatDate(pin.windowStart)}
                           </span>

@@ -15,6 +15,7 @@ import type {
   PricingPageData,
   TaskPublicView,
   WaitlistPageData,
+  CitylessHomeData,
   WaitlistUnsubscribeHandlers,
   WaitlistUnsubscribePageData,
   TaskMapPin,
@@ -182,7 +183,21 @@ const pin = (
   windowStart: string,
   offerCount: number,
   postedAt: string,
-): TaskMapPin => ({ id, slug: `${id.slice(4).replaceAll('_', '-')}-${areaName.toLowerCase().replaceAll(' ', '-')}`, title, categorySlug, areaName, point, radiusMeters: 1609, budget, windowStart, offerCount, postedAt });
+): TaskMapPin => ({
+  id,
+  slug: `${id.slice(4).replaceAll('_', '-')}-${areaName.toLowerCase().replaceAll(' ', '-')}`,
+  title,
+  categorySlug,
+  areaName,
+  point,
+  radiusMeters: 1609,
+  budget,
+  windowStart,
+  // Three-hour windows.
+  windowEnd: new Date(Date.parse(windowStart) + 3 * 3_600_000).toISOString(),
+  offerCount,
+  postedAt,
+});
 
 export const austinMapPins: TaskMapPin[] = [
   { ...pin('tsk_desk', deskPublicTask.title, 'furniture-assembly', 'Mueller', { lat: 30.2993, lng: -97.7036 }, { type: 'fixed', priceCents: 6000 }, '2026-11-21T16:00:00.000Z', 3, deskPublicTask.postedAt), slug: deskPublicTask.slug },
@@ -203,18 +218,18 @@ export const austinMapPins: TaskMapPin[] = [
 
 /** Austin's neighborhoods by their approximate centers (the seeded areas), alphabetical. */
 export const austinMapAreas: LandingMapData['areas'] = [
-  { name: 'Allandale', point: { lat: 30.339, lng: -97.748 } },
-  { name: 'Cherrywood', point: { lat: 30.287, lng: -97.713 } },
-  { name: 'Circle C', point: { lat: 30.186, lng: -97.885 } },
-  { name: 'Crestview', point: { lat: 30.346, lng: -97.723 } },
-  { name: 'Downtown', point: { lat: 30.2672, lng: -97.7431 } },
-  { name: 'East Austin', point: { lat: 30.262, lng: -97.721 } },
-  { name: 'Hyde Park', point: { lat: 30.306, lng: -97.727 } },
-  { name: 'Mueller', point: { lat: 30.2993, lng: -97.7036 } },
-  { name: 'North Loop', point: { lat: 30.318, lng: -97.72 } },
-  { name: 'Travis Heights', point: { lat: 30.247, lng: -97.746 } },
-  { name: 'Windsor Park', point: { lat: 30.311, lng: -97.693 } },
-  { name: 'Zilker', point: { lat: 30.26, lng: -97.769 } },
+  { name: 'Allandale', slug: 'allandale', point: { lat: 30.339, lng: -97.748 }, helperCount: 4 },
+  { name: 'Cherrywood', slug: 'cherrywood', point: { lat: 30.287, lng: -97.713 }, helperCount: 3 },
+  { name: 'Circle C', slug: 'circle-c', point: { lat: 30.186, lng: -97.885 }, helperCount: 1 },
+  { name: 'Crestview', slug: 'crestview', point: { lat: 30.346, lng: -97.723 }, helperCount: 5 },
+  { name: 'Downtown', slug: 'downtown', point: { lat: 30.2672, lng: -97.7431 }, helperCount: 6 },
+  { name: 'East Austin', slug: 'east-austin', point: { lat: 30.262, lng: -97.721 }, helperCount: 4 },
+  { name: 'Hyde Park', slug: 'hyde-park', point: { lat: 30.306, lng: -97.727 }, helperCount: 3 },
+  { name: 'Mueller', slug: 'mueller', point: { lat: 30.2993, lng: -97.7036 }, helperCount: 7 },
+  { name: 'North Loop', slug: 'north-loop', point: { lat: 30.318, lng: -97.72 }, helperCount: 2 },
+  { name: 'Travis Heights', slug: 'travis-heights', point: { lat: 30.247, lng: -97.746 }, helperCount: 3 },
+  { name: 'Windsor Park', slug: 'windsor-park', point: { lat: 30.311, lng: -97.693 }, helperCount: 2 },
+  { name: 'Zilker', slug: 'zilker', point: { lat: 30.26, lng: -97.769 }, helperCount: 4 },
 ];
 
 /** The map the landing page gets in development: OpenFreeMap's detailed style (no key), centered on Austin. */
@@ -402,6 +417,19 @@ export const waitlistComingNextData: WaitlistPageData = {
   ],
   helperReward: { amountCents: 5000 },
 };
+/**
+ * The home page while its city isn't open (launch rehearsal J-L1): Austin live, Gainesville paused for now, and a
+ * city about to open, with the waitlist's cities people ask for most.
+ */
+export const citylessHomeData: CitylessHomeData = {
+  cities: [
+    { slug: 'austin', name: 'Austin', state: 'TX', status: 'live' },
+    { slug: 'tampa', name: 'Tampa', state: 'FL', status: 'prelaunch' },
+    { slug: 'gainesville', name: 'Gainesville', state: 'FL', status: 'paused' },
+  ],
+  waitlist: { markets: [austinMarket], comingNext: waitlistComingNextData.comingNext, helperReward: { amountCents: 5000 } },
+};
+
 /** From posting's "We're not in Dallas yet" (`?zip=75201`): the ZIP filled in and the people already waiting near it. */
 export const waitlistFromPostingData: WaitlistPageData = {
   ...waitlistComingNextData,

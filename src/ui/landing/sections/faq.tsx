@@ -5,7 +5,7 @@ import { Heading } from './heading';
 
 /**
  * Good to know: one question open at a time, each a card of its own. Opening one grows it smoothly to its
- * answer and closing shrinks it back (`landing-faq` in globals.css); the open one rises a little.
+ * answer and closing shrinks it back (`landing-faq` in landing.css); the open one rises a little.
  */
 export function FaqSection() {
   const t = useTranslations('landing.faq');

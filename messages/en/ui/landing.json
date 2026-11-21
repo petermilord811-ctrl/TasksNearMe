@@ -190,7 +190,74 @@
     "emptyFilteredBody": "Try a wider distance, zoom out, or show everything.",
     "showEverything": "Show everything",
     "approximate": "Approximate area",
-    "nearMe": "Show tasks near me"
+    "nearMe": "Show tasks near me",
+    "you": "You",
+    "youEdge": "You · {miles, number} mi",
+    "youEdgeLabel": "You're {miles, number} mi from the middle of the map. Show where you are",
+    "showMe": "Show where I am",
+    "home": "Home",
+    "homeAt": "Home · {area}",
+    "homeEdge": "Home · {miles, number} mi",
+    "homeEdgeLabel": "Your home area is {miles, number} mi from the middle of the map. Show it",
+    "nearHome": "Tasks near your home",
+    "showHome": "Show my home area",
+    "homeNote": "Starting from your home area, {area}.",
+    "homeDenied": "Your browser didn't share your location, so the map stays on your home area.",
+    "homeUseDevice": "Use where I am now",
+    "pulseNew": "New task",
+    "pulseOffer": "New offer",
+    "pulseBooked": "Booked",
+    "areaCardTasks": "{count, plural, =0 {No open tasks} one {# open task} other {# open tasks}}",
+    "areaCardTypical": "usually {price}",
+    "areaCardHelpers": "{count, plural, one {# helper works from here} other {# helpers work from here}}",
+    "areaCardHint": "Click to see its tasks",
+    "areaCardPicked": "Showing its tasks. Click again to see all",
+    "watchArea": "Watch an area",
+    "watchDraw": "Draw a loop around the area you want to watch.",
+    "watchTooSmall": "That loop is too small. Draw around a bigger area.",
+    "watchCancel": "Cancel",
+    "watchTitle": "Watch {areas}",
+    "watchAnd": " and ",
+    "watchMany": "{first} and {count, plural, one {# more} other {# more}}",
+    "watchBody": "Get told when new tasks are posted there. Alerts go by neighborhood, never by exact place.",
+    "watchAlerts": "Get alerts",
+    "watchAgain": "Draw again",
+    "watchClose": "Close",
+    "liveNew": "New",
+    "liveNewTask": "{title} in {area}",
+    "liveShow": "Show",
+    "liveDismiss": "Dismiss",
+    "layerDrive": "Drive times",
+    "layerClock": "Light follows the clock",
+    "layerMinimap": "Minimap",
+    "driveFromYou": "Driving from you, estimated:",
+    "driveFromHome": "Driving from your home area, estimated:",
+    "driveMinutes": "{minutes} min",
+    "driveNone": "No roads around you on the map yet",
+    "whenLabel": "When",
+    "when": {
+      "any": "Any time",
+      "today": "Today",
+      "this_weekend": "This weekend",
+      "this_week": "This week"
+    },
+    "emptyAreaTitle": "Nothing open in {area} right now",
+    "emptyWhen": {
+      "today": "No open tasks today",
+      "this_weekend": "No open tasks this weekend",
+      "this_week": "No open tasks this week"
+    },
+    "jumpPicked": "Neighborhood: {area}. Change it",
+    "jumpClear": "Show all of the city, not just {area}",
+    "clock": {
+      "day": "Daytime in {market} · {time}",
+      "golden": "Golden hour in {market} · {time}",
+      "dusk": "Dusk in {market} · {time}",
+      "dawn": "Dawn in {market} · {time}",
+      "night": "Night in {market} · {time}"
+    },
+    "withinHomeLabel": "Distance from your home",
+    "countMatching": "{count, plural, =0 {No open tasks} one {# open task} other {# open tasks}} around {market}"
   },
   "categories": {
     "eyebrow": "What people book",
@@ -399,7 +466,9 @@
     "mark": "Brand: the mark at small sizes",
     "palette": "Brand: palette",
     "type": "Brand: type",
-    "motion": "Brand: motion tokens"
+    "motion": "Brand: motion tokens",
+    "noCity": "Landing page, no city open (paused)",
+    "noCityDark": "Landing page, no city open, dark"
   },
   "assistant": {
     "label": "Describe the task you need help with",
@@ -467,5 +536,23 @@
       "tvMounting": "TV mounting isn’t offered yet: it needs its own safety checks. Shelves, desks and anchoring furniture to the wall count as furniture assembly.",
       "licensedTrade": "Electrical, plumbing and gas work need a licensed pro, so they’re not offered here. If part of your task is something else, pick the closest kind of help below."
     }
+  },
+  "cityless": {
+    "eyebrow": "Opening city by city",
+    "subtitle": "Post what you need, agree on a price up front, and book a verified local helper. We're opening one city at a time: tell us where you are, and we'll write when we open there.",
+    "joinCta": "Join the waitlist",
+    "helperCta": "Become a helper",
+    "citiesTitle": "Where we are",
+    "citiesBody": "We open city by city, with verified helpers in place before the first task.",
+    "status": {
+      "live": "Open now",
+      "prelaunch": "Opening soon",
+      "paused": "Paused for now"
+    },
+    "cityName": "{city}, {state}",
+    "cityLink": "See {city}",
+    "noCities": "We're getting ready to open our first city.",
+    "waitlistTitle": "Tell us where you are",
+    "waitlistBody": "Leave your email and ZIP. We'll write when we open near you, and that's all."
   }
 }

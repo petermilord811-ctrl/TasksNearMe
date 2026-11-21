@@ -22,6 +22,11 @@ import { PAGE_TITLE_CLASS } from '@/ui/components/layout/page-header';
 export interface WaitlistScreenProps {
   data: WaitlistPageData;
   handlers: WaitlistHandlers;
+  /**
+   * Part of another page (the home page while its city isn't open): its own heading, a level down (h2), and its own
+   * words, without the list of open cities (that page lists every city with its status).
+   */
+  embedded?: { title: string; description: string };
 }
 
 export function WaitlistConfirmation({ email, zip }: Pick<WaitlistInput, 'email' | 'zip'>) {
@@ -40,7 +45,7 @@ const card = 'rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 sha
  * their email, ZIP and city, see how many already wait near them and which cities come next by demand, and
  * helpers learn they can get verified now, wherever they live.
  */
-export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
+export function WaitlistScreen({ data, handlers, embedded }: WaitlistScreenProps) {
   const t = useTranslations('waitlist');
   const forms = useTranslations('forms');
   const id = useId();
@@ -58,11 +63,12 @@ export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
     if (joined) confirmationRef.current?.focus();
   }, [joined]);
 
-  return <section aria-labelledby={`${id}-title`} className="mx-auto max-w-reading space-y-6 py-4 sm:py-8">
+  const Heading = embedded ? 'h2' : 'h1';
+  return <section aria-labelledby={`${id}-title`} className={embedded ? 'space-y-6' : 'mx-auto max-w-reading space-y-6 py-4 sm:py-8'}>
     <header className="space-y-3">
       <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-2xl bg-brand-soft text-primary"><MapPin className="size-6" /></span>
-      <h1 id={`${id}-title`} className={PAGE_TITLE_CLASS}>{t(data.from === 'beta' ? 'beta.title' : 'title')}</h1>
-      <p className="text-muted-foreground">{t(data.from === 'beta' ? 'beta.description' : 'description')}</p>
+      <Heading id={`${id}-title`} className={PAGE_TITLE_CLASS}>{embedded ? embedded.title : t(data.from === 'beta' ? 'beta.title' : 'title')}</Heading>
+      <p className="text-muted-foreground">{embedded ? embedded.description : t(data.from === 'beta' ? 'beta.description' : 'description')}</p>
       {data.demand && nearby > 0 && <p className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1.5 text-sm text-secondary-foreground"><Users aria-hidden="true" className="size-4 text-primary" />{t('demand', { count: nearby, zip: data.demand.zip })}</p>}
     </header>
 
@@ -133,7 +139,7 @@ export function WaitlistScreen({ data, handlers }: WaitlistScreenProps) {
       </ol>
     </section>}
 
-    {data.markets.length > 0 && <section aria-labelledby={`${id}-markets`} className="space-y-2 rounded-[1.375rem] border border-callout-border bg-callout p-4 text-callout-foreground sm:p-6">
+    {!embedded && data.markets.length > 0 && <section aria-labelledby={`${id}-markets`} className="space-y-2 rounded-[1.375rem] border border-callout-border bg-callout p-4 text-callout-foreground sm:p-6">
       <h2 id={`${id}-markets`} className="text-[17px] font-semibold leading-6 lg:text-lg">{t('marketsTitle')}</h2>
       <ul>
         {data.markets.map((market) => <li key={market.slug}><Link href={routes.market(market.slug)} className="inline-flex min-h-11 items-center py-2 underline underline-offset-4">{t('marketLink', { market: market.name })}</Link></li>)}

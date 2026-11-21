@@ -3,15 +3,22 @@ import { austinLandingMap, austinMapPins } from '@/fixtures';
 import { distanceMiles, roundMiles, type LatLng } from '@/shared/geo';
 import {
   arrivalCamera,
-  arrivalProgress,
+  BLOOM_MAX,
+  bloomOffsets,
+  inTimeRange,
+  medianCents,
+  pinIdsMatching,
   circleBounds,
   circleRing,
   donutArcs,
+  edgeMarker,
   effectiveSort,
   inBounds,
   insideServiceArea,
+  listOrigin,
   nearbyPins,
   outsideCircle,
+  pinnedArrivalProgress,
   pixelsPerMile,
   projector,
   shownAmountCents,
@@ -122,12 +129,12 @@ describe('the arrival under the hero', () => {
   const from: MapCamera = { center: { lat: 30.348, lng: -97.725 }, zoom: 14, pitch: 50, bearing: -45 };
   const to: MapCamera = { center: austinLandingMap.center, zoom: 10.75, pitch: 0, bearing: 0 };
 
-  it('runs from the bottom of the window to near its top', () => {
-    expect(arrivalProgress(900, 900)).toBe(0);
-    expect(arrivalProgress(1200, 900)).toBe(0);
-    expect(arrivalProgress(450, 900)).toBeCloseTo(450 / 765);
-    expect(arrivalProgress(135, 900)).toBe(1);
-    expect(arrivalProgress(-400, 900)).toBe(1);
+  it('waits while the sheet slides in, then runs over the pinned stretch of scrolling', () => {
+    expect(pinnedArrivalProgress(300, 600)).toBe(0);
+    expect(pinnedArrivalProgress(0, 600)).toBe(0);
+    expect(pinnedArrivalProgress(-150, 600)).toBeCloseTo(0.25);
+    expect(pinnedArrivalProgress(-600, 600)).toBe(1);
+    expect(pinnedArrivalProgress(-2000, 600)).toBe(1);
   });
 
   it('starts close and tilted over the task and ends flat over the city', () => {
@@ -156,6 +163,41 @@ describe('the arrival under the hero', () => {
   });
 });
 
+describe('where the list measures from', () => {
+  it('is the visitor in or near the market, and nobody for a visitor in another city', () => {
+    const inMueller = { lat: 30.2989, lng: -97.7064 };
+    expect(listOrigin(austinLandingMap, inMueller)).toBe(inMueller);
+    expect(listOrigin(austinLandingMap, undefined)).toBeUndefined();
+    // Dallas is about 180 miles away.
+    expect(listOrigin(austinLandingMap, { lat: 32.7767, lng: -96.797 })).toBeUndefined();
+  });
+});
+
+describe('the marker for an off-screen location', () => {
+  const box = { left: 20, top: 100, right: 620, bottom: 500 };
+
+  it('hides while the point is in view', () => {
+    expect(edgeMarker({ x: 300, y: 300 }, box)).toBeNull();
+    expect(edgeMarker({ x: 20, y: 500 }, box)).toBeNull();
+  });
+
+  it('sits on the edge the line from the middle crosses, pointing at the point', () => {
+    // Straight up from the middle (320, 300): the top edge, pointing up.
+    const up = edgeMarker({ x: 320, y: -400 }, box)!;
+    expect(up.x).toBeCloseTo(320);
+    expect(up.y).toBeCloseTo(100);
+    expect(up.angle).toBeCloseTo(-Math.PI / 2);
+    // Far to the right and a little down: the right edge, a little below the middle.
+    const right = edgeMarker({ x: 3320, y: 600 }, box)!;
+    expect(right.x).toBeCloseTo(620);
+    expect(right.y).toBeCloseTo(300 + 300 * (300 / 3000));
+    // Down and to the left: the corner area, never outside the box.
+    const corner = edgeMarker({ x: -2000, y: 2000 }, box)!;
+    expect(corner.x).toBeGreaterThanOrEqual(box.left - 1e-9);
+    expect(corner.y).toBeLessThanOrEqual(box.bottom + 1e-9);
+  });
+});
+
 describe('projector', () => {
   it('puts the center in the middle, north up and east right', () => {
     const project = projector(austinLandingMap.center, 19, 640, 480);
@@ -165,5 +207,50 @@ describe('projector', () => {
     expect(north.y).toBeLessThan(240);
     expect(east.x).toBeGreaterThan(320);
     expect(pixelsPerMile(19, 640)).toBeCloseTo(640 / 19);
+  });
+});
+
+describe('the time and neighborhood filters', () => {
+  const day = (iso: string) => Date.parse(iso);
+  it('keeps a task whose window touches the range, as the board does', () => {
+    const pin = { windowStart: '2026-11-21T16:00:00.000Z', windowEnd: '2026-11-21T19:00:00.000Z' };
+    expect(inTimeRange(pin, { from: day('2026-11-21T00:00:00Z'), to: day('2026-11-22T00:00:00Z') })).toBe(true);
+    // Ends as the range starts, or starts as it ends: not in it.
+    expect(inTimeRange(pin, { from: day('2026-11-21T19:00:00Z'), to: day('2026-11-23T00:00:00Z') })).toBe(false);
+    expect(inTimeRange(pin, { from: day('2026-11-20T00:00:00Z'), to: day('2026-11-21T16:00:00Z') })).toBe(false);
+  });
+
+  it('narrows the list to the time and the neighborhood', () => {
+    const saturday = { from: day('2026-11-28T06:00:00Z'), to: day('2026-11-29T06:00:00Z') };
+    const ids = nearbyPins(austinMapPins, { when: saturday }).map(({ pin }) => pin.id);
+    expect(ids.length).toBeGreaterThan(0);
+    expect(ids.every((id) => austinMapPins.find((pin) => pin.id === id)!.windowStart.startsWith('2026-11-28'))).toBe(true);
+    const mueller = nearbyPins(austinMapPins, { areaName: 'Mueller' }).map(({ pin }) => pin.areaName);
+    expect(mueller).toEqual(['Mueller']);
+    expect(pinIdsMatching(austinMapPins, { areaName: 'Mueller', category: 'yard-cleanup' }).size).toBe(0);
+    expect(pinIdsMatching(austinMapPins, {}).size).toBe(austinMapPins.length);
+  });
+});
+
+describe('a cluster in bloom', () => {
+  it('fans its tasks round one ring from the top, clockwise, with room between them', () => {
+    expect(bloomOffsets(0)).toEqual([]);
+    expect(bloomOffsets(1)).toEqual([{ x: 0, y: -44 }]);
+    const eight = bloomOffsets(8);
+    expect(eight[0]).toEqual({ x: 0, y: -53.5 });
+    expect(eight[2]!.x).toBeGreaterThan(50);
+    for (let i = 0; i < eight.length; i += 1) {
+      const a = eight[i]!;
+      const b = eight[(i + 1) % eight.length]!;
+      expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual(40);
+    }
+    const most = bloomOffsets(BLOOM_MAX);
+    expect(Math.hypot(most[0]!.x - most[1]!.x, most[0]!.y - most[1]!.y)).toBeGreaterThanOrEqual(40);
+  });
+
+  it('reads a typical price as the median', () => {
+    expect(medianCents([])).toBeNull();
+    expect(medianCents([9000, 4500, 6000])).toBe(6000);
+    expect(medianCents([4000, 5000, 7000, 9000])).toBe(6000);
   });
 });

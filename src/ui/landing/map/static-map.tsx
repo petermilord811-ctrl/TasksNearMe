@@ -14,6 +14,11 @@ export const FADE_VERTICAL = {
   maskImage: 'linear-gradient(to bottom, transparent, #000 11%, #000 80%, transparent)',
   WebkitMaskImage: 'linear-gradient(to bottom, transparent, #000 11%, #000 80%, transparent)',
 } as const;
+/** Soft at the top only: the page fades its bottom itself (the landing's pinned map, whose bottom edge moves). */
+export const FADE_TOP = {
+  maskImage: 'linear-gradient(to bottom, transparent, #000 11%)',
+  WebkitMaskImage: 'linear-gradient(to bottom, transparent, #000 11%)',
+} as const;
 
 /** The drawing's frames: mid-size (`card`), or full width (`wide`, a whole-city span). */
 const FRAMES = { card: { width: 640, height: 480, span: 19 }, wide: { width: 1600, height: 1000, span: 46 } } as const;
@@ -84,7 +89,7 @@ export function StaticMap({
   milesById?: Map<string, number>;
   /** The visitor's chosen distance: a ring around them, and the tasks beyond it quiet. */
   withinMiles?: number | null;
-  fade?: 'all' | 'vertical';
+  fade?: 'all' | 'vertical' | 'top';
   frame?: keyof typeof FRAMES;
   /** Room panels take over the map (fractions): the city is centered in what's left. */
   padding?: { top: number; right: number; bottom: number; left: number };
@@ -125,7 +130,7 @@ export function StaticMap({
 
   return (
     <div className={cn('relative size-full', className)}>
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" className={cn('absolute inset-0 size-full', fade === 'all' && 'map-fade')} style={fade === 'vertical' ? FADE_VERTICAL : undefined} aria-hidden="true" focusable="false">
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" className={cn('absolute inset-0 size-full', fade === 'all' && 'map-fade')} style={fade === 'vertical' ? FADE_VERTICAL : fade === 'top' ? FADE_TOP : undefined} aria-hidden="true" focusable="false">
         <defs>
           <pattern id={`streets-${uid}`} width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(-8)">
             <path d="M0 11H22M11 0V22" stroke="var(--map-road)" strokeWidth="1.2" />

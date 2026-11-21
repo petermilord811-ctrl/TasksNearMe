@@ -9,7 +9,7 @@ import { cn } from '@/ui/lib/utils';
 import { CATEGORY_ICONS } from '../category-icons';
 import { useLanding } from '../landing-state';
 import { useOptionalMapExplorer } from './explorer-state';
-import { effectiveSort, nearbyPins } from './map-math';
+import { effectiveSort, listOrigin, nearbyPins } from './map-math';
 import { pinPrice } from './pin-card';
 
 /** How many tasks the row holds (the list beside the map has the rest). */
@@ -29,7 +29,7 @@ export function MapCardRail({ map, className }: { map: LandingMapData; className
   const { selectedCategory, litTaskId, focusedTaskId, setHighlightedTaskId, pickTask, location } = useLanding();
   const explorer = useOptionalMapExplorer();
   const reduced = usePrefersReducedMotion();
-  const from = location.status === 'granted' ? location.point : undefined;
+  const from = listOrigin(map, location.status === 'granted' ? location.point : undefined);
   const sort = effectiveSort(explorer?.sortChoice ?? undefined, from);
   const withinMiles = from ? (explorer?.withinMiles ?? null) : null;
   const rows = useMemo(

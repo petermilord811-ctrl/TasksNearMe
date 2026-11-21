@@ -17,7 +17,8 @@ export function pinPrice(pin: TaskMapPin, perHour: (rate: string) => string): st
  * The card that grows out of a pin (positioned by the map, in px or % from the map's top-left; solid, so nothing
  * behind it shows through): the category, the title, the area (and how far, once the visitor shared a location),
  * the day, how many offers it has, the price, and a link to the task. It opens above the pin, or below it near the map's top edge. A
- * picked task's card stays open with a close button; a pointed-at one closes as the pointer leaves.
+ * picked task's card stays open with a close button and takes clicks; a pointed-at one is a preview that lets clicks
+ * through to the pins under it (it never hides a pin from the pointer), and closes as the pointer leaves.
  *
  * It repeats a row of the list beside the map (the keyboard and screen-reader path to the same tasks), so
  * it's hidden from assistive tech and out of the tab order.
@@ -48,7 +49,7 @@ export function PinCard({
     <div
       key={pin.id}
       aria-hidden="true"
-      className={cn('bloom-in pointer-events-auto absolute z-10 w-64 -translate-x-1/2', below ? 'translate-y-[26px]' : '-translate-y-[calc(100%+26px)]')}
+      className={cn('bloom-in absolute z-10 w-64 -translate-x-1/2', picked ? 'pointer-events-auto' : 'pointer-events-none', below ? 'translate-y-[26px]' : '-translate-y-[calc(100%+26px)]')}
       style={{ left: x, top: y, ['--bloom-origin' as string]: below ? '50% 0%' : '50% 100%' }}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}

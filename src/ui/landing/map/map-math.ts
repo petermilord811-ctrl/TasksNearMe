@@ -30,6 +30,24 @@ export function inBounds(point: LatLng, bounds: ViewBounds): boolean {
   return point.lat >= bounds.south && point.lat <= bounds.north && point.lng >= bounds.west && point.lng <= bounds.east;
 }
 
+/** A span of time (ms since the epoch): the board's "when" filters, from `whenRange` (src/shared/board-match.ts). */
+export interface TimeRange {
+  from: number;
+  to: number;
+}
+
+/** Whether a task's window touches a range (the board's rule: it starts before the range ends and ends after it starts). */
+export function inTimeRange(pin: Pick<TaskMapPin, 'windowStart' | 'windowEnd'>, range: TimeRange): boolean {
+  return Date.parse(pin.windowStart) < range.to && Date.parse(pin.windowEnd) > range.from;
+}
+
+/** The pins a filter keeps, by id (to fade the others out on the map rather than drop them). */
+export function pinIdsMatching(pins: TaskMapPin[], filter: { category?: string | null; when?: TimeRange | null; areaName?: string | null }): Set<string> {
+  return new Set(
+    pins.filter((pin) => (!filter.category || pin.categorySlug === filter.category) && (!filter.when || inTimeRange(pin, filter.when)) && (!filter.areaName || pin.areaName === filter.areaName)).map((pin) => pin.id),
+  );
+}
+
 /** The number a pin shows (its fixed price, or its hourly rate): only for ordering, never added up. */
 export function shownAmountCents(pin: TaskMapPin): number {
   return pin.budget.type === 'fixed' ? pin.budget.priceCents : pin.budget.rateCents;
@@ -48,12 +66,23 @@ export function effectiveSort(sort: ListSort | undefined, from: LatLng | undefin
  */
 export function nearbyPins(
   pins: TaskMapPin[],
-  options: { from?: LatLng; category?: string | null; limit?: number; sort?: ListSort; withinMiles?: number | null; bounds?: ViewBounds | null },
+  options: {
+    from?: LatLng;
+    category?: string | null;
+    limit?: number;
+    sort?: ListSort;
+    withinMiles?: number | null;
+    bounds?: ViewBounds | null;
+    /** Only tasks whose time window touches this range (Today, This weekend, This week). */
+    when?: TimeRange | null;
+    /** Only tasks in this neighborhood. */
+    areaName?: string | null;
+  },
 ): NearbyPin[] {
-  const { from, withinMiles, bounds } = options;
+  const { from, withinMiles, bounds, when, areaName } = options;
   let rows: { pin: TaskMapPin; exact?: number; order: number }[] = pins
     .map((pin, order) => (from ? { pin, exact: distanceMiles(from, pin.point), order } : { pin, order }))
-    .filter(({ pin }) => !options.category || pin.categorySlug === options.category);
+    .filter(({ pin }) => (!options.category || pin.categorySlug === options.category) && (!when || inTimeRange(pin, when)) && (!areaName || pin.areaName === areaName));
   if (from && withinMiles) rows = rows.filter((row) => (row.exact ?? 0) <= withinMiles);
   if (bounds) rows = rows.filter((row) => inBounds(row.pin.point, bounds));
   const sort = effectiveSort(options.sort, from);
@@ -66,6 +95,19 @@ export function nearbyPins(
 /** Whether a visitor is inside the market's service area. */
 export function insideServiceArea(map: Pick<LandingMapData, 'center' | 'serviceRadiusMiles'>, from: LatLng): boolean {
   return distanceMiles(map.center, from) <= map.serviceRadiusMiles;
+}
+
+/** Just past the service area, a visitor is still a neighbor: their distances and "nearest" still mean something. */
+const NEARBY_MARGIN_MILES = 15;
+
+/**
+ * Where the list measures from: the visitor's place, if it's in or near the market. Someone in another city (the page
+ * finds them by itself now) keeps the usual order with no distances, rather than every task "1,040 mi" away; the map
+ * still shows where they are.
+ */
+export function listOrigin(map: Pick<LandingMapData, 'center' | 'serviceRadiusMiles'>, point: LatLng | undefined): LatLng | undefined {
+  if (!point) return undefined;
+  return distanceMiles(map.center, point) <= map.serviceRadiusMiles + NEARBY_MARGIN_MILES ? point : undefined;
 }
 
 export const METERS_PER_MILE = 1609.344;
@@ -136,12 +178,39 @@ const smooth = (t: number) => t * t * (3 - 2 * t);
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
 /**
- * How far the map has arrived (0–1) from where its top edge is: 0 as it enters at the bottom of the window,
- * 1 once it reaches the top 15% (the heading and the list sit over it by then).
+ * Wide screens: how far the map has arrived (0–1) once its stage is pinned. `top` is where the map's scroll track
+ * starts (its section's top edge): 0 while the sheet is still sliding over the hero (top above 0 isn't reached
+ * yet), then it runs over the next `distance` pixels of scrolling (the camera moves while the map itself stays put).
  */
-export function arrivalProgress(top: number, viewportHeight: number): number {
-  const height = Math.max(1, viewportHeight);
-  return clamp01((height - top) / (height * 0.85));
+export function pinnedArrivalProgress(top: number, distance: number): number {
+  return clamp01(-top / Math.max(1, distance));
+}
+
+/** A box inside the map (pixels from its top-left corner): the part a visitor sees, clear of the page's panels. */
+export interface EdgeBox {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/**
+ * Where a marker for an off-screen point sits: on the box's edge, along the line from the box's middle toward the
+ * point, with the angle it points in (radians, 0 = right, clockwise as screens go). Null while the point is inside
+ * the box (it shows itself there).
+ */
+export function edgeMarker(point: { x: number; y: number }, box: EdgeBox): { x: number; y: number; angle: number } | null {
+  if (point.x >= box.left && point.x <= box.right && point.y >= box.top && point.y <= box.bottom) return null;
+  const cx = (box.left + box.right) / 2;
+  const cy = (box.top + box.bottom) / 2;
+  const dx = point.x - cx;
+  const dy = point.y - cy;
+  const halfW = Math.max(0, (box.right - box.left) / 2);
+  const halfH = Math.max(0, (box.bottom - box.top) / 2);
+  // The first edge the line meets: the smaller of the two scales.
+  const scale = Math.min(dx === 0 ? Infinity : halfW / Math.abs(dx), dy === 0 ? Infinity : halfH / Math.abs(dy));
+  const reach = Number.isFinite(scale) ? scale : 0;
+  return { x: cx + dx * reach, y: cy + dy * reach, angle: Math.atan2(dy, dx) };
 }
 
 /**
@@ -182,4 +251,31 @@ export function projector(center: LatLng, spanMiles: number, width: number, heig
 /** Pixels per mile for the drawn map's scale (to draw a task's area circle). */
 export function pixelsPerMile(spanMiles: number, width: number): number {
   return width / spanMiles;
+}
+
+// ---- A cluster in bloom ------------------------------------------------------------------------------------
+
+/** Most tasks a cluster fans out (a bigger one zooms in instead, as before). */
+export const BLOOM_MAX = 16;
+
+/**
+ * Where each of `count` tasks sits when its cluster fans out (pixels from the cluster's middle): evenly round one
+ * ring, starting at the top and going clockwise, wide enough that their 34 px badges keep about 8 px apart.
+ */
+export function bloomOffsets(count: number, badge = 34, gap = 8): { x: number; y: number }[] {
+  if (count <= 0) return [];
+  if (count === 1) return [{ x: 0, y: -Math.max(44, badge + gap) }];
+  const radius = Math.max(44, ((badge + gap) * count) / (2 * Math.PI));
+  return Array.from({ length: count }, (_, index) => {
+    const angle = -Math.PI / 2 + (index / count) * Math.PI * 2;
+    return { x: Math.round(Math.cos(angle) * radius * 10) / 10, y: Math.round(Math.sin(angle) * radius * 10) / 10 };
+  });
+}
+
+/** A typical price among tasks (the median of what they show, in cents), or null without any. */
+export function medianCents(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? sorted[middle]! : Math.round((sorted[middle - 1]! + sorted[middle]!) / 2);
 }
