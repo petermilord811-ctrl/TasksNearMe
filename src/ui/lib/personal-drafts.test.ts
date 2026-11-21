@@ -20,6 +20,7 @@ describe('forgetPersonalDrafts (sweep 2026-11-20)', () => {
       'tnm:helper-setup:usr_maya',
       'tnm:offer:tsk_desk',
       'tnm:offer:sent:tsk_desk',
+      'tnm:question:tsk_desk',
       'tnm:assistant:help:v1',
       'tnm-map-intro',
     ]);

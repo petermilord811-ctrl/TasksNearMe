@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { TaskQuestionHandlers, TaskQuestionsData } from '@/contracts';
@@ -9,7 +10,7 @@ import copy from '../../../../messages/en/ui/questions.json';
 import { TaskQuestions } from './task-questions';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
-afterEach(cleanup);
+afterEach(() => { cleanup(); window.sessionStorage.clear(); });
 
 const handlers: TaskQuestionHandlers = {
   onAsk: fakeHandler({ ok: true, code: 'sent' }),
@@ -27,6 +28,20 @@ function show(data: TaskQuestionsData) {
 }
 
 describe('TaskQuestions', () => {
+  it('keeps a question being typed across a reload, until it is sent (journeys on a phone, as J-H7 for offers)', async () => {
+    const user = userEvent.setup();
+    show(taskQuestionsHelperData);
+    await user.type(screen.getByLabelText(copy.ask.label), 'Is the dresser already out of its box?');
+    // A reload: the page comes back with what was typed.
+    cleanup();
+    show(taskQuestionsHelperData);
+    await waitFor(() => expect(screen.getByLabelText(copy.ask.label)).toHaveValue('Is the dresser already out of its box?'));
+    // Sent: the words go, from the box and from the tab.
+    await user.click(screen.getByRole('button', { name: copy.ask.submit }));
+    await waitFor(() => expect(screen.getByLabelText(copy.ask.label)).toHaveValue(''));
+    expect(window.sessionStorage.getItem(`tnm:question:${taskQuestionsHelperData.taskId}`)).toBeNull();
+  });
+
   it('gives the poster answer, edit and pin while questions are open', () => {
     show(taskQuestionsPosterData);
     expect(screen.getByRole('textbox', { name: copy.answer.label })).toBeInTheDocument();

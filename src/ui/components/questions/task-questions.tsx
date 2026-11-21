@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState, useTransition } from 'react';
+import { useEffect, useId, useState, useTransition } from 'react';
 import { CircleHelp, Pin, PinOff } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
@@ -40,19 +40,44 @@ function useSubmit() {
   return { pending, error, run };
 }
 
-function TextForm({ label, placeholder, hint, max, submit, submitting, success, initial = '', onSubmit }: {
+/** A question's words for a task, kept in this tab until it's sent (personal drafts: gone at sign-out). */
+export const questionDraftKey = (taskId: string) => `tnm:question:${taskId}`;
+
+/** `draftKey`: the words stay in this tab's sessionStorage under it until sent, so a reload keeps them (as offers do, J-H7). */
+function TextForm({ label, placeholder, hint, max, submit, submitting, success, initial = '', draftKey, onSubmit }: {
   label: string; placeholder: string; hint?: string; max: number; submit: string; submitting: string; success: string; initial?: string;
-  onSubmit: (body: string) => Promise<ActionResult>;
+  draftKey?: string; onSubmit: (body: string) => Promise<ActionResult>;
 }) {
   const id = useId();
   const [body, setBody] = useState(initial);
   const { pending, error, run } = useSubmit();
+  // Back once, after hydration (the server can't read the tab's storage).
+  useEffect(() => {
+    if (!draftKey) return;
+    try {
+      const saved = window.sessionStorage.getItem(draftKey);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- the tab's storage exists only after hydration
+      if (saved) setBody((current) => current || saved.slice(0, max));
+    } catch {
+      // Storage off (a private window): nothing was kept.
+    }
+  }, [draftKey, max]);
+  const keep = (next: string) => {
+    setBody(next);
+    if (!draftKey) return;
+    try {
+      if (next) window.sessionStorage.setItem(draftKey, next);
+      else window.sessionStorage.removeItem(draftKey);
+    } catch {
+      // Storage off: nothing is kept.
+    }
+  };
   return <form noValidate className="space-y-2" onSubmit={(event) => {
     event.preventDefault();
-    if (!pending && body.trim().length >= 2) run(() => onSubmit(body), success, () => setBody(''));
+    if (!pending && body.trim().length >= 2) run(() => onSubmit(body), success, () => keep(''));
   }}>
     <label htmlFor={`${id}-body`} className="text-sm font-semibold">{label}</label>
-    <Textarea id={`${id}-body`} value={body} onChange={(event) => setBody(event.target.value)} placeholder={placeholder} maxLength={max} rows={2} aria-invalid={Boolean(error)} aria-describedby={[hint ? `${id}-hint` : '', error ? `${id}-error` : ''].filter(Boolean).join(' ') || undefined} className="min-h-16" />
+    <Textarea id={`${id}-body`} value={body} onChange={(event) => keep(event.target.value)} placeholder={placeholder} maxLength={max} rows={2} aria-invalid={Boolean(error)} aria-describedby={[hint ? `${id}-hint` : '', error ? `${id}-error` : ''].filter(Boolean).join(' ') || undefined} className="min-h-16" />
     {hint && <p id={`${id}-hint`} className="text-xs text-muted-foreground">{hint}</p>}
     {error && <p id={`${id}-error`} className="text-sm text-destructive">{error}</p>}
     <Button type="submit" size="sm" disabled={pending || body.trim().length < 2} aria-busy={pending}>{pending && <Spinner aria-hidden="true" />}{pending ? submitting : submit}</Button>
@@ -137,7 +162,7 @@ export function TaskQuestions({ data, handlers, now, wide = false }: { data: Tas
       ? <p className="text-sm text-muted-foreground">{t(data.viewer.isPoster ? 'posterEmpty' : 'empty')}</p>
       : <ol className="space-y-3">{data.questions.map((question) => <QuestionItem key={question.id} question={question} data={data} handlers={handlers} now={now} />)}</ol>}
     {data.viewer.canAsk
-      ? <TextForm label={t('ask.label')} placeholder={t('ask.placeholder')} hint={t('ask.hint')} max={TASK_QUESTION_MAX} submit={t('ask.submit')} submitting={t('ask.submitting')} success={t('ask.sent')} onSubmit={(body) => handlers.onAsk({ body })} />
+      ? <TextForm label={t('ask.label')} placeholder={t('ask.placeholder')} hint={t('ask.hint')} max={TASK_QUESTION_MAX} submit={t('ask.submit')} submitting={t('ask.submitting')} success={t('ask.sent')} draftKey={questionDraftKey(data.taskId)} onSubmit={(body) => handlers.onAsk({ body })} />
       : data.viewer.askBlocked && !data.viewer.isPoster && <p className="text-sm text-muted-foreground">{t(`blocked.${data.viewer.askBlocked}`)}</p>}
   </section>;
 }
