@@ -5,6 +5,8 @@ import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { routes, SERIES_ACTION_IDS, SERIES_CHARGE_FAILURES, SERIES_SKIPPERS, SERIES_VISIT_ACTION_IDS, SERIES_VISIT_STATES, type ActionResult, type SeriesHandlers, type SeriesPageData } from '@/contracts';
 import {
+  mayaMastercard,
+  mayaVisa,
   SERIES_NOW,
   seriesClientActiveData,
   seriesClientMonthlyData,
@@ -183,6 +185,25 @@ describe('SeriesScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Change card' }));
     const sheet = await screen.findByRole('dialog', { name: seriesCopy.changeCard.title });
     await user.click(within(sheet).getByRole('radio', { name: /Mastercard/ }));
+    await user.click(within(sheet).getByRole('button', { name: 'Use this card' }));
+    await waitFor(() => expect(handlers.onChangeCard).toHaveBeenCalledExactlyOnceWith({ methodId: 'pm_maya_mc' }));
+  });
+
+  it("shows a card that can't be used here disabled, never chooses it, and removes it only when asked (J-AB4)", async () => {
+    const user = userEvent.setup();
+    const asked: { methodId: string }[] = [];
+    // The series' own card, the Visa, is the refused one.
+    const { handlers } = mount({ ...seriesClientActiveData, cards: [{ ...mayaVisa, unusable: true }, mayaMastercard] }, { onRemoveCard: async (input) => { asked.push(input); return ok; } });
+    await user.click(screen.getByRole('button', { name: 'Change card' }));
+    const sheet = await screen.findByRole('dialog', { name: seriesCopy.changeCard.title });
+    const refused = within(sheet).getByRole('radio', { name: 'Visa •••• 1881' });
+    expect(refused).toBeDisabled();
+    expect(refused).toHaveAccessibleDescription("This card can't be used here. Contact support if you think that's wrong.");
+    expect(within(sheet).getByRole('radio', { name: /Mastercard/ })).toHaveAttribute('aria-checked', 'true');
+    expect(asked).toEqual([]);
+    await user.click(within(sheet).getByRole('button', { name: 'Remove' }));
+    expect(asked).toEqual([{ methodId: 'pm_maya_visa' }]);
+    await waitFor(() => expect(within(sheet).queryByText('Visa •••• 1881')).not.toBeInTheDocument());
     await user.click(within(sheet).getByRole('button', { name: 'Use this card' }));
     await waitFor(() => expect(handlers.onChangeCard).toHaveBeenCalledExactlyOnceWith({ methodId: 'pm_maya_mc' }));
   });

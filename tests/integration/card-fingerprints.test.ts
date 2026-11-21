@@ -3,8 +3,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FileStorage } from '@/integrations/storage';
 import { createDevPaymentProvider } from '@/integrations/payments';
 import { users } from '@/modules/accounts/schema';
-import { methodForChoice } from '@/modules/bookings/confirm';
-import { addCard } from '@/modules/earnings/service';
+import { methodForChoice, paymentPanel } from '@/modules/bookings/confirm';
+import { addCard, getPaymentsPage } from '@/modules/earnings/service';
 import { blocks } from '@/modules/messaging/schema';
 import { paymentMethods, payments } from '@/modules/payments/schema';
 import { supportCaseEvents, supportCases } from '@/modules/support/schema';
@@ -76,6 +76,19 @@ describe('cards and accounts (abuse rehearsal J-AB4)', () => {
     await db.update(users).set({ status: 'active' }).where(eq(users.id, PEOPLE.banned));
     expect(await methodForChoice(deps, PEOPLE.newcomer, { kind: 'dev_card', card: 'success', save: false })).toMatchObject({ providerRef: 'devpm_success', fingerprint: fingerprintFor(PEOPLE.newcomer) });
     await db.update(users).set({ status: 'banned' }).where(eq(users.id, PEOPLE.banned));
+  });
+
+  it("lists a saved card a banned account used as one that can't be used here, on payment forms and the payments page, and leaves it saved", async () => {
+    // The newcomer's old card (saved before the ban) and a fine one.
+    await db.insert(paymentMethods).values(savedCard('pm_cf_newcomer_fine', PEOPLE.newcomer, 'fp_cf_newcomer_fine'));
+    const unusable = (methods: readonly { id: string; unusable?: true }[]) => methods.filter((method) => method.unusable).map((method) => method.id);
+    expect(unusable((await paymentPanel(db, PEOPLE.newcomer, dev)).methods)).toEqual(['pm_cf_newcomer_old']);
+    expect(unusable((await getPaymentsPage(db, PEOPLE.newcomer)).methods)).toEqual(['pm_cf_newcomer_old']);
+    // A stranger's own cards are all fine.
+    expect(unusable((await paymentPanel(db, PEOPLE.stranger, dev)).methods)).toEqual([]);
+    // Showing it removes nothing.
+    const [old] = await db.select({ detachedAt: paymentMethods.detachedAt }).from(paymentMethods).where(eq(paymentMethods.id, 'pm_cf_newcomer_old'));
+    expect(old?.detachedAt).toBeNull();
   });
 
   it("keeps refusing the card of a banned account that was deleted afterwards (32's review)", async () => {

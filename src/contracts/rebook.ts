@@ -7,7 +7,7 @@ import type { HelperSetupState } from './helper-work';
 import { invitePricingSchema } from './invites';
 import type { ExactAddress } from './location';
 import type { PriceBreakdown, PricingInput } from './money';
-import { paymentChoiceSchema, type PaymentAttemptResult, type PaymentPanelData } from './payments';
+import { paymentChoiceSchema, type CardRemovalHandlers, type PaymentAttemptResult, type PaymentPanelData } from './payments';
 import type { ClientSummary, HelperSummary } from './people';
 import { REPEAT_CHOICES, type SeriesSchedule } from './series';
 import type { RebookProposalStatus } from './status';
@@ -139,7 +139,7 @@ export type AcceptProposalInput = z.input<typeof acceptProposalInputSchema>;
  * - `onFinishVerification`: after the dev bank dialog.
  * - `onDecline` (client), `onWithdraw` (helper): ok `updated`. Errors: `not_allowed`, `expired`, `unknown`.
  */
-export interface ProposalHandlers {
+export interface ProposalHandlers extends CardRemovalHandlers {
   onAccept: QueryHandler<AcceptProposalInput, PaymentAttemptResult>;
   onFinishVerification: QueryHandler<{ paymentId: string; outcome: 'approved' | 'failed' }, PaymentAttemptResult>;
   onDecline: ActionHandler;

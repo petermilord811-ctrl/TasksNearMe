@@ -23,7 +23,13 @@
     "cardUnavailable": "The card field didn't load. Check your connection and refresh the page, or choose a saved card.",
     "cardFailed": "We couldn't check this card. Check the details and try again.",
     "stripeHint": "We take Visa, Mastercard, American Express and Discover. Your card details go straight to Stripe, our payment provider.",
-    "kept": "This card is kept on your account for the later charges. You can change it any time."
+    "kept": "This card is kept on your account for the later charges. You can change it any time.",
+    "unusable": "This card can't be used here. Contact support if you think that's wrong.",
+    "remove": "Remove",
+    "removing": "Removing…",
+    "removed": "Card removed.",
+    "removeNotAllowed": "This card pays for a booking in progress. Try again after the booking is finished.",
+    "removeFailed": "We couldn't remove this card. Try again."
   },
   "testCards": {
     "success": "Approved",

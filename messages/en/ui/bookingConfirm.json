@@ -61,6 +61,7 @@
     "pending-no-failure": "Booking held for payment",
     "payment-picker-saved": "Saved payment methods",
     "payment-picker-new-card": "New test card picker",
+    "payment-picker-unusable": "A card that can't be used here",
     "payment-labels": "Card and wallet labels",
     "cancellation-fixed": "Fixed-price cancellation",
     "cancellation-hourly": "Hourly cancellation",

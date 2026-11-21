@@ -3,7 +3,7 @@ import type { ActionHandler, FieldErrorCode, QueryHandler } from './actions';
 import type { Cents, ISODateTime } from './common';
 import type { PriceBreakdown, PricingInput } from './money';
 import type { ChangeStatus } from './status';
-import { paymentChoiceSchema, type PaymentAttemptResult, type PaymentPanelData } from './payments';
+import { paymentChoiceSchema, type CardRemovalHandlers, type PaymentAttemptResult, type PaymentPanelData } from './payments';
 
 /**
  * Change requests on a booking (blueprint 03 §5, 04 §5; `/app/bookings/[bookingId]/changes/…`). Either
@@ -116,7 +116,7 @@ export type AcceptChangeInput = z.input<typeof acceptChangeInputSchema>;
  * - `onFinishVerification`: after the dev bank dialog (as on the confirmation page); same results.
  * - `onDecline`, `onWithdraw`: ok `updated` with `redirectTo`. Errors: `not_allowed`, `unknown`.
  */
-export interface ChangeReviewHandlers {
+export interface ChangeReviewHandlers extends CardRemovalHandlers {
   onAccept: QueryHandler<AcceptChangeInput, PaymentAttemptResult>;
   onPayDifference: QueryHandler<AcceptChangeInput, PaymentAttemptResult>;
   onFinishVerification: QueryHandler<{ paymentId: string; outcome: 'approved' | 'failed' }, PaymentAttemptResult>;

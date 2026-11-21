@@ -7,7 +7,7 @@ import type { CategorySlug, Cents, ISODateTime } from './common';
 import { mustAcceptField } from './forms';
 import type { TaskLocation } from './location';
 import type { PriceBreakdown, PricingInput } from './money';
-import { paymentChoiceSchema, type PaymentAttemptResult, type PaymentPanelData } from './payments';
+import { paymentChoiceSchema, type CardRemovalHandlers, type PaymentAttemptResult, type PaymentPanelData } from './payments';
 import type { ClientSummary, HelperSummary } from './people';
 import { TASK_DESCRIPTION_MAX } from './posting';
 import type { InviteStatus } from './status';
@@ -126,7 +126,7 @@ export type RequestHelperInput = z.input<typeof requestHelperInputSchema>;
  *   invite already open), `rate_limited`, `unknown`.
  * - `onFinishVerification`: after the dev bank dialog.
  */
-export interface RequestHelperHandlers {
+export interface RequestHelperHandlers extends CardRemovalHandlers {
   onQuote: QueryHandler<{ pricing: PricingInput; taskId?: string }, PriceBreakdown>;
   onRequest: QueryHandler<RequestHelperInput, PaymentAttemptResult>;
   onFinishVerification: QueryHandler<{ paymentId: string; outcome: 'approved' | 'failed' }, PaymentAttemptResult>;

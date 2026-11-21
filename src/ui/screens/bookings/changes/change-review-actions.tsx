@@ -97,7 +97,7 @@ export function ChangeReviewActions({ data, handlers, initialResult, initialPend
     {data.payment && choice && paymentActions && <section ref={paymentSection} tabIndex={-1} aria-labelledby={`${id}-payment-heading`} className={cn(surface, surfacePad, 'space-y-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring')}>
       <h2 id={`${id}-payment-heading`} className={sectionTitle}>{t('payment')}</h2>
       <p className="text-sm text-muted-foreground">{t('paymentHint')}</p>
-      <PaymentMethodPicker panel={data.payment} id={`${id}-payment`} disabled={disabled} field={{ name: 'payment', value: choice, onChange: (value: PaymentChoice) => { setChoice(value); setResult(undefined); }, onBlur: () => {}, ref: (node: HTMLElement | null) => { paymentControl.current = node; } }} error={paymentErrorCode ? fields(paymentErrorCode) : undefined} />
+      <PaymentMethodPicker panel={data.payment} onRemoveCard={handlers.onRemoveCard} id={`${id}-payment`} disabled={disabled} field={{ name: 'payment', value: choice, onChange: (value: PaymentChoice) => { setChoice(value); setResult(undefined); }, onBlur: () => {}, ref: (node: HTMLElement | null) => { paymentControl.current = node; } }} error={paymentErrorCode ? fields(paymentErrorCode) : undefined} />
     </section>}
     {paymentMissing && <p role="status" className={cn(warningPanel, 'px-4 py-3.5 text-sm')}>{t('paymentMissing')}</p>}
     <div ref={feedbackSection} tabIndex={-1} className="space-y-3 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">

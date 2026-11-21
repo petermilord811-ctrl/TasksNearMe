@@ -61,6 +61,7 @@
     "pending-no-failure": "Reserva retenida para el pago",
     "payment-picker-saved": "Métodos de pago guardados",
     "payment-picker-new-card": "Selector de nueva tarjeta de prueba",
+    "payment-picker-unusable": "Una tarjeta que no se puede usar aquí",
     "payment-labels": "Etiquetas de tarjetas y billeteras",
     "cancellation-fixed": "Cancelación con precio fijo",
     "cancellation-hourly": "Cancelación por hora",

@@ -57,6 +57,16 @@ export async function cardOfBannedAccount(db: Db, fingerprint: string | null | u
   return Boolean(paid);
 }
 
+/**
+ * The saved cards of `userId` that can't be used here because a banned account used the same card (J-AB4 follow-up,
+ * ab): the payment forms show them disabled with a Remove button, never preselected. Nothing detaches them on its own.
+ */
+export async function unusableCardIds(db: Db, userId: string, cards: readonly { id: string; fingerprint: string | null }[]): Promise<Set<string>> {
+  const unusable = new Set<string>();
+  for (const card of cards) if (await cardOfBannedAccount(db, card.fingerprint, userId)) unusable.add(card.id);
+  return unusable;
+}
+
 /** The account `recipientId` blocked that shares one of `senderId`'s cards, if any (never the sender themself). */
 async function blockedAccountOnSameCard(db: Db, senderId: string, recipientId: string): Promise<string | null> {
   const mine = await fingerprintsOf(db, senderId);

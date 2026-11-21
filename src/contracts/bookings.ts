@@ -6,7 +6,7 @@ import { mustAcceptField } from './forms';
 import type { ExactAddress, TaskLocation } from './location';
 import type { MessageSegment } from './messaging';
 import type { PriceBreakdown, PricingInput } from './money';
-import { paymentChoiceSchema, type PaymentAttemptResult, type PaymentMethodLabel, type PaymentPanelData } from './payments';
+import { paymentChoiceSchema, type CardRemovalHandlers, type PaymentAttemptResult, type PaymentMethodLabel, type PaymentPanelData } from './payments';
 import type { ClientSummary, HelperSummary, PersonSummary } from './people';
 import type { PhotoUploadResult } from './posting';
 import type { SeriesCadence, SeriesChargeFailure, SeriesSummary } from './series';
@@ -115,7 +115,7 @@ export type ConfirmBookingInput = z.input<typeof confirmBookingInputSchema>;
  *   `rate_limited`, `validation_failed`, `unknown`.
  * - `onFinishVerification`: after the bank step, with what the bank answered. Same results as `onConfirm`.
  */
-export interface BookingConfirmHandlers {
+export interface BookingConfirmHandlers extends CardRemovalHandlers {
   onConfirm: (input: ConfirmBookingInput) => Promise<PaymentAttemptResult>;
   onFinishVerification: (input: { paymentId: string; outcome: 'approved' | 'failed' }) => Promise<PaymentAttemptResult>;
 }
@@ -339,7 +339,7 @@ export type PayScheduledInput = z.input<typeof payScheduledInputSchema>;
  *   `unknown`.
  * - `onFinishPayVerification`: after the bank step; the same results.
  */
-export interface ScheduledPaymentHandlers {
+export interface ScheduledPaymentHandlers extends CardRemovalHandlers {
   onPayNow: QueryHandler<PayScheduledInput, PaymentAttemptResult>;
   onFinishPayVerification: QueryHandler<{ paymentId: string; outcome: 'approved' | 'failed' }, PaymentAttemptResult>;
 }
@@ -388,7 +388,7 @@ export type TipInput = z.input<typeof tipInputSchema>;
  *   window closed, or the booking changed: reload), `rate_limited`, `unknown`.
  * - `onFinishTipVerification`: after the bank step; the same results.
  */
-export interface BookingTipHandlers {
+export interface BookingTipHandlers extends CardRemovalHandlers {
   onTip: (input: TipInput) => Promise<PaymentAttemptResult>;
   onFinishTipVerification: (input: { paymentId: string; outcome: 'approved' | 'failed' }) => Promise<PaymentAttemptResult>;
 }

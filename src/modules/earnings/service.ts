@@ -42,7 +42,7 @@ import { marketDayKey } from '@/shared/format';
 import { earnings, payouts } from './schema';
 import { shownPaymentStatus } from '@/modules/payments/shown-status';
 import { userTimeZone } from '@/modules/markets/time-zone';
-import { cardOfBannedAccount } from '@/modules/trust/card-fingerprints';
+import { cardOfBannedAccount, unusableCardIds } from '@/modules/trust/card-fingerprints';
 
 /**
  * The money after the work (blueprint 04 §5–6): transfers to helpers when a booking completes or a
@@ -378,9 +378,10 @@ export async function getPaymentsPage(db: Db, posterUserId: string): Promise<Pay
     ];
   });
   receipts.sort((a, b) => b.paidAt.localeCompare(a.paidAt));
+  const unusable = await unusableCardIds(db, posterUserId, methodRows);
   return {
     receipts,
-    methods: methodRows.map((m) => ({ id: m.id, brand: m.brand as CardBrand, last4: m.last4, expMonth: m.expMonth, expYear: m.expYear, isDefault: m.isDefault })),
+    methods: methodRows.map((m) => ({ id: m.id, brand: m.brand as CardBrand, last4: m.last4, expMonth: m.expMonth, expYear: m.expYear, isDefault: m.isDefault, ...(unusable.has(m.id) ? { unusable: true as const } : {}) })),
     newCard: newCardCollection(provider()),
   };
 }

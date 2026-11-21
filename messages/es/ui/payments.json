@@ -23,7 +23,13 @@
     "cardUnavailable": "El campo de la tarjeta no se cargó. Revisa tu conexión y actualiza la página, o elige una tarjeta guardada.",
     "cardFailed": "No pudimos verificar esta tarjeta. Revisa los datos e inténtalo de nuevo.",
     "stripeHint": "Aceptamos Visa, Mastercard, American Express y Discover. Los datos de tu tarjeta van directamente a Stripe, nuestro proveedor de pagos.",
-    "kept": "Esta tarjeta se guarda en tu cuenta para los cobros posteriores. Puedes cambiarla cuando quieras."
+    "kept": "Esta tarjeta se guarda en tu cuenta para los cobros posteriores. Puedes cambiarla cuando quieras.",
+    "unusable": "Esta tarjeta no se puede usar aquí. Contacta a soporte si crees que es un error.",
+    "remove": "Quitar",
+    "removing": "Quitando…",
+    "removed": "Tarjeta quitada.",
+    "removeNotAllowed": "Esta tarjeta paga una reserva en curso. Inténtalo de nuevo cuando la reserva termine.",
+    "removeFailed": "No pudimos quitar esta tarjeta. Inténtalo de nuevo."
   },
   "testCards": {
     "success": "Aprobada",

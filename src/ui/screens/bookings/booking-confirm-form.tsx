@@ -128,7 +128,7 @@ export function BookingConfirmForm({ data, handlers, now, initialResult, initial
         <legend className="sr-only">{t('payment')}</legend>
         <section ref={paymentSection} tabIndex={-1} aria-labelledby={`${id}-payment-title`} className={cn(surface, surfacePad, 'space-y-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring')}>
           <h2 id={`${id}-payment-title`} className={sectionTitle}>{t('payment')}</h2>
-          <Controller control={form.control} name="payment" render={({ field }) => <PaymentMethodPicker panel={data.payment} id={paymentId} disabled={disabled} keepCard={Boolean(data.paysLater)} field={{ ...field, onChange: (choice) => { form.clearErrors('payment'); field.onChange(choice); } }} error={paymentError ? errorText(paymentError) : undefined} />} />
+          <Controller control={form.control} name="payment" render={({ field }) => <PaymentMethodPicker panel={data.payment} onRemoveCard={handlers.onRemoveCard} id={paymentId} disabled={disabled} keepCard={Boolean(data.paysLater)} field={{ ...field, onChange: (choice) => { form.clearErrors('payment'); field.onChange(choice); } }} error={paymentError ? errorText(paymentError) : undefined} />} />
           {paymentFailure && <FormFeedback result={feedback} />}
         </section>
         <div className="space-y-2">

@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { confirmBookingAction, finishBankVerificationAction } from '@/modules/bookings/actions';
+import { removeCardAction } from '@/modules/earnings/actions';
 import { getBookingConfirmPage } from '@/modules/bookings/confirm';
 import { bookingDeps } from '@/modules/bookings/server';
 import { requirePosterIdentity } from '@/modules/verification/poster-identity';
@@ -45,6 +46,7 @@ async function Confirm({ params }: Pick<PageProps<'/[locale]/app/tasks/[taskId]/
       handlers={{
         onConfirm: confirmBookingAction.bind(null, taskId, offerId),
         onFinishVerification: finishBankVerificationAction,
+        onRemoveCard: removeCardAction,
       }}
     />
   );

@@ -5,8 +5,8 @@ import userEvent from '@testing-library/user-event';
 import { Controller, useForm } from 'react-hook-form';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CARD_BRANDS, DEV_TEST_CARDS, type ConfirmBookingInput, type PaymentPanelData } from '@/contracts';
-import { mayaPaymentPanel, noSavedCardsPaymentPanel } from '@/fixtures';
+import { CARD_BRANDS, DEV_TEST_CARDS, type ActionResult, type CardRemovalHandlers, type ConfirmBookingInput, type PaymentPanelData } from '@/contracts';
+import { mayaPaymentPanel, noSavedCardsPaymentPanel, unusableCardPaymentPanel } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import payments from '../../../../messages/en/ui/payments.json';
 import { BankVerificationDialog, getDefaultPaymentChoice, PaymentMethodLabel, PaymentMethodPicker } from './index';
@@ -20,15 +20,16 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
-function PickerExample({ panel = mayaPaymentPanel, disabled = false, onSubmit = vi.fn() }: {
+function PickerExample({ panel = mayaPaymentPanel, disabled = false, onSubmit = vi.fn(), onRemoveCard }: {
   panel?: PaymentPanelData;
   disabled?: boolean;
   onSubmit?: (input: ConfirmBookingInput) => void;
+  onRemoveCard?: CardRemovalHandlers['onRemoveCard'];
 }) {
   const form = useForm<ConfirmBookingInput>({ defaultValues: { offerRevision: 1, acceptTerms: false, payment: getDefaultPaymentChoice(panel) } });
   return <NextIntlClientProvider locale="en" messages={{ ...uiMessages, payments }}>
     <form onSubmit={form.handleSubmit(onSubmit)}>
-      <Controller control={form.control} name="payment" render={({ field }) => <PaymentMethodPicker panel={panel} field={field} disabled={disabled} />} />
+      <Controller control={form.control} name="payment" render={({ field }) => <PaymentMethodPicker panel={panel} field={field} disabled={disabled} onRemoveCard={onRemoveCard} />} />
       <button type="submit">Submit test form</button>
     </form>
   </NextIntlClientProvider>;
@@ -96,6 +97,68 @@ describe('Payment methods', () => {
   it('uses the default flag even when it is not first, and the first saved card when no default exists', () => {
     expect(getDefaultPaymentChoice({ ...mayaPaymentPanel, methods: [...mayaPaymentPanel.methods].reverse() })).toEqual({ kind: 'saved', methodId: 'pm_maya_visa' });
     expect(getDefaultPaymentChoice({ ...mayaPaymentPanel, methods: mayaPaymentPanel.methods.map((method) => ({ ...method, isDefault: false })) })).toEqual({ kind: 'saved', methodId: 'pm_maya_visa' });
+  });
+});
+
+describe('A saved card that can\'t be used here (abuse rehearsal J-AB4)', () => {
+  const why = "This card can't be used here. Contact support if you think that's wrong.";
+
+  it('shows it disabled with the neutral line, never chooses it, and keeps "Use a new card"', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<PickerExample panel={unusableCardPaymentPanel} onSubmit={onSubmit} onRemoveCard={async () => ({ ok: true, code: 'updated' })} />);
+    const refused = screen.getByRole('radio', { name: 'Visa •••• 1881' });
+    expect(refused).toBeDisabled();
+    expect(refused).toHaveAttribute('aria-checked', 'false');
+    expect(refused).toHaveAccessibleDescription(why);
+    // Maya's default is the refused Visa: the Mastercard is chosen instead.
+    expect(screen.getByRole('radio', { name: /Mastercard/ })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Use a new card' })).toBeEnabled();
+    // Pressing the refused card changes nothing.
+    await user.click(screen.getByText('Visa •••• 1881'));
+    await user.click(screen.getByText(why));
+    await user.click(screen.getByRole('button', { name: 'Submit test form' }));
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ payment: { kind: 'saved', methodId: 'pm_maya_mc' } }), expect.anything());
+  });
+
+  it('removes it only when asked, then moves focus to the chosen card', async () => {
+    const user = userEvent.setup();
+    const asked: { methodId: string }[] = [];
+    render(<PickerExample panel={unusableCardPaymentPanel} onRemoveCard={async (input) => { asked.push(input); return { ok: true, code: 'updated' }; }} />);
+    expect(asked).toEqual([]);
+    const remove = screen.getByRole('button', { name: 'Remove' });
+    expect(remove).toHaveAccessibleDescription('Visa •••• 1881');
+    await user.click(remove);
+    expect(asked).toEqual([{ methodId: 'pm_maya_visa' }]);
+    await waitFor(() => expect(screen.queryByText('Visa •••• 1881')).not.toBeInTheDocument());
+    expect(screen.queryByText(why)).not.toBeInTheDocument();
+    expect(screen.getByText('Card removed.')).toHaveAttribute('aria-live', 'polite');
+    expect(screen.getByRole('radio', { name: /Mastercard/ })).toHaveFocus();
+  });
+
+  it('keeps the card and says why when it can\'t be removed yet, and counts one already gone as removed', async () => {
+    const user = userEvent.setup();
+    let answer: ActionResult = { ok: false, code: 'not_allowed' };
+    render(<PickerExample panel={unusableCardPaymentPanel} onRemoveCard={async () => answer} />);
+    await user.click(screen.getByRole('button', { name: 'Remove' }));
+    const busy = 'This card pays for a booking in progress. Try again after the booking is finished.';
+    expect(await screen.findByText(busy, { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByText(busy, { selector: 'p' })).toHaveAttribute('aria-live', 'polite');
+    expect(screen.getByRole('radio', { name: 'Visa •••• 1881' })).toBeDisabled();
+    answer = { ok: false, code: 'not_found' };
+    await user.click(screen.getByRole('button', { name: 'Remove' }));
+    await waitFor(() => expect(screen.queryByText('Visa •••• 1881')).not.toBeInTheDocument());
+  });
+
+  it('has no Remove button when the form has no remove action', () => {
+    render(<PickerExample panel={unusableCardPaymentPanel} />);
+    expect(screen.getByRole('radio', { name: 'Visa •••• 1881' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Remove' })).not.toBeInTheDocument();
+  });
+
+  it('falls back to a new card when no saved card can be used', () => {
+    const allRefused = { ...unusableCardPaymentPanel, methods: unusableCardPaymentPanel.methods.map((method) => ({ ...method, unusable: true as const })) };
+    expect(getDefaultPaymentChoice(allRefused)).toEqual({ kind: 'dev_card', card: 'success', save: false });
   });
 });
 

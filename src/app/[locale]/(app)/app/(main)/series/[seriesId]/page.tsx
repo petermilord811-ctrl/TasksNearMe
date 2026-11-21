@@ -13,6 +13,7 @@ import {
   seriesMessageAction,
   skipVisitAction,
 } from '@/modules/bookings/series-actions';
+import { removeCardAction } from '@/modules/earnings/actions';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
@@ -51,6 +52,7 @@ async function Series({ params }: Pick<PageProps<'/[locale]/app/series/[seriesId
         onEnd: endSeriesAction.bind(null, seriesId),
         onChangeCard: changeSeriesCardAction.bind(null, seriesId),
         onMessage: seriesMessageAction.bind(null, seriesId),
+        onRemoveCard: removeCardAction,
       }}
     />
   );

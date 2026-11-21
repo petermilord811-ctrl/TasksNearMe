@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Controller, useForm } from 'react-hook-form';
-import type { ActionResult, ConfirmBookingInput, PaymentPanelData } from '@/contracts';
+import type { ActionResult, CardRemovalHandlers, ConfirmBookingInput, PaymentPanelData } from '@/contracts';
 import { deskConfirmData, fakeHandler } from '@/fixtures';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { BankVerificationDialog, getDefaultPaymentChoice, PaymentMethodPicker } from '@/ui/components/payments';
 import { Button } from '@/ui/primitives/button';
 
-export function PaymentMethodPickerPreview({ panel }: { panel: PaymentPanelData }) {
+export function PaymentMethodPickerPreview({ panel, onRemoveCard }: { panel: PaymentPanelData; onRemoveCard?: CardRemovalHandlers['onRemoveCard'] }) {
   const form = useForm<ConfirmBookingInput>({ defaultValues: {
     offerRevision: deskConfirmData.offer.revision,
     payment: getDefaultPaymentChoice(panel),
@@ -17,7 +17,7 @@ export function PaymentMethodPickerPreview({ panel }: { panel: PaymentPanelData 
   } });
 
   return <div className="mx-auto max-w-reading rounded-xl border bg-card p-card shadow-card">
-    <Controller name="payment" control={form.control} render={({ field }) => <PaymentMethodPicker panel={panel} field={field} />} />
+    <Controller name="payment" control={form.control} render={({ field }) => <PaymentMethodPicker panel={panel} field={field} onRemoveCard={onRemoveCard} />} />
   </div>;
 }
 

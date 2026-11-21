@@ -6,6 +6,7 @@ import { getBookingView, runBookingAction } from '@/modules/bookings/hub';
 import { chargeDueScheduled, expireUnpaidScheduled, payScheduledNow } from '@/modules/bookings/scheduled';
 import { bookingSeries, bookingTerms, bookings } from '@/modules/bookings/schema';
 import { cancelSeries, changeSeriesCard, endSeries, getSeriesPage, pauseSeries, runSeriesCalendars, seriesConversation, seriesSummaries, skipVisit } from '@/modules/bookings/series';
+import { users } from '@/modules/accounts/schema';
 import { featureFlags } from '@/modules/markets/schema';
 import { getPublishedPolicy } from '@/modules/markets/queries';
 import { threadParticipants, threads, messages } from '@/modules/messaging/schema';
@@ -225,6 +226,27 @@ describe('regular visits', () => {
     expect((await visit(3)).status).toBe('confirmed');
     // Paid already: nothing more to pay.
     expect(await payScheduledNow(deps, 'usr_ben', third.id, { payment: { kind: 'dev_card', card: 'success', save: false } }, new Date(third.startAt.getTime() - 29 * HOUR))).toEqual({ ok: false, code: 'not_allowed' });
+  });
+
+  it("won't switch the series to a card a banned account used, and lists that card as one that can't be used here (J-AB4)", async () => {
+    // Its own banned account (copied from Maya's row), gone again in finally.
+    const [maya] = await db.select().from(users).where(eq(users.id, 'usr_maya'));
+    await db.insert(users).values({ ...maya!, id: 'usr_srs_banned', email: 'srs-banned@example.test', phone: null, phoneVerifiedAt: null, status: 'banned' });
+    try {
+      const card = { provider: 'dev', providerRef: devCardRef('success'), brand: 'visa', last4: '0101', expMonth: 12, expYear: 2030, fingerprint: 'fp_srs_refused' };
+      await db.insert(paymentMethods).values([{ ...card, id: 'pm_srs_banned', userId: 'usr_srs_banned' }, { ...card, id: 'pm_srs_refused', userId: 'usr_ben' }]);
+      const cardOfSeries = async () => (await db.select({ id: bookingSeries.paymentMethodId }).from(bookingSeries).where(eq(bookingSeries.id, seriesId)))[0]?.id;
+      const before = await cardOfSeries();
+      expect(await changeSeriesCard(db, 'usr_ben', seriesId, { methodId: 'pm_srs_refused' }, start)).toEqual({ ok: false, code: 'card_not_allowed' });
+      expect(await cardOfSeries()).toBe(before);
+      const page = await getSeriesPage(db, 'usr_ben', seriesId, start);
+      expect(page?.cards?.filter((saved) => saved.unusable).map((saved) => saved.id)).toEqual(['pm_srs_refused']);
+      // Nothing removed it: it stays saved until Ben removes it.
+      expect((await db.select({ detachedAt: paymentMethods.detachedAt }).from(paymentMethods).where(eq(paymentMethods.id, 'pm_srs_refused')))[0]?.detachedAt).toBeNull();
+    } finally {
+      await db.delete(paymentMethods).where(inArray(paymentMethods.id, ['pm_srs_banned', 'pm_srs_refused']));
+      await db.delete(users).where(eq(users.id, 'usr_srs_banned'));
+    }
   });
 
   it('skips a visit: the client any time before it, the helper 48 h ahead', async () => {

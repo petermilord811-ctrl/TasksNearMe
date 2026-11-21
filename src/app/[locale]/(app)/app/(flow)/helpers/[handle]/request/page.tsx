@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { bookingDeps } from '@/modules/bookings/server';
+import { removeCardAction } from '@/modules/earnings/actions';
 import { finishRequestVerificationAction, quoteInviteAction, requestHelperAction } from '@/modules/invites/actions';
 import { getRequestHelperPage } from '@/modules/invites/service';
 import { requirePosterIdentity } from '@/modules/verification/poster-identity';
@@ -49,6 +50,7 @@ async function RequestHelper({ params, searchParams }: Pick<PageProps<'/[locale]
         onQuote: quoteInviteAction,
         onRequest: requestHelperAction.bind(null, handle),
         onFinishVerification: finishRequestVerificationAction,
+        onRemoveCard: removeCardAction,
       }}
     />
   );

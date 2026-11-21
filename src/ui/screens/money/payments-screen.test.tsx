@@ -129,6 +129,14 @@ describe('PaymentsScreen', () => {
     expect(screen.getByText(copy.development)).toBeVisible();
   });
 
+  it("says when a card can't be used here, offers no Make default for it, and keeps Remove (J-AB4)", () => {
+    mount({ ...mayaPaymentsPageData, methods: mayaPaymentsPageData.methods.map((method) => (method.id === 'pm_maya_mc' ? { ...method, unusable: true as const } : method)) });
+    expect(within(mastercard()).getByText(messages.payments.picker.unusable)).toBeVisible();
+    expect(within(mastercard()).queryByRole('button', { name: copy.makeDefault })).not.toBeInTheDocument();
+    expect(within(mastercard()).getByRole('button', { name: copy.remove })).toBeEnabled();
+    expect(within(visa()).queryByText(messages.payments.picker.unusable)).not.toBeInTheDocument();
+  });
+
   it('asks before removal and returns focus when the person keeps the card', async () => {
     const user = userEvent.setup();
     const { handlers } = mount();

@@ -21,6 +21,19 @@ export interface SavedPaymentMethod {
   /** Four digits, e.g. 2028. */
   expYear: number;
   isDefault: boolean;
+  /**
+   * This card can't be used here (abuse rehearsal J-AB4: an account the app banned used it). Payment forms show it
+   * disabled with "This card can't be used here" and a Remove button, and never choose it for the person.
+   */
+  unusable?: true;
+}
+
+/**
+ * Removing a saved card from a payment form, for a card that can't be used here (`SavedPaymentMethod.unusable`; the
+ * same action as the payments page's). Optional: without it, the form shows the card disabled only.
+ */
+export interface CardRemovalHandlers {
+  onRemoveCard?: (input: { methodId: string }) => Promise<ActionResult>;
 }
 
 /** How a payment shows in lists and errors: "Visa •••• 1881", "Apple Pay". */

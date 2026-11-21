@@ -135,7 +135,7 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
         <legend className="sr-only">{t('payment')}</legend>
         <section aria-labelledby={`${id}-payment-title`} className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06] bg-card p-4 shadow-card sm:p-6">
           <h2 id={`${id}-payment-title`} className="font-heading text-xl/7 font-semibold">{t('payment')}</h2>
-          <Controller control={form.control} name="payment" render={({ field, fieldState }) => <PaymentMethodPicker id={`${id}-payment`} panel={data.payment} disabled={disabled} field={{ ...field, onChange: (choice) => { form.clearErrors('payment'); field.onChange(choice); } }} error={fieldState.error?.message ? fieldError(fieldState.error.message) : undefined} />} />
+          <Controller control={form.control} name="payment" render={({ field, fieldState }) => <PaymentMethodPicker id={`${id}-payment`} panel={data.payment} onRemoveCard={handlers.onRemoveCard} disabled={disabled} field={{ ...field, onChange: (choice) => { form.clearErrors('payment'); field.onChange(choice); } }} error={fieldState.error?.message ? fieldError(fieldState.error.message) : undefined} />} />
         </section>
         <Controller control={form.control} name="acceptTerms" render={({ field, fieldState }) => <div className="space-y-2">
           <div className="flex items-start gap-3">

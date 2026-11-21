@@ -6,7 +6,7 @@ import { CalendarX, CirclePause, CirclePlay, CreditCard, MessageCircle, RotateCc
 import { useTranslations } from 'next-intl';
 import { pauseSeriesInputSchema, routes, type ActionResult, type SeriesActionId, type SeriesHandlers, type SeriesPageData } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
-import { PaymentMethodLabel } from '@/ui/components/payments';
+import { PaymentMethodLabel, UnusableCardOption, useCardRemoval } from '@/ui/components/payments';
 import { useFormat } from '@/ui/lib/format';
 import { cn } from '@/ui/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
@@ -109,12 +109,17 @@ function PauseSheet({ limits, open, onOpenChange, onPause }: { limits: NonNullab
   </SeriesSheet>;
 }
 
-function ChangeCardSheet({ cards, current, open, onOpenChange, onChangeCard }: { cards: NonNullable<SeriesPageData['cards']>; current?: string; open: boolean; onOpenChange: (open: boolean) => void; onChangeCard: SeriesHandlers['onChangeCard'] }) {
+function ChangeCardSheet({ cards, current, open, onOpenChange, onChangeCard, onRemoveCard }: { cards: NonNullable<SeriesPageData['cards']>; current?: string; open: boolean; onOpenChange: (open: boolean) => void; onChangeCard: SeriesHandlers['onChangeCard']; onRemoveCard?: SeriesHandlers['onRemoveCard'] }) {
   const t = useTranslations('series');
   const payments = useTranslations('payments');
   const id = useId();
   const mutation = useSeriesMutation();
-  const [methodId, setMethodId] = useState(cards.find((card) => card.id === current)?.id ?? cards.find((card) => card.isDefault)?.id ?? cards[0]?.id ?? '');
+  const removal = useCardRemoval(onRemoveCard, `${id}-cards`);
+  const shown = cards.filter((card) => !removal.removed.has(card.id));
+  // A card that can't be used here is never chosen for the person, and comes last, beside "Add a card".
+  const usable = shown.filter((card) => !card.unusable);
+  const unusable = shown.filter((card) => card.unusable);
+  const [methodId, setMethodId] = useState(usable.find((card) => card.id === current)?.id ?? usable.find((card) => card.isDefault)?.id ?? usable[0]?.id ?? '');
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -124,7 +129,7 @@ function ChangeCardSheet({ cards, current, open, onOpenChange, onChangeCard }: {
   }
 
   return <SeriesSheet title={t('changeCard.title')} description={t('changeCard.description')} open={open} onOpenChange={onOpenChange} locked={mutation.pending !== null}>
-    {cards.length === 0
+    {shown.length === 0
       ? <div className="space-y-3">
         <p>{t('changeCard.noCards')}</p>
         <Link href={routes.app.payments()} className={buttonVariants({ variant: 'outline' })}>{t('changeCard.addCard')}</Link>
@@ -132,16 +137,18 @@ function ChangeCardSheet({ cards, current, open, onOpenChange, onChangeCard }: {
       : <form noValidate aria-busy={mutation.pending !== null} onSubmit={submit} className="space-y-4">
         <fieldset disabled={mutation.pending !== null} className="space-y-2">
           <legend id={`${id}-legend`} className="mb-2 font-medium">{t('changeCard.pick')}</legend>
-          <RadioGroup aria-labelledby={`${id}-legend`} value={methodId} onValueChange={(value) => { setMethodId(value); mutation.setResult(undefined); }} className="gap-2">
-            {cards.map((card) => <label key={card.id} htmlFor={`${id}-${card.id}`} className={cn('flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border border-foreground/[0.09] bg-card px-3.5 py-3', methodId === card.id && 'border-primary/60 bg-primary/[0.045]')}>
+          <RadioGroup id={`${id}-cards`} aria-labelledby={`${id}-legend`} value={methodId} onValueChange={(value) => { setMethodId(value); mutation.setResult(undefined); }} className="gap-2">
+            {usable.map((card) => <label key={card.id} htmlFor={`${id}-${card.id}`} className={cn('flex min-h-14 cursor-pointer items-center gap-3 rounded-2xl border border-foreground/[0.09] bg-card px-3.5 py-3', methodId === card.id && 'border-primary/60 bg-primary/[0.045]')}>
               <RadioGroupItem id={`${id}-${card.id}`} value={card.id} />
               <span className="min-w-0">
                 <span className="block font-medium"><PaymentMethodLabel method={{ brand: card.brand, last4: card.last4 }} /></span>
                 <span className="block text-sm tabular-nums text-muted-foreground">{payments('picker.expires', { month: String(card.expMonth).padStart(2, '0'), year: String(card.expYear).slice(-2) })}</span>
               </span>
             </label>)}
+            {unusable.map((card) => <UnusableCardOption key={card.id} method={card} id={`${id}-${card.id}`} value={card.id} removal={removal} />)}
           </RadioGroup>
         </fieldset>
+        <p aria-live="polite" className="sr-only">{removal.announcement}</p>
         <Link href={routes.app.payments()} className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-4">{t('changeCard.addCard')}</Link>
         <SeriesFeedback result={mutation.result} onReload={mutation.refresh} />
         <Button type="submit" disabled={mutation.pending !== null || !methodId} aria-busy={mutation.pending !== null} className="w-full sm:w-auto">
@@ -207,7 +214,7 @@ export function SeriesActions({ data, handlers }: { data: SeriesPageData; handle
     </div>
     <SeriesFeedback result={mutation.result} onReload={mutation.refresh} />
     {data.pauseLimits && series.actions.includes('pause_series') && <PauseSheet limits={data.pauseLimits} open={sheet === 'pause'} onOpenChange={(open) => setSheet(open ? 'pause' : null)} onPause={handlers.onPause} />}
-    {series.actions.includes('change_card') && <ChangeCardSheet cards={data.cards ?? []} current={series.card?.methodId} open={sheet === 'card'} onOpenChange={(open) => setSheet(open ? 'card' : null)} onChangeCard={handlers.onChangeCard} />}
+    {series.actions.includes('change_card') && <ChangeCardSheet cards={data.cards ?? []} current={series.card?.methodId} open={sheet === 'card'} onOpenChange={(open) => setSheet(open ? 'card' : null)} onChangeCard={handlers.onChangeCard} onRemoveCard={handlers.onRemoveCard} />}
     <ConfirmDialog
       open={sheet === 'stop'}
       onOpenChange={(open) => setSheet(open ? 'stop' : null)}

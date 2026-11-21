@@ -35,7 +35,7 @@ import { findTaskWithPublicView } from '@/modules/tasks/queries';
 import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { tasks } from '@/modules/tasks/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
-import { cardOfBannedAccount } from '@/modules/trust/card-fingerprints';
+import { cardOfBannedAccount, unusableCardIds } from '@/modules/trust/card-fingerprints';
 import { maskContactDetails } from '@/modules/trust/contact-masking';
 import { toMessageSegments } from '@/modules/trust/message-segments';
 import { fieldError, validationFailed } from '@/platform/actions/results';
@@ -150,6 +150,7 @@ export async function paymentPanel(db: Db, userId: string, provider: PaymentProv
     .from(paymentMethods)
     .where(and(eq(paymentMethods.userId, userId), isNull(paymentMethods.detachedAt), eq(paymentMethods.provider, provider.name)))
     .orderBy(desc(paymentMethods.isDefault), asc(paymentMethods.createdAt));
+  const unusable = await unusableCardIds(db, userId, rows);
   const methods: SavedPaymentMethod[] = rows.map((row) => ({
     id: row.id,
     brand: row.brand as CardBrand,
@@ -157,6 +158,7 @@ export async function paymentPanel(db: Db, userId: string, provider: PaymentProv
     expMonth: row.expMonth,
     expYear: row.expYear,
     isDefault: row.isDefault,
+    ...(unusable.has(row.id) ? { unusable: true as const } : {}),
   }));
   return { methods, newCard: newCardCollection(provider) };
 }

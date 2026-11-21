@@ -206,6 +206,7 @@ function TipForm({ tip, helperName, handlers, preview }: { tip: Available; helpe
           <p className="font-medium">{t('payment')}</p>
           <PaymentMethodPicker
             panel={tip.payment}
+            onRemoveCard={handlers.onRemoveCard}
             id={`${id}-payment`}
             disabled={disabled}
             field={{ name: 'payment', value: payment, onChange: (value: PaymentChoice) => { setPayment(value); setResult(undefined); }, onBlur: () => {}, ref: (node: HTMLElement | null) => { paymentControl.current = node; } }}

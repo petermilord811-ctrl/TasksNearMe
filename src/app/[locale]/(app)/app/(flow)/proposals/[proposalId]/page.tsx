@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { bookingDeps, hubDeps } from '@/modules/bookings/server';
+import { removeCardAction } from '@/modules/earnings/actions';
 import { acceptProposalAction, declineProposalAction, finishProposalVerificationAction, withdrawProposalAction } from '@/modules/rebook/actions';
 import { getProposalPage } from '@/modules/rebook/service';
 import { getViewer } from '@/platform/auth/viewer';
@@ -44,6 +45,7 @@ async function Proposal({ params }: Pick<PageProps<'/[locale]/app/proposals/[pro
         onFinishVerification: finishProposalVerificationAction.bind(null, proposalId),
         onDecline: declineProposalAction.bind(null, proposalId),
         onWithdraw: withdrawProposalAction.bind(null, proposalId),
+        onRemoveCard: removeCardAction,
       }}
     />
   );

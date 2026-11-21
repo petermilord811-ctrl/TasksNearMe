@@ -3,7 +3,7 @@ import type { SeriesActionId, SeriesVisitActionId } from './action-ids';
 import type { ActionHandler, FieldErrorCode } from './actions';
 import type { CategorySlug, ISODateTime, TimeZone } from './common';
 import type { PriceBreakdown, PricingInput } from './money';
-import type { CardBrand, SavedPaymentMethod } from './payments';
+import type { CardBrand, CardRemovalHandlers, SavedPaymentMethod } from './payments';
 import type { ClientSummary, HelperSummary } from './people';
 
 /**
@@ -158,7 +158,7 @@ export type ChangeSeriesCardInput = z.input<typeof changeSeriesCardInputSchema>;
  * - `onChangeCard` (client): ok `updated`. Errors: `validation_failed` (`methodId` `invalid`), `not_allowed`.
  * - `onMessage`: ok with `redirectTo` (the conversation).
  */
-export interface SeriesHandlers {
+export interface SeriesHandlers extends CardRemovalHandlers {
   onSkipVisit: ActionHandler<{ visitId: string }>;
   onPause: ActionHandler<PauseSeriesInput>;
   onResume: ActionHandler;

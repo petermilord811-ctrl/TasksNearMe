@@ -1,4 +1,5 @@
 import { bookingsPaused } from '@/modules/markets/outage';
+import { cardOfBannedAccount, unusableCardIds } from '@/modules/trust/card-fingerprints';
 import { and, asc, desc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import type {
   ActionResult,
@@ -473,11 +474,13 @@ export async function changeSeriesCard(db: Db, posterId: string, seriesId: strin
   const own = await ownSeries(db, posterId, seriesId);
   if (!own || own.role !== 'poster' || !['active', 'paused', 'ended'].includes(own.series.status)) return { ok: false, code: 'not_allowed' };
   const [card] = await db
-    .select({ id: paymentMethods.id })
+    .select({ id: paymentMethods.id, fingerprint: paymentMethods.fingerprint })
     .from(paymentMethods)
     .where(and(eq(paymentMethods.id, parsed.data.methodId), eq(paymentMethods.userId, posterId), isNull(paymentMethods.detachedAt)))
     .limit(1);
   if (!card) return { ok: false, code: 'validation_failed', fieldErrors: { methodId: ['invalid'] } };
+  // A card a banned account used is refused here too, not saved for the next charge to fail (J-AB4).
+  if (await cardOfBannedAccount(db, card.fingerprint, posterId)) return { ok: false, code: 'card_not_allowed' };
   await db.update(bookingSeries).set({ paymentMethodId: card.id, updatedAt: now }).where(eq(bookingSeries.id, own.series.id));
   await db.update(bookings).set({ fundingMethodId: card.id, updatedAt: now }).where(and(eq(bookings.seriesId, own.series.id), eq(bookings.status, 'scheduled')));
   // A visit whose charge failed and has no try left gets one now, with the new card.
@@ -563,7 +566,8 @@ export async function getSeriesPage(db: Db, viewerId: string, seriesId: string, 
   let cards: SavedPaymentMethod[] | undefined;
   if (role === 'poster') {
     const rows = await db.select().from(paymentMethods).where(and(eq(paymentMethods.userId, series.posterUserId), isNull(paymentMethods.detachedAt))).orderBy(desc(paymentMethods.isDefault), asc(paymentMethods.createdAt));
-    cards = rows.map((row) => ({ id: row.id, brand: row.brand as CardBrand, last4: row.last4, expMonth: row.expMonth, expYear: row.expYear, isDefault: row.isDefault }));
+    const unusable = await unusableCardIds(db, series.posterUserId, rows);
+    cards = rows.map((row) => ({ id: row.id, brand: row.brand as CardBrand, last4: row.last4, expMonth: row.expMonth, expYear: row.expYear, isDefault: row.isDefault, ...(unusable.has(row.id) ? { unusable: true as const } : {}) }));
     const current = rows.find((row) => row.id === series.paymentMethodId);
     card = current ? { methodId: current.id, brand: current.brand as CardBrand, last4: current.last4, expMonth: current.expMonth, expYear: current.expYear } : null;
   }

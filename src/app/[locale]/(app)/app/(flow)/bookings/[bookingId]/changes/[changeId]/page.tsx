@@ -12,6 +12,7 @@ import {
   withdrawChangeAction,
 } from '@/modules/bookings/change-actions';
 import { getChangeReviewPage } from '@/modules/bookings/changes';
+import { removeCardAction } from '@/modules/earnings/actions';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
@@ -48,6 +49,7 @@ async function ChangeReview({ params }: Pick<PageProps<'/[locale]/app/bookings/[
         onFinishVerification: finishChangeVerificationAction.bind(null, bookingId, changeId),
         onDecline: declineChangeAction.bind(null, bookingId, changeId),
         onWithdraw: withdrawChangeAction.bind(null, bookingId, changeId),
+        onRemoveCard: removeCardAction,
       }}
     />
   );

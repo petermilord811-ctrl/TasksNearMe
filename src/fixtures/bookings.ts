@@ -69,6 +69,11 @@ const devCards = { kind: 'dev', testCards: DEV_TEST_CARDS } as const;
 
 export const mayaPaymentPanel: PaymentPanelData = { methods: [mayaVisa, mayaMastercard], newCard: devCards };
 export const noSavedCardsPaymentPanel: PaymentPanelData = { methods: [], newCard: devCards };
+/**
+ * Maya's default Visa can't be used here (abuse rehearsal J-AB4: a banned account used the same card). It shows
+ * disabled with a Remove button and is never chosen for her: the Mastercard is.
+ */
+export const unusableCardPaymentPanel: PaymentPanelData = { methods: [{ ...mayaVisa, unusable: true }, mayaMastercard], newCard: devCards };
 
 /** Maya books Jordan: $60 + $6.00 fee = $66.00 today. Late cancellation: $54.00 back, Jordan gets $12.00. */
 export const deskConfirmData: BookingConfirmPageData = {

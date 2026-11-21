@@ -8,7 +8,7 @@ import {
   deskConfirmData, deskConfirmDeclinedData, deskConfirmInsufficientFundsData, deskConfirmPaysLaterData,
   deskConfirmNewCardData, deskConfirmUnavailableData, fakeBookingConfirmHandlers,
   fakeHandler, mayaPaymentPanel, mayaShell, movingConfirmHourlyData,
-  noSavedCardsPaymentPanel, remoteConfirmData,
+  noSavedCardsPaymentPanel, remoteConfirmData, unusableCardPaymentPanel,
 } from '@/fixtures';
 import { CancellationSummary } from '@/ui/components/money/cancellation-summary';
 import { PaymentMethodLabel } from '@/ui/components/payments';
@@ -93,6 +93,10 @@ export const bookingConfirmPreviews: PreviewEntry[] = [
   {
     id: 'component-payment-method-picker/new-card', group: copy.previews.group, title: copy.previews['payment-picker-new-card'],
     render: () => <PaymentMethodPickerPreview panel={noSavedCardsPaymentPanel} />,
+  },
+  {
+    id: 'component-payment-method-picker/unusable-card', group: copy.previews.group, title: copy.previews['payment-picker-unusable'],
+    render: () => <PaymentMethodPickerPreview panel={unusableCardPaymentPanel} onRemoveCard={fakeHandler({ ok: true, code: 'updated' })} />,
   },
   {
     id: 'component-payment-method-label/all-brands', group: copy.previews.group, title: copy.previews['payment-labels'],

@@ -128,6 +128,7 @@ function ClientView({ scheduled, visit, handlers, preview }: { scheduled: Schedu
           <legend className="font-medium">{t('payWith')}</legend>
           <PaymentMethodPicker
             panel={scheduled.payment}
+            onRemoveCard={handlers?.onRemoveCard}
             id={`${id}-payment`}
             disabled={disabled}
             field={{ name: 'payment', value: payment, onChange: (value: PaymentChoice) => { setPayment(value); setResult(undefined); }, onBlur: () => {}, ref: (node: HTMLElement | null) => { paymentControl.current = node; } }}

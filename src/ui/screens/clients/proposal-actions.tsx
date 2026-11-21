@@ -104,7 +104,7 @@ export function ProposalActions({ data, handlers, initialResult, initialPending 
         <legend className="sr-only">{t('payment')}</legend>
         <section ref={paymentRef} aria-labelledby={`${id}-payment-title`} className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]">
           <h2 id={`${id}-payment-title`} className="font-display text-xl/7 font-semibold tracking-[-0.015em]">{t('payment')}</h2>
-          <Controller control={form.control} name="payment" render={({ field }) => <PaymentMethodPicker panel={payment} id={`${id}-payment`} disabled={disabled} keepCard={Boolean(proposal.schedule)} field={{ ...field, onChange: (choice) => { form.clearErrors('payment'); field.onChange(choice); } }} error={paymentError ? errorText(paymentError) : undefined} />} />
+          <Controller control={form.control} name="payment" render={({ field }) => <PaymentMethodPicker panel={payment} onRemoveCard={handlers.onRemoveCard} id={`${id}-payment`} disabled={disabled} keepCard={Boolean(proposal.schedule)} field={{ ...field, onChange: (choice) => { form.clearErrors('payment'); field.onChange(choice); } }} error={paymentError ? errorText(paymentError) : undefined} />} />
           <p className="text-sm tabular-nums">{t('chargeNow', { amount: formatMoney(proposal.breakdown.posterTotalCents) })}</p>
         </section>
         <div className="space-y-2">

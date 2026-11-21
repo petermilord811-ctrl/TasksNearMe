@@ -72,10 +72,11 @@ function SavedCard({ method, handlers, onRemoved, onRemovalFocus, initialOpen = 
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2"><p id={`${id}-label`} className="font-medium"><PaymentMethodLabel method={method} /></p>{method.isDefault && <Badge variant="secondary">{payments('picker.default')}</Badge>}</div>
           <p className="text-sm tabular-nums text-muted-foreground">{payments('picker.expires', { month: String(method.expMonth).padStart(2, '0'), year: String(method.expYear).slice(-2) })}</p>
+          {method.unusable && <p className="text-sm text-muted-foreground">{payments('picker.unusable')}</p>}
         </div>
       </div>
       <div className="flex flex-wrap gap-2 pl-13 sm:pl-0">
-        {!method.isDefault && <Button type="button" variant="outline" disabled={pending} aria-describedby={`${id}-label`} aria-busy={pending && operation === 'default'} onClick={() => void run('default')}>{pending && operation === 'default' && <Spinner aria-hidden="true" />}{t(pending && operation === 'default' ? 'makingDefault' : 'makeDefault')}</Button>}
+        {!method.isDefault && !method.unusable && <Button type="button" variant="outline" disabled={pending} aria-describedby={`${id}-label`} aria-busy={pending && operation === 'default'} onClick={() => void run('default')}>{pending && operation === 'default' && <Spinner aria-hidden="true" />}{t(pending && operation === 'default' ? 'makingDefault' : 'makeDefault')}</Button>}
         <AlertDialog open={open} onOpenChange={(value) => { if (!pending) setOpen(value); }}>
           <AlertDialogTrigger asChild><Button type="button" variant="ghost" disabled={pending} aria-describedby={`${id}-label`} onClick={() => setResult(undefined)}>{t('remove')}</Button></AlertDialogTrigger>
           <AlertDialogContent onCloseAutoFocus={(event) => {
