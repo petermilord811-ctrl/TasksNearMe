@@ -50,3 +50,5 @@ automation/dev-supervisor.pid
 # Claude Code's agent worktrees (full copies of the repo). Ignored here so Tailwind's source scan and
 # git status skip them; ESLint ignores them too (eslint.config.mjs). TypeScript's `**` skips dot-folders.
 /.claude/worktrees/
+# Open security findings, kept out of the public repository until fixed (decisions.md, 2026-11-21).
+docs/private/

@@ -85,7 +85,8 @@ with each deploy and no server setting is needed. It applies to a production bui
 
 Caddy leaves the decision to the app: the `tasksnearme.com` block in `/etc/caddy/Caddyfile` only repeats, as a second
 layer, `noindex, nofollow` on `/app`, `/admin` and `/api/*`; `dev.tasksnearme.com` keeps `noindex, nofollow` on
-everything. (Until the SEO build shipped, Caddy also held the listings back; backups of the earlier files:
+everything, and since 2026-11-21 asks for a password (basic auth) and answers 404 to Next's dev endpoints
+(`/__nextjs*`, `/_next/mcp*`); backup of the file before that: `/etc/caddy/Caddyfile.bak-20261121-devlock`. (Until the SEO build shipped, Caddy also held the listings back; backups of the earlier files:
 `/etc/caddy/Caddyfile.bak-2026-11-14-seo` and `…-seo2`.) After an edit: `sudo caddy validate --config
 /etc/caddy/Caddyfile`, then `sudo systemctl reload caddy`.
 

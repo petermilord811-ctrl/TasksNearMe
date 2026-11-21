@@ -1,6 +1,6 @@
 # TasksNearMe
 
-Book trusted local help for everyday tasks, starting in Austin, Texas. People post a task, compare offers from verified helpers nearby, book and pay up front, and approve the work before the helper is paid.
+Book trusted local help for everyday tasks, starting in Gainesville, Florida. People post a task, compare offers from verified helpers nearby, book and pay up front, and approve the work before the helper is paid.
 
 - **How we work:** [docs/workflow.md](docs/workflow.md). Claude builds the app, Codex builds the UI from tickets.
 - **Product blueprint:** [docs/blueprint/](docs/blueprint/README.md) (the source of truth, from the brief to the backlog)
@@ -18,7 +18,7 @@ npm install
 cp .env.example .env.local          # development values; no provider keys needed
 npm run db:up                       # Postgres in Docker, port 54329
 npm run db:migrate
-npm run db:seed                     # Austin, categories, people, tasks, offers, bookings
+npm run db:seed                     # markets (Gainesville; Austin paused), categories, people, tasks, offers, bookings
 npx playwright install chromium     # once, for the preview harness and e2e
 npm run dev                         # http://localhost:3000
 ```
@@ -65,7 +65,7 @@ All `/dev` routes are development tools: they're not found in a production build
 - **Better Auth** with email one-time codes; staff add a second step.
 - **One app, many modules** (`src/modules/*`): each owns its tables, domain rules (pure functions), queries and Server Actions. Pages read contract types already filtered for the viewer (`src/contracts`), so the UI never decides who sees what.
 - **Jobs** run in-process every minute (`src/modules/jobs/runner.ts`, an advisory lock keeps it to one instance): offer and hold expiry, automatic approval and its reminders, review publishing, notifications, and their emails and texts. Pages also run the due work they show, so nothing waits for the next tick. `JOBS_DISABLED=1` turns the runner off.
-- **Money** is integer cents everywhere; times are UTC, shown in America/Chicago.
+- **Money** is integer cents everywhere; times are UTC, shown in each market's time zone (`markets.time_zone`; Gainesville's is America/New_York).
 
 ## Tests
 
