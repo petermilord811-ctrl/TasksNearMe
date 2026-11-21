@@ -13,8 +13,11 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { MyOffersScreen } from '@/ui/screens/work';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'My offers', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('myOffers');
+}
 
 /** The helper's invites from clients (`?invite=` opens one), then their offers: active, booked, and closed. */
 function MyOffersPage({ searchParams }: PageProps<'/[locale]/app/offers'>) {

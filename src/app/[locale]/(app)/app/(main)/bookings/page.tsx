@@ -8,8 +8,11 @@ import { db } from '@/platform/db/client';
 import { BookingsScreen } from '@/ui/screens/bookings';
 import { requestNow } from '@/platform/clock';
 import { BookingsSkeleton } from '@/ui/screens/bookings/bookings-skeleton';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Bookings', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('bookings');
+}
 
 /** Every booking as client or helper: needs action, upcoming, past. */
 export default function BookingsPage() {

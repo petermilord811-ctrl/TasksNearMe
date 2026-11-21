@@ -10,8 +10,11 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { ReviewScreen } from '@/ui/screens/reviews';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Leave a review', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('review');
+}
 
 /** Either person on a completed booking reviews the other (double-blind). */
 function ReviewPage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/review'>) {

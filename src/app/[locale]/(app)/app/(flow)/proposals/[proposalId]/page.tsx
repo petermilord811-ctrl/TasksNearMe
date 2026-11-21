@@ -11,8 +11,11 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { ProposalScreen } from '@/ui/screens/clients';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Booking proposal', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('proposal');
+}
 
 /**
  * A rebooking proposal, for its two people only: the client accepts by paying (or declines), the helper can

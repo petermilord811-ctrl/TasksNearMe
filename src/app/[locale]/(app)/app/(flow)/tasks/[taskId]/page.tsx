@@ -20,8 +20,11 @@ import { savePushSubscriptionAction } from '@/modules/notifications/actions';
 import { TaskManageScreen } from '@/ui/screens/tasks';
 import { requestNow } from '@/platform/clock';
 import { TaskManageSkeleton } from '@/ui/screens/tasks/task-detail-skeletons';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Your task' };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('task');
+}
 
 /** The poster's own task: offers, invites, compare, cancel. Anyone else gets a 404. */
 function ManageTaskPage({ params }: PageProps<'/[locale]/app/tasks/[taskId]'>) {

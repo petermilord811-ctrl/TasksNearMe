@@ -24,8 +24,11 @@ import { HelperProfileEditorScreen } from '@/ui/screens/helper';
 import { requestNow } from '@/platform/clock';
 import { verificationSteps } from '@/modules/badges/standing';
 import { welcomeCardFor } from '@/modules/rewards/welcome';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Your helper profile', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('helperProfile');
+}
 
 /** Everything a helper can change after onboarding. No profile yet: start onboarding. */
 function HelperProfilePage() {

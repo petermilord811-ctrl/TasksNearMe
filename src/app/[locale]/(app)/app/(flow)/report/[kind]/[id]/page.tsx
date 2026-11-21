@@ -9,8 +9,11 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { ReportScreen } from '@/ui/screens/support';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Report', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('report');
+}
 
 /** Report a task, a helper's profile or a review (backlog B-059); public pages link here. */
 function ReportPage({ params }: PageProps<'/[locale]/app/report/[kind]/[id]'>) {

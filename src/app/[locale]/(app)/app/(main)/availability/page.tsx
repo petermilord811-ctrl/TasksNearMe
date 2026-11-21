@@ -10,8 +10,11 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { MyAvailabilityScreen } from '@/ui/screens/availability';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'My availability', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('availability');
+}
 
 /** The helper's open slots: post one, see requests, cancel (blueprint 02 J3 step 4). */
 function MyAvailabilityPage() {

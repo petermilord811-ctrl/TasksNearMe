@@ -22,8 +22,11 @@ import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { PostTaskScreen } from '@/ui/screens/posting';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Post a task', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('postTask');
+}
 
 /** The posting wizard (blueprint 02 J1). Posting needs a verified phone. */
 function PostTaskPage({ searchParams }: PageProps<'/[locale]/app/tasks/new'>) {

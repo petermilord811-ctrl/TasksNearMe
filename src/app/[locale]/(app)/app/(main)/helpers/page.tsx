@@ -11,8 +11,11 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { HelpersBrowseScreen } from '@/ui/screens/browse';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Find helpers', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('findHelpers');
+}
 
 /**
  * Browse and search the helpers of the viewer's home market (blueprint 02 `/app/helpers`), where their tasks are

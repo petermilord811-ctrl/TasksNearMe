@@ -31,8 +31,11 @@ import { verificationSteps } from '@/modules/badges/standing';
 import { redeemHelperInvite } from '@/modules/beta/actions';
 import { helperInviteFor } from '@/modules/beta/server';
 import { HelperInviteScreen } from '@/ui/screens/beta';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Become a helper', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('becomeHelper');
+}
 
 /** Helper onboarding, one step per page. Locked steps send people to the first step still to do. */
 function HelperOnboardingPage({ params }: PageProps<'/[locale]/app/helper/onboarding/[step]'>) {

@@ -10,8 +10,11 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { ProposeChangeScreen } from '@/ui/screens/bookings';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Propose a change', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('proposeChange');
+}
 
 /** Either person on the booking proposes new terms (anyone else: not found). */
 function ProposeChangePage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/changes/new'>) {

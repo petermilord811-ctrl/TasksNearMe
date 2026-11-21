@@ -9,8 +9,11 @@ import { db } from '@/platform/db/client';
 import { InboxScreen } from '@/ui/screens/messages';
 import { requestNow } from '@/platform/clock';
 import { InboxSkeleton } from '@/ui/screens/messages/inbox-skeleton';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Messages', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('messages');
+}
 
 /** The viewer's conversations, latest activity first. */
 function MessagesPage() {

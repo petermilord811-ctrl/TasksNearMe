@@ -10,8 +10,11 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { RewardsScreen } from '@/ui/screens/rewards';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Rewards', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('rewards');
+}
 
 /** A helper's gift-card rewards (brought up to date with their bookings on each visit). */
 function RewardsPage() {

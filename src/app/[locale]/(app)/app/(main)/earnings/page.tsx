@@ -10,8 +10,11 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { EarningsScreen } from '@/ui/screens/money';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Earnings', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('earnings');
+}
 
 /** The helper's transfers and payouts. */
 function EarningsPage() {

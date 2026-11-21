@@ -18,8 +18,11 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { HelperTaskScreen } from '@/ui/screens/work';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Task', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('findWorkTask');
+}
 
 /** A task from the helper's side: the offer form, the helper's own offer, or why they can't offer. */
 function HelperTaskPage({ params }: PageProps<'/[locale]/app/find-work/[taskId]'>) {

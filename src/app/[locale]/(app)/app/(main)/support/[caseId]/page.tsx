@@ -10,8 +10,11 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { SupportCaseScreen } from '@/ui/screens/support';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Support case', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('supportCase');
+}
 
 /** One case for the member who opened it (anyone else: not found). Opening it marks support's replies read. */
 function SupportCasePage({ params }: PageProps<'/[locale]/app/support/[caseId]'>) {

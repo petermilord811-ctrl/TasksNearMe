@@ -10,8 +10,11 @@ import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { PosterIdentityScreen } from '@/ui/screens/verify';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Verify your ID', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('verifyIdentity');
+}
 
 /**
  * A client's ID check, when risk asks for one (blueprint 01 P2): posting and paying send the person here

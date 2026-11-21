@@ -10,8 +10,11 @@ import { getViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
 import { CompletionScreen } from '@/ui/screens/bookings';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Mark the work complete', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('complete');
+}
 
 /** The booking's helper sends the evidence for approval (blueprint 02 J6). */
 function CompletePage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/complete'>) {

@@ -11,8 +11,11 @@ import { getViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
 import { RequestHelperScreen } from '@/ui/screens/invites';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Request a helper', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('requestHelper');
+}
 
 /**
  * Ask one helper to do one of your open tasks (blueprint 02 J3): from their profile, saved helpers, or

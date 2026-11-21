@@ -11,8 +11,11 @@ import { getViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
 import { BookingConfirmScreen } from '@/ui/screens/bookings';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Confirm and pay', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('confirmAndPay');
+}
 
 /** Book an offer: review the terms, pay, and confirm (blueprint 02 J4). */
 function ConfirmBookingPage({ params }: PageProps<'/[locale]/app/tasks/[taskId]/offers/[offerId]/confirm'>) {

@@ -10,8 +10,11 @@ import { getViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
 import { ReportProblemScreen } from '@/ui/screens/bookings';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Report a problem', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('reportProblem');
+}
 
 /** The booking's client reports a problem instead of approving (blueprint 02 J6). */
 function ProblemPage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/problem'>) {

@@ -12,8 +12,11 @@ import { db } from '@/platform/db/client';
 import { ThreadContent, ThreadPanes } from '@/ui/screens/messages';
 import { requestNow } from '@/platform/clock';
 import { ThreadSkeleton } from '@/ui/screens/messages/thread-skeleton';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Conversation', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('conversation');
+}
 
 /**
  * One conversation for its two people (anyone else: not found). Opening it marks it read. `?from=` ("Load earlier

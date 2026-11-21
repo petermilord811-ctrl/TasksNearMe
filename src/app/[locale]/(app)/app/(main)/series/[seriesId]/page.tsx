@@ -18,8 +18,11 @@ import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { SeriesScreen } from '@/ui/screens/series';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Regular visits', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('series');
+}
 
 /** Regular visits (blueprint 03 §7), for their client and their helper only (anyone else: not found). */
 function SeriesPage({ params }: PageProps<'/[locale]/app/series/[seriesId]'>) {

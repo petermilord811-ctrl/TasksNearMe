@@ -20,8 +20,11 @@ import { getViewer } from '@/platform/auth/viewer';
 import { BookingHubScreen } from '@/ui/screens/bookings';
 import { requestNow } from '@/platform/clock';
 import { BookingHubSkeleton } from '@/ui/screens/bookings/booking-hub-skeleton';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Booking', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('booking');
+}
 
 /** One booking for its client or its helper (anyone else: not found). */
 function BookingPage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]'>) {

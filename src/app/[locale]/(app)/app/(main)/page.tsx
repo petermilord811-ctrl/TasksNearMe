@@ -11,8 +11,11 @@ import { DashboardScreen } from '@/ui/screens/home';
 import { requestNow } from '@/platform/clock';
 import { parseDashboardQuery } from '@/shared/dashboard';
 import { DashboardSkeleton } from '@/ui/screens/home/dashboard-skeleton';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Home', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('home');
+}
 
 /**
  * The signed-in home as a dashboard (completion plan 9.9): what needs the person, then their tasks, offers and

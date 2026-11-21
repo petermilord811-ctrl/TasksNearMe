@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
+import * as rootParams from 'next/root-params';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { CategorySlug, ISODateTime } from '@/contracts';
 import { APP_LOCALES, localeOrDefault, type AppLocale } from '@/contracts/locale';
 import { appUrl } from '@/integrations/oauth';
 import { SITE_NAME, type StructuredDataContext } from '@/modules/seo/structured-data';
 import { languageAlternatePaths, localizedPath } from '@/shared/locale';
+import type { AppPageTitle } from './app-page-titles';
 
 const OPEN_GRAPH_LOCALES: Record<AppLocale, string> = { en: 'en_US', es: 'es_US' };
 
@@ -57,6 +59,18 @@ export async function publicPageMetadata(page: PublicPageMeta): Promise<Metadata
     },
     twitter: { card: 'summary_large_image', title: shareTitle, description: page.description, images },
   };
+}
+
+/**
+ * A signed-in page's title in the page's language, through the root layout's "%s · TasksNearMe" template like a public
+ * page's (sweep J-E9: they were English strings, which the route announcer read aloud on Spanish pages). The language
+ * comes from the [locale] root segment alone, never a cookie or a header, so the metadata stays static per language
+ * under Cache Components. Signed-in pages stay out of search (the proxy's X-Robots-Tag says so too).
+ */
+export async function appPageMetadata(page: AppPageTitle): Promise<Metadata> {
+  const locale = localeOrDefault(await rootParams.locale());
+  const t = await getTranslations({ locale, namespace: 'server.meta.app' });
+  return { title: t(page), robots: { index: false } };
 }
 
 /** What structured data needs to know about the page: the site's address and the page's language. */

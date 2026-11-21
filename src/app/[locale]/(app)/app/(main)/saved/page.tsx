@@ -9,8 +9,11 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { SavedHelpersScreen } from '@/ui/screens/reviews';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Saved helpers', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('savedHelpers');
+}
 
 /** The client's saved helpers. */
 function SavedPage() {

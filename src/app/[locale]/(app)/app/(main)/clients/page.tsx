@@ -8,8 +8,11 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { MyClientsScreen } from '@/ui/screens/clients';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'My clients', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('myClients');
+}
 
 /** The helper's past clients, with "Propose a booking" when they can do the same task again (blueprint 01). */
 export default function ClientsPage() {

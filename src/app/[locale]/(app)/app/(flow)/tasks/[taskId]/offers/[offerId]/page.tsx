@@ -9,8 +9,11 @@ import { getViewer } from '@/platform/auth/viewer';
 import { OfferDetailScreen } from '@/ui/screens/tasks';
 import { requestNow } from '@/platform/clock';
 import { OfferDetailSkeleton } from '@/ui/screens/tasks/task-detail-skeletons';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Offer' };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('offer');
+}
 
 /** One offer on the poster's task. Opening it marks it seen. */
 function OfferDetailPage({ params }: PageProps<'/[locale]/app/tasks/[taskId]/offers/[offerId]'>) {

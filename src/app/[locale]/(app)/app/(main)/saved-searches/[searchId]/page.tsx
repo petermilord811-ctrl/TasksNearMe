@@ -6,8 +6,11 @@ import { savedSearchHref } from '@/modules/searches/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Saved search', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('savedSearch');
+}
 
 /** A saved search (from its alerts): opens its board view, as it is now (completion plan 7.10). */
 export default function SavedSearchPage({ params }: PageProps<'/[locale]/app/saved-searches/[searchId]'>) {

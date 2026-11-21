@@ -8,8 +8,11 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { ReceiptScreen } from '@/ui/screens/money';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Receipt', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('receipt');
+}
 
 /** A printable receipt for one booking, for its client only. */
 function ReceiptPage({ params }: PageProps<'/[locale]/app/payments/[bookingId]'>) {

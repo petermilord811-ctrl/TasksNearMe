@@ -10,8 +10,11 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { NotificationsScreen } from '@/ui/screens/account';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Notifications', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('notifications');
+}
 
 /** What happened on the viewer's offers, bookings, payments and messages. */
 function NotificationsPage() {

@@ -10,8 +10,11 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { FindWorkScreen, FindWorkSkeleton } from '@/ui/screens/work';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Find work', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('findWork');
+}
 
 /** The helper feed: open tasks near the helper's area, with distance bands and filters. */
 function FindWorkPage({ searchParams }: PageProps<'/[locale]/app/find-work'>) {

@@ -11,8 +11,11 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { SupportScreen } from '@/ui/screens/support';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Support', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('support');
+}
 
 /** The member's cases (open first) and a new request. */
 function SupportPage() {

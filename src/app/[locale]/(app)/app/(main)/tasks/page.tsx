@@ -6,8 +6,11 @@ import { db } from '@/platform/db/client';
 import { MyTasksScreen } from '@/ui/screens/tasks';
 import { requestNow } from '@/platform/clock';
 import { MyTasksSkeleton } from '@/ui/screens/tasks/my-tasks-skeleton';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'My tasks' };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('myTasks');
+}
 
 /** The poster's tasks: open, booked, past. */
 export default function MyTasksPage() {

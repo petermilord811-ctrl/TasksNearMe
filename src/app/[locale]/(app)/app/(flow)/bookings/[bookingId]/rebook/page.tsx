@@ -10,8 +10,11 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { ProposeRebookScreen } from '@/ui/screens/clients';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Propose a booking', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('rebook');
+}
 
 /**
  * The helper proposes doing a past client's task again (blueprint 02 J8): a new time and a price, the last

@@ -36,8 +36,11 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AccountScreen } from '@/ui/screens/account';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Account', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('account');
+}
 
 /**
  * Profile (name and photo), contact details (email and phone, each changed with a 6-digit code), ways to

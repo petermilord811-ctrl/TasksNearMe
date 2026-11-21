@@ -17,8 +17,11 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { ChangeReviewScreen } from '@/ui/screens/bookings';
 import { requestNow } from '@/platform/clock';
+import { appPageMetadata } from '@/i18n/metadata';
 
-export const metadata: Metadata = { title: 'Change request', robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  return appPageMetadata('changeRequest');
+}
 
 /** A change request for the two people on the booking (anyone else: not found). */
 function ChangeReviewPage({ params }: PageProps<'/[locale]/app/bookings/[bookingId]/changes/[changeId]'>) {
