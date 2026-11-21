@@ -154,7 +154,11 @@ export function TaskQuestions({ data, handlers, now, wide = false }: { data: Tas
   const t = useTranslations('questions');
   return <section aria-labelledby={`questions-${data.taskId}`} className={cn('mx-auto w-full space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.06]', wide ? 'max-w-content' : 'max-w-reading')}>
     <header className="space-y-1">
-      <h2 id={`questions-${data.taskId}`} className="flex items-center gap-2 text-lg font-semibold"><CircleHelp aria-hidden="true" className="size-5 text-primary" />{t('title')} <span className="text-sm font-normal text-muted-foreground tabular-nums">{t('count', { count: data.questions.length })}</span></h2>
+      {/* The count sits beside the heading, not in it: the heading names the section ("Questions"), not "Questions No questions yet" (accessibility pass, J-A5). */}
+      <div className="flex items-center gap-2">
+        <h2 id={`questions-${data.taskId}`} className="flex items-center gap-2 text-lg font-semibold"><CircleHelp aria-hidden="true" className="size-5 text-primary" />{t('title')}</h2>
+        <span className="text-sm text-muted-foreground tabular-nums">{t('count', { count: data.questions.length })}</span>
+      </div>
       <p className="text-sm text-muted-foreground">{t('intro')}</p>
       {data.closed && data.viewer.isPoster && <p className="text-sm text-muted-foreground">{t('closedPoster')}</p>}
     </header>

@@ -28,6 +28,13 @@ function show(data: TaskQuestionsData) {
 }
 
 describe('TaskQuestions', () => {
+  it('names the section by its heading alone, with the count beside it (accessibility pass, J-A5)', () => {
+    show({ ...taskQuestionsHelperData, questions: [] });
+    expect(screen.getByRole('heading', { level: 2, name: copy.title })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: copy.title })).toBeInTheDocument();
+    expect(screen.getByText('No questions yet')).toBeVisible();
+  });
+
   it('keeps a question being typed across a reload, until it is sent (journeys on a phone, as J-H7 for offers)', async () => {
     const user = userEvent.setup();
     show(taskQuestionsHelperData);
