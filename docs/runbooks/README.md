@@ -16,6 +16,7 @@ What staff and the on-call engineer do when something goes wrong in production (
 | [The database is unreachable](database-unreachable.md) | Postgres stops answering. |
 | [Live updates stop](realtime-dropping.md) | Open pages stop updating by themselves. |
 | [A deploy rolled back](deploy-rollback.md) | A deploy switched back, by `deploy.sh` or by hand, while people were using the site. |
+| [Backups and restoring](backup-and-restore.md) | Turning on the nightly backup, checking it runs, or getting data back after a mistake or a lost server. |
 
 ## Who is on call
 

@@ -38,6 +38,7 @@ Building happens on GitHub's runner, not on the VPS. The VPS only runs `node ser
 | Settings and secrets | `/srv/tasksnearme-preview/preview.env` (root:tnm-preview, 640) |
 | `deploy.sh` and the Node binary (root-owned) | `/usr/local/lib/tasksnearme-preview/` |
 | Database | `tasksnearme_preview` (role `tnm_preview`) in the `tasksnearme-db` container |
+| Backups, once the owner turns them on | `/var/backups/tasksnearme` and an R2 bucket; settings in `/etc/tasksnearme-backup/` ([runbook](../../docs/runbooks/backup-and-restore.md)) |
 | Public address | the `tasksnearme.com` block in `/etc/caddy/Caddyfile` (`www` redirects there) |
 
 Set up on 2026-11-13 with `sudo bash deploy/preview/setup-vps.sh <deploy-key.pub> <node binary>`, plus the
