@@ -162,6 +162,18 @@ describe('sentences that read right (messages pass J-M2, J-M3)', () => {
     expect(reopened.text.match(/looking for a new helper/g)).toHaveLength(1);
   });
 
+  it('puts the short link in the text only: the email and the push keep the page\'s address (messages pass J-M9)', () => {
+    const row = { type: 'helper_on_the_way' as const, title: 'Assemble a desk', actorName: 'Jordan T.', params: null, target: { kind: 'booking' as const, bookingId: 'bkg_desk' }, userId: 'usr_maya' };
+    const short = deliveryContent(row, 'es', undefined, { shortCode: 'Ab3dE6gH9k' });
+    expect(short.sms).toMatch(/^TasksNearMe: .+ http\S*\/n\/Ab3dE6gH9k$/);
+    expect(short.text).toContain('/es/app/bookings/bkg_desk');
+    expect(short.html).toContain('/es/app/bookings/bkg_desk');
+    expect(short.push.url).toMatch(/\/es\/app\/bookings\/bkg_desk$/);
+    expect(`${short.text}${short.html}${short.push.url}`).not.toContain('/n/');
+    // Without one, the text keeps the full address.
+    expect(deliveryContent(row).sms).toMatch(/\/app\/bookings\/bkg_desk$/);
+  });
+
   it('keeps an English text with a date in the 160-character alphabet, so it isn\'t sent as 70-character parts', () => {
     const failed = { ...base, title: 'Weekly cleaning', target: { kind: 'booking' as const, bookingId: 'bkg_1' }, type: 'scheduled_payment_failed' as const, params: { at: '2026-11-24T14:00:00.000Z', timeZone: 'America/New_York' as const } };
     expect(deliveryContent(failed).sms).toMatch(/^[\x20-\x7E]+$/);

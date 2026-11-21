@@ -10,6 +10,8 @@ import { devSignIn } from './support/sign-in';
 
 const CHRIS_EMAIL = 'chris@example.test';
 const CHRIS_PHONE = '+15125550102';
+const GRACE_EMAIL = 'grace@example.test';
+const GRACE_PHONE = '+13525550110';
 
 async function outboxText(page: Page, to: string): Promise<string> {
   await page.goto(`/dev/outbox?to=${encodeURIComponent(to)}`);
@@ -45,4 +47,26 @@ test('a booking update arrives by email, and not by text once booking texts are 
       await expect(reset).toBeChecked({ timeout: 5_000 });
     }).toPass({ timeout: 60_000 });
   }
+});
+
+test("a text's short link opens the page it's about, and a code that isn't one is not found (messages pass J-M9)", async ({ page, request }, testInfo) => {
+  test.skip(testInfo.project.name !== 'app-desktop', 'changes shared data; desktop only');
+  test.setTimeout(240_000);
+  // Grace, whom no other spec uses: the test above turns Chris's booking texts off while it runs (in parallel).
+  await devSignIn(page, GRACE_EMAIL);
+  const title = `Assemble a desk (e2e short ${Date.now().toString(36)})`;
+  await notifyNow('usr_grace', 'helper_on_the_way', title);
+  // The runner sends within a minute. The text carries /n/<code> in place of the page's address.
+  let texts = '';
+  await expect.poll(async () => (texts = await outboxText(page, GRACE_PHONE)), { timeout: 150_000, intervals: [5_000] }).toContain(title);
+  // Exactly 10 characters: the page's text runs straight on into the next message.
+  const code = texts.slice(texts.indexOf(title)).match(/\/n\/([0-9A-Za-z]{10})/)?.[1];
+  expect(code, 'the text carries a short link').toBeTruthy();
+  // The email keeps the page's full address.
+  await expect.poll(() => outboxText(page, GRACE_EMAIL), { timeout: 150_000, intervals: [5_000] }).toContain(title);
+  expect(await outboxText(page, GRACE_EMAIL)).toContain('/app/messages');
+  // Through the real proxy and route: the short link opens the page, signed in.
+  await page.goto(`/n/${code}`);
+  await expect(page).toHaveURL(/\/app\/messages$/);
+  for (const path of ['/n/AAAAAAAAAA', '/n/short']) expect((await request.get(path, { maxRedirects: 0 })).status(), path).toBe(404);
 });

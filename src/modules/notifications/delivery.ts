@@ -1,7 +1,7 @@
 import { and, asc, count, eq, gte, inArray, isNull, lt, lte, ne, or } from 'drizzle-orm';
 import { createTranslator } from 'next-intl';
-import type { AppLocale, AttentionTarget, NotificationTopic, NotificationType, NotificationView, TimeZone } from '@/contracts';
-import { DEFAULT_LOCALE, localeOrDefault, routes } from '@/contracts';
+import type { AppLocale, NotificationTopic, NotificationType, NotificationView, TimeZone } from '@/contracts';
+import { DEFAULT_LOCALE, localeOrDefault } from '@/contracts';
 import { messagesFor, perLocale } from '@/i18n/catalog';
 import { createEmailProvider, type EmailProvider } from '@/integrations/email';
 import { createSmsSender, type SmsSender } from '@/integrations/sms';
@@ -16,6 +16,8 @@ import { localizedPath } from '@/shared/locale';
 import { pushSenderFromEnv, type PushMessage, type PushSender } from '@/integrations/push/web-push';
 import { channelsFor, missingAddressReason, NOTIFICATION_TOPIC, planDelivery, preferenceOn, pushOn, RETRY_MINUTES, URGENT_TYPES, type DeliveryChannel } from './delivery-domain';
 import { renderNotificationEmail } from './emails';
+import { notificationPath } from './paths';
+import { shortCodeFor } from './short-links';
 import { emailSuppressions, notificationDeliveries, notificationPreferences, notifications, pushSubscriptions } from './schema';
 
 /**
@@ -53,47 +55,6 @@ type DeliveryRow = typeof notificationDeliveries.$inferSelect;
 
 const tFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.notifications' }));
 
-function pathOf(target: AttentionTarget): string {
-  switch (target.kind) {
-    case 'booking':
-      return routes.app.booking(target.bookingId);
-    case 'task':
-      return routes.app.task(target.taskId);
-    case 'thread':
-      return routes.app.thread(target.threadId);
-    case 'messages':
-      return routes.app.messages();
-    case 'find_work_task':
-      return routes.app.findWorkTask(target.taskId);
-    case 'onboarding':
-      return routes.app.helperOnboarding(target.step);
-    case 'earnings':
-      return routes.app.earnings();
-    case 'support_case':
-      return routes.app.supportCase(target.caseId);
-    case 'invite':
-      return routes.app.offers(target.inviteId);
-    case 'proposal':
-      return routes.app.proposal(target.proposalId);
-    case 'series':
-      return routes.app.series(target.seriesId);
-    case 'account':
-      return routes.app.account();
-    case 'community_post':
-      return routes.app.communityPost(target.postId);
-    case 'saved_search':
-      return routes.app.savedSearch(target.searchId);
-    case 'booking_review':
-      return routes.app.bookingReview(target.bookingId);
-    case 'saved_searches':
-      return routes.app.savedSearches();
-    case 'verify_identity':
-      return routes.app.verifyIdentity();
-    case 'rewards':
-      return routes.app.rewards();
-  }
-}
-
 const appUrl = () => (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 
 /**
@@ -107,7 +68,13 @@ export const endOnce = (line: string) => line.replace(/([.?!…])\.$/u, '$1');
  * push, in the recipient's language. Their links are too (/es/... for Spanish, sweep MN12): opened signed out, or in
  * a browser set to another language, the page, sign-in and unsubscribe still come in the reader's language.
  */
-export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'actorName' | 'params' | 'target' | 'userId'> & { id?: string }, locale: AppLocale = DEFAULT_LOCALE, timeZone?: TimeZone) {
+export function deliveryContent(
+  row: Pick<NotificationRow, 'type' | 'title' | 'actorName' | 'params' | 'target' | 'userId'> & { id?: string },
+  locale: AppLocale = DEFAULT_LOCALE,
+  timeZone?: TimeZone,
+  /** The text message's short link (short-links.ts, messages pass J-M9); the email, push and bell keep the full one. */
+  { shortCode }: { shortCode?: string | null } = {},
+) {
   const t = tFor(locale);
   const params: NonNullable<NotificationView['params']> = row.params ?? {};
   const sentence = endOnce(t(`types.${row.type as NotificationType}`, {
@@ -133,7 +100,7 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
     search: params.search ?? '',
     refundFor: params.refundFor ?? 'other',
   }));
-  const url = `${appUrl()}${localizedPath(pathOf(row.target), locale)}`;
+  const url = `${appUrl()}${localizedPath(notificationPath(row.target), locale)}`;
   const type = row.type as NotificationType;
   // A cancellation receipt also says what happens to the money, and that the other person was told.
   const actorName = row.actorName ?? t('actorFallback');
@@ -142,7 +109,7 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
       ? [t('receipt.money', { money: params.money ?? 'other', amount: params.amountCents === undefined ? '' : formatMoney(params.amountCents), actorName }), t('receipt.told', { actorName })].filter((line) => line !== '').map(endOnce)
       : [];
   const email = renderNotificationEmail({ type, topic: NOTIFICATION_TOPIC[type], sentence, details, target: row.target, url, userId: row.userId, appUrl: appUrl(), locale });
-  return { ...email, sms: t('sms', { sentence, url }), push: { title: t('pushTitle'), body: sentence, url, ...(row.id ? { tag: row.id } : {}) } };
+  return { ...email, sms: t('sms', { sentence, url: shortCode ? `${appUrl()}/n/${shortCode}` : url }), push: { title: t('pushTitle'), body: sentence, url, ...(row.id ? { tag: row.id } : {}) } };
 }
 
 /** One push to each of the person's devices; a device the push service says is gone is forgotten. */
@@ -245,7 +212,9 @@ const channelOn = (person: Person, topic: NotificationTopic, channel: DeliveryCh
 /** Sends a claimed delivery and records the outcome: sent, or failed with the next try. */
 async function attempt(db: Db, providers: DeliveryProviders, delivery: DeliveryRow, row: NotificationRow, to: string, now: Date, person: Pick<Person, 'locale' | 'timeZone'>): Promise<boolean> {
   try {
-    await sendOne(db, providers, delivery, row, to, deliveryContent(row, person.locale, person.timeZone), now);
+    // A text links through the notification's short code, made with its first text (messages pass J-M9).
+    const shortCode = delivery.channel === 'sms' ? (row.shortCode ?? (await shortCodeFor(db, row.id))) : undefined;
+    await sendOne(db, providers, delivery, row, to, deliveryContent(row, person.locale, person.timeZone, { shortCode }), now);
     await db.update(notificationDeliveries).set({ status: 'sent', sentAt: now, attempts: delivery.attempts + 1, reason: null, sendAfter: null, updatedAt: now }).where(eq(notificationDeliveries.id, delivery.id));
     return true;
   } catch (error) {

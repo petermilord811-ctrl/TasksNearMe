@@ -119,7 +119,8 @@ function isAppPath(path: string): boolean {
 }
 
 export const config = {
-  // Everything but API routes, Next's internals (/_next, /__nextjs…), the map worker and files with an
+  // Everything but API routes, text messages' short links (/n/<code>, outside [locale]: no language rewrite or
+  // sample-page lookup, messages pass J-M9), Next's internals (/_next, /__nextjs…), the map worker and files with an
   // extension; and all of /app, where a route can have one (a booking's calendar.ics).
-  matcher: ['/((?!api|_next|__next|_vercel|vendor|.*\\..*).*)', '/app/:path*'],
+  matcher: ['/((?!api|n/|_next|__next|_vercel|vendor|.*\\..*).*)', '/app/:path*'],
 };

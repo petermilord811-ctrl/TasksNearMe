@@ -4,6 +4,7 @@ import type { AttentionTarget, NotificationType } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { EmailTimeoutError } from '@/integrations/email/timeout';
 import { deliverNotifications, type DeliveryProviders } from '@/modules/notifications/delivery';
+import { shortCodeFor, shortLinkPath } from '@/modules/notifications/short-links';
 import { blocks, threadParticipants, threads } from '@/modules/messaging/schema';
 import { notificationDeliveries, notificationPreferences, notifications } from '@/modules/notifications/schema';
 import { createDb } from '@/platform/db/connect';
@@ -93,7 +94,7 @@ describe('notification delivery', () => {
     expect(await deliveriesOf(offer)).toMatchObject({ email: { status: 'sent', attempts: 1 }, sms: { status: 'skipped', reason: 'preference_off' } });
     expect(await deliveriesOf(confirmed)).toMatchObject({ email: { status: 'sent' }, sms: { status: 'sent' } });
     const texts = mineSent().filter((item) => item.channel === 'sms');
-    expect(texts).toEqual([{ channel: 'sms', to: '+15125550284', text: expect.stringMatching(/^TasksNearMe: Jordan T\. booked you for Assemble a desk\. http.*\/app\/bookings\/bkg_tv$/) }]);
+    expect(texts).toEqual([{ channel: 'sms', to: '+15125550284', text: expect.stringMatching(/^TasksNearMe: Jordan T\. booked you for Assemble a desk\. http\S*\/n\/[0-9A-Za-z]{10}$/) }]);
     const email = mineSent().find((item) => item.channel === 'email' && item.subject?.startsWith('Jordan T. sent an offer'));
     expect(email?.text).toContain('/app/account');
 
@@ -230,5 +231,32 @@ describe('notification delivery', () => {
     expect((await deliveriesOf(quiet)).email).toMatchObject({ status: 'failed', attempts: 1, reason: "Resend didn't answer within 15 s", sendAfter: new Date(later.getTime() + 5 * 60_000) });
     await run(new Date(later.getTime() + 5 * 60_000));
     expect((await deliveriesOf(quiet)).email).toMatchObject({ status: 'sent', attempts: 2 });
+  });
+
+  it("links a text through a short code that opens the page in the reader's language, and keeps it (messages pass J-M9)", async () => {
+    sent = [];
+    const at = new Date(DAY.getTime() + 2 * 60 * 60_000);
+    const id = await notify(PERSON, 'helper_on_the_way', at);
+    await run(at);
+    const [row] = await db.select({ shortCode: notifications.shortCode }).from(notifications).where(eq(notifications.id, id));
+    const code = row?.shortCode ?? '';
+    expect(code).toMatch(/^[0-9A-Za-z]{10}$/);
+    const text = mineSent().find((item) => item.channel === 'sms' && item.text.includes('is on the way'));
+    expect(text?.text).toMatch(new RegExp(`^TasksNearMe: .+ http\\S*/n/${code}$`));
+    // The email keeps the page's full address.
+    const email = mineSent().find((item) => item.channel === 'email' && item.subject?.includes('is on the way'));
+    expect(email?.text).toContain('/app/bookings/bkg_tv');
+    expect(email?.text).not.toContain('/n/');
+    // The code opens the page in the reader's language: as the account says when it's opened.
+    const [person] = await db.select({ locale: users.locale }).from(users).where(eq(users.id, PERSON));
+    await db.update(users).set({ locale: 'en' }).where(eq(users.id, PERSON));
+    expect(await shortLinkPath(db, code)).toBe('/app/bookings/bkg_tv');
+    await db.update(users).set({ locale: 'es' }).where(eq(users.id, PERSON));
+    expect(await shortLinkPath(db, code)).toBe('/es/app/bookings/bkg_tv');
+    await db.update(users).set({ locale: person!.locale }).where(eq(users.id, PERSON));
+    // One code per notification, whoever asks again; nothing for a code that isn't one.
+    expect(await shortCodeFor(db, id)).toBe(code);
+    expect(await shortLinkPath(db, 'AAAAAAAAAA')).toBeNull();
+    expect(await shortLinkPath(db, 'short')).toBeNull();
   });
 });

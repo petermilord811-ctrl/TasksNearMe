@@ -1,3 +1,4 @@
+import { unstable_doesMiddlewareMatch } from 'next/experimental/testing/server';
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,7 +21,7 @@ vi.mock('@/shared/sample-data', async (original) => ({
   samplesHiddenInThisBuild: () => state.hidden,
 }));
 
-const { proxy } = await import('./proxy');
+const { proxy, config } = await import('./proxy');
 
 const navigate = { 'sec-fetch-mode': 'navigate', 'sec-fetch-dest': 'document' };
 const SESSION = 'better-auth.session_token=abc';
@@ -118,5 +119,16 @@ describe('proxy: the sample marketplace’s pages', () => {
     expect(target(await get('/tasks/assemble-a-desk-duckpond-9f2e'))).toBe('rewrite /en/tasks/assemble-a-desk-duckpond-9f2e');
     // Only reads are answered this way; a form posting to a page goes through.
     expect(target(await get('/dallas', navigate, 'POST'))).toBe('rewrite /en/dallas');
+  });
+});
+
+describe('proxy: text messages\' short links (messages pass J-M9)', () => {
+  it('leaves /n/<code> to its route, outside [locale]: no language rewrite and no sample-page lookup', () => {
+    expect(unstable_doesMiddlewareMatch({ config, url: '/n/Ab3dE6gH9k' })).toBe(false);
+    expect(unstable_doesMiddlewareMatch({ config, url: '/n/Ab3dE6gH9k?utm=sms' })).toBe(false);
+  });
+
+  it('still runs for pages that only start with an n, and for /n without a code', () => {
+    for (const url of ['/notifications', '/app/notifications', '/n', '/es/n/Ab3dE6gH9k', '/neighborhoods']) expect(unstable_doesMiddlewareMatch({ config, url }), url).toBe(true);
   });
 });
