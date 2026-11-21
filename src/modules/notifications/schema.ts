@@ -21,8 +21,18 @@ export const notifications = pgTable(
     sourceEventId: text('source_event_id').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     readAt: timestamp('read_at', { withTimezone: true }),
+    /**
+     * The short link a text message carries in place of the page's address (messages pass J-M9): 10 characters from a
+     * CSPRNG (base62, about 60 bits), made on the first text, gone with the notification. /n/<code> redirects to the
+     * page in the recipient's language, which still asks for sign-in.
+     */
+    shortCode: text('short_code'),
   },
-  (t) => [index('notifications_user_idx').on(t.userId, t.createdAt), uniqueIndex('notifications_event_user_idx').on(t.sourceEventId, t.userId)],
+  (t) => [
+    index('notifications_user_idx').on(t.userId, t.createdAt),
+    uniqueIndex('notifications_event_user_idx').on(t.sourceEventId, t.userId),
+    uniqueIndex('notifications_short_code_idx').on(t.shortCode),
+  ],
 );
 
 /**
