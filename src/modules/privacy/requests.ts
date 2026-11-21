@@ -2,6 +2,7 @@ import { communityPosts, communityReactions, communityReplies } from '@/modules/
 import { messageReactions, savedReplies } from '@/modules/messaging/schema';
 import { taskQuestions } from '@/modules/questions/schema';
 import { savedSearches } from '@/modules/searches/schema';
+import { waitlistEntries } from '@/modules/marketing/schema';
 import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, ne, notInArray, or, sql } from 'drizzle-orm';
 import { DATA_EXPORT_DAYS, DELETION_GRACE_DAYS, localeOrDefault, type AccountPrivacyView, type ActionResult, type DeletionBlocker } from '@/contracts';
 import { isReservedEmailAddress, type EmailProvider } from '@/integrations/email';
@@ -26,7 +27,7 @@ import { helperProfiles, helperServices, helperWorkSamples } from '@/modules/pro
 import { savedHelpers } from '@/modules/reviews/schema';
 import { deleteAddressDocument } from '@/modules/verification/address';
 import { deleteIdentityCapturePhotos } from '@/modules/verification/capture';
-import { addressVerifications, identityCaptures } from '@/modules/verification/schema';
+import { addressVerifications, backgroundChecks, identityCaptures } from '@/modules/verification/schema';
 import { supportCases } from '@/modules/support/schema';
 import { files, taskLocations, taskMarks, taskPhotos, tasks } from '@/modules/tasks/schema';
 import { auditLog } from '@/platform/audit/schema';
@@ -34,7 +35,8 @@ import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
-import { buildDataExport, dataExportFilename } from './data-export';
+import { buildDataExport, dataExportFilename, dataExportJsonName, dataExportPhotos } from './data-export';
+import { zipFiles } from './zip';
 import { renderAccountDeletedNotice } from './emails';
 import { devHelpersOn } from '@/shared/dev-helpers';
 import { createBillingProvider } from '@/integrations/billing';
@@ -46,7 +48,7 @@ import { endSubscriptionsOf, forgetBillingCustomerOf, stopRenewalsOf } from '@/m
  * kept for `DATA_EXPORT_DAYS`, then deleted. A deletion waits `DELETION_GRACE_DAYS` (the person can keep the
  * account until then), and past that date for anything still open; then the account is anonymized: the
  * profile, contact details, sign-ins and preferences go, open tasks and offers close, and what others and
- * the law need (bookings, payments, messages to others, reviews) stays under "Deleted user".
+ * the law need (bookings, payments, messages to others, reviews) stays under "Deleted account".
  */
 
 const DAY_MS = 86_400_000;
@@ -68,6 +70,8 @@ export interface PrivacyJobDeps {
   appUrl: string;
   /** Deletes the person's customer at the payment provider (Stripe) with the account. */
   payments?: PaymentProvider | null;
+  /** Cancels a background check invitation still waiting at Checkr (ab, 2026-11-21). */
+  background?: { cancelInvitations?(ref: string): Promise<void> } | null;
 }
 
 async function hasOpenBookings(db: Db, userId: string): Promise<boolean> {
@@ -174,7 +178,7 @@ export async function privacyViewOf(db: Db, userId: string, now: Date): Promise<
   };
 }
 
-const exportKey = (userId: string, requestId: string) => `exports/${userId}/${requestId}.json`;
+const exportKey = (userId: string, requestId: string) => `exports/${userId}/${requestId}.zip`;
 
 /** The job: prepare waiting exports (a couple a minute), then tell the person it's ready. */
 export async function prepareDueExports(db: Db, deps: Pick<PrivacyJobDeps, 'storage' | 'cipher'>, now: Date, scope: Scope = {}): Promise<number> {
@@ -199,7 +203,10 @@ export async function prepareDueExports(db: Db, deps: Pick<PrivacyJobDeps, 'stor
       continue;
     }
     const key = exportKey(request.userId, request.id);
-    await deps.storage.put(key, Buffer.from(JSON.stringify(data, null, 2), 'utf8'), 'application/json');
+    // One zip: the JSON, and the photos they added, listed in it (ab, 2026-11-21, J-PR10).
+    const photos = await dataExportPhotos(db, deps.storage, request.userId);
+    const json = Buffer.from(JSON.stringify({ ...data, photos: photos.list }, null, 2), 'utf8');
+    await deps.storage.put(key, zipFiles([{ name: dataExportJsonName(now), body: json, compress: true }, ...photos.entries], now), 'application/zip');
     const expiresAt = new Date(now.getTime() + DATA_EXPORT_DAYS * DAY_MS);
     const [ready] = await db
       .update(privacyRequests)
@@ -282,7 +289,7 @@ export async function processDueDeletions(db: Db, deps: PrivacyJobDeps, now: Dat
  * Anonymizes an account. Their open tasks are canceled and pending offers withdrawn first (the other
  * people are told, as usual); then the personal details, sign-ins, sessions, preferences, photos, marks
  * and verification documents go, and the person gets a last email at the old address. Bookings, payments, messages others
- * received and reviews stay, under "Deleted user", for the people and the records that need them.
+ * received and reviews stay, under "Deleted account", for the people and the records that need them.
  */
 export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: string, now: Date): Promise<void> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -330,6 +337,18 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
   }
   // And their customer for plans, once its plans ended above (J-PR9).
   await forgetBillingCustomerOf(db, billing, userId);
+  // A background check invitation still waiting is canceled at Checkr, so nothing is run or billed for an account
+  // that's gone (ab, 2026-11-21, J-PR11); the row stays, canceled. A check under way or done keeps its status (FCRA).
+  for (const check of await db.select({ id: backgroundChecks.id, provider: backgroundChecks.provider, ref: backgroundChecks.providerRef }).from(backgroundChecks).where(and(eq(backgroundChecks.userId, userId), eq(backgroundChecks.status, 'invited')))) {
+    if (check.provider === 'checkr' && check.ref) {
+      if (deps.background?.cancelInvitations) await deps.background.cancelInvitations(check.ref);
+      else console.error(`[privacy] no Checkr client to cancel ${check.id}'s invitation; it expires on its own`);
+    }
+    await db.update(backgroundChecks).set({ status: 'canceled', updatedAt: now }).where(eq(backgroundChecks.id, check.id));
+  }
+  // Had they any booking, either side? Then their verified home address stays, encrypted, for claims about real jobs:
+  // the retention sweep deletes it 2 years after the last one (ab, 2026-11-21, J-PR12).
+  const [booked] = await db.select({ id: bookings.id }).from(bookings).where(or(eq(bookings.posterUserId, userId), eq(bookings.helperUserId, userId))).limit(1);
   // Unfinished exports of a deleted account go too.
   for (const row of await db.select({ id: privacyRequests.id, fileKey: privacyRequests.fileKey }).from(privacyRequests).where(and(eq(privacyRequests.userId, userId), eq(privacyRequests.kind, 'export'), inArray(privacyRequests.status, ['requested', 'ready'])))) {
     if (row.fileKey) await deps.storage.delete(row.fileKey);
@@ -340,9 +359,10 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     await tx
       .update(users)
       .set({
-        name: 'Deleted user',
+        // As the data copy names them (ab, 2026-11-21); a label in each reader's language is a row of its own.
+        name: 'Deleted account',
         firstName: 'Deleted',
-        lastName: 'User',
+        lastName: 'Account',
         email: `deleted+${userId}@deleted.invalid`,
         emailVerified: false,
         image: null,
@@ -424,7 +444,25 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
       .update(tasks)
       .set({ description: '', updatedAt: now })
       .where(and(eq(tasks.posterUserId, userId), ne(tasks.description, ''), sql`not exists (select 1 from ${bookings} b where b.task_id = ${tasks.id})`));
-    await tx.insert(auditLog).values({ id: newId('aud'), actorId: null, actorRole: 'system', action: 'account.deleted', targetType: 'user', targetId: userId, metadata: { at: now.toISOString() } });
+    // The waitlist entry with their address goes too (J-PR13).
+    await tx.delete(waitlistEntries).where(eq(sql`lower(${waitlistEntries.email})`, user.email.toLowerCase()));
+    // Their audit rows keep ids and what happened, not their contact details (ab, 2026-11-21, J-PR13): an email change's
+    // addresses, a "Not you?" report's, a passkey's name and the IP addresses go. A banned account's stay, for the
+    // investigations its ban may need, as its ID hash does.
+    if (user.status !== 'banned') {
+      await tx
+        .update(auditLog)
+        .set({ metadata: sql`${auditLog.metadata} - array['previousEmail', 'newEmail', 'name']::text[]`, ip: null })
+        .where(and(eq(auditLog.targetType, 'user'), eq(auditLog.targetId, userId)));
+      await tx
+        .update(auditLog)
+        .set({ metadata: sql`${auditLog.metadata} - array['from', 'to']::text[]` })
+        .where(and(eq(auditLog.targetType, 'user'), eq(auditLog.targetId, userId), sql`${auditLog.metadata} ->> 'kind' = 'email'`));
+    }
+    // A verified home address with no booking behind it serves no claim: it goes now (J-PR12). A banned account's stays.
+    if (!booked && user.status !== 'banned') await tx.update(addressVerifications).set({ addressCiphertext: null, updatedAt: now }).where(eq(addressVerifications.userId, userId));
+    // `banned` tells the retention sweep to leave a banned account's address, as its ID hash is left.
+    await tx.insert(auditLog).values({ id: newId('aud'), actorId: null, actorRole: 'system', action: 'account.deleted', targetType: 'user', targetId: userId, metadata: { at: now.toISOString(), ...(user.status === 'banned' ? { banned: true } : {}) } });
   });
 
   await expireCacheTags(db, ['tasks', 'helpers', ...(profile ? [`helper:${profile.handle}`] : []), ...(market ? [`market:${market.slug}`] : [])]);

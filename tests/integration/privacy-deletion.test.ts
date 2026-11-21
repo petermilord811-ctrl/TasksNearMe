@@ -12,9 +12,12 @@ import { notificationDeliveries, notifications, privacyRequests, pushSubscriptio
 import { dispatchNotifications } from '@/modules/notifications/service';
 import { offers } from '@/modules/offers/schema';
 import { prepareDueExports, processDueDeletions, readReadyExport, requestAccountDeletion, requestDataExport } from '@/modules/privacy/requests';
+import { readZip } from '@/modules/privacy/zip';
 import { rebookProposals } from '@/modules/rebook/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { savedSearches } from '@/modules/searches/schema';
+import { waitlistEntries } from '@/modules/marketing/schema';
+import { addressVerifications, backgroundChecks } from '@/modules/verification/schema';
 import { files, taskLocations, taskPhotos, tasks } from '@/modules/tasks/schema';
 import { auditLog } from '@/platform/audit/schema';
 import { cacheTagInvalidations } from '@/platform/cache/schema';
@@ -47,7 +50,9 @@ const storage: FileStorage = {
 };
 const sent: EmailMessage[] = [];
 const email: EmailProvider = { name: 'memory', send: vi.fn(async (message: EmailMessage) => void sent.push(message)) };
-const deps = { storage, cipher, email, appUrl: 'http://localhost:3000' };
+// Plain arrays, not mocks: vitest clears mocks' calls before each test, and the deletions run in an earlier one.
+const canceledInvitations: string[] = [];
+const deps = { storage, cipher, email, appUrl: 'http://localhost:3000', background: { cancelInvitations: async (ref: string) => void canceledInvitations.push(ref) } };
 const DAY = 86_400_000;
 
 const CLIENT = 'usr_pr_client';
@@ -120,6 +125,18 @@ beforeAll(async () => {
   ]);
   // Pat offered to do her TV job again; the proposal waits for her.
   await db.insert(rebookProposals).values({ id: 'rbp_pr_tv', helperUserId: HELPER, posterUserId: CLIENT, fromBookingId: 'bkg_pr_done', status: 'sent', startAt: request.startAt, pricingType: 'fixed', priceCents: 6000, breakdown: terms!.breakdown, expiresAt: request.expiresAt });
+  // Pat's verified home address and a background check invitation he never opened; Fay's address, with no booking.
+  await db.insert(addressVerifications).values([
+    { id: 'adr_pr_helper', userId: HELPER, status: 'verified', addressCiphertext: cipher.encrypt(JSON.stringify({ line1: '5 Hale Ct', city: 'Austin', state: 'TX', zip: '78723' })), submittedAt: asked, decidedAt: asked },
+    { id: 'adr_pr_failer', userId: FAILER, status: 'verified', addressCiphertext: cipher.encrypt(JSON.stringify({ line1: '7 Lin Rd', city: 'Austin', state: 'TX', zip: '78723' })), submittedAt: asked, decidedAt: asked },
+  ]);
+  await db.insert(backgroundChecks).values({ id: 'bgc_pr_helper', userId: HELPER, provider: 'checkr', providerRef: 'cand_pr_helper', status: 'invited', invitationExpiresAt: new Date(due.getTime() + DAY), createdAt: asked, updatedAt: asked });
+  // Paula changed her email once and added a passkey (both audited), and joined the waitlist before signing up.
+  await db.insert(auditLog).values([
+    { id: 'aud_pr_email', actorId: CLIENT, actorRole: 'user', action: 'account.email_changed', targetType: 'user', targetId: CLIENT, metadata: { previousEmail: 'paula.old@example.test', newEmail: 'pr-client@example.test' }, ip: '203.0.113.7' },
+    { id: 'aud_pr_passkey', actorId: CLIENT, actorRole: 'user', action: 'account.passkey_added', targetType: 'user', targetId: CLIENT, metadata: { name: 'Mi teléfono' }, ip: '203.0.113.7' },
+  ]);
+  await db.insert(waitlistEntries).values({ id: 'wle_pr_client', email: 'pr-client@example.test', zip: '78723', interest: 'need_help', locale: 'es' });
   // Fay's photo is the one storage fails to delete the first time.
   await db.insert(tasks).values({ ...task('tsk_pr_failer', 'canceled'), posterUserId: FAILER, locationId: null });
   await photo('fil_pr_failer', FAILER, 'tsk_pr_failer');
@@ -142,6 +159,9 @@ afterAll(async () => {
   await db.delete(passkeys).where(inArray(passkeys.userId, ids));
   await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.userId, ids));
   await db.delete(savedSearches).where(inArray(savedSearches.userId, ids));
+  await db.delete(addressVerifications).where(inArray(addressVerifications.userId, ids));
+  await db.delete(backgroundChecks).where(inArray(backgroundChecks.userId, ids));
+  await db.delete(waitlistEntries).where(eq(waitlistEntries.id, 'wle_pr_client'));
   await db.delete(billingCustomers).where(inArray(billingCustomers.userId, ids));
   await db.delete(privacyRequests).where(inArray(privacyRequests.userId, ids));
   await db.delete(outboxEvents).where(inArray(outboxEvents.aggregateId, [...ids, 'tsk_pr_open', 'ofr_pr_helper', 'inv_pr_sent', 'inv_pr_countered', 'rbp_pr_tv']));
@@ -156,8 +176,15 @@ describe('the privacy rehearsal: a copy of the data, then deleting the account (
     expect(await requestDataExport(db, CLIENT, asked)).toEqual({ ok: true, code: 'submitted' });
     expect(await prepareDueExports(db, { storage, cipher }, asked, { userIds: [CLIENT] })).toBe(1);
     const file = await readReadyExport(db, storage, CLIENT, asked);
-    const text = file!.body.toString('utf8');
+    expect(file?.filename).toBe('tasksnearme-data-2026-11-21.zip');
+    const zip = readZip(file!.body);
+    const text = zip.get('tasksnearme-data-2026-11-21.json')!.toString('utf8');
     const data = JSON.parse(text);
+    // The photo of her home comes with it, listed in the JSON (J-PR10); nobody else's files do.
+    expect([...zip.keys()]).toEqual(['tasksnearme-data-2026-11-21.json', 'photos/tasks/fil_pr_client_home.jpg']);
+    expect(zip.get('photos/tasks/fil_pr_client_home.jpg')?.toString()).toBe('jpeg');
+    expect(data.photos).toEqual([{ file: 'photos/tasks/fil_pr_client_home.jpg', kind: 'tasks', task: expect.any(String), addedAt: expect.any(String) }]);
+    expect(data.about).toContain('Los documentos de identidad no se incluyen');
     expect(data.about).toMatch(/^Todo lo vinculado a tu cuenta de TasksNearMe/);
     expect(data.account).toMatchObject({ id: CLIENT, firstName: 'Paula', lastName: 'Reyes', language: 'es', homeCity: 'Austin, TX', phone: '+13525550141' });
     expect(data.account.signInMethods[0].method).toBe('código por correo');
@@ -198,7 +225,7 @@ describe('the privacy rehearsal: a copy of the data, then deleting the account (
 
   it('takes her personal data: name, contacts, sign-ins, devices, photos, addresses, searches and notifications (J-PR3)', async () => {
     const [paula] = await db.select().from(users).where(eq(users.id, CLIENT));
-    expect(paula).toMatchObject({ name: 'Deleted user', firstName: 'Deleted', lastName: 'User', email: `deleted+${CLIENT}@deleted.invalid`, phone: null, status: 'deleted' });
+    expect(paula).toMatchObject({ name: 'Deleted account', firstName: 'Deleted', lastName: 'Account', email: `deleted+${CLIENT}@deleted.invalid`, phone: null, status: 'deleted' });
     const left = await Promise.all([
       db.select({ id: sessions.id }).from(sessions).where(eq(sessions.userId, CLIENT)),
       db.select({ id: passkeys.id }).from(passkeys).where(eq(passkeys.userId, CLIENT)),
@@ -240,8 +267,26 @@ describe('the privacy rehearsal: a copy of the data, then deleting the account (
     // Omar's copy names Pat as a deleted account, in Omar's language.
     expect(await requestDataExport(db, OTHER, due)).toEqual({ ok: true, code: 'submitted' });
     expect(await prepareDueExports(db, { storage, cipher }, due, { userIds: [OTHER] })).toBe(1);
-    const data = JSON.parse((await readReadyExport(db, storage, OTHER, due))!.body.toString('utf8'));
+    const copy = readZip((await readReadyExport(db, storage, OTHER, due))!.body);
+    const data = JSON.parse([...copy.values()][0]!.toString('utf8'));
     expect(data.invites).toEqual([expect.objectContaining({ with: 'Deleted account', status: 'declined' })]);
+  });
+
+  it("keeps a verified home address with bookings behind it, deletes one without, and cancels a waiting background check (J-PR11, J-PR12)", async () => {
+    const kept = await db.select({ id: addressVerifications.id, address: addressVerifications.addressCiphertext }).from(addressVerifications).where(inArray(addressVerifications.id, ['adr_pr_helper', 'adr_pr_failer']));
+    expect(new Map(kept.map((row) => [row.id, row.address !== null]))).toEqual(new Map([['adr_pr_helper', true], ['adr_pr_failer', false]]));
+    expect(canceledInvitations).toEqual(['cand_pr_helper']);
+    expect((await db.select({ status: backgroundChecks.status }).from(backgroundChecks).where(eq(backgroundChecks.id, 'bgc_pr_helper')))[0]?.status).toBe('canceled');
+  });
+
+  it('leaves her audit rows ids and what happened, not her contact details, and takes her waitlist entry (J-PR13)', async () => {
+    const rows = await db.select({ id: auditLog.id, action: auditLog.action, metadata: auditLog.metadata, ip: auditLog.ip }).from(auditLog).where(eq(auditLog.targetId, CLIENT));
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    expect(byId.get('aud_pr_email')).toMatchObject({ metadata: {}, ip: null });
+    expect(byId.get('aud_pr_passkey')).toMatchObject({ metadata: {}, ip: null });
+    expect(rows.find((row) => row.action === 'account.deleted')?.metadata).toEqual({ at: due.toISOString() });
+    expect(JSON.stringify(rows)).not.toMatch(/paula\.old|pr-client@|Mi teléfono|203\.0\.113/);
+    expect(await db.select().from(waitlistEntries).where(eq(waitlistEntries.id, 'wle_pr_client'))).toEqual([]);
   });
 
   it('expires the cached pages they were on: the helper lists, the old profile, the tasks and the city (J-PR4)', async () => {

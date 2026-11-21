@@ -25,6 +25,7 @@ import { runWelcomeRewards } from '@/modules/rewards/welcome';
 import { readPendingDocuments } from '@/modules/verification/auto-check';
 import { runPrivacyRequests } from '@/modules/privacy/requests';
 import { retentionDue, runRetention } from '@/modules/privacy/retention';
+import { checkrFromEnv } from '@/integrations/checkr';
 import { createEmailProvider } from '@/integrations/email';
 import { documentReaderFromEnv } from '@/integrations/ai/document-reader';
 import { idReaderFromEnv } from '@/integrations/ai/id-document-reader';
@@ -99,7 +100,7 @@ export const JOBS: Job[] = [
   },
   // The waitlist of a market that went live hears it's open (completion plan 8.3), a batch a minute.
   { name: 'waitlist.city_open', run: (db, now) => sendCityOpenEmails(db, { email: createEmailProvider(db), appUrl: (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '') }, now) },
-  { name: 'privacy.requests', run: (db, now) => runPrivacyRequests(db, { storage: createFileStorage(), cipher: fieldCipherFromEnv(), email: createEmailProvider(db), payments: createPaymentProvider(), appUrl: (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '') }, now) },
+  { name: 'privacy.requests', run: (db, now) => runPrivacyRequests(db, { storage: createFileStorage(), cipher: fieldCipherFromEnv(), email: createEmailProvider(db), payments: createPaymentProvider(), background: checkrFromEnv(), appUrl: (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '') }, now) },
   // Webhook events whose processing failed, again on their backoff (completion plan 5.11).
   { name: 'webhooks.retry', run: (db, now) => retryDueWebhooks(db, now) },
   // Events that failed for good page the staff on call, once a day per provider while they're there (when things break).

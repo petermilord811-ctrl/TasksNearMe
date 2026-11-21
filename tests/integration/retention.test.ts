@@ -3,9 +3,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FileStorage } from '@/integrations/storage';
 import { bookingCompletionPhotos, bookingSeries, bookings } from '@/modules/bookings/schema';
 import { messages, threads } from '@/modules/messaging/schema';
-import { addressDeleted, RETENTION_RULES, sweepAddresses, sweepAudit, sweepCompletionFiles, sweepMessages } from '@/modules/privacy/retention';
+import { users } from '@/modules/accounts/schema';
+import { addressDeleted, RETENTION_RULES, sweepAddresses, sweepAudit, sweepCompletionFiles, sweepDeletedAccountAddresses, sweepMessages, sweepTaskPhotos } from '@/modules/privacy/retention';
 import { readExactAddress } from '@/modules/tasks/locations';
-import { files, taskLocations, tasks } from '@/modules/tasks/schema';
+import { files, taskLocations, taskPhotos, tasks } from '@/modules/tasks/schema';
+import { addressVerifications } from '@/modules/verification/schema';
 import { auditLog } from '@/platform/audit/schema';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { createDb } from '@/platform/db/connect';
@@ -23,6 +25,7 @@ const OLD = 'loc_tmp_ret_old';
 const RECENT = 'loc_tmp_ret_recent';
 const OPEN = 'loc_tmp_ret_open';
 const address = { line1: '9 Retention Way', city: 'Austin', state: 'TX', zip: '78723' };
+const GONE = ['usr_tmp_ret_gone_old', 'usr_tmp_ret_gone_recent', 'usr_tmp_ret_gone_banned'];
 
 beforeAll(async () => {
   const [deskTask] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
@@ -43,13 +46,32 @@ beforeAll(async () => {
     { id: 'msg_tmp_ret_old', threadId: 'thr_tmp_ret_old', senderUserId: booking!.posterUserId, kind: 'text', body: 'Long ago.', createdAt: ago(800) },
     { id: 'msg_tmp_ret_new', threadId: 'thr_tmp_ret_new', senderUserId: booking!.posterUserId, kind: 'text', body: 'Last month.', createdAt: ago(30) },
   ]);
+  // Task photos: on the task closed 800 days ago, on the one booked again last month, and two never posted (800 and 30
+  // days old).
+  const photo = (id: string, daysAgo: number) => ({ id, ownerUserId: booking!.posterUserId, kind: 'task_photo', storageKey: `task_photo/${id}.webp`, contentType: 'image/webp', width: 1, height: 1, bytes: 4, createdAt: ago(daysAgo) });
+  await db.insert(files).values([photo('fil_tmp_ret_home_old', 800), photo('fil_tmp_ret_home_recent', 800), photo('fil_tmp_ret_unposted_old', 800), photo('fil_tmp_ret_unposted_new', 30)]);
+  for (const id of ['fil_tmp_ret_home_old', 'fil_tmp_ret_home_recent', 'fil_tmp_ret_unposted_old', 'fil_tmp_ret_unposted_new']) stored.set(`task_photo/${id}.webp`, Buffer.from('webp'));
+  await db.insert(taskPhotos).values([{ taskId: 'tsk_tmp_ret_files', fileId: 'fil_tmp_ret_home_old', position: 0 }, { taskId: 'tsk_tmp_ret_recent', fileId: 'fil_tmp_ret_home_recent', position: 0 }]);
+  // Deleted accounts with a verified home address: last booked 800 days ago, last booked 30 days ago, and banned.
+  const [chris] = await db.select().from(users).where(eq(users.id, 'usr_chris'));
+  await db.insert(users).values(GONE.map((id) => ({ ...chris!, id, email: `deleted+${id}@deleted.invalid`, name: 'Deleted account', phone: null, phoneVerifiedAt: null, status: 'deleted' })));
+  await db.insert(addressVerifications).values(GONE.map((id) => ({ id: `adr_${id}`, userId: id, status: 'verified', addressCiphertext: cipher.encrypt(JSON.stringify(address)), submittedAt: ago(900), decidedAt: ago(900), createdAt: ago(900) })));
+  const ended = (id: string, helperUserId: string, daysAgo: number) => ({ ...booking!, id, taskId: 'tsk_tmp_ret_open', helperUserId, status: 'canceled', startAt: ago(daysAgo), canceledAt: ago(daysAgo), completedAt: null, updatedAt: ago(daysAgo), createdAt: ago(daysAgo + 1) });
+  await db.insert(bookings).values([ended('bkg_tmp_ret_gone_old', GONE[0]!, 800), ended('bkg_tmp_ret_gone_recent', GONE[1]!, 30), ended('bkg_tmp_ret_gone_banned', GONE[2]!, 800)]);
   await db.insert(auditLog).values([
+    { id: 'aud_tmp_ret_gone_banned', actorRole: 'system', action: 'account.deleted', targetType: 'user', targetId: GONE[2]!, metadata: { at: ago(700).toISOString(), banned: true } },
     { id: 'aud_tmp_ret_old', actorRole: 'system', action: 'tmp.retention', targetType: 'test', targetId: 'tmp_ret', at: ago(8 * 365).toISOString() },
     { id: 'aud_tmp_ret_new', actorRole: 'system', action: 'tmp.retention', targetType: 'test', targetId: 'tmp_ret', at: ago(30).toISOString() },
   ]);
 });
 
 afterAll(async () => {
+  await db.delete(taskPhotos).where(inArray(taskPhotos.fileId, ['fil_tmp_ret_home_old', 'fil_tmp_ret_home_recent']));
+  await db.delete(files).where(inArray(files.id, ['fil_tmp_ret_home_old', 'fil_tmp_ret_home_recent', 'fil_tmp_ret_unposted_old', 'fil_tmp_ret_unposted_new']));
+  await db.delete(bookings).where(inArray(bookings.id, ['bkg_tmp_ret_gone_old', 'bkg_tmp_ret_gone_recent', 'bkg_tmp_ret_gone_banned']));
+  await db.delete(addressVerifications).where(inArray(addressVerifications.userId, GONE));
+  await db.delete(auditLog).where(inArray(auditLog.targetId, GONE));
+  await db.delete(users).where(inArray(users.id, GONE));
   await db.delete(messages).where(inArray(messages.threadId, ['thr_tmp_ret_old', 'thr_tmp_ret_new']));
   await db.delete(threads).where(inArray(threads.id, ['thr_tmp_ret_old', 'thr_tmp_ret_new']));
   await db.delete(bookingCompletionPhotos).where(eq(bookingCompletionPhotos.bookingId, 'bkg_tmp_ret_files'));
@@ -100,6 +122,20 @@ describe('retention timers', () => {
     expect(await sweepCompletionFiles(db, { storage }, now, { only: ['bkg_tmp_ret_files', 'bkg_tmp_ret_recent'] })).toBe(1);
     expect(stored.has('completion/tmp-ret.webp')).toBe(false);
     expect(await db.select().from(files).where(eq(files.id, 'fil_tmp_ret_photo'))).toEqual([]);
+  });
+
+  it(`deletes task photos ${RETENTION_RULES.taskPhotoYears} years after the task closed, and uploads never posted as long after`, async () => {
+    const ids = ['fil_tmp_ret_home_old', 'fil_tmp_ret_home_recent', 'fil_tmp_ret_unposted_old', 'fil_tmp_ret_unposted_new'];
+    expect(await sweepTaskPhotos(db, { storage }, now, { only: ids })).toBe(2);
+    expect((await db.select({ id: files.id }).from(files).where(inArray(files.id, ids))).map((row) => row.id).sort()).toEqual(['fil_tmp_ret_home_recent', 'fil_tmp_ret_unposted_new']);
+    expect(stored.has('task_photo/fil_tmp_ret_home_old.webp')).toBe(false);
+    expect(await db.select().from(taskPhotos).where(eq(taskPhotos.fileId, 'fil_tmp_ret_home_old'))).toEqual([]);
+  });
+
+  it(`deletes a deleted account's verified home address ${RETENTION_RULES.deletedAccountAddressYears} years after its last booking; a banned one's stays`, async () => {
+    expect(await sweepDeletedAccountAddresses(db, now, { only: GONE })).toBe(1);
+    const rows = await db.select({ userId: addressVerifications.userId, kept: addressVerifications.addressCiphertext }).from(addressVerifications).where(inArray(addressVerifications.userId, GONE));
+    expect(new Map(rows.map((row) => [row.userId, row.kept !== null]))).toEqual(new Map([[GONE[0], false], [GONE[1], true], [GONE[2], true]]));
   });
 
   it(`deletes audit entries after ${RETENTION_RULES.auditYears} years`, async () => {

@@ -14,6 +14,7 @@ import {
   requestAccountDeletion,
   requestDataExport,
 } from '@/modules/privacy/requests';
+import { readZip } from '@/modules/privacy/zip';
 import { bookingSeries, bookings } from '@/modules/bookings/schema';
 import { supportCases } from '@/modules/support/schema';
 import { files, tasks } from '@/modules/tasks/schema';
@@ -75,15 +76,17 @@ describe('a copy of the data', () => {
     expect(event?.payload).toMatchObject({ userId: 'usr_maya' });
 
     const file = await readReadyExport(db, storage, 'usr_maya', now);
-    expect(file?.filename).toBe('tasksnearme-data-2026-11-17.json');
-    const data = JSON.parse(file!.body.toString('utf8'));
+    expect(file?.filename).toBe('tasksnearme-data-2026-11-17.zip');
+    // A zip: the JSON, and the photos she added (J-PR10).
+    const json = readZip(file!.body).get('tasksnearme-data-2026-11-17.json')!;
+    const data = JSON.parse(json.toString('utf8'));
     expect(data).toMatchObject({ format: 'tasksnearme-data-export/1', account: { id: 'usr_maya', email: 'maya@example.test', firstName: 'Maya' } });
     const desk = data.tasksPosted.find((task: { id: string }) => task.id === 'tsk_desk');
     expect(desk).toMatchObject({ title: expect.stringContaining('desk'), address: { line1: '1234 Example Lane', zip: '78723' } });
     // Lee's offer, as Maya sees it in the app: his number hidden.
     const lee = data.offersReceived.find((offer: { from: string }) => offer.from.startsWith('Lee'));
     expect(lee.message).toContain('[phone hidden]');
-    const text = file!.body.toString('utf8');
+    const text = json.toString('utf8');
     expect(text).not.toContain('512-555-0134');
     expect(text).not.toContain('jordan@example.test');
     expect(text).not.toMatch(/accessToken|refreshToken|idToken|codeHash/);
@@ -165,7 +168,7 @@ describe('deleting an account', () => {
     expect(await processDueDeletions(db, deps, due, scope)).toEqual({ deleted: 1, waiting: 0 });
 
     const [gone] = await db.select().from(users).where(eq(users.id, LEAVER));
-    expect(gone).toMatchObject({ name: 'Deleted user', email: `deleted+${LEAVER}@deleted.invalid`, phone: null, phoneVerifiedAt: null, status: 'deleted' });
+    expect(gone).toMatchObject({ name: 'Deleted account', email: `deleted+${LEAVER}@deleted.invalid`, phone: null, phoneVerifiedAt: null, status: 'deleted' });
     expect(await db.select().from(sessions).where(eq(sessions.userId, LEAVER))).toEqual([]);
     expect(await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, LEAVER))).toEqual([]);
     const [task] = await db.select({ status: tasks.status }).from(tasks).where(eq(tasks.id, 'tsk_tmp_leaver'));

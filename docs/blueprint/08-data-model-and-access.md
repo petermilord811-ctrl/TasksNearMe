@@ -167,10 +167,11 @@ There is no direct database editing and no impersonation in production. Support 
 | Data | Default |
 |---|---|
 | Exact address shown to the helper | Hidden 48 h after completion |
-| Exact address in storage | Kept while the poster keeps it as a saved location; otherwise deleted 180 days after the last booking |
+| Exact address in storage | Kept while the poster keeps it as a saved location; otherwise deleted 180 days after the last booking. At once when the account is deleted (2026-11-21) |
 | Messages, completion photos, receipts | 2 years after last activity; longer while a case or legal hold is open |
+| Task photos (added 2026-11-21) | 2 years after the task closes (completed, canceled or expired, with every booking of it over as long), never while a case about one is open; an upload never posted, 2 years after it was added. At once when the account is deleted |
 | Ledger, payments, tax records | 7 years |
 | Identity verification | Status kept. Provider-held images handled per the provider's retention and redaction settings, within Texas biometric limits (**F10**). Our own capture's photos (06 §1): deleted once both stages are final (the double check cleared the ID), and at the latest 30 days after the stage-1 decision; at once when canceled or the account is deleted; the row and its answers stay. The ID's keyed hash (6.3) goes with a deleted account, unless the account was banned |
-| Proof of address | Status, dates and the encrypted address kept; the document deleted 30 days after the decision, at once when the account is deleted |
+| Proof of address | Status, dates and the encrypted address kept; the document deleted 30 days after the decision, at once when the account is deleted. A deleted account's address (2026-11-21): kept encrypted for claims and investigations of its real jobs until 2 years after its last booking, longer while a case or legal hold is open, then deleted; deleted at once when it had no booking; a banned account keeps it with the ID hash |
 | Background checks | Status kept; report contents stay with the provider (FCRA) |
-| Audit log | 7 years |
+| Audit log | 7 years. A deleted account's rows keep ids and what happened, not its contact details: an email change's addresses, passkey names and IP addresses are removed, unless the account was banned (2026-11-21) |

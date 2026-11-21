@@ -27,6 +27,8 @@ export interface Checkr {
   postAdverseAction(ref: string): Promise<void>;
   /** Staff decided for the person after all: the scheduled final notice is canceled. */
   cancelAdverseAction(adverseActionId: string): Promise<void>;
+  /** The candidate's invitations still waiting are canceled (an account being deleted, privacy rehearsal J-PR11). */
+  cancelInvitations(ref: string): Promise<void>;
 }
 
 export function createCheckr(config: { apiKey: string; packageSlug: string; fetch?: typeof fetch; now?: () => Date }): Checkr {
@@ -71,6 +73,11 @@ export function createCheckr(config: { apiKey: string; packageSlug: string; fetc
     async postAdverseAction() {},
     async cancelAdverseAction(adverseActionId) {
       await call('DELETE', `/adverse_actions/${encodeURIComponent(adverseActionId)}`);
+    },
+    async cancelInvitations(ref) {
+      const list = await call('GET', `/invitations?candidate_id=${encodeURIComponent(ref)}&status=pending`);
+      const ids = Array.isArray(list.data) ? (list.data as { id?: unknown }[]).map((item) => item.id).filter((id): id is string => typeof id === 'string') : [];
+      for (const id of ids) await call('DELETE', `/invitations/${encodeURIComponent(id)}`);
     },
   };
 }

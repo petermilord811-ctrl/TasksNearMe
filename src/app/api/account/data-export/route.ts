@@ -5,8 +5,8 @@ import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
 
 /**
- * The signed-in person's prepared copy of their data (src/modules/privacy), as a JSON download, while it's
- * ready (7 days). Anyone else, or no ready copy, gets a 404 that looks like any missing file.
+ * The signed-in person's prepared copy of their data (src/modules/privacy), as a zip download (the JSON and the photos
+ * they added), while it's ready (7 days). Anyone else, or no ready copy, gets a 404 that looks like any missing file.
  */
 export async function GET() {
   const viewer = await getViewer();
@@ -14,7 +14,7 @@ export async function GET() {
   if (!file) return new Response('Not found', { status: 404, headers: { 'Cache-Control': 'no-store' } });
   return new Response(new Uint8Array(file.body), {
     headers: {
-      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Type': 'application/zip',
       'Content-Length': String(file.body.length),
       'Content-Disposition': `attachment; filename="${file.filename}"`,
       'Cache-Control': 'private, no-store',

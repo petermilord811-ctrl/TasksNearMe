@@ -25,6 +25,16 @@ describe('Checkr', () => {
     for (const [, init] of fetcher.mock.calls as [string, RequestInit][]) expect(JSON.parse(String(init.body)).work_locations).toEqual([{ country: 'US', state: 'WA' }]);
   });
 
+  it("cancels a deleted account's invitations still waiting (privacy rehearsal J-PR11)", async () => {
+    const fetcher = vi.fn(async (url: string, _init?: RequestInit) => (url.includes('/invitations?') ? json({ object: 'list', data: [{ id: 'inv_1', status: 'pending' }] }) : new Response(null, { status: 204 })));
+    const checkr = createCheckr({ apiKey: 'key_test', packageSlug: 'p', fetch: fetcher as unknown as typeof fetch });
+    await checkr.cancelInvitations('cand_1');
+    expect((fetcher.mock.calls as [string, RequestInit][]).map(([url, init]) => `${init.method} ${url}`)).toEqual([
+      'GET https://api.checkr.com/v1/invitations?candidate_id=cand_1&status=pending',
+      'DELETE https://api.checkr.com/v1/invitations/inv_1',
+    ]);
+  });
+
   it('sends the pre-adverse notice on the latest report with every adverse item, and can cancel the final one', async () => {
     const now = new Date('2026-11-17T15:00:00.000Z');
     const fetcher = vi.fn(async (url: string, _init?: RequestInit) => {

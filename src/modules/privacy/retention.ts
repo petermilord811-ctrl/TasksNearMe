@@ -4,7 +4,8 @@ import { pruneContactReverts } from '@/modules/accounts/contact-revert';
 import { sessions, verifications } from '@/modules/accounts/schema';
 import { bookingCompletionPhotos, bookingExpenses } from '@/modules/bookings/schema';
 import { messages } from '@/modules/messaging/schema';
-import { files, taskLocations } from '@/modules/tasks/schema';
+import { files, taskLocations, taskPhotos } from '@/modules/tasks/schema';
+import { addressVerifications } from '@/modules/verification/schema';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { rateLimits } from '@/platform/rate-limit/schema';
@@ -16,6 +17,8 @@ import { rateLimits } from '@/platform/rate-limit/schema';
  *   rebooking proposal from it waits. The row stays (tasks point at it), without the address;
  * - messages: a conversation's messages and their attachments, 2 years after its last message;
  * - completion photos and receipts: 2 years after the booking finished;
+ * - task photos (pictures of homes): 2 years after the task closed (ab, 2026-11-21);
+ * - a deleted account's verified home address: 2 years after its last booking (ab, 2026-11-21); a banned account's stays;
  * - the audit log: 7 years;
  * - expired sessions and sign-in codes, and old rate-limit windows: housekeeping;
  * - "Not you?" links (completion plan 5.23): the old and new address or number an expired link kept are cleared,
@@ -25,7 +28,7 @@ import { rateLimits } from '@/platform/rate-limit/schema';
  * backlog clears over a few runs without a long transaction.
  */
 
-export const RETENTION_RULES = { addressDays: 180, messageYears: 2, completionFileYears: 2, auditYears: 7 } as const;
+export const RETENTION_RULES = { addressDays: 180, messageYears: 2, completionFileYears: 2, taskPhotoYears: 2, deletedAccountAddressYears: 2, auditYears: 7 } as const;
 
 const DAY_MS = 86_400_000;
 const YEAR_MS = 365 * DAY_MS;
@@ -137,6 +140,71 @@ export async function sweepCompletionFiles(db: Db, deps: RetentionDeps, now: Dat
   return photos.length + receipts.length;
 }
 
+/**
+ * Task photos, pictures of people's homes (privacy rehearsal, ab's decision 2026-11-21): 2 years after the task closed
+ * (completed, canceled or expired, and every booking of it over as long), never while a case about one is open. A photo
+ * no task kept (an upload never posted) goes after as long. A copied task (Book again) shares its photos: each goes once
+ * no task showing it needs it.
+ */
+export async function sweepTaskPhotos(db: Db, deps: RetentionDeps, now: Date, { limit = 100, only }: { limit?: number; only?: string[] } = {}): Promise<number> {
+  const cutoff = new Date(now.getTime() - RETENTION_RULES.taskPhotoYears * YEAR_MS);
+  const due = idsOf(
+    await db.execute(sql`
+      select f.id from files f
+      where f.kind = 'task_photo' and f.created_at < ${cutoff}
+        ${only ? sql`and f.id in ${only}` : sql``}
+        and not exists (
+          select 1 from task_photos p join tasks t on t.id = p.task_id
+          where p.file_id = f.id and (t.status not in ('completed', 'canceled', 'expired') or t.updated_at >= ${cutoff})
+        )
+        and not exists (
+          select 1 from task_photos p join bookings b on b.task_id = p.task_id
+          where p.file_id = f.id and (b.status in ${OPEN_BOOKING} or b.updated_at >= ${cutoff} or coalesce(b.completed_at, b.canceled_at, b.start_at) >= ${cutoff})
+        )
+        and not exists (
+          select 1 from task_photos p join bookings b on b.task_id = p.task_id join support_cases c on c.booking_id = b.id
+          where p.file_id = f.id and c.status not in ${CLOSED_CASE}
+        )
+      limit ${limit}
+    `),
+  );
+  if (due.length === 0) return 0;
+  await db.delete(taskPhotos).where(inArray(taskPhotos.fileId, due));
+  await deleteFiles(db, deps, due);
+  return due.length;
+}
+
+/**
+ * A deleted account's verified home address (privacy rehearsal, ab's decision 2026-11-21): kept encrypted for claims and
+ * investigations about its real jobs until 2 years after its last booking, longer while a case about one is open, then
+ * deleted. A banned account's stays, as its ID hash does (its `account.deleted` entry says `banned`). One with no booking
+ * went at the deletion.
+ */
+export async function sweepDeletedAccountAddresses(db: Db, now: Date, { limit = 200, only }: { limit?: number; only?: string[] } = {}): Promise<number> {
+  const cutoff = new Date(now.getTime() - RETENTION_RULES.deletedAccountAddressYears * YEAR_MS);
+  const due = idsOf(
+    await db.execute(sql`
+      select a.id from address_verifications a join users u on u.id = a.user_id
+      where u.status = 'deleted' and a.address_ciphertext is not null
+        ${only ? sql`and a.user_id in ${only}` : sql``}
+        and not exists (select 1 from audit_log l where l.action = 'account.deleted' and l.target_type = 'user' and l.target_id = u.id and l.metadata ->> 'banned' = 'true')
+        and not exists (
+          select 1 from bookings b
+          where (b.poster_user_id = u.id or b.helper_user_id = u.id)
+            and (b.status in ${OPEN_BOOKING} or b.updated_at >= ${cutoff} or coalesce(b.completed_at, b.canceled_at, b.start_at) >= ${cutoff})
+        )
+        and not exists (
+          select 1 from bookings b join support_cases c on c.booking_id = b.id
+          where (b.poster_user_id = u.id or b.helper_user_id = u.id) and c.status not in ${CLOSED_CASE}
+        )
+      limit ${limit}
+    `),
+  );
+  if (due.length === 0) return 0;
+  const cleared = await db.update(addressVerifications).set({ addressCiphertext: null, updatedAt: now }).where(inArray(addressVerifications.id, due)).returning({ id: addressVerifications.id });
+  return cleared.length;
+}
+
 /** Audit entries past 7 years. */
 export async function sweepAudit(db: Db, now: Date, limit = 1_000): Promise<number> {
   const cutoff = new Date(now.getTime() - RETENTION_RULES.auditYears * YEAR_MS);
@@ -167,6 +235,8 @@ export async function runRetention(db: Db, deps: RetentionDeps, now: Date) {
     addresses: await sweepAddresses(db, now),
     messages: await sweepMessages(db, deps, now),
     completionFiles: await sweepCompletionFiles(db, deps, now),
+    taskPhotos: await sweepTaskPhotos(db, deps, now),
+    deletedAccountAddresses: await sweepDeletedAccountAddresses(db, now),
     audit: await sweepAudit(db, now),
     expired: await sweepExpired(db, now),
   };

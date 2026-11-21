@@ -3,7 +3,7 @@ title: Who sees my address?
 summary: Only the helper you book, and only after you confirm.
 topic: getting-started
 order: 2
-updated: 2026-11-18
+updated: 2026-11-21
 ---
 Your exact address goes to **one person: the helper you book**, and only once the booking is confirmed.
 
@@ -13,7 +13,7 @@ Everyone else, including helpers making offers, sees only your neighborhood (for
 
 ## After the task
 
-Your address is hidden from the helper again 48 hours after the task is complete.
+Your address is hidden from the helper again 48 hours after the task is complete. We delete it 180 days after the last booking there, or after the task closes if nobody booked it, and at once if you delete your account.
 
 Our support team can open it only when they need to help with a booking, and every view is logged.
 

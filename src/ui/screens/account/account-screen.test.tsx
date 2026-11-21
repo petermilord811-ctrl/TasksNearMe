@@ -227,7 +227,7 @@ describe('AccountScreen', () => {
 
   it('offers the ready copy as a download until it expires', () => {
     mount({ ...jordanAccountData, privacy: exportReadyPrivacy });
-    expect(screen.getByRole('link', { name: 'Download my data (JSON)' })).toHaveAttribute('href', routes.api.dataExport());
+    expect(screen.getByRole('link', { name: 'Download my data (ZIP)' })).toHaveAttribute('href', routes.api.dataExport());
     expect(screen.getByText(/Ready to download until .*Nov 27/)).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Request a copy of my data' })).not.toBeInTheDocument();
   });

@@ -1,4 +1,4 @@
-import { asc, desc, eq, inArray, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, or } from 'drizzle-orm';
 import { createTranslator } from 'next-intl';
 import { localeOrDefault } from '@/contracts';
 import { messagesFor, perLocale } from '@/i18n/catalog';
@@ -20,11 +20,13 @@ import { communityPosts, communityReplies } from '@/modules/community/schema';
 import { taskQuestions } from '@/modules/questions/schema';
 import { savedSearches } from '@/modules/searches/schema';
 import { savedReplies } from '@/modules/messaging/schema';
-import { taskLocations, taskMarks, tasks } from '@/modules/tasks/schema';
+import { files, taskLocations, taskMarks, taskPhotos, tasks } from '@/modules/tasks/schema';
 import { toMessageSegments } from '@/modules/trust/message-segments';
 import { addressVerifications, backgroundChecks, identityCaptures, identityVerifications } from '@/modules/verification/schema';
 import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
+import type { FileStorage } from '@/integrations/storage';
+import type { ZipEntry } from './zip';
 import { subscriptions } from '@/modules/billing/schema';
 
 /**
@@ -61,8 +63,50 @@ function pricingOf(row: { pricingType: string | null; priceCents: number | null;
     : { type: 'fixed', priceCents: row.priceCents };
 }
 
+/** The download: a zip of the JSON and the person's photos (privacy rehearsal J-PR10). */
 export function dataExportFilename(now: Date): string {
+  return `tasksnearme-data-${now.toISOString().slice(0, 10)}.zip`;
+}
+
+/** The JSON inside it. */
+export function dataExportJsonName(now: Date): string {
   return `tasksnearme-data-${now.toISOString().slice(0, 10)}.json`;
+}
+
+const PHOTO_FOLDERS: Record<string, string> = { avatar: 'profile', task_photo: 'tasks', work_sample: 'work-samples', message: 'messages' };
+const extensionOf = (contentType: string) => ({ 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/png': 'png', 'image/heic': 'heic' })[contentType] ?? 'bin';
+
+/**
+ * The photos the person added themselves, for the copy's zip (ab, 2026-11-21): their profile photo, their tasks'
+ * photos, their work samples and the photos they sent in messages. Only files they own; never anyone else's, and never
+ * identity documents or proofs of address (deleted within 30 days of our decision). A file storage no longer has (the
+ * retention timer took it) is left out. Each is listed in the JSON with its place in the zip.
+ */
+export async function dataExportPhotos(db: Db, storage: FileStorage, userId: string): Promise<{ entries: ZipEntry[]; list: { file: string; kind: string; task: string | null; addedAt: string | null }[] }> {
+  const [user] = await db.select({ avatarFileId: users.avatarFileId }).from(users).where(eq(users.id, userId)).limit(1);
+  const samples = await db.select({ fileId: helperWorkSamples.fileId }).from(helperWorkSamples).where(eq(helperWorkSamples.userId, userId));
+  const sent = await db.select({ ids: messages.attachmentFileIds }).from(messages).where(eq(messages.senderUserId, userId));
+  const linked = [user?.avatarFileId ?? null, ...samples.map((row) => row.fileId), ...sent.flatMap((row) => (Array.isArray(row.ids) ? row.ids : []))].filter((id): id is string => Boolean(id));
+  const rows = await db
+    .select()
+    .from(files)
+    .where(and(eq(files.ownerUserId, userId), or(eq(files.kind, 'task_photo'), linked.length ? inArray(files.id, [...new Set(linked)]) : undefined)))
+    .orderBy(asc(files.createdAt));
+  const taskOf = new Map(
+    rows.length ? (await db.select({ fileId: taskPhotos.fileId, title: tasks.title }).from(taskPhotos).innerJoin(tasks, eq(tasks.id, taskPhotos.taskId)).where(inArray(taskPhotos.fileId, rows.map((row) => row.id)))).map((row) => [row.fileId, row.title]) : [],
+  );
+  const entries: ZipEntry[] = [];
+  const list: { file: string; kind: string; task: string | null; addedAt: string | null }[] = [];
+  for (const row of rows) {
+    const folder = PHOTO_FOLDERS[row.kind];
+    if (!folder || !row.storageKey || row.storageKey.startsWith('public/')) continue;
+    const body = await storage.get(row.storageKey);
+    if (!body) continue;
+    const name = `photos/${folder}/${row.id}.${extensionOf(row.contentType)}`;
+    entries.push({ name, body });
+    list.push({ file: name, kind: folder, task: taskOf.get(row.id) ?? null, addedAt: iso(row.createdAt) });
+  }
+  return { entries, list };
 }
 
 export async function buildDataExport(db: Db, cipher: FieldCipher, userId: string, now: Date): Promise<Record<string, unknown> | null> {

@@ -650,7 +650,7 @@
     "WY": "Wyoming"
   },
   "dataExport": {
-    "about": "Todo lo vinculado a tu cuenta de TasksNearMe. El dinero está en centavos de dólar estadounidense y las horas en UTC. Las demás personas aparecen solo con su nombre visible, y sus datos de contacto siguen ocultos, como en la app.",
+    "about": "Todo lo vinculado a tu cuenta de TasksNearMe. El dinero está en centavos de dólar estadounidense y las horas en UTC. Las demás personas aparecen solo con su nombre visible, y sus datos de contacto siguen ocultos, como en la app. Las fotos que agregaste están en la carpeta photos, con su lista en \"photos\". Los documentos de identidad no se incluyen: los eliminamos dentro de los 30 días posteriores a nuestra decisión.",
     "you": "tú",
     "someone": "alguien",
     "deletedAccount": "Cuenta eliminada",
