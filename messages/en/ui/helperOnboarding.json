@@ -288,7 +288,7 @@
       "services": "Helper setup: what you do",
       "servicesChosen": "Helper setup: two services chosen",
       "area": "Helper setup: where you help",
-      "about": "Helper setup: about you, with Claude's draft",
+      "about": "Helper setup: about you, with an AI draft",
       "aboutExamples": "Helper setup: about you, with examples",
       "aboutPhoto": "Helper setup: about you, with a photo",
       "invalid": "Helper setup: a part with errors",

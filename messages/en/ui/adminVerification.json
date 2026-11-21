@@ -278,7 +278,7 @@
     "duplicateOf": "The same ID is on: ",
     "duplicateCleared": "Staff found the same ID in order on {date}.",
     "reading": {
-      "waiting": "Not read automatically yet. Opening the photos or approving reads them; after {time} you can approve without the reading.",
+      "waiting": "Not read automatically yet: the reader gets to it within a few minutes. After {time} you can approve without the reading.",
       "no_reader": "No automatic reading here (no reader is set up): approving skips the duplicate-ID check, and the audit log says so.",
       "timed_out": "The automatic reading didn’t answer in time: approving skips the duplicate-ID check, and the audit log says so."
     }

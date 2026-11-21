@@ -21,19 +21,25 @@ import { addressLabel } from './state';
  * The automatic reading of documents (the job runner, a few at a time): each proof of address waiting
  * for review (completion plan 4.1) and the front of each ID waiting in our own check (6.1) is read once,
  * and only the yes/no answers are stored for staff beside it. ID photos are decrypted in memory for the
- * reading and never written anywhere else. Test accounts (reserved domains such as example.test) never
- * reach a provider; they get the stand-ins.
+ * reading and never written anywhere else. The readers are the server's own unless `DOCUMENT_READER=claude`
+ * (`src/integrations/ai/reader-choice.ts`); test accounts (reserved domains such as example.test) get the
+ * stand-ins, so they never reach a real reader.
  */
 
 /**
- * The ID reading's needs: where the photos are, their key, the reader (none in production without a key),
- * and the ID hash's key (from FIELD_ENCRYPTION_KEY unless given).
+ * The ID reading's needs: where the photos are, their key, the reader (null: none, so nothing is read), and
+ * the ID hash's key (from FIELD_ENCRYPTION_KEY unless given).
  */
 export interface IdReadingDeps {
   storage: FileStorage;
   files: ByteCipher;
   reader: IdDocumentReader | null;
   hasher?: KeyedHasher | null;
+  /**
+   * Only test accounts' photos (the stand-in, which reads nothing and answers at once); everyone else's are left
+   * for the job. What a request may do: the server's own reader runs only in the job.
+   */
+  testAccountsOnly?: boolean;
 }
 
 /** A minute's worth: the runner waits for these, so they go last and few at a time. */
@@ -113,7 +119,7 @@ async function readPendingProofs(
  * check waits for staff (the identity queue's `duplicate_id`).
  */
 export async function readPendingIds(db: Db, deps: IdReadingDeps, now: Date, scope: { userIds?: readonly string[] } = {}): Promise<number> {
-  if (!deps.reader) return 0;
+  if (!deps.reader && !deps.testAccountsOnly) return 0;
   const hasher = deps.hasher === undefined ? identityDocumentHasherFromEnv() : deps.hasher;
   const rows = await db
     .select({ capture: identityCaptures, email: users.email, firstName: users.firstName, lastName: users.lastName, homeMarketId: users.homeMarketId })
@@ -132,7 +138,8 @@ export async function readPendingIds(db: Db, deps: IdReadingDeps, now: Date, sco
   let read = 0;
   const zones = await marketTimeZones(db, rows.map((row) => row.homeMarketId));
   for (const { capture, email, firstName, lastName, homeMarketId } of rows) {
-    const reader = isReservedEmailAddress(email) ? createStandInIdReader() : deps.reader;
+    const reader = isReservedEmailAddress(email) ? createStandInIdReader() : deps.testAccountsOnly ? null : deps.reader;
+    if (!reader) continue;
     const [file] = await db.select().from(files).where(eq(files.id, capture.frontFileId!)).limit(1);
     const sealed = file ? await deps.storage.get(file.storageKey) : null;
     let bytes: Buffer | null = null;

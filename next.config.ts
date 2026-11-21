@@ -18,6 +18,21 @@ const nextConfig: NextConfig = {
   ...(process.env.TNM_E2E_BUILD === '1' ? { typescript: { ignoreBuildErrors: true } } : {}),
   // CI's preview build (.github/workflows/ci.yml, scripts/preview/bundle.sh): a self-contained server folder.
   ...(process.env.NEXT_OUTPUT === 'standalone' ? { output: 'standalone' as const } : {}),
+  // The server's document readers (src/integrations/ocr/engine.ts) load Tesseract, its English data and unpdf in a
+  // short-lived process of their own at run time, out of the bundler's sight, so the standalone folder is told to keep
+  // them. Only the LSTM builds of the core (the readers' engine mode); nothing is ever downloaded.
+  outputFileTracingIncludes: {
+    '/**': [
+      './node_modules/tesseract.js/package.json',
+      './node_modules/tesseract.js/src/**',
+      './node_modules/tesseract.js-core/package.json',
+      './node_modules/tesseract.js-core/tesseract-core-*lstm.{js,wasm}',
+      './node_modules/@tesseract.js-data/eng/4.0.0_best_int/**',
+      './node_modules/{regenerator-runtime,is-url,wasm-feature-detect,bmp-js}/**',
+      './node_modules/unpdf/package.json',
+      './node_modules/unpdf/dist/**',
+    ],
+  },
   ...(devPublicHost ? { allowedDevOrigins: [devPublicHost] } : {}),
   env: {
     // The test clock (blueprint 10 §3.1, src/platform/clock): built into development, into builds made

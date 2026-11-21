@@ -176,9 +176,9 @@ export const ID_READING_WAIT_MS = 15 * 60_000;
 export const APPROVED_WITHOUT_READING = 'approved without the automatic reading (no duplicate check)';
 
 /**
- * Photos in review without their automatic reading: approval reads them first when a reader is set up (and
- * waits up to `ID_READING_WAIT_MS` for one that doesn't answer); without a reader it goes ahead without the
- * duplicate check. Undefined once the reading ran, readable or not.
+ * Photos in review without their automatic reading: when a reader is set up, approval waits for it (the job
+ * reads within minutes; a test account's photos are read when staff open them) up to `ID_READING_WAIT_MS`;
+ * without a reader it goes ahead without the duplicate check. Undefined once the reading ran, readable or not.
  */
 export function identityReadingState(capture: { status: string; autoCheck: unknown; submittedAt: Date }, readerOn: boolean, now: Date): IdentityReadingState | undefined {
   if (capture.status !== 'submitted' || capture.autoCheck !== null) return undefined;
@@ -478,18 +478,19 @@ export async function decideAddress(db: Db, staff: StaffActor, input: AddressDec
  * again within the limits (an `under_18` rejection closes helper setup until staff allow new tries).
  *
  * Approval waits for the automatic reading (5.18), which also hashes the ID to find it on other accounts: with
- * `reading` (the reader the job uses) it reads the photos now if the job hasn't yet. A duplicate found that way
- * stops the approval (`version_conflict`: staff see the other account first). A reader that doesn't answer holds
- * approval for `ID_READING_WAIT_MS` (`not_ready`); with no reader, or after that, approval goes ahead and the audit
- * log says it was made without the reading.
+ * `reading` it reads the photos now if the job hasn't yet (the staff actions only test accounts' photos, with the
+ * stand-in: the server's own reader runs only in the job, never on a request). A duplicate found that way stops
+ * the approval (`version_conflict`: staff see the other account first). `readerOn` says a reader is set up when
+ * `reading` doesn't. A reading that hasn't come holds approval for `ID_READING_WAIT_MS` (`not_ready`); with no
+ * reader, or after that, approval goes ahead and the audit log says it was made without the reading.
  */
 /**
  * Reads one capture's photos now when it is in review without its automatic reading (staff opened it, or are
- * approving it), instead of waiting for the job. True when it read them. A failure is logged and leaves the
- * capture for the job.
+ * approving it), instead of waiting for the job: with `testAccountsOnly`, only a test account's. True when it read
+ * them. A failure is logged and leaves the capture for the job.
  */
 export async function readCaptureNow(db: Db, reading: IdReadingDeps | null | undefined, captureId: string, now: Date): Promise<boolean> {
-  if (!reading?.reader) return false;
+  if (!reading || (!reading.reader && !reading.testAccountsOnly)) return false;
   const [capture] = await db.select({ userId: identityCaptures.userId, status: identityCaptures.status, autoCheck: identityCaptures.autoCheck }).from(identityCaptures).where(eq(identityCaptures.id, captureId)).limit(1);
   if (!capture || capture.status !== 'submitted' || capture.autoCheck !== null) return false;
   try {
@@ -500,7 +501,13 @@ export async function readCaptureNow(db: Db, reading: IdReadingDeps | null | und
   }
 }
 
-export async function decideIdentityCapture(db: Db, staff: StaffActor, input: IdentityCaptureDecisionInput, now: Date, options: { reading?: IdReadingDeps | null } = {}): Promise<ActionResult> {
+export async function decideIdentityCapture(
+  db: Db,
+  staff: StaffActor,
+  input: IdentityCaptureDecisionInput,
+  now: Date,
+  options: { reading?: IdReadingDeps | null; readerOn?: boolean } = {},
+): Promise<ActionResult> {
   if (!canDecideVerification(staff)) return { ok: false, code: 'not_allowed' };
   const parsed = identityCaptureDecisionInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
@@ -509,7 +516,7 @@ export async function decideIdentityCapture(db: Db, staff: StaffActor, input: Id
   if (decision === 'approve') {
     let [capture] = await db.select().from(identityCaptures).where(eq(identityCaptures.id, captureId)).limit(1);
     if (!capture || capture.status !== 'submitted' || capture.userId === staff.id) return { ok: false, code: 'not_allowed' };
-    const reader = options.reading?.reader ? options.reading : null;
+    const reader = options.reading && (options.reading.reader || options.reading.testAccountsOnly) ? options.reading : null;
     if (capture.autoCheck === null && reader) {
       await readCaptureNow(db, reader, captureId, now);
       const flaggedBefore = capture.duplicateOfUserId;
@@ -517,7 +524,7 @@ export async function decideIdentityCapture(db: Db, staff: StaffActor, input: Id
       if (!capture) return { ok: false, code: 'not_allowed' };
       if (capture.duplicateOfUserId && !flaggedBefore) return { ok: false, code: 'version_conflict' };
     }
-    const reading = identityReadingState(capture, reader !== null, now);
+    const reading = identityReadingState(capture, options.readerOn ?? reader !== null, now);
     if (reading?.state === 'waiting') return { ok: false, code: 'not_ready' };
     if (reading?.state === 'skipped') withoutReading = reading.why;
   }

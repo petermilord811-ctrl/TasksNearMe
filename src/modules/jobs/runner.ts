@@ -112,8 +112,9 @@ export const JOBS: Job[] = [
   { name: 'cache.prune_tags', run: async (db, now) => { await pruneCacheTags(db, now); } },
   // Search engines: new or changed public pages to IndexNow, every 15 minutes, on the live site only (src/modules/seo).
   { name: 'seo.indexnow', run: async (_db, now) => { await announceChangedPages(now); } },
-  // Last: it waits on Claude (a few seconds a document).
   { name: 'earnings.transfers', run: async (db, now) => { const connect = stripeConnectFromEnv(); if (connect) await runScheduledTransfers(db, connect, now); } },
+  // Last: each document takes a few seconds of the server's own OCR, one at a time (src/integrations/ocr). This is
+  // the only place documents are read; requests never are.
   {
     name: 'verification.read_documents',
     run: (db, now) => {

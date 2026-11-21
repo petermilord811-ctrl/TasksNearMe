@@ -2,19 +2,21 @@ import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { z } from 'zod';
 import { ADDRESS_DOCUMENT_TYPES, type AddressDocumentType } from '@/contracts';
+import { createServerAddressReader } from '@/integrations/ocr';
 import { DEFAULT_CLAUDE_MODEL, type ClaudeClient } from './claude';
+import { documentReaderChoice } from './reader-choice';
 import { AiRefusedError, AiUnavailableError } from './writer';
-import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * Reads a proof-of-address document once for our trust team (completion plan 4.1): is it readable, does the
  * name match the account's, does the address match the one entered, is it dated within 90 days, and what
  * kind of document is it. Only these answers are kept, never the document's text; staff still decide.
- * With `ANTHROPIC_API_KEY` Claude reads it (images and PDFs, through the official SDK); without one,
- * development and tests use a stand-in that reads nothing and trusts the declared type.
- * Only Claude reads documents, never Kimi (whose turn first covers writing help and AI search): a proof of address
- * carries a name and an address, NVIDIA's free key may not be sent personal data, and another reader would need
- * its own privacy review and a check against staff decisions first.
+ * The server's own reader reads it by default, everywhere (owner, 2026-11-21: `src/integrations/ocr`, a PDF's own
+ * text or Tesseract on a photo, on this server; a scanned PDF without text is unreadable).
+ * `DOCUMENT_READER=claude` with `ANTHROPIC_API_KEY` hands it to Claude instead (images and PDFs, through the
+ * official SDK). Test accounts get the stand-in (`auto-check.ts`). Never Kimi: a proof of address carries a name
+ * and an address, NVIDIA's free key may not be sent personal data, and another reader would need its own privacy
+ * review first.
  */
 
 export interface AddressDocumentReading {
@@ -31,7 +33,7 @@ export interface AddressDocumentInput {
 }
 
 export interface AddressDocumentReader {
-  /** Kept with the answers (`claude:<model>`, `stand-in`). */
+  /** Kept with the answers (`server:ocr`, `claude:<model>`, `stand-in`). */
   readonly name: string;
   read(input: AddressDocumentInput): Promise<AddressDocumentReading>;
 }
@@ -107,7 +109,7 @@ export function createClaudeDocumentReader({ client, model }: { client: ClaudeCl
   };
 }
 
-/** Development and tests: reads nothing, trusts the declared type, and says so (staff see "not sure"). */
+/** Test accounts (reserved email domains, `auto-check.ts`): reads nothing, trusts the declared type, and says so (staff see "not sure"). */
 export function createStandInDocumentReader(): AddressDocumentReader {
   return {
     name: 'stand-in',
@@ -117,13 +119,12 @@ export function createStandInDocumentReader(): AddressDocumentReader {
   };
 }
 
-/** The reader for this environment: Claude with a key, the stand-in outside production, none in production without a key. */
-export function documentReaderFromEnv(env: Record<string, string | undefined> = process.env): AddressDocumentReader | null {
-  const key = env.ANTHROPIC_API_KEY?.trim();
-  if (key) {
+/** The reader for this environment: the server's own (any environment, no key), or Claude with `DOCUMENT_READER=claude` and a key. */
+export function documentReaderFromEnv(env: Record<string, string | undefined> = process.env): AddressDocumentReader {
+  if (documentReaderChoice(env) === 'claude') {
     const model = env.ANTHROPIC_MODEL?.trim() || DEFAULT_CLAUDE_MODEL;
     // The job runner reads in the background, so it can wait longer than a button in a form.
-    return createClaudeDocumentReader({ client: new Anthropic({ apiKey: key, timeout: 45_000, maxRetries: 1 }), model });
+    return createClaudeDocumentReader({ client: new Anthropic({ apiKey: env.ANTHROPIC_API_KEY!.trim(), timeout: 45_000, maxRetries: 1 }), model });
   }
-  return !devHelpersOn(env) ? null : createStandInDocumentReader();
+  return createServerAddressReader();
 }

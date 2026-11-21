@@ -57,11 +57,19 @@ describe('the ID reader', () => {
     await expect(createClaudeIdReader({ client: stubClient(new Error('network')).client, model: 'm' }).read(input())).rejects.toBeInstanceOf(AiUnavailableError);
   });
 
-  it('is Claude with a key, the stand-in without one, and nothing in production without one', async () => {
-    expect(idReaderFromEnv({ ANTHROPIC_API_KEY: 'sk-test', NODE_ENV: 'production' })?.name).toBe('claude:claude-opus-5-5');
-    expect(idReaderFromEnv({ ANTHROPIC_API_KEY: 'sk-test', ANTHROPIC_MODEL: 'claude-haiku-5-5' })?.name).toBe('claude:claude-haiku-5-5');
-    expect(idReaderFromEnv({ NODE_ENV: 'development' })?.name).toBe('stand-in');
-    expect(idReaderFromEnv({ NODE_ENV: 'production' })).toBeNull();
+  it("is the server's own reader everywhere, and Claude only when chosen with a key", async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(idReaderFromEnv({ NODE_ENV: 'production' }).name).toBe('server:ocr');
+    expect(idReaderFromEnv({ NODE_ENV: 'development' }).name).toBe('server:ocr');
+    // A key alone changes nothing: the owner chose the server (2026-11-21).
+    expect(idReaderFromEnv({ ANTHROPIC_API_KEY: 'sk-test', NODE_ENV: 'production', DOCUMENT_READER: '' }).name).toBe('server:ocr');
+    expect(idReaderFromEnv({ ANTHROPIC_API_KEY: 'sk-test', NODE_ENV: 'production', DOCUMENT_READER: 'claude' }).name).toBe('claude:claude-opus-5-5');
+    expect(idReaderFromEnv({ ANTHROPIC_API_KEY: 'sk-test', ANTHROPIC_MODEL: 'claude-haiku-5-5', DOCUMENT_READER: ' Claude ' }).name).toBe('claude:claude-haiku-5-5');
+    expect(warn).not.toHaveBeenCalled();
+    // Claude without its key, or a reader that doesn't exist: the server's, and the log says so.
+    expect(idReaderFromEnv({ NODE_ENV: 'production', DOCUMENT_READER: 'claude' }).name).toBe('server:ocr');
+    expect(idReaderFromEnv({ NODE_ENV: 'production', DOCUMENT_READER: 'kimi' }).name).toBe('server:ocr');
+    expect(warn).toHaveBeenCalledTimes(2);
     await expect(createStandInIdReader().read(input())).resolves.toEqual({ readable: true, documentType: 'drivers_license' });
   });
 });

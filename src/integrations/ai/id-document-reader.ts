@@ -2,22 +2,24 @@ import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
 import { IDENTITY_DOCUMENT_TYPES, type IdentityDocumentType } from '@/contracts';
+import { createServerIdReader } from '@/integrations/ocr';
 import { DEFAULT_CLAUDE_MODEL } from './claude';
+import { documentReaderChoice } from './reader-choice';
 import { AiRefusedError, AiUnavailableError } from './writer';
-import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * Reads the photo of an ID's front once for our trust team (our own ID check, stage 1; completion plan
  * 6.1): the name, birth date, expiry date, document type, issuing state and document number, as printed.
  * The app compares them with the account at once and keeps only yes/no answers and the expiry month and
  * year (`deriveIdentityAutoCheck`), plus a keyed hash of the number, state and birth date to spot the same
- * ID on two accounts (6.3); the name, birth date and document number themselves are never stored or logged. Claude is never
- * shown the selfie and never asked to compare faces: staff do that, and the provider double-checks.
- * With `ANTHROPIC_API_KEY` Claude reads it (through the official SDK, with the server-side fallback for a
- * declined request); without one, development and tests use a stand-in that reads nothing.
- * Only Claude reads IDs, never Kimi (whose turn first covers writing help and AI search): an ID is government data
- * with a name, birth date and number, NVIDIA's free key may not be sent personal data, and another reader would
- * need its own privacy review and a check against staff decisions first.
+ * ID on two accounts (6.3); the name, birth date and document number themselves are never stored or logged. No
+ * reader is shown the selfie or compares faces: staff do that, and the provider double-checks.
+ * The server's own reader reads it by default, everywhere (owner, 2026-11-21: `src/integrations/ocr`, Tesseract
+ * on this server: a passport's machine-readable zone with its check digits, or a US license or state ID's labeled
+ * fields; unreadable whenever it isn't sure). `DOCUMENT_READER=claude` with `ANTHROPIC_API_KEY` hands it to Claude
+ * instead (the official SDK, with the server-side fallback for a declined request). Test accounts get the
+ * stand-in (`auto-check.ts`). Never Kimi: an ID is government data with a name, birth date and number, NVIDIA's
+ * free key may not be sent personal data, and another reader would need its own privacy review first.
  */
 
 export interface IdDocumentReading {
@@ -42,7 +44,7 @@ export interface IdDocumentInput {
 }
 
 export interface IdDocumentReader {
-  /** Kept with the answers (`claude:<model>`, `stand-in`). */
+  /** Kept with the answers (`server:ocr`, `claude:<model>`, `stand-in`). */
   readonly name: string;
   read(input: IdDocumentInput): Promise<IdDocumentReading>;
 }
@@ -134,7 +136,7 @@ export function createClaudeIdReader({ client, model }: { client: ClaudeBetaClie
   };
 }
 
-/** Development and tests: reads nothing, trusts the declared type, and says so (staff see "not sure"). */
+/** Test accounts (reserved email domains, `auto-check.ts`): reads nothing, trusts the declared type, and says so (staff see "not sure"). */
 export function createStandInIdReader(): IdDocumentReader {
   return {
     name: 'stand-in',
@@ -144,13 +146,12 @@ export function createStandInIdReader(): IdDocumentReader {
   };
 }
 
-/** The reader for this environment: Claude with a key, the stand-in outside production, none in production without a key. */
-export function idReaderFromEnv(env: Record<string, string | undefined> = process.env): IdDocumentReader | null {
-  const key = env.ANTHROPIC_API_KEY?.trim();
-  if (key) {
+/** The reader for this environment: the server's own (any environment, no key), or Claude with `DOCUMENT_READER=claude` and a key. */
+export function idReaderFromEnv(env: Record<string, string | undefined> = process.env): IdDocumentReader {
+  if (documentReaderChoice(env) === 'claude') {
     const model = env.ANTHROPIC_MODEL?.trim() || DEFAULT_CLAUDE_MODEL;
     // The job runner reads in the background, so it can wait longer than a button in a form.
-    return createClaudeIdReader({ client: new Anthropic({ apiKey: key, timeout: 45_000, maxRetries: 1 }), model });
+    return createClaudeIdReader({ client: new Anthropic({ apiKey: env.ANTHROPIC_API_KEY!.trim(), timeout: 45_000, maxRetries: 1 }), model });
   }
-  return !devHelpersOn(env) ? null : createStandInIdReader();
+  return createServerIdReader();
 }

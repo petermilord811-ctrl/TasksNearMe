@@ -46,10 +46,14 @@ describe('the proof-of-address reader', () => {
     await expect(createClaudeDocumentReader({ client: stubClient(new Error('network')).client, model: 'm' }).read(input())).rejects.toBeInstanceOf(AiUnavailableError);
   });
 
-  it('is Claude with a key, the stand-in without one, and nothing in production without one', async () => {
-    expect(documentReaderFromEnv({ ANTHROPIC_API_KEY: 'sk-test', NODE_ENV: 'production' })?.name).toBe('claude:claude-opus-5-5');
-    expect(documentReaderFromEnv({ NODE_ENV: 'development' })?.name).toBe('stand-in');
-    expect(documentReaderFromEnv({ NODE_ENV: 'production' })).toBeNull();
+  it("is the server's own reader everywhere, and Claude only when chosen with a key", async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(documentReaderFromEnv({ NODE_ENV: 'production' }).name).toBe('server:ocr');
+    expect(documentReaderFromEnv({ NODE_ENV: 'development', DOCUMENT_READER: 'server' }).name).toBe('server:ocr');
+    expect(documentReaderFromEnv({ ANTHROPIC_API_KEY: 'sk-test', NODE_ENV: 'production' }).name).toBe('server:ocr');
+    expect(documentReaderFromEnv({ ANTHROPIC_API_KEY: 'sk-test', NODE_ENV: 'production', DOCUMENT_READER: 'claude' }).name).toBe('claude:claude-opus-5-5');
+    expect(documentReaderFromEnv({ ANTHROPIC_API_KEY: ' ', DOCUMENT_READER: 'claude' }).name).toBe('server:ocr');
+    expect(warn).toHaveBeenCalledTimes(1);
     await expect(createStandInDocumentReader().read(input())).resolves.toEqual({ readable: true, documentType: 'utility_bill' });
   });
 });

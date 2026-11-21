@@ -194,7 +194,7 @@
     "submit": "Send for review",
     "sending": "Sending…",
     "sent": "Sent. We'll review it and let you know.",
-    "privacy": "Only our trust and safety team opens the document, and every view is logged. First, an automated reader (Claude, by Anthropic) checks the name, address and date for them; we keep only its yes-or-no answers. We delete the document 30 days after we review it.",
+    "privacy": "Only our trust and safety team opens the document, and every view is logged. First, an automated reader on our own servers checks the name, address and date for them; we keep only its yes-or-no answers. We delete the document 30 days after we review it.",
     "moving": "Moved? Send a new proof",
     "requested": "Our team asked for a new proof of your home address. Send one below; offers are paused until it is approved.",
     "inReview": "We're reviewing your document. It usually takes a day or two, and you can set up payouts meanwhile.",
@@ -371,7 +371,7 @@
       "duplicate_id": "This ID is already used on another account. Contact support if you think this is a mistake.",
       "other": "We couldn't accept these photos. Take them again, or contact support if this keeps happening."
     },
-    "privacy": "Only our trust and safety team sees your photos, and every view is logged. An automated reader (Claude, by Anthropic) reads the name, dates and ID number on the front of your ID for them; we keep only its yes-or-no answers, never your name, birth date or ID number, plus a one-way code made from the number, issuing state and birth date that can't be turned back into them, only to spot the same ID on two accounts. Your photos are stored encrypted and deleted no later than 30 days after our decision.",
+    "privacy": "Only our trust and safety team sees your photos, and every view is logged. An automated reader on our own servers reads the name, dates and ID number on the front of your ID for them; we keep only its yes-or-no answers, never your name, birth date or ID number, plus a one-way code made from the number, issuing state and birth date that can't be turned back into them, only to spot the same ID on two accounts. Your photos are stored encrypted and deleted no later than 30 days after our decision.",
     "errors": {
       "photo": {
         "required": "Take this photo first.",

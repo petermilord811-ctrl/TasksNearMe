@@ -23,11 +23,12 @@ export function aiWritingSetUp(env: Record<string, string | undefined> = process
 }
 
 /**
- * ID and address documents can be read here: Claude has a key, or this isn't production (the stand-ins), as
- * `documentReaderFromEnv` and `idReaderFromEnv` decide. Never Kimi, so a Kimi key alone sets up writing, not reading.
+ * ID and address documents can be read here: always, in every environment, since the server's own readers need no
+ * key (`reader-choice.ts`; Claude only with `DOCUMENT_READER=claude` and its key). Never Kimi. The job runner does
+ * the reading (verification.read_documents); staff pages only need to know that it will.
  */
-export function aiReadingSetUp(env: Record<string, string | undefined> = process.env): boolean {
-  return Boolean(env.ANTHROPIC_API_KEY?.trim()) || devHelpersOn(env);
+export function aiReadingSetUp(_env: Record<string, string | undefined> = process.env): boolean {
+  return true;
 }
 
 export { DEFAULT_CLAUDE_MODEL } from './claude';

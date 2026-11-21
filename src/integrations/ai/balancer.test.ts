@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { aiProviderOrder, aiWriterFromEnv, createBalancedWriter, type ModelHealth } from './balancer';
-import { aiWritingSetUp } from './index';
+import { aiReadingSetUp, aiWritingSetUp } from './index';
 import { createTaskDrafter } from './task-drafter';
 import { AiRateLimitedError, AiRefusedError, AiUnavailableError, type AiWriter } from './writer';
 
@@ -231,5 +231,11 @@ describe('the balancer for this environment', () => {
     expect(aiWritingSetUp({ NODE_ENV: 'production', KIMI_API_KEY: 'k' })).toBe(false);
     expect(aiWritingSetUp({ NODE_ENV: 'production', GROQ_API_KEY: 'g' })).toBe(true);
     expect(aiWritingSetUp({ NODE_ENV: 'production', ANTHROPIC_API_KEY: 'c' })).toBe(false);
+  });
+
+  it('reads documents on our own server everywhere, keys or not: a model key sets up the writing only', () => {
+    expect(aiReadingSetUp({ NODE_ENV: 'production' })).toBe(true);
+    expect(aiReadingSetUp({ NODE_ENV: 'development' })).toBe(true);
+    expect(aiWritingSetUp({ NODE_ENV: 'production' })).toBe(false);
   });
 });

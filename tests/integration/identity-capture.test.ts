@@ -203,10 +203,15 @@ describe('the automatic reading', () => {
     expect(await readPendingIds(db, { storage, files: fileCipher, reader }, at(0.2), scope)).toBe(0);
   });
 
-  it("leaves it to staff when the reader can't answer, and does nothing without a reader", async () => {
-    await db.update(identityCaptures).set({ autoCheck: null }).where(eq(identityCaptures.userId, READER));
+  it("leaves it to staff when the reader can't answer, does nothing without a reader, and on a request reads test accounts only", async () => {
+    await db.update(identityCaptures).set({ autoCheck: null }).where(inArray(identityCaptures.userId, [READER, MAIN]));
     const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(await readPendingIds(db, { storage, files: fileCipher, reader: null }, at(0.2), { userIds: [READER] })).toBe(0);
+    // What a staff request may read: a test account's photos (the stand-in), never anyone else's (they wait for the job).
+    const requestOnly = { storage, files: fileCipher, reader: null, testAccountsOnly: true };
+    expect(await readPendingIds(db, requestOnly, at(0.2), { userIds: [READER, MAIN] })).toBe(1);
+    expect((await capturesOf(READER))[0]!.autoCheck).toBeNull();
+    expect((await capturesOf(MAIN))[0]!.autoCheck).toEqual({ readable: true, documentType: 'drivers_license', by: 'stand-in', at: at(0.2).toISOString() });
     expect(await readPendingIds(db, { storage, files: fileCipher, reader: stub(async () => { throw new AiUnavailableError('down'); }) }, at(0.2), { userIds: [READER] })).toBe(1);
     quiet.mockRestore();
     expect((await capturesOf(READER))[0]!.autoCheck).toEqual({ readable: false, by: 'stub (unavailable)', at: at(0.2).toISOString() });

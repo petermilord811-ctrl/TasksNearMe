@@ -194,7 +194,7 @@
     "submit": "Enviar para revisión",
     "sending": "Enviando…",
     "sent": "Enviado. Lo revisaremos y te avisaremos.",
-    "privacy": "Solo nuestro equipo de confianza y seguridad abre el documento, y cada vez que lo ve queda registrado. Antes, un lector automatizado (Claude, de Anthropic) revisa por ellos el nombre, la dirección y la fecha; solo conservamos sus respuestas de sí o no. Eliminamos el documento 30 días después de revisarlo.",
+    "privacy": "Solo nuestro equipo de confianza y seguridad abre el documento, y cada vez que lo ve queda registrado. Antes, un lector automatizado en nuestros propios servidores revisa por ellos el nombre, la dirección y la fecha; solo conservamos sus respuestas de sí o no. Eliminamos el documento 30 días después de revisarlo.",
     "moving": "¿Te mudaste? Envía un nuevo comprobante",
     "requested": "Nuestro equipo pidió un nuevo comprobante de tu domicilio. Envíalo abajo; tus ofertas están en pausa hasta que se apruebe.",
     "inReview": "Estamos revisando tu documento. Suele tardar uno o dos días, y mientras tanto puedes configurar tus pagos.",
@@ -371,7 +371,7 @@
       "duplicate_id": "Esta identificación ya se usa en otra cuenta. Contacta a soporte si crees que es un error.",
       "other": "No pudimos aceptar estas fotos. Tómalas de nuevo o contacta a soporte si sigue pasando."
     },
-    "privacy": "Solo nuestro equipo de confianza y seguridad ve tus fotos, y cada vista queda registrada. Un lector automático (Claude, de Anthropic) lee para ellos el nombre, las fechas y el número del frente de tu identificación; guardamos solo sus respuestas de sí o no, nunca tu nombre, tu fecha de nacimiento ni tu número de identificación, además de un código de un solo sentido hecho con el número, el estado emisor y la fecha de nacimiento, que no permite recuperarlos, solo para detectar la misma identificación en dos cuentas. Tus fotos se guardan cifradas y se borran a más tardar 30 días después de nuestra decisión.",
+    "privacy": "Solo nuestro equipo de confianza y seguridad ve tus fotos, y cada vista queda registrada. Un lector automático en nuestros propios servidores lee para ellos el nombre, las fechas y el número del frente de tu identificación; guardamos solo sus respuestas de sí o no, nunca tu nombre, tu fecha de nacimiento ni tu número de identificación, además de un código de un solo sentido hecho con el número, el estado emisor y la fecha de nacimiento, que no permite recuperarlos, solo para detectar la misma identificación en dos cuentas. Tus fotos se guardan cifradas y se borran a más tardar 30 días después de nuestra decisión.",
     "errors": {
       "photo": {
         "required": "Primero toma esta foto.",
