@@ -1,7 +1,7 @@
 'use client';
 
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Map as MapLibreMap, Marker, getVersion, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl';
 import { routes } from '@/contracts';
@@ -44,8 +44,9 @@ function serviceGeoJson(serviceArea: AreaMapProps['serviceArea']) {
 
 export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, activeId, onActiveChange, onSelect, label, groupLabel, visible, onReady, onFailed }: Omit<AreaMapProps, 'styleUrl' | 'attribution'> & { styleUrl: string; visible: boolean; onReady: () => void; onFailed: () => void }) {
   const t = useTranslations('common');
-  // How to move the map, in the page's language (MapLibre says it when a gesture would have scrolled the page).
-  const gestureText = useRef({ twoFingers: t('mapTwoFingers'), ctrlZoom: t('mapCtrlZoom'), cmdZoom: t('mapCmdZoom') });
+  // How to move the map, in the page's language (MapLibre says it when a gesture would have scrolled the page), and
+  // the name of its canvas: a region in the Tab order that MapLibre calls "Map" in English otherwise (accessibility pass).
+  const gestureText = useRef({ twoFingers: t('mapTwoFingers'), ctrlZoom: t('mapCtrlZoom'), cmdZoom: t('mapCmdZoom'), canvas: t('mapKeyboard') });
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const markers = useRef<{ marker: Marker; element: HTMLButtonElement; ids: string[] }[]>([]);
@@ -54,6 +55,13 @@ export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, act
   useEffect(() => {
     latest.current = { places, serviceArea, activeId, onActiveChange, onSelect, groupLabel, onReady, onFailed };
   });
+  // Callers build `places` and `serviceArea` per render (find work's service ring is a new object each time). Keyed by
+  // value, a re-render with the same data (a hover, a marker's focus) keeps the map as it is instead of framing it again
+  // and rebuilding the markers, which dropped keyboard focus on every marker (accessibility pass).
+  const placesKey = places.map((place) => `${place.id}:${place.point.lat},${place.point.lng}:${place.radiusMeters}:${place.label}:${place.name}`).join('|');
+  const stablePlaces = useMemo(() => places, [placesKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const serviceKey = serviceArea ? `${serviceArea.center.lat},${serviceArea.center.lng},${serviceArea.radiusMiles}` : '';
+  const stableServiceArea = useMemo(() => serviceArea, [serviceKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const highlightRef = useRef<(id: string | null) => void>(() => {});
   const renderRef = useRef<(force?: boolean) => void>(() => {});
   const frameRef = useRef<() => void>(() => {});
@@ -76,6 +84,7 @@ export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, act
         scrollZoom: true,
         cooperativeGestures: true,
         locale: {
+          'Map.Title': gestureText.current.canvas,
           'CooperativeGesturesHandler.MobileHelpText': gestureText.current.twoFingers,
           'CooperativeGesturesHandler.WindowsHelpText': gestureText.current.ctrlZoom,
           'CooperativeGesturesHandler.MacHelpText': gestureText.current.cmdZoom,
@@ -132,6 +141,8 @@ export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, act
       const zoom = Math.round(map.getZoom() * 4) / 4;
       if (!force && zoom === lastZoom) return;
       lastZoom = zoom;
+      // A marker with keyboard focus gets it back once the markers are rebuilt (a zoom groups them anew).
+      const focused = markers.current.find((item) => item.element === document.activeElement)?.ids[0];
       for (const item of markers.current) item.marker.remove();
       markers.current = [];
       const now = latest.current;
@@ -163,6 +174,7 @@ export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, act
         const marker = new Marker({ element, anchor: 'center' }).setLngLat(at).addTo(map);
         markers.current.push({ marker, element, ids: group.ids });
       }
+      if (focused) markers.current.find((item) => item.ids.includes(focused))?.element.focus({ preventScroll: true });
       highlight(latest.current.activeId ?? null);
     };
 
@@ -214,6 +226,10 @@ export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, act
       paint();
       frame();
       renderMarkers(true);
+      // A drawn marker with keyboard focus hands it to the live marker for the same place before the drawn map goes
+      // (accessibility pass: focus fell back to the page when the live map finished loading).
+      const handoff = document.activeElement instanceof HTMLElement ? document.activeElement.dataset.placeId : undefined;
+      if (handoff) markers.current.find((item) => item.ids.includes(handoff))?.element.focus({ preventScroll: true });
       latest.current.onReady();
     };
     map.on('load', setUpMap);
@@ -243,11 +259,11 @@ export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, act
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
-    (map.getSource(PLACES) as GeoJSONSource | undefined)?.setData(placesGeoJson(places));
-    (map.getSource(SERVICE) as GeoJSONSource | undefined)?.setData(serviceGeoJson(serviceArea));
+    (map.getSource(PLACES) as GeoJSONSource | undefined)?.setData(placesGeoJson(stablePlaces));
+    (map.getSource(SERVICE) as GeoJSONSource | undefined)?.setData(serviceGeoJson(stableServiceArea));
     frameRef.current();
     renderRef.current(true);
-  }, [places, serviceArea]);
+  }, [stablePlaces, stableServiceArea]);
 
   useEffect(() => { highlightRef.current(activeId ?? null); }, [activeId]);
 

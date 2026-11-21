@@ -44,6 +44,7 @@
   "mapTwoFingers": "Usa dos dedos para mover el mapa",
   "mapCtrlZoom": "Pellizca, o mantén Ctrl y desplázate, para acercar el mapa",
   "mapCmdZoom": "Pellizca, o mantén ⌘ y desplázate, para acercar el mapa",
+  "mapKeyboard": "Mapa. Las flechas lo mueven; + y − lo acercan o alejan.",
   "days": {
     "today": "Hoy",
     "tomorrow": "Mañana"

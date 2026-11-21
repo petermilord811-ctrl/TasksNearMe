@@ -173,6 +173,15 @@ test('on phones, find work switches between the list and the map', async ({ page
   await expect(page).toHaveURL(/view=map/);
   await expect(page.getByRole('complementary', { name: "Map of the tasks' general areas" })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Open tasks' })).toBeHidden();
+  // The map's markers take keyboard focus one after another (accessibility pass: focusing one rebuilt them all, and
+  // focus fell back to the page).
+  const markers = page.getByRole('complementary', { name: "Map of the tasks' general areas" }).getByRole('button');
+  await expect(markers.first()).toBeVisible({ timeout: 30_000 });
+  expect(await markers.count()).toBeGreaterThan(1);
+  await markers.first().focus();
+  await page.keyboard.press('Tab');
+  // The map's <aside> is the complementary landmark (implicit role, no role attribute).
+  await expect.poll(() => page.evaluate(() => document.activeElement?.tagName === 'BUTTON' && document.activeElement.closest('aside') !== null)).toBe(true);
   await page.getByRole('link', { name: 'List' }).click();
   await expect(page.getByRole('region', { name: 'Open tasks' })).toBeVisible();
 });

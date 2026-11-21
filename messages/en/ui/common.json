@@ -44,6 +44,7 @@
   "mapTwoFingers": "Use two fingers to move the map",
   "mapCtrlZoom": "Pinch, or hold Ctrl and scroll, to zoom the map",
   "mapCmdZoom": "Pinch, or hold ⌘ and scroll, to zoom the map",
+  "mapKeyboard": "Map. Arrow keys move it; + and − zoom.",
   "days": {
     "today": "Today",
     "tomorrow": "Tomorrow"

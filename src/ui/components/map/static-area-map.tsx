@@ -62,6 +62,8 @@ export function StaticAreaMap({ places, serviceArea, fallbackCenter, activeId, o
         type="button"
         style={style}
         aria-label={single ? single.name : groupLabel(spot.ids.length)}
+        // The live map hands keyboard focus over by this when it replaces the drawn one (accessibility pass).
+        data-place-id={spot.ids[0]}
         onMouseEnter={() => onActiveChange?.(spot.ids[0] ?? null)}
         onMouseLeave={() => onActiveChange?.(null)}
         onFocus={() => onActiveChange?.(spot.ids[0] ?? null)}
