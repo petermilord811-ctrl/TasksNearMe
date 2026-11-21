@@ -112,7 +112,9 @@ export function AccountMenu({ viewer, onSignOut, onSwitchLanguage, onModeChange,
 
   return (
     <div className="relative shrink-0">
-      <DropdownMenu open={open} onOpenChange={setOpen}>
+      {/* Not modal: a modal menu hid every other part of the page from assistive tech and locked its scroll as it
+          opened, restyling the whole page (speed on a phone); a menu needs neither. */}
+      <DropdownMenu modal={false} open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
           <Button ref={triggerRef} type="button" variant="ghost" size="icon" className="group/avatar rounded-full p-0 hover:bg-transparent active:scale-95 dark:hover:bg-transparent" aria-label={t('accountMenu', { name: viewer.displayName, initials: viewer.initials })} aria-describedby={statusId} aria-busy={pending} disabled={pending}>
             {pending ? <LoaderCircle aria-hidden="true" className="size-5 animate-spin motion-reduce:animate-none" /> : viewer.photo ? <AvatarPhoto src={viewer.photo.src} alt="" size={44} className={AVATAR} fallback={initials} /> : initials}
