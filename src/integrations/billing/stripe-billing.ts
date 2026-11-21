@@ -1,4 +1,4 @@
-import { createStripeClient, type StripeClient } from '@/integrations/payments/stripe';
+import { createStripeClient, StripeError, type StripeClient } from '@/integrations/payments/stripe';
 import type { BillingProvider, BillingSubscription } from './index';
 
 /**
@@ -107,6 +107,14 @@ export function createStripeBilling(config: { secretKey: string; fetch?: typeof 
     },
     async cancelNow(subscriptionId) {
       await stripe.request('DELETE', `/subscriptions/${encodeURIComponent(subscriptionId)}`);
+    },
+    async forgetCustomer(customerId) {
+      try {
+        await stripe.request('DELETE', `/customers/${encodeURIComponent(customerId)}`);
+      } catch (error) {
+        // Already gone.
+        if (!(error instanceof StripeError && error.status === 404)) throw error;
+      }
     },
   };
 }

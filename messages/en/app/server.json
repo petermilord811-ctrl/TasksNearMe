@@ -648,5 +648,15 @@
     "WV": "West Virginia",
     "WI": "Wisconsin",
     "WY": "Wyoming"
+  },
+  "dataExport": {
+    "about": "Everything linked to your TasksNearMe account. Money is in US cents and times are UTC. Other people appear by their display name only, and their contact details stay hidden, as they do in the app.",
+    "you": "you",
+    "someone": "someone",
+    "deletedAccount": "Deleted account",
+    "hidden": "[{detail, select, phone {phone} other {email}} hidden]",
+    "card": "{brand} ending {last4}",
+    "cardWithoutBrand": "card ending {last4}",
+    "emailCode": "email code"
   }
 }

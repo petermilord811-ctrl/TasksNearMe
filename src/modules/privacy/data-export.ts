@@ -1,12 +1,15 @@
 import { asc, desc, eq, inArray, or } from 'drizzle-orm';
-import { accounts, agreements, users } from '@/modules/accounts/schema';
+import { createTranslator } from 'next-intl';
+import { localeOrDefault } from '@/contracts';
+import { messagesFor, perLocale } from '@/i18n/catalog';
+import { accounts, agreements, passkeys, sessions, users } from '@/modules/accounts/schema';
 import { availabilityPosts } from '@/modules/availability/schema';
 import { bookings } from '@/modules/bookings/schema';
 import { earnings, payouts } from '@/modules/earnings/schema';
 import { invites } from '@/modules/invites/schema';
-import { areas, categories } from '@/modules/markets/schema';
+import { areas, categories, markets } from '@/modules/markets/schema';
 import { blocks, messages, threadParticipants } from '@/modules/messaging/schema';
-import { notificationPreferences, notifications } from '@/modules/notifications/schema';
+import { notificationPreferences, notifications, pushSubscriptions } from '@/modules/notifications/schema';
 import { offers } from '@/modules/offers/schema';
 import { paymentMethods, payments, refunds } from '@/modules/payments/schema';
 import { helperProfiles, helperServices, helperWorkSamples } from '@/modules/profiles/schema';
@@ -29,8 +32,11 @@ import { subscriptions } from '@/modules/billing/schema';
  * person keeps. Their own words and details are as written (their addresses decrypted). Other people
  * appear by display name only, and what others wrote passes through the app's own masking, so contact
  * details stay hidden here as they are in the app. Money is in US cents; times are UTC (ISO 8601).
- * Never included: other people's contact details, provider secrets or tokens, internal staff notes,
- * moderation reasons, or verification documents (proof-of-address files and ID photos are deleted after review).
+ * The words in it are in the person's language (privacy rehearsal J-PR7); field names and status codes stay as they
+ * are, for programs that read the file.
+ * Never included: other people's contact details, provider secrets or tokens (sign-in tokens, passkeys' keys, push
+ * endpoints), internal staff notes, moderation reasons, or verification documents (proof-of-address files and ID
+ * photos are deleted after review).
  */
 
 export const DATA_EXPORT_FORMAT = 'tasksnearme-data-export/1';
@@ -39,11 +45,13 @@ const NOTIFICATION_LIMIT = 1_000;
 
 const iso = (value: Date | string | null | undefined): string | null => (value instanceof Date ? value.toISOString() : (value ?? null));
 
+const tFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.dataExport' }));
+
 /** What someone else wrote, with contact details hidden as the app hides them. */
-function masked(text: string | null): string | null {
+function masked(text: string | null, hidden: (detail: 'phone' | 'email') => string): string | null {
   if (text === null) return null;
   return toMessageSegments(text, { mask: true })
-    .map((segment) => (segment.kind === 'text' ? segment.text : `[${segment.detail} hidden]`))
+    .map((segment) => (segment.kind === 'text' ? segment.text : hidden(segment.detail)))
     .join('');
 }
 
@@ -60,6 +68,8 @@ export function dataExportFilename(now: Date): string {
 export async function buildDataExport(db: Db, cipher: FieldCipher, userId: string, now: Date): Promise<Record<string, unknown> | null> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return null;
+  const t = tFor(localeOrDefault(user.locale));
+  const hide = (text: string | null) => masked(text, (detail) => t('hidden', { detail }));
   const decrypt = (ciphertext: string | null): unknown => {
     if (!ciphertext) return null;
     try {
@@ -73,14 +83,23 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
   const names = new Map<string, string>();
   const nameOf = async (ids: (string | null)[]) => {
     const missing = [...new Set(ids.filter((id): id is string => Boolean(id) && !names.has(id!)))];
-    if (missing.length) for (const row of await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, missing))) names.set(row.id, row.name);
+    if (missing.length) {
+      for (const row of await db.select({ id: users.id, name: users.name, status: users.status }).from(users).where(inArray(users.id, missing))) {
+        names.set(row.id, row.status === 'deleted' ? t('deletedAccount') : row.name);
+      }
+    }
   };
-  const who = (id: string | null) => (!id ? 'TasksNearMe' : id === userId ? 'you' : (names.get(id) ?? 'someone'));
+  const who = (id: string | null) => (!id ? 'TasksNearMe' : id === userId ? t('you') : (names.get(id) ?? t('someone')));
 
   // ---- The account ----
   const signIns = await db.select({ provider: accounts.providerId, createdAt: accounts.createdAt }).from(accounts).where(eq(accounts.userId, userId));
   const agreementRows = await db.select().from(agreements).where(eq(agreements.userId, userId)).orderBy(asc(agreements.acceptedAt));
   const preferenceRows = await db.select().from(notificationPreferences).where(eq(notificationPreferences.userId, userId));
+  const [homeMarket] = await db.select({ name: markets.name, state: markets.state }).from(markets).where(eq(markets.id, user.homeMarketId)).limit(1);
+  // Where they're signed in, their passkeys and the devices that get their notifications (J-PR7): no token or key.
+  const sessionRows = await db.select({ ip: sessions.ipAddress, browser: sessions.userAgent, createdAt: sessions.createdAt, expiresAt: sessions.expiresAt }).from(sessions).where(eq(sessions.userId, userId)).orderBy(asc(sessions.createdAt));
+  const passkeyRows = await db.select({ name: passkeys.name, deviceType: passkeys.deviceType, backedUp: passkeys.backedUp, createdAt: passkeys.createdAt }).from(passkeys).where(eq(passkeys.userId, userId)).orderBy(asc(passkeys.createdAt));
+  const pushRows = await db.select({ browser: pushSubscriptions.userAgent, createdAt: pushSubscriptions.createdAt, lastSentAt: pushSubscriptions.lastSentAt }).from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId)).orderBy(asc(pushSubscriptions.createdAt));
 
   // ---- Helping ----
   const [profile] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, userId)).limit(1);
@@ -153,8 +172,7 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
   return {
     format: DATA_EXPORT_FORMAT,
     generatedAt: now.toISOString(),
-    about:
-      'Everything linked to your TasksNearMe account. Money is in US cents and times are UTC. Other people appear by their display name only, and their contact details stay hidden, as they do in the app.',
+    about: t('about'),
     account: {
       id: user.id,
       email: user.email,
@@ -164,13 +182,18 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
       phone: user.phone,
       phoneVerifiedAt: iso(user.phoneVerifiedAt),
       mode: user.mode,
+      language: user.locale,
+      homeCity: homeMarket ? `${homeMarket.name}, ${homeMarket.state}` : null,
       status: user.status,
       createdAt: iso(user.createdAt),
       termsAcceptedAt: iso(user.termsAcceptedAt),
       termsVersion: user.termsVersion,
       adultAttestedAt: iso(user.adultAttestedAt),
-      signInMethods: [{ method: 'email code', since: iso(user.createdAt) }, ...signIns.filter((row) => row.provider !== 'credential').map((row) => ({ method: row.provider, since: iso(row.createdAt) }))],
+      signInMethods: [{ method: t('emailCode'), since: iso(user.createdAt) }, ...signIns.filter((row) => row.provider !== 'credential').map((row) => ({ method: row.provider, since: iso(row.createdAt) }))],
     },
+    signedIn: sessionRows.map((row) => ({ browser: row.browser, ip: row.ip, since: iso(row.createdAt), until: iso(row.expiresAt) })),
+    passkeys: passkeyRows.map((row) => ({ name: row.name, device: row.deviceType, backedUp: row.backedUp, addedAt: iso(row.createdAt) })),
+    notificationDevices: pushRows.map((row) => ({ browser: row.browser, addedAt: iso(row.createdAt), lastSentAt: iso(row.lastSentAt) })),
     agreements: agreementRows.map((row) => ({ document: row.doc, version: row.version, acceptedAt: iso(row.acceptedAt), ip: row.ip, browser: row.userAgent })),
     notificationPreferences: preferenceRows.map((row) => ({ topic: row.topic, channel: row.channel, enabled: row.enabled === 'true' })),
     helperProfile: profile
@@ -180,6 +203,7 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
           bio: profile.bio,
           status: profile.status,
           area: profileArea?.name ?? null,
+          homeZip: profile.homeZip,
           serviceRadiusKm: profile.serviceRadiusKm,
           remoteWork: profile.remoteOk,
           tools: profile.tools,
@@ -211,7 +235,7 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
       address: row.locationId ? (addressOfLocation.get(row.locationId) ?? null) : null,
       postedAt: iso(row.publishedAt ?? row.createdAt),
     })),
-    offersReceived: offersReceived.map((row) => ({ task: titleOf.get(row.taskId) ?? null, from: who(row.helperUserId), pricing: pricingOf(row), proposedStart: iso(row.proposedStart), message: masked(row.message), status: row.status, sentAt: iso(row.createdAt) })),
+    offersReceived: offersReceived.map((row) => ({ task: titleOf.get(row.taskId) ?? null, from: who(row.helperUserId), pricing: pricingOf(row), proposedStart: iso(row.proposedStart), message: hide(row.message), status: row.status, sentAt: iso(row.createdAt) })),
     offersMade: offersMade.map((row) => ({ task: titleOf.get(row.taskId) ?? null, pricing: pricingOf(row), proposedStart: iso(row.proposedStart), message: row.message, brings: row.brings, status: row.status, sentAt: iso(row.createdAt), updatedAt: iso(row.updatedAt) })),
     invites: inviteRows.map((row) => ({
       task: titleOf.get(row.taskId) ?? null,
@@ -219,7 +243,7 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
       with: who(row.posterUserId === userId ? row.helperUserId : row.posterUserId),
       pricing: pricingOf(row),
       start: iso(row.startAt),
-      message: row.posterUserId === userId ? row.message : masked(row.message),
+      message: row.posterUserId === userId ? row.message : hide(row.message),
       status: row.status,
       sentAt: iso(row.createdAt),
     })),
@@ -235,7 +259,7 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
       cancelReason: row.cancelReason,
     })),
     savedAndHiddenTasks: marks.map((row) => ({ task: titleOf.get(row.taskId) ?? row.taskId, mark: row.kind, at: iso(row.createdAt) })),
-    payments: paymentRows.map((row) => ({ booking: row.bookingId, purpose: row.purpose, amountCents: row.amountCents, status: row.status, card: row.methodLast4 ? `${row.methodBrand ?? 'card'} ending ${row.methodLast4}` : null, at: iso(row.createdAt) })),
+    payments: paymentRows.map((row) => ({ booking: row.bookingId, purpose: row.purpose, amountCents: row.amountCents, status: row.status, card: row.methodLast4 ? (row.methodBrand ? t('card', { brand: row.methodBrand, last4: row.methodLast4 }) : t('cardWithoutBrand', { last4: row.methodLast4 })) : null, at: iso(row.createdAt) })),
     plans: planRows.map((row) => ({ plan: row.plan, interval: row.interval, priceCents: row.priceCents, status: row.status, periodEnd: iso(row.currentPeriodEnd), cancelAtPeriodEnd: row.cancelAtPeriodEnd, endedAt: iso(row.endedAt), at: iso(row.createdAt) })),
     refunds: refundRows.map((row) => ({ booking: row.bookingId, amountCents: row.amountCents, reason: row.reason, status: row.status, at: iso(row.createdAt) })),
     paymentMethods: methodRows.map((row) => ({ brand: row.brand, last4: row.last4, expires: row.expMonth && row.expYear ? `${String(row.expMonth).padStart(2, '0')}/${row.expYear}` : null, default: row.isDefault, removedAt: iso(row.detachedAt), addedAt: iso(row.createdAt) })),
@@ -244,12 +268,12 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
     payouts: payoutRows.map((row) => ({ amountCents: row.amountCents, method: row.method, feeCents: row.feeCents, netCents: row.amountCents - row.feeCents, status: row.status, arrivalDate: row.arrivalDate, bankLast4: row.bankLast4, at: iso(row.createdAt) })),
     rewards: rewardRows.map((row) => ({ program: row.program, amountCents: row.amountCents, status: row.status, earnedAt: iso(row.createdAt), deliveredAt: iso(row.deliveredAt) })),
     reviewsWritten: reviewsWritten.map((row) => ({ about: who(row.subjectUserId), booking: row.bookingId, rating: row.rating, tags: row.tags, text: row.body, status: row.status, publishedAt: iso(row.publishedAt), writtenAt: iso(row.createdAt) })),
-    reviewsAboutYou: reviewsAbout.map((row) => ({ from: who(row.authorUserId), booking: row.bookingId, rating: row.rating, tags: row.tags, text: masked(row.body), publishedAt: iso(row.publishedAt) })),
+    reviewsAboutYou: reviewsAbout.map((row) => ({ from: who(row.authorUserId), booking: row.bookingId, rating: row.rating, tags: row.tags, text: hide(row.body), publishedAt: iso(row.publishedAt) })),
     savedHelpers: savedRows.map((row) => ({ helper: who(row.helperUserId), savedAt: iso(row.createdAt) })),
     blocked: blockRows.map((row) => ({ person: who(row.blockedId), since: iso(row.createdAt) })),
     messages: messageRows
       .filter((row) => row.body)
-      .map((row) => ({ conversation: row.threadId, from: who(row.senderUserId), text: row.senderUserId === userId ? row.body : masked(row.body), at: iso(row.createdAt) })),
+      .map((row) => ({ conversation: row.threadId, from: who(row.senderUserId), text: row.senderUserId === userId ? row.body : hide(row.body), at: iso(row.createdAt) })),
     supportCases: caseRows.map((row) => ({ id: row.id, type: row.type, topic: row.topic, status: row.status, reason: row.reason, description: row.description, openedAt: iso(row.createdAt), outcome: row.resolutionSummary, resolvedAt: iso(row.resolvedAt) })),
     notifications: notificationRows.map((row) => ({ type: row.type, about: row.title, at: iso(row.createdAt), readAt: iso(row.readAt) })),
     community: {

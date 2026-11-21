@@ -414,8 +414,11 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
     await publishNotices(db, senders.map((sender) => ({ channel: userChannel(sender), notice: { type: 'read', thread: thread.id } })));
   }
   const lastMine = [...rows].reverse().find((row) => row.senderUserId === userId);
-  const disabledReason: ComposerDisabledReason | undefined = blocked ? 'blocked' : found.context.closed ? 'closed' : undefined;
-  const closedReason = disabledReason === 'closed' ? found.context.closedReason : undefined;
+  // A deleted account reads nothing (privacy rehearsal J-PR8): the conversation reads as closed, with no reason that
+  // points a way on (no offer to request again, no booking to write about).
+  const otherGone = found.other.status === 'deleted';
+  const disabledReason: ComposerDisabledReason | undefined = blocked ? 'blocked' : otherGone || found.context.closed ? 'closed' : undefined;
+  const closedReason = disabledReason === 'closed' && !otherGone ? found.context.closedReason : undefined;
   // Quotes (a replied-to message may be older than this page) and reactions, then the viewer's saved replies (7.3).
   const quotedIds = [...new Set(rows.flatMap((row) => (row.replyToMessageId ? [row.replyToMessageId] : [])))];
   const [quotedRows, reactionRows, replies] = await Promise.all([
@@ -473,7 +476,7 @@ export async function sendMessage(db: Db, userId: string, threadId: string, inpu
   const [thread] = await db.select().from(threads).where(eq(threads.id, String(threadId))).limit(1);
   const found = thread ? await summaryOf(db, thread, userId, now) : null;
   if (!thread || !found) return { ok: false, code: 'not_found' };
-  if (found.context.closed || (await isBlocked(db, userId, found.other.id))) return { ok: false, code: 'not_allowed' };
+  if (found.context.closed || found.other.status === 'deleted' || (await isBlocked(db, userId, found.other.id))) return { ok: false, code: 'not_allowed' };
   const limited = await consumeRateLimit(db, `messages:${userId}`, SEND_RATE_LIMIT, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
 
@@ -528,7 +531,7 @@ export async function reactToMessage(db: Db, userId: string, threadId: string, i
   const found = thread ? await summaryOf(db, thread, userId, now) : null;
   if (!thread || !found) return { ok: false, code: 'not_found' };
   // As for sending: not in a closed conversation (the page offers no reactions there either).
-  if (found.context.closed || (await isBlocked(db, userId, found.other.id))) return { ok: false, code: 'not_allowed' };
+  if (found.context.closed || found.other.status === 'deleted' || (await isBlocked(db, userId, found.other.id))) return { ok: false, code: 'not_allowed' };
   const limited = await consumeRateLimit(db, `message-reactions:${userId}`, REACTION_RATE_LIMIT, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
   const [message] = await db.select({ id: messages.id }).from(messages).where(and(eq(messages.id, String(input.messageId)), eq(messages.threadId, thread.id), eq(messages.kind, 'text'))).limit(1);

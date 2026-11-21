@@ -56,7 +56,12 @@ export interface BookingFacts {
   /** Regular visits: the visit's series. A `scheduled` booking's charge failed (the client pays on the page). */
   seriesId?: string | null;
   fundingFailure?: string | null;
+  /** The other person deleted their account (privacy rehearsal J-PR8): nothing more goes their way. */
+  otherDeleted?: boolean;
 }
+
+/** What a booking can't offer once the other person's account is deleted: their profile, a review, a message, a new booking. */
+const TOWARD_THE_OTHER: readonly BookingActionId[] = ['book_again', 'offer_rebook', 'save_helper', 'review', 'message', 'propose_change'];
 
 export interface BookingPolicy {
   noShowMinutes: number;
@@ -236,7 +241,7 @@ const KIND_ORDER: Record<ActionDescriptor['kind'], number> = { primary: 0, secon
 
 /** The booking page's actions: single taps (`bookingActions`) and sheets (`sheetActions`), primary first, destructive last. */
 export function allBookingActions(booking: BookingFacts, role: BookingViewerRole, policy: BookingPolicy, now: Date): ActionDescriptor<BookingActionId>[] {
-  const all = [...bookingActions(booking, role, now), ...sheetActions(booking, role, policy, now)];
+  const all = [...bookingActions(booking, role, now), ...sheetActions(booking, role, policy, now)].filter((action) => !booking.otherDeleted || !TOWARD_THE_OTHER.includes(action.id));
   return all.map((action, index) => ({ action, index })).sort((a, b) => KIND_ORDER[a.action.kind] - KIND_ORDER[b.action.kind] || a.index - b.index).map(({ action }) => action);
 }
 

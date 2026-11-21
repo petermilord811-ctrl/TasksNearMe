@@ -607,8 +607,14 @@ async function claimEvents(db: Db, limit: number) {
 /** Makes an event's notifications, one per event and person (idempotent); `onlyUserId`, just that person's. */
 async function deliver(db: Db, event: EventRow, onlyUserId?: string): Promise<number> {
   let made = 0;
-  for (const item of await plan(db, event, onlyUserId)) {
+  const planned = await plan(db, event, onlyUserId);
+  // Nobody is told anything once their account is deleted (privacy rehearsal J-PR5): no bell row, no email to the
+  // address it left behind.
+  const people = [...new Set(planned.map((item) => item.userId))];
+  const gone = new Set(people.length ? (await db.select({ id: users.id }).from(users).where(and(inArray(users.id, people), eq(users.status, 'deleted')))).map((row) => row.id) : []);
+  for (const item of planned) {
     if (onlyUserId && item.userId !== onlyUserId) continue;
+    if (gone.has(item.userId)) continue;
     // Several unread messages in one thread make one notification.
     if (item.type === 'message_received' && item.target.kind === 'thread') {
       const threadId = item.target.threadId;

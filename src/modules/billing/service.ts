@@ -315,6 +315,21 @@ export async function endSubscriptionsOf(db: Db, provider: BillingProvider | nul
 }
 
 /**
+ * A deleted account's customer for plans goes too, with its cards (privacy rehearsal J-PR9: only the payments'
+ * customer went, STC1). After its plans ended (`endSubscriptionsOf`); the stand-in's customers aren't real, so only
+ * the row goes. Its invoices stay on Stripe's records.
+ */
+export async function forgetBillingCustomerOf(db: Db, provider: BillingProvider | null, userId: string): Promise<void> {
+  const [customer] = await db.select().from(billingCustomers).where(eq(billingCustomers.userId, userId)).limit(1);
+  if (!customer) return;
+  if (customer.provider === 'stripe') {
+    if (provider?.name !== 'stripe' || !provider.forgetCustomer) return;
+    await provider.forgetCustomer(customer.providerCustomerId);
+  }
+  await db.delete(billingCustomers).where(eq(billingCustomers.userId, userId));
+}
+
+/**
  * A deletion was asked for: nothing renews while it waits (7 days, longer while something blocks it), so no new
  * period is charged and then lost (aa's sweep #6). Each plan ends with the period paid for; withdrawing the deletion
  * leaves them cancelling, and the person can keep them in the portal.

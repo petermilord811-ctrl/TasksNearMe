@@ -18,6 +18,7 @@ import type {
   TimelineEvent,
 } from '@/contracts';
 import { routes } from '@/contracts';
+import { users } from '@/modules/accounts/schema';
 import { marketPolicies } from '@/modules/markets/schema';
 import { offers } from '@/modules/offers/schema';
 import { earnings } from '@/modules/earnings/schema';
@@ -90,6 +91,13 @@ async function reviewFacts(db: Db, booking: BookingRow, role: BookingViewerRole,
       helperSaved: saved,
     },
   };
+}
+
+/** A booking over (deleting is refused while one is open) whose other person deleted their account (J-PR8). */
+async function otherDeletedOf(db: Db, booking: BookingRow, role: BookingViewerRole): Promise<Pick<BookingFacts, 'otherDeleted'>> {
+  if (booking.status !== 'completed' && booking.status !== 'canceled') return {};
+  const [other] = await db.select({ status: users.status }).from(users).where(eq(users.id, role === 'poster' ? booking.helperUserId : booking.posterUserId)).limit(1);
+  return other?.status === 'deleted' ? { otherDeleted: true } : {};
 }
 
 function factsOf(booking: BookingRow, remote: boolean): BookingFacts {
@@ -199,8 +207,8 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
   const completion = ['completion_submitted', 'disputed', 'completed'].includes(booking.status) ? await completionViewOf(db, booking.id) : null;
 
   const remote = found.view.location.kind === 'remote';
-  const [review, afterCancel] = await Promise.all([reviewFacts(db, booking, role, now), canceledFacts(db, booking, userId)]);
-  const facts = { ...factsOf(booking, remote), ...review.facts, ...afterCancel };
+  const [review, afterCancel, gone] = await Promise.all([reviewFacts(db, booking, role, now), canceledFacts(db, booking, userId), otherDeletedOf(db, booking, role)]);
+  const facts = { ...factsOf(booking, remote), ...review.facts, ...afterCancel, ...gone };
   const visibility = addressVisibility(facts, role, policy, now);
   let exactAddress: ExactAddress | undefined;
   if (visibility === 'visible' && task.locationId) {
@@ -415,8 +423,8 @@ export async function runBookingAction(
   const role = booking ? roleOf(booking, userId) : null;
   if (!booking || !role) return { ok: false, code: 'not_found' };
   const found = await findTaskWithPublicView(db, booking.taskId);
-  const [review, afterCancel] = await Promise.all([reviewFacts(db, booking, role, now), canceledFacts(db, booking, userId)]);
-  const facts = { ...factsOf(booking, found?.view.location.kind === 'remote'), ...review.facts, ...afterCancel };
+  const [review, afterCancel, gone] = await Promise.all([reviewFacts(db, booking, role, now), canceledFacts(db, booking, userId), otherDeletedOf(db, booking, role)]);
+  const facts = { ...factsOf(booking, found?.view.location.kind === 'remote'), ...review.facts, ...afterCancel, ...gone };
   const allowed = allBookingActions(facts, role, await policyOf(db, booking.policyVersionId), now).find((item) => item.id === action);
   if (!allowed?.enabled) return { ok: false, code: 'not_allowed' };
 

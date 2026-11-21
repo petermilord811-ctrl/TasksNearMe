@@ -648,5 +648,15 @@
     "WV": "Virginia Occidental",
     "WI": "Wisconsin",
     "WY": "Wyoming"
+  },
+  "dataExport": {
+    "about": "Todo lo vinculado a tu cuenta de TasksNearMe. El dinero está en centavos de dólar estadounidense y las horas en UTC. Las demás personas aparecen solo con su nombre visible, y sus datos de contacto siguen ocultos, como en la app.",
+    "you": "tú",
+    "someone": "alguien",
+    "deletedAccount": "Cuenta eliminada",
+    "hidden": "[{detail, select, phone {teléfono} other {correo}} oculto]",
+    "card": "{brand} terminada en {last4}",
+    "cardWithoutBrand": "tarjeta terminada en {last4}",
+    "emailCode": "código por correo"
   }
 }

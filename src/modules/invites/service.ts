@@ -722,6 +722,28 @@ async function closeInvite(db: Db, payments_: PaymentProvider | null, invite: In
   return { ok: true, code: 'updated' };
 }
 
+/**
+ * A deleted account's open requests, whatever their state (privacy rehearsal J-PR3): the ones it sent are canceled
+ * and the ones sent to it declined, a countered one or a bank step under way included; every hold is released and
+ * every slot freed, so nobody books, or is booked by, an account that's gone.
+ */
+export async function closeInvitesOf(db: Db, payments_: PaymentProvider | null, userId: string, now: Date): Promise<number> {
+  const closed = await db.transaction(async (tx) => {
+    const rows = await tx
+      .update(invites)
+      .set({ status: sql`case when ${invites.posterUserId} = ${userId} then 'canceled' else 'declined' end`, decidedAt: now, updatedAt: now })
+      .where(and(or(eq(invites.posterUserId, userId), eq(invites.helperUserId, userId)), inArray(invites.status, OPEN)))
+      .returning({ id: invites.id, slotId: invites.slotId, taskId: invites.taskId });
+    for (const row of rows) await cancelDraftTask(tx, row.taskId, now);
+    return rows;
+  });
+  for (const invite of closed) {
+    await releaseInviteHolds(db, payments_, invite.id, now);
+    await releaseSlot(db, invite.slotId, now);
+  }
+  return closed.length;
+}
+
 /** The helper canceled a requested slot: its waiting request is declined and the client's hold released. */
 export async function closeSlotRequests(db: Db, payments_: PaymentProvider | null, slotId: string, now: Date): Promise<void> {
   const closed = await db.transaction(async (tx) => {

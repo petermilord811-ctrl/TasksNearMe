@@ -11,7 +11,12 @@ import { availabilityPosts } from '@/modules/availability/schema';
 import { bookingSeries, bookings } from '@/modules/bookings/schema';
 import { earnings, payouts } from '@/modules/earnings/schema';
 import { blocks, threadParticipants } from '@/modules/messaging/schema';
-import { notificationPreferences, notifications, privacyRequests, pushSubscriptions } from '@/modules/notifications/schema';
+import { notificationDeliveries, notificationPreferences, notifications, privacyRequests, pushSubscriptions } from '@/modules/notifications/schema';
+import { closeInvitesOf } from '@/modules/invites/service';
+import { rebookProposals } from '@/modules/rebook/schema';
+import { declineProposal, withdrawProposal } from '@/modules/rebook/service';
+import { markets } from '@/modules/markets/schema';
+import { expireCacheTags } from '@/platform/cache/expire';
 import { offers } from '@/modules/offers/schema';
 import { helperOfferAction } from '@/modules/offers/helper';
 import { cancelTask } from '@/modules/offers/owner';
@@ -23,7 +28,7 @@ import { deleteAddressDocument } from '@/modules/verification/address';
 import { deleteIdentityCapturePhotos } from '@/modules/verification/capture';
 import { addressVerifications, identityCaptures } from '@/modules/verification/schema';
 import { supportCases } from '@/modules/support/schema';
-import { files, taskMarks, tasks } from '@/modules/tasks/schema';
+import { files, taskLocations, taskMarks, taskPhotos, tasks } from '@/modules/tasks/schema';
 import { auditLog } from '@/platform/audit/schema';
 import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
@@ -34,7 +39,7 @@ import { renderAccountDeletedNotice } from './emails';
 import { devHelpersOn } from '@/shared/dev-helpers';
 import { createBillingProvider } from '@/integrations/billing';
 import { aiUsage } from '@/modules/billing/schema';
-import { endSubscriptionsOf, stopRenewalsOf } from '@/modules/billing/service';
+import { endSubscriptionsOf, forgetBillingCustomerOf, stopRenewalsOf } from '@/modules/billing/service';
 
 /**
  * Privacy requests (blueprint 08 §5; completion plan 3.3). A copy of the data is prepared by the job runner,
@@ -181,7 +186,14 @@ export async function prepareDueExports(db: Db, deps: Pick<PrivacyJobDeps, 'stor
     .limit(EXPORTS_PER_RUN);
   let prepared = 0;
   for (const request of due) {
-    const data = await buildDataExport(db, deps.cipher, request.userId, now);
+    let data: Record<string, unknown> | null;
+    try {
+      data = await buildDataExport(db, deps.cipher, request.userId, now);
+    } catch (error) {
+      // One that fails is tried again next run, and the ones behind it still go (J-PR1).
+      console.error(`[privacy] the data copy for ${request.userId} failed; trying again next run`, error instanceof Error ? error.message : error);
+      continue;
+    }
     if (!data) {
       await db.update(privacyRequests).set({ status: 'expired', completedAt: now }).where(eq(privacyRequests.id, request.id));
       continue;
@@ -240,14 +252,26 @@ export async function processDueDeletions(db: Db, deps: PrivacyJobDeps, now: Dat
     .orderBy(asc(privacyRequests.createdAt));
   let deleted = 0;
   let waiting = 0;
-  for (const request of requested.filter((row) => scheduledOf(row) <= now).slice(0, DELETIONS_PER_RUN)) {
+  let tried = 0;
+  // Only deletions that run count toward a run's share: the ones still waiting (an open booking, a case) no longer take
+  // every place and leave the requests behind them waiting forever (privacy rehearsal J-PR2).
+  for (const request of requested.filter((row) => scheduledOf(row) <= now)) {
+    if (tried >= DELETIONS_PER_RUN) break;
     const blocker = await deletionBlocker(db, request.userId);
     if (blocker) {
       if (request.blockedReason !== blocker) await db.update(privacyRequests).set({ blockedReason: blocker }).where(eq(privacyRequests.id, request.id));
       waiting += 1;
       continue;
     }
-    await anonymizeAccount(db, deps, request.userId, now);
+    tried += 1;
+    try {
+      await anonymizeAccount(db, deps, request.userId, now);
+    } catch (error) {
+      // One that fails (a provider, a constraint) is tried again next run without holding up the ones behind it
+      // (privacy rehearsal J-PR1: a single failure stalled every deletion after it in the batch, every minute).
+      console.error(`[privacy] deleting ${request.userId} failed; trying again next run`, error instanceof Error ? error.message : error);
+      continue;
+    }
     await db.update(privacyRequests).set({ status: 'done', blockedReason: null, completedAt: now }).where(eq(privacyRequests.id, request.id));
     deleted += 1;
   }
@@ -271,13 +295,46 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     await helperOfferAction(db, userId, offer.id, 'withdraw_offer', now);
   }
 
-  // Plans (9.13): they end now, so nothing renews and charges after the account is gone.
-  await endSubscriptionsOf(db, createBillingProvider(), userId, now);
+  // Their requests to helpers end (the card holds are released), and requests to them as a helper are declined:
+  // nobody books, or is booked by, a deleted account (privacy rehearsal J-PR3).
+  await closeInvitesOf(db, deps.payments ?? null, userId, now);
+  // Rebooking proposals waiting either way end too: one they sent as a helper is withdrawn, one sent to them declined.
+  for (const row of await db.select({ id: rebookProposals.id, helperUserId: rebookProposals.helperUserId }).from(rebookProposals).where(and(or(eq(rebookProposals.helperUserId, userId), eq(rebookProposals.posterUserId, userId)), eq(rebookProposals.status, 'sent')))) {
+    await (row.helperUserId === userId ? withdrawProposal(db, userId, row.id, now) : declineProposal(db, userId, row.id, now));
+  }
 
+  // Plans (9.13): they end now, so nothing renews and charges after the account is gone.
+  const billing = createBillingProvider();
+  await endSubscriptionsOf(db, billing, userId, now);
+
+  // Their photos go: the profile's, the work samples' and their tasks' (pictures of their home, J-PR3). Message
+  // attachments, completion photos and receipts stay on the retention clock (blueprint 08 §5), for the other person.
   const photoFiles = await db
     .select({ id: files.id, storageKey: files.storageKey })
     .from(files)
-    .where(and(eq(files.ownerUserId, userId), or(eq(files.kind, 'avatar'), eq(files.kind, 'work_sample'))));
+    .where(and(eq(files.ownerUserId, userId), inArray(files.kind, ['avatar', 'work_sample', 'task_photo'])));
+  // The cached pages they were on: their public profile, the helper lists, their tasks and their city's pages (J-PR4).
+  const [profile] = await db.select({ handle: helperProfiles.handle }).from(helperProfiles).where(eq(helperProfiles.userId, userId)).limit(1);
+  const [market] = await db.select({ slug: markets.slug }).from(markets).where(eq(markets.id, user.homeMarketId)).limit(1);
+
+  // What lives outside the database goes before the account changes, so a failure here leaves the account whole for the
+  // next run to try again (J-PR1); deleting a file or a customer twice is harmless. After the change, the account reads
+  // as deleted and the next run would skip it.
+  for (const file of photoFiles) await deps.storage.delete(file.storageKey);
+  // Their customer at the payment provider goes too, with every card on it (payments themselves stay on the
+  // provider's records, as the law requires). Connected payout accounts stay for tax reporting.
+  const [customer] = await db.select().from(paymentCustomers).where(eq(paymentCustomers.userId, userId)).limit(1);
+  if (customer && deps.payments?.name === customer.provider && deps.payments.forgetCustomer) {
+    await deps.payments.forgetCustomer(customer.customerRef);
+    await db.delete(paymentCustomers).where(eq(paymentCustomers.userId, userId));
+  }
+  // And their customer for plans, once its plans ended above (J-PR9).
+  await forgetBillingCustomerOf(db, billing, userId);
+  // Unfinished exports of a deleted account go too.
+  for (const row of await db.select({ id: privacyRequests.id, fileKey: privacyRequests.fileKey }).from(privacyRequests).where(and(eq(privacyRequests.userId, userId), eq(privacyRequests.kind, 'export'), inArray(privacyRequests.status, ['requested', 'ready'])))) {
+    if (row.fileKey) await deps.storage.delete(row.fileKey);
+    await db.update(privacyRequests).set({ status: 'expired', fileKey: null, completedAt: now }).where(eq(privacyRequests.id, row.id));
+  }
 
   await db.transaction(async (tx) => {
     await tx
@@ -307,7 +364,12 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     await tx.delete(staffAuthenticators).where(eq(staffAuthenticators.userId, userId));
     await tx.delete(notificationPreferences).where(eq(notificationPreferences.userId, userId));
     await tx.delete(aiUsage).where(eq(aiUsage.userId, userId));
+    // Their notifications' email, text and push rows first: they point at the notifications with no cascade, and every
+    // recent notification has them, so the delete failed for anyone who'd been told anything (privacy rehearsal J-PR1).
+    await tx.delete(notificationDeliveries).where(eq(notificationDeliveries.userId, userId));
     await tx.delete(notifications).where(eq(notifications.userId, userId));
+    // Their exact addresses go now, not 180 days after their last booking (nothing of theirs is open by now, J-PR3).
+    await tx.update(taskLocations).set({ addressEnc: '', deletedAt: now }).where(and(eq(taskLocations.ownerUserId, userId), isNull(taskLocations.deletedAt)));
     await tx.delete(pushSubscriptions).where(eq(pushSubscriptions.userId, userId));
     await tx.delete(savedHelpers).where(or(eq(savedHelpers.userId, userId), eq(savedHelpers.helperUserId, userId)));
     await tx.delete(taskMarks).where(eq(taskMarks.userId, userId));
@@ -315,7 +377,7 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     await tx.update(threadParticipants).set({ muted: true }).where(eq(threadParticipants.userId, userId));
     await tx.update(paymentMethods).set({ detachedAt: now, isDefault: false }).where(and(eq(paymentMethods.userId, userId), isNull(paymentMethods.detachedAt)));
     await tx.update(availabilityPosts).set({ status: 'canceled', canceledAt: now, updatedAt: now }).where(and(eq(availabilityPosts.helperUserId, userId), ne(availabilityPosts.status, 'canceled')));
-    await tx.update(helperProfiles).set({ handle: `deleted-${userId}`, headline: '', bio: '', tools: [], status: 'paused', updatedAt: now.toISOString() }).where(eq(helperProfiles.userId, userId));
+    await tx.update(helperProfiles).set({ handle: `deleted-${userId}`, headline: '', bio: '', tools: [], homeZip: null, status: 'paused', updatedAt: now.toISOString() }).where(eq(helperProfiles.userId, userId));
     await tx.update(helperServices).set({ status: 'paused', description: '' }).where(eq(helperServices.userId, userId));
     await tx.delete(helperWorkSamples).where(eq(helperWorkSamples.userId, userId));
     // Part 7: what they kept goes; what they wrote in the community and on tasks comes down (rows stay for
@@ -350,24 +412,24 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
         helpfulCount: sql`(select count(*) from ${communityReactions} r where r.target_kind = ${kind} and r.target_id = ${table.id} and r.kind = 'helpful')`,
       }).where(inArray(table.id, ids));
     }
-    if (photoFiles.length) await tx.delete(files).where(inArray(files.id, photoFiles.map((file) => file.id)));
+    if (photoFiles.length) {
+      // A task's photos are linked to it with no cascade (J-PR3).
+      await tx.delete(taskPhotos).where(inArray(taskPhotos.fileId, photoFiles.map((file) => file.id)));
+      await tx.delete(files).where(inArray(files.id, photoFiles.map((file) => file.id)));
+    }
+    // What they wrote on tasks nobody booked serves nobody now: the description goes, and the search text with it (it's
+    // generated from the title and description). The title stays for the offers helpers made; a booked task keeps its
+    // text as its booking's record (J-PR6).
+    await tx
+      .update(tasks)
+      .set({ description: '', updatedAt: now })
+      .where(and(eq(tasks.posterUserId, userId), ne(tasks.description, ''), sql`not exists (select 1 from ${bookings} b where b.task_id = ${tasks.id})`));
     await tx.insert(auditLog).values({ id: newId('aud'), actorId: null, actorRole: 'system', action: 'account.deleted', targetType: 'user', targetId: userId, metadata: { at: now.toISOString() } });
   });
 
-  for (const file of photoFiles) await deps.storage.delete(file.storageKey);
+  await expireCacheTags(db, ['tasks', 'helpers', ...(profile ? [`helper:${profile.handle}`] : []), ...(market ? [`market:${market.slug}`] : [])]);
+  // The verification timers are this step's backstop: they delete a deleted account's documents too.
   await deleteVerificationDocuments(db, deps.storage, userId, now, { keepIdHash: user.status === 'banned' });
-  // Their customer at the payment provider goes too, with every card on it (payments themselves stay on the
-  // provider's records, as the law requires). Connected payout accounts stay for tax reporting.
-  const [customer] = await db.select().from(paymentCustomers).where(eq(paymentCustomers.userId, userId)).limit(1);
-  if (customer && deps.payments?.name === customer.provider && deps.payments.forgetCustomer) {
-    await deps.payments.forgetCustomer(customer.customerRef);
-    await db.delete(paymentCustomers).where(eq(paymentCustomers.userId, userId));
-  }
-  // Unfinished exports of a deleted account go too.
-  for (const row of await db.select({ id: privacyRequests.id, fileKey: privacyRequests.fileKey }).from(privacyRequests).where(and(eq(privacyRequests.userId, userId), eq(privacyRequests.kind, 'export'), inArray(privacyRequests.status, ['requested', 'ready'])))) {
-    if (row.fileKey) await deps.storage.delete(row.fileKey);
-    await db.update(privacyRequests).set({ status: 'expired', fileKey: null, completedAt: now }).where(eq(privacyRequests.id, row.id));
-  }
 
   if (!isReservedEmailAddress(user.email) || devHelpersOn()) {
     const email = renderAccountDeletedNotice({ appUrl: deps.appUrl, locale: localeOrDefault(user.locale) });

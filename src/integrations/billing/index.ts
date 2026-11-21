@@ -49,6 +49,11 @@ export interface BillingProvider {
   cancelAtPeriodEnd(subscriptionId: string): Promise<void>;
   /** Ends it now, with no refund (an account being deleted). */
   cancelNow(subscriptionId: string): Promise<void>;
+  /**
+   * Deletes the customer and every card on it (an account being deleted, privacy rehearsal J-PR9); its invoices stay
+   * on Stripe's records, as the law requires. Deleting one that's already gone is fine.
+   */
+  forgetCustomer?(customerId: string): Promise<void>;
 }
 
 /** The stand-in: the module (src/modules/billing) records its subscriptions itself. */

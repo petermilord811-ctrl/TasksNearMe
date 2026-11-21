@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addressVisibility, bookingActions, bookingDeadlines, bookingNextStep, needsAction, sheetActions, type BookingFacts } from './domain';
+import { addressVisibility, allBookingActions, bookingActions, bookingDeadlines, bookingNextStep, needsAction, sheetActions, type BookingFacts } from './domain';
 
 const start = new Date('2026-11-21T16:30:00.000Z'); // Sat 10:30 am in Austin
 const policy = { noShowMinutes: 30, addressHideAfterHours: 48 };
@@ -50,6 +50,16 @@ describe('booking actions', () => {
     expect(ids(bookingActions({ ...completed, reviewed: true, helperSaved: true }, 'poster', start))).toEqual(['book_again', 'message']);
     expect(ids(bookingActions(completed, 'helper', start))).toEqual(['review', 'offer_rebook', 'message']);
     expect(ids(bookingActions({ ...completed, reviewed: true }, 'helper', start))).toEqual(['offer_rebook', 'message']);
+  });
+
+  it("offers nothing toward someone who deleted their account: no review, message, saving, Book again or rebooking (J-PR8)", () => {
+    const completed = { ...confirmed, status: 'completed', completedAt: at('2026-11-21T19:05:00.000Z'), reviewWindowOpen: true, otherDeleted: true };
+    expect(ids(allBookingActions(completed, 'poster', policy, start))).toEqual([]);
+    expect(ids(allBookingActions(completed, 'helper', policy, start))).toEqual([]);
+    // After the helper canceled, the client can still reopen the task for new offers, not ask the same helper again.
+    const canceledAt = at('2026-11-21T17:01:00.000Z');
+    const canceled: BookingFacts = { ...confirmed, status: 'canceled', cancelReason: 'helper', canceledAt, task: { status: 'canceled', windowEnd: at('2026-11-21T19:30:00.000Z'), hidden: false }, contested: false, otherDeleted: true };
+    expect(ids(allBookingActions(canceled, 'poster', policy, canceledAt))).toEqual(['find_replacement']);
   });
 
   it('skips check-in for remote work, and asks for the work once started', () => {
