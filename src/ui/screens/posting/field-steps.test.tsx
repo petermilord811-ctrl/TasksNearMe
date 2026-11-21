@@ -8,6 +8,7 @@ import { FormProvider, useForm, useWatch } from 'react-hook-form';
 import { CATEGORY_DETAIL_FIELDS, type CategorySlug, type TaskDraftInput } from '@/contracts';
 import { deskDraft, postTaskPageData, remoteHelpDraft } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
+import esMessages from '../../../../messages/es/ui';
 import { CategoryStep } from './category-step';
 import { DetailsStep } from './details-step';
 import { BudgetStep } from './budget-step';
@@ -15,10 +16,10 @@ import { ScheduleStep } from './schedule-step';
 
 afterEach(cleanup);
 
-function FormHarness({ children, values = deskDraft }: { children: ReactNode; values?: TaskDraftInput }) {
+function FormHarness({ children, values = deskDraft, locale = 'en' }: { children: ReactNode; values?: TaskDraftInput; locale?: 'en' | 'es' }) {
   const form = useForm<TaskDraftInput>({ defaultValues: values });
   const currentValues = useWatch({ control: form.control });
-  return <NextIntlClientProvider locale="en" messages={messages}><FormProvider {...form}><form>{children}<output data-testid="draft">{JSON.stringify(currentValues)}</output></form></FormProvider></NextIntlClientProvider>;
+  return <NextIntlClientProvider locale={locale} messages={locale === 'es' ? { ...messages, ...esMessages } : messages}><FormProvider {...form}><form>{children}<output data-testid="draft">{JSON.stringify(currentValues)}</output></form></FormProvider></NextIntlClientProvider>;
 }
 
 function draft() { return JSON.parse(screen.getByTestId('draft').textContent!) as TaskDraftInput; }
@@ -46,6 +47,15 @@ describe('posting fields and copy', () => {
 
   it('keeps copy free of the posting ticket banned vocabulary', () => {
     expect(JSON.stringify(messages.postTask)).not.toMatch(/\b(hire|wages|employer)\b/i);
+  });
+
+  it('names a suggested category in the page’s language, not the database’s English (Spanish pass, 2026-11-21)', async () => {
+    const user = userEvent.setup();
+    render(<FormHarness locale="es"><CategoryStep data={postTaskPageData} /></FormHarness>);
+    await user.type(screen.getByRole('textbox', { name: '¿No sabes cuál elegir? Describe lo que necesitas' }), 'necesito rastrillar las hojas del jardín');
+    expect(screen.getByText('Parece Limpieza de jardín.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Usar Limpieza de jardín' })).toBeInTheDocument();
+    expect(screen.queryByText(/Yard cleanup/)).not.toBeInTheDocument();
   });
 
   it('changes category defaults and clears category-specific details without posting', async () => {

@@ -38,6 +38,8 @@ function ReviewLine({ label, children }: { label: string; children: ReactNode })
 export function ReviewStep({ data, handlers, values, photos, selectedAddress }: ReviewStepProps) {
   const { formatDate, formatTimeRange, timeZone } = useFormat();
   const t = useTranslations('postTask');
+  // The category's name in the page's language, by slug (the data's `name` is the database's English).
+  const categoryName = useTranslations('helperCard.categories');
   const id = useId();
   const [attempt, setAttempt] = useState(0);
   const [price, setPrice] = useState<{ key: string; attempt: number; breakdown?: PriceBreakdownData; error?: boolean }>();
@@ -72,7 +74,7 @@ export function ReviewStep({ data, handlers, values, photos, selectedAddress }: 
       <h2 id={`${id}-public`} className="flex items-center gap-2 font-heading text-xl font-semibold"><Globe aria-hidden="true" className="size-5 shrink-0 text-primary" />{t('review.everyone')}</h2>
       <p className="break-words font-heading text-lg font-semibold">{values.title}</p>
       <dl className="grid sm:grid-cols-2 sm:gap-4">
-        <ReviewLine label={t('review.category')}>{category?.name ?? t('review.notSet')}</ReviewLine>
+        <ReviewLine label={t('review.category')}>{category ? categoryName(category.slug) : t('review.notSet')}</ReviewLine>
         <ReviewLine label={t('review.area')}>{local ? address?.areaName ? t('review.areaValue', { area: address.areaName, market: data.market.name }) : t('review.areaUnavailable') : t('review.remote')}</ReviewLine>
         <ReviewLine label={t('review.when')}><span className="block">{date}</span><span className="block tabular-nums">{time}</span></ReviewLine>
         <ReviewLine label={t('review.budget')}>

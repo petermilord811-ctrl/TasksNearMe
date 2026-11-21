@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PostTaskHandlers, PriceBreakdown, TaskDraftInput } from '@/contracts';
 import { addressSuggestions, deskBreakdown, deskDraft, fakePostTaskHandlers, movingDraft, movingFundedBreakdown, postTaskPageData, remoteHelpDraft, uploadedTaskPhotos } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
+import esMessages from '../../../../messages/es/ui';
 import { ReviewStep } from './review-step';
 
 afterEach(cleanup);
@@ -15,6 +16,13 @@ function show(values: TaskDraftInput = deskDraft, handlers: PostTaskHandlers = f
 }
 
 describe('ReviewStep', () => {
+  it('names the category in the page’s language, not the database’s English (Spanish pass, 2026-11-21)', async () => {
+    render(<NextIntlClientProvider locale="es" messages={{ ...messages, ...esMessages }}><ReviewStep data={postTaskPageData} handlers={fakePostTaskHandlers} values={deskDraft} photos={uploadedTaskPhotos} selectedAddress={addressSuggestions[0]} /></NextIntlClientProvider>);
+    expect(within(screen.getByRole('region', { name: 'Todos ven' })).getByText('Armado de muebles')).toBeInTheDocument();
+    expect(screen.queryByText('Furniture assembly')).not.toBeInTheDocument();
+    await screen.findByRole('region', { name: 'Si reservas a este precio' });
+  });
+
   it('requests the exact supplied budget and displays the returned poster total', async () => {
     const onQuote = vi.fn().mockResolvedValue(deskBreakdown);
     show(deskDraft, { ...fakePostTaskHandlers, onQuote });

@@ -58,6 +58,7 @@ export function CategoryStep({ data }: { data: PostTaskPageData }) {
  */
 function CategorySuggestion({ data, selected, onUse }: { data: PostTaskPageData; selected: CategorySlug | undefined; onUse: (slug: CategorySlug, title: string) => void }) {
   const t = useTranslations('postTask.category.suggest');
+  const categoryName = useTranslations('helperCard.categories');
   const id = useId();
   const [text, setText] = useState('');
   const intent = text.trim().length >= 3 ? readTaskIntent(text) : null;
@@ -68,8 +69,8 @@ function CategorySuggestion({ data, selected, onUse }: { data: PostTaskPageData;
     <div id={`${id}-result`} aria-live="polite" className="min-h-6 text-sm">
       {intent?.notOffered ? <p className="text-pretty text-muted-foreground">{t(`notOffered.${intent.notOffered}`)}</p>
         : match ? <p className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <span>{t('soundsLike', { category: match.name })}</span>
-          {selected === match.slug ? <span className="font-medium text-success">{t('chosen')}</span> : <Button type="button" size="sm" variant="outline" onClick={() => onUse(match.slug, intent?.title ?? '')}>{t('use', { category: match.name })}</Button>}
+          <span>{t('soundsLike', { category: categoryName(match.slug) })}</span>
+          {selected === match.slug ? <span className="font-medium text-success">{t('chosen')}</span> : <Button type="button" size="sm" variant="outline" onClick={() => onUse(match.slug, intent?.title ?? '')}>{t('use', { category: categoryName(match.slug) })}</Button>}
         </p>
           : intent ? <p className="text-muted-foreground">{t('none')}</p> : <p className="text-muted-foreground">{t('hint')}</p>}
     </div>
