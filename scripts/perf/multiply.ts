@@ -65,7 +65,12 @@ export async function multiply(url: string, copies: number): Promise<Record<stri
               return (other === 'id' || other.endsWith('_id') || Boolean(key)) && !(key ? REFERENCE_TABLES.has(key.target) : REFERENCE_COLUMNS.has(other));
             };
             const needsSuffixForUniqueness = indexColumns.some((list) => list.includes(column.name) && !list.some(suffixed));
-            if (!pointsAtReference && (idLike || needsSuffixForUniqueness)) return `o.${name} || '_c' || n`;
+            if (!pointsAtReference && (idLike || needsSuffixForUniqueness)) {
+              // An email's suffix goes before the @, so a copy keeps a reserved domain (example.test) that nothing ever mails
+              // (src/integrations/email): `jordan@example.test` becomes `jordan+c3@example.test`, not `…example.test_c3`.
+              if (column.name === 'email' || column.name.endsWith('_email')) return `regexp_replace(o.${name}, '@', '+c' || n || '@')`;
+              return `o.${name} || '_c' || n`;
+            }
             return `o.${name}`;
           }
           if (column.udt === 'timestamptz' || column.udt === 'timestamp') return `o.${name} + make_interval(mins => (hashtext(${seed}) % 43200))`;
