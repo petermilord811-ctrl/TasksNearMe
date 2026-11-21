@@ -62,7 +62,8 @@ describe('T-05: booking twice at once', () => {
     // The other tap is refused or sent to the same booking, never charged.
     for (const result of results) {
       if (result.ok) expect(result).toMatchObject({ code: 'booked', redirectTo: routes.app.booking(live[0]!.id) });
-      else expect(result.code).toBe('not_allowed');
+      // Still being charged: "We're still checking your payment" (J-O12); or, settled meanwhile, can't be booked again.
+      else expect(['not_ready', 'not_allowed']).toContain(result.code);
     }
     expect(await confirmBooking(deps, 'usr_chris', taskId, offerId, card, new Date())).toMatchObject({ ok: true, code: 'booked', redirectTo: routes.app.booking(live[0]!.id) });
     expect(charges).toHaveLength(1);
@@ -86,7 +87,8 @@ describe('T-05: booking twice at once', () => {
     const first = confirmBooking({ db, payments: slow }, 'usr_chris', taskId, offerId, card, new Date());
     await atCharge;
     const second = await confirmBooking({ db, payments: provider }, 'usr_chris', taskId, offerId, card, new Date());
-    expect(second).toMatchObject({ ok: false, code: 'not_allowed' });
+    // "We're still checking your payment. Try again in a few minutes." (J-O12), never a second charge.
+    expect(second).toMatchObject({ ok: false, code: 'not_ready' });
     release();
     expect(await first).toMatchObject({ ok: true, code: 'booked' });
     const { live, succeeded } = await moneyOf(taskId);

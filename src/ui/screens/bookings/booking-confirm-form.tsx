@@ -155,7 +155,7 @@ export function BookingConfirmForm({ data, handlers, now, initialResult, initial
           <p>{t(`errors.${reloadCode}`, { helper: data.offer.helper.displayName })}</p>
           <Button type="button" variant="outline" disabled={disabled} onClick={() => router.refresh()}>{t('reload')}</Button>
         </AlertDescription></Alert>
-      </div> : !paymentFailure && <FormFeedback result={feedback} />}
+      </div> : !paymentFailure && <FormFeedback result={feedback} errorMessage={feedback && !feedback.ok && feedback.code === 'not_ready' ? t('errors.not_ready') : undefined} />}
       </div>
       <div ref={submitBar} className={actionTray}>
         <Button type="submit" disabled={disabled} aria-busy={pending} className="w-full sm:w-auto">{pending && <Spinner />}{t(pending ? 'booking' : data.paysLater ? 'submitLater' : 'submit', { amount: formatMoney(data.breakdown.posterTotalCents) })}</Button>

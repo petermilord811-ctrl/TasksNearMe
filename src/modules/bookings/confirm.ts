@@ -379,7 +379,7 @@ export async function confirmBooking(
           .from(payments)
           .where(and(eq(payments.bookingId, booking.id), eq(payments.status, 'processing')))
           .limit(1);
-        if (inFlight) throw new HoldConflict();
+        if (inFlight) throw new PaymentInFlight();
       }
       const bookingId = booking?.id ?? newId('bkg');
       if (!booking) {
@@ -443,6 +443,9 @@ export async function confirmBooking(
       return { bookingId, paymentId, idempotencyKey, replaced: replaced.map((row) => row.providerRef) };
     });
   } catch (error) {
+    // Another attempt on this hold is still being charged or checked: a double click, or a charge whose call never
+    // answered, given up after 5 minutes (payments/stale-charges.ts): "We're still checking your payment" (J-O12).
+    if (error instanceof PaymentInFlight) return { ok: false, code: 'not_ready' };
     if (error instanceof HoldConflict || isUniqueViolation(error)) return { ok: false, code: 'not_allowed' };
     throw error;
   }
@@ -460,6 +463,8 @@ export async function confirmBooking(
 }
 
 class HoldConflict extends Error {}
+/** Another attempt on the same hold is being charged, or its outcome is still unknown. */
+class PaymentInFlight extends Error {}
 
 /** The client's saved card for this method: the one they picked, or the new one, kept now (a booking paid later needs it). */
 async function keptCard(tx: Tx, posterId: string, provider: string, method: ChosenMethod, now: Date): Promise<string> {

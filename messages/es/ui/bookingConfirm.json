@@ -30,7 +30,8 @@
   "errors": {
     "version_conflict": "{helper} cambió esta oferta. Recarga para ver las nuevas condiciones.",
     "not_allowed": "Esta oferta ya no se puede reservar. Recarga para ver lo que hay disponible.",
-    "expired": "Se acabó el tiempo de retención de tu reserva. Recarga para empezar de nuevo."
+    "expired": "Se acabó el tiempo de retención de tu reserva. Recarga para empezar de nuevo.",
+    "not_ready": "Todavía estamos revisando tu pago. Inténtalo de nuevo en unos minutos."
   },
   "unavailable": {
     "title": "Esta oferta ya no está disponible",

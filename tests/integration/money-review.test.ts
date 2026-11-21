@@ -88,9 +88,10 @@ const connect: StripeConnect = {
   dashboardLink: vi.fn(),
 };
 
-function signedPayment(event: unknown) {
+function signedPayment(event: unknown, when: Date = now) {
   const payload = JSON.stringify(event);
-  const t = Math.floor(now.getTime() / 1000);
+  // Signed when it's sent: Stripe's signatures hold for 5 minutes.
+  const t = Math.floor(when.getTime() / 1000);
   return { payload, signature: `t=${t},v1=${createHmac('sha256', PAY_SECRET).update(`${t}.${payload}`).digest('hex')}`, secret: PAY_SECRET };
 }
 function signedConnect(event: unknown) {
@@ -211,6 +212,71 @@ describe('a charge whose call never answered (MO9)', () => {
     const told = await db.select().from(outboxEvents).where(and(eq(outboxEvents.type, 'payment.refunded'), eq(outboxEvents.aggregateId, 'pay_tmp_mr_chg')));
     expect(told).toHaveLength(1);
     expect(await planNotifications(db, told[0]!)).toEqual([expect.objectContaining({ userId: CLIENT, type: 'payment_refunded', params: { amountCents: 1200, refundFor: 'late' } })]);
+  });
+});
+
+describe('a booking’s payment whose call never answered (J-O12, when things break 2026-11-21)', () => {
+  // As Stripe: the late event finds an attempt by the payment id on the intent, for Stripe's rows only (the dev stand-in
+  // does the rest). Its charge call throws (a timeout, a network error): the booking holds, its attempt has no answer.
+  const stripe: PaymentProvider = { ...pay, name: 'stripe' };
+  const unanswered: PaymentProvider = { ...stripe, charge: async () => { throw new Error('Stripe timeout'); } };
+  async function openDesk(n: number): Promise<void> {
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    const [offer] = await db.select().from(offers).where(eq(offers.id, 'off_jordan'));
+    await db.insert(tasks).values({ ...desk!, id: `tsk_mr_${n}`, slug: `tsk-mr-${n}-slug`, posterUserId: CLIENT, status: 'open', offerCount: 1, version: 1 });
+    await db.insert(offers).values({ ...offer!, id: `off_mr_${n}`, taskId: `tsk_mr_${n}`, status: 'pending', revision: 1, expiresAt: at(24 * 60 * MINUTE) });
+  }
+  const book = (n: number, payments: PaymentProvider, when: Date) => confirmBooking({ db, payments }, CLIENT, `tsk_mr_${n}`, `off_mr_${n}`, { offerRevision: 1, payment: { kind: 'dev_card', card: 'success', save: false }, acceptTerms: true }, when);
+  const attemptsOf = async (n: number) => db.select().from(payments).innerJoin(bookings, eq(bookings.id, payments.bookingId)).where(eq(bookings.taskId, `tsk_mr_${n}`)).orderBy(payments.createdAt);
+  const lateSuccess = (paymentId: string, intent: string, when: Date) => signedPayment({ id: `evt_${intent}`, type: 'payment_intent.succeeded', data: { object: { id: intent, object: 'payment_intent', metadata: { payment_id: paymentId } } } }, when);
+
+  it('is given up after 5 minutes, so the client can pay again; a late success then goes back in full, with the client told', async () => {
+    await openDesk(40);
+    await expect(book(40, unanswered, now)).rejects.toThrow('Stripe timeout');
+    const [first] = await attemptsOf(40);
+    expect(first!.payments).toMatchObject({ status: 'processing', providerRef: null });
+    expect(first!.bookings.status).toBe('pending_funding');
+    // Paying again at once: the first attempt might still go through.
+    expect(await book(40, stripe, at(MINUTE))).toEqual({ ok: false, code: 'not_ready' });
+    await cancelStaleCharges(db, at(4 * MINUTE));
+    expect((await attemptsOf(40))[0]!.payments.status).toBe('processing');
+    await cancelStaleCharges(db, at(5 * MINUTE));
+    expect((await attemptsOf(40))[0]!.payments.status).toBe('canceled');
+    // Then it books, with a new attempt.
+    expect(await book(40, stripe, at(6 * MINUTE))).toMatchObject({ ok: true, code: 'booked' });
+    const attempts = await attemptsOf(40);
+    expect(attempts.map((row) => row.payments.status)).toEqual(['canceled', 'succeeded']);
+    expect(attempts[0]!.bookings.status).toBe('confirmed');
+    // The first charge had gone through after all: the booking is paid already, so it goes back in full, once.
+    await handleStripePaymentWebhook(deps, lateSuccess(first!.payments.id, 'pi_tmp_mr_late40', at(7 * MINUTE)), at(7 * MINUTE));
+    await handleStripePaymentWebhook(deps, lateSuccess(first!.payments.id, 'pi_tmp_mr_late40', at(7 * MINUTE)), at(7 * MINUTE));
+    expect((await db.select().from(refunds).where(eq(refunds.paymentId, first!.payments.id))).map((row) => [row.amountCents, row.reason, row.status])).toEqual([[first!.payments.amountCents, 'late_capture', 'succeeded']]);
+    const told = await db.select().from(outboxEvents).where(and(eq(outboxEvents.type, 'payment.refunded'), eq(outboxEvents.aggregateId, first!.payments.id)));
+    expect(await planNotifications(db, told[0]!)).toEqual([expect.objectContaining({ userId: CLIENT, type: 'payment_refunded', params: expect.objectContaining({ refundFor: 'late' }) })]);
+  });
+
+  it('books the booking when the late success comes while it still waits for the money, without a refund', async () => {
+    await openDesk(41);
+    await expect(book(41, unanswered, now)).rejects.toThrow('Stripe timeout');
+    await cancelStaleCharges(db, at(5 * MINUTE));
+    const [given] = await attemptsOf(41);
+    expect(given!.payments.status).toBe('canceled');
+    await handleStripePaymentWebhook(deps, lateSuccess(given!.payments.id, 'pi_tmp_mr_late41', at(6 * MINUTE)), at(6 * MINUTE));
+    const [after] = await attemptsOf(41);
+    expect(after!.payments).toMatchObject({ status: 'succeeded', providerRef: 'pi_tmp_mr_late41' });
+    expect(after!.bookings.status).toBe('confirmed');
+    expect(await db.select().from(refunds).where(eq(refunds.paymentId, given!.payments.id))).toEqual([]);
+    // Stripe sends it again: still one booking, no refund.
+    await handleStripePaymentWebhook(deps, lateSuccess(given!.payments.id, 'pi_tmp_mr_late41', at(6 * MINUTE)), at(6 * MINUTE));
+    expect(await db.select().from(refunds).where(eq(refunds.paymentId, given!.payments.id))).toEqual([]);
+  });
+
+  it('leaves a booking that isn’t waiting on its client to its own job', async () => {
+    // A confirmed booking's stray unanswered attempt (and a visit paid later, the scheduled job's) isn't given up here.
+    const [confirmed] = await attemptsOf(41);
+    await db.insert(payments).values({ id: 'pay_tmp_mr_stray', bookingId: confirmed!.bookings.id, purpose: 'booking_funding', payerUserId: CLIENT, amountCents: 100, status: 'processing', provider: 'stripe', providerRef: null, idempotencyKey: 'tmp-mr-stray', createdAt: at(-30 * MINUTE), updatedAt: at(-30 * MINUTE) });
+    await cancelStaleCharges(db, now);
+    expect((await db.select({ status: payments.status }).from(payments).where(eq(payments.id, 'pay_tmp_mr_stray')))[0]?.status).toBe('processing');
   });
 });
 

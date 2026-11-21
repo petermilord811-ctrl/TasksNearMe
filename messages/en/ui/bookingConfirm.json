@@ -30,7 +30,8 @@
   "errors": {
     "version_conflict": "{helper} changed this offer. Reload to see the new terms.",
     "not_allowed": "This offer can't be booked any more. Reload to see what's available.",
-    "expired": "Your booking hold ran out. Start again by reloading."
+    "expired": "Your booking hold ran out. Start again by reloading.",
+    "not_ready": "We're still checking your payment. Try again in a few minutes."
   },
   "unavailable": {
     "title": "This offer is no longer available",

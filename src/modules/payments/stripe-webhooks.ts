@@ -4,7 +4,7 @@ import { routes } from '@/contracts';
 import { verifyStripeSignature } from '@/integrations/stripe-identity';
 import { finishChangeCharge, finishChangeVerification } from '@/modules/bookings/changes';
 import { finishBankVerification, settle, type BookingDeps } from '@/modules/bookings/confirm';
-import { bookingChangeRequests } from '@/modules/bookings/schema';
+import { bookingChangeRequests, bookings } from '@/modules/bookings/schema';
 import { finishTipCharge, finishTipVerification } from '@/modules/bookings/tips';
 import { finishCounterVerification, finishRequestVerification } from '@/modules/invites/service';
 import { invites } from '@/modules/invites/schema';
@@ -17,6 +17,9 @@ import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { refundWholePayment } from './refund-across';
 import { payments } from './schema';
+
+/** A booking still waiting for its money: on the payment page, or a visit paid later (bookings/confirm.ts). */
+const AWAITING_MONEY = ['pending_funding', 'scheduled'];
 
 /**
  * Stripe's payment intent events (docs/integration-points.md "Webhooks"): the second path to the outcome of
@@ -52,6 +55,17 @@ export async function handleStripePaymentWebhook(deps: BookingDeps, input: { pay
   const object = event.data?.object ?? {};
   const [known] = await deps.db.select().from(payments).where(and(eq(payments.providerRef, intentId), eq(payments.provider, 'stripe'))).limit(1);
   const payment = known ?? (await byPaymentId(deps.db, object.metadata, intentId));
+  // A booking's payment we gave up on (its call never answered: stale-charges.ts, J-O12) whose booking still waits for
+  // the money: it books, as an answered call would have (ab, when things break 2026-11-21). settle() holds the locks,
+  // and gives the money back itself if the booking or its task moved on meanwhile: never money without a booking.
+  if (payment && payment.status === 'canceled' && event.type === 'payment_intent.succeeded' && payment.bookingId && payment.purpose === 'booking_funding') {
+    const [booking] = await deps.db.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, payment.bookingId)).limit(1);
+    if (booking && AWAITING_MONEY.includes(booking.status)) {
+      const settled = await settle(deps, payment.payerUserId, payment.id, { status: 'succeeded', providerRef: intentId }, now);
+      if (settled.ok) await proposalFunded(deps.db, payment.bookingId, now);
+      return { status: 200, body: { ok: true } };
+    }
+  }
   // A charge that went through after we gave up on it (the payment window ran out during the bank's check, or the
   // attempt was replaced): the money came in for nothing, so it goes straight back (booking reviews, lifecycle #2).
   if (payment && payment.status === 'canceled' && event.type === 'payment_intent.succeeded' && payment.bookingId) {
