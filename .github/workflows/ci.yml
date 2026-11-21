@@ -2,6 +2,9 @@
 #
 # - Every push: the quick checks (typecheck, lint, unit tests, DB integration tests, a production build). Nothing
 #   deploys or merges. A newer push to the same branch cancels the older run, so a burst of pushes costs one run.
+#   A push that changes only docs runs nothing. A ship or e2e run of the same commit stops its push run, since it runs
+#   the same checks (owner, 2026-11-21: the repo is private, so Actions minutes are billed, and every ship until then
+#   paid for its checks twice).
 # - Ship: Actions → CI → Run workflow → pick the feat/* branch → tick "Ship", or
 #     gh workflow run ci.yml --ref feat/<branch> -f deploy=true
 #   The quick checks and the e2e suite (against the e2e production build, in parallel shards, each with its own
@@ -16,6 +19,8 @@ name: CI
 on:
   push:
     branches: ['**']
+    # Docs and the root notes (CLAUDE.md, AGENTS.md) feed no check or build. A ship still runs everything.
+    paths-ignore: ['docs/**', '*.md']
   workflow_dispatch:
     inputs:
       deploy:
@@ -43,6 +48,9 @@ jobs:
   checks:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: write # a ship or e2e run stops the push run of the same commit
     services:
       db:
         image: postgis/postgis:17-3.5
@@ -64,6 +72,22 @@ jobs:
       PREVIEW_URL: https://tasksnearme.com
       SHIP: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && inputs.deploy) }}
     steps:
+      # A commit is pushed and shipped in the same moment (the two runs start within 25 s of each other), so the push
+      # run is still going when this step runs, after the containers start. A failed lookup or cancel only costs the
+      # duplicate minutes; it never fails the ship.
+      - name: Stop the push run of this commit
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ids=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --event push --commit "$GITHUB_SHA" \
+            --json databaseId,status --jq '.[] | select(.status != "completed") | .databaseId') || true
+          for id in $ids; do
+            if gh run cancel "$id" --repo "$GITHUB_REPOSITORY"; then
+              echo "Stopped push run $id: this run checks the same commit." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
       - uses: actions/checkout@v5
 
       - uses: actions/setup-node@v5
