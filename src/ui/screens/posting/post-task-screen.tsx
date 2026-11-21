@@ -13,6 +13,7 @@ import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
+import { newRequestKey } from '@/ui/lib/request-key';
 import { cn } from '@/ui/lib/utils';
 import { CategoryStep } from './category-step';
 import { DescribeStep } from './describe-step';
@@ -133,6 +134,9 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
   useKeepFocusAboveBar(formRef, barRef);
   const lock = useRef(false);
   const posted = useRef(false);
+  // This post's key (bad connections pass, J-N1): kept with the draft, so a repeat after an answer that never arrived
+  // returns the task the first post made. A new one after Start over, or with the next draft.
+  const requestKey = useRef<string | null>(null);
   const stepRef = useRef(step);
   const addressRef = useRef(address);
   const resolvePhotos = useRef(handlers.onResolvePhotos);
@@ -168,6 +172,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
           if (saved) {
             const savedStep = saved.step === 'review' && !schemaRef.current.safeParse(saved.values).success ? 'category' : saved.step;
             reset(saved.values); setStep(savedStep); setAddress(saved.address); setRestored(true);
+            requestKey.current = saved.requestKey ?? null;
             stepRef.current = savedStep; addressRef.current = saved.address;
             setPhotos((current) => current.filter((photo) => saved.values.photoIds.includes(photo.id)));
             const resolve = resolvePhotos.current;
@@ -199,7 +204,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
     if (!persistDraft || posted.current) return;
     try {
       // Only uploaded ids are persisted for photos; no File, blob URL, or image data.
-      sessionStorage.setItem(key, JSON.stringify({ values: getValues(), step: stepRef.current, address: addressRef.current }, (_name, value: unknown) => typeof value === 'number' && !Number.isFinite(value) ? 0 : value));
+      sessionStorage.setItem(key, JSON.stringify({ values: getValues(), step: stepRef.current, address: addressRef.current, ...(requestKey.current ? { requestKey: requestKey.current } : {}) }, (_name, value: unknown) => typeof value === 'number' && !Number.isFinite(value) ? 0 : value));
     } catch { void Promise.resolve().then(() => setStorageFailed(true)); }
   }, [getValues, key, persistDraft]);
 
@@ -230,6 +235,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
   // "Start over" from a kept draft: the page as it opened, before anything was typed.
   const startOver = useCallback(() => {
     try { sessionStorage.removeItem(key); } catch { /* Storage blocked: nothing was kept either. */ }
+    requestKey.current = null;
     const fresh: PostTaskStep = data.repeat ? (data.repeat.addressDeleted ? 'where' : 'review') : template || data.initialCategory ? 'describe' : 'category';
     reset(opening.current); setPhotos([]); setAddress(data.repeat?.address); setResult(undefined); setInvalid(false); setFocusField(undefined); setRestored(false);
     setStep(fresh); stepRef.current = fresh; stepsPushed.current = 0; recordStep(fresh, false);
@@ -294,8 +300,11 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
     if (lock.current || posted.current) return;
     lock.current = true; setPending(true); setResult(undefined); setInvalid(false); clearErrors();
     let next: ActionResult;
+    // The key goes into the stored draft before the post leaves, so even a reload after a lost answer repeats it.
+    requestKey.current ??= newRequestKey();
+    saveDraft();
     // "Ask for help" (plan 9.10): the post it started from, so the post and the new task link to each other.
-    try { next = await handlers.onPost({ ...valuesToPost, ...(check.token ? { botCheck: check.token } : {}), ...(data.fromPost ? { fromPostId: data.fromPost.id } : {}) }); }
+    try { next = await handlers.onPost({ ...valuesToPost, requestKey: requestKey.current, ...(check.token ? { botCheck: check.token } : {}), ...(data.fromPost ? { fromPostId: data.fromPost.id } : {}) }); }
     catch { next = { ok: false, code: 'unknown' }; }
     if (next.ok) {
       posted.current = true;

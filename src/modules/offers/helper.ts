@@ -532,6 +532,23 @@ async function prepareOffer(db: Db, userId: string, taskId: string, input: Offer
   };
 }
 
+/**
+ * The offer this helper already has is the one they sent again (an answer that never arrived; bad connections pass,
+ * J-N1): the same price, start, message and brings. Anything else is a second offer, which the offer page edits instead.
+ */
+function sameOffer(existing: typeof offers.$inferSelect, values: ReturnType<typeof pricingColumns> & { proposedStart: Date; message?: string | null; brings?: string[] }): boolean {
+  return (
+    existing.pricingType === values.pricingType &&
+    existing.priceCents === values.priceCents &&
+    existing.hourlyRateCents === values.hourlyRateCents &&
+    existing.estimatedHours === values.estimatedHours &&
+    existing.hoursCap === values.hoursCap &&
+    existing.proposedStart.getTime() === values.proposedStart.getTime() &&
+    (existing.message ?? '') === (values.message ?? '') &&
+    JSON.stringify(existing.brings ?? []) === JSON.stringify(values.brings ?? [])
+  );
+}
+
 /** A new offer. One active offer per task; at most 25 active offers. */
 export async function submitOffer(db: Db, userId: string, taskId: string, input: OfferInput, now: Date): Promise<ActionResult> {
   const limited = await consumeRateLimit(db, `offer:${userId}`, OFFER_RATE_LIMIT, now);
@@ -545,12 +562,11 @@ export async function submitOffer(db: Db, userId: string, taskId: string, input:
     .select({ value: count() })
     .from(offers)
     .where(and(eq(offers.helperUserId, userId), inArray(offers.status, ACTIVE)));
-  const [existing] = await db
-    .select({ id: offers.id })
-    .from(offers)
-    .where(and(eq(offers.taskId, row.task.id), eq(offers.helperUserId, userId), inArray(offers.status, ACTIVE)))
-    .limit(1);
-  if (existing) return { ok: false, code: 'not_allowed' };
+  const activeOfferOfTheirs = async () =>
+    (await db.select().from(offers).where(and(eq(offers.taskId, row.task.id), eq(offers.helperUserId, userId), inArray(offers.status, ACTIVE))).limit(1))[0];
+  const existing = await activeOfferOfTheirs();
+  // Their own offer sent again, after an answer that never arrived: sent already (J-N1). Any other is a second offer.
+  if (existing) return sameOffer(existing, values) ? { ok: true, code: 'sent' } : { ok: false, code: 'not_allowed' };
   if ((active?.value ?? 0) >= MAX_ACTIVE_OFFERS) return { ok: false, code: 'limit_reached' };
 
   const id = newId('off');
@@ -560,8 +576,11 @@ export async function submitOffer(db: Db, userId: string, taskId: string, input:
       await recordOfferEvent(tx, 'offer.submitted', userId, { id, taskId: row.task.id }, row.task.posterUserId);
     });
   } catch (error) {
-    // The partial unique index: another request created the active offer first.
-    if (isUniqueViolation(error)) return { ok: false, code: 'not_allowed' };
+    // The partial unique index: another request created the active offer first; the same one is a repeat (J-N1).
+    if (isUniqueViolation(error)) {
+      const first = await activeOfferOfTheirs();
+      return first && sameOffer(first, values) ? { ok: true, code: 'sent' } : { ok: false, code: 'not_allowed' };
+    }
     throw error;
   }
   await refreshOfferCount(db, row.task.id);

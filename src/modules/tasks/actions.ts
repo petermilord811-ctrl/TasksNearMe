@@ -17,9 +17,9 @@ import type {
   PricingInput,
   TaskDraftInput,
 } from '@/contracts';
-import { CATEGORY_SLUGS, localeOrDefault, routes } from '@/contracts';
+import { CATEGORY_SLUGS, localeOrDefault, requestKeyField, routes } from '@/contracts';
 import { photoFromFile, storePhoto } from '@/modules/files/uploads';
-import { files } from '@/modules/tasks/schema';
+import { files, tasks } from '@/modules/tasks/schema';
 import { marketTag } from '@/modules/marketing/queries';
 import { getFlags, getPublishedPolicy } from '@/modules/markets/queries';
 import { categories, markets } from '@/modules/markets/schema';
@@ -133,16 +133,23 @@ export async function quoteTaskPrice(input: { budget: PricingInput; expenseAllow
 /** Posting attempts per person (B-061 rate-limit review). */
 const POSTING_RULE = { limit: 30, windowSeconds: 60 * 60 };
 
-export async function postTaskAction(input: TaskDraftInput & BotCheckInput & { fromPostId?: string }): Promise<ActionResult> {
+export async function postTaskAction(input: TaskDraftInput & BotCheckInput & { fromPostId?: string; requestKey?: string }): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
+  // The same post again, after an answer that never arrived (the draft's key): the task it made, even if the draft
+  // changed since, and before the bot check, whose token the first post used (bad connections pass, J-N1).
+  const requestKey = requestKeyField.safeParse(input?.requestKey);
+  if (requestKey.success) {
+    const [posted] = await db.select({ id: tasks.id }).from(tasks).where(and(eq(tasks.posterUserId, userId), eq(tasks.requestKey, requestKey.data))).limit(1);
+    if (posted) return { ok: true, code: 'submitted', redirectTo: routes.app.task(posted.id) };
+  }
   // Turnstile before anything is saved (blueprint 06 §4: posting).
   const refused = await checkBot('post_task', input?.botCheck);
   if (refused) return refused;
   // A backstop for accounts past their first week (whose open tasks aren't capped): plenty for a person.
   const limited = await consumeRateLimit(db, `post-task:user:${userId}`, POSTING_RULE);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
-  const outcome = await (await postingForRequest()).post(userId, input);
+  const outcome = await (await postingForRequest()).post(userId, input, requestKey.success ? { requestKey: requestKey.data } : {});
   if (!outcome.ok) return outcome.result;
   // "Ask for help" (plan 9.10): the author's own community post becomes this task's discussion, and links to it.
   if (typeof input?.fromPostId === 'string' && input.fromPostId) await linkCommunityPostToTask(db, userId, input.fromPostId, outcome.taskId, new Date());

@@ -92,7 +92,10 @@ describe("the helper's side of offers", () => {
 
   it('sends one active offer per task, and counts it publicly', async () => {
     expect(await submitOffer(db, 'usr_jordan', TASK, offer(), now())).toEqual({ ok: true, code: 'sent' });
-    expect(await submitOffer(db, 'usr_jordan', TASK, offer(), now())).toEqual({ ok: false, code: 'not_allowed' });
+    // The same offer again (an answer that never arrived): sent already, and still one (bad connections pass, J-N1).
+    expect(await submitOffer(db, 'usr_jordan', TASK, offer(), now())).toEqual({ ok: true, code: 'sent' });
+    // A different one while theirs is active: the offer page edits it instead.
+    expect(await submitOffer(db, 'usr_jordan', TASK, offer({ message: 'A different offer for the same task.' }), now())).toEqual({ ok: false, code: 'not_allowed' });
     expect(await offerCount()).toBe(1);
     const view = await getHelperTaskView(db, 'usr_jordan', TASK, now());
     expect(view?.myOffer).toMatchObject({ status: 'pending', revision: 1, pricing: { type: 'fixed', priceCents: 6000 } });

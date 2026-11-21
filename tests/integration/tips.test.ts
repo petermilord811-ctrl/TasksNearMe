@@ -124,8 +124,10 @@ describe('tips', () => {
     expect(tips).toEqual([expect.objectContaining({ amountCents: 900, status: 'succeeded', payerUserId: 'usr_ana', provider: 'dev' })]);
     expect(tips[0]!.idempotencyKey).toBe(`tip:${id}:${tips[0]!.id}`);
     expect(await tipEarningsOf(id)).toEqual([expect.objectContaining({ helperUserId: 'usr_jordan', amountCents: 900, status: 'transferred' })]);
-    // One tip per booking.
-    expect(await tipBooking(deps, 'usr_ana', id, { amountCents: 500, payment: card() }, new Date())).toEqual({ ok: false, code: 'not_allowed' });
+    // One tip per booking. The client's tip sent again (an answer that never arrived) answers as the first did, and
+    // charges nothing more (bad connections pass, J-N1); anyone else is still refused.
+    expect(await tipBooking(deps, 'usr_ana', id, { amountCents: 500, payment: card() }, new Date())).toEqual({ ok: true, code: 'paid', redirectTo: `/app/bookings/${id}` });
+    expect(await tipBooking(deps, 'usr_jordan', id, { amountCents: 500, payment: card() }, new Date())).toEqual({ ok: false, code: 'not_allowed' });
     expect(await tipsOf(id)).toHaveLength(1);
 
     // Both people see it; the client's payments and the timeline have it as a tip.
@@ -161,8 +163,9 @@ describe('tips', () => {
   it('never charges twice for two taps at once', async () => {
     const id = await approvedDesk('tsk_tip_twice');
     const results = await Promise.all([1, 2].map(() => tipBooking(deps, 'usr_ana', id, { amountCents: 600, payment: card() }, new Date())));
-    expect(results.filter((result) => result.ok)).toHaveLength(1);
-    expect(results.filter((result) => !result.ok)).toEqual([{ ok: false, code: 'not_allowed' }]);
+    // The second tap meets the first being charged (refused) or gone through (answered as paid, J-N1): one charge either way.
+    expect(results.filter((result) => result.ok).length).toBeGreaterThanOrEqual(1);
+    expect(results.filter((result) => !result.ok).every((result) => !result.ok && result.code === 'not_allowed')).toBe(true);
     expect(await tipsOf(id)).toHaveLength(1);
     expect(await tipEarningsOf(id)).toHaveLength(1);
   });

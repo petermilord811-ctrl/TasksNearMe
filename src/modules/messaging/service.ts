@@ -30,6 +30,7 @@ import { shortenSegments, toMessageSegments } from '@/modules/trust/message-segm
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { violatedConstraint } from '@/platform/db/errors';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { userChannel } from '@/platform/realtime/hub';
@@ -462,6 +463,13 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
 export async function sendMessage(db: Db, userId: string, threadId: string, input: SendMessageInput, now: Date): Promise<ActionResult> {
   const parsed = sendMessageInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
+  // The same message again, after an answer that never arrived (the composer's key): sent already, never twice, and
+  // before the rate limit (bad connections pass, J-N1).
+  const requestKey = parsed.data.requestKey;
+  if (requestKey) {
+    const [sent] = await db.select({ id: messages.id }).from(messages).where(and(eq(messages.senderUserId, userId), eq(messages.requestKey, requestKey))).limit(1);
+    if (sent) return { ok: true, code: 'sent' };
+  }
   const [thread] = await db.select().from(threads).where(eq(threads.id, String(threadId))).limit(1);
   const found = thread ? await summaryOf(db, thread, userId, now) : null;
   if (!thread || !found) return { ok: false, code: 'not_found' };
@@ -485,7 +493,13 @@ export async function sendMessage(db: Db, userId: string, threadId: string, inpu
       .where(and(inArray(files.id, attachmentIds), eq(files.ownerUserId, userId), eq(files.kind, 'message')));
     if (owned.length !== attachmentIds.length) return { ok: false, code: 'validation_failed', fieldErrors: { attachmentIds: ['invalid'] } };
   }
-  await db.insert(messages).values({ id: newId('msg'), threadId: thread.id, senderUserId: userId, kind: 'text', body: parsed.data.body, attachmentFileIds: attachmentIds, replyToMessageId, createdAt: now });
+  try {
+    await db.insert(messages).values({ id: newId('msg'), threadId: thread.id, senderUserId: userId, kind: 'text', body: parsed.data.body, attachmentFileIds: attachmentIds, replyToMessageId, requestKey: requestKey ?? null, createdAt: now });
+  } catch (error) {
+    // The same message at the same moment (its key is taken): the other request sent it.
+    if (requestKey && violatedConstraint(error) === 'messages_sender_request_key_idx') return { ok: true, code: 'sent' };
+    throw error;
+  }
   const others = await db
     .select({ userId: threadParticipants.userId })
     .from(threadParticipants)

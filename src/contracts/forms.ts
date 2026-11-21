@@ -12,6 +12,12 @@ import type { FieldErrorCode } from './actions';
 const code = (value: FieldErrorCode) => value;
 
 /** Trimmed and lower-cased. */
+/**
+ * A device's key for one intent (a post, a message; bad connections pass, J-N1): a UUID made on the phone and sent again
+ * with a repeat after an answer that never arrived, so the server returns the first result instead of doing it twice.
+ */
+export const requestKeyField = z.uuid('invalid');
+
 export const emailField = z
   .string(code('required'))
   .trim()

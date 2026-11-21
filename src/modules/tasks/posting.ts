@@ -5,7 +5,7 @@ import type { ActionResult, AddressSuggestion, CategorySlug, PostTaskPageData, P
 import { compactTaskDetails, createTaskDraftSchema, REPEAT_PLACE_PREFIX } from '@/contracts';
 import { GeocoderUnavailableError, type GeoPlace, type Geocoder } from '@/integrations/geocoding';
 import { fieldError, validationFailed } from '@/platform/actions/results';
-import { isUniqueViolation } from '@/platform/db/errors';
+import { isUniqueViolation, violatedConstraint } from '@/platform/db/errors';
 import { auditLog } from '@/platform/audit/schema';
 import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
@@ -229,7 +229,7 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
     return { fromTitle: task.title, draft, ...(address ? { address } : {}), ...(task.mode === 'local' && !address ? { addressDeleted: true } : {}) };
   }
 
-  async function post(userId: string, input: unknown): Promise<PostTaskOutcome> {
+  async function post(userId: string, input: unknown, { requestKey }: { requestKey?: string } = {}): Promise<PostTaskOutcome> {
     const at = now();
     const fail = (result: ActionResult): PostTaskOutcome => ({ ok: false, result });
 
@@ -393,6 +393,7 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
             publicLng: point?.lng ?? null,
             publishedAt: at,
             expiresAt: windowEnd,
+            requestKey: requestKey ?? null,
             createdAt: at,
             updatedAt: at,
           });
@@ -417,6 +418,11 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
         });
         break;
       } catch (error) {
+        // The same post at the same moment (its key is taken): the task the other request made (bad connections, J-N1).
+        if (requestKey && violatedConstraint(error) === 'tasks_poster_request_key_idx') {
+          const [first] = await db.select({ id: tasks.id, slug: tasks.slug }).from(tasks).where(and(eq(tasks.posterUserId, userId), eq(tasks.requestKey, requestKey))).limit(1);
+          if (first) return { ok: true, taskId: first.id, slug: first.slug };
+        }
         if (!isUniqueViolation(error) || attempt >= 2) throw error;
       }
     }

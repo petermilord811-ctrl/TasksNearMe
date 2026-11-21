@@ -18,6 +18,7 @@ import { Button } from '@/ui/primitives/button';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
 import { Spinner } from '@/ui/primitives/spinner';
 import { Textarea } from '@/ui/primitives/textarea';
+import { newRequestKey } from '@/ui/lib/request-key';
 
 export interface MessageComposerProps {
   rules: ComposerRules;
@@ -53,6 +54,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
   const [uploading, setUploading] = useState(false);
   const lastTyping = useRef(0);
   const locked = useRef(initialPending);
+  const requestKey = useRef<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const uploadLocked = useRef(false);
   const mounted = useRef(true);
@@ -96,13 +98,17 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
     // Writing goes on after a message: focus (and a phone's keyboard) stays in the message box (journeys on a phone, J-C4).
     const keepFocus = formRef.current?.contains(document.activeElement) ?? false;
     locked.current = true; setPending(true); setResult(undefined);
+    // This message's key (bad connections pass, J-N1): a retry after an answer that never arrived sends the same key, so
+    // the message goes once. A new key after it's sent.
+    requestKey.current ??= newRequestKey();
+    const keyed = { ...input, requestKey: requestKey.current };
     let next: ActionResult;
-    try { next = await handlers.onSend(replyTo ? { ...input, replyToId: replyTo.id } : input); }
+    try { next = await handlers.onSend(replyTo ? { ...keyed, replyToId: replyTo.id } : keyed); }
     catch { next = { ok: false, code: 'unknown' }; }
     if (!mounted.current) return;
     locked.current = false; setPending(false); setResult(next);
     if (next.ok) {
-      if (next.code === 'sent') { form.reset({ body: '', attachmentIds: [] }); setPhotos([]); setReplyTo(null); router.refresh(); }
+      if (next.code === 'sent') { requestKey.current = null; form.reset({ body: '', attachmentIds: [] }); setPhotos([]); setReplyTo(null); router.refresh(); }
       if (next.redirectTo) router.push(next.redirectTo);
       // By id: reset() has just let go of the field's ref, so setFocus would find nothing.
       else if (keepFocus) document.getElementById(`${id}-body`)?.focus();

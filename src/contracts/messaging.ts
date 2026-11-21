@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { ActionHandler, QueryHandler } from './actions';
+import { requestKeyField } from './forms';
 import type { ISODateTime, Photo } from './common';
 import type { PersonSummary, PresenceState } from './people';
 import type { PhotoUploadResult } from './posting';
@@ -154,6 +155,8 @@ export const sendMessageInputSchema = z
     attachmentIds: z.array(z.string().min(1)).max(4, 'too_long'),
     /** A reply to an earlier message in the same conversation (7.3). */
     replyToId: z.string().min(1).max(80).optional(),
+    /** The composer's key for this message (bad connections pass, J-N1): a repeat is the same message, not a second. */
+    requestKey: requestKeyField.optional(),
   })
   .refine((input) => input.body.length > 0 || input.attachmentIds.length > 0, { path: ['body'], message: 'required' });
 export type SendMessageInput = z.input<typeof sendMessageInputSchema>;

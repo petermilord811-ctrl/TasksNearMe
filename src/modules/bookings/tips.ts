@@ -79,7 +79,11 @@ export async function tipBooking(deps: BookingDeps, userId: string, bookingId: s
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, String(bookingId))).limit(1);
   const role = booking ? roleOf(booking, userId) : null;
   if (!booking || !role) return { ok: false, code: 'not_found' };
-  if (tipRefusal(factsOf(booking, Boolean(await tipThatWentThrough(db, booking.id))), role, now)) return { ok: false, code: 'not_allowed' };
+  const through = await tipThatWentThrough(db, booking.id);
+  // This client's tip, sent again after an answer that never arrived: paid already, as the first answer said (bad
+  // connections pass, J-N1). Only their own: another person's tip still refuses.
+  if (through && role === 'poster' && through.payerUserId === userId) return { ok: true, code: 'paid', redirectTo: routes.app.booking(booking.id) };
+  if (tipRefusal(factsOf(booking, Boolean(through)), role, now)) return { ok: false, code: 'not_allowed' };
   const paused = await pausedIn(db, booking.marketId);
   if (paused) return paused;
   const limited = await consumeRateLimit(db, `tip:${userId}`, TIP_RATE_LIMIT, now);

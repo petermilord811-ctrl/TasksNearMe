@@ -65,7 +65,9 @@ describe('the one-tap offer', () => {
     const shelves = (await allCards()).find((card) => card.task.id === SHELVES);
     expect(shelves?.myOffer?.status).toBe('pending');
     expect(shelves?.quickOffer).toBeUndefined();
-    expect(await submitQuickOffer(db, JORDAN, SHELVES, now())).toEqual({ ok: false, code: 'not_allowed' });
+    // The same tap again (an answer that never arrived): sent already, and still his one offer (bad connections pass, J-N1).
+    expect(await submitQuickOffer(db, JORDAN, SHELVES, now())).toEqual({ ok: true, code: 'sent' });
+    expect(await db.select({ id: offers.id }).from(offers).where(eq(offers.taskId, SHELVES))).toHaveLength(1);
 
     expect(await withdrawOfferOnTask(db, JORDAN, SHELVES, now())).toEqual({ ok: true, code: 'updated' });
     const [withdrawn] = await db.select({ status: offers.status }).from(offers).where(eq(offers.id, offer!.id));

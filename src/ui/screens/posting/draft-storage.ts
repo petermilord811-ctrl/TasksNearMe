@@ -2,7 +2,8 @@ import { CATEGORY_SLUGS, POST_TASK_STEPS, type AddressSuggestion, type PostTaskS
 
 export const draftStorageKey = (market: string) => `tasksnearme:post-task:${market}:v1`;
 
-export interface StoredTaskDraft { values: TaskDraftInput; step: PostTaskStep; address?: AddressSuggestion }
+/** `requestKey`: this post's key (bad connections pass, J-N1), kept with the draft so a repeat after a reload still has it. */
+export interface StoredTaskDraft { values: TaskDraftInput; step: PostTaskStep; address?: AddressSuggestion; requestKey?: string }
 
 const object = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 const number = (value: unknown) => typeof value === 'number' && Number.isFinite(value);
@@ -27,5 +28,6 @@ export function readStoredDraft(raw: string): StoredTaskDraft | undefined {
   if (object(saved.address) && typeof saved.address.placeId === 'string' && typeof saved.address.line1 === 'string' && typeof saved.address.line2 === 'string' && saved.address.inServiceArea === true && (saved.address.areaName === undefined || typeof saved.address.areaName === 'string')) {
     address = saved.address as unknown as AddressSuggestion;
   }
-  return { values: value as TaskDraftInput, step: saved.step as PostTaskStep, address };
+  const requestKey = typeof saved.requestKey === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(saved.requestKey) ? saved.requestKey : undefined;
+  return { values: value as TaskDraftInput, step: saved.step as PostTaskStep, address, ...(requestKey ? { requestKey } : {}) };
 }

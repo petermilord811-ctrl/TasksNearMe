@@ -34,7 +34,7 @@ describe('MessageComposer', () => {
     const { handlers } = mount();
     await user.type(input(), '  See you Saturday.  ');
     await user.click(send());
-    await waitFor(() => expect(handlers.onSend).toHaveBeenCalledExactlyOnceWith({ body: 'See you Saturday.', attachmentIds: [] }));
+    await waitFor(() => expect(handlers.onSend).toHaveBeenCalledExactlyOnceWith({ body: 'See you Saturday.', attachmentIds: [], requestKey: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/) }));
     await waitFor(() => expect(input()).toHaveValue(''));
     expect(navigation.refresh).toHaveBeenCalledOnce();
     expect(screen.getByText(thread.composer.sent)).toBeInTheDocument();
@@ -50,7 +50,7 @@ describe('MessageComposer', () => {
     expect(vi.mocked(handlers.onUploadPhoto).mock.calls[0]![0].get('file')).toBe(upload);
     expect(await screen.findByRole('img')).toHaveAccessibleName(uploadedTaskPhotos[0]!.alt);
     await user.click(send());
-    await waitFor(() => expect(handlers.onSend).toHaveBeenCalledExactlyOnceWith({ body: '', attachmentIds: [uploadedTaskPhotos[0]!.id] }));
+    await waitFor(() => expect(handlers.onSend).toHaveBeenCalledExactlyOnceWith({ body: '', attachmentIds: [uploadedTaskPhotos[0]!.id], requestKey: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/) }));
     await waitFor(() => expect(screen.queryByRole('img')).not.toBeInTheDocument());
   });
 
@@ -72,7 +72,7 @@ describe('MessageComposer', () => {
     expect(send()).toBeDisabled();
     await user.type(input(), 'Ready');
     await user.click(send());
-    await waitFor(() => expect(handlers.onSend).toHaveBeenCalledExactlyOnceWith({ body: 'Ready', attachmentIds: [] }));
+    await waitFor(() => expect(handlers.onSend).toHaveBeenCalledExactlyOnceWith({ body: 'Ready', attachmentIds: [], requestKey: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/) }));
   });
 
   it('keeps the draft and attached photos after send errors and rejected requests', async () => {
@@ -131,6 +131,26 @@ describe('MessageComposer', () => {
     await act(async () => finishSend({ ok: true, code: 'sent', redirectTo: routes.app.messages() }));
     expect(onSend).toHaveBeenCalledOnce();
     expect(navigation.push).toHaveBeenCalledWith(routes.app.messages());
+  });
+
+  it('sends a retry with the same key and the next message with a new one (bad connections pass, J-N1)', async () => {
+    const user = userEvent.setup();
+    const onSend = vi.fn<ThreadHandlers['onSend']>().mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValue({ ok: true, code: 'sent' });
+    mount({ handlers: { ...fakeThreadHandlers, onSend } });
+    await user.type(input(), 'See you at ten.');
+    await user.click(send());
+    await waitFor(() => expect(onSend).toHaveBeenCalledTimes(1));
+    // The words stay for the retry, which carries the same key: the server keeps one message if the first went through.
+    expect(input()).toHaveValue('See you at ten.');
+    await user.click(send());
+    await waitFor(() => expect(input()).toHaveValue(''));
+    await user.type(input(), 'Bringing the drill.');
+    await user.click(send());
+    await waitFor(() => expect(onSend).toHaveBeenCalledTimes(3));
+    const keys = onSend.mock.calls.map(([sent]) => sent.requestKey);
+    expect(keys[0]).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[0]);
   });
 
   it('keeps focus in the message box while sending and after, from a tap on Send or the keyboard (J-C4)', async () => {
@@ -200,7 +220,7 @@ describe('MessageComposer', () => {
     fireEvent.keyDown(input(), { key: 'Enter', isComposing: true });
     expect(handlers.onSend).not.toHaveBeenCalled();
     fireEvent.keyDown(input(), { key: 'Enter' });
-    await waitFor(() => expect(handlers.onSend).toHaveBeenCalledExactlyOnceWith({ body: 'Ready', attachmentIds: [] }));
+    await waitFor(() => expect(handlers.onSend).toHaveBeenCalledExactlyOnceWith({ body: 'Ready', attachmentIds: [], requestKey: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/) }));
   });
 
   it('leaves mobile Enter available for a new line', () => {

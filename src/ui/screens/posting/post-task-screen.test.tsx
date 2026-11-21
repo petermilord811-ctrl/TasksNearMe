@@ -30,7 +30,7 @@ describe('posting wizard', () => {
       expect(handlers.onPost).not.toHaveBeenCalled();
     }
     await user.click(screen.getByRole('button', { name: 'Post task' }));
-    await waitFor(() => expect(handlers.onPost).toHaveBeenCalledExactlyOnceWith(deskDraft));
+    await waitFor(() => expect(handlers.onPost).toHaveBeenCalledExactlyOnceWith({ ...deskDraft, requestKey: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/) }));
   });
 
   it('advances from the budget price field with Enter without posting', async () => {
@@ -60,7 +60,7 @@ describe('posting wizard', () => {
     expect(handlers.onPost).not.toHaveBeenCalled();
     screen.getByRole('button', { name: 'Post task' }).focus();
     await user.keyboard(key);
-    await waitFor(() => expect(handlers.onPost).toHaveBeenCalledExactlyOnceWith(deskDraft));
+    await waitFor(() => expect(handlers.onPost).toHaveBeenCalledExactlyOnceWith({ ...deskDraft, requestKey: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/) }));
   });
 
   it('validates only describe on Next, focuses its empty title, and Back never validates', async () => {
@@ -107,7 +107,7 @@ describe('posting wizard', () => {
     expect(screen.getByText(/^Posting “Assemble a desk \(flat-pack, 1 item\)” again\. Everything from last time is filled in except photos/)).toBeVisible();
     expect(screen.getAllByText(/1234 Example Lane/).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: 'Post task' }));
-    await waitFor(() => expect(handlers.onPost).toHaveBeenCalledExactlyOnceWith(postTaskRepeatData.repeat!.draft));
+    await waitFor(() => expect(handlers.onPost).toHaveBeenCalledExactlyOnceWith({ ...postTaskRepeatData.repeat!.draft, requestKey: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/) }));
   });
 
   it('opens Post again on Where to search again when the old address was deleted', () => {
@@ -178,7 +178,7 @@ describe('posting wizard', () => {
     const pending = screen.getByRole('button', { name: /Posting…/ });
     expect(pending).toBeDisabled(); expect(pending).toHaveAttribute('aria-busy', 'true');
     await user.click(pending);
-    expect(onPost).toHaveBeenCalledExactlyOnceWith(deskDraft);
+    expect(onPost).toHaveBeenCalledExactlyOnceWith({ ...deskDraft, requestKey: expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/) });
     await act(async () => finish(postTaskResults.posted));
     expect(navigation.push).toHaveBeenCalledWith(postTaskResults.posted.redirectTo);
     expect(screen.getByText(messages.feedback.success.submitted)).toBeInTheDocument();
@@ -245,6 +245,22 @@ describe('posting wizard', () => {
     mount({ persistDraft: true });
     await user.click(await screen.findByRole('button', { name: 'Post task' }));
     await waitFor(() => expect(sessionStorage.getItem(draftStorageKey('austin'))).toBeNull());
+  });
+
+  it('keeps the post key in the stored draft and sends it again with a retry (bad connections pass, J-N1)', async () => {
+    const user = userEvent.setup();
+    sessionStorage.setItem(draftStorageKey('austin'), JSON.stringify({ values: deskDraft, step: 'review', address: addressSuggestions[0] }));
+    const onPost = vi.fn<PostTaskHandlers['onPost']>().mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValue(postTaskResults.posted);
+    mount({ persistDraft: true, handlers: { ...fakePostTaskHandlers, onQuote: async () => deskBreakdown, onPost } });
+    await user.click(await screen.findByRole('button', { name: 'Post task' }));
+    await waitFor(() => expect(onPost).toHaveBeenCalledTimes(1));
+    const key = onPost.mock.calls[0]![0].requestKey;
+    expect(key).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    // Saved with the draft before the post left: a reload after a lost answer still repeats it.
+    expect(JSON.parse(sessionStorage.getItem(draftStorageKey('austin'))!).requestKey).toBe(key);
+    await user.click(await screen.findByRole('button', { name: 'Post task' }));
+    await waitFor(() => expect(onPost).toHaveBeenCalledTimes(2));
+    expect(onPost.mock.calls[1]![0].requestKey).toBe(key);
   });
 
   it('recovers from malformed stored review data without rendering an invalid review', async () => {

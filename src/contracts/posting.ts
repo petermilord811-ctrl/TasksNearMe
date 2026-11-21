@@ -402,9 +402,10 @@ export interface PostTaskHandlers {
   onQuote: QueryHandler<{ budget: PricingInput; expenseAllowanceCents: Cents }, PriceBreakdown>;
   /**
    * Sends the bot check's answer as `botCheck` (`fieldErrors.botCheck` when it's turned down), and with `fromPost`
-   * the post's id as `fromPostId`, which links the new task to it.
+   * the post's id as `fromPostId`, which links the new task to it. `requestKey` is the draft's key for this post
+   * (bad connections pass, J-N1): the same key again returns the task the first post made.
    */
-  onPost: ActionHandler<TaskDraftInput & BotCheckInput & { fromPostId?: string }>;
+  onPost: ActionHandler<TaskDraftInput & BotCheckInput & { fromPostId?: string; requestKey?: string }>;
   /** Thumbnails for photo ids restored from a saved draft (only the person's own uploads). */
   onResolvePhotos?: QueryHandler<{ photoIds: string[] }, Photo[]>;
 }
