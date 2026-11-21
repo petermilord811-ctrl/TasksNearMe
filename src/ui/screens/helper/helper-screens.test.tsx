@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { routes, type ActionResult, type HelperOnboardingPageData, type HelperProfileEditorHandlers } from '@/contracts';
 import { fakeOnboardingHandlers, fakeProfileEditorHandlers, onboardingAreaStep, onboardingDone, onboardingDoneAwaitingCity, onboardingDoneAwaitingCityPending, onboardingIdentityStep, onboardingProfileStep, onboardingServicesStep, samProfileEditorData } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
+import esMessages from '../../../../messages/es/ui';
 import { HelperOnboardingScreen } from './helper-onboarding-screen';
 import { HelperProfileEditorScreen } from './helper-profile-editor-screen';
 
@@ -104,6 +105,13 @@ describe('helper onboarding screen', () => {
     expect(screen.queryByRole('link', { name: /Finish Home address/ })).not.toBeInTheDocument();
     expect(screen.getByText(/Our team is checking what you sent/)).toBeVisible();
     expect(screen.queryByText(/Finish the available steps below/)).not.toBeInTheDocument();
+  });
+
+  it('names the categories a helper can take in the page’s language (journeys on a phone, J-H20)', () => {
+    render(<NextIntlClientProvider locale="es" messages={esMessages}><HelperOnboardingScreen data={onboardingDone} handlers={fakeOnboardingHandlers} /></NextIntlClientProvider>);
+    const listed = screen.getAllByRole('listitem').map((item) => item.textContent);
+    expect(listed).toEqual(expect.arrayContaining(['Armado de muebles', 'Ayuda con mudanzas', 'Limpieza de jardín']));
+    expect(listed).not.toContain('Furniture assembly');
   });
 
   it('shows the earned welcome gift card (no first task) and the find-work link on the last step', () => {
