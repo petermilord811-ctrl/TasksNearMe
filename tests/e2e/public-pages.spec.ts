@@ -13,10 +13,42 @@ import { waitlistEntries } from '../../src/modules/marketing/schema';
  * the camera pulls back, and takes clicks once it's there); on phones, the map section's start.
  */
 async function landOnMap(page: Page) {
-  await page.locator('[data-map-landed]').evaluate((anchor) => anchor.scrollIntoView({ block: 'start' }));
+  const landed = page.locator('[data-map-landed]');
+  await landed.evaluate((anchor) => anchor.scrollIntoView({ block: 'start' }));
   await expect.poll(() => page.locator('#tasks-near-you [data-task-map]').evaluate((frame) => frame.getBoundingClientRect().top < window.innerHeight * 0.9)).toBe(true);
   // The explorer takes clicks once the arrival has come far enough (wide screens), right away on phones.
   await expect.poll(() => page.locator('[data-map-explorer]').evaluate((panel) => getComputedStyle(panel).pointerEvents)).not.toBe('none');
+  if (!(await page.evaluate(() => window.matchMedia('(min-width: 1024px)').matches))) return;
+  // Wide screens: it takes clicks from 55% of the arrival but slides in until about 73%, and its card blooms in. Wait
+  // until it's all the way in and has stopped moving. A click that finds it "not stable" makes Playwright retry with the
+  // page scrolled to other alignments, which moves this pinned arrival back, so the explorer stops taking clicks (a
+  // desktop flake, 2026-11-21). Each try scrolls back to the landing first: the hero above can still change the page's
+  // height as it loads.
+  await expect
+    .poll(
+      async () => {
+        await landed.evaluate((anchor) => anchor.scrollIntoView({ block: 'start' }));
+        return page.locator('[data-map-explorer]').evaluate(
+          (panel) =>
+            new Promise<boolean>((resolve) => {
+              const parts = [panel.firstElementChild, panel.querySelector('[data-reveal]')].filter((part): part is Element => part !== null);
+              const before = parts.map((part) => part.getBoundingClientRect());
+              requestAnimationFrame(() =>
+                requestAnimationFrame(() => {
+                  const still = parts.every((part, index) => {
+                    const box = part.getBoundingClientRect();
+                    const was = before[index]!;
+                    return getComputedStyle(part).opacity === '1' && box.top === was.top && box.left === was.left && box.width === was.width;
+                  });
+                  resolve(parts.length === 2 && getComputedStyle(panel).pointerEvents !== 'none' && still);
+                }),
+              );
+            }),
+        );
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(true);
 }
 
 /**
