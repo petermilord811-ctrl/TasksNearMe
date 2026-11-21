@@ -17,6 +17,7 @@
  */
 import { spawn } from 'node:child_process';
 import { e2eDatabaseUrl } from './e2e-db.mjs';
+import { clearStaleCssCache, recordCssBuild } from './lib/css-fingerprint.mjs';
 import { pauseDevServer, restartDevServer } from './lib/dev-restart.mjs';
 import { acquireHeavyLock } from './lib/heavy-lock.mjs';
 
@@ -75,7 +76,10 @@ try {
     const e2eEnv = process.env.CI ? process.env : { ...process.env, DATABASE_URL: e2eDatabaseUrl() };
     commandEnv = { ...e2eEnv, E2E_TARGET: 'build' };
     if (!process.env.CI) code = await run(['node', 'scripts/e2e-db.mjs', 'prepare']);
+    // A stylesheet edit can survive in Turbopack's build cache (scripts/lib/css-fingerprint.mjs).
+    const css = process.env.CI ? null : clearStaleCssCache(process.cwd(), log);
     if (code === undefined || code === 0) code = await run(['npm', 'run', 'e2e:build'], e2eEnv);
+    if (code === 0 && css) recordCssBuild(process.cwd(), css);
     if (code !== 0) log(`The e2e build failed (exit ${code}), so the command didn't run.`);
     // Only the build needs the dev server's memory; the run's `next start` holds about 0.4 GB. Letting the dev
     // server come back now keeps dev.tasksnearme.com usable while e2e runs queue one after another.
