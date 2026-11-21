@@ -7,7 +7,7 @@
     "booking": "Ver reserva",
     "series": "Ver visitas regulares"
   },
-  "masking": "Los números de teléfono y los correos se mantienen ocultos hasta que se confirme la reserva",
+  "masking": "Los números de teléfono, los correos, los enlaces y los nombres de usuario se mantienen ocultos hasta que se confirme la reserva",
   "presenceNow": "En línea ahora",
   "presenceToday": "Se conectó hoy",
   "typing": "escribiendo…",

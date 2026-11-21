@@ -55,7 +55,13 @@ describe('the Spanish copy’s voice', () => {
   });
 
   /** The words people read: no argument names ("{email}"), plural and select heads, or tag names. */
-  const prose = (text: string) => text.replace(/\{\s*\w+\s*(,\s*\w+\s*)?[,}]/gu, ' ').replace(/<\/?\w+>/gu, '');
+  // What a reader sees: first the case keys of a select or plural, which follow "select," (or "plural,") or the case
+  // before them and come right before "{" ("email {correo}" is code, not the word); then placeholders; then tags.
+  const prose = (text: string) =>
+    text
+      .replace(/(?:(?<=\b(?:select|plural|selectordinal),\s*)|(?<=\}\s*))(?:\w+|=\d+)\s*(?=\{)/gu, ' ')
+      .replace(/\{\s*\w+\s*(,\s*\w+\s*)?[,}]/gu, ' ')
+      .replace(/<\/?\w+>/gu, '');
 
   for (const { rule, pattern } of RULES) {
     it(rule, () => {

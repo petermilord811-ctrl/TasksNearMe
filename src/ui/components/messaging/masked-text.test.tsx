@@ -31,6 +31,12 @@ describe('MaskedText', () => {
     expect(screen.getByText('•••-•••-•••• (hidden until booking)')).toBeVisible();
   });
 
+  it('says a hidden link or username shows once the booking is paid (abuse rehearsal J-AB1, J-AB2)', () => {
+    renderMessage([{ kind: 'text', text: 'Pay here ' }, { kind: 'masked', detail: 'link' }, { kind: 'text', text: ' or ' }, { kind: 'masked', detail: 'handle' }]);
+    expect(screen.getByText('link hidden (links show once the booking is paid)')).toBeVisible();
+    expect(screen.getByText('@••• (usernames show once the booking is paid)')).toBeVisible();
+  });
+
   it('renders allowed text unchanged rather than running its own contact detection', () => {
     const segments: MessageSegment[] = [...unmaskedMessage, { kind: 'text', text: ' Call 512-555-0134.' }];
     renderMessage(segments);

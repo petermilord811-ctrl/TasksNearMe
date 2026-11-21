@@ -5,7 +5,7 @@
   "ask": {
     "label": "Hacer una pregunta",
     "placeholder": "¿Qué necesitas saber para hacer una buena oferta?",
-    "hint": "Una pregunta abierta a la vez. Aquí los teléfonos y correos quedan ocultos.",
+    "hint": "Una pregunta abierta a la vez. Aquí los teléfonos, correos, enlaces y nombres de usuario quedan ocultos.",
     "submit": "Preguntar",
     "submitting": "Enviando…",
     "sent": "Pregunta enviada"

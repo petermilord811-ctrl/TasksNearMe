@@ -20,9 +20,13 @@ export function MaskedText({ segments, className }: MaskedTextProps) {
         <span key={index} className="rounded bg-muted px-1 py-0.5 text-muted-foreground">
           {segment.detail === 'email'
             ? t('masked.email')
-            : segment.hint
-              ? t('masked.phone', { hint: segment.hint })
-              : t('masked.phoneWithoutHint')}
+            : segment.detail === 'link'
+              ? t('masked.link')
+              : segment.detail === 'handle'
+                ? t('masked.handle')
+                : segment.hint
+                  ? t('masked.phone', { hint: segment.hint })
+                  : t('masked.phoneWithoutHint')}
         </span>
       ))}
     </span>

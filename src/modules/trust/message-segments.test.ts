@@ -29,8 +29,23 @@ describe('message segments', () => {
     ]);
   });
 
-  it('leaves links and longer runs of digits alone', () => {
-    expect(toMessageSegments('Tracking 151255501012, see example.com', { mask: true })).toEqual([{ kind: 'text', text: 'Tracking 151255501012, see example.com' }]);
+  it('hides links and payment or social usernames before a booking, but not tasksnearme.com (abuse rehearsal J-AB1, J-AB2)', () => {
+    expect(toMessageSegments('Pay here https://bit.ly/3xYz or Venmo @maya-r, $MayaR1.', { mask: true })).toEqual([
+      { kind: 'text', text: 'Pay here ' },
+      { kind: 'masked', detail: 'link' },
+      { kind: 'text', text: ' or Venmo ' },
+      { kind: 'masked', detail: 'handle' },
+      { kind: 'text', text: ', ' },
+      { kind: 'masked', detail: 'handle' },
+      { kind: 'text', text: '.' },
+    ]);
+    expect(toMessageSegments('The task: https://tasksnearme.com/tasks/desk-1', { mask: true })).toEqual([{ kind: 'text', text: 'The task: https://tasksnearme.com/tasks/desk-1' }]);
+    // After the booking, everything as written.
+    expect(toMessageSegments('See example.com or @maya', { mask: false })).toEqual([{ kind: 'text', text: 'See example.com or @maya' }]);
+  });
+
+  it('leaves longer runs of digits alone', () => {
+    expect(toMessageSegments('Tracking 151255501012 arrives Friday', { mask: true })).toEqual([{ kind: 'text', text: 'Tracking 151255501012 arrives Friday' }]);
   });
 });
 

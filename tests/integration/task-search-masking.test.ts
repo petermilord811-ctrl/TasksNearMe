@@ -30,6 +30,12 @@ const SAMPLES = [
   'Text +13525550101, 13525550101, 352/555/0101 or 352 555 01 01.',
   'Write to maya at gmail.com or maya (at) gmail (dot) com.',
   'Llama al ３５２５５５０１０１, 1º piso.',
+  // Abuse rehearsal (migration 0072): usernames, spaced-out numbers and emails, and tasksnearme.com's own links.
+  'Pay me on Venmo @maya-r or cash app $MayaR1, IG @maya.cleans.',
+  'Text 3 5 2 5 5 5 0 1 0 1 or write maya @ gmail . com.',
+  'The listing: https://tasksnearme.com/tasks/desk-1, not tasksnearme.com.pay-now.io or paypal.me/mayar.',
+  'Son $80 por 2 horas, a las 10:30; bienvenid@s tod@s, te veo @ las 5.',
+  // Last: the test below reads it as what stays searchable.
   'Tracking 151255501012 arrives Saturday 2026-11-21 at 10:30.',
 ];
 

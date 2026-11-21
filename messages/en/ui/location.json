@@ -28,7 +28,9 @@
   "masked": {
     "phone": "•••-•••-{hint} (hidden until booking)",
     "phoneWithoutHint": "•••-•••-•••• (hidden until booking)",
-    "email": "•••@••• (hidden until booking)"
+    "email": "•••@••• (hidden until booking)",
+    "link": "link hidden (links show once the booking is paid)",
+    "handle": "@••• (usernames show once the booking is paid)"
   },
   "previews": {
     "locationGroup": "Location",

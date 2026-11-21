@@ -17,7 +17,7 @@
     "startTimeHint": "Elige una hora dentro del horario de tu cliente, en {zone}.",
     "chooseStart": "Elige una hora de inicio",
     "message": "Mensaje para tu cliente",
-    "privacy": "Los números de teléfono y los correos se ocultan hasta que se confirme la reserva.",
+    "privacy": "Los números de teléfono, los correos, los enlaces y los nombres de usuario se ocultan hasta que se confirme la reserva.",
     "messageCount": "{count} de {maximum} caracteres",
     "brings": "Lo que llevarás",
     "bringsHint": "Agrega hasta 10 artículos, de 2 a 40 caracteres cada uno.",

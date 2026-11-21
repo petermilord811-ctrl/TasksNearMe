@@ -73,10 +73,13 @@ const iso = (value: Date | null | undefined) => (value ? value.toISOString() : n
 /** A dispute that is open, or was won or lost; an inquiry that closed without a chargeback clears it (stripe-webhooks.ts). */
 export const LIVE_DISPUTE_STATUSES = ['open', 'won', 'lost'] as const;
 
-/** What someone wrote, with phone numbers and emails replaced (src/modules/trust/message-segments.ts). */
+/** What a hidden detail reads as in the pack. */
+const HIDDEN_AS = { phone: '[phone number hidden]', email: '[email hidden]', link: '[link hidden]', handle: '[username hidden]' } as const;
+
+/** What someone wrote, with phone numbers, emails, links and usernames replaced (src/modules/trust/message-segments.ts). */
 function withoutContacts(text: string): string {
   return toMessageSegments(text, { mask: true })
-    .map((segment) => (segment.kind === 'text' ? segment.text : segment.detail === 'phone' ? '[phone number hidden]' : '[email hidden]'))
+    .map((segment) => (segment.kind === 'text' ? segment.text : HIDDEN_AS[segment.detail]))
     .join('');
 }
 const APPROVAL_VIA: Record<string, string> = { poster: 'client', auto: 'automatic', support: 'support', settlement: 'settlement' };

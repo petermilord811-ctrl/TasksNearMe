@@ -49,7 +49,7 @@
     "start": "New start · {zone}",
     "startHint": "Choose a date and time ({zone}).",
     "message": "Message to the client",
-    "messageHint": "Use 10 to 1,000 characters. Phone numbers and emails are hidden until the booking is confirmed.",
+    "messageHint": "Use 10 to 1,000 characters. Phone numbers, emails, links and usernames are hidden until the booking is confirmed.",
     "changeRequired": "Choose a new price or start before sending your counter.",
     "send": "Send counter",
     "close": "Keep requested terms",

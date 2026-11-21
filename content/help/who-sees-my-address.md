@@ -9,7 +9,7 @@ Your exact address goes to **one person: the helper you book**, and only once th
 
 ## Before you book
 
-Everyone else, including helpers making offers, sees only your neighborhood (for example, Duckpond) and a rough distance. Phone numbers and emails in messages stay hidden until the booking is confirmed.
+Everyone else, including helpers making offers, sees only your neighborhood (for example, Duckpond) and a rough distance. Phone numbers, emails, links and usernames in messages stay hidden until the booking is confirmed.
 
 ## After the task
 

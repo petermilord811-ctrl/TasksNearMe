@@ -41,6 +41,46 @@ describe('maskContactDetails', () => {
     expect(maskContactDetails(input)).toEqual({ text: input, masked: false });
   });
 
+  it.each([
+    // Payment and social usernames (abuse rehearsal J-AB1), spaced-out numbers and emails (J-AB5).
+    ['Pay me on Venmo @maya-r instead', 'Pay me on Venmo [hidden] instead'],
+    ['cash app $MayaR1 and cancel the booking', 'cash app [hidden] and cancel the booking'],
+    ['IG @maya.cleans or telegram @mayar_23', 'IG [hidden] or telegram [hidden]'],
+    ['Snapchat: @maya.r', 'Snapchat: [hidden]'],
+    ['paypal.me/mayar', '[hidden]'],
+    ['text 3 5 2 5 5 5 0 1 0 1', 'text [hidden]'],
+    ['or 1 3 5 2 5 5 5 0 1 0 1', 'or [hidden]'],
+    ['write maya @ gmail . com', 'write [hidden]'],
+    ['escríbeme a maya @gmail.com', 'escríbeme a [hidden]'],
+    ['Págame por Venmo @maya-r y cancela', 'Págame por Venmo [hidden] y cancela'],
+  ])('hides %j as %j', (input, output) => {
+    expect(maskContactDetails(input)).toEqual({ text: output, masked: true });
+  });
+
+  it("leaves tasksnearme.com's own links readable, and hides a longer host that only starts with it (J-AB2)", () => {
+    for (const text of ['See https://tasksnearme.com/tasks/desk-1 for the photos.', 'Help is at www.tasksnearme.com/help.', 'Book on tasksnearme.com.']) expect(maskContactDetails(text)).toEqual({ text, masked: false });
+    expect(maskContactDetails('Verify at https://tasksnearme.com.pay-now.io/login').text).toBe('Verify at [hidden]');
+    expect(maskContactDetails('Visit tasksnearme.co today').text).toBe('Visit [hidden] today');
+  });
+
+  it.each([
+    // Ordinary sentences, prices, times, dates, quantities and addresses, in English and Spanish, stay as written.
+    'The desk is $80, or $12.50 an hour, $1,200 for the whole move.',
+    'Son $80 por 2 horas; el total es US$150.',
+    'Between 9am and 5pm, or around 10:30 / 10.30, see you @ the park.',
+    'Te veo @ las 5, o a las 17:30. Bienvenid@s tod@s.',
+    'Saturday 2026-11-21, Nov 21 or 11/21/2026, then 21.11.2026.',
+    'Apt 5B, 1234 Elm St, Gainesville, FL 32601.',
+    'Calle 5 #12-34, 2º piso, Gainesville FL 32601.',
+    'Two boxes of 40 parts, 6 shelves, 3 flights of stairs, 1.5 baths.',
+    'Codes 1 2 3 on the box, room 4 5 6.',
+    'Version 2.0 of the app, 4K TV, 55" screen, 120Hz.',
+    'Email works best: I check it at night.',
+    'I use Venmo and Cash App, but I pay through TasksNearMe.',
+  ])('leaves ordinary text alone in both languages: %j', (input) => {
+    expect(maskContactDetails(input)).toEqual({ text: input, masked: false });
+  });
+
   it('keeps the rest of the text as written while it reads styled digits as digits', () => {
     expect(maskContactDetails('1º piso: llama al ３５２５５５０１０１, ½ hora antes')).toEqual({ text: '1º piso: llama al [hidden], ½ hora antes', masked: true });
   });

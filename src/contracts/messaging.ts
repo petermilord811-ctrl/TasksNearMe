@@ -14,7 +14,8 @@ export type MessageSegment =
   | { kind: 'text'; text: string }
   | {
       kind: 'masked';
-      detail: 'phone' | 'email';
+      /** Links and payment or social usernames too, until the booking (abuse rehearsal J-AB1, J-AB2). */
+      detail: 'phone' | 'email' | 'link' | 'handle';
       /** Safe hint the UI may show, e.g. last 4 digits of a phone number ("0134"). */
       hint?: string;
     };

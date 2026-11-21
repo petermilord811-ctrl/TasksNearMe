@@ -28,7 +28,9 @@
   "masked": {
     "phone": "•••-•••-{hint} (oculto hasta la reserva)",
     "phoneWithoutHint": "•••-•••-•••• (oculto hasta la reserva)",
-    "email": "•••@••• (oculto hasta la reserva)"
+    "email": "•••@••• (oculto hasta la reserva)",
+    "link": "enlace oculto (los enlaces se muestran cuando se paga la reserva)",
+    "handle": "@••• (los nombres de usuario se muestran cuando se paga la reserva)"
   },
   "previews": {
     "locationGroup": "Ubicación",

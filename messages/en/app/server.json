@@ -654,7 +654,7 @@
     "you": "you",
     "someone": "someone",
     "deletedAccount": "Deleted account",
-    "hidden": "[{detail, select, phone {phone} other {email}} hidden]",
+    "hidden": "[{detail, select, phone {phone} email {email} link {link} other {username}} hidden]",
     "card": "{brand} ending {last4}",
     "cardWithoutBrand": "card ending {last4}",
     "emailCode": "email code"

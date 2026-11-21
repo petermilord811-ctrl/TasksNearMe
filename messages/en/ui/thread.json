@@ -7,7 +7,7 @@
     "booking": "View booking",
     "series": "View regular visits"
   },
-  "masking": "Phone numbers and emails stay hidden until the booking is confirmed",
+  "masking": "Phone numbers, emails, links and usernames stay hidden until the booking is confirmed",
   "presenceNow": "Active now",
   "presenceToday": "Active today",
   "typing": "typing…",

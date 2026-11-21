@@ -5,7 +5,7 @@
   "ask": {
     "label": "Ask a question",
     "placeholder": "What do you need to know to make a good offer?",
-    "hint": "One open question at a time. Phone numbers and emails are hidden here.",
+    "hint": "One open question at a time. Phone numbers, emails, links and usernames are hidden here.",
     "submit": "Ask",
     "submitting": "Sending…",
     "sent": "Question sent"

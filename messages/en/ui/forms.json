@@ -10,7 +10,7 @@
     "in_use": "That number is already used by another account. Try a different number or contact support.",
     "must_accept": "Select this checkbox to continue.",
     "prohibited": "This isn't allowed on TasksNearMe. See the list of prohibited tasks.",
-    "contact_details": "Leave out phone numbers, emails and links: you can share them once a booking is confirmed.",
+    "contact_details": "Leave out phone numbers, emails, links and usernames: you can share them once a booking is confirmed.",
     "name_reserved": "Use your own name. Names like “Support” or “TasksNearMe” are kept for our team.",
     "out_of_range": "Choose a value within the allowed range.",
     "unchanged": "That's what you have now.",

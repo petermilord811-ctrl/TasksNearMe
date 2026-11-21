@@ -9,7 +9,7 @@ Tu dirección exacta llega a **una sola persona: el ayudante que reservas**, y s
 
 ## Antes de reservar
 
-Todos los demás, incluidos los ayudantes que hacen ofertas, solo ven tu vecindario (por ejemplo, Duckpond) y una distancia aproximada. Los números de teléfono y los correos en los mensajes permanecen ocultos hasta que se confirma la reserva.
+Todos los demás, incluidos los ayudantes que hacen ofertas, solo ven tu vecindario (por ejemplo, Duckpond) y una distancia aproximada. Los números de teléfono, los correos, los enlaces y los nombres de usuario en los mensajes permanecen ocultos hasta que se confirma la reserva.
 
 ## Después de la tarea
 

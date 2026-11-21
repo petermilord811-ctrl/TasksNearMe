@@ -1,18 +1,19 @@
 /**
  * Contact details are hidden before a booking is confirmed (blueprint 01 §5, 06 §2): in public
  * task text and in pre-booking messages. Masking is best-effort; it removes the common ways to
- * write emails, phone numbers, and links.
+ * write emails, phone numbers, links, and payment or social usernames (`@name`, `$cashtag`; abuse rehearsal J-AB1).
+ * Links to tasksnearme.com itself stay (J-AB2).
  */
 
 export const MASK = '[hidden]';
 
-/** What a pattern finds: messages mask emails and phones (src/contracts/messaging.ts); task text also hides links. */
-export type ContactDetail = 'email' | 'link' | 'phone';
+/** What a pattern finds; task text and pre-booking messages hide all of them (abuse rehearsal J-AB2: links too). */
+export type ContactDetail = 'email' | 'handle' | 'link' | 'phone';
 
 /**
  * These patterns also live in Postgres: contact-masking-sql.ts ports them for `tasks.search_text`, the generated column
- * task search reads (migration 0066, redefined in 0068). Change one here and the same change needs a migration that
- * redefines that column; tests/integration/task-search-masking.test.ts fails until the two agree.
+ * task search reads (migration 0066, redefined in 0068 and 0072). Change one here and the same change needs a migration
+ * that redefines that column; tests/integration/task-search-masking.test.ts fails until the two agree.
  *
  * They run on the text's NFKC form, so full-width or styled digits (３５２, 𝟑𝟓𝟐) count as digits, while what's kept
  * is the text as written (a Spanish "1º" stays). Phones are bounded by other digits, not by words, so a number run into
@@ -26,14 +27,23 @@ export const CONTACT_PATTERNS: readonly { detail: ContactDetail; pattern: RegExp
     detail: 'email',
     pattern: /\b[\w.+-]+\s*(?:\(|\[)?\s*at\s*(?:\)|\])?\s*[\w-]+(?:\s*(?:\(|\[)?\s*dot\s*(?:\)|\])?\s*|\.)(?:com|net|org|edu|io|co)\b/gi,
   },
-  // Links.
-  { detail: 'link', pattern: /\bhttps?:\/\/\S+/gi },
-  { detail: 'link', pattern: /\bwww\.\S+/gi },
-  { detail: 'link', pattern: /\b[\w-]+\.(?:com|net|org|io|co|me|app)(?:\/\S*)?\b/gi },
+  // Spaced out: "maya @ gmail . com" (J-AB5), a known ending after the dot so a sentence with an "@" isn't one.
+  { detail: 'email', pattern: /[\w.+-]+\s*@\s*[\w-]+\s*\.\s*(?:com|net|org|edu|io|co|me|app|us|mx|es)\b/gi },
+  // Links, but not to tasksnearme.com itself (J-AB2): its host, alone, not the start of a longer one.
+  { detail: 'link', pattern: /\bhttps?:\/\/(?!(?:www\.)?tasksnearme\.com(?![\w-]|\.\w))\S+/gi },
+  { detail: 'link', pattern: /\bwww\.(?!tasksnearme\.com(?![\w-]|\.\w))\S+/gi },
+  { detail: 'link', pattern: /\b(?!tasksnearme\.com(?![\w-]|\.\w))[\w-]+\.(?:com|net|org|io|co|me|app)(?:\/\S*)?\b/gi },
   // Phone numbers: any country's in E.164 (+447700900123), and US numbers, 10 digits with common separators
   // (352-555-0101, (352) 555 0101, 352/555/0101, 352 555 01 01), with an optional +1 or 1.
   { detail: 'phone', pattern: /\+[1-9]\d{7,14}(?!\d)/g },
   { detail: 'phone', pattern: /(?<!\d)(?:\+?1[\s./-]*)?\(?\d{3}\)?[\s./-]*\d{3}[\s./-]*\d{2}[\s./-]?\d{2}(?!\d)/g },
+  // Every digit spaced out, phone-length only (J-AB5): "3 5 2 5 5 5 0 1 0 1". Prices, times and dates never are.
+  { detail: 'phone', pattern: /(?<![\d+])(?:\+?1[\s.-])?\d(?:[\s.-]\d){9}(?!\d)/g },
+  // Payment and social usernames (J-AB1): Venmo, Instagram, Telegram, Snapchat's "@name" (a letter first, so "@5pm"
+  // and "tod@s" aren't), and Cash App's "$cashtag" (a letter first, so prices aren't). Zelle goes by a phone or an email,
+  // PayPal by a paypal.me link: both above.
+  { detail: 'handle', pattern: /(?<![\w.+-])@[a-z][\w.-]*\w/gi },
+  { detail: 'handle', pattern: /(?<![\w$])\$[a-z][\w-]*\w/gi },
 ];
 
 /** Where a contact detail is in the text as written, and what it reads as (NFKC: its digits as 0-9). */

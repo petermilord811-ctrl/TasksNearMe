@@ -49,7 +49,7 @@
     "start": "Nuevo inicio · {zone}",
     "startHint": "Elige una fecha y hora ({zone}).",
     "message": "Mensaje para el cliente",
-    "messageHint": "Usa entre 10 y 1,000 caracteres. Los números de teléfono y los correos se ocultan hasta que se confirme la reserva.",
+    "messageHint": "Usa entre 10 y 1,000 caracteres. Los números de teléfono, los correos, los enlaces y los nombres de usuario se ocultan hasta que se confirme la reserva.",
     "changeRequired": "Elige un nuevo precio o inicio antes de enviar tu contraoferta.",
     "send": "Enviar contraoferta",
     "close": "Mantener condiciones solicitadas",

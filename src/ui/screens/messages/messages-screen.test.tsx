@@ -138,7 +138,7 @@ describe('ThreadScreen', () => {
     expect(within(log).getByText('•••@••• (hidden until booking)')).toBeVisible();
     expect(log).toHaveTextContent('Offer received · $50.00');
     expect(container.textContent).not.toContain('512-555-0134');
-    expect(screen.getByText(/Phone numbers and emails.*hidden until the booking is confirmed/)).toBeVisible();
+    expect(screen.getByText(/Phone numbers, emails, links and usernames.*hidden until the booking is confirmed/)).toBeVisible();
     const phoneMessage = deskOfferThreadPageData.messages[1]!;
     expect(log.querySelector(`time[datetime="${phoneMessage.createdAt}"]`)).toHaveTextContent(formatTime(phoneMessage.createdAt));
     expect(log).toHaveTextContent(deskOfferThreadPageData.thread.otherParty.displayName);
@@ -148,7 +148,7 @@ describe('ThreadScreen', () => {
     thread(deskBookingThreadPageData);
     expect(screen.getByRole('log')).toHaveTextContent('512-555-0101');
     expect(screen.getByRole('log')).toHaveTextContent('On the way');
-    expect(screen.queryByText(/Phone numbers and emails.*hidden until the booking is confirmed/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Phone numbers, emails, links and usernames.*hidden until the booking is confirmed/)).not.toBeInTheDocument();
   });
 
   it('keeps the photo label in its accessible name and restores focus after viewing the larger image', async () => {

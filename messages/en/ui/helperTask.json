@@ -17,7 +17,7 @@
     "startTimeHint": "Choose a time in the client's window. Times are in {zone}.",
     "chooseStart": "Choose a start time",
     "message": "Message to the client",
-    "privacy": "Phone numbers and emails are hidden until the booking is confirmed.",
+    "privacy": "Phone numbers, emails, links and usernames are hidden until the booking is confirmed.",
     "messageCount": "{count} of {maximum} characters",
     "brings": "What you'll bring",
     "bringsHint": "Add up to 10 items, with 2 to 40 characters each.",

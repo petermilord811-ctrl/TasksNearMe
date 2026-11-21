@@ -50,7 +50,7 @@ const iso = (value: Date | string | null | undefined): string | null => (value i
 const tFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.dataExport' }));
 
 /** What someone else wrote, with contact details hidden as the app hides them. */
-function masked(text: string | null, hidden: (detail: 'phone' | 'email') => string): string | null {
+function masked(text: string | null, hidden: (detail: 'phone' | 'email' | 'link' | 'handle') => string): string | null {
   if (text === null) return null;
   return toMessageSegments(text, { mask: true })
     .map((segment) => (segment.kind === 'text' ? segment.text : hidden(segment.detail)))
