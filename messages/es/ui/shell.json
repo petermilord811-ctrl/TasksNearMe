@@ -36,6 +36,8 @@
     "label": "Elige cómo usar TasksNearMe",
     "poster": "Necesito ayuda",
     "helper": "Puedo ayudar",
+    "nowHelper": "Estás en modo ayudante",
+    "nowPoster": "Estás en modo cliente",
     "pending": "Cambiando de modo…",
     "toHelper": "Cambiar a “Puedo ayudar”",
     "toPoster": "Cambiar a “Necesito ayuda”"

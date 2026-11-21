@@ -37,6 +37,8 @@
     "poster": "I need help",
     "helper": "I can help",
     "pending": "Changing mode…",
+    "nowHelper": "You’re in helper mode",
+    "nowPoster": "You’re in client mode",
     "toHelper": "Switch to “I can help”",
     "toPoster": "Switch to “I need help”"
   },

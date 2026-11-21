@@ -58,6 +58,7 @@ describe('AccountMenu', () => {
     await userEvent.click(item);
     expect(onModeChange).toHaveBeenCalledExactlyOnceWith({ mode: 'helper' });
     await vi.waitFor(() => expect(push).toHaveBeenCalledWith(routes.app.helperOnboarding()));
+    expect(toastSuccess).toHaveBeenCalledWith('You’re in helper mode');
   });
 
   it('switches the theme and the language from the menu (the bar has no room for them on phones)', async () => {

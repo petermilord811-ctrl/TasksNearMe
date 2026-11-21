@@ -82,15 +82,17 @@ export function AccountMenu({ viewer, onSignOut, onSwitchLanguage, onModeChange,
   async function switchMode() {
     if (viewer.kind !== 'user' || !onModeChange || pendingRef.current) return;
     pendingRef.current = true;
+    const nextMode = viewer.mode === 'poster' ? 'helper' : 'poster';
     setMessage({ text: t('mode.pending'), error: false });
     let result: ActionResult;
     try {
-      result = await onModeChange({ mode: viewer.mode === 'poster' ? 'helper' : 'poster' });
+      result = await onModeChange({ mode: nextMode });
     } catch {
       result = { ok: false, code: 'unknown' };
     }
     pendingRef.current = false;
-    const text = feedback(`${result.ok ? 'success' : 'error'}.${result.code}`);
+    // Which mode the person is in now, not "Updated" (journeys on a phone).
+    const text = result.ok ? t(nextMode === 'helper' ? 'mode.nowHelper' : 'mode.nowPoster') : feedback(`error.${result.code}`);
     setMessage({ text, error: !result.ok });
     if (result.ok) {
       toast.success(text);

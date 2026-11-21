@@ -26,7 +26,8 @@ describe('ModeSwitch', () => {
     expect(handler).not.toHaveBeenCalled();
     await userEvent.click(screen.getByRole('button', { name: 'I can help' }));
     expect(handler).toHaveBeenCalledExactlyOnceWith({ mode: 'helper' });
-    expect(toastSuccess).toHaveBeenCalledWith(feedback.success.updated);
+    // Says which mode, not "Updated" (journeys on a phone).
+    expect(toastSuccess).toHaveBeenCalledWith('You’re in helper mode');
     // The app owns the viewer; a success does not invent a new prop value.
     expect(screen.getByRole('button', { name: 'I need help' })).toHaveAttribute('aria-pressed', 'true');
   });
@@ -77,6 +78,6 @@ describe('ModeSwitch', () => {
     handler.mockResolvedValueOnce({ ok: true, code: 'updated' });
     await userEvent.click(screen.getByRole('button', { name: 'I can help' }));
     expect(handler).toHaveBeenCalledTimes(2);
-    expect(screen.getByRole('status')).toHaveTextContent(feedback.success.updated);
+    expect(screen.getByRole('status')).toHaveTextContent('You’re in helper mode');
   });
 });

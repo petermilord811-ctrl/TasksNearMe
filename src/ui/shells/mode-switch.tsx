@@ -45,7 +45,8 @@ export function ModeSwitch({ mode, onModeChange }: ModeSwitchProps) {
     pendingRef.current = false;
     setPendingMode(null);
     setAccepted(result.ok ? nextMode : null);
-    const text = feedback(`${result.ok ? 'success' : 'error'}.${result.code}`);
+    // Which mode the person is in now, not "Updated" (journeys on a phone).
+    const text = result.ok ? t(nextMode === 'helper' ? 'mode.nowHelper' : 'mode.nowPoster') : feedback(`error.${result.code}`);
     setMessage({ text, error: !result.ok });
     if (result.ok) {
       toast.success(text);
