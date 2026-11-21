@@ -83,6 +83,12 @@ describe('my clients and rebooking', () => {
     expect((await db.select().from(tasks).where(eq(tasks.id, done!.taskId!)))[0]).toMatchObject({ status: 'assigned', posterUserId: 'usr_ana' });
     // A second click after success goes to the booking.
     expect(await acceptProposal(deps, 'usr_ana', row!.id, card('success'), now())).toMatchObject({ ok: true, code: 'booked' });
+    // The helper hears it once: the accepted proposal, with the booking's date; no separate "booked you" (J-H21).
+    await dispatchNotifications(db, new Date(), 10_000);
+    const told = await db.select().from(notifications).where(eq(notifications.userId, 'usr_sam'));
+    const aboutBooking = told.filter((note) => note.target.kind === 'booking' && note.target.bookingId === done!.bookingId);
+    expect(aboutBooking.map((note) => note.type)).toEqual(['rebook_accepted']);
+    expect(aboutBooking[0]!.params).toMatchObject({ at: booking!.startAt.toISOString(), timeZone: 'America/Chicago' });
   });
 
   it('lets the client decline, the helper withdraw, and expires old proposals', async () => {

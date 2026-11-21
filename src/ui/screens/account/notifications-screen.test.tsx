@@ -55,7 +55,7 @@ const copy: Record<NotificationType, RegExp> = {
   invite_countered: /sent a counter-offer/,
   invite_accepted: /accepted your booking request.*You're booked/,
   rebook_proposed: /proposed a booking/,
-  rebook_accepted: /accepted your proposal.*You're booked/,
+  rebook_accepted: /accepted your proposal: you're booked for/,
   rebook_declined: /declined your proposal.*No booking was made/,
   task_reopened: /looking for a new helper.*Make an offer/,
   approval_reminder: /Approve .* or report a problem\. It's approved automatically/,

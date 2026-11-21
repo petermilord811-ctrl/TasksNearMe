@@ -43,7 +43,7 @@
     "invite_countered": "{actorName} envió una contraoferta{hasAmount, select, yes { de {amount}} other {}} para {title}",
     "invite_accepted": "{actorName} aceptó tu solicitud de reserva para {title}. Ya está reservado",
     "rebook_proposed": "{actorName} propuso una reserva: {title}. Revisa los detalles",
-    "rebook_accepted": "{actorName} aceptó tu propuesta para {title}. Ya está reservado",
+    "rebook_accepted": "{actorName} aceptó tu propuesta: tienes una reserva para {title}{hasDate, select, yes { el {date}} other {}}",
     "rebook_declined": "{actorName} rechazó tu propuesta para {title}. No se hizo ninguna reserva",
     "task_reopened": "Tu cliente busca un nuevo ayudante para {title}. Haz una oferta si aún puedes ayudar",
     "approval_reminder": "Aprueba {title} o reporta un problema. Se aprueba automáticamente {hasHours, select, yes {en {hours, plural, one {# hora} other {# horas}}} other {pronto}}",

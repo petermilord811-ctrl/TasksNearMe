@@ -280,9 +280,14 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
       const forHelper = (type: NotificationType, extra: Partial<Planned> = {}): Planned => ({ userId: booking.helperUserId, type, target, title: booking.title, actorName: posterName, ...extra });
       const forPoster = (type: NotificationType, extra: Partial<Planned> = {}): Planned => ({ userId: booking.posterUserId, type, target, title: booking.title, actorName: helperName, ...extra });
       switch (event.type) {
-        case 'booking.confirmed':
+        case 'booking.confirmed': {
+          // A booking from the helper's own proposal: rebook_accepted says it, with the date, so the helper hears it once
+          // (journeys on a phone, J-H21; ab decided). The proposal holds the booking from the moment the client accepts.
+          const [fromProposal] = await db.select({ id: rebookProposals.id }).from(rebookProposals).where(eq(rebookProposals.bookingId, booking.id)).limit(1);
+          if (fromProposal) return [];
           // Who booked them and when, on the booking's clock (messages pass J-M5).
           return [forHelper('booking_confirmed', { params: { at: booking.startAt.toISOString(), timeZone: await marketTimeZone(db, booking.marketId) } })];
+        }
         case 'booking.on_my_way':
           return [forPoster('helper_on_the_way')];
         case 'booking.running_late':
@@ -369,7 +374,11 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
       const actorName = await nameOf(db, posterId);
       const bookingId = text(p.bookingId) ?? proposal?.bookingId ?? undefined;
       if (event.type === 'rebook.accepted') {
-        return bookingId ? [{ userId: helperId, type: 'rebook_accepted' as const, target: { kind: 'booking', bookingId } as AttentionTarget, title, actorName }] : [];
+        if (!bookingId) return [];
+        // The one notification for that moment, with the booking's date on its clock (booking_confirmed is skipped; J-H21).
+        const booked = await bookingContext(db, bookingId);
+        const params = booked ? { params: { at: booked.startAt.toISOString(), timeZone: await marketTimeZone(db, booked.marketId) } } : {};
+        return [{ userId: helperId, type: 'rebook_accepted' as const, target: { kind: 'booking', bookingId } as AttentionTarget, title, actorName, ...params }];
       }
       return [{ userId: helperId, type: 'rebook_declined' as const, target: { kind: 'proposal', proposalId } as AttentionTarget, title, actorName }];
     }
