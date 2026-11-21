@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import type { CardBrand, DevTestCard } from '@/contracts';
 import { DEV_TEST_CARDS } from '@/contracts';
 import { createStripePayments } from './stripe';
@@ -32,6 +32,11 @@ export interface CollectedCard {
   last4: string;
   expMonth: number;
   expYear: number;
+  /**
+   * The provider's id for the card itself, the same on every account that adds it (Stripe's `card.fingerprint`): an
+   * opaque id, not card data (abuse rehearsal J-AB4: a banned account's card is refused, block evasion is flagged).
+   */
+  fingerprint?: string;
 }
 
 /**
@@ -88,8 +93,12 @@ export interface PaymentProvider {
   cancelAuthorization(input: { authorizationRef: string }): Promise<{ status: 'canceled' }>;
   /** Refunds part or all of a captured charge. Same key, same result. */
   refund(input: { chargeRef: string; amountCents: number; idempotencyKey: string }): Promise<{ status: 'succeeded' | 'failed'; refundRef: string }>;
-  /** Development only: the payment method for a test card (what the provider's card form would return). */
-  collectDevCard?(card: DevTestCard): CollectedCard;
+  /**
+   * Development only: the payment method for a test card (what the provider's card form would return). Its fingerprint
+   * is the card's for that person (`ownerId`), so one person's test card never matches another's; tests that need two
+   * accounts on one card write the fingerprint themselves.
+   */
+  collectDevCard?(card: DevTestCard, ownerId?: string): CollectedCard;
   /**
    * Stripe: a card collected by Stripe.js (`pm_…`): its brand and last four, attached to the person's
    * customer (made on first use; pass `ref` when one is stored). `not_supported`: not a card brand we take.
@@ -168,8 +177,9 @@ export function createDevPaymentProvider(): PaymentProvider {
     async completeAction({ outcome }) {
       return outcome === 'approved' ? { status: 'succeeded' } : { status: 'failed', failureCode: 'payment_declined' };
     },
-    collectDevCard(card) {
-      return { providerRef: devCardRef(card), brand: 'visa', last4: DEV_CARDS[card].last4, expMonth: 12, expYear: 2030 };
+    collectDevCard(card, ownerId) {
+      const fingerprint = `devfp_${createHash('sha256').update(`${ownerId ?? ''}:${card}`).digest('hex').slice(0, 16)}`;
+      return { providerRef: devCardRef(card), brand: 'visa', last4: DEV_CARDS[card].last4, expMonth: 12, expYear: 2030, fingerprint };
     },
   };
 }

@@ -30,7 +30,8 @@ export const supportCases = pgTable(
     subjectUserId: text('subject_user_id').references(() => users.id),
     /** Where a report came from (the conversation and its task), for support's review. */
     // `answer`: a report of the question's answer (its poster is the case's subject), not the question (sweep QA3).
-    context: jsonb('context').$type<{ threadId?: string; taskId?: string; reviewId?: string; postId?: string; replyId?: string; questionId?: string; answer?: boolean }>(),
+    // A block-evasion flag (J-AB4) also names who was reached and the account they blocked.
+    context: jsonb('context').$type<{ threadId?: string; taskId?: string; reviewId?: string; postId?: string; replyId?: string; questionId?: string; answer?: boolean; recipientUserId?: string; blockedUserId?: string }>(),
     reason: text('reason'),
     description: text('description').notNull().default(''),
     /** Photos sent with the case (files of kind `evidence`). */

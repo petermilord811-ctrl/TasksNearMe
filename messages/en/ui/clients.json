@@ -76,6 +76,7 @@
     "errorsByCode": {
       "validation_failed": "Proposal — check the fields",
       "payment_declined": "Proposal — card declined",
+      "card_not_allowed": "Card can't be used here",
       "insufficient_funds": "Proposal — insufficient funds",
       "requires_bank_verification": "Proposal — verification needed",
       "version_conflict": "Proposal — details changed",

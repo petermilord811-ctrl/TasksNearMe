@@ -52,6 +52,7 @@
     "results": {
       "validation_failed": "Check the details",
       "payment_declined": "Payment declined",
+      "card_not_allowed": "Card can't be used here",
       "insufficient_funds": "Insufficient funds",
       "requires_bank_verification": "Bank verification needed",
       "version_conflict": "Booking changed",
@@ -259,7 +260,8 @@
       "payment_declined": "Your card was declined.",
       "insufficient_funds": "Your card didn't have enough funds.",
       "requires_bank_verification": "Your bank wants to confirm it's you.",
-      "no_card": "There's no card on file for it."
+      "no_card": "There's no card on file for it.",
+      "card_not_allowed": "This card can't be used here. Pay with another card."
     },
     "payByVisit": "Pay by {date} to keep this visit. Otherwise it's skipped, with no fees.",
     "payByBooking": "Pay by {date} to keep this booking. Otherwise it's canceled, with no fees.",

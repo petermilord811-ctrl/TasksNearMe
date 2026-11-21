@@ -124,7 +124,8 @@
     "payment_declined": "The card was declined.",
     "insufficient_funds": "The card didn't have enough funds.",
     "requires_bank_verification": "Your bank wants you to confirm the payment.",
-    "no_card": "There's no card on file."
+    "no_card": "There's no card on file.",
+    "card_not_allowed": "This card can't be used here. Pay with another card."
   },
   "visitActions": {
     "skip_visit": "Skip",

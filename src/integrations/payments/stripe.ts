@@ -186,7 +186,7 @@ export function createStripePayments(config: { secretKey: string; fetch?: typeof
 
     async prepareCard({ paymentMethodRef, customer }): Promise<PreparedCardResult> {
       const method = await stripe.request('GET', `/payment_methods/${encodeURIComponent(paymentMethodRef)}`);
-      const card = (method.card ?? {}) as { brand?: unknown; last4?: unknown; exp_month?: unknown; exp_year?: unknown };
+      const card = (method.card ?? {}) as { brand?: unknown; last4?: unknown; exp_month?: unknown; exp_year?: unknown; fingerprint?: unknown };
       const brand = str(card.brand);
       if (method.type !== 'card' || !brand || !(CARD_BRANDS as readonly string[]).includes(brand)) return { ok: false, reason: 'not_supported' };
       const customerRef =
@@ -219,6 +219,7 @@ export function createStripePayments(config: { secretKey: string; fetch?: typeof
         last4: str(card.last4) ?? '',
         expMonth: typeof card.exp_month === 'number' ? card.exp_month : 0,
         expYear: typeof card.exp_year === 'number' ? card.exp_year : 0,
+        ...(str(card.fingerprint) ? { fingerprint: str(card.fingerprint)! } : {}),
       };
       return { ok: true, card: collected, customerRef };
     },

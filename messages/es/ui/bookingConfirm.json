@@ -75,6 +75,7 @@
     },
     "results": {
       "payment_declined": "Pago rechazado",
+      "card_not_allowed": "La tarjeta no se puede usar aquí",
       "insufficient_funds": "Fondos insuficientes",
       "requires_bank_verification": "Verificación bancaria no disponible",
       "version_conflict": "La oferta cambió",

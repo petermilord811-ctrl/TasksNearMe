@@ -78,6 +78,7 @@
       "unavailable": "Provider unavailable feedback",
       "unknown": "Message could not be sent",
       "payment_declined": "Payment declined feedback",
+      "card_not_allowed": "Card can't be used here",
       "insufficient_funds": "Insufficient funds feedback",
       "requires_bank_verification": "Bank verification feedback",
       "version_conflict": "Updated details feedback",

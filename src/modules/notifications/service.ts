@@ -38,6 +38,7 @@ import { requestIdentityAfterNameChange } from '@/modules/verification/tracks';
 import { computeOnboarding } from '@/modules/verification/progress';
 import { loadOnboardingState } from '@/modules/verification/state';
 import { pushSetup } from './push';
+import { flagBlockEvasion } from '@/modules/trust/card-fingerprints';
 import { notificationPreferences, notifications } from './schema';
 import { verificationNotificationFor } from './verification-plan';
 import { helpersToAlert, replacementHelpers } from '@/modules/offers/task-alerts';
@@ -684,6 +685,12 @@ export async function dispatchNotifications(db: Db, now: Date, limit = 200): Pro
       await reactForOperations(db, event, now);
     } catch (error) {
       console.error(`[outbox] operations for ${event.type} ${event.id} failed`, error);
+    }
+    // Someone reaching a person who blocked another account on the same card: a case for staff (abuse rehearsal J-AB4).
+    try {
+      await flagBlockEvasion(db, event, now);
+    } catch (error) {
+      console.error(`[outbox] block-evasion check for ${event.type} ${event.id} failed`, error);
     }
     // Live notices for open pages (src/modules/realtime/reactions.ts, completion plan 7.1): ids only, after the
     // notifications above exist, here in the claimer's loop so other dispatchers' deliveries don't send twice.

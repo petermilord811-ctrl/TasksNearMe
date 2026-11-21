@@ -101,7 +101,8 @@
     "reason": "Reason: {reason}",
     "reasons": {
       "incomplete": "The work isn't finished",
-      "contact_change_reported": "“Not you?” on a contact change"
+      "contact_change_reported": "“Not you?” on a contact change",
+      "block_evasion": "Possible block evasion: the same card as an account the person they reached blocked"
     },
     "otherReason": "Other reason",
     "photos": "Case photos",

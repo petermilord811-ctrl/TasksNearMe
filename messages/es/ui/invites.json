@@ -74,6 +74,7 @@
     "errors": {
       "validation_failed": "Solicitud — revisa los campos",
       "payment_declined": "Solicitud — tarjeta rechazada",
+      "card_not_allowed": "La tarjeta no se puede usar aquí",
       "insufficient_funds": "Solicitud — fondos insuficientes",
       "requires_bank_verification": "Solicitud — requiere verificación",
       "version_conflict": "Solicitud — los detalles cambiaron",

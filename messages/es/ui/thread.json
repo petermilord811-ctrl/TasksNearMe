@@ -78,6 +78,7 @@
       "unavailable": "Aviso de proveedor no disponible",
       "unknown": "No se pudo enviar el mensaje",
       "payment_declined": "Aviso de pago rechazado",
+      "card_not_allowed": "La tarjeta no se puede usar aquí",
       "insufficient_funds": "Aviso de fondos insuficientes",
       "requires_bank_verification": "Aviso de verificación del banco",
       "version_conflict": "Aviso de detalles actualizados",

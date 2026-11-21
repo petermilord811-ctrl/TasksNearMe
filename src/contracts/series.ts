@@ -48,7 +48,8 @@ export const SERIES_SKIPPERS = ['poster', 'helper', 'payment', 'pause'] as const
 export type SeriesSkipper = (typeof SERIES_SKIPPERS)[number];
 
 /** Why a visit's automatic charge didn't go through (the bank asked for the client: pay in the app). */
-export const SERIES_CHARGE_FAILURES = ['payment_declined', 'insufficient_funds', 'requires_bank_verification', 'no_card'] as const;
+/** `card_not_allowed`: the saved card can't be used here (abuse rehearsal J-AB4), said neutrally, never naming why. */
+export const SERIES_CHARGE_FAILURES = ['payment_declined', 'insufficient_funds', 'requires_bank_verification', 'no_card', 'card_not_allowed'] as const;
 export type SeriesChargeFailure = (typeof SERIES_CHARGE_FAILURES)[number];
 
 /** How a series repeats, for the words ("Every 2 weeks on Tuesday", "Monthly on the last Saturday"). */

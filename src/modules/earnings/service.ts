@@ -42,6 +42,7 @@ import { marketDayKey } from '@/shared/format';
 import { earnings, payouts } from './schema';
 import { shownPaymentStatus } from '@/modules/payments/shown-status';
 import { userTimeZone } from '@/modules/markets/time-zone';
+import { cardOfBannedAccount } from '@/modules/trust/card-fingerprints';
 
 /**
  * The money after the work (blueprint 04 §5–6): transfers to helpers when a booking completes or a
@@ -449,7 +450,13 @@ export async function addCard(db: Db, userId: string, input: AddCardInput, now: 
     if (!payments_.collectDevCard || !parsed.data.card) return { ok: false, code: 'not_allowed' };
     // Saving a card checks it with the bank: test cards that decline are refused.
     if (parsed.data.card === 'declined' || parsed.data.card === 'insufficient_funds') return { ok: false, code: 'payment_declined' };
-    card = payments_.collectDevCard(parsed.data.card);
+    card = payments_.collectDevCard(parsed.data.card, userId);
+  }
+  // A card some banned account used isn't taken, with a message that never names the ban (abuse rehearsal J-AB4); a card
+  // from Stripe's form comes off the person's customer again.
+  if (await cardOfBannedAccount(db, card.fingerprint, userId)) {
+    if (parsed.data.paymentMethodId) await payments_.detachCard?.(card.providerRef).catch((error: unknown) => console.error('[payments] detaching a refused card failed', error));
+    return { ok: false, code: 'card_not_allowed' };
   }
   const existing = await db.select({ id: paymentMethods.id }).from(paymentMethods).where(and(eq(paymentMethods.userId, userId), isNull(paymentMethods.detachedAt)));
   const makeDefault = parsed.data.makeDefault || existing.length === 0;
@@ -464,6 +471,7 @@ export async function addCard(db: Db, userId: string, input: AddCardInput, now: 
       last4: card.last4,
       expMonth: card.expMonth,
       expYear: card.expYear,
+      fingerprint: card.fingerprint ?? null,
       isDefault: makeDefault,
       createdAt: now,
     });

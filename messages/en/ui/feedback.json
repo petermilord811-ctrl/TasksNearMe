@@ -59,6 +59,7 @@
   "error": {
     "validation_failed": "Check the details and try again.",
     "payment_declined": "Your card was declined. Try another card or payment method.",
+    "card_not_allowed": "This card can't be used here. Contact support if you think that's wrong.",
     "insufficient_funds": "There aren't enough funds for this payment. Try another payment method.",
     "requires_bank_verification": "Your bank needs to verify this payment. Complete the bank verification to continue.",
     "version_conflict": "The details changed while you were viewing them. Refresh the page and check them before trying again.",

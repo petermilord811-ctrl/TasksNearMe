@@ -74,6 +74,7 @@
     "errors": {
       "validation_failed": "Request — check the fields",
       "payment_declined": "Request — card declined",
+      "card_not_allowed": "Card can't be used here",
       "insufficient_funds": "Request — insufficient funds",
       "requires_bank_verification": "Request — verification needed",
       "version_conflict": "Request — details changed",

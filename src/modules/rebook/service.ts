@@ -503,6 +503,7 @@ export async function acceptProposal(deps: BookingDeps, posterId: string, propos
       methodRef: method.providerRef,
       methodBrand: method.brand,
       methodLast4: method.last4,
+      methodFingerprint: method.fingerprint ?? null,
       methodExpMonth: method.expMonth,
       methodExpYear: method.expYear,
       saveMethod: method.save,

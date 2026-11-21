@@ -22,9 +22,11 @@ export const paymentMethods = pgTable(
     expYear: integer('exp_year').notNull(),
     isDefault: boolean('is_default').notNull().default(false),
     detachedAt: timestamp('detached_at', { withTimezone: true }),
+    /** The provider's id for the card itself (Stripe's `card.fingerprint`; abuse rehearsal J-AB4): opaque, not card data. */
+    fingerprint: text('fingerprint'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('payment_methods_user_idx').on(t.userId)],
+  (t) => [index('payment_methods_user_idx').on(t.userId), index('payment_methods_fingerprint_idx').on(t.fingerprint)],
 );
 
 /**
@@ -54,6 +56,8 @@ export const payments = pgTable(
     methodLast4: text('method_last4'),
     methodExpMonth: integer('method_exp_month'),
     methodExpYear: integer('method_exp_year'),
+    /** The card's provider fingerprint (J-AB4), so a card used without saving it is known too. */
+    methodFingerprint: text('method_fingerprint'),
     /** Save the new card for next time once this payment succeeds. */
     saveMethod: boolean('save_method').notNull().default(false),
     /** payment_declined | insufficient_funds */
@@ -72,6 +76,7 @@ export const payments = pgTable(
   (t) => [
     index('payments_booking_idx').on(t.bookingId, t.createdAt),
     index('payments_payer_idx').on(t.payerUserId, t.createdAt),
+    index('payments_method_fingerprint_idx').on(t.methodFingerprint),
     uniqueIndex('payments_idempotency_idx').on(t.idempotencyKey),
   ],
 );

@@ -68,6 +68,11 @@ export type ActionSuccessCode = (typeof ACTION_SUCCESS_CODES)[number];
 export const ACTION_ERROR_CODES = [
   'validation_failed',
   'payment_declined',
+  /**
+   * This card can't be used here (abuse rehearsal J-AB4: a banned account used it). Said neutrally, never naming the ban:
+   * "This card can't be used here. Contact support if you think that's wrong."
+   */
+  'card_not_allowed',
   'insufficient_funds',
   'requires_bank_verification',
   'version_conflict',

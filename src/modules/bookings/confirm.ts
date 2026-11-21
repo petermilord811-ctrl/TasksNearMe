@@ -35,6 +35,7 @@ import { findTaskWithPublicView } from '@/modules/tasks/queries';
 import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { tasks } from '@/modules/tasks/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
+import { cardOfBannedAccount } from '@/modules/trust/card-fingerprints';
 import { maskContactDetails } from '@/modules/trust/contact-masking';
 import { toMessageSegments } from '@/modules/trust/message-segments';
 import { fieldError, validationFailed } from '@/platform/actions/results';
@@ -262,14 +263,30 @@ export interface ChosenMethod {
   save: boolean;
   /** Stripe: the customer the card is attached to. */
   customerRef?: string;
+  /** The provider's id for the card itself (abuse rehearsal J-AB4), kept on the payment and on a saved card. */
+  fingerprint?: string | null;
 }
 
 async function chosenMethod(deps: BookingDeps, posterId: string, input: ConfirmBookingInput): Promise<ChosenMethod | ActionResult> {
   return methodForChoice(deps, posterId, input.payment);
 }
 
-/** The card a client chose (a saved one, or a development test card); also used to pay change differences. */
+/**
+ * The card a client chose (a saved one, or a development test card); also used to pay change differences, tips, requests
+ * to a helper and rebooking. A card some banned account used is refused here, neutrally (abuse rehearsal J-AB4).
+ */
 export async function methodForChoice(deps: BookingDeps, posterId: string, choice: ConfirmBookingInput['payment']): Promise<ChosenMethod | ActionResult> {
+  const method = await chosenCard(deps, posterId, choice);
+  if ('ok' in method) return method;
+  if (await cardOfBannedAccount(deps.db, method.fingerprint, posterId)) {
+    // A new card from Stripe's form went on the person's customer as it was checked: it comes off again.
+    if (!method.paymentMethodId) await deps.payments.detachCard?.(method.providerRef).catch((error: unknown) => console.error('[payments] detaching a refused card failed', error));
+    return { ok: false, code: 'card_not_allowed' };
+  }
+  return method;
+}
+
+async function chosenCard(deps: BookingDeps, posterId: string, choice: ConfirmBookingInput['payment']): Promise<ChosenMethod | ActionResult> {
   if (choice.kind === 'saved') {
     const [method] = await deps.db
       .select()
@@ -287,6 +304,7 @@ export async function methodForChoice(deps: BookingDeps, posterId: string, choic
       expYear: method.expYear,
       paymentMethodId: method.id,
       save: false,
+      fingerprint: method.fingerprint,
     };
   }
   if (choice.kind === 'stripe_card') {
@@ -300,7 +318,7 @@ export async function methodForChoice(deps: BookingDeps, posterId: string, choic
     return { ...prepared.card, paymentMethodId: null, save: choice.save, customerRef: prepared.customerRef };
   }
   if (!deps.payments.collectDevCard) return fieldError('payment.card', 'not_supported');
-  const card = deps.payments.collectDevCard(choice.card);
+  const card = deps.payments.collectDevCard(choice.card, posterId);
   return { ...card, paymentMethodId: null, save: choice.save };
 }
 
@@ -433,6 +451,7 @@ export async function confirmBooking(
         methodRef: method.providerRef,
         methodBrand: method.brand,
         methodLast4: method.last4,
+        methodFingerprint: method.fingerprint ?? null,
         methodExpMonth: method.expMonth,
         methodExpYear: method.expYear,
         saveMethod: method.save,
@@ -477,7 +496,7 @@ async function keptCard(tx: Tx, posterId: string, provider: string, method: Chos
   if (same) return same.id;
   const [anyMethod] = await tx.select({ id: paymentMethods.id }).from(paymentMethods).where(and(eq(paymentMethods.userId, posterId), isNull(paymentMethods.detachedAt))).limit(1);
   const id = newId('pm');
-  await tx.insert(paymentMethods).values({ id, userId: posterId, provider, providerRef: method.providerRef, brand: method.brand, last4: method.last4, expMonth: method.expMonth, expYear: method.expYear, isDefault: !anyMethod, createdAt: now });
+  await tx.insert(paymentMethods).values({ id, userId: posterId, provider, providerRef: method.providerRef, brand: method.brand, last4: method.last4, expMonth: method.expMonth, expYear: method.expYear, fingerprint: method.fingerprint ?? null, isDefault: !anyMethod, createdAt: now });
   return id;
 }
 
@@ -712,6 +731,7 @@ export async function settle(deps: BookingDeps, posterId: string, paymentId: str
         last4: payment.methodLast4,
         expMonth: payment.methodExpMonth ?? 12,
         expYear: payment.methodExpYear ?? 2030,
+        fingerprint: payment.methodFingerprint,
         isDefault: !anyMethod,
         createdAt: now,
       });

@@ -44,7 +44,7 @@ async function amountOf(db: Db, bookingId: string): Promise<number | null> {
  * Opens a payment attempt on a scheduled booking, unless one is already on its way (the job and the client
  * never both charge it): the booking row is locked, and an earlier attempt waiting for the bank is replaced.
  */
-async function openAttempt(db: Db, booking: BookingRow, amountCents: number, method: { paymentMethodId: string | null; providerRef: string; brand: string; last4: string; expMonth: number; expYear: number; save: boolean }, provider: string, now: Date): Promise<{ paymentId: string; idempotencyKey: string; replaced: (string | null)[] } | null> {
+async function openAttempt(db: Db, booking: BookingRow, amountCents: number, method: { paymentMethodId: string | null; providerRef: string; brand: string; last4: string; expMonth: number; expYear: number; save: boolean; fingerprint?: string | null }, provider: string, now: Date): Promise<{ paymentId: string; idempotencyKey: string; replaced: (string | null)[] } | null> {
   return db.transaction(async (tx) => {
     await tx.execute(sql`select id from bookings where id = ${booking.id} for update`);
     const [current] = await tx.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, booking.id)).limit(1);
@@ -71,6 +71,7 @@ async function openAttempt(db: Db, booking: BookingRow, amountCents: number, met
       methodRef: method.providerRef,
       methodBrand: method.brand,
       methodLast4: method.last4,
+      methodFingerprint: method.fingerprint ?? null,
       methodExpMonth: method.expMonth,
       methodExpYear: method.expYear,
       saveMethod: method.save,
@@ -147,6 +148,7 @@ async function chargeOne(deps: BookingDeps, booking: BookingRow, now: Date): Pro
   const attempts = claimed.fundingAttempts + 1;
   const amountCents = await amountOf(db, claimed.id);
   const method = claimed.fundingMethodId ? await methodForChoice(deps, claimed.posterUserId, { kind: 'saved', methodId: claimed.fundingMethodId }) : null;
+  if (method && 'ok' in method && method.code === 'card_not_allowed') return chargeFailed(db, claimed, 'card_not_allowed', attempts, now);
   if (!amountCents || !method || !('providerRef' in method)) return chargeFailed(db, claimed, 'no_card', attempts, now);
   // An earlier attempt of the job's whose outcome is unknown (the provider threw): asked again with the same key and the
   // same off-session charge, which gives back that attempt's own result instead of charging twice (repeats review #2).

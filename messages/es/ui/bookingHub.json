@@ -52,6 +52,7 @@
     "results": {
       "validation_failed": "Revisa los datos",
       "payment_declined": "Pago rechazado",
+      "card_not_allowed": "La tarjeta no se puede usar aquí",
       "insufficient_funds": "Fondos insuficientes",
       "requires_bank_verification": "Se necesita verificación del banco",
       "version_conflict": "La reserva cambió",
@@ -259,7 +260,8 @@
       "payment_declined": "Tu tarjeta fue rechazada.",
       "insufficient_funds": "Tu tarjeta no tenía fondos suficientes.",
       "requires_bank_verification": "Tu banco quiere confirmar que eres tú.",
-      "no_card": "No hay una tarjeta guardada para este cobro."
+      "no_card": "No hay una tarjeta guardada para este cobro.",
+      "card_not_allowed": "Esta tarjeta no se puede usar aquí. Paga con otra tarjeta."
     },
     "payByVisit": "Paga antes del {date} para conservar esta visita. Si no, se omite, sin cargos.",
     "payByBooking": "Paga antes del {date} para conservar esta reserva. Si no, se cancela, sin cargos.",

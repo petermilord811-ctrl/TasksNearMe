@@ -75,6 +75,7 @@
     },
     "results": {
       "payment_declined": "Payment declined",
+      "card_not_allowed": "Card can't be used here",
       "insufficient_funds": "Insufficient funds",
       "requires_bank_verification": "Bank verification unavailable",
       "version_conflict": "Offer changed",

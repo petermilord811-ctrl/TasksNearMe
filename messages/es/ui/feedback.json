@@ -59,6 +59,7 @@
   "error": {
     "validation_failed": "Revisa los detalles e inténtalo de nuevo.",
     "payment_declined": "Rechazaron tu tarjeta. Prueba con otra tarjeta u otro método de pago.",
+    "card_not_allowed": "Esta tarjeta no se puede usar aquí. Contacta a soporte si crees que es un error.",
     "insufficient_funds": "No hay fondos suficientes para este pago. Prueba con otro método de pago.",
     "requires_bank_verification": "Tu banco debe verificar este pago. Completa la verificación bancaria para continuar.",
     "version_conflict": "Los detalles cambiaron mientras los veías. Actualiza la página y revísalos antes de volver a intentarlo.",

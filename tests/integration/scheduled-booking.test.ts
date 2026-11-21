@@ -5,6 +5,7 @@ import { confirmBooking, getBookingConfirmPage } from '@/modules/bookings/confir
 import { chargeDueScheduled, expireUnpaidScheduled } from '@/modules/bookings/scheduled';
 import { bookingTerms, bookings } from '@/modules/bookings/schema';
 import { cancelBookingBy, previewCancellation } from '@/modules/bookings/sheets';
+import { users } from '@/modules/accounts/schema';
 import { offers } from '@/modules/offers/schema';
 import { paymentMethods, payments } from '@/modules/payments/schema';
 import { tasks } from '@/modules/tasks/schema';
@@ -130,6 +131,28 @@ describe('bookings made more than 14 days ahead', () => {
     expect(task).toMatchObject({ status: 'open', offerCount: 0 });
     const succeeded = await db.select().from(payments).where(and(eq(payments.bookingId, booking.id), eq(payments.status, 'succeeded')));
     expect(succeeded).toHaveLength(0);
+  });
+
+  it("says the card can't be used, not that there's no card, when a banned account shares it by the charge (abuse rehearsal J-AB4)", async () => {
+    const BANNED = 'usr_sched_banned';
+    const { taskId, offerId, start } = await farDesk('tsk_far_refused', 21);
+    await confirmBooking(deps, 'usr_ana', taskId, offerId, { offerRevision: 1, payment: { kind: 'dev_card', card: 'success', save: false }, acceptTerms: true }, now);
+    const booking = await bookingOf(taskId);
+    // Ana's kept card, and an account that used the same card and was banned in the meantime.
+    const [before] = await db.select({ fingerprint: paymentMethods.fingerprint }).from(paymentMethods).where(eq(paymentMethods.id, booking.fundingMethodId!));
+    await db.update(paymentMethods).set({ fingerprint: 'fp_sched_shared' }).where(eq(paymentMethods.id, booking.fundingMethodId!));
+    const [maya] = await db.select().from(users).where(eq(users.id, 'usr_maya'));
+    await db.insert(users).values({ ...maya!, id: BANNED, email: 'sched-banned@example.test', phone: null, phoneVerifiedAt: null, status: 'banned' });
+    await db.insert(paymentMethods).values({ id: 'pm_sched_banned', userId: BANNED, provider: 'dev', providerRef: devCardRef('success'), brand: 'visa', last4: '4242', expMonth: 12, expYear: 2030, fingerprint: 'fp_sched_shared' });
+    try {
+      await chargeDueScheduled(deps, new Date(start.getTime() - 71 * HOUR));
+      expect(await bookingOf(taskId)).toMatchObject({ status: 'scheduled', fundingFailure: 'card_not_allowed' });
+      expect(await db.select().from(payments).where(eq(payments.bookingId, booking.id))).toHaveLength(0);
+    } finally {
+      await db.update(paymentMethods).set({ fingerprint: before?.fingerprint ?? null }).where(eq(paymentMethods.id, booking.fundingMethodId!));
+      await db.delete(paymentMethods).where(eq(paymentMethods.userId, BANNED));
+      await db.delete(users).where(eq(users.id, BANNED));
+    }
   });
 
   it('cancels free before it is paid: nothing was charged', async () => {
