@@ -96,6 +96,16 @@ describe('helper onboarding screen', () => {
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
   });
 
+  it('says a step waiting for our team is in review, not one to finish (journeys on a phone, J-H6)', () => {
+    const steps = onboardingDone.progress.steps.map((entry) => (entry.step === 'address' ? { ...entry, state: 'in_review' as const } : entry.step === 'done' ? { ...entry, state: 'current' as const } : entry));
+    show(<HelperOnboardingScreen data={{ ...onboardingDone, progress: { ...onboardingDone.progress, bookable: false, bookableCategories: [], steps } }} handlers={fakeOnboardingHandlers} />);
+    expect(screen.getByRole('heading', { name: 'A few steps left' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Home address: in review' })).toHaveAttribute('href', routes.app.helperOnboarding('address'));
+    expect(screen.queryByRole('link', { name: /Finish Home address/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/Our team is checking what you sent/)).toBeVisible();
+    expect(screen.queryByText(/Finish the available steps below/)).not.toBeInTheDocument();
+  });
+
   it('shows the earned welcome gift card (no first task) and the find-work link on the last step', () => {
     show(<HelperOnboardingScreen data={onboardingDone} handlers={fakeOnboardingHandlers} />);
     expect(screen.getByRole('heading', { name: 'You can make offers now' })).toBeVisible();

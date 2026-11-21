@@ -44,15 +44,17 @@ const GIFT_STEPS: readonly OnboardingStep[] = WELCOME_GIFT_CHECKS;
 function OnboardingDone({ data, onSavePushSubscription }: { data: HelperOnboardingPageData; onSavePushSubscription?: HelperOnboardingHandlers['onSavePushSubscription'] }) {
   const t = useTranslations('helperOnboarding');
   const remaining = data.progress.steps.filter(({ step, state }) => step !== 'done' && state !== 'done' && state !== 'skipped' && state !== 'later');
+  // Only steps waiting on our team (or locked behind them) left: nothing to finish now (journeys on a phone, J-H6).
+  const waitingOnly = remaining.length > 0 && remaining.every(({ state }) => state === 'in_review' || state === 'locked');
   return <section className="space-y-6 rounded-xl border bg-card p-card shadow-card">
     {/* Outside the cities we're open in, the notice is the page's news; the generic heading would say "a few steps left". */}
     {data.awaitingCity ? <AwaitingCityNotice data={data} /> : <>
       {data.progress.bookable ? <CircleCheck aria-hidden="true" className="size-10 text-primary" /> : <Clock aria-hidden="true" className="size-10 text-muted-foreground" />}
-      <div className="space-y-2"><h2 className="text-xl font-semibold">{t(data.progress.bookable ? 'screen.doneReady' : 'screen.donePending')}</h2><p className="text-muted-foreground">{t(data.progress.bookable ? 'screen.doneReadyBody' : 'screen.donePendingBody')}</p></div>
+      <div className="space-y-2"><h2 className="text-xl font-semibold">{t(data.progress.bookable ? 'screen.doneReady' : 'screen.donePending')}</h2><p className="text-muted-foreground">{t(data.progress.bookable ? 'screen.doneReadyBody' : waitingOnly ? 'screen.donePendingReviewBody' : 'screen.donePendingBody')}</p></div>
     </>}
     {data.progress.bookable && <PushPrompt push={data.push} onSave={onSavePushSubscription} kind="tasks" />}
     {data.progress.bookable && <><ul className="list-disc space-y-1 pl-5">{data.progress.bookableCategories.map((slug) => <li key={slug}>{data.categories.find((category) => category.slug === slug)?.name}</li>)}</ul><Link href={routes.app.findWork()} className={buttonVariants()}>{t('screen.findWork')}</Link></>}
-    {remaining.length > 0 && <div className="space-y-2"><h3 className="text-lg font-semibold">{t('screen.remaining')}</h3><ul className="space-y-1">{remaining.map(({ step, state }) => <li key={step}>{state === 'locked' ? <p className="flex min-h-11 items-center gap-2 text-muted-foreground"><Lock aria-hidden="true" className="size-4" />{t('screen.lockedStep', { step: t(`screen.steps.${step}`) })}</p> : <Link href={routes.app.helperOnboarding(step)} className="inline-flex min-h-11 items-center text-primary underline underline-offset-4">{t('screen.finishStep', { step: t(`screen.steps.${step}`) })}</Link>}</li>)}</ul></div>}
+    {remaining.length > 0 && <div className="space-y-2"><h3 className="text-lg font-semibold">{t('screen.remaining')}</h3><ul className="space-y-1">{remaining.map(({ step, state }) => <li key={step}>{state === 'locked' ? <p className="flex min-h-11 items-center gap-2 text-muted-foreground"><Lock aria-hidden="true" className="size-4" />{t('screen.lockedStep', { step: t(`screen.steps.${step}`) })}</p> : state === 'in_review' ? <Link href={routes.app.helperOnboarding(step)} className="inline-flex min-h-11 items-center gap-2 text-foreground underline-offset-4 hover:underline"><Clock aria-hidden="true" className="size-4 text-info" />{t('screen.reviewStep', { step: t(`screen.steps.${step}`) })}</Link> : <Link href={routes.app.helperOnboarding(step)} className="inline-flex min-h-11 items-center text-primary underline underline-offset-4">{t('screen.finishStep', { step: t(`screen.steps.${step}`) })}</Link>}</li>)}</ul></div>}
     {/* The $50 welcome gift card: earned the moment the phone, ID and background checks have all passed. */}
     {data.welcomeReward && <WelcomeGiftCardView card={data.welcomeReward} headingLevel={3} />}
   </section>;

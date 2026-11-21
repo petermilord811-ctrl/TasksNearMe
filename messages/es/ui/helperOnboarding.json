@@ -126,9 +126,11 @@
     "donePending": "Faltan unos pasos",
     "doneReadyBody": "Estás listo para ayudar en estas categorías.",
     "donePendingBody": "Termina los pasos disponibles de abajo. El estado de tu configuración se actualizará después de cada verificación.",
+    "donePendingReviewBody": "Nuestro equipo está revisando lo que enviaste, normalmente en un día. Te avisaremos, y podrás hacer ofertas en cuanto se apruebe.",
     "remaining": "Por terminar",
     "lockedStep": "{step}: bloqueado",
     "finishStep": "Terminar {step}",
+    "reviewStep": "{step}: en revisión",
     "findWork": "Buscar trabajo",
     "previews": {
       "group": "Registro de ayudantes",

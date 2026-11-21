@@ -126,9 +126,11 @@
     "donePending": "A few steps left",
     "doneReadyBody": "You're ready to help in these categories.",
     "donePendingBody": "Finish the available steps below. Your setup status will update after each check.",
+    "donePendingReviewBody": "Our team is checking what you sent, usually within a day. We'll let you know, and you can make offers once it's approved.",
     "remaining": "Still to finish",
     "lockedStep": "{step}: Locked",
     "finishStep": "Finish {step}",
+    "reviewStep": "{step}: in review",
     "findWork": "Find work",
     "previews": {
       "group": "Helper onboarding",
