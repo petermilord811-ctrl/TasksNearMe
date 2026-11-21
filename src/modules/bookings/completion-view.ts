@@ -23,32 +23,39 @@ import { bookingCompletionPhotos, bookingCompletions, bookingExpenses, bookings,
 export async function autoApproveDue(db: Db, now: Date, scope: { bookingId?: string } = {}): Promise<void> {
   const conditions = [eq(bookings.status, 'completion_submitted'), lte(bookings.approvalDueAt, now)];
   if (scope.bookingId) conditions.push(eq(bookings.id, scope.bookingId));
-  const approved = await db
-    .update(bookings)
-    .set({ status: 'completed', completedVia: 'auto', completedAt: now, updatedAt: now })
-    .where(and(...conditions))
-    .returning({ id: bookings.id, taskId: bookings.taskId, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId });
-  if (approved.length === 0) return;
+  // The approval in one transaction (the booking, its conversation's line, the task, the event), so a server that stops
+  // halfway (a crash, a deploy) can't leave a completed booking whose task, line and notices never come: the next run
+  // doesn't find it again (when things break, 2026-11-21). The money comes after, outside it: it calls the payment
+  // provider, and a transaction shouldn't wait on that.
+  const approved = await db.transaction(async (tx) => {
+    const rows = await tx
+      .update(bookings)
+      .set({ status: 'completed', completedVia: 'auto', completedAt: now, updatedAt: now })
+      .where(and(...conditions))
+      .returning({ id: bookings.id, taskId: bookings.taskId, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId });
+    if (rows.length === 0) return rows;
+    for (const booking of rows) await postEvent(tx, bookingThreadLink(booking), 'status', { type: 'auto_approved' }, now);
+    await tx.update(tasks).set({ status: 'completed', updatedAt: now }).where(inArray(tasks.id, rows.map((row) => row.taskId)));
+    await tx.insert(outboxEvents).values(
+      rows.map((row) => ({
+        id: newId('evt'),
+        type: 'booking.completed',
+        aggregateType: 'booking',
+        aggregateId: row.id,
+        payload: { bookingId: row.id, taskId: row.taskId, via: 'auto' },
+      })),
+    );
+    return rows;
+  });
+  // One booking's provider error, or a server that stops here, never strands the rest (booking reviews, money #5): the
+  // sweep below records what's missing.
   for (const booking of approved) {
-    await postEvent(db, bookingThreadLink(booking), 'status', { type: 'auto_approved' }, now);
-    // One booking's provider error never strands the rest of the batch (booking reviews, money #5): the sweep below
-    // records what's missing.
     try {
       await recordCompletionMoney(db, booking.id, now);
     } catch (error) {
       console.error(`[bookings] completion money for ${booking.id} failed; the sweep retries it`, error);
     }
   }
-  await db.update(tasks).set({ status: 'completed', updatedAt: now }).where(inArray(tasks.id, approved.map((row) => row.taskId)));
-  await db.insert(outboxEvents).values(
-    approved.map((row) => ({
-      id: newId('evt'),
-      type: 'booking.completed',
-      aggregateType: 'booking',
-      aggregateId: row.id,
-      payload: { bookingId: row.id, taskId: row.taskId, via: 'auto' },
-    })),
-  );
 }
 
 /**

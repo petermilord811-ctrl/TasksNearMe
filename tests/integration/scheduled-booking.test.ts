@@ -90,6 +90,30 @@ describe('bookings made more than 14 days ahead', () => {
     expect(await bookingOf(taskId)).toMatchObject({ status: 'confirmed' });
   });
 
+  it('charges it after a server stopped mid-charge, 10 minutes later and once (when things break, 2026-11-21)', async () => {
+    const { taskId, offerId, start } = await farDesk('tsk_far_crash', 22);
+    await confirmBooking(deps, 'usr_ana', taskId, offerId, { offerRevision: 1, payment: { kind: 'dev_card', card: 'success', save: false }, acceptTerms: true }, now);
+    const due = new Date(start.getTime() - 71 * HOUR);
+    // The server goes away while the charge is out: the call never answers, so nothing after the claim runs.
+    const charged: string[] = [];
+    const hanging = { ...provider, charge: () => new Promise<never>(() => {}) };
+    void chargeDueScheduled({ db, payments: hanging }, due);
+    await expect.poll(async () => (await db.select({ id: payments.id }).from(payments).where(eq(payments.bookingId, (await bookingOf(taskId)).id))).length).toBe(1);
+    const claimed = await bookingOf(taskId);
+    expect(claimed).toMatchObject({ status: 'scheduled' });
+    expect(claimed.fundingDueAt?.getTime()).toBe(due.getTime() + 10 * 60_000);
+
+    // A new server: nothing is due before the lease runs out; then the open attempt is asked again with its own key.
+    const counting = { ...provider, charge: (input: Parameters<typeof provider.charge>[0]) => { charged.push(input.idempotencyKey); return provider.charge(input); } };
+    await chargeDueScheduled({ db, payments: counting }, new Date(due.getTime() + 9 * 60_000));
+    expect(charged).toEqual([]);
+    await chargeDueScheduled({ db, payments: counting }, new Date(due.getTime() + 10 * 60_000));
+    const [attempt] = await db.select().from(payments).where(eq(payments.bookingId, claimed.id));
+    expect(charged).toEqual([attempt!.idempotencyKey]);
+    expect(await bookingOf(taskId)).toMatchObject({ status: 'confirmed', fundingDueAt: null });
+    expect(await db.select().from(payments).where(eq(payments.bookingId, claimed.id))).toHaveLength(1);
+  });
+
   it('retries once at 48 h, then cancels it 24 h before and opens the task again, with no fees', async () => {
     const { taskId, offerId, start } = await farDesk('tsk_far_unpaid', 21);
     await confirmBooking(deps, 'usr_ana', taskId, offerId, { offerRevision: 1, payment: { kind: 'dev_card', card: 'declined', save: false }, acceptTerms: true }, now);

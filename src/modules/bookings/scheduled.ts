@@ -128,10 +128,13 @@ const RETRY_UNKNOWN_MS = 10 * 60_000;
 /** Charges one due booking off-session with its saved card. */
 async function chargeOne(deps: BookingDeps, booking: BookingRow, now: Date): Promise<void> {
   const { db } = deps;
-  // Claim it: another runner (or a double tick) finds nothing due.
+  // Claim it for a while: another runner (or a double tick) finds nothing due. A lease, not for good: a server that
+  // stops mid-charge (a crash, a deploy) leaves it due again in 10 minutes, and the next run asks about the open attempt
+  // with the same key instead of the booking waiting, unseen, for its deadline (when things break, 2026-11-21). Every
+  // outcome below sets the next time or clears it.
   const [claimed] = await db
     .update(bookings)
-    .set({ fundingDueAt: null, updatedAt: now })
+    .set({ fundingDueAt: new Date(now.getTime() + RETRY_UNKNOWN_MS), updatedAt: now })
     .where(and(eq(bookings.id, booking.id), eq(bookings.status, 'scheduled'), lte(bookings.fundingDueAt, now)))
     .returning();
   if (!claimed) return;

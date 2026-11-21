@@ -96,26 +96,30 @@ async function liveBooking(db: Db | Tx, taskId: string): Promise<BookingRow | nu
 export async function expireUnfundedBookings(db: Db, now: Date, scope: { taskId?: string } = {}): Promise<void> {
   const conditions = [eq(bookings.status, 'pending_funding'), lte(bookings.fundingExpiresAt, now)];
   if (scope.taskId) conditions.push(eq(bookings.taskId, scope.taskId));
-  const expired = await db
-    .update(bookings)
-    .set({ status: 'canceled', cancelReason: 'funding_failed', canceledAt: now, fundingExpiresAt: null, updatedAt: now })
-    .where(and(...conditions))
-    .returning({ id: bookings.id, taskId: bookings.taskId });
-  if (expired.length === 0) return;
-  const ids = expired.map((row) => row.id);
-  await db
-    .update(payments)
-    .set({ status: 'canceled', updatedAt: now })
-    .where(and(inArray(payments.bookingId, ids), inArray(payments.status, ['requires_confirmation', 'processing'])));
-  await db.insert(outboxEvents).values(
-    expired.map((row) => ({
-      id: newId('evt'),
-      type: 'booking.funding_expired',
-      aggregateType: 'booking',
-      aggregateId: row.id,
-      payload: { bookingId: row.id, taskId: row.taskId },
-    })),
-  );
+  // One transaction: a server that stops halfway (a crash, a deploy) can't leave a booking canceled with its payment
+  // still open and nobody told, since the next run no longer finds it (when things break, 2026-11-21).
+  await db.transaction(async (tx) => {
+    const expired = await tx
+      .update(bookings)
+      .set({ status: 'canceled', cancelReason: 'funding_failed', canceledAt: now, fundingExpiresAt: null, updatedAt: now })
+      .where(and(...conditions))
+      .returning({ id: bookings.id, taskId: bookings.taskId });
+    if (expired.length === 0) return;
+    const ids = expired.map((row) => row.id);
+    await tx
+      .update(payments)
+      .set({ status: 'canceled', updatedAt: now })
+      .where(and(inArray(payments.bookingId, ids), inArray(payments.status, ['requires_confirmation', 'processing'])));
+    await tx.insert(outboxEvents).values(
+      expired.map((row) => ({
+        id: newId('evt'),
+        type: 'booking.funding_expired',
+        aggregateType: 'booking',
+        aggregateId: row.id,
+        payload: { bookingId: row.id, taskId: row.taskId },
+      })),
+    );
+  });
 }
 
 function unavailableReason(task: TaskRow, offer: OfferRow, live: BookingRow | null, now: Date): BookingUnavailableReason | undefined {
