@@ -32,9 +32,12 @@ export function PublicAccountLinks({ viewer, placement }: {
   }
 
   return <>
-    {/* Signed out, "Sign in" shows on phones too (audit M46): coming back is one tap, not a trip through the menu. */}
+    {/* Signed out, "Sign in" shows on phones too (audit M46): coming back is one tap, not a trip through the menu. Under
+        430 px the main button says its short form (Spanish "Publicar"; English is the same words), so Sign in, the button
+        and the menu fit the bar in both languages (Spanish pass, 2026-11-21: the menu used to slip past the edge at 360).
+        Its name stays the whole phrase, which starts with the words on it. */}
     <Link href={account.href} className={cn(buttonVariants({ variant: 'ghost' }), signUp ? 'rounded-full px-3 lg:px-4' : 'hidden rounded-full lg:inline-flex')}>{account.label}</Link>
     {signUp && <Link href={signUp.href} className={cn(buttonVariants({ variant: 'outline' }), 'hidden rounded-full lg:inline-flex')}>{signUp.label}</Link>}
-    <Link href={resolved.kind === 'public' ? routes.signIn(routes.app.newTask()) : routes.app.newTask()} className={cn(buttonVariants(), 'rounded-full px-4 shadow-[0_8px_20px_-8px_var(--primary-glow)] transition-[transform,box-shadow,background-color] hover:-translate-y-px hover:bg-primary-hover hover:shadow-[0_12px_26px_-8px_var(--primary-glow)] active:translate-y-0 active:scale-[0.97]')}>{t('postTask')}</Link>
+    <Link href={resolved.kind === 'public' ? routes.signIn(routes.app.newTask()) : routes.app.newTask()} className={cn(buttonVariants(), 'rounded-full px-4 shadow-[0_8px_20px_-8px_var(--primary-glow)] transition-[transform,box-shadow,background-color] hover:-translate-y-px hover:bg-primary-hover hover:shadow-[0_12px_26px_-8px_var(--primary-glow)] active:translate-y-0 active:scale-[0.97]')} aria-label={t('postTask')}><span className="min-[430px]:hidden">{t('postTaskShort')}</span><span className="hidden min-[430px]:inline">{t('postTask')}</span></Link>
   </>;
 }

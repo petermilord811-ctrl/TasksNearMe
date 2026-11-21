@@ -51,6 +51,32 @@ test('a browser in Spanish gets the site in Spanish, and the footer switches thi
   await expect(page.locator('html')).toHaveAttribute('lang', 'es');
 });
 
+test.describe('a phone at 360 px', () => {
+  test.use({ viewport: { width: 360, height: 800 } });
+  test.skip(({ isMobile }) => !isMobile, 'a phone matter; one project is enough');
+
+  test('keeps Sign in, the main button and the menu inside the bar, in Spanish and English (Spanish pass, 2026-11-21)', async ({ page }) => {
+    // Spanish's longer words used to push the menu past the bar's edge, out of reach: no navigation, no language switch.
+    for (const [path, shell] of [['/es/how-it-works', shellEs], ['/en/how-it-works', shellEn]] as const) {
+      await page.goto(path);
+      const bar = page.getByRole('banner').locator(':scope > div');
+      const menu = bar.getByRole('button', { name: shell.openMenu });
+      await expect(menu).toBeVisible();
+      await expect(bar.getByRole('link', { name: shell.signIn, exact: true })).toBeVisible();
+      // The words on it are the short form; its name is the whole phrase, which starts with them.
+      const post = bar.getByRole('link', { name: shell.postTask, exact: true });
+      await expect(post).toBeVisible();
+      await expect(post).toHaveText(shell.postTaskShort, { useInnerText: true });
+      const [edge, button] = await Promise.all([bar.boundingBox(), menu.boundingBox()]);
+      expect(button!.x + button!.width).toBeLessThanOrEqual(Math.min(edge!.x + edge!.width, 360));
+      await menu.click();
+      await expect(page.getByRole('dialog', { name: shell.menuTitle })).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog', { name: shell.menuTitle })).toBeHidden();
+    }
+  });
+});
+
 test('an /es page opened as a page sets this device to Spanish; the router fetching it does not', async ({ request }) => {
   const cookieOf = (headers: { name: string; value: string }[]) =>
     headers.filter((header) => header.name.toLowerCase() === 'set-cookie' && header.value.startsWith('NEXT_LOCALE=')).map((header) => header.value.split(';')[0]);
