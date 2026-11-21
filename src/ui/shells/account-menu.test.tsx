@@ -103,7 +103,9 @@ describe('AccountMenu', () => {
     const menu = await openMenu();
     await userEvent.click(within(menu).getByRole('menuitem', { name: 'Sign out' }));
     expect(await screen.findByText(feedback.error.unknown)).toBeVisible();
-    expect(screen.getByRole('status')).toHaveTextContent(feedback.error.unknown);
+    // The menu button carries it as its description; the toast says it, once (accessibility pass, J-A8).
+    expect(screen.getByRole('button', { name: `${alexStaff.initials}, account menu for ${alexStaff.displayName}` })).toHaveAccessibleDescription(feedback.error.unknown);
+    expect(document.querySelector('[aria-live]:not([aria-live="off"]), [role="status"], [role="log"]')).toBeNull();
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(toastError).toHaveBeenCalledWith(feedback.error.unknown);
     expect(push).not.toHaveBeenCalled();

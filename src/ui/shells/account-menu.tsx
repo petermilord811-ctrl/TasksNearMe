@@ -154,7 +154,8 @@ export function AccountMenu({ viewer, onSignOut, onSwitchLanguage, onModeChange,
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <p id={statusId} role="status" aria-live="polite" aria-atomic="true" className={cn(message?.error ? 'absolute right-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-destructive bg-card p-3 text-sm text-destructive shadow-xs' : 'sr-only')}>
+      {/* The menu button's description, not a live region: the toast says the result (accessibility pass, J-A8). */}
+      <p id={statusId} className={cn(message?.error ? 'absolute right-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-destructive bg-card p-3 text-sm text-destructive shadow-xs' : 'sr-only')}>
         {pending ? t('signingOut') : message?.text}
       </p>
     </div>

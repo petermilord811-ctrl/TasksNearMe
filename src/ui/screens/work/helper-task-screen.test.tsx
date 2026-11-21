@@ -2,6 +2,7 @@
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
+import { toast } from 'sonner';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, OFFER_ACTION_IDS, routes, type ActionResult, type HelperTaskView, type HelperWorkHandlers } from '@/contracts';
 import { deskBreakdown, deskOfferMessageDraft, helperComputerBlocked, helperDeskStaleOffer, helperDeskWithOffer, helperMovingHourly } from '@/fixtures';
@@ -181,7 +182,10 @@ describe('HelperTaskScreen', () => {
     expect(pending).toHaveAttribute('aria-busy', 'true');
     await act(async () => finish({ ok: false, code: 'not_allowed' }));
     expect(await screen.findByText(feedback.error.not_allowed)).toBeVisible();
-    expect(screen.getByText(feedback.error.not_allowed).closest('[aria-live]')).toHaveAttribute('aria-live', 'polite');
+    // Said once, by its toast; the line under the actions is the result's record, not a second live region
+    // (accessibility pass, J-A8).
+    expect(toast.error).toHaveBeenCalledWith(feedback.error.not_allowed);
+    expect(screen.getByText(feedback.error.not_allowed).closest('[aria-live]:not([aria-live="off"]), [role="status"], [role="alert"], [role="log"]')).toBeNull();
   });
 
   it.each(ACTION_ERROR_CODES)('maps the %s action error to friendly copy', async (code) => {

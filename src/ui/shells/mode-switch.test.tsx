@@ -32,22 +32,46 @@ describe('ModeSwitch', () => {
     expect(screen.getByRole('button', { name: 'I need help' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('disables both options while pending, prevents duplicate calls, and follows redirectTo', async () => {
+  it('says the result once, by its toast: the line beside the switch describes it and isn’t a live region (accessibility pass, J-A8)', async () => {
+    const { container } = show(vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' })));
+    await userEvent.click(screen.getByRole('button', { name: 'I can help' }));
+    expect(toastSuccess).toHaveBeenCalledExactlyOnceWith('You’re in helper mode');
+    expect(screen.getByRole('group', { name: uiMessages.shell.mode.label })).toHaveAccessibleDescription('You’re in helper mode');
+    expect(container.querySelector('[aria-live]:not([aria-live="off"]), [role="status"], [role="alert"], [role="log"]')).toBeNull();
+  });
+
+  it('marks both options busy while pending, keeping focus (accessibility pass, J-A9), prevents duplicate calls, and follows redirectTo', async () => {
     let finish: (result: ActionResult) => void = () => {};
     const handler = vi.fn(() => new Promise<ActionResult>((resolve) => { finish = resolve; }));
     show(handler);
     const helper = screen.getByRole('button', { name: 'I can help' });
     await userEvent.dblClick(helper);
     expect(handler).toHaveBeenCalledExactlyOnceWith({ mode: 'helper' });
-    expect(helper).toBeDisabled();
+    // aria-disabled, not disabled: a disabled button would lose keyboard focus to the page.
+    expect(helper).not.toBeDisabled();
+    expect(helper).toHaveAttribute('aria-disabled', 'true');
     expect(helper).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByRole('button', { name: 'I need help' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'I need help' })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('group')).toHaveAttribute('aria-busy', 'true');
     expect(push).not.toHaveBeenCalled();
     await act(async () => finish({ ok: true, code: 'updated', redirectTo: routes.app.helperOnboarding() }));
-    expect(helper).toBeEnabled();
+    expect(helper).not.toHaveAttribute('aria-disabled');
     expect(helper).toHaveAttribute('aria-busy', 'false');
     expect(push).toHaveBeenCalledExactlyOnceWith(routes.app.helperOnboarding());
+  });
+
+  it('keeps keyboard focus on the pressed option while the change saves, and ignores presses meanwhile (accessibility pass, J-A9)', async () => {
+    let finish: (result: ActionResult) => void = () => {};
+    const handler = vi.fn(() => new Promise<ActionResult>((resolve) => { finish = resolve; }));
+    show(handler);
+    const helper = screen.getByRole('button', { name: 'I can help' });
+    helper.focus();
+    await userEvent.keyboard('{Enter}');
+    await userEvent.keyboard('{Enter}');
+    expect(handler).toHaveBeenCalledOnce();
+    expect(helper).toHaveFocus();
+    await act(async () => finish({ ok: true, code: 'updated' }));
+    expect(helper).toHaveFocus();
   });
 
   it('works from the keyboard in helper mode', async () => {
@@ -63,7 +87,7 @@ describe('ModeSwitch', () => {
     show(vi.fn(async (): Promise<ActionResult> => ({ ok: false, code })));
     await userEvent.click(screen.getByRole('button', { name: 'I can help' }));
     expect(await screen.findByText(feedback.error[code])).toBeVisible();
-    expect(screen.getByRole('status')).toHaveTextContent(feedback.error[code]);
+    expect(screen.getByRole('group', { name: uiMessages.shell.mode.label })).toHaveAccessibleDescription(feedback.error[code]);
     expect(toastError).toHaveBeenCalledWith(feedback.error[code]);
     expect(push).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: 'I need help' })).toHaveAttribute('aria-pressed', 'true');
@@ -78,6 +102,6 @@ describe('ModeSwitch', () => {
     handler.mockResolvedValueOnce({ ok: true, code: 'updated' });
     await userEvent.click(screen.getByRole('button', { name: 'I can help' }));
     expect(handler).toHaveBeenCalledTimes(2);
-    expect(screen.getByRole('status')).toHaveTextContent('You’re in helper mode');
+    expect(screen.getByRole('group', { name: uiMessages.shell.mode.label })).toHaveAccessibleDescription('You’re in helper mode');
   });
 });

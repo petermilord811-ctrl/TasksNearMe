@@ -171,6 +171,23 @@ describe('ActionBar', () => {
     expect(Array.from(container.querySelectorAll('[data-action-id]'), (element) => element.getAttribute('data-action-id'))).toEqual(['message', 'approve', 'cancel']);
   });
 
+  it('says a result once, by its toast: the line under the bar is its record, not a live region (accessibility pass, J-A8)', async () => {
+    show([{ id: 'message', kind: 'primary', enabled: true }], vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'sent' })));
+    await userEvent.click(screen.getByRole('button', { name: 'Send message' }));
+    const line = await screen.findByText(feedback.success.sent);
+    expect(toastSuccess).toHaveBeenCalledExactlyOnceWith(feedback.success.sent);
+    expect(line.closest('[aria-live]:not([aria-live="off"]), [role="status"], [role="alert"], [role="log"]')).toBeNull();
+  });
+
+  it('keeps the More sheet’s result line live: the modal sheet hides the toasts from screen readers (accessibility pass, J-A8)', async () => {
+    show([{ id: 'message', kind: 'primary', enabled: true }, { id: 'pay', kind: 'secondary', enabled: true }]);
+    await userEvent.click(screen.getByRole('button', { name: 'More' }));
+    const sheet = screen.getByRole('dialog', { name: 'More actions' });
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Finish payment' }));
+    const line = await within(sheet).findByText(feedback.success.saved);
+    expect(line.closest('[aria-live]')).toHaveAttribute('aria-live', 'polite');
+  });
+
   it('keeps secondary actions and their reasons in the mobile More sheet', async () => {
     show(deskBeforeNoShowPosterActions);
     await userEvent.click(screen.getByRole('button', { name: 'More' }));

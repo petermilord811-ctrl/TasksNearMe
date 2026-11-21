@@ -76,7 +76,10 @@ export function ModeSwitch({ mode, onModeChange }: ModeSwitchProps) {
             variant="ghost"
             aria-pressed={mode === option}
             aria-busy={pendingMode === option}
-            disabled={pendingMode !== null}
+            // Busy, not disabled: a disabled button drops keyboard focus to the page, and a change re-renders the page
+            // in place, so a keyboard user started over from the top (accessibility pass, J-A9). changeMode ignores
+            // presses while one is saving.
+            aria-disabled={pendingMode !== null || undefined}
             onClick={() => void changeMode(option)}
             className={cn(
               'relative z-[1] min-w-0 gap-1.5 rounded-full px-3.5 text-[0.8125rem] font-semibold text-muted-foreground hover:bg-transparent hover:text-foreground disabled:opacity-100 dark:hover:bg-transparent sm:px-4',
@@ -88,7 +91,8 @@ export function ModeSwitch({ mode, onModeChange }: ModeSwitchProps) {
           </Button>
         ))}
       </div>
-      <p id={statusId} role="status" aria-live="polite" aria-atomic="true" className={cn(message?.error ? 'mt-2 max-w-80 text-sm text-destructive' : 'sr-only')}>
+      {/* The switch's description, not a live region: the toast says the result (accessibility pass, J-A8). */}
+      <p id={statusId} className={cn(message?.error ? 'mt-2 max-w-80 text-sm text-destructive' : 'sr-only')}>
         {pendingMode ? t('mode.pending') : message?.text}
       </p>
     </div>

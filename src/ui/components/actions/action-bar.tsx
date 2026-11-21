@@ -238,7 +238,10 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
           </Sheet>
         </>}
       </div>
-      <div ref={resultRegion} tabIndex={-1} aria-live="polite" aria-atomic="true" className="mt-3 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+      {/* The result's record, not a live region: its toast says it (sonner's region), and two regions read it twice
+          (accessibility pass, J-A8). Focus lands here when the control that had it is gone. The More sheet's line
+          above stays live: the modal sheet hides the toasts from screen readers. */}
+      <div ref={resultRegion} tabIndex={-1} className="mt-3 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
         {resultContent()}
       </div>
       <AlertDialog open={confirmation !== null} onOpenChange={(open) => { if (!open) setConfirmation(null); }}>
