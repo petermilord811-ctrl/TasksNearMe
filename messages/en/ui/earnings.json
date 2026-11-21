@@ -67,6 +67,6 @@
     "confirmBody": "The {fee} fee comes out of the {amount}. It usually arrives in minutes.",
     "confirm": "Cash out",
     "cancel": "Not now",
-    "sent": "On its way to your debit card."
+    "sent": "{net} is on its way to your debit card. It usually arrives in minutes."
   }
 }

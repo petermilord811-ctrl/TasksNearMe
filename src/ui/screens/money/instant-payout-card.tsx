@@ -1,24 +1,35 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Zap } from 'lucide-react';
+import { CircleCheck, Zap } from 'lucide-react';
 import type { ActionResult, EarningsHandlers, InstantPayoutOffer } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
+import { Alert, AlertDescription } from '@/ui/primitives/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/ui/primitives/alert-dialog';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 
-/** "Cash out now": what can go to the helper's debit card in minutes, the fee, and a confirmation first. */
-export function InstantPayoutCard({ offer, onInstantPayout }: { offer: InstantPayoutOffer; onInstantPayout: NonNullable<EarningsHandlers['onInstantPayout']> }) {
+/**
+ * "Cash out now": what can go to the helper's debit card in minutes, the fee, and a confirmation first. Stays mounted
+ * without an offer: after a cash-out the refresh empties the balance, and the card then says what is on its way, with
+ * focus on it (journeys on a phone: the card and its "On its way" vanished together).
+ */
+export function InstantPayoutCard({ offer, onInstantPayout }: { offer?: InstantPayoutOffer; onInstantPayout: NonNullable<EarningsHandlers['onInstantPayout']> }) {
   const t = useTranslations('earnings.instant');
   const router = useRouter();
   const locked = useRef(false);
+  const sentNote = useRef<HTMLDivElement>(null);
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<ActionResult>();
-  const amounts = { amount: formatMoney(offer.availableCents), fee: formatMoney(offer.feeCents), net: formatMoney(offer.netCents) };
+  // The net amount of this visit's cash-out, kept once the offer is gone.
+  const [sent, setSent] = useState<string>();
+  const amounts = offer ? { amount: formatMoney(offer.availableCents), fee: formatMoney(offer.feeCents), net: formatMoney(offer.netCents) } : undefined;
+  const settled = Boolean(sent && !offer);
+  // The button that had focus went with the offer: the confirmation takes it.
+  useEffect(() => { if (settled) sentNote.current?.focus(); }, [settled]);
 
   async function cashOut() {
     if (locked.current) return;
@@ -34,8 +45,18 @@ export function InstantPayoutCard({ offer, onInstantPayout }: { offer: InstantPa
     locked.current = false;
     setPending(false);
     setResult(next);
-    if (next.ok) router.refresh();
+    if (next.ok) {
+      setSent(amounts?.net);
+      router.refresh();
+    }
   }
+
+  if (settled) {
+    return <Alert ref={sentNote} tabIndex={-1} role="status" className="border-success/25 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+      <CircleCheck aria-hidden="true" className="text-success" /><AlertDescription className="text-foreground">{t('sent', { net: sent! })}</AlertDescription>
+    </Alert>;
+  }
+  if (!offer || !amounts) return null;
 
   return <section aria-labelledby="earnings-instant" className="space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card dark:border-white/[0.06] md:p-6">
     <h2 id="earnings-instant" className="flex items-center gap-2 font-display text-xl/7 font-semibold tracking-[-0.015em] md:text-[22px]/7.5"><Zap aria-hidden="true" className="size-5 text-primary" />{t('title')}</h2>
@@ -48,6 +69,6 @@ export function InstantPayoutCard({ offer, onInstantPayout }: { offer: InstantPa
         <AlertDialogFooter><AlertDialogCancel>{t('cancel')}</AlertDialogCancel><AlertDialogAction onClick={() => void cashOut()}>{t('confirm')}</AlertDialogAction></AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-    <FormFeedback result={result} successMessage={t('sent')} />
+    <FormFeedback result={result} successMessage={t('sent', { net: sent ?? amounts.net })} />
   </section>;
 }

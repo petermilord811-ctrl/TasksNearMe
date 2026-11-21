@@ -67,6 +67,6 @@
     "confirmBody": "La tarifa de {fee} se descuenta de los {amount}. Suele llegar en minutos.",
     "confirm": "Cobrar",
     "cancel": "Ahora no",
-    "sent": "En camino a tu tarjeta de débito."
+    "sent": "{net} va en camino a tu tarjeta de débito. Suele llegar en minutos."
   }
 }

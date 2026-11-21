@@ -83,7 +83,9 @@ export function EarningsScreen({ data, handlers, now }: EarningsScreenProps) {
       <p className="text-sm text-muted-foreground">{t('account.timing')}</p>
       <EarningsDashboardAction onOpenPayoutDashboard={handlers.onOpenPayoutDashboard} actionNeeded={account.actionNeeded} />
     </section>
-    {data.instantPayout && handlers.onInstantPayout && <InstantPayoutCard offer={data.instantPayout} onInstantPayout={handlers.onInstantPayout} />}
+    {/* Mounted whenever instant payouts are on, offer or not: after a cash-out the refresh empties the balance, and the
+        card stays to say where the money went. */}
+    {handlers.onInstantPayout && <InstantPayoutCard offer={data.instantPayout} onInstantPayout={handlers.onInstantPayout} />}
     {data.firstPayoutNotice && <Alert role="note" className="border-info/25">
       <Info aria-hidden="true" className="text-info" /><AlertDescription className="text-foreground">{t('firstPayoutNotice')}</AlertDescription>
     </Alert>}
