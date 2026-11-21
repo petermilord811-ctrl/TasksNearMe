@@ -39,6 +39,8 @@ export interface AreaMapProps {
   onActiveChange?: (id: string | null) => void;
   onSelect?: (id: string) => void;
   label: string;
+  /** The id of text that explains the map (a legend beside it): the map region's description. */
+  describedBy?: string;
   groupLabel: (count: number) => string;
   /** The live map, or only the drawn one; the app's setting (`MapTilesProvider`) when absent. */
   live?: boolean;
@@ -74,8 +76,10 @@ export function AreaMap(props: AreaMapProps) {
       else window.clearTimeout(idle);
     };
   }, [wantLive, near]);
-  const drawn = <StaticAreaMap places={props.places} serviceArea={props.serviceArea} fallbackCenter={props.fallbackCenter} activeId={props.activeId} onActiveChange={props.onActiveChange} onSelect={props.onSelect} label={props.label} groupLabel={props.groupLabel} className="absolute inset-0" />;
-  return <div ref={box} className={cn('relative min-h-40 overflow-hidden rounded-xl border bg-card', props.className)}>
+  const drawn = <StaticAreaMap places={props.places} serviceArea={props.serviceArea} fallbackCenter={props.fallbackCenter} activeId={props.activeId} onActiveChange={props.onActiveChange} onSelect={props.onSelect} groupLabel={props.groupLabel} className="absolute inset-0" />;
+  // One landmark per map, named by its label, whichever map shows (the drawn one or the live one): its markers and the
+  // live map's canvas (a named group) sit inside it, and nothing around it adds another (accessibility pass, J-A10).
+  return <div ref={box} role="region" aria-label={props.label} aria-describedby={props.describedBy} className={cn('relative min-h-40 overflow-hidden rounded-xl border bg-card', props.className)}>
     {live !== 'ready' && drawn}
     {near && live !== 'failed' && <LiveAreaMap {...props} styleUrl={props.styleUrl ?? tiles.styleUrl} visible={live === 'ready'} onReady={() => setLive('ready')} onFailed={() => setLive('failed')} />}
     <p className="pointer-events-none absolute right-2 bottom-1 z-10 rounded bg-card/80 px-1.5 text-[10px] text-muted-foreground">{props.attribution ?? tiles.attribution}</p>

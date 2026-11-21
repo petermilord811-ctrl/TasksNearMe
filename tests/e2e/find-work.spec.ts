@@ -153,10 +153,10 @@ test('a helper saves a task, hides one (Undo brings it back), and sees the areas
     await page.goto('/app/find-work?sort=pay');
     await expect(page.getByRole('link', { name: shelves })).toHaveCount(0);
 
-    // The map beside the list: general areas only, never an address.
-    const map = page.getByRole('complementary', { name: "Map of the tasks' general areas" });
+    // The map beside the list: general areas only, never an address. One landmark, described by its legend (J-A10).
+    const map = page.getByRole('region', { name: 'Map of tasks' });
     await expect(map).toBeVisible();
-    await expect(map.getByText(/never the address/)).toBeVisible();
+    await expect(map).toHaveAccessibleDescription(/never the address/);
     const html = await page.content();
     for (const secret of ['1234 Example Lane', '300 Sample Street']) expect(html).not.toContain(secret);
   } finally {
@@ -171,17 +171,16 @@ test('on phones, find work switches between the list and the map', async ({ page
   await expect(page.getByRole('region', { name: 'Open tasks' })).toBeVisible();
   await page.getByRole('link', { name: 'Map' }).click();
   await expect(page).toHaveURL(/view=map/);
-  await expect(page.getByRole('complementary', { name: "Map of the tasks' general areas" })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Map of tasks' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Open tasks' })).toBeHidden();
   // The map's markers take keyboard focus one after another (accessibility pass: focusing one rebuilt them all, and
   // focus fell back to the page).
-  const markers = page.getByRole('complementary', { name: "Map of the tasks' general areas" }).getByRole('button');
+  const markers = page.getByRole('region', { name: 'Map of tasks' }).getByRole('button');
   await expect(markers.first()).toBeVisible({ timeout: 30_000 });
   expect(await markers.count()).toBeGreaterThan(1);
   await markers.first().focus();
   await page.keyboard.press('Tab');
-  // The map's <aside> is the complementary landmark (implicit role, no role attribute).
-  await expect.poll(() => page.evaluate(() => document.activeElement?.tagName === 'BUTTON' && document.activeElement.closest('aside') !== null)).toBe(true);
+  await expect.poll(() => page.evaluate(() => document.activeElement?.tagName === 'BUTTON' && document.activeElement.closest('[role="region"][aria-label="Map of tasks"]') !== null)).toBe(true);
   await page.getByRole('link', { name: 'List' }).click();
   await expect(page.getByRole('region', { name: 'Open tasks' })).toBeVisible();
 });

@@ -42,7 +42,7 @@ function serviceGeoJson(serviceArea: AreaMapProps['serviceArea']) {
   };
 }
 
-export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, activeId, onActiveChange, onSelect, label, groupLabel, visible, onReady, onFailed }: Omit<AreaMapProps, 'styleUrl' | 'attribution'> & { styleUrl: string; visible: boolean; onReady: () => void; onFailed: () => void }) {
+export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, activeId, onActiveChange, onSelect, groupLabel, visible, onReady, onFailed }: Omit<AreaMapProps, 'styleUrl' | 'attribution'> & { styleUrl: string; visible: boolean; onReady: () => void; onFailed: () => void }) {
   const t = useTranslations('common');
   // How to move the map, in the page's language (MapLibre says it when a gesture would have scrolled the page), and
   // the name of its canvas: a region in the Tab order that MapLibre calls "Map" in English otherwise (accessibility pass).
@@ -99,6 +99,11 @@ export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, act
       return;
     }
     mapRef.current = map;
+    // MapLibre makes its canvas a region; inside AreaMap's region it's a named group (its name says how to move the map),
+    // and it takes a Tab stop only once the live map shows (the effect on `visible` below; accessibility pass, J-A10).
+    const canvas = map.getCanvas();
+    canvas.setAttribute('role', 'group');
+    canvas.tabIndex = -1;
     map.touchZoomRotate.disableRotation();
     map.keyboard.disableRotation();
     // Set up once the style and the first full render are in ('load'). On a slow connection the tiles can take a
@@ -267,5 +272,11 @@ export function LiveAreaMap({ styleUrl, places, serviceArea, fallbackCenter, act
 
   useEffect(() => { highlightRef.current(activeId ?? null); }, [activeId]);
 
-  return <div ref={ref} role="region" aria-label={label} className={cn('absolute inset-0 transition-opacity duration-300', visible ? 'opacity-100' : 'opacity-0')} />;
+  // While the live map loads behind the drawn one (transparent), Tab must not land on its canvas.
+  useEffect(() => {
+    const canvas = mapRef.current?.getCanvas();
+    if (canvas) canvas.tabIndex = visible ? 0 : -1;
+  }, [visible]);
+
+  return <div ref={ref} className={cn('absolute inset-0 transition-opacity duration-300', visible ? 'opacity-100' : 'opacity-0')} />;
 }

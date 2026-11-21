@@ -25,12 +25,22 @@ describe('AreaMap (speed on a phone)', () => {
     render(<AreaMap {...props} />);
     // Hidden (a phone's list view) or below the fold: nothing loads.
     expect(screen.queryByTestId('live-map')).not.toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Tasks near you' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Tasks near you' })).toBeInTheDocument();
     act(() => observed!.callback([{ isIntersecting: true, target: observed!.element } as IntersectionObserverEntry], {} as IntersectionObserver));
     // In view: it waits for the page to be idle first.
     expect(screen.queryByTestId('live-map')).not.toBeInTheDocument();
     act(() => idle.forEach((run) => run()));
     expect(screen.getByTestId('live-map')).toBeInTheDocument();
+  });
+
+  it('is one landmark, named by its label and described by its legend, the drawn picture hidden (accessibility pass, J-A10)', () => {
+    vi.stubGlobal('IntersectionObserver', undefined);
+    render(<><AreaMap {...props} describedBy="legend" places={[{ id: 'tsk_a', point: { lat: 29.65, lng: -82.32 }, radiusMeters: 800, label: '$60', name: 'Assemble a desk' }]} /><p id="legend">Circles are general areas.</p></>);
+    const map = screen.getByRole('region', { name: 'Tasks near you' });
+    expect(screen.getAllByRole('region')).toEqual([map]);
+    expect(map).toHaveAccessibleDescription('Circles are general areas.');
+    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Assemble a desk' })).toBeInTheDocument();
   });
 
   it('loads it at once where IntersectionObserver is missing, and never when the live map is off', () => {

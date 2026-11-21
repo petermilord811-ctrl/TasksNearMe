@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, BellRing, Lock, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -112,6 +112,7 @@ function FindWorkList({ data, now, handlers, liveMap = true }: FindWorkScreenPro
   const { query } = data;
   const [active, setActive] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const legendId = useId();
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [hidden, setHidden] = useState<Record<string, boolean>>({});
   const [undo, setUndo] = useState<FindWorkCard | null>(null);
@@ -250,7 +251,8 @@ function FindWorkList({ data, now, handlers, liveMap = true }: FindWorkScreenPro
           {query.page < data.pageCount && <Link href={routes.app.findWork({ ...query, page: query.page + 1 })} rel="next" className={buttonVariants({ variant: 'outline' })}>{t('next')}<ArrowRight aria-hidden="true" className="size-4" /></Link>}
         </nav>}
       </section>
-      <aside aria-label={t('mapLabel')} className={cn('min-w-0', query.view === 'map' ? 'block' : 'hidden lg:block')}>
+      {/* Not an aside: the map is one landmark, AreaMap's region (accessibility pass, J-A10). */}
+      <div className={cn('min-w-0', query.view === 'map' ? 'block' : 'hidden lg:block')}>
         <div className="space-y-2 lg:sticky lg:top-[calc(var(--app-header-offset,0px)+7.5rem)]">
           <AreaMap
             styleUrl={data.map.styleUrl}
@@ -262,18 +264,19 @@ function FindWorkList({ data, now, handlers, liveMap = true }: FindWorkScreenPro
             onActiveChange={setActive}
             onSelect={setSelected}
             label={t('mapLabel')}
+            describedBy={legendId}
             groupLabel={(count) => t('mapGroup', { count })}
             live={liveMap}
             className="h-[62vh] min-h-80 lg:h-[calc(100vh-var(--app-header-offset,0px)-10rem)]"
           />
-          <p className="text-xs text-muted-foreground">{mapArea ? t('mapLegend', { area: mapArea.name, miles: mapArea.serviceRadiusMiles }) : t('mapLegendNoArea')}{remoteCount > 0 ? ` ${t('mapRemote', { count: remoteCount })}` : ''}</p>
+          <p id={legendId} className="text-xs text-muted-foreground">{mapArea ? t('mapLegend', { area: mapArea.name, miles: mapArea.serviceRadiusMiles }) : t('mapLegendNoArea')}{remoteCount > 0 ? ` ${t('mapRemote', { count: remoteCount })}` : ''}</p>
           {selectedCard && <div className="relative rounded-[1.375rem] border border-foreground/[0.07] bg-card p-3 pr-12 shadow-card dark:border-white/[0.06]">
             <p className="font-semibold"><Link href={routes.app.findWorkTask(selectedCard.task.id)} className="underline-offset-4 hover:underline">{selectedCard.task.title}</Link></p>
             <p className="text-sm text-muted-foreground tabular-nums">{selectedCard.task.location.kind === 'local' ? selectedCard.task.location.areaName : ''} · {budgetLabel(selectedCard)}{selectedCard.earnings.type === 'fixed' ? ` · ${t('earn', { amount: formatMoney(selectedCard.earnings.amountCents) })}` : ''}</p>
             <button type="button" onClick={() => setSelected(null)} aria-label={t('closeSelected')} className="absolute top-1.5 right-1.5 inline-flex size-11 items-center justify-center rounded-md hover:bg-accent"><X aria-hidden="true" className="size-4" /></button>
           </div>}
         </div>
-      </aside>
+      </div>
     </div>
     <p className="flex items-start gap-2 border-t pt-6 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('privacy')}</p>
   </div>;

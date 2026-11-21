@@ -101,7 +101,7 @@
   "savedResults": "{count, plural, one {# tarea guardada} other {# tareas guardadas}}",
   "savedEmptyTitle": "Aún no hay tareas guardadas",
   "savedEmptyBody": "Toca el marcador de una tarea para guardarla aquí para más tarde.",
-  "mapLabel": "Mapa de las zonas generales de las tareas",
+  "mapLabel": "Mapa de tareas",
   "mapGroup": "{count} tareas por aquí",
   "mapPlace": "{title}, {budget}, {area}",
   "mapLegend": "Los círculos muestran la zona general de cada tarea, nunca la dirección. El anillo punteado es tu zona alrededor de {area}, {miles} millas.",

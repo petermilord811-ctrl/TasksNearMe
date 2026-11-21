@@ -11,14 +11,13 @@ const SIZE = 600;
  * The drawn map: the same places, rings and markers on a plain paper background, without tiles. Shown
  * while the live map loads, where WebGL or the tiles aren't available, and in previews.
  */
-export function StaticAreaMap({ places, serviceArea, fallbackCenter, activeId, onActiveChange, onSelect, label, groupLabel, className }: {
+export function StaticAreaMap({ places, serviceArea, fallbackCenter, activeId, onActiveChange, onSelect, groupLabel, className }: {
   places: AreaMapPlace[];
   serviceArea?: { center: LatLng; radiusMiles: number };
   fallbackCenter: LatLng;
   activeId?: string | null;
   onActiveChange?: (id: string | null) => void;
   onSelect?: (id: string) => void;
-  label: string;
   groupLabel: (count: number) => string;
   className?: string;
 }) {
@@ -40,7 +39,8 @@ export function StaticAreaMap({ places, serviceArea, fallbackCenter, activeId, o
   const inView = (x: number, y: number) => x > 8 && x < SIZE - 8 && y > 8 && y < SIZE - 8;
 
   return <div className={cn('relative overflow-hidden rounded-xl border bg-[var(--map-land,#f6efe6)]', className)}>
-    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} preserveAspectRatio="xMidYMid slice" role="img" aria-label={label} className="absolute inset-0 size-full">
+    {/* The picture of the areas; AreaMap's region names the map and the markers name the places (J-A10). */}
+    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} preserveAspectRatio="xMidYMid slice" aria-hidden="true" className="absolute inset-0 size-full">
       <defs>
         <pattern id="area-map-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0H0V40" fill="none" stroke="currentColor" strokeOpacity="0.06" /></pattern>
       </defs>

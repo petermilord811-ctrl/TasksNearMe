@@ -101,7 +101,7 @@
   "savedResults": "{count, plural, one {# saved task} other {# saved tasks}}",
   "savedEmptyTitle": "No saved tasks yet",
   "savedEmptyBody": "Tap the bookmark on a task to keep it here for later.",
-  "mapLabel": "Map of the tasks' general areas",
+  "mapLabel": "Map of tasks",
   "mapGroup": "{count} tasks around here",
   "mapPlace": "{title}, {budget}, {area}",
   "mapLegend": "Circles show each task's general area, never the address. The dashed ring is your area around {area}, {miles} miles.",

@@ -164,11 +164,13 @@ describe('FindWorkScreen', () => {
 
   it('draws the general areas on the map, never an address, and lights a row from its marker', async () => {
     const { container } = renderWork();
-    const map = screen.getByRole('complementary', { name: findWork.mapLabel });
-    expect(within(map).getByRole('img', { name: findWork.mapLabel })).toBeInTheDocument();
+    // One landmark for the map, described by its legend (accessibility pass, J-A10).
+    const map = screen.getByRole('region', { name: findWork.mapLabel });
+    expect(screen.queryByRole('complementary', { name: findWork.mapLabel })).toBeNull();
+    expect(map).toHaveAccessibleDescription(/1 remote task is in the list only/);
     // Four local tasks (the laptop is remote); markers in the same spot would group.
     expect(within(map).getAllByRole('button').length).toBeGreaterThanOrEqual(3);
-    expect(within(map).getByText(/1 remote task is in the list only/)).toBeVisible();
+    expect(screen.getByText(/1 remote task is in the list only/)).toBeVisible();
     expect(container.innerHTML).not.toContain('Example Lane');
     const desk = findWorkPageData.cards[0]!.task;
     await userEvent.hover(within(map).getByRole('button', { name: new RegExp(desk.title.replace(/[()]/g, '.')) }));

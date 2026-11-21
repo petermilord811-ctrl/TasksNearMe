@@ -29,7 +29,7 @@ describe('GeneralArea', () => {
     const { container } = renderLocation(<GeneralArea location={muellerAreaForJordan} showMap />);
     expect(screen.getByText('Mueller, Austin')).toBeVisible();
     expect(screen.getByText('About 2 miles away')).toBeVisible();
-    expect(screen.getByRole('img', { name: /General area around Mueller, Austin/ })).toBeVisible();
+    expect(screen.getByRole('region', { name: /General area around Mueller, Austin/ })).toBeVisible();
     expect(container).not.toHaveTextContent(deskExactAddress.line1);
     expect(container.innerHTML).not.toContain('30.2993');
   });
