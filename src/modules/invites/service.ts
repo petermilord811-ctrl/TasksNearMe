@@ -148,10 +148,10 @@ export async function expireDueInvites(db: Db, payments_: PaymentProvider | null
 // ---- Requesting ---------------------------------------------------------------------------------------
 
 /** The client's open tasks in the helper's bookable categories. */
-async function invitableTasks(db: Db, posterId: string, helperId: string, now: Date): Promise<(InvitableTask & { marketId: string })[]> {
+async function invitableTasks(db: Db, posterId: string, helperId: string, now: Date): Promise<(InvitableTask & { marketId: string; expenseAllowanceCents: number })[]> {
   const state = await loadHelperState(db, helperId, now);
   const rows = await db
-    .select({ id: tasks.id, title: tasks.title, slug: categories.slug, windowStart: tasks.windowStart, windowEnd: tasks.windowEnd, marketId: tasks.marketId })
+    .select({ id: tasks.id, title: tasks.title, slug: categories.slug, windowStart: tasks.windowStart, windowEnd: tasks.windowEnd, marketId: tasks.marketId, expenseAllowanceCents: tasks.expenseAllowanceCents })
     .from(tasks)
     .innerJoin(categories, eq(categories.id, tasks.categoryId))
     // Hidden tasks can't be shown to a helper through an invite either.
@@ -159,7 +159,7 @@ async function invitableTasks(db: Db, posterId: string, helperId: string, now: D
     .orderBy(desc(tasks.createdAt));
   return rows
     .filter((row) => state.facts.bookableCategories.includes(row.slug as CategorySlug))
-    .map((row) => ({ id: row.id, title: row.title, categorySlug: row.slug as CategorySlug, windowStart: row.windowStart.toISOString(), windowEnd: row.windowEnd.toISOString(), marketId: row.marketId }));
+    .map((row) => ({ id: row.id, title: row.title, categorySlug: row.slug as CategorySlug, windowStart: row.windowStart.toISOString(), windowEnd: row.windowEnd.toISOString(), marketId: row.marketId, expenseAllowanceCents: row.expenseAllowanceCents }));
 }
 
 /** The helper's listed price per category: the fixed price, or the hourly rate with their minimum hours. */
@@ -245,7 +245,7 @@ export async function getRequestHelperPage(
   if (slot) suggestion = { ...(offered[0] ? { taskId: offered[0].id } : {}), pricing: slot.pricing };
   return {
     helper,
-    tasks: offered.map(({ marketId: _market, ...task }) => task),
+    tasks: offered.map(({ marketId: _market, expenseAllowanceCents: _allowance, ...task }) => task),
     listedPricing,
     ...(suggestion ? { suggestion } : {}),
     ...(fromBooking && !options.slotId ? { fromBooking } : {}),
@@ -255,11 +255,18 @@ export async function getRequestHelperPage(
   };
 }
 
-/** The client's breakdown for a price (in the task's market; the default market without a task). */
-export async function quoteInvite(db: Db, posterId: string, pricing: PricingInput, marketId?: string): Promise<PriceBreakdown | null> {
-  const market = marketId ?? (await db.select({ marketId: tasks.marketId }).from(tasks).where(eq(tasks.posterUserId, posterId)).limit(1))[0]?.marketId;
-  const fees = market ? await feesOf(db, market) : null;
-  return fees ? quoteBreakdown(fees, pricing) : null;
+/**
+ * The client's breakdown for a price: for the client's own task `taskId`, in its market and with its expense allowance (the
+ * hold covers it, as an offer's charge does); without one, in the market of a task of theirs, with no allowance.
+ */
+export async function quoteInvite(db: Db, posterId: string, pricing: PricingInput, taskId?: string): Promise<PriceBreakdown | null> {
+  const [task] = await db
+    .select({ marketId: tasks.marketId, expenseAllowanceCents: tasks.expenseAllowanceCents })
+    .from(tasks)
+    .where(taskId === undefined ? eq(tasks.posterUserId, posterId) : and(eq(tasks.id, taskId), eq(tasks.posterUserId, posterId)))
+    .limit(1);
+  const fees = task ? await feesOf(db, task.marketId) : null;
+  return fees ? quoteBreakdown(fees, pricing, { expenseAllowanceCents: taskId === undefined ? 0 : task!.expenseAllowanceCents }) : null;
 }
 
 /** Sends an invite: the card is authorized for the total (or a bank step comes first). */
@@ -292,13 +299,16 @@ export async function requestHelper(deps: BookingDeps, posterId: string, handle:
   const fees = await feesOf(db, task.marketId);
   if (!fees) return { ok: false, code: 'unknown' };
   // Risk asked this client to verify their ID first; the amount counts for new accounts.
-  if (await posterIdentityRequirement(db, posterId, now, quoteBreakdown(fees, parsed.data.pricing).posterTotalCents)) return { ok: false, code: 'identity_required' };
+  // The task's expense allowance is held with the price, as an offer charges it: the booking's terms carry it, and receipts
+  // approved against it are paid back to the helper out of what the client paid (before, the platform paid them).
+  const allowance = { expenseAllowanceCents: task.expenseAllowanceCents };
+  if (await posterIdentityRequirement(db, posterId, now, quoteBreakdown(fees, parsed.data.pricing, allowance).posterTotalCents)) return { ok: false, code: 'identity_required' };
   const limited = await consumeRateLimit(db, `invites:${posterId}`, REQUEST_RULE, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
   const method = await methodForChoice(deps, posterId, parsed.data.payment);
   if (!('providerRef' in method)) return method;
 
-  const breakdown = quoteBreakdown(fees, parsed.data.pricing);
+  const breakdown = quoteBreakdown(fees, parsed.data.pricing, allowance);
   const inviteId = newId('inv');
   const paymentId = newId('pay');
   try {
@@ -749,7 +759,7 @@ export async function counterInvite(db: Db, payments_: PaymentProvider | null, h
   if (!invite) return { ok: false, code: 'not_allowed' };
   if (invite.status !== 'sent') return { ok: false, code: invite.status === 'expired' ? 'expired' : 'not_allowed' };
   const [task] = await db
-    .select({ marketId: tasks.marketId, windowStart: tasks.windowStart, windowEnd: tasks.windowEnd, categorySlug: categories.slug })
+    .select({ marketId: tasks.marketId, windowStart: tasks.windowStart, windowEnd: tasks.windowEnd, categorySlug: categories.slug, expenseAllowanceCents: tasks.expenseAllowanceCents })
     .from(tasks)
     .innerJoin(categories, eq(categories.id, tasks.categoryId))
     .where(eq(tasks.id, invite.taskId))
@@ -765,7 +775,8 @@ export async function counterInvite(db: Db, payments_: PaymentProvider | null, h
   if (await pricingRefused(db, task.categorySlug, pricing)) return { ok: false, code: 'validation_failed', fieldErrors: { pricing: ['out_of_range'] } };
   const start = parsed.data.start ? new Date(parsed.data.start) : invite.startAt;
   if (start < task.windowStart || start > task.windowEnd || start.getTime() - now.getTime() < 2 * HOUR) return { ok: false, code: 'validation_failed', fieldErrors: { start: ['invalid'] } };
-  const counterBreakdown = quoteBreakdown(fees, pricing);
+  // The task's expense allowance stays in the total, as in the first hold.
+  const counterBreakdown = quoteBreakdown(fees, pricing, { expenseAllowanceCents: task.expenseAllowanceCents });
   const columns = pricingColumns(pricing);
   const [updated] = await db
     .update(invites)

@@ -33,9 +33,9 @@ function refreshed<T extends { ok: boolean }>(result: T): T {
   return result;
 }
 
-export async function quoteInviteAction(input: { pricing: PricingInput }): Promise<PriceBreakdown> {
+export async function quoteInviteAction(input: { pricing: PricingInput; taskId?: string }): Promise<PriceBreakdown> {
   const userId = await signedInUserId();
-  const quote = userId ? await quoteInvite(db, userId, input.pricing) : null;
+  const quote = userId ? await quoteInvite(db, userId, input.pricing, input.taskId === undefined ? undefined : String(input.taskId)) : null;
   if (!quote) throw new Error('No quote');
   return quote;
 }

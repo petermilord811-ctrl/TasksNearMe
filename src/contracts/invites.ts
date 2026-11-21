@@ -119,14 +119,15 @@ export const requestHelperInputSchema = z.object({
 export type RequestHelperInput = z.input<typeof requestHelperInputSchema>;
 
 /**
- * - `onQuote`: the client's breakdown for a price (the UI never computes money).
+ * - `onQuote`: the client's breakdown for a price (the UI never computes money); with `taskId`, the chosen task's expense
+ *   allowance is in it, as it is in the hold.
  * - `onRequest`: ok `sent` with `redirectTo` (the task page), or bank verification first. Errors:
  *   `validation_failed`, `payment_declined`, `insufficient_funds`, `not_allowed` (blocked, not bookable, an
  *   invite already open), `rate_limited`, `unknown`.
  * - `onFinishVerification`: after the dev bank dialog.
  */
 export interface RequestHelperHandlers {
-  onQuote: QueryHandler<{ pricing: PricingInput }, PriceBreakdown>;
+  onQuote: QueryHandler<{ pricing: PricingInput; taskId?: string }, PriceBreakdown>;
   onRequest: QueryHandler<RequestHelperInput, PaymentAttemptResult>;
   onFinishVerification: QueryHandler<{ paymentId: string; outcome: 'approved' | 'failed' }, PaymentAttemptResult>;
 }

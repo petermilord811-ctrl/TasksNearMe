@@ -127,7 +127,8 @@ describe('RequestHelperScreen', () => {
     fireEvent.change(start(), { target: { value: '2026-12-12T10:00' } });
     await user.type(screen.getByRole('textbox', { name: 'Message (optional)' }), '  Please bring your drill.  ');
     await ready();
-    expect(handlers.onQuote).toHaveBeenLastCalledWith({ pricing: { type: 'fixed', priceCents: 5000 } });
+    // The quote names the chosen task, so its expense allowance is in the total the hold covers.
+    expect(handlers.onQuote).toHaveBeenLastCalledWith({ pricing: { type: 'fixed', priceCents: 5000 }, taskId: 'tsk_bookshelf' });
     expect(screen.getByText(/We'll place a hold of \$49\.50/)).toBeVisible();
     expect(screen.queryByText('$55.00')).not.toBeInTheDocument();
     await user.click(terms());

@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Controller, FormProvider, useForm, useWatch, type FieldPath } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Lock } from 'lucide-react';
-import { invitePricingSchema, needsBankVerification, requestHelperInputSchema, routes, type ActionResult, type PaymentAttemptResult, type PaymentVerification, type PriceBreakdown as PriceBreakdownData, type RequestHelperInput } from '@/contracts';
+import { invitePricingSchema, needsBankVerification, requestHelperInputSchema, routes, type ActionResult, type PaymentAttemptResult, type PaymentVerification, type PriceBreakdown as PriceBreakdownData, type PricingInput, type RequestHelperInput } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
@@ -62,7 +62,13 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
   const { setError, setFocus } = form;
   const pricing = useWatch({ control: form.control, name: 'pricing' });
   const validPricing = invitePricingSchema.safeParse(pricing).success;
-  const quote = usePriceQuote({ pricing, valid: validPricing, onQuote: handlers.onQuote, initialBreakdown });
+  // The chosen task's expense allowance is held with the price: the quote names the task (Book again's copy carries none).
+  const chosenTask = useWatch({ control: form.control, name: 'taskId' });
+  const onQuote = useCallback(
+    (input: { pricing: PricingInput }) => handlers.onQuote(chosenTask && !isBookAgain(chosenTask) ? { ...input, taskId: chosenTask } : input),
+    [handlers, chosenTask],
+  );
+  const quote = usePriceQuote({ pricing, valid: validPricing, onQuote, initialBreakdown });
   const disabled = pending || Boolean(verification) || Boolean(result?.ok);
 
   useEffect(() => {
