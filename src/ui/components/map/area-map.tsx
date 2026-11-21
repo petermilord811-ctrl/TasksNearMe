@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { LatLng } from '@/shared/geo';
 import { cn } from '@/ui/lib/utils';
@@ -51,10 +51,33 @@ export function AreaMap(props: AreaMapProps) {
   const tiles = useMapTiles();
   const wantLive = props.live ?? tiles.live;
   const [live, setLive] = useState<'loading' | 'ready' | 'failed'>(wantLive ? 'loading' : 'failed');
+  // The live map (MapLibre's code, its style and tiles, a WebGL context) loads once the map is about to be seen: one
+  // hidden on phones (find work's list) or further down the page costs nothing until then, the drawn map standing in
+  // (speed on a phone, 2026-11-21). Without IntersectionObserver (tests), it loads at once, as before.
+  const box = useRef<HTMLDivElement>(null);
+  const [near, setNear] = useState(() => typeof window !== 'undefined' && typeof IntersectionObserver === 'undefined');
+  useEffect(() => {
+    const element = box.current;
+    if (!wantLive || near || !element || typeof IntersectionObserver === 'undefined') return;
+    // Seen soon, and the page done with its first work (paint, hydration, the first taps): then MapLibre comes in.
+    let idle = 0;
+    const whenIdle = (run: () => void) => typeof requestIdleCallback === 'function' ? requestIdleCallback(run, { timeout: 2500 }) : window.setTimeout(run, 1200);
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      observer.disconnect();
+      idle = whenIdle(() => setNear(true));
+    }, { rootMargin: '300px 0px' });
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      if (typeof cancelIdleCallback === 'function') cancelIdleCallback(idle);
+      else window.clearTimeout(idle);
+    };
+  }, [wantLive, near]);
   const drawn = <StaticAreaMap places={props.places} serviceArea={props.serviceArea} fallbackCenter={props.fallbackCenter} activeId={props.activeId} onActiveChange={props.onActiveChange} onSelect={props.onSelect} label={props.label} groupLabel={props.groupLabel} className="absolute inset-0" />;
-  return <div className={cn('relative min-h-40 overflow-hidden rounded-xl border bg-card', props.className)}>
+  return <div ref={box} className={cn('relative min-h-40 overflow-hidden rounded-xl border bg-card', props.className)}>
     {live !== 'ready' && drawn}
-    {live !== 'failed' && <LiveAreaMap {...props} styleUrl={props.styleUrl ?? tiles.styleUrl} visible={live === 'ready'} onReady={() => setLive('ready')} onFailed={() => setLive('failed')} />}
+    {near && live !== 'failed' && <LiveAreaMap {...props} styleUrl={props.styleUrl ?? tiles.styleUrl} visible={live === 'ready'} onReady={() => setLive('ready')} onFailed={() => setLive('failed')} />}
     <p className="pointer-events-none absolute right-2 bottom-1 z-10 rounded bg-card/80 px-1.5 text-[10px] text-muted-foreground">{props.attribution ?? tiles.attribution}</p>
   </div>;
 }
