@@ -696,10 +696,14 @@ async function seedBookings(tx: Tx): Promise<void> {
 async function seedNotifications(tx: Tx): Promise<void> {
   const now = Date.now();
   const at = (minutesAgo: number) => new Date(now - minutesAgo * 60_000);
+  // Ben booked the bookshelf anchoring from Jordan's offer, so only the helper heard "booked you" (booking_confirmed);
+  // both hear the start reminder, with the booking's clock time (messages pass J-M5, J-M6).
+  const [tv] = await tx.select({ startAt: bookings.startAt }).from(bookings).where(eq(bookings.id, 'bkg_tv'));
+  if (!tv) throw new Error('Seed notifications: bkg_tv is missing');
   await tx.insert(notifications).values([
     { id: 'ntf_seed_ruth_arrived', userId: 'usr_ruth', type: 'helper_arrived', title: 'Assemble a bookcase', actorName: 'Jordan T.', target: { kind: 'booking', bookingId: 'bkg_bookcase' }, sourceEventId: 'seed:ruth_arrived', createdAt: at(50) },
     { id: 'ntf_seed_ruth_on_way', userId: 'usr_ruth', type: 'helper_on_the_way', title: 'Assemble a bookcase', actorName: 'Jordan T.', target: { kind: 'booking', bookingId: 'bkg_bookcase' }, sourceEventId: 'seed:ruth_on_way', createdAt: at(75), readAt: at(70) },
-    { id: 'ntf_seed_ben_tv', userId: 'usr_ben', type: 'booking_confirmed', title: 'Anchor a tall bookshelf to the wall', target: { kind: 'booking', bookingId: 'bkg_tv' }, sourceEventId: 'seed:ben_tv', createdAt: at(24 * 60), readAt: at(23 * 60) },
+    { id: 'ntf_seed_ben_tv', userId: 'usr_ben', type: 'booking_reminder', title: 'Anchor a tall bookshelf to the wall', actorName: 'Jordan T.', target: { kind: 'booking', bookingId: 'bkg_tv' }, params: { at: tv.startAt.toISOString(), timeZone: AUSTIN.timeZone }, sourceEventId: 'seed:ben_tv', createdAt: at(24 * 60), readAt: at(23 * 60) },
     { id: 'ntf_seed_jordan_tv', userId: 'usr_jordan', type: 'booking_confirmed', title: 'Anchor a tall bookshelf to the wall', actorName: 'Ben W.', target: { kind: 'booking', bookingId: 'bkg_tv' }, sourceEventId: 'seed:jordan_tv', createdAt: at(24 * 60), readAt: at(23 * 60) },
   ]);
 }
