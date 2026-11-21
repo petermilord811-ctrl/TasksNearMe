@@ -17,8 +17,12 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 vi.mock('sonner', () => ({ toast: { success: toastSuccess, error: toastError } }));
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
-function show(descriptors: ActionDescriptor[], onAction = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'saved' }))) {
-  return render(<NextIntlClientProvider locale="en" messages={uiMessages}><TimeZoneProvider timeZone="America/Chicago"><ActionBar actions={descriptors} onAction={onAction} /></TimeZoneProvider></NextIntlClientProvider>);
+/** The desk's day (Sat Nov 21, Chicago): its reasons' times read without the day. */
+const DESK_DAY = '2026-11-21T14:00:00.000Z';
+
+/** `now: null` renders without the page's clock. */
+function show(descriptors: ActionDescriptor[], onAction = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'saved' })), now: string | null = DESK_DAY) {
+  return render(<NextIntlClientProvider locale="en" messages={uiMessages}><TimeZoneProvider timeZone="America/Chicago"><ActionBar actions={descriptors} onAction={onAction} now={now ?? undefined} /></TimeZoneProvider></NextIntlClientProvider>);
 }
 
 describe('action copy coverage', () => {
@@ -31,6 +35,18 @@ describe('action copy coverage', () => {
 });
 
 describe('ActionBar', () => {
+  it('names the day of a reason’s time that is not today, or without the page’s clock (journeys on a phone, J-H18)', () => {
+    const noShow = (now: string | null) => {
+      cleanup();
+      show(deskBeforeNoShowPosterActions, undefined, now);
+      return screen.getAllByRole('button', { name: 'Report a no-show' })[0]!;
+    };
+    expect(noShow(DESK_DAY)).toHaveAccessibleDescription('Available at 11:00 am');
+    // Four days before: the day, not a time that reads as today.
+    expect(noShow('2026-11-17T15:00:00.000Z')).toHaveAccessibleDescription(/^Available Sat, Nov 21 · 11:00\s?am$/);
+    expect(noShow(null)).toHaveAccessibleDescription(/^Available Sat, Nov 21 · 11:00\s?am$/);
+  });
+
   it('displays the disabled reason and does not call its handler', async () => {
     const handler = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'saved' }));
     show(deskBeforeNoShowPosterActions, handler);

@@ -1,8 +1,10 @@
 {
   "available_at": "Disponible a las {at}",
+  "available_at_on": "Disponible el {at}",
   "available_at_without_time": "Esta acción aún no está disponible.",
   "open_change_exists": "Ya hay otro cambio abierto",
-  "deadline_passed": "La fecha límite venció el {at}",
+  "deadline_passed": "La fecha límite venció a las {at}",
+  "deadline_passed_on": "La fecha límite venció el {at}",
   "deadline_passed_without_time": "La fecha límite ya venció.",
   "not_bookable": "Termina la configuración de ayudante antes de continuar.",
   "needs_background_check": "Se necesita una verificación de antecedentes para esta categoría.",

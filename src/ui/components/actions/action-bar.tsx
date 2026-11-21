@@ -5,7 +5,7 @@ import { Ellipsis, LoaderCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import type { ActionDescriptor, ActionResult } from '@/contracts';
+import type { ActionDescriptor, ActionResult, ISODateTime } from '@/contracts';
 import { useFormat } from '@/ui/lib/format';
 import { actionTray, trayGap } from '@/ui/components/bookings/surface';
 import { cn } from '@/ui/lib/utils';
@@ -31,10 +31,12 @@ export interface ActionBarProps {
   /** Static initial states for previews; normal screens leave these unset. */
   initialResult?: ActionResult;
   initialPending?: string;
+  /** The page's clock: a reason's time today reads "at 8:00 am"; another day, or without it, names the day. */
+  now?: ISODateTime;
 }
 
-export function ActionBar({ actions, onAction, sticky = false, mobileFixed = false, barRef, onRequestAction, getActionLink, onResult, renderResult, description, initialResult, initialPending }: ActionBarProps) {
-  const { formatTime } = useFormat();
+export function ActionBar({ actions, onAction, sticky = false, mobileFixed = false, barRef, onRequestAction, getActionLink, onResult, renderResult, description, initialResult, initialPending, now }: ActionBarProps) {
+  const { formatTime, formatDateTime, dayKey } = useFormat();
   const t = useTranslations('actions');
   const reason = useTranslations('actionReasons');
   const feedback = useTranslations('feedback');
@@ -119,11 +121,16 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
 
   function renderAction(action: ActionDescriptor, context: string) {
     const disabledReason = action.disabledReason;
-    const reasonText = disabledReason
-      ? (disabledReason.code === 'available_at' || disabledReason.code === 'deadline_passed') && !disabledReason.at
-        ? reason(`${disabledReason.code}_without_time`)
-        : reason(disabledReason.code, { at: disabledReason.at ? formatTime(disabledReason.at) : '' })
-      : undefined;
+    const reasonText = !disabledReason
+      ? undefined
+      : disabledReason.code === 'available_at' || disabledReason.code === 'deadline_passed'
+        ? !disabledReason.at
+          ? reason(`${disabledReason.code}_without_time`)
+          // Another day than the page's names the day (journeys on a phone: "Available at 8:00 am" four days out).
+          : now && dayKey(disabledReason.at) === dayKey(now)
+            ? reason(disabledReason.code, { at: formatTime(disabledReason.at) })
+            : reason(`${disabledReason.code}_on`, { at: formatDateTime(disabledReason.at) })
+        : reason(disabledReason.code, { at: disabledReason.at ? formatTime(disabledReason.at) : '' });
     const reasonId = `${id}-${context}-${action.id}-reason`;
     const pending = pendingId === action.id;
     const link = getActionLink?.(action.id);

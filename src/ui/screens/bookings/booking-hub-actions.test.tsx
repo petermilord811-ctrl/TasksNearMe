@@ -18,7 +18,8 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.clearAllMocks(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 function mount(data: BookingView = deskBookingHelperDayOf, onAction = vi.fn(fakeHandler<{ action: Parameters<BookingHubHandlers['onAction']>[0]['action'] }>({ ok: true, code: 'updated' }, 0))) {
-  return { onAction, ...render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><BookingHubActions data={data} handlers={{ onAction }} sheets={fakeBookingSheetHandlers} /></TimeZoneProvider></NextIntlClientProvider>) };
+  // On the desk's day (Sat Nov 21), so an action's "Available at" reads without the day.
+  return { onAction, ...render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><BookingHubActions data={data} handlers={{ onAction }} sheets={fakeBookingSheetHandlers} now="2026-11-21T14:00:00.000Z" /></TimeZoneProvider></NextIntlClientProvider>) };
 }
 
 describe('BookingHubActions', () => {

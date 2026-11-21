@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { BookmarkCheck, CircleAlert, CircleCheck } from 'lucide-react';
-import { routes, type ActionResult, type BookingActionId, type BookingHubHandlers, type BookingSheetHandlers, type BookingView } from '@/contracts';
+import { routes, type ActionResult, type BookingActionId, type BookingHubHandlers, type BookingSheetHandlers, type BookingView, type ISODateTime } from '@/contracts';
 import { useFormat } from '@/ui/lib/format';
 import { ActionBar } from '@/ui/components/actions/action-bar';
 import { Alert, AlertDescription } from '@/ui/primitives/alert';
@@ -32,9 +32,11 @@ export interface BookingHubActionsProps {
   /** Preview-only snapshots, without submitting an action on mount. */
   initialResult?: ActionResult;
   initialPending?: BookingActionId;
+  /** The page's clock, so an action's "Available at" names the day when it isn't today. */
+  now?: ISODateTime;
 }
 
-export function BookingHubActions({ data, handlers, sheets, initialResult, initialPending }: BookingHubActionsProps) {
+export function BookingHubActions({ data, handlers, sheets, initialResult, initialPending, now }: BookingHubActionsProps) {
   const { formatDateTime, formatTime, zoneName } = useFormat();
   const t = useTranslations('bookingHub');
   const feedback = useTranslations('feedback');
@@ -78,6 +80,7 @@ export function BookingHubActions({ data, handlers, sheets, initialResult, initi
     {data.actions.length === 0 && savedStatus}
     <ActionBar
     actions={data.actions}
+    now={now}
     mobileFixed
     barRef={barRef}
     initialResult={initialResult}

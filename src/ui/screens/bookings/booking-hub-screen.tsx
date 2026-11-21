@@ -161,7 +161,7 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
 
     <ScheduledPaymentCard key={`scheduled-${data.id}`} data={data} handlers={scheduledPayment} preview={scheduledPreview} />
 
-    <BookingHubActions key={data.id} data={data} handlers={handlers} sheets={sheets} initialResult={initialResult} initialPending={initialPending} />
+    <BookingHubActions key={data.id} data={data} handlers={handlers} sheets={sheets} initialResult={initialResult} initialPending={initialPending} now={now} />
 
     <BookingTipCard key={`tip-${data.id}`} data={data} handlers={tip} preview={tipPreview} />
 
