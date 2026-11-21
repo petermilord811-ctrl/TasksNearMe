@@ -14,6 +14,7 @@ import { Button } from '@/ui/primitives/button';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
 import { Spinner } from '@/ui/primitives/spinner';
 import { Textarea } from '@/ui/primitives/textarea';
+import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
 
 export function ReviewForm({ data, handlers, initialResult, initialPending = false }: {
   data: ReviewPageData;
@@ -33,13 +34,14 @@ export function ReviewForm({ data, handlers, initialResult, initialPending = fal
   const body = useWatch({ control: form.control, name: 'body' });
   const privateFeedback = useWatch({ control: form.control, name: 'privateFeedback' });
   const submitBar = useRef<HTMLDivElement>(null);
+  // A field that focus reaches behind the sticky bar, or whose hint or count is, comes clear of it, also when a
+  // keyboard that shrinks the page opens (WCAG 2.4.11).
+  const formRef = useRef<HTMLFormElement>(null);
+  useKeepFocusAboveBar(formRef, submitBar);
   const fieldError = (code: string) => fieldCopy(fieldCopy.has(code) ? code : 'invalid');
   const feedback = action.result && !action.result.ok ? { ...action.result, fieldErrors: undefined } : action.result;
 
-  return <form noValidate aria-label={t('yourReview')} aria-busy={pending} className="space-y-6" onFocusCapture={(event) => {
-    const bar = submitBar.current;
-    if (bar && !bar.contains(event.target) && event.target.getBoundingClientRect().bottom > bar.getBoundingClientRect().top) event.target.scrollIntoView({ block: 'center', behavior: 'instant' });
-  }} onSubmit={(event) => {
+  return <form ref={formRef} noValidate aria-label={t('yourReview')} aria-busy={pending} className="space-y-6" onSubmit={(event) => {
     if (disabled) { event.preventDefault(); return; }
     void form.handleSubmit((input) => action.run(handlers.onSubmit, input))(event);
   }}>

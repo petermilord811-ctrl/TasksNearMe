@@ -19,6 +19,7 @@ import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives
 import { RadioGroup, RadioGroupItem } from '@/ui/primitives/radio-group';
 import { Spinner } from '@/ui/primitives/spinner';
 import { Textarea } from '@/ui/primitives/textarea';
+import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
 import type { ReportProblemScreenProps } from './report-problem-screen';
 
 export function ReportProblemForm({ data, handlers, initialResult, initialPending = false }: Omit<ReportProblemScreenProps, 'now'> & {
@@ -46,6 +47,10 @@ export function ReportProblemForm({ data, handlers, initialResult, initialPendin
   const feedback = useRef<HTMLDivElement>(null);
   const submitButton = useRef<HTMLButtonElement>(null);
   const submitBar = useRef<HTMLDivElement>(null);
+  // A field that focus reaches behind the sticky bar, or whose hint or count is, comes clear of it, also when a
+  // keyboard that shrinks the page opens (WCAG 2.4.11).
+  const formRef = useRef<HTMLFormElement>(null);
+  useKeepFocusAboveBar(formRef, submitBar);
   const disabled = pending || uploading || Boolean(result?.ok);
   const { setError, setFocus } = form;
 
@@ -92,10 +97,7 @@ export function ReportProblemForm({ data, handlers, initialResult, initialPendin
   const genericFeedback = result && !result.ok ? { ...result, fieldErrors: undefined } : result;
 
   return <>
-    <form noValidate aria-label={t('title')} aria-busy={pending || uploading} className="space-y-6" onFocusCapture={(event) => {
-      const bar = submitBar.current;
-      if (bar && !bar.contains(event.target) && event.target.getBoundingClientRect().bottom > bar.getBoundingClientRect().top) event.target.scrollIntoView({ block: 'center', behavior: 'instant' });
-    }} onSubmit={(event) => {
+    <form ref={formRef} noValidate aria-label={t('title')} aria-busy={pending || uploading} className="space-y-6" onSubmit={(event) => {
       if (disabled || locked.current || confirmation) { event.preventDefault(); return; }
       void form.handleSubmit((input) => { setResult(undefined); setConfirmation(input); }, focusInvalid)(event);
     }}>

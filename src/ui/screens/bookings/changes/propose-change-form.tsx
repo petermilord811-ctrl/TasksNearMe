@@ -11,6 +11,7 @@ import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
+import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
 import { ChangeQuote } from './change-quote';
 import { ProposeChangeFields } from './propose-change-fields';
 import { changedInput, changeDefaults, startOutsideWindow } from './propose-change-values';
@@ -37,6 +38,10 @@ export function ProposeChangeForm({ data, handlers, initialInput, initialResult 
   const locked = useRef(false);
   const submitButton = useRef<HTMLButtonElement>(null);
   const bar = useRef<HTMLDivElement>(null);
+  // A field that focus reaches behind the sticky bar, or whose hint is, comes clear of it, also when a keyboard that
+  // shrinks the page opens (WCAG 2.4.11).
+  const fields = useRef<HTMLFieldSetElement>(null);
+  useKeepFocusAboveBar(fields, bar);
   const { setError, setFocus } = form;
   useEffect(() => {
     if (!result || result.ok || pending) return;
@@ -89,9 +94,7 @@ export function ProposeChangeForm({ data, handlers, initialInput, initialResult 
 
   return <FormProvider {...form}>
     <form noValidate onSubmit={(event) => { void form.handleSubmit(review)(event); }} aria-busy={pending} className="space-y-6">
-      <fieldset disabled={pending} className={cn(surface, surfacePad, 'min-w-0 space-y-5')} onFocusCapture={(event) => {
-        if (bar.current && event.target.getBoundingClientRect().bottom > bar.current.getBoundingClientRect().top) event.target.scrollIntoView({ block: 'center', behavior: 'instant' });
-      }}>
+      <fieldset ref={fields} disabled={pending} className={cn(surface, surfacePad, 'min-w-0 space-y-5')}>
         <legend className="sr-only">{t('fields')}</legend>
         <div className="space-y-1.5">
           <h2 className={sectionTitle}>{t('fields')}</h2>

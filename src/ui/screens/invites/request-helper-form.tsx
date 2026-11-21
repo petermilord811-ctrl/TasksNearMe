@@ -16,6 +16,7 @@ import { Button } from '@/ui/primitives/button';
 import { Checkbox } from '@/ui/primitives/checkbox';
 import { Spinner } from '@/ui/primitives/spinner';
 import { usePriceQuote } from '@/ui/lib/use-price-quote';
+import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
 import { isBookAgain, RequestHelperFields, requestOptions, requestStartWindow, suggestedPricing } from './request-helper-fields';
 import type { RequestHelperScreenProps } from './request-helper-screen';
 
@@ -29,6 +30,10 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
   const router = useRouter();
   const id = useId();
   const submitBar = useRef<HTMLDivElement>(null);
+  // A field that focus reaches behind the sticky bar, or whose hint or count is, comes clear of it, also when a
+  // keyboard that shrinks the page opens (WCAG 2.4.11).
+  const formRef = useRef<HTMLFormElement>(null);
+  useKeepFocusAboveBar(formRef, submitBar);
   const feedbackSection = useRef<HTMLDivElement>(null);
   const [result, setResult] = useState<ActionResult | undefined>(() => initialResult && !needsBankVerification(initialResult) ? initialResult : undefined);
   const [verification, setVerification] = useState<PaymentVerification | undefined>(() => initialResult && needsBankVerification(initialResult) ? initialResult.verification : undefined);
@@ -105,10 +110,7 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
   const slotRequestUnavailable = !!data.slot && !data.slotUnavailable && result && !result.ok && result.code === 'not_allowed';
   const fieldError = (code: string) => fields(fields.has(code) ? code : 'invalid');
   return <>
-    <FormProvider {...form}><form noValidate aria-label={t('title', { helper: data.helper.displayName })} aria-busy={pending} className="space-y-6" onFocusCapture={(event) => {
-      const bar = submitBar.current;
-      if (bar && !bar.contains(event.target) && event.target.getBoundingClientRect().bottom > bar.getBoundingClientRect().top) event.target.scrollIntoView({ block: 'center', behavior: 'instant' });
-    }} onSubmit={(event) => {
+    <FormProvider {...form}><form ref={formRef} noValidate aria-label={t('title', { helper: data.helper.displayName })} aria-busy={pending} className="space-y-6" onSubmit={(event) => {
       if (disabled || locked.current || !quote.breakdown) { event.preventDefault(); return; }
       // Book again sends the past booking and the description; an open task sends its id (J-C7).
       void form.handleSubmit((input) => run(() => handlers.onRequest(isBookAgain(input.taskId) && data.fromBooking

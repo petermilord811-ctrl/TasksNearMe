@@ -21,6 +21,7 @@ import { Alert, AlertDescription } from '@/ui/primitives/alert';
 import { Button } from '@/ui/primitives/button';
 import { Checkbox } from '@/ui/primitives/checkbox';
 import { Spinner } from '@/ui/primitives/spinner';
+import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
 import type { BookingConfirmScreenProps } from './booking-confirm-screen';
 
 export function BookingConfirmForm({ data, handlers, now, initialResult, initialPending = false, children }: BookingConfirmScreenProps & {
@@ -37,6 +38,10 @@ export function BookingConfirmForm({ data, handlers, now, initialResult, initial
   const paymentSection = useRef<HTMLElement>(null);
   const feedbackSection = useRef<HTMLDivElement>(null);
   const submitBar = useRef<HTMLDivElement>(null);
+  // A field that focus reaches behind the sticky bar, or whose hint or count is, comes clear of it, also when a
+  // keyboard that shrinks the page opens (WCAG 2.4.11).
+  const formRef = useRef<HTMLFormElement>(null);
+  useKeepFocusAboveBar(formRef, submitBar);
   const [result, setResult] = useState<ActionResult | undefined>(() => initialResult && !needsBankVerification(initialResult) ? initialResult : undefined);
   const [verification, setVerification] = useState<PaymentVerification | undefined>(() => initialResult && needsBankVerification(initialResult) ? initialResult.verification : undefined);
   const [pending, setPending] = useState(initialPending);
@@ -106,10 +111,7 @@ export function BookingConfirmForm({ data, handlers, now, initialResult, initial
   const lastFailure = data.pending?.lastFailure;
 
   return <>
-    <form noValidate aria-label={t('title')} aria-busy={pending} className="space-y-6" onFocusCapture={(event) => {
-      const bar = submitBar.current;
-      if (bar && !bar.contains(event.target) && event.target.getBoundingClientRect().bottom > bar.getBoundingClientRect().top) event.target.scrollIntoView({ block: 'center', behavior: 'instant' });
-    }} onSubmit={(event) => {
+    <form ref={formRef} noValidate aria-label={t('title')} aria-busy={pending} className="space-y-6" onSubmit={(event) => {
       if (disabled || locked.current) { event.preventDefault(); return; }
       void form.handleSubmit(
         (input) => run(() => handlers.onConfirm(input)),
