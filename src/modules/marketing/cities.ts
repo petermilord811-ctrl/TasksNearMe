@@ -23,10 +23,12 @@ interface Directory {
   comingNext: WaitlistCity[];
 }
 
-async function loadDirectory(rows: RowScope): Promise<Directory> {
-  'use cache';
-  cacheLife('hours');
-  cacheTag('markets', WAITLIST_TAG);
+/**
+ * The directory straight from the database. Outside a request (the IndexNow job, through the sitemap's entries) there's
+ * no cache to call `cacheLife()` in: it throws, and the live site's seo.indexnow failed on every run until the sitemap
+ * read this instead of loadDirectory (2026-11-21).
+ */
+async function readDirectory(rows: RowScope): Promise<Directory> {
   const open = await db
     .select({ slug: markets.slug, name: markets.name, state: markets.state, status: markets.status, zipPrefixes: markets.zipPrefixes })
     .from(markets)
@@ -39,6 +41,14 @@ async function loadDirectory(rows: RowScope): Promise<Directory> {
       .sort((a, b) => (a.status === b.status ? a.name.localeCompare(b.name) : a.status === 'live' ? -1 : 1)),
     comingNext,
   };
+}
+
+/** The directory for pages: cached for an hour, and refreshed when markets or the waitlist change. */
+async function loadDirectory(rows: RowScope): Promise<Directory> {
+  'use cache';
+  cacheLife('hours');
+  cacheTag('markets', WAITLIST_TAG);
+  return readDirectory(rows);
 }
 
 /** The directory's entry for each state, by name in the page's language. */
@@ -80,8 +90,11 @@ export async function getStateCitiesPageData(
   };
 }
 
-/** For the sitemap: each state's slug and whether it has something real to show. */
+/**
+ * For the sitemap: each state's slug and whether it has something real to show. Straight from the database, since the
+ * IndexNow job reads the sitemap outside a request; the sitemap route caches its whole result (getSitemap).
+ */
 export async function listDirectoryStates(rows: RowScope): Promise<Array<{ slug: string; openCities: number; peopleWaiting: number }>> {
-  const directory = await loadDirectory(rows);
+  const directory = await readDirectory(rows);
   return directoryStates(directory, (code) => code, 'en').map(({ slug, openCities, peopleWaiting }) => ({ slug, openCities, peopleWaiting }));
 }
