@@ -80,8 +80,8 @@ describe('the Markets section on /admin/config (plan 8.2)', () => {
     expect(row.lastChange).toBeUndefined();
     expect(row.openingRefused).toBeUndefined();
     expect(row.actions).toEqual([
-      { id: 'prelaunch', kind: 'secondary', enabled: true, confirm: true, helpersIn: 1, waitlistEmails: 0 },
-      { id: 'live', kind: 'primary', enabled: true, confirm: true, helpersIn: 1, waitlistEmails: 2 },
+      { id: 'prelaunch', kind: 'secondary', enabled: true, confirm: true, helpersIn: 1, waitlistEmails: 0, accountsTold: 0 },
+      { id: 'live', kind: 'primary', enabled: true, confirm: true, helpersIn: 1, waitlistEmails: 2, accountsTold: 0 },
     ]);
     // The same helpers setMarketStatus would bring in: waiting there, home market elsewhere.
     const [market] = await db.select().from(markets).where(eq(markets.id, WICHITA));

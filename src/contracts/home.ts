@@ -48,7 +48,9 @@ export type AttentionTarget =
   /** A completed booking's reviews (`routes.app.bookingReview(bookingId)`): leave yours, read theirs once published (sweep RV2, RV4). */
   | { kind: 'booking_review'; bookingId: string }
   /** The person's saved searches (`routes.app.savedSearches()`): a morning digest over several of them (sweep SS6). */
-  | { kind: 'saved_searches' };
+  | { kind: 'saved_searches' }
+  /** Posting a task (`routes.app.newTask()`): where a city's launch message sends its clients (J-L2). */
+  | { kind: 'new_task' };
 
 export const ATTENTION_KINDS = [
   /** Client: approve the submitted work (or report a problem) before the deadline. */

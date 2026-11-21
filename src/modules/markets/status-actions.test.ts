@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { marketStatusChange } from './coverage';
 import { canChangeMarketStatus, marketStatusActions, openingRefusal } from './status-actions';
 
-const facts = { helpersToBringIn: 7, waitlistToTell: 40 };
+const facts = { helpersToBringIn: 7, waitlistToTell: 40, accountsToTell: 5 };
 // Europe/London: a zone whose clock no supported US zone keeps, refused before and after plan 8.1.
 const ZONES = ['America/Chicago', 'America/New_York', 'America/Denver', 'Pacific/Honolulu', 'Europe/London'];
 
@@ -16,16 +16,16 @@ describe('the Markets section’s buttons (plan 8.2)', () => {
 
   it('offer the two other statuses in order, each confirmed, and say what opening the market does', () => {
     expect(marketStatusActions(['admin'], { status: 'paused', timeZone: 'America/Chicago', ...facts })).toEqual([
-      { id: 'prelaunch', kind: 'secondary', enabled: true, confirm: true, helpersIn: 7, waitlistEmails: 0 },
-      { id: 'live', kind: 'primary', enabled: true, confirm: true, helpersIn: 7, waitlistEmails: 40 },
+      { id: 'prelaunch', kind: 'secondary', enabled: true, confirm: true, helpersIn: 7, waitlistEmails: 0, accountsTold: 0 },
+      { id: 'live', kind: 'primary', enabled: true, confirm: true, helpersIn: 7, waitlistEmails: 40, accountsTold: 5 },
     ]);
   });
 
   it('bring in whoever still waits there whenever it is open after the move, and email the waitlist only when going live', () => {
     // A market opened some other way (a migration) still has helpers to bring in: the next move to an open status does.
     expect(marketStatusActions(['admin'], { status: 'prelaunch', timeZone: 'America/Chicago', ...facts })).toEqual([
-      { id: 'live', kind: 'primary', enabled: true, confirm: true, helpersIn: 7, waitlistEmails: 40 },
-      { id: 'paused', kind: 'destructive', enabled: true, confirm: true, helpersIn: 0, waitlistEmails: 0 },
+      { id: 'live', kind: 'primary', enabled: true, confirm: true, helpersIn: 7, waitlistEmails: 40, accountsTold: 5 },
+      { id: 'paused', kind: 'destructive', enabled: true, confirm: true, helpersIn: 0, waitlistEmails: 0, accountsTold: 0 },
     ]);
     expect(marketStatusActions(['admin'], { status: 'live', timeZone: 'America/Chicago', ...facts, helpersToBringIn: 0 }).map(({ id, helpersIn, waitlistEmails }) => ({ id, helpersIn, waitlistEmails }))).toEqual([
       { id: 'prelaunch', helpersIn: 0, waitlistEmails: 0 },

@@ -87,6 +87,13 @@ export const NOTIFICATION_TYPES = [
   'helper_ready',
   /** A helper who waited for their city: we've opened there (`title`: the city); they choose a neighborhood next. */
   'city_open',
+  /**
+   * Their city went live (`title`: the city): someone with an account there and no helper profile is told to post a
+   * first task (launch rehearsal J-L2). Once per person and city, never by text.
+   */
+  'city_live_client',
+  /** Their city went live (`title`: the city): a helper there who isn't bookable yet is told to finish setting up (J-L2). */
+  'city_live_helper',
   /** A new task the helper could take, in their area and categories (blueprint 02 J1; at most 3 an hour). */
   'task_match',
   /** The copy of their data they asked for is ready to download on the account page (for `DATA_EXPORT_DAYS`). */
@@ -185,7 +192,7 @@ export interface NotificationHandlers {
 }
 
 /** `account`: verification and account notices (email always on, like receipts). */
-export const NOTIFICATION_TOPICS = ['bookings', 'messages', 'offers', 'task_alerts', 'community', 'payments', 'account', 'tips_and_news'] as const;
+export const NOTIFICATION_TOPICS = ['bookings', 'messages', 'offers', 'task_alerts', 'community', 'payments', 'account', 'city_news', 'tips_and_news'] as const;
 export type NotificationTopic = (typeof NOTIFICATION_TOPICS)[number];
 export const NOTIFICATION_CHANNELS = ['email', 'sms'] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];

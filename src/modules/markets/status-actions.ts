@@ -19,8 +19,10 @@ export interface MarketStatusFacts {
   timeZone: string;
   /** Helpers with a ZIP it covers, no neighborhood and a home market elsewhere: they come in whenever it's open after a move. */
   helpersToBringIn: number;
-  /** Waitlist entries it covers, never told and still subscribed: they're emailed when it goes live. */
+  /** Waitlist entries it covers, never told, still subscribed and without an account there: they're emailed when it goes live. */
   waitlistToTell: number;
+  /** Accounts there it tells that it's live when it goes live (clients, helpers not bookable yet; never told): J-L2. */
+  accountsToTell: number;
 }
 
 /** The statuses the viewer may move the market to, in order (pre-launch, live, paused); none for staff who aren't admins. */
@@ -33,6 +35,7 @@ export function marketStatusActions(roles: readonly StaffRole[], market: MarketS
     confirm: true,
     helpersIn: isOpenMarketStatus(status) ? market.helpersToBringIn : 0,
     waitlistEmails: status === 'live' ? market.waitlistToTell : 0,
+    accountsTold: status === 'live' ? market.accountsToTell : 0,
   }));
 }
 

@@ -7,7 +7,8 @@
   "meta": {
     "home": {
       "title": "TasksNearMe: tasks near me, done by trusted local helpers",
-      "description": "Get everyday tasks done by verified helpers near you: furniture assembly, moving, yard work, cleaning, and computer help. See the full price before you book. Now in {market}."
+      "description": "Get everyday tasks done by verified helpers near you: furniture assembly, moving, yard work, cleaning, and computer help. See the full price before you book. Now in {market}.",
+      "descriptionNoCity": "Get everyday tasks done by verified helpers near you: furniture assembly, moving, yard work, cleaning, and computer help. See the full price before you book. Opening city by city."
     },
     "market": {
       "title": "Help with tasks near you in {market}",
@@ -150,6 +151,7 @@
         "payments": "Payments",
         "tips_and_news": "Tips and news",
         "account": "Account and verification",
+        "city_news": "News about your city",
         "task_alerts": "New tasks near you",
         "community": "Community"
       },
@@ -160,6 +162,7 @@
         "payments": "payment",
         "tips_and_news": "tips and news",
         "account": "account",
+        "city_news": "city news",
         "task_alerts": "new-task",
         "community": "community"
       },
@@ -181,7 +184,8 @@
         "community_post": "Open the post",
         "saved_search": "Open your search",
         "booking_review": "Go to the reviews",
-        "saved_searches": "Open your saved searches"
+        "saved_searches": "Open your saved searches",
+        "new_task": "Post a task"
       },
       "next": {
         "offer_received": "Compare the offers on your task and book the one that fits. You're only charged when you book.",
@@ -230,6 +234,8 @@
         "replacement_search_started": "You were refunded in full. New offers will appear on your task. If you no longer need it, cancel the task.",
         "badge_earned": "See all your badges, and the next ones, on your account page.",
         "city_open": "Choose your neighborhood and add your home address. Then you can send offers on tasks near you.",
+        "city_live_client": "Describe what you need in a few words. You choose who to book, and pay only when you book.",
+        "city_live_helper": "Once your checks are done, clients near you can book you.",
         "reward_earned": "Our team gives it a quick check, then you pick the card you want. Gift cards are separate from your earnings.",
         "reward_ready": "Pick the card you want on your Rewards page and redeem it within 90 days.",
         "community_reply": "Read the answer, and pin the one that helped.",
@@ -308,6 +314,8 @@
       "replacement_search_started": "{actorName} canceled {title}. Your task is open for offers again, and we told helpers nearby.",
       "badge_earned": "{tier, plural, =1 {You earned a badge: {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}}} other {Your {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}} badge reached level #}}.",
       "city_open": "We're open in {title}. Choose your neighborhood to start taking tasks.",
+      "city_live_client": "TasksNearMe is live in {title}. Post your first task, and helpers near you send offers.",
+      "city_live_helper": "TasksNearMe is live in {title}. Finish setting up to start getting booked.",
       "reward_earned": "Your welcome gift card{hasAmount, select, yes { of {amount}} other {}} is yours: your verification checks all passed.",
       "reward_ready": "Your gift card{hasAmount, select, yes { of {amount}} other {}} is ready. Pick your card on your Rewards page.",
       "community_reply": "{actorName} answered your post: {title}.",

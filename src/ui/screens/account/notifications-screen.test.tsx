@@ -66,6 +66,8 @@ const copy: Record<NotificationType, RegExp> = {
   id_expiring: /ID you verified with has expired/,
   helper_ready: /you can send offers now/,
   city_open: /We're open in /,
+  city_live_client: /^TasksNearMe is live in .+: post your first task/,
+  city_live_helper: /^TasksNearMe is live in .+: finish setting up to start getting booked/,
   task_match: /New task near you: .*\$54\.00/,
   data_export_ready: /copy of your data is ready/,
   series_started: /started regular visits/,
@@ -112,6 +114,7 @@ const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: 
   saved_search: { target: { kind: 'saved_search', searchId: 'search / one' }, href: routes.app.savedSearch('search / one') },
   booking_review: { target: { kind: 'booking_review', bookingId: 'booking / one' }, href: routes.app.bookingReview('booking / one') },
   saved_searches: { target: { kind: 'saved_searches' }, href: routes.app.savedSearches() },
+  new_task: { target: { kind: 'new_task' }, href: routes.app.newTask() },
 };
 
 describe('NotificationsScreen', () => {

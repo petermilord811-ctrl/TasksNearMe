@@ -116,6 +116,7 @@
       "payments": "Payments",
       "tips_and_news": "Tips and news",
       "account": "Account and verification",
+      "city_news": "News about your city",
       "task_alerts": "New tasks near you",
       "community": "Community"
     },
@@ -237,6 +238,7 @@
       "payments": "payment",
       "tips_and_news": "tips and news",
       "account": "account",
+      "city_news": "city news",
       "task_alerts": "new-task",
       "community": "community"
     }

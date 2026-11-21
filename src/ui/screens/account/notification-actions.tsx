@@ -59,6 +59,8 @@ const icons: Record<NotificationType, LucideIcon> = {
   id_expiring: CalendarClock,
   helper_ready: BadgeCheck,
   city_open: MapPinned,
+  city_live_client: MapPinned,
+  city_live_helper: MapPinned,
   badge_earned: Award,
   reward_earned: Gift,
   reward_ready: Gift,

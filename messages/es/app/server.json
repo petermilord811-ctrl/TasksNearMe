@@ -7,7 +7,8 @@
   "meta": {
     "home": {
       "title": "TasksNearMe: ayuda de confianza cerca de ti",
-      "description": "Haz tus tareas de todos los días con ayudantes verificados cerca de ti: armado de muebles, mudanzas, jardín, limpieza y ayuda con computadoras. Ve el precio completo antes de reservar. Ya en {market}."
+      "description": "Haz tus tareas de todos los días con ayudantes verificados cerca de ti: armado de muebles, mudanzas, jardín, limpieza y ayuda con computadoras. Ve el precio completo antes de reservar. Ya en {market}.",
+      "descriptionNoCity": "Haz tus tareas de todos los días con ayudantes verificados cerca de ti: armado de muebles, mudanzas, jardín, limpieza y ayuda con computadoras. Ve el precio completo antes de reservar. Abrimos ciudad por ciudad."
     },
     "market": {
       "title": "Ayuda para el hogar cerca de ti en {market}",
@@ -150,6 +151,7 @@
         "payments": "Pagos",
         "tips_and_news": "Consejos y novedades",
         "account": "Cuenta y verificación",
+        "city_news": "Novedades de tu ciudad",
         "task_alerts": "Tareas nuevas cerca de ti",
         "community": "Comunidad"
       },
@@ -160,6 +162,7 @@
         "payments": "pagos",
         "tips_and_news": "consejos y novedades",
         "account": "cuenta",
+        "city_news": "novedades de tu ciudad",
         "task_alerts": "tareas nuevas",
         "community": "comunidad"
       },
@@ -181,7 +184,8 @@
         "community_post": "Abrir la publicación",
         "saved_search": "Abrir tu búsqueda",
         "booking_review": "Ir a las reseñas",
-        "saved_searches": "Abrir tus búsquedas guardadas"
+        "saved_searches": "Abrir tus búsquedas guardadas",
+        "new_task": "Publicar una tarea"
       },
       "next": {
         "offer_received": "Compara las ofertas de tu tarea y reserva la que mejor te convenga. Solo se te cobra cuando reservas.",
@@ -230,6 +234,8 @@
         "replacement_search_started": "Se te reembolsó el monto completo. Las nuevas ofertas aparecerán en tu tarea. Si ya no la necesitas, cancela la tarea.",
         "badge_earned": "Mira todas tus insignias, y las próximas, en tu página de cuenta.",
         "city_open": "Elige tu vecindario y agrega tu domicilio. Después podrás enviar ofertas en tareas cerca de ti.",
+        "city_live_client": "Describe lo que necesitas en pocas palabras. Tú eliges a quién reservar y solo pagas al reservar.",
+        "city_live_helper": "Cuando termines tus verificaciones, los clientes cerca de ti podrán reservarte.",
         "reward_earned": "Nuestro equipo la revisa rápidamente y luego eliges la tarjeta que quieras. Las tarjetas de regalo son aparte de tus ganancias.",
         "reward_ready": "Elige la tarjeta que quieras en tu página de Recompensas y canjéala dentro de 90 días.",
         "community_reply": "Lee la respuesta y fija la que te ayudó.",
@@ -308,6 +314,8 @@
       "replacement_search_started": "{actorName} canceló {title}. Tu tarea vuelve a estar abierta a ofertas y avisamos a los ayudantes cercanos.",
       "badge_earned": "{tier, plural, =1 {Ganaste una insignia: {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}}} other {Tu insignia {badge, select, tasks_completed {Tareas hechas} five_star {Cinco estrellas} on_time {Puntual} repeat_clients {Te vuelven a reservar} category_pro {Experto en la categoría} regular_visits {Visitas regulares} founding_helper {Ayudante fundador} client_bookings {Buen vecino} client_regular {Cliente habitual} client_five_star {Un gusto trabajar contigo} other {nueva}} subió al nivel #}}.",
       "city_open": "Ya estamos en {title}. Elige tu vecindario para empezar a recibir tareas.",
+      "city_live_client": "TasksNearMe ya está disponible en {title}. Publica tu primera tarea y los ayudantes cerca de ti te enviarán ofertas.",
+      "city_live_helper": "TasksNearMe ya está disponible en {title}. Termina de configurar tu perfil para empezar a recibir reservas.",
       "reward_earned": "Tu tarjeta de regalo de bienvenida{hasAmount, select, yes { de {amount}} other {}} es tuya: pasaste todas las verificaciones.",
       "reward_ready": "Tu tarjeta de regalo{hasAmount, select, yes { de {amount}} other {}} está lista. Elige tu tarjeta en tu página de Recompensas.",
       "community_reply": "{actorName} respondió a tu publicación: {title}.",

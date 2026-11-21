@@ -66,6 +66,8 @@
     "replacement_search_started": "{actorName} canceled {title}. Your task is open for offers again, and we told helpers nearby",
     "badge_earned": "{tier, plural, =1 {You earned a badge: {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}}} other {Your {badge, select, tasks_completed {Tasks done} five_star {Five-star} on_time {On time} repeat_clients {Booked again} category_pro {Category pro} regular_visits {Regular visits} founding_helper {Founding helper} client_bookings {Good neighbor} client_regular {Regular client} client_five_star {Great to work with} other {new}} badge reached level #}}",
     "city_open": "We're open in {title}: choose your neighborhood to start taking tasks",
+    "city_live_client": "TasksNearMe is live in {title}: post your first task",
+    "city_live_helper": "TasksNearMe is live in {title}: finish setting up to start getting booked",
     "reward_earned": "Your welcome gift card{hasAmount, select, yes { of {amount}} other {}} is yours. Pick your card after our quick check",
     "reward_ready": "Your gift card{hasAmount, select, yes { of {amount}} other {}} is ready. Pick your card on Rewards",
     "community_reply": "{actorName} answered your post: {title}",

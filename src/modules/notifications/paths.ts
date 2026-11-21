@@ -34,6 +34,8 @@ export function notificationPath(target: AttentionTarget): string {
       return routes.app.savedSearch(target.searchId);
     case 'booking_review':
       return routes.app.bookingReview(target.bookingId);
+    case 'new_task':
+      return routes.app.newTask();
     case 'saved_searches':
       return routes.app.savedSearches();
     case 'verify_identity':

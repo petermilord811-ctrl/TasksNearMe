@@ -6,6 +6,7 @@ import type { StaffActor } from '@/modules/support/staff';
 import { emitVerificationEvent } from '@/modules/verification/state';
 import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
+import { outboxEvents } from '@/platform/outbox/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { queueCityOpenEmails } from '@/modules/marketing/city-open';
@@ -47,6 +48,11 @@ export async function setMarketStatus(db: Db, staff: StaffActor, marketId: strin
       await emitVerificationEvent(tx, helper.userId, 'helper', 'city_open', { city: market.name });
     }
     const waitlistQueued = next === 'live' ? await queueCityOpenEmails(tx, market, now) : 0;
+    // Its accounts hear that it's live (launch rehearsal J-L2): the dispatcher plans one message each, once per person and
+    // city, so going live again after a pause or a pre-launch round trip tells nobody twice.
+    if (next === 'live') {
+      await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'market.live', aggregateType: 'market', aggregateId: market.id, payload: { marketId: market.id, city: market.name } });
+    }
     await tx.insert(auditLog).values({
       id: newId('aud'),
       actorId: staff.id,

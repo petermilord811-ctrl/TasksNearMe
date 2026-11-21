@@ -33,6 +33,20 @@ describe('email and text message content', () => {
   });
 });
 
+describe("a city's launch message (launch rehearsal J-L2)", () => {
+  it('tells clients to post a first task and helpers to finish setting up, under the city news topic with its unsubscribe', () => {
+    const client = deliveryContent({ type: 'city_live_client', title: 'Gainesville', actorName: null, params: null, target: { kind: 'new_task' }, userId: 'usr_maya' });
+    expect(client.subject).toBe('TasksNearMe is live in Gainesville. Post your first task, and helpers near you send offers.');
+    expect(client.text).toContain('/app/tasks/new');
+    expect(client.text).toContain("You're getting this because city news emails are on.");
+    expect(client.text).toMatch(/\/email\/unsubscribe\?token=/);
+    const helper = deliveryContent({ type: 'city_live_helper', title: 'Gainesville', actorName: null, params: null, target: { kind: 'onboarding', step: 'identity' }, userId: 'usr_jordan' }, 'es');
+    expect(helper.subject).toBe('TasksNearMe ya está disponible en Gainesville. Termina de configurar tu perfil para empezar a recibir reservas.');
+    expect(helper.text).toContain('/es/app/helper/onboarding/identity');
+    expect(helper.text).toContain('Recibes esto porque los correos de novedades de tu ciudad están activados.');
+  });
+});
+
 describe('in Spanish', () => {
   const base = { title: 'Armar un escritorio', actorName: 'Jordan T.', target: { kind: 'booking' as const, bookingId: 'bkg_desk' }, userId: 'usr_maya' };
 

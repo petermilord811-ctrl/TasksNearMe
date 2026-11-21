@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NOTIFICATION_TOPICS, NOTIFICATION_TYPES } from '@/contracts';
-import { cancelReceiptMoney, channelsFor, NOTIFICATION_TOPIC, planDelivery, preferenceOn, quietHoursEnd } from './delivery-domain';
+import { cancelReceiptMoney, channelsFor, cityLiveKey, isLockedPreference, NOTIFICATION_TOPIC, planDelivery, preferenceOn, quietHoursEnd, TEXTLESS_TOPICS } from './delivery-domain';
 
 const at = (iso: string) => new Date(iso);
 
@@ -69,6 +69,22 @@ describe('notification delivery rules', () => {
     expect(planDelivery({ type: 'offer_received', channel: 'email', enabled: false, hasAddress: true, now: day, timeZone: AUSTIN })).toEqual({ action: 'skip', reason: 'preference_off' });
     expect(planDelivery({ type: 'helper_arrived', channel: 'sms', enabled: true, hasAddress: false, now: day, timeZone: AUSTIN })).toEqual({ action: 'skip', reason: 'no_verified_phone' });
     expect(planDelivery({ type: 'offer_received', channel: 'email', enabled: true, hasAddress: false, now: day, timeZone: AUSTIN })).toEqual({ action: 'skip', reason: 'no_email' });
+  });
+});
+
+describe("a city's launch message (launch rehearsal J-L2, ab's decision)", () => {
+  it('goes by email, the bell and push under "News about your city", on unless turned off, never by text', () => {
+    for (const type of ['city_live_client', 'city_live_helper'] as const) {
+      expect(NOTIFICATION_TOPIC[type]).toBe('city_news');
+      expect(channelsFor(type)).not.toContain('sms');
+      expect(channelsFor(type)).toEqual(expect.arrayContaining(['email', 'push']));
+    }
+    expect(preferenceOn(new Map(), 'city_news', 'email')).toBe(true);
+    expect(preferenceOn(new Map([['city_news:email', false]]), 'city_news', 'email')).toBe(false);
+    expect(isLockedPreference('city_news', 'email')).toBe(false);
+    expect(TEXTLESS_TOPICS.has('city_news')).toBe(true);
+    // Kept once per person and city, whatever event planned it.
+    expect(cityLiveKey('mkt_gainesville')).toBe('city_live:mkt_gainesville');
   });
 });
 

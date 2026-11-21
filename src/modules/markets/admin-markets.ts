@@ -1,7 +1,9 @@
-import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
 import { ADMIN_MARKET_STATUSES, type AdminMarketRow, type AdminMarketStatus } from '@/contracts';
-import { users } from '@/modules/accounts/schema';
+import { staffRoles, users } from '@/modules/accounts/schema';
 import { waitlistEntries } from '@/modules/marketing/schema';
+import { cityLiveKey } from '@/modules/notifications/delivery-domain';
+import { notifications } from '@/modules/notifications/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import type { StaffActor } from '@/modules/support/staff';
 import { auditLog } from '@/platform/audit/schema';
@@ -59,6 +61,32 @@ export async function getAdminMarkets(db: Db, staff: StaffActor): Promise<AdminM
   const entriesBy = new Map(waitlistRows.map((row) => [row.prefix, row.entries]));
   const toTellBy = new Map(waitlistRows.map((row) => [row.prefix, row.toTell]));
   const tells = (marketId: string, statuses: readonly string[]) => tellRows.filter((row) => row.marketId === marketId && statuses.includes(row.status ?? '')).reduce((total, row) => total + row.count, 0);
+  // Going live (launch rehearsal J-L2): the accounts there it tells through the app (as the dispatcher plans them: active,
+  // not staff, no helper profile or one not bookable yet, never told), and the waitlist entries that have such an account,
+  // which the waitlist's email skips (`has_account`): nobody gets both.
+  const reach = new Map(await Promise.all(rows.map(async (market) => {
+    const [accounts] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .leftJoin(helperProfiles, eq(helperProfiles.userId, users.id))
+      .where(and(
+        eq(users.homeMarketId, market.id),
+        eq(users.status, 'active'),
+        or(isNull(helperProfiles.userId), eq(helperProfiles.status, 'draft')),
+        sql`not exists (select 1 from ${staffRoles} where ${staffRoles.userId} = ${users.id})`,
+        sql`not exists (select 1 from ${notifications} where ${notifications.userId} = ${users.id} and ${notifications.sourceEventId} = ${cityLiveKey(market.id)})`,
+      ));
+    const [withAccount] = market.zipPrefixes.length === 0 ? [{ count: 0 }] : await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(waitlistEntries)
+      .where(and(
+        isNull(waitlistEntries.toldMarketId),
+        isNull(waitlistEntries.unsubscribedAt),
+        inArray(waitlistPrefix, market.zipPrefixes),
+        sql`exists (select 1 from ${users} where lower(${users.email}) = lower(${waitlistEntries.email}) and ${users.homeMarketId} = ${market.id} and ${users.status} = 'active')`,
+      ));
+    return [market.id, { accountsToTell: accounts?.count ?? 0, waitlistWithAccount: withAccount?.count ?? 0 }] as const;
+  })));
   const lastChange = new Map<string, (typeof changes)[number]>();
   for (const change of changes) if (!lastChange.has(change.marketId)) lastChange.set(change.marketId, change);
 
@@ -67,7 +95,8 @@ export async function getAdminMarkets(db: Db, staff: StaffActor): Promise<AdminM
     const helpersWaiting = helpersOver(market.zipPrefixes, () => true);
     // The ones setMarketStatus brings in: their home market isn't this one yet.
     const helpersToBringIn = helpersOver(market.zipPrefixes, (homeMarketId) => homeMarketId !== market.id);
-    const toTell = sumOver(market.zipPrefixes, toTellBy);
+    const { accountsToTell, waitlistWithAccount } = reach.get(market.id) ?? { accountsToTell: 0, waitlistWithAccount: 0 };
+    const toTell = sumOver(market.zipPrefixes, toTellBy) - waitlistWithAccount;
     const last = lastChange.get(market.id);
     const from = statusOf(last?.metadata.from);
     const to = statusOf(last?.metadata.to);
@@ -85,7 +114,7 @@ export async function getAdminMarkets(db: Db, staff: StaffActor): Promise<AdminM
       waitlist: { entries: sumOver(market.zipPrefixes, entriesBy), told: tells(market.id, ['sent']), queued: tells(market.id, ['queued', 'sending']), toTell, failed: tells(market.id, ['failed']) },
       ...(last && from && to ? { lastChange: { at: isoOf(last.at), by: last.by ?? 'Staff', reason: last.reason ?? '', from, to } } : {}),
       ...(refusal ? { openingRefused: refusal } : {}),
-      actions: marketStatusActions(staff.roles, { status: market.status, timeZone: market.timeZone, helpersToBringIn, waitlistToTell: toTell }),
+      actions: marketStatusActions(staff.roles, { status: market.status, timeZone: market.timeZone, helpersToBringIn, waitlistToTell: toTell, accountsToTell }),
     };
   });
 }

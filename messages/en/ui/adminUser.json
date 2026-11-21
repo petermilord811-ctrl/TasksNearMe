@@ -153,6 +153,8 @@
     "replacement_search_started": "Task reopened for a replacement",
     "badge_earned": "Badge earned",
     "city_open": "City opened",
+    "city_live_client": "City live: post a first task",
+    "city_live_helper": "City live: finish setting up",
     "reward_earned": "Welcome gift card earned",
     "reward_ready": "Gift card ready",
     "community_reply": "Community reply",

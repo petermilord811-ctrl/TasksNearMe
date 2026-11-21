@@ -48,6 +48,10 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   id_expiring: 'account',
   helper_ready: 'account',
   city_open: 'account',
+  // Rare service news about the person's own city (its launch, a reopening, a major new service there), never promotions
+  // or tips, which stay in tips_and_news: that's what keeps its email on by default honest (J-L2, ab's decision).
+  city_live_client: 'city_news',
+  city_live_helper: 'city_news',
   badge_earned: 'tips_and_news',
   // A gift card is money-like and once in a lifetime: told like the account's verification news (email always on).
   reward_earned: 'account',
@@ -132,8 +136,18 @@ export const DEFAULT_PREFERENCES: Record<NotificationTopic, readonly Notificatio
   account: ['email'],
   task_alerts: ['email'],
   community: [],
+  city_news: ['email'],
   tips_and_news: [],
 };
+
+/**
+ * The record a city's launch message is kept under (`notifications.source_event_id`, unique per person): one per person
+ * and city, whatever the event that planned it, so going live again tells nobody twice (J-L2).
+ */
+export const cityLiveKey = (marketId: string) => `city_live:${marketId}`;
+
+/** Topics whose news never goes by text (an announcement by text needs consent we don't collect): no text switch. */
+export const TEXTLESS_TOPICS: ReadonlySet<NotificationTopic> = new Set<NotificationTopic>(['city_news']);
 
 export const isLockedPreference = (topic: string, channel: string) => LOCKED_PREFERENCES.some((item) => item.topic === topic && item.channel === channel);
 
@@ -172,7 +186,7 @@ export const pushOn = (topic: NotificationTopic) => topic !== 'tips_and_news';
  * Never by text: nudges and receipts that can wait (texts cost money and feel intrusive). Asking for a review and its
  * reminder ride the bookings topic, whose texts are on by default; an automatic refund's notice is a receipt.
  */
-export const NO_SMS_TYPES: ReadonlySet<NotificationType> = new Set<NotificationType>(['review_prompt', 'review_reminder', 'payment_refunded', 'address_recheck']);
+export const NO_SMS_TYPES: ReadonlySet<NotificationType> = new Set<NotificationType>(['review_prompt', 'review_reminder', 'payment_refunded', 'address_recheck', 'city_live_client', 'city_live_helper']);
 
 export const channelsFor = (type: NotificationType): readonly DeliveryChannel[] =>
   EMAIL_ONLY_TYPES.has(type) ? ['email'] : NO_SMS_TYPES.has(type) ? DELIVERY_CHANNELS.filter((channel) => channel !== 'sms') : DELIVERY_CHANNELS;

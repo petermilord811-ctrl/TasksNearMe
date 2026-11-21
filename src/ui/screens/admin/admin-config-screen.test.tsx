@@ -171,7 +171,7 @@ describe('the Markets section (plan 8.2)', () => {
     const handlers = mount();
     await user.click(card('Austin, TX').getByRole('button', { name: 'Take Austin live' }));
     const dialog = within(await screen.findByRole('alertdialog', { name: 'Take Austin live?' }));
-    expect(dialog.getByText("Austin opens to everyone. 58 people on its waitlist get one email that it's open, in their language.")).toBeInTheDocument();
+    expect(dialog.getByText("Austin opens to everyone. 58 people on its waitlist get one email that it's open, in their language. 12 people with an account there get one message that it's live: by email (unless they turned those off), in the bell and by push.")).toBeInTheDocument();
     await user.click(dialog.getByRole('button', { name: 'Take Austin live' }));
     expect(await dialog.findByText('Write why, in at least 10 characters.')).toBeInTheDocument();
     expect(handlers.onSetMarketStatus).not.toHaveBeenCalled();

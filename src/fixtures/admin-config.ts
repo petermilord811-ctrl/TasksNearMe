@@ -32,8 +32,8 @@ export const adminMarketRows: AdminMarketRow[] = [
     waitlist: { entries: 61, told: 0, queued: 0, toTell: 58, failed: 0 },
     lastChange: { at: '2026-11-17T16:20:00.000Z', by: 'Riley N.', reason: 'Austin waits while Gainesville opens first (owner, Nov 17).', from: 'live', to: 'prelaunch' },
     actions: [
-      { id: 'live', kind: 'primary', enabled: true, confirm: true, helpersIn: 0, waitlistEmails: 58 },
-      { id: 'paused', kind: 'destructive', enabled: true, confirm: true, helpersIn: 0, waitlistEmails: 0 },
+      { id: 'live', kind: 'primary', enabled: true, confirm: true, helpersIn: 0, waitlistEmails: 58, accountsTold: 12 },
+      { id: 'paused', kind: 'destructive', enabled: true, confirm: true, helpersIn: 0, waitlistEmails: 0, accountsTold: 0 },
     ],
   },
   {
@@ -42,8 +42,8 @@ export const adminMarketRows: AdminMarketRow[] = [
     homePage: true,
     waitlist: { entries: 214, told: 0, queued: 0, toTell: 209, failed: 0 },
     actions: [
-      { id: 'prelaunch', kind: 'secondary', enabled: true, confirm: true, helpersIn: 23, waitlistEmails: 0 },
-      { id: 'live', kind: 'primary', enabled: true, confirm: true, helpersIn: 23, waitlistEmails: 209 },
+      { id: 'prelaunch', kind: 'secondary', enabled: true, confirm: true, helpersIn: 23, waitlistEmails: 0, accountsTold: 0 },
+      { id: 'live', kind: 'primary', enabled: true, confirm: true, helpersIn: 23, waitlistEmails: 209, accountsTold: 0 },
     ],
   },
   {
@@ -53,8 +53,8 @@ export const adminMarketRows: AdminMarketRow[] = [
     waitlist: { entries: 17, told: 0, queued: 0, toTell: 17, failed: 0 },
     openingRefused: 'time_zone_unsupported',
     actions: [
-      { id: 'prelaunch', kind: 'secondary', enabled: false, confirm: true, helpersIn: 2, waitlistEmails: 0 },
-      { id: 'live', kind: 'primary', enabled: false, confirm: true, helpersIn: 2, waitlistEmails: 17 },
+      { id: 'prelaunch', kind: 'secondary', enabled: false, confirm: true, helpersIn: 2, waitlistEmails: 0, accountsTold: 0 },
+      { id: 'live', kind: 'primary', enabled: false, confirm: true, helpersIn: 2, waitlistEmails: 17, accountsTold: 0 },
     ],
   },
   {
@@ -64,8 +64,8 @@ export const adminMarketRows: AdminMarketRow[] = [
     waitlist: { entries: 133, told: 96, queued: 31, toTell: 2, failed: 3 },
     lastChange: { at: '2026-11-18T14:05:00.000Z', by: 'Riley N.', reason: 'Tulsa meets the supply and quality criteria: opening to everyone.', from: 'prelaunch', to: 'live' },
     actions: [
-      { id: 'prelaunch', kind: 'secondary', enabled: true, confirm: true, helpersIn: 0, waitlistEmails: 0 },
-      { id: 'paused', kind: 'destructive', enabled: true, confirm: true, helpersIn: 0, waitlistEmails: 0 },
+      { id: 'prelaunch', kind: 'secondary', enabled: true, confirm: true, helpersIn: 0, waitlistEmails: 0, accountsTold: 0 },
+      { id: 'paused', kind: 'destructive', enabled: true, confirm: true, helpersIn: 0, waitlistEmails: 0, accountsTold: 0 },
     ],
   },
 ];

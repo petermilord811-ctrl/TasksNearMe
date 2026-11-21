@@ -116,8 +116,16 @@ export interface AdminMarketStatusAction extends ActionDescriptor<AdminMarketSta
    * with a ZIP it covers whose home market isn't this one yet. 0 for pausing.
    */
   helpersIn: number;
-  /** Waitlist entries it emails that the city is open (going live, completion plan 8.3). */
+  /**
+   * Waitlist entries it emails that the city is open (going live, completion plan 8.3): those without an account there,
+   * who hear through the app instead.
+   */
   waitlistEmails: number;
+  /**
+   * People with an account there it tells that the city is live (going live, launch rehearsal J-L2): clients, and
+   * helpers not bookable yet; never told before. 0 for the other moves.
+   */
+  accountsTold: number;
 }
 
 /** One market in the config page's Markets section (completion plan 8.2). Counts only, never who. */

@@ -7,10 +7,11 @@ import type {
   NotificationsPageData,
   NotificationType,
   NotificationView,
+  OnboardingStep,
 } from '@/contracts';
 import { accountProfileInputSchema, BADGE_CODES, localeOrDefault, NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS, type BadgeCode } from '@/contracts';
 import { smsAvailable } from '@/integrations/sms';
-import { users } from '@/modules/accounts/schema';
+import { staffRoles, users } from '@/modules/accounts/schema';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { bookingSeries, bookings } from '@/modules/bookings/schema';
 import { messages, threadParticipants } from '@/modules/messaging/schema';
@@ -31,9 +32,11 @@ import { communityPosts } from '@/modules/community/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
 import { instantSearchMatches } from '@/modules/searches/service';
 import { reviews } from '@/modules/reviews/schema';
-import { cancelReceiptMoney, EMAIL_ONLY_TYPES, isLockedPreference, preferenceOn } from './delivery-domain';
+import { cancelReceiptMoney, cityLiveKey, EMAIL_ONLY_TYPES, isLockedPreference, preferenceOn, TEXTLESS_TOPICS } from './delivery-domain';
 import { privacyViewOf } from '@/modules/privacy/requests';
 import { requestIdentityAfterNameChange } from '@/modules/verification/tracks';
+import { computeOnboarding } from '@/modules/verification/progress';
+import { loadOnboardingState } from '@/modules/verification/state';
 import { pushSetup } from './push';
 import { notificationPreferences, notifications } from './schema';
 import { verificationNotificationFor } from './verification-plan';
@@ -61,6 +64,17 @@ interface Planned {
   title?: string;
   actorName?: string;
   params?: NotificationView['params'];
+  /**
+   * The record that makes it once only, when that isn't the event (`notifications` is unique per source and person): a
+   * city's launch message is keyed by the city (`cityLiveKey`), so a second go-live tells nobody twice.
+   */
+  sourceKey?: string;
+}
+
+/** Where a helper who isn't bookable yet goes on with setting up: the first step not done (the dashboard's own). */
+async function nextSetupStep(db: Db, userId: string, now: Date): Promise<OnboardingStep> {
+  const { firstIncomplete } = computeOnboarding((await loadOnboardingState(db, userId, now)).facts);
+  return firstIncomplete === 'done' ? 'profile' : firstIncomplete;
 }
 
 const text = (value: unknown) => (typeof value === 'string' ? value : undefined);
@@ -497,6 +511,33 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
       const planned = verificationNotificationFor(p);
       return planned ? [planned] : [];
     }
+    case 'market.live': {
+      // Launch rehearsal J-L2 (ab's decision): everyone with an account in the city hears it's live, once, in their own
+      // language: clients are told to post a first task, helpers not bookable yet to finish setting up. Bookable, paused
+      // and suspended helpers hear nothing new (task alerts already find the bookable ones), and neither does staff.
+      // Accounts are why the waitlist's email skips an address as `has_account`: nobody gets both.
+      const marketId = text(p.marketId) ?? event.aggregateId;
+      const city = text(p.city);
+      if (!marketId || !city) return [];
+      const sourceKey = cityLiveKey(marketId);
+      const people = await db
+        .select({ userId: users.id, helperStatus: helperProfiles.status })
+        .from(users)
+        .leftJoin(helperProfiles, eq(helperProfiles.userId, users.id))
+        .where(and(
+          eq(users.homeMarketId, marketId),
+          eq(users.status, 'active'),
+          ...(onlyUserId ? [eq(users.id, onlyUserId)] : []),
+          sql`not exists (select 1 from ${staffRoles} where ${staffRoles.userId} = ${users.id})`,
+          sql`not exists (select 1 from ${notifications} where ${notifications.userId} = ${users.id} and ${notifications.sourceEventId} = ${sourceKey})`,
+        ));
+      const planned: Planned[] = [];
+      for (const person of people) {
+        if (person.helperStatus === null) planned.push({ userId: person.userId, type: 'city_live_client', target: { kind: 'new_task' }, title: city, sourceKey });
+        else if (person.helperStatus === 'draft') planned.push({ userId: person.userId, type: 'city_live_helper', target: { kind: 'onboarding', step: await nextSetupStep(db, person.userId, new Date(event.createdAt)) }, title: city, sourceKey });
+      }
+      return planned;
+    }
     case 'badge.earned': {
       // Completion plan 6.4: a new badge or a higher tier, shown with the person's badges on the account page.
       const userId = text(p.userId);
@@ -592,7 +633,7 @@ async function deliver(db: Db, event: EventRow, onlyUserId?: string): Promise<nu
           actorName: item.actorName ?? null,
           params: item.params ?? null,
           target: item.target,
-          sourceEventId: event.id,
+          sourceEventId: item.sourceKey ?? event.id,
           createdAt: new Date(event.createdAt),
           // An email-only one (a receipt) is never unread in the bell.
           ...(EMAIL_ONLY_TYPES.has(item.type) ? { readAt: new Date(event.createdAt) } : {}),
@@ -733,7 +774,7 @@ export async function getAccountPage(db: Db, userId: string, returned: { connect
     ...(texts ? {} : { textsOff: true as const }),
     signIn,
     preferences: NOTIFICATION_TOPICS.flatMap((topic) =>
-      NOTIFICATION_CHANNELS.filter((channel) => texts || channel !== 'sms').map((channel) => {
+      NOTIFICATION_CHANNELS.filter((channel) => (texts || channel !== 'sms') && !(channel === 'sms' && TEXTLESS_TOPICS.has(topic))).map((channel) => {
         const locked = isLocked(topic, channel);
         const enabled = preferenceOn(stored, topic, channel);
         return { topic, channel, enabled, locked };
