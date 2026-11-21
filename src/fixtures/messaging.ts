@@ -147,3 +147,38 @@ export const fakeThreadHandlers: ThreadHandlers = {
   onSaveReply: () => wait({ ok: true, code: 'saved' }),
   onDeleteReply: () => wait({ ok: true, code: 'updated' }),
 };
+
+// ---- Direct conversations (2026-11-21) ------------------------------------------------------------------------
+
+/** Maya wrote to Jordan from his profile; he hasn't answered yet. */
+export const directThreadWithJordan: ThreadSummary = {
+  id: 'thr_direct_maya_jordan',
+  kind: 'direct',
+  title: 'Jordan T.',
+  otherParty: { id: 'usr_jordan', displayName: 'Jordan T.', initials: 'JT', memberSince: '2026-11-03T15:00:00.000Z', phoneVerified: true },
+  subject: { kind: 'person', helperHandle: 'jordan-t', canRequest: true },
+  lastMessage: { sender: 'me', kind: 'text', preview: text('Hi Jordan! Do you assemble standing desks too?'), createdAt: '2026-11-21T15:50:00.000Z' },
+  unreadCount: 0,
+  contactMasking: true,
+};
+
+/** Maya's first message: 2 more until Jordan answers. */
+export const directThreadPageData: ThreadPageData = {
+  thread: directThreadWithJordan,
+  messages: [{ id: 'msg_d1', sender: 'me', kind: 'text', segments: text('Hi Jordan! Do you assemble standing desks too?'), attachments: [], createdAt: '2026-11-21T15:50:00.000Z' }],
+  composer: { ...composer, firstMessagesLeft: 2 },
+};
+
+/** Maya sent her 3 first messages: she can write again when Jordan replies. */
+export const directThreadAwaitingReplyData: ThreadPageData = {
+  ...directThreadPageData,
+  messages: [
+    ...directThreadPageData.messages,
+    { id: 'msg_d2', sender: 'me', kind: 'text', segments: text('It’s a two-motor frame, about 60 inches wide.'), attachments: [], createdAt: '2026-11-21T15:51:00.000Z' },
+    { id: 'msg_d3', sender: 'me', kind: 'text', segments: text('Saturday morning would be perfect.'), attachments: [], createdAt: '2026-11-21T15:52:00.000Z' },
+  ],
+  composer: { ...composer, canSend: false, disabledReason: 'awaiting_reply', firstMessagesLeft: 0 },
+};
+
+/** Maya's inbox with the direct conversation on top. */
+export const mayaInboxWithDirectData: InboxPageData = { threads: [directThreadWithJordan, deskBookingThread, deskOfferLeeThread] };

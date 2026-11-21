@@ -103,7 +103,8 @@ export function InboxList({ threads, now, currentId, variant = 'full' }: { threa
                 </div>
                 <p className={cn('flex min-w-0 items-center gap-1.5 text-xs', as({ full: 'sm:text-sm', pane: '', split: 'sm:text-sm lg:text-xs' }))}>
                   <span className="shrink-0 rounded-full bg-secondary px-1.5 py-px font-medium text-secondary-foreground">{t(`kinds.${thread.kind}`)}</span>
-                  <span className="min-w-0 truncate font-medium">{thread.title}</span>
+                  {/* A direct conversation's title is the person's name, already the row's heading. */}
+                  {thread.kind !== 'direct' && <span className="min-w-0 truncate font-medium">{thread.title}</span>}
                 </p>
                 <p className={cn('text-sm leading-5 [overflow-wrap:anywhere]', as({ full: 'line-clamp-2', pane: 'line-clamp-1', split: 'line-clamp-2 lg:line-clamp-1' }), unread ? 'text-foreground' : 'text-muted-foreground')}>
                   {thread.lastMessage ? <LastMessage message={thread.lastMessage} /> : t('noMessage')}

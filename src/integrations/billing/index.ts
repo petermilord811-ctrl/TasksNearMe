@@ -37,6 +37,33 @@ export interface CheckoutInput {
   idempotencyKey: string;
 }
 
+/** A one-time purchase (Sparks, 2026-11-21): Checkout in `payment` mode with one inline price. */
+export interface PaymentCheckoutInput {
+  customerId: string;
+  userId: string;
+  amountCents: number;
+  /** The line as the receipt shows it ("550 Sparks"). */
+  productName: string;
+  /** What the session carries back (kind, purchaseId, userId…): how its webhook finds the purchase. */
+  metadata: Record<string, string>;
+  successUrl: string;
+  cancelUrl: string;
+  idempotencyKey: string;
+}
+
+/** A Checkout Session as Stripe last saw it. */
+export interface BillingCheckoutSession {
+  id: string;
+  /** payment | subscription | setup */
+  mode: string;
+  /** paid | unpaid | no_payment_required */
+  paymentStatus: string;
+  /** open | complete | expired */
+  status: string;
+  amountTotalCents: number | null;
+  metadata: Record<string, string>;
+}
+
 export interface BillingProvider {
   readonly name: 'stripe' | 'dev';
   createCustomer(input: { userId: string; email: string; name: string }): Promise<{ customerId: string }>;
@@ -54,6 +81,10 @@ export interface BillingProvider {
    * on Stripe's records, as the law requires. Deleting one that's already gone is fine.
    */
   forgetCustomer?(customerId: string): Promise<void>;
+  /** A one-time purchase's checkout (Sparks). */
+  createPaymentCheckout?(input: PaymentCheckoutInput): Promise<{ url: string; sessionId: string }>;
+  /** Reads a Checkout Session back (a purchase's return and its webhook trust only this, never the browser). */
+  getCheckoutSession?(sessionId: string): Promise<BillingCheckoutSession>;
 }
 
 /** The stand-in: the module (src/modules/billing) records its subscriptions itself. */

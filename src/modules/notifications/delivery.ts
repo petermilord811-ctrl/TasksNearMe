@@ -80,6 +80,8 @@ export function deliveryContent(
   const params: NonNullable<NotificationView['params']> = row.params ?? {};
   const sentence = endOnce(t(`types.${row.type as NotificationType}`, {
     title: row.title ?? t('taskFallback'),
+    // A direct conversation's message has no task to name (2026-11-21).
+    hasTitle: row.title ? 'yes' : 'no',
     actorName: row.actorName ?? t('actorFallback'),
     hasAmount: params.amountCents === undefined ? 'no' : 'yes',
     amount: params.amountCents === undefined ? '' : formatMoney(params.amountCents),

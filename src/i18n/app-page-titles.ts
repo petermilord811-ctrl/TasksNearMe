@@ -4,6 +4,6 @@ export const APP_PAGE_TITLES = [
   'proposeChange', 'changeRequest', 'rebook', 'proposal', 'messages', 'conversation', 'notifications', 'account', 'payments',
   'receipt', 'support', 'supportCase', 'findHelpers', 'savedHelpers', 'requestHelper', 'savedSearch', 'series', 'report',
   'verifyIdentity', 'findWork', 'findWorkTask', 'myOffers', 'availability', 'myClients', 'earnings', 'rewards', 'helperProfile',
-  'becomeHelper',
+  'becomeHelper', 'newMessage', 'sparks',
 ] as const;
 export type AppPageTitle = (typeof APP_PAGE_TITLES)[number];

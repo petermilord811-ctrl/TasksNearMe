@@ -5,7 +5,8 @@
     "offer_for_client": "Ver oferta",
     "task_for_helper": "Ver tarea",
     "booking": "Ver reserva",
-    "series": "Ver visitas regulares"
+    "series": "Ver visitas regulares",
+    "person": "Ver perfil"
   },
   "masking": "Los números de teléfono, los correos, los enlaces y los nombres de usuario se mantienen ocultos hasta que se confirme la reserva",
   "presenceNow": "En línea ahora",
@@ -15,7 +16,8 @@
   "disabled": {
     "blocked": "No pueden enviarse mensajes",
     "closed": "Esta conversación está cerrada",
-    "unavailable": "Los mensajes no están disponibles en esta conversación"
+    "unavailable": "Los mensajes no están disponibles en esta conversación",
+    "awaiting_reply": "Podrás escribir de nuevo cuando {name} responda."
   },
   "closed": {
     "offer_for_client": {
@@ -44,7 +46,8 @@
     "offer_for_client": "Abre la oferta para volver a solicitarle",
     "task_for_helper": "Abrir la tarea",
     "booking": "Abrir la reserva",
-    "series": "Abrir las visitas regulares"
+    "series": "Abrir las visitas regulares",
+    "person": "Abrir su perfil"
   },
   "log": "Mensajes de la conversación",
   "empty": "Aún no hay mensajes.",
@@ -123,7 +126,8 @@
       "limit": "Puedes tener hasta 20 respuestas guardadas.",
       "failed": "No se pudo guardar esa respuesta. Inténtalo de nuevo.",
       "hint": "'{first_name}' y '{task}' se completan en cada conversación."
-    }
+    },
+    "awaiting_reply": "Podrás escribir de nuevo cuando te responda"
   },
   "newMessages": "Mensajes nuevos",
   "loadEarlier": "Cargar mensajes anteriores",
@@ -139,5 +143,12 @@
     "heart": "Corazón",
     "laugh": "Risa",
     "check": "Listo"
+  },
+  "direct": {
+    "label": "Mensaje directo",
+    "masking": "Los números de teléfono, los correos, los enlaces y los nombres de usuario se mantienen ocultos hasta que tengan una reserva pagada",
+    "requestHint": "¿Quieres que {name} haga una tarea para ti?",
+    "request": "Enviar una solicitud de tarea",
+    "firstMessagesLeft": "{count, plural, one {Puedes enviar # mensaje más hasta que {name} responda.} other {Puedes enviar # mensajes más hasta que {name} responda.}}"
   }
 }

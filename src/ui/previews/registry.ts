@@ -74,6 +74,7 @@ import { searchPreviews } from './searches.preview';
 import { routeDialogPreviews } from './route-dialogs.preview';
 import { rewardsPreviews } from './rewards.preview';
 import { planPreviews } from './plan.preview';
+import { sparksPreviews } from './sparks.preview';
 import { changesPreviews } from './changes.preview';
 import { inviteCardPreviews } from './invite-card.preview';
 import { requestHelperPreviews } from './request-helper.preview';
@@ -155,6 +156,7 @@ export const previews: PreviewEntry[] = [
   ...helpersBrowsePreviews,
   ...rewardsPreviews,
   ...planPreviews,
+  ...sparksPreviews,
   ...changesPreviews,
   ...inviteCardPreviews,
   ...requestHelperPreviews,

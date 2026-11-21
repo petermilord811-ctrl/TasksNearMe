@@ -5,7 +5,8 @@
     "offer_for_client": "View offer",
     "task_for_helper": "View task",
     "booking": "View booking",
-    "series": "View regular visits"
+    "series": "View regular visits",
+    "person": "View profile"
   },
   "masking": "Phone numbers, emails, links and usernames stay hidden until the booking is confirmed",
   "presenceNow": "Active now",
@@ -15,7 +16,8 @@
   "disabled": {
     "blocked": "You can't message each other",
     "closed": "This conversation is closed",
-    "unavailable": "Messaging is unavailable in this conversation"
+    "unavailable": "Messaging is unavailable in this conversation",
+    "awaiting_reply": "You can write again when {name} replies."
   },
   "closed": {
     "offer_for_client": {
@@ -44,7 +46,8 @@
     "offer_for_client": "Open the offer to request them again",
     "task_for_helper": "Open the task",
     "booking": "Open the booking",
-    "series": "Open the regular visits"
+    "series": "Open the regular visits",
+    "person": "Open their profile"
   },
   "log": "Conversation messages",
   "empty": "No messages yet.",
@@ -123,7 +126,8 @@
       "limit": "You can keep up to 20 saved replies.",
       "failed": "That reply couldn’t be saved. Try again.",
       "hint": "'{first_name}' and '{task}' are filled in for each conversation."
-    }
+    },
+    "awaiting_reply": "You can write again when they reply"
   },
   "newMessages": "New messages",
   "loadEarlier": "Load earlier messages",
@@ -139,5 +143,12 @@
     "heart": "Heart",
     "laugh": "Laugh",
     "check": "Done"
+  },
+  "direct": {
+    "label": "Direct message",
+    "masking": "Phone numbers, emails, links and usernames stay hidden until you have a paid booking together",
+    "requestHint": "Want {name} to do a task for you?",
+    "request": "Send a task request",
+    "firstMessagesLeft": "{count, plural, one {You can send # more message until {name} replies.} other {You can send # more messages until {name} replies.}}"
   }
 }

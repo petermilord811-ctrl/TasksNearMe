@@ -1,6 +1,6 @@
 import { helperProfiles } from '@/modules/profiles/schema';
 import { recomputeResponseTime } from '@/modules/profiles/response-time';
-import { and, asc, count, desc, eq, gt, inArray, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import type {
   ActionResult,
   ComposerClosedReason,
@@ -36,6 +36,7 @@ import { consumeRateLimit } from '@/platform/rate-limit';
 import { userChannel } from '@/platform/realtime/hub';
 import { publishNotices } from '@/platform/realtime/publish';
 import { presenceOf } from '@/modules/realtime/presence';
+import { firstMessagesLeft } from './direct-rules';
 import { messageReactions, messages, savedReplies, threadParticipants, threads } from './schema';
 
 /**
@@ -45,7 +46,7 @@ import { messageReactions, messages, savedReplies, threadParticipants, threads }
  */
 
 const DAY = 86_400_000;
-const SEND_RATE_LIMIT = { limit: 60, windowSeconds: 3600 };
+export const SEND_RATE_LIMIT = { limit: 60, windowSeconds: 3600 };
 /** Each reaction tells the other person at once: a person's pace, not a script's (security review SEC21). */
 const REACTION_RATE_LIMIT = { limit: 60, windowSeconds: 60 };
 const PAGE_SIZE = 100;
@@ -124,8 +125,9 @@ async function contextsOf(db: Db, list: ThreadRow[], viewerId: string, now: Date
   const bookingIds = linked('booking');
   const seriesIds = linked('series');
   const offerIds = linked('offer');
-  const [taskRows, bookingRows, seriesRows, lastVisits, offerRows, bookedRows] = await Promise.all([
-    db.select({ id: tasks.id, title: tasks.title, posterUserId: tasks.posterUserId, status: tasks.status }).from(tasks).where(inArray(tasks.id, [...new Set(list.map((thread) => thread.taskId))])),
+  const taskIds = [...new Set(list.flatMap((thread) => (thread.taskId ? [thread.taskId] : [])))];
+  const [taskRows, bookingRows, seriesRows, lastVisits, offerRows, bookedRows, direct] = await Promise.all([
+    taskIds.length ? db.select({ id: tasks.id, title: tasks.title, posterUserId: tasks.posterUserId, status: tasks.status }).from(tasks).where(inArray(tasks.id, taskIds)) : [],
     bookingIds.length ? db.select().from(bookings).where(inArray(bookings.id, bookingIds)) : [],
     seriesIds.length ? db.select({ id: bookingSeries.id, status: bookingSeries.status }).from(bookingSeries).where(inArray(bookingSeries.id, seriesIds)) : [],
     // Each series' last visit that isn't canceled.
@@ -138,6 +140,7 @@ async function contextsOf(db: Db, list: ThreadRow[], viewerId: string, now: Date
       : [],
     offerIds.length ? db.select().from(offers).where(inArray(offers.id, offerIds)) : [],
     offerIds.length ? db.selectDistinct({ offerId: bookings.offerId }).from(bookings).where(and(inArray(bookings.offerId, offerIds), inArray(bookings.status, LIVE_BOOKING_STATUSES))) : [],
+    directPeopleOf(db, list, viewerId),
   ]);
   const taskById = new Map(taskRows.map((task) => [task.id, task]));
   const bookingById = new Map(bookingRows.map((booking) => [booking.id, booking]));
@@ -149,7 +152,21 @@ async function contextsOf(db: Db, list: ThreadRow[], viewerId: string, now: Date
   // offer was chosen: offers/closing.ts has the rule, shared with the offer page and My offers.
   const canceledOffers = await declinedByCancel(db, offerRows, (taskId) => taskById.get(taskId)?.status);
   for (const thread of list) {
-    const task = taskById.get(thread.taskId);
+    if (thread.kind === 'direct') {
+      // Two people, no task (2026-11-21): titled with the other person; open while both accounts are; contact details
+      // hidden until the two have a paid booking together.
+      const otherId = otherOfPair(thread.linkedId, viewerId);
+      const other = otherId ? direct.people.get(otherId) : undefined;
+      if (!otherId || !other) continue;
+      out.set(thread.id, {
+        title: other.name,
+        subject: { kind: 'person', ...(other.handle ? { helperHandle: other.handle } : {}), canRequest: other.bookable },
+        masking: !direct.paidWith.has(otherId),
+        closed: false,
+      });
+      continue;
+    }
+    const task = thread.taskId ? taskById.get(thread.taskId) : undefined;
     if (!task) continue;
     if (thread.kind === 'booking') {
       const booking = bookingById.get(thread.linkedId);
@@ -190,7 +207,7 @@ async function contextsOf(db: Db, list: ThreadRow[], viewerId: string, now: Date
       const closedReason: ComposerClosedReason = offer.status === 'declined' ? (canceledOffers.has(offer.id) ? 'task_canceled' : 'offer_declined') : offer.status === 'withdrawn' ? 'offer_withdrawn' : offer.status === 'accepted' ? 'offer_ended' : 'offer_expired';
       out.set(thread.id, {
         title: task.title,
-        subject: viewerId === task.posterUserId ? { kind: 'offer_for_client', taskId: thread.taskId, offerId: offer.id } : { kind: 'task_for_helper', taskId: thread.taskId },
+        subject: viewerId === task.posterUserId ? { kind: 'offer_for_client', taskId: task.id, offerId: offer.id } : { kind: 'task_for_helper', taskId: task.id },
         masking: !booked,
         closed,
         ...(closed ? { closedReason } : {}),
@@ -198,6 +215,50 @@ async function contextsOf(db: Db, list: ThreadRow[], viewerId: string, now: Date
     }
   }
   return out;
+}
+
+/** The other person of a direct conversation's pair key (`directPairKey`), when the viewer is one of the two. */
+function otherOfPair(linkedId: string, viewerId: string): string | undefined {
+  const [a, b] = linkedId.split(':');
+  if (!a || !b) return undefined;
+  return a === viewerId ? b : b === viewerId ? a : undefined;
+}
+
+/**
+ * The other people of the viewer's direct conversations: their name, helper handle (and whether their profile is
+ * live, for "Send a task request"), and which of them the viewer has a paid booking with (contact details show then).
+ */
+async function directPeopleOf(db: Db, list: ThreadRow[], viewerId: string) {
+  const others = [...new Set(list.flatMap((thread) => (thread.kind === 'direct' ? [otherOfPair(thread.linkedId, viewerId)] : [])).filter((id): id is string => Boolean(id)))];
+  const people = new Map<string, { name: string; handle?: string; bookable: boolean }>();
+  const paidWith = new Set<string>();
+  if (others.length === 0) return { people, paidWith };
+  const [rows, paid] = await Promise.all([
+    db.select({ id: users.id, name: users.name, handle: helperProfiles.handle, profileStatus: helperProfiles.status }).from(users).leftJoin(helperProfiles, eq(helperProfiles.userId, users.id)).where(inArray(users.id, others)),
+    db
+      .selectDistinct({ posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId })
+      .from(bookings)
+      .where(and(isNotNull(bookings.confirmedAt), or(and(eq(bookings.posterUserId, viewerId), inArray(bookings.helperUserId, others)), and(eq(bookings.helperUserId, viewerId), inArray(bookings.posterUserId, others))))),
+  ]);
+  for (const row of rows) people.set(row.id, { name: row.name, ...(row.handle ? { handle: row.handle } : {}), bookable: row.profileStatus === 'active' && row.id !== viewerId });
+  for (const row of paid) paidWith.add(row.posterUserId === viewerId ? row.helperUserId : row.posterUserId);
+  return { people, paidWith };
+}
+
+/**
+ * A direct conversation's first messages (2026-11-21): what the viewer can still send before the other person
+ * answers (`firstMessagesLeft`), or null once they have, for the person who didn't start it, and for other threads.
+ */
+export async function directFirstMessagesLeft(db: Db, thread: ThreadRow, viewerId: string): Promise<number | null> {
+  if (thread.kind !== 'direct' || thread.startedByUserId !== viewerId) return null;
+  const rows = await db
+    .select({ senderUserId: messages.senderUserId, value: sql<number>`count(*)::int` })
+    .from(messages)
+    .where(and(eq(messages.threadId, thread.id), eq(messages.kind, 'text')))
+    .groupBy(messages.senderUserId);
+  const viewerSent = rows.find((row) => row.senderUserId === viewerId)?.value ?? 0;
+  const otherSent = rows.filter((row) => row.senderUserId !== null && row.senderUserId !== viewerId).reduce((sum, row) => sum + row.value, 0);
+  return firstMessagesLeft({ viewerStarted: true, viewerSent, otherSent });
 }
 
 function personOf(user: typeof users.$inferSelect): PersonSummary {
@@ -404,7 +465,7 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   // Only once it's a real conversation (the research report's rule 10): a booking's or regular visits' thread,
   // or an offer or invite thread where both people have written. Any verified helper opens a thread by making
   // an offer, so a poster who never answered never shows their activity to them.
-  const engaged = (thread.kind !== 'offer' && thread.kind !== 'invite') || (rows.some((row) => row.senderUserId === userId) && rows.some((row) => row.senderUserId === found.other.id));
+  const engaged = (thread.kind !== 'offer' && thread.kind !== 'invite' && thread.kind !== 'direct') || (rows.some((row) => row.senderUserId === userId) && rows.some((row) => row.senderUserId === found.other.id));
   const mutual = engaged && !blocked && viewer?.showActivity !== false && found.other.showActivity;
   const presence = mutual ? presenceOf(found.other.lastActiveAt, true, now) : undefined;
   // "Seen" for the people whose messages were just read: a live notice, ids only.
@@ -417,7 +478,9 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   // A deleted account reads nothing (privacy rehearsal J-PR8): the conversation reads as closed, with no reason that
   // points a way on (no offer to request again, no booking to write about).
   const otherGone = found.other.status === 'deleted';
-  const disabledReason: ComposerDisabledReason | undefined = blocked ? 'blocked' : otherGone || found.context.closed ? 'closed' : undefined;
+  // A direct conversation the viewer started: a few messages until the other person answers (2026-11-21).
+  const firstLeft = await directFirstMessagesLeft(db, thread, userId);
+  const disabledReason: ComposerDisabledReason | undefined = blocked ? 'blocked' : otherGone || found.context.closed ? 'closed' : firstLeft === 0 ? 'awaiting_reply' : undefined;
   const closedReason = disabledReason === 'closed' && !otherGone ? found.context.closedReason : undefined;
   // Quotes (a replied-to message may be older than this page) and reactions, then the viewer's saved replies (7.3).
   const quotedIds = [...new Set(rows.flatMap((row) => (row.replyToMessageId ? [row.replyToMessageId] : [])))];
@@ -456,6 +519,7 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
       canSend: !disabledReason,
       ...(disabledReason ? { disabledReason } : {}),
       ...(closedReason ? { closedReason } : {}),
+      ...(firstLeft !== null && !blocked && !otherGone ? { firstMessagesLeft: firstLeft } : {}),
       maxLength: 2000,
       maxAttachments: 4,
       maxPhotoMegabytes: Math.round(MAX_PHOTO_BYTES / (1024 * 1024)),
@@ -477,6 +541,8 @@ export async function sendMessage(db: Db, userId: string, threadId: string, inpu
   const found = thread ? await summaryOf(db, thread, userId, now) : null;
   if (!thread || !found) return { ok: false, code: 'not_found' };
   if (found.context.closed || found.other.status === 'deleted' || (await isBlocked(db, userId, found.other.id))) return { ok: false, code: 'not_allowed' };
+  // A direct conversation the sender started: no more until the other person answers (2026-11-21).
+  if ((await directFirstMessagesLeft(db, thread, userId)) === 0) return { ok: false, code: 'limit_reached' };
   const limited = await consumeRateLimit(db, `messages:${userId}`, SEND_RATE_LIMIT, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
 

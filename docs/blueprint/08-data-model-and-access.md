@@ -119,7 +119,8 @@ ledger_journals ─1:N─ ledger_entries ─N:1─ ledger_accounts   (journals r
 ### messaging, notifications, reviews, support, platform
 | Table | Key fields | Constraints and notes |
 |---|---|---|
-| `threads`, `thread_participants` | kind (`offer`/`invite`/`booking`/`case`), linked id; participants with last_read_at, muted | One thread per offer, invite, booking, or case |
+| `threads`, `thread_participants` | kind (`offer`/`invite`/`booking`/`case`/`series`/`direct`), linked id (for `direct`: the two user ids in order), task id (null for `direct`), started_by_user_id (`direct`); participants with last_read_at, muted | One thread per offer, invite, booking, or case; one direct conversation per pair of people (2026-11-21) |
+| `spark_purchases` | user, pack, points, amount, provider session, status (`pending`/`paid`/`refunded`) | Earned Sparks are counted from community, booking and review rows, never stored (2026-11-21) |
 | `messages` | thread_id, sender_user_id (null = system), kind (`text`/`system`/`status`/`attachment`), body, body_masked, attachment_file_ids[], flagged_at | Contact details masked before confirmation; flagged messages enter the moderation queue |
 | `notifications`, `notification_deliveries`, `notification_preferences`, `push_subscriptions` | Per-user inbox; per-channel delivery with provider message id; endpoint keys | Unique push endpoint |
 | `reviews` | booking_id, author_user_id, subject_user_id, direction, rating (1–5), tags[], body, status (`submitted`/`published`/`hidden`), published_at, hidden_reason | Unique (booking, author). Only for completed bookings |

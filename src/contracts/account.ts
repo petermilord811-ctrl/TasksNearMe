@@ -10,6 +10,8 @@ import type { AttentionTarget } from './home';
 import type { VerificationTrack } from './onboarding';
 import type { AccountVerification } from './helper-standing';
 import type { BadgeCode, OwnBadgesData } from './badges';
+import type { DirectMessageSetting } from './messaging';
+import type { SparksSummary } from './sparks';
 
 /**
  * Notifications and the account page (blueprint 02 §1.2: `/app/notifications`, `/app/account`).
@@ -250,6 +252,10 @@ export interface AccountPageData {
    * today" and "Seen"; when off, nobody does, and they don't see anyone else's either (it's mutual).
    */
   activity?: { shown: boolean };
+  /** Who may start a direct conversation with them (2026-11-21): everyone, people they've talked to about a task, or nobody. */
+  directMessages?: { setting: DirectMessageSetting };
+  /** Their Sparks (2026-11-21), for the card that links to `routes.app.sparks()`. */
+  sparks?: SparksSummary;
   /**
    * The account's sign-in details are held (completion plan 5.23): someone used the "Not you?" link in a contact
    * change notice, and our team checks the account before anything changes again. Say so, and don't offer to
@@ -386,6 +392,8 @@ export interface AccountHandlers extends PushHandlers {
   onSaveProfile: ActionHandler<AccountProfileInput>;
   /** "Show when I'm active" on or off. ok `updated`. */
   onSaveActivity?: ActionHandler<{ shown: boolean }>;
+  /** Who may start a direct conversation with them. ok `updated`. Errors: `validation_failed`. */
+  onSaveDirectMessages?: ActionHandler<{ setting: DirectMessageSetting }>;
   onSavePreference: ActionHandler<{ topic: NotificationTopic; channel: NotificationChannel; enabled: boolean }>;
   onRequestExport: () => Promise<ActionResult>;
   onRequestDeletion: () => Promise<ActionResult>;

@@ -34,5 +34,6 @@
     "withSlots": "Jordan · open times",
     "samPhoto": "Sam, with a profile photo"
   },
-  "recommendedBy": "{count, plural, one {Recommended by # neighbor} other {Recommended by # neighbors}}"
+  "recommendedBy": "{count, plural, one {Recommended by # neighbor} other {Recommended by # neighbors}}",
+  "message": "Message {name}"
 }

@@ -29,6 +29,8 @@ import {
 } from '@/modules/notifications/actions';
 import { cancelAccountDeletionAction, requestAccountDeletionAction, requestDataExportAction } from '@/modules/privacy/actions';
 import { getAccountPage } from '@/modules/notifications/service';
+import { saveDirectMessagesAction } from '@/modules/messaging/actions';
+import { sparksSummaryOf } from '@/modules/sparks/service';
 import { accountVerificationFor } from '@/modules/badges/standing';
 import { ownBadges } from '@/modules/badges/service';
 import { requestNow } from '@/platform/clock';
@@ -60,10 +62,10 @@ async function Account({ searchParams }: Pick<PageProps<'/[locale]/app/account'>
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.account()));
   const { connect, error } = await searchParams;
   const now = await requestNow();
-  const [page, verification, badges] = await Promise.all([getAccountPage(db, viewer.user.id, { connect, error }, now), accountVerificationFor(db, viewer.user.id, now), ownBadges(db, viewer.user.id)]);
+  const [page, verification, badges, sparks] = await Promise.all([getAccountPage(db, viewer.user.id, { connect, error }, now), accountVerificationFor(db, viewer.user.id, now), ownBadges(db, viewer.user.id), sparksSummaryOf(db, viewer.user.id)]);
   if (!page) notFound();
   // A client with nothing to verify (no texts here, plan 9.2, and no ID check asked for) gets no verification section.
-  const data = { ...page, ...(verification.role === 'helper' || verification.steps.length > 0 ? { verification } : {}), badges };
+  const data = { ...page, ...(verification.role === 'helper' || verification.steps.length > 0 ? { verification } : {}), badges, ...(sparks ? { sparks } : {}) };
   return (
     <AccountScreen
       data={data}
@@ -83,6 +85,7 @@ async function Account({ searchParams }: Pick<PageProps<'/[locale]/app/account'>
         onRemovePasskey: removePasskeyAction,
         onSaveLanguage: saveLanguageAction,
         onSaveActivity: saveActivityAction,
+        onSaveDirectMessages: saveDirectMessagesAction,
         onUploadPhoto: uploadProfilePhotoAction,
         onRemovePhoto: removeProfilePhotoAction,
         onStartEmailChange: startEmailChangeAction,

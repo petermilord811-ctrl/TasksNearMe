@@ -9,7 +9,7 @@ import type {
   NotificationView,
   OnboardingStep,
 } from '@/contracts';
-import { accountProfileInputSchema, BADGE_CODES, localeOrDefault, NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS, type BadgeCode } from '@/contracts';
+import { accountProfileInputSchema, BADGE_CODES, DIRECT_MESSAGE_SETTINGS, localeOrDefault, NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS, type BadgeCode, type DirectMessageSetting } from '@/contracts';
 import { smsAvailable } from '@/integrations/sms';
 import { staffRoles, users } from '@/modules/accounts/schema';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
@@ -798,6 +798,7 @@ export async function getAccountPage(db: Db, userId: string, returned: { connect
     ...(pushSetup() ? { push: pushSetup()! } : {}),
     language: localeOrDefault(user.locale),
     activity: { shown: user.showActivity },
+    directMessages: { setting: (DIRECT_MESSAGE_SETTINGS as readonly string[]).includes(user.directMessages) ? (user.directMessages as DirectMessageSetting) : 'everyone' },
     // A "Not you?" link holds the email, phone and ways to sign in until staff clear it (completion plan 5.23).
     ...(user.contactHoldAt ? { contactChangesHeld: true } : {}),
   };

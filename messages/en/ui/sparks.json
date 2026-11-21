@@ -1,0 +1,65 @@
+{
+  "title": "Sparks",
+  "description": "Your score on TasksNearMe. Earn Sparks by helping out and taking part, and start more conversations a day as you level up.",
+  "notices": {
+    "purchased": "Thanks! Your Sparks were added.",
+    "purchase_pending": "We’re confirming your payment. Your Sparks show up here as soon as it goes through.",
+    "purchase_canceled": "Checkout was canceled. Nothing was charged."
+  },
+  "total": {
+    "heading": "Your Sparks",
+    "split": "{earned} earned · {bought} bought",
+    "progressLabel": "Progress to {level}",
+    "toNext": "{count, plural, one {# more Spark} other {# more Sparks}} to reach {level}",
+    "top": "You’ve reached the top level.",
+    "allowance": "You can start {count, plural, one {# new direct conversation} other {# new direct conversations}} a day.",
+    "withPlan": "Your plan allows at least {count}."
+  },
+  "earn": {
+    "heading": "How to earn Sparks",
+    "points": "+{points} each",
+    "pointsCapped": "+{points} each, up to {cap} a day",
+    "yours": "{points} so far",
+    "sources": {
+      "posts": "A post in the community",
+      "replies": "A reply in the community",
+      "helpful": "Someone marks your post or reply Helpful",
+      "thanks": "Someone thanks you for a post or reply",
+      "bookings": "A completed booking, as a client or a helper",
+      "reviews": "A review you write"
+    }
+  },
+  "levelsHeading": "Levels",
+  "levelsCaption": "Each level, the Sparks it starts at, and the new direct conversations it allows a day",
+  "levelColumns": {
+    "level": "Level",
+    "from": "From",
+    "chats": "Chats a day"
+  },
+  "levels": {
+    "newcomer": "Newcomer",
+    "neighbor": "Neighbor",
+    "good_neighbor": "Good neighbor",
+    "pillar": "Pillar",
+    "local_legend": "Local legend"
+  },
+  "planNote": "Plus and Pro allow at least {count} new conversations a day, whatever your level.",
+  "planLink": "See the plans",
+  "buy": {
+    "heading": "Get more Sparks",
+    "description": "Bought Sparks count toward your level right away.",
+    "action": "Buy {points} for {price}",
+    "unavailable": "Buying Sparks isn’t available here yet.",
+    "terms": "A one-time payment through Stripe, not a subscription. Wherever others see your Sparks, they also see how many you bought. Sparks can’t be spent, moved or cashed out. If something’s wrong with a purchase, contact support."
+  },
+  "history": {
+    "heading": "Your purchases",
+    "row": "{points} Sparks · {price} · {date}",
+    "status": {
+      "pending": "Not completed",
+      "paid": "Paid",
+      "refunded": "Refunded"
+    }
+  },
+  "whatTheyAre": "Sparks are a community score. They don’t buy anything, never change search results, and aren’t part of anyone’s ratings or verification."
+}

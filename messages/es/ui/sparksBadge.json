@@ -1,0 +1,12 @@
+{
+  "label": "{total} Chispas, {level}",
+  "labelBought": "{total} Chispas, {level}, {bought} de ellas compradas",
+  "bought": "({bought} compradas)",
+  "levels": {
+    "newcomer": "Primeros pasos",
+    "neighbor": "Del vecindario",
+    "good_neighbor": "Gran apoyo",
+    "pillar": "Pilar",
+    "local_legend": "Leyenda local"
+  }
+}

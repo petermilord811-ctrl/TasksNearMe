@@ -2,6 +2,7 @@ import type { CategorySlug, ISODateTime, Photo, TimeZone } from './common';
 import type { AvailabilitySlotView } from './availability';
 import type { HelperSummary, ServiceSummary } from './people';
 import type { BadgeView } from './badges';
+import type { SparksSummary } from './sparks';
 
 /** Tags a client can give a helper in a review. The UI maps each to copy ("On time"). */
 export const HELPER_REVIEW_TAGS = [
@@ -62,4 +63,8 @@ export interface HelperProfilePageData {
   workSamples: WorkSampleView[];
   /** Open slots, soonest first (at most 6). Each links to `routes.app.requestHelper(handle, { slotId })` (UI-029). */
   slots?: AvailabilitySlotView[];
+  /** Their Sparks with the bought part (2026-11-21); absent with none. Shown apart from the verification badges, ratings and reviews. */
+  sparks?: SparksSummary;
+  /** "Message" (`routes.app.newMessage({ helper: handle })`): absent when they take direct messages from nobody. */
+  acceptsMessages?: boolean;
 }

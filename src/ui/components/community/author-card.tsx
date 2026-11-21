@@ -1,11 +1,12 @@
 'use client';
 
-import { ArrowRight, BadgeCheck, MapPin, MessageCircleReply, Star, ThumbsUp, Wrench } from 'lucide-react';
+import { ArrowRight, BadgeCheck, MapPin, MessageCircle, MessageCircleReply, Star, ThumbsUp, Wrench } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { CommunityAuthor } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { AchievementBadge } from '@/ui/components/people/achievement-badges';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
+import { SparksBadge } from '@/ui/components/people/sparks-badge';
 import { useFormat } from '@/ui/lib/format';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
@@ -53,13 +54,15 @@ export function AuthorCardContent({ author }: { author: CommunityAuthor }) {
       {helper?.responseTime && <li className="flex items-center gap-2"><MessageCircleReply aria-hidden="true" className="size-3.5 shrink-0" />{helperCopy('responseTime', { range: helper.responseTime })}</li>}
       <li className="tabular-nums">{t('authorCard.memberSince', { date: formatMonthYear(card.memberSince) })}</li>
     </ul>
+    {card.sparks && <SparksBadge sparks={card.sparks} compact />}
     {helper && helper.badges.length > 0 && <div className="space-y-1.5">
       <p className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">{t('authorCard.badges')}</p>
       <ul className="flex flex-wrap gap-1.5">{helper.badges.map((badge) => <li key={`${badge.code}:${badge.category ?? ''}`} className="max-w-full"><AchievementBadge badge={badge} compact /></li>)}</ul>
     </div>}
-    {author.helperHandle && <div className="flex flex-wrap gap-2 border-t border-border pt-3">
+    {(author.helperHandle || card.messageHref) && <div className="flex flex-wrap gap-2 border-t border-border pt-3">
       {helper?.requestHref && <Link href={helper.requestHref} className={buttonVariants({ size: 'sm', className: 'min-h-10' })}>{t('authorCard.request')}</Link>}
-      <Link href={routes.helperProfile(author.helperHandle)} className={buttonVariants({ variant: 'outline', size: 'sm', className: 'min-h-10' })}>{t('authorCard.viewProfile')}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>
+      {card.messageHref && <Link href={card.messageHref} className={buttonVariants({ variant: 'outline', size: 'sm', className: 'min-h-10' })}><MessageCircle aria-hidden="true" className="size-3.5" />{t('authorCard.message')}</Link>}
+      {author.helperHandle && <Link href={routes.helperProfile(author.helperHandle)} className={buttonVariants({ variant: 'outline', size: 'sm', className: 'min-h-10' })}>{t('authorCard.viewProfile')}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>}
     </div>}
   </div>;
 }

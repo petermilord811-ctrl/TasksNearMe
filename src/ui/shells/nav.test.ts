@@ -23,7 +23,7 @@ describe('app navigation (completion plan 9.14)', () => {
       routes.app.offers(), routes.app.availability(), routes.app.earnings(), routes.app.clients(), routes.app.rewards(), routes.app.savedSearches(),
     ]);
     for (const mode of ['poster', 'helper'] as const) {
-      expect(getAppNav(mode).account.map((item) => item.href)).toEqual([routes.app.account(), routes.app.payments(), routes.app.support()]);
+      expect(getAppNav(mode).account.map((item) => item.href)).toEqual([routes.app.account(), routes.app.plan(), routes.app.sparks(), routes.app.payments(), routes.app.support()]);
     }
   });
 

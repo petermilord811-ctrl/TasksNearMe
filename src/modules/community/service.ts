@@ -47,6 +47,7 @@ import { consumeRateLimit } from '@/platform/rate-limit';
 import { auditRoleOf, canModerateTasks } from '@/modules/tasks/moderation';
 import type { StaffActor } from '@/modules/support/staff';
 import { ASK_FOR_HELP_KINDS, authorRole, communityLimits, helpfulMilestone, initialsOf, isSafetyOrCrimePost, milesBetween, NEARBY_MILES, postTaskState, REACTION_RULE, SAVE_RULE } from './domain';
+import { sparksSummariesOf } from '@/modules/sparks/service';
 import { communityPosts, communityReactions, communityReplies, communitySaves } from './schema';
 
 /**
@@ -122,7 +123,7 @@ async function authorsOf(db: Db, userIds: string[], viewerId: string): Promise<M
   const ids = [...new Set(userIds)];
   if (ids.length === 0) return new Map();
   const [people, profiles, verified, posters] = await Promise.all([
-    db.select({ id: users.id, name: users.name, createdAt: users.createdAt, avatarFileId: users.avatarFileId }).from(users).where(inArray(users.id, ids)),
+    db.select({ id: users.id, name: users.name, createdAt: users.createdAt, avatarFileId: users.avatarFileId, status: users.status, directMessages: users.directMessages }).from(users).where(inArray(users.id, ids)),
     db
       .select({
         userId: helperProfiles.userId,
@@ -143,7 +144,7 @@ async function authorsOf(db: Db, userIds: string[], viewerId: string): Promise<M
   ]);
   const profileOf = new Map(profiles.map((row) => [row.userId, row]));
   const helperIds = profiles.filter((row) => row.status === 'active').map((row) => row.userId);
-  const [recommended, badges] = await Promise.all([recommendedByCounts(db, helperIds), badgesFor(db, helperIds)]);
+  const [recommended, badges, sparks] = await Promise.all([recommendedByCounts(db, helperIds), badgesFor(db, helperIds), sparksSummariesOf(db, ids)]);
   const verifiedIds = new Set(verified.map((row) => row.userId));
   const posterIds = new Set(posters.map((row) => row.userId));
   return new Map(
@@ -176,6 +177,9 @@ async function authorsOf(db: Db, userIds: string[], viewerId: string): Promise<M
                 },
               }
             : {}),
+          // Sparks with the bought part, and Message (2026-11-21): not on your own card, nor for someone who takes none.
+          ...(sparks.get(person.id) ? { sparks: sparks.get(person.id) } : {}),
+          ...(person.id !== viewerId && (person.status === 'active' || person.status === 'restricted') && person.directMessages !== 'nobody' ? { messageHref: routes.app.newMessage({ userId: person.id }) } : {}),
         },
       };
       return [person.id, author];

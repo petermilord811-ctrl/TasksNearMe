@@ -13,6 +13,8 @@ import { AccountPreferences } from './account-preferences';
 import { AccountPrivacy, AccountSignOut } from './account-privacy';
 import { AccountLanguage } from './account-language';
 import { AccountActivity } from './account-activity';
+import { AccountDirectMessages } from './account-direct-messages';
+import { SparksBadge } from '@/ui/components/people/sparks-badge';
 import { AccountPasskeys } from './account-passkeys';
 import { AccountSignIn } from './account-sign-in';
 import { VerificationChecklist } from '../helper/helper-standing';
@@ -85,6 +87,12 @@ export function AccountScreen({ data, handlers, initialDialog }: {
           <div className={cardClass}><Section headingLevel={3} title={t('plan.title')} description={t('plan.description')}>
             <Button variant="outline" asChild className="h-auto min-h-11 max-w-full whitespace-normal"><Link href={routes.app.plan()}>{t('plan.link')}<ArrowRight aria-hidden="true" /></Link></Button>
           </Section></div>
+          <div className={cardClass}><Section headingLevel={3} title={t('sparks.title')} description={t('sparks.description')}>
+            <div className="flex flex-wrap items-center gap-3">
+              {data.sparks && <SparksBadge sparks={data.sparks} />}
+              <Button variant="outline" asChild className="h-auto min-h-11 max-w-full whitespace-normal"><Link href={routes.app.sparks()}>{t('sparks.link')}<ArrowRight aria-hidden="true" /></Link></Button>
+            </div>
+          </Section></div>
           <div className={cardClass}><Section headingLevel={3} title={t('helper.title')} description={t(`helper.descriptions.${helperStatus}`)}>
             {helperStatus === 'suspended' ? <Link href={routes.help()} className="inline-flex min-h-11 items-center text-sm text-primary underline underline-offset-4">{t('helper.contactSupport')}</Link> : <Button variant="outline" asChild className="h-auto min-h-11 max-w-full whitespace-normal"><Link href={helperStatus === 'none' || helperStatus === 'draft' ? routes.app.helperOnboarding() : routes.app.helperProfile()}>{t(helperStatus === 'none' ? 'helper.become' : helperStatus === 'draft' ? 'helper.finish' : 'helper.edit')}<ArrowRight aria-hidden="true" /></Link></Button>}
           </Section></div>
@@ -92,6 +100,7 @@ export function AccountScreen({ data, handlers, initialDialog }: {
         </AccountGroupSection>
         <AccountGroupSection id="privacy" title={t('groups.privacy')} summary={t('groups.summaries.privacy')}>
           {data.activity && handlers.onSaveActivity && <div className={cardClass}><Section headingLevel={3} title={t('activity.title')} description={t('activity.description')}><AccountActivity shown={data.activity.shown} onSave={handlers.onSaveActivity} /></Section></div>}
+          {data.directMessages && handlers.onSaveDirectMessages && <div className={cardClass}><Section headingLevel={3} title={t('directMessages.title')} description={t('directMessages.description')}><AccountDirectMessages setting={data.directMessages.setting} onSave={handlers.onSaveDirectMessages} /></Section></div>}
           <div className={cardClass}><Section headingLevel={3} title={t('privacy.title')} description={t('privacy.description')}><AccountPrivacy privacy={data.privacy} handlers={handlers} /></Section></div>
           <AccountSignOut onSignOut={handlers.onSignOut} onRemovePushSubscription={handlers.onRemovePushSubscription} />
         </AccountGroupSection>

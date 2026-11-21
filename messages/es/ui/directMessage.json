@@ -1,0 +1,32 @@
+{
+  "back": "Todos los mensajes",
+  "title": "Escribirle a {name}",
+  "viewProfile": "Ver perfil",
+  "formLabel": "Primer mensaje para {name}",
+  "label": "Tu mensaje",
+  "placeholder": "Hola, {name}…",
+  "firstMessages": "{count, plural, one {Puedes enviar # mensaje} other {Puedes enviar hasta # mensajes}} hasta que {name} responda.",
+  "count": "{used}/{maximum}",
+  "masking": "Los números de teléfono, los correos, los enlaces y los nombres de usuario se mantienen ocultos hasta que tengan una reserva pagada. Paga siempre a través de TasksNearMe para tener protección.",
+  "allowance": "Te {left, plural, one {queda # conversación nueva} other {quedan # conversaciones nuevas}} hoy (de {perDay})",
+  "send": "Enviar mensaje",
+  "sending": "Enviando…",
+  "tooLong": "Usa {maximum} caracteres o menos.",
+  "empty": "Escribe un mensaje antes de enviarlo.",
+  "resetsAt": "Podrás iniciar otra después de {at} ({zone}).",
+  "moreWithSparks": "Inicia más conversaciones al día con Chispas",
+  "refusals": {
+    "self": "Eres tú. Elige a otra persona para escribirle.",
+    "account_limited": "Tu cuenta no puede iniciar conversaciones nuevas por ahora. Contacta a soporte para saber por qué.",
+    "unavailable": "{name} no puede recibir mensajes por ahora.",
+    "blocked": "No pueden enviarse mensajes.",
+    "not_accepting": "{name} no recibe mensajes directos.",
+    "task_contacts_only": "{name} solo recibe mensajes directos de personas con quienes habló de una tarea. Puedes enviarle una solicitud de tarea.",
+    "limit_reached": "Ya iniciaste todas las conversaciones nuevas que puedes hoy."
+  },
+  "request": {
+    "title": "¿Tienes una tarea para {name}?",
+    "description": "Envía una solicitud de tarea con los detalles y el precio. Tu tarjeta se autoriza al enviarla y solo se cobra si acepta.",
+    "action": "Enviar una solicitud de tarea"
+  }
+}

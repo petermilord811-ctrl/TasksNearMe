@@ -24,8 +24,11 @@ export type MessageSegment =
 // Blueprint 02 J2 step 6 (pre-booking thread), 06 (contact details masked before confirmation),
 // 08 §117 (one thread per offer, invite, booking, or case).
 
-/** `series`: one conversation for all the visits of regular visits. */
-export const THREAD_KINDS = ['offer', 'invite', 'booking', 'case', 'series'] as const;
+/**
+ * `series`: one conversation for all the visits of regular visits. `direct`: two people talking without a task
+ * (2026-11-21, owner): started from a helper's profile, a community author's card, or a past conversation's person.
+ */
+export const THREAD_KINDS = ['offer', 'invite', 'booking', 'case', 'series', 'direct'] as const;
 export type ThreadKind = (typeof THREAD_KINDS)[number];
 
 /** What a thread is about, so the UI can link to it with the route builders. */
@@ -37,7 +40,12 @@ export type ThreadSubject =
   /** `routes.app.booking(bookingId)`. */
   | { kind: 'booking'; bookingId: string }
   /** Regular visits: `routes.app.series(seriesId)`. */
-  | { kind: 'series'; seriesId: string };
+  | { kind: 'series'; seriesId: string }
+  /**
+   * A direct conversation: the other person. A helper links to `routes.helperProfile(helperHandle)`; with
+   * `canRequest`, "Send a task request" opens `routes.app.requestHelper(helperHandle)` (a funded direct invite).
+   */
+  | { kind: 'person'; helperHandle?: string; canRequest: boolean };
 
 /** Reactions on a message (completion plan 7.3): a small set, like a team chat. */
 export const MESSAGE_REACTIONS = ['thumbs_up', 'heart', 'laugh', 'check'] as const;
@@ -73,7 +81,7 @@ export interface MessageView {
 export interface ThreadSummary {
   id: string;
   kind: ThreadKind;
-  /** The task's title. */
+  /** The task's title; for a `direct` conversation, the other person's display name. */
   title: string;
   otherParty: PersonSummary;
   subject: ThreadSubject;
@@ -101,6 +109,11 @@ export const COMPOSER_DISABLED_REASONS = [
   'blocked',
   /** The offer or booking is over (declined, withdrawn, expired, canceled, or completed long ago). */
   'closed',
+  /**
+   * A direct conversation the viewer started: they sent `DIRECT_FIRST_MESSAGES_MAX` messages and the other person
+   * hasn't answered yet. Sending opens again as soon as they do.
+   */
+  'awaiting_reply',
 ] as const;
 export type ComposerDisabledReason = (typeof COMPOSER_DISABLED_REASONS)[number];
 
@@ -118,6 +131,11 @@ export interface ComposerRules {
   disabledReason?: ComposerDisabledReason;
   /** With `disabledReason: 'closed'`: why. */
   closedReason?: ComposerClosedReason;
+  /**
+   * A direct conversation the viewer started that the other person hasn't answered yet: how many more messages the
+   * viewer can send until they do ("You can send 2 more messages until Sam replies"). Absent once they've answered.
+   */
+  firstMessagesLeft?: number;
   maxLength: number;
   maxAttachments: number;
   maxPhotoMegabytes: number;
@@ -182,6 +200,82 @@ export interface ThreadHandlers {
   /** Save the composer's text as a saved reply: ok `saved`. Errors: `validation_failed`, `limit_reached` (20). */
   onSaveReply?: ActionHandler<MessageSavedReplyInput>;
   onDeleteReply?: ActionHandler<{ id: string }>;
+}
+
+// ---- Direct conversations (2026-11-21) -----------------------------------------------------------------------
+
+/** Who may start a direct conversation with a person (their account setting). */
+export const DIRECT_MESSAGE_SETTINGS = [
+  'everyone',
+  /** Only people they've already talked to about a task (an offer, invite, booking or regular visits). */
+  'task_contacts',
+  'nobody',
+] as const;
+export type DirectMessageSetting = (typeof DIRECT_MESSAGE_SETTINGS)[number];
+
+/** Messages the person who started a direct conversation can send before the other person answers. */
+export const DIRECT_FIRST_MESSAGES_MAX = 3;
+
+/** Why a direct conversation can't be started. */
+export const DIRECT_CHAT_REFUSALS = [
+  /** Yourself. */
+  'self',
+  /** The viewer's own account is limited or suspended by our team: no new conversations (support can say why). */
+  'account_limited',
+  /** The account is gone, banned or suspended. */
+  'unavailable',
+  /** One of the two blocked the other. */
+  'blocked',
+  /** They take no direct messages. */
+  'not_accepting',
+  /** They take direct messages only from people they've talked to about a task. */
+  'task_contacts_only',
+  /** The viewer started their allowance of new conversations in the last 24 hours (`allowance.resetsAt`). */
+  'limit_reached',
+] as const;
+export type DirectChatRefusal = (typeof DIRECT_CHAT_REFUSALS)[number];
+
+/**
+ * `/app/messages/new?to=…` (or `?helper=<handle>`): start a direct conversation with one person by writing the first
+ * message. When the two already have a direct conversation, the page goes straight to it instead.
+ */
+export interface NewDirectMessagePageData {
+  recipient: PersonSummary;
+  /** The recipient's helper handle, when they're a helper: their profile, and "Send a task request" with `canRequest`. */
+  helperHandle?: string;
+  /** "Send a task request" (`routes.app.requestHelper(helperHandle)`): the recipient is a bookable helper and not the viewer. */
+  canRequest: boolean;
+  /** Absent when the viewer can write now. */
+  refusal?: DirectChatRefusal;
+  /**
+   * New direct conversations the viewer can start: `left` of `perDay` in any 24 hours. With none left, `resetsAt` is
+   * when the next one frees up. `perDay` grows with the viewer's Sparks level and with a plan (`routes.app.sparks()`).
+   */
+  allowance: { left: number; perDay: number; resetsAt?: ISODateTime };
+  /** Messages the viewer can send before the recipient answers (`DIRECT_FIRST_MESSAGES_MAX`). */
+  firstMessagesMax: number;
+  /** Phone numbers, emails and links are hidden until the two have a paid booking together (blueprint 06). */
+  contactMasking: boolean;
+  maxLength: number;
+}
+
+export const startDirectChatInputSchema = z.object({
+  /** The recipient's user id (`NewDirectMessagePageData.recipient.id`). */
+  to: z.string('required').trim().min(1, 'required').max(80, 'too_long'),
+  body: z.string('required').trim().min(1, 'required').max(2000, 'too_long'),
+  /** The composer's key (bad connections pass, J-N1): a repeat after a lost answer opens the same conversation. */
+  requestKey: requestKeyField.optional(),
+});
+export type StartDirectChatInput = z.input<typeof startDirectChatInputSchema>;
+
+/**
+ * Handlers on the new conversation page.
+ * - `onStart`: ok `sent` with `redirectTo` the conversation. Errors: `validation_failed` (`body`), `not_allowed`
+ *   (a refusal that appeared meanwhile: reload), `limit_reached` (with `retryAt`), `rate_limited` (with `retryAt`),
+ *   `unknown`.
+ */
+export interface NewDirectMessageHandlers {
+  onStart: ActionHandler<StartDirectChatInput>;
 }
 
 export const MESSAGE_SAVED_REPLY_MAX = 20;

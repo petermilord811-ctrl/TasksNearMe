@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { ActionHandler, FieldErrorCode } from './actions';
 import type { BadgeView } from './badges';
 import type { CategorySlug, ISODateTime, Photo } from './common';
+import type { SparksSummary } from './sparks';
 
 /**
  * The community feed (completion plan 7.7–7.8): neighbors ask for a recommendation, ask a question, share a tip,
@@ -55,6 +56,10 @@ export interface CommunityAuthorCard {
     /** Ask them for help directly; absent on your own card. */
     requestHref?: string;
   };
+  /** Their Sparks with the bought part (2026-11-21); absent with none. */
+  sparks?: SparksSummary;
+  /** Message them (`routes.app.newMessage`); absent on your own card and when they take no direct messages. */
+  messageHref?: string;
 }
 
 export interface CommunityReactionsView {

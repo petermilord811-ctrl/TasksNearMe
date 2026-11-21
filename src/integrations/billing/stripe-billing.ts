@@ -1,5 +1,5 @@
 import { createStripeClient, StripeError, type StripeClient } from '@/integrations/payments/stripe';
-import type { BillingProvider, BillingSubscription } from './index';
+import type { BillingCheckoutSession, BillingProvider, BillingSubscription } from './index';
 
 /**
  * Stripe Billing over the REST API (no SDK), like the payments integration:
@@ -34,6 +34,17 @@ export function subscriptionFromStripe(sub: StripeObject): BillingSubscription {
     interval: interval === 'month' || interval === 'year' ? interval : null,
     unitAmountCents: num(price.unit_amount) ?? null,
     metadata,
+  };
+}
+
+export function checkoutSessionFromStripe(session: StripeObject): BillingCheckoutSession {
+  return {
+    id: str(session.id) ?? '',
+    mode: str(session.mode) ?? '',
+    paymentStatus: str(session.payment_status) ?? 'unpaid',
+    status: str(session.status) ?? 'open',
+    amountTotalCents: num(session.amount_total) ?? null,
+    metadata: Object.fromEntries(Object.entries(obj(session.metadata)).filter((entry): entry is [string, string] => typeof entry[1] === 'string')),
   };
 }
 
@@ -90,6 +101,28 @@ export function createStripeBilling(config: { secretKey: string; fetch?: typeof 
       }
       const session = await stripe.request('POST', '/checkout/sessions', params, input.idempotencyKey);
       return { url: str(session.url)!, sessionId: str(session.id)! };
+    },
+    async createPaymentCheckout(input) {
+      const params = new URLSearchParams({
+        mode: 'payment',
+        customer: input.customerId,
+        client_reference_id: input.userId,
+        success_url: input.successUrl,
+        cancel_url: input.cancelUrl,
+        'line_items[0][quantity]': '1',
+        'line_items[0][price_data][currency]': 'usd',
+        'line_items[0][price_data][unit_amount]': String(input.amountCents),
+        'line_items[0][price_data][product_data][name]': input.productName,
+      });
+      for (const [key, value] of Object.entries(input.metadata)) {
+        params.set(`metadata[${key}]`, value);
+        params.set(`payment_intent_data[metadata][${key}]`, value);
+      }
+      const session = await stripe.request('POST', '/checkout/sessions', params, input.idempotencyKey);
+      return { url: str(session.url)!, sessionId: str(session.id)! };
+    },
+    async getCheckoutSession(sessionId) {
+      return checkoutSessionFromStripe(await stripe.request('GET', `/checkout/sessions/${encodeURIComponent(sessionId)}`));
     },
     async createPortal({ customerId, returnUrl, idempotencyKey }) {
       const session = await stripe.request('POST', '/billing_portal/sessions', new URLSearchParams({ customer: customerId, return_url: returnUrl, configuration: await portalConfigurationId() }), idempotencyKey);

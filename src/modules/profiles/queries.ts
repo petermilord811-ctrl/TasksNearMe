@@ -1,4 +1,5 @@
 import { recommendedByCounts } from '@/modules/community/service';
+import { sparksSummaryOf } from '@/modules/sparks/service';
 import { responseTimeRange } from '@/shared/response-time';
 import 'server-only';
 import { openSlotsOf } from '@/modules/availability/slots';
@@ -247,8 +248,12 @@ export async function getHelperProfile(handle: string, database: Db = db, rows: 
   const recommended = await recommendedByCounts(database, [row.user.id], rows);
   // Their market's clock: open slots and review dates (completion plan 8.1). Their area says which market.
   const timeZone = await marketTimeZone(database, row.marketId);
+  // Their Sparks (2026-11-21), with the bought part: a community score shown on the profile, never a booking signal.
+  const sparks = await sparksSummaryOf(database, userId);
   return {
     timeZone,
+    ...(sparks ? { sparks } : {}),
+    acceptsMessages: row.user.directMessages !== 'nobody',
     helper: withRecommended(toHelperSummary(
       row.profile,
       row.user,

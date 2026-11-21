@@ -34,7 +34,7 @@
     "earnings_transferred": "{hasAmount, select, yes {Se transfirieron {amount}} other {Se transfirieron tus ganancias}} a tu cuenta de pagos",
     "payout_paid": "Se te pagó{hasAmount, select, yes { {amount}} other {}}",
     "review_published": "Se publicó la reseña de {actorName} para {title}",
-    "message_received": "{actorName} te envió un mensaje sobre {title}",
+    "message_received": "{hasTitle, select, yes {{actorName} te envió un mensaje sobre {title}} other {{actorName} te envió un mensaje}}",
     "support_replied": "Soporte respondió sobre {title}",
     "case_resolved": "Soporte resolvió tu caso sobre {title}",
     "change_proposed": "{actorName} propuso un cambio en {title}. Revisa los detalles",

@@ -199,6 +199,11 @@ export const routes = {
     bookingReview: (bookingId: string) => `/app/bookings/${enc(bookingId)}/review`,
     bookingCalendar: (bookingId: string) => `/app/bookings/${enc(bookingId)}/calendar.ics`,
     messages: () => '/app/messages',
+    /**
+     * Start a direct conversation (2026-11-21): with a person by their user id, or with a helper by their handle (a
+     * public profile's Message). Goes straight to the conversation when the two already have one.
+     */
+    newMessage: (to: { userId: string } | { helper: string }) => withQuery('/app/messages/new', 'helper' in to ? { helper: to.helper } : { to: to.userId }),
     /** A conversation; `from` (its `earlier`): from that message on, after "Load earlier messages" (sweep MN11). */
     thread: (threadId: string, page: { from?: string } = {}) => withQuery(`/app/messages/${enc(threadId)}`, { from: page.from }),
     /**
@@ -230,6 +235,8 @@ export const routes = {
     rewards: () => '/app/rewards',
     /** The person's plan (completion plan 9.13): what it adds, subscribe, or manage and cancel. */
     plan: () => '/app/plan',
+    /** The person's Sparks (2026-11-21): their score, how it's earned, what levels unlock, and buying more. */
+    sparks: (back: { purchase?: string; canceled?: boolean } = {}) => withQuery('/app/sparks', { purchase: back.purchase, canceled: back.canceled ? '1' : undefined }),
     notifications: () => '/app/notifications',
     account: () => '/app/account',
     support: () => '/app/support',

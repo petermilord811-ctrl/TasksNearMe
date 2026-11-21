@@ -9,6 +9,8 @@ export type NavId =
   | 'community'
   | 'savedSearches'
   | 'account'
+  | 'plan'
+  | 'sparks'
   | 'findWork'
   | 'earnings'
   | 'helpers'
@@ -65,8 +67,11 @@ export function getAppNav(mode: Mode): { primary: NavItem[]; secondary: NavItem[
   const home: NavItem = { id: 'home', href: routes.app.home(), exact: true };
   const neighbors: NavItem = { id: 'community', href: routes.app.community() };
   const last: NavItem[] = [{ id: 'bookings', href: routes.app.bookings() }, { id: 'messages', href: routes.app.messages() }];
+  // The plans and Sparks sit with the account's pages (2026-11-21: "make plan subscription feature asap").
   const account: NavItem[] = [
     { id: 'account', href: routes.app.account() },
+    { id: 'plan', href: routes.app.plan() },
+    { id: 'sparks', href: routes.app.sparks() },
     { id: 'payments', href: routes.app.payments() },
     { id: 'support', href: routes.app.support() },
   ];

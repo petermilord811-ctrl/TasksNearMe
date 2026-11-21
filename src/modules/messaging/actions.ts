@@ -1,11 +1,12 @@
 'use server';
 
 import { refresh } from 'next/cache';
-import type { ActionResult, MessageReaction, MessageSavedReplyInput, PhotoUploadResult, SendMessageInput } from '@/contracts';
+import type { ActionResult, DirectMessageSetting, MessageReaction, MessageSavedReplyInput, PhotoUploadResult, SendMessageInput, StartDirectChatInput } from '@/contracts';
 import { storePhoto } from '@/modules/files/uploads';
 import { fileStorage } from '@/modules/tasks/server';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
+import { saveDirectMessageSetting, startDirectChat } from './direct';
 import { deleteReply, notifyTyping, reactToMessage, saveReply, sendMessage } from './service';
 import { requestNow } from '@/platform/clock';
 
@@ -66,6 +67,22 @@ export async function deleteReplyAction(input: { id: string }): Promise<ActionRe
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
   const result = await deleteReply(db, userId, String(input.id));
+  if (result.ok) refresh();
+  return result;
+}
+
+/** Start a direct conversation with its first message (2026-11-21): ok `sent`, `redirectTo` the conversation. */
+export async function startDirectChatAction(input: StartDirectChatInput): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  return startDirectChat(db, userId, input, await requestNow());
+}
+
+/** "Who can message me directly" (2026-11-21): everyone, people they've talked to about a task, or nobody. */
+export async function saveDirectMessagesAction(input: { setting: DirectMessageSetting }): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  const result = await saveDirectMessageSetting(db, userId, input, await requestNow());
   if (result.ok) refresh();
   return result;
 }

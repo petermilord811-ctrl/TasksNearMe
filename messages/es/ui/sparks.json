@@ -1,0 +1,65 @@
+{
+  "title": "Chispas",
+  "description": "Tu puntuación en TasksNearMe. Gana Chispas ayudando y participando, e inicia más conversaciones al día a medida que subes de nivel.",
+  "notices": {
+    "purchased": "¡Gracias! Se agregaron tus Chispas.",
+    "purchase_pending": "Estamos confirmando tu pago. Tus Chispas aparecerán aquí en cuanto se complete.",
+    "purchase_canceled": "Se canceló el pago. No se cobró nada."
+  },
+  "total": {
+    "heading": "Tus Chispas",
+    "split": "{earned} ganadas · {bought} compradas",
+    "progressLabel": "Progreso hacia {level}",
+    "toNext": "Te {count, plural, one {falta # Chispa} other {faltan # Chispas}} para llegar a {level}",
+    "top": "Llegaste al nivel más alto.",
+    "allowance": "Puedes iniciar {count, plural, one {# conversación directa nueva} other {# conversaciones directas nuevas}} al día.",
+    "withPlan": "Tu plan permite al menos {count}."
+  },
+  "earn": {
+    "heading": "Cómo ganar Chispas",
+    "points": "+{points} cada una",
+    "pointsCapped": "+{points} cada una, hasta {cap} al día",
+    "yours": "{points} hasta ahora",
+    "sources": {
+      "posts": "Una publicación en la comunidad",
+      "replies": "Una respuesta en la comunidad",
+      "helpful": "Alguien marca tu publicación o respuesta como Útil",
+      "thanks": "Alguien te da las gracias por una publicación o respuesta",
+      "bookings": "Una reserva completada, como cliente o como ayudante",
+      "reviews": "Una reseña que escribes"
+    }
+  },
+  "levelsHeading": "Niveles",
+  "levelsCaption": "Cada nivel, las Chispas con las que empieza y las conversaciones directas nuevas que permite al día",
+  "levelColumns": {
+    "level": "Nivel",
+    "from": "Desde",
+    "chats": "Chats al día"
+  },
+  "levels": {
+    "newcomer": "Primeros pasos",
+    "neighbor": "Del vecindario",
+    "good_neighbor": "Gran apoyo",
+    "pillar": "Pilar",
+    "local_legend": "Leyenda local"
+  },
+  "planNote": "Plus y Pro permiten al menos {count} conversaciones nuevas al día, sea cual sea tu nivel.",
+  "planLink": "Ver los planes",
+  "buy": {
+    "heading": "Consigue más Chispas",
+    "description": "Las Chispas compradas cuentan para tu nivel de inmediato.",
+    "action": "Comprar {points} por {price}",
+    "unavailable": "Todavía no se pueden comprar Chispas aquí.",
+    "terms": "Un pago único a través de Stripe, no una suscripción. Donde otras personas vean tus Chispas, también verán cuántas compraste. Las Chispas no se pueden gastar, transferir ni cambiar por dinero. Si algo salió mal con una compra, contacta a soporte."
+  },
+  "history": {
+    "heading": "Tus compras",
+    "row": "{points} Chispas · {price} · {date}",
+    "status": {
+      "pending": "Sin completar",
+      "paid": "Pagada",
+      "refunded": "Reembolsada"
+    }
+  },
+  "whatTheyAre": "Las Chispas son una puntuación de la comunidad. No compran nada, nunca cambian los resultados de búsqueda y no forman parte de las calificaciones ni de la verificación de nadie."
+}

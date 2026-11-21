@@ -4,22 +4,30 @@ import type { TimelineEvent } from '@/contracts';
 import { users } from '../accounts/schema';
 
 /**
- * Threads and messages (docs/blueprint/08 §117): one thread per offer, invite, booking, or case.
- * Bodies are stored as written; contact details are masked when shown, until a booking is confirmed.
- * Linked ids are plain columns so messaging doesn't depend on offers or bookings.
+ * Threads and messages (docs/blueprint/08 §117): one thread per offer, invite, booking, or case, and one direct
+ * conversation per pair of people (2026-11-21). Bodies are stored as written; contact details are masked when shown,
+ * until a booking is confirmed. Linked ids are plain columns so messaging doesn't depend on offers or bookings.
  */
 export const threads = pgTable(
   'threads',
   {
     id: text('id').primaryKey(),
-    kind: text('kind').notNull(), // offer | invite | booking | case
-    /** The offer, invite, booking or case id. */
+    kind: text('kind').notNull(), // offer | invite | booking | case | series | direct
+    /** The offer, invite, booking, series or case id; for `direct`, the two people's ids in order (`directPairKey`). */
     linkedId: text('linked_id').notNull(),
-    taskId: text('task_id').notNull(),
+    /** The task it's about; null for a direct conversation. */
+    taskId: text('task_id'),
+    /** Who started a direct conversation (their daily allowance and first messages count it); null for the others. */
+    startedByUserId: text('started_by_user_id').references(() => users.id),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     lastMessageAt: timestamp('last_message_at', { withTimezone: true }),
   },
-  (t) => [uniqueIndex('threads_kind_linked_idx').on(t.kind, t.linkedId), index('threads_last_message_idx').on(t.lastMessageAt)],
+  (t) => [
+    uniqueIndex('threads_kind_linked_idx').on(t.kind, t.linkedId),
+    index('threads_last_message_idx').on(t.lastMessageAt),
+    // A person's direct starts in the last day (their allowance).
+    index('threads_started_by_idx').on(t.startedByUserId, t.createdAt).where(sql`started_by_user_id is not null`),
+  ],
 );
 
 export const threadParticipants = pgTable(

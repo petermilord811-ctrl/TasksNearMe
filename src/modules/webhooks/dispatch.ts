@@ -7,6 +7,7 @@ import { handleConnectWebhook } from '@/modules/payments/connect';
 import { handleStripePaymentWebhook, stripeEventType } from '@/modules/payments/stripe-webhooks';
 import { createBillingProvider } from '@/integrations/billing';
 import { handleBillingWebhook, isBillingEvent } from '@/modules/billing/service';
+import { handleSparksWebhook, isSparksCheckoutEvent } from '@/modules/sparks/service';
 import { recordEmailFeedback } from '@/modules/notifications/suppressions';
 import { handleCheckrWebhook, handlePersonaWebhook, handleStripeIdentityWebhook } from '@/modules/verification/webhooks';
 import type { Db } from '@/platform/db/connect';
@@ -40,6 +41,8 @@ async function stripe(db: Db, payload: string, headers: WebhookHeaders, now: Dat
     const secrets = [env('STRIPE_CONNECT_WEBHOOK_SECRET'), secret].filter((value): value is string => Boolean(value));
     return handleConnectWebhook(db, { payload, signature, secrets }, now);
   }
+  // Sparks packs (2026-11-21): one-time checkouts, read back from Stripe. Before the plans, which take the other checkouts.
+  if (isSparksCheckoutEvent(payload)) return handleSparksWebhook(db, createBillingProvider(), { payload, signature, secret }, now);
   // Plans (completion plan 9.13): checkout and subscription events, read back from Stripe.
   if (isBillingEvent(type)) return handleBillingWebhook(db, createBillingProvider(), { payload, signature, secret }, now);
   if (type?.startsWith('payment_intent.') || type?.startsWith('charge.dispute.')) {

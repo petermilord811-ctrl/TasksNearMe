@@ -1,5 +1,5 @@
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
-import { Check, Clock3, Flag, Hammer, Laptop, Leaf, MapPin, Package, Sparkles, type LucideIcon, ThumbsUp } from 'lucide-react';
+import { Check, Clock3, Flag, Hammer, Laptop, Leaf, MapPin, MessageCircle, Package, Sparkles, type LucideIcon, ThumbsUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { CategorySlug, HelperProfilePageData, HelperServiceDetail } from '@/contracts';
 import { routes } from '@/contracts/routes';
@@ -8,6 +8,7 @@ import { useFormat } from '@/ui/lib/format';
 import { AvailabilitySlotList } from '@/ui/components/availability/availability-slot-list';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { RatingStars } from '@/ui/components/people/rating-stars';
+import { SparksBadge } from '@/ui/components/people/sparks-badge';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
 import { AchievementBadgeList } from '@/ui/components/people/achievement-badges';
 import { WorkSampleGallery } from '@/ui/components/people/work-sample-gallery';
@@ -103,7 +104,9 @@ export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
               </li>}
             </ul>
             <p className="text-sm text-muted-foreground">{t('memberSince', { date: formatMonthYear(helper.memberSince) })}</p>
+            {data.sparks && <SparksBadge sparks={data.sparks} />}
             <Link href={routes.app.requestHelper(helper.handle)} className={cn(buttonVariants({ size: 'lg' }), 'h-auto min-h-11 w-full whitespace-normal py-2.5 lg:mt-auto')}>{t('requestBooking', { name: helper.displayName })}</Link>
+            {data.acceptsMessages && <Link href={routes.app.newMessage({ helper: helper.handle })} className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'h-auto min-h-11 w-full whitespace-normal py-2.5')}><MessageCircle aria-hidden="true" className="size-4" />{t('message', { name: helper.displayName })}</Link>}
           </div>
         </div>
       </header>
@@ -146,8 +149,9 @@ export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
           : <div className="space-y-2 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card dark:border-white/[0.06]"><p className="font-medium">{t('noReviews')}</p><p className="text-sm text-muted-foreground">{t('noReviewsDescription')}</p></div>}
       </section>
       <p><Link href={routes.app.report('helper', helper.handle)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"><Flag aria-hidden="true" className="size-4" />{report('links.helper')}</Link></p>
-      <div className="sticky bottom-3 z-20 lg:hidden">
-        <Link href={routes.app.requestHelper(helper.handle)} className={cn(buttonVariants({ size: 'lg' }), 'h-auto min-h-12 w-full whitespace-normal py-2.5 shadow-[0_10px_30px_-10px_var(--primary-glow)]')}>{t('requestBooking', { name: helper.displayName })}</Link>
+      <div className="sticky bottom-3 z-20 flex gap-2 lg:hidden">
+        <Link href={routes.app.requestHelper(helper.handle)} className={cn(buttonVariants({ size: 'lg' }), 'h-auto min-h-12 min-w-0 flex-1 whitespace-normal py-2.5 shadow-[0_10px_30px_-10px_var(--primary-glow)]')}>{t('requestBooking', { name: helper.displayName })}</Link>
+        {data.acceptsMessages && <Link href={routes.app.newMessage({ helper: helper.handle })} aria-label={t('message', { name: helper.displayName })} title={t('message', { name: helper.displayName })} className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'h-auto min-h-12 shrink-0 bg-card px-4 shadow-card')}><MessageCircle aria-hidden="true" className="size-5" /></Link>}
       </div>
     </div>
   );

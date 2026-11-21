@@ -1,0 +1,32 @@
+{
+  "back": "All messages",
+  "title": "Message {name}",
+  "viewProfile": "View profile",
+  "formLabel": "First message to {name}",
+  "label": "Your message",
+  "placeholder": "Hi {name}, …",
+  "firstMessages": "{count, plural, one {You can send # message} other {You can send up to # messages}} until {name} replies.",
+  "count": "{used}/{maximum}",
+  "masking": "Phone numbers, emails, links and usernames stay hidden until the two of you have a paid booking. Pay through TasksNearMe so you’re covered.",
+  "allowance": "{left, plural, one {# new conversation} other {# new conversations}} left today (of {perDay})",
+  "send": "Send message",
+  "sending": "Sending…",
+  "tooLong": "Use {maximum} characters or fewer.",
+  "empty": "Write a message before sending.",
+  "resetsAt": "You can start another one after {at} ({zone}).",
+  "moreWithSparks": "Start more conversations a day with Sparks",
+  "refusals": {
+    "self": "This is you. Pick someone else to message.",
+    "account_limited": "Your account can’t start new conversations right now. Contact support to find out why.",
+    "unavailable": "{name} can’t receive messages right now.",
+    "blocked": "You can’t message each other.",
+    "not_accepting": "{name} isn’t taking direct messages.",
+    "task_contacts_only": "{name} takes direct messages only from people they’ve talked to about a task. You can send them a task request instead.",
+    "limit_reached": "You’ve started as many new conversations as you can today."
+  },
+  "request": {
+    "title": "Have a task for {name}?",
+    "description": "Send a task request with the details and the price. Your card is authorized when you send it and charged only if they accept.",
+    "action": "Send a task request"
+  }
+}

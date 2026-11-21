@@ -75,6 +75,9 @@ import savedSearches from './savedSearches.json';
 import taskCard from './taskCard.json';
 import taskManage from './taskManage.json';
 import thread from './thread.json';
+import directMessage from './directMessage.json';
+import sparks from './sparks.json';
+import sparksBadge from './sparksBadge.json';
 import timeline from './timeline.json';
 import verification from './verification.json';
 import waitlist from './waitlist.json';
@@ -82,6 +85,6 @@ import cities from './cities.json';
 import notFound from './notFound.json';
 import errorPage from './errorPage.json';
 
-const uiMessages = { account, actionReasons, actions, availability, bookingComplete, bookingConfirm, bookingHub, bookingSheets, bookings, brand, changes, clients, common, completion, earnings, feedback, findWork, forms, help, helpContact, helperCard, helperOnboarding, helperStanding, badges, helperProfile, helperProfileEditor, helperTask, helpersBrowse, home, inbox, inviteCard, invites, landing, layout, legal, location, money, myOffers, myTasks, notifications, offers, payments, paymentsPage, postTask, posterIdentity, primitives, proposal, publicPages, publicTask, push, receipt, report, reportProblem, review, reviews, rewards, safety, savedHelpers, series, shell, signIn, status, support, supportCase, taskBoard, community, portal, questions, savedSearches, taskCard, taskManage, thread, timeline, verification, waitlist, cities, beta, plan, notFound, errorPage };
+const uiMessages = { account, actionReasons, actions, availability, bookingComplete, bookingConfirm, bookingHub, bookingSheets, bookings, brand, changes, clients, common, completion, earnings, feedback, findWork, forms, help, helpContact, helperCard, helperOnboarding, helperStanding, badges, helperProfile, helperProfileEditor, helperTask, helpersBrowse, home, inbox, inviteCard, invites, landing, layout, legal, location, money, myOffers, myTasks, notifications, offers, payments, paymentsPage, postTask, posterIdentity, primitives, proposal, publicPages, publicTask, push, receipt, report, reportProblem, review, reviews, rewards, safety, savedHelpers, series, shell, signIn, status, support, supportCase, taskBoard, community, portal, questions, savedSearches, taskCard, taskManage, thread, directMessage, sparks, sparksBadge, timeline, verification, waitlist, cities, beta, plan, notFound, errorPage };
 
 export default uiMessages;

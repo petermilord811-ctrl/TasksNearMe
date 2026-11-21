@@ -12,8 +12,8 @@
       "profile": "Photo, name, contact details and verification",
       "security": "Email code, Google or Microsoft, passkeys",
       "notifications": "Emails and texts, this device, language",
-      "helping": "Your plan and your helper profile",
-      "privacy": "Activity, a copy of your data, deleting the account, signing out"
+      "helping": "Your plan, your Sparks and your helper profile",
+      "privacy": "Activity, direct messages, a copy of your data, deleting the account, signing out"
     }
   },
   "profile": {
@@ -317,5 +317,31 @@
         "contact": "If you're worried about your account, tell our support team what happened. They can secure it for you."
       }
     }
+  },
+  "directMessages": {
+    "title": "Direct messages",
+    "description": "Who can start a conversation with you without a task.",
+    "legend": "Who can message you directly",
+    "options": {
+      "everyone": {
+        "label": "Everyone",
+        "hint": "Any member can write to you. They can send a few messages until you reply."
+      },
+      "task_contacts": {
+        "label": "People I’ve talked to about a task",
+        "hint": "Only people from an offer, a request or a booking with you."
+      },
+      "nobody": {
+        "label": "Nobody",
+        "hint": "People can still reach you through offers, requests and bookings."
+      }
+    },
+    "hint": "Conversations already going on carry on. To stop one, block the person from the conversation.",
+    "failed": "That didn’t save. Try again."
+  },
+  "sparks": {
+    "title": "Sparks",
+    "description": "Your community score: how it’s earned, your level, and the conversations a day it allows.",
+    "link": "See your Sparks"
   }
 }

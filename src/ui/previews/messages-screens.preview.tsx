@@ -3,7 +3,8 @@ import {
   type ActionResult, type AppShellHandlers, type InboxPageData, type PreviewEntry, type ThreadHandlers, type ThreadPageData,
 } from '@/contracts';
 import {
-  blockedThreadPageData, closedThreadPageData, deskBookingThreadPageData, deskOfferThreadPageData, earlierThreadPageData, expiredOfferThreadPageData,
+  blockedThreadPageData, closedThreadPageData, deskBookingThreadPageData, deskOfferThreadPageData, directThreadAwaitingReplyData, directThreadPageData, earlierThreadPageData, expiredOfferThreadPageData,
+  mayaInboxWithDirectData,
   fakeHandler, fakeThreadHandlers, inboxEmptyData, jordanInboxPageData, jordanShell, mayaInboxPageData,
   mayaShell, movingOfferThreadForHelper, taskCanceledOfferThreadPageData, taskCanceledThreadForHelperPageData,
 } from '@/fixtures';
@@ -54,6 +55,13 @@ export const messagesScreenPreviews: PreviewEntry[] = [
     { ...deskBookingThreadPageData.thread, id: 'preview-support', kind: 'case' },
     { ...movingOfferThreadForHelper, lastMessage: undefined },
   ] }),
+  // Direct conversations (2026-11-21): in the inbox, a first message with two more allowed, and waiting on a reply.
+  {
+    id: 'screen-inbox/direct', group: inboxCopy.previews.group, title: 'Inbox with a direct conversation', layout: 'fullscreen',
+    render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.messages()}><InboxScreen data={mayaInboxWithDirectData} now={now} /></AppShell>,
+  },
+  threadPreview('direct', 'Direct conversation: the first message, two more until a reply', directThreadPageData),
+  threadPreview('direct-awaiting-reply', 'Direct conversation: three sent, waiting on a reply', directThreadAwaitingReplyData),
   threadPreview('booking', threadCopy.previews.booking, deskBookingThreadPageData),
   // A long conversation: "Load earlier messages" above its latest 100 (sweep MN11).
   threadPreview('earlier', threadCopy.previews.earlier, earlierThreadPageData),

@@ -34,5 +34,6 @@
     "withSlots": "Jordan · horarios abiertos",
     "samPhoto": "Sam, con foto de perfil"
   },
-  "recommendedBy": "{count, plural, one {# recomendación de vecinos} other {# recomendaciones de vecinos}}"
+  "recommendedBy": "{count, plural, one {# recomendación de vecinos} other {# recomendaciones de vecinos}}",
+  "message": "Escribirle a {name}"
 }

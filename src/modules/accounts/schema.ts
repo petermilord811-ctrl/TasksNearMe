@@ -54,6 +54,11 @@ export const users = pgTable(
     /** "Show when I'm active" on the account page; on by default, off hides their activity from everyone. */
     showActivity: boolean('show_activity').notNull().default(true),
     /**
+     * Who may start a direct conversation with them (2026-11-21; `DIRECT_MESSAGE_SETTINGS`): `everyone` (the
+     * default), `task_contacts` (people they've talked to about a task) or `nobody`.
+     */
+    directMessages: text('direct_messages').notNull().default('everyone'),
+    /**
      * Since when the account's sign-in details are held (completion plan 5.23): someone used the "Not you?" link
      * in a contact change notice. Until trust and safety or an admin clears it on the person page, the email and
      * phone can't change and no passkey or Google or Microsoft sign-in can be added. Signing in still works.

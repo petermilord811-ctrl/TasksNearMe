@@ -182,7 +182,8 @@
       "helper": "Offers help on TasksNearMe",
       "poster": "Has posted tasks here",
       "neighbor": "A neighbor in the community"
-    }
+    },
+    "message": "Message"
   },
   "save": {
     "save": "Save",

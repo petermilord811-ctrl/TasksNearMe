@@ -159,6 +159,7 @@ describe('plans', () => {
 
   it('with Stripe: a plan live at Stripe (paid before its webhook) blocks a second checkout and shows up mirrored', async () => {
     const live: BillingSubscription = { id: 'sub_fake_live', customerId: 'cus_fake', status: 'active', currentPeriodEnd: new Date(now.getTime() + 20 * 86_400_000), cancelAtPeriodEnd: false, endedAt: null, interval: 'month', unitAmountCents: 499, metadata: { userId: CLIENT, plan: 'plus', interval: 'month', marketId: 'mkt_austin' } };
+    const remote: BillingSubscription[] = [live];
     const canceled: string[] = [];
     const renewalsStopped: string[] = [];
     let checkouts = 0;
@@ -171,7 +172,7 @@ describe('plans', () => {
       },
       createPortal: async () => ({ url: 'https://billing.stripe.test/p' }),
       getSubscription: async () => live,
-      listSubscriptions: async () => [live],
+      listSubscriptions: async () => remote,
       cancelAtPeriodEnd: async (id) => {
         renewalsStopped.push(id);
       },
@@ -191,12 +192,22 @@ describe('plans', () => {
     const page = await planPageData(db, stripe, CLIENT, 'client', now, { notice: 'subscribed', plan: 'pro' });
     expect(page?.confirming).toBe('pro');
     expect(page?.portal).toBe(true);
+    // Once Stripe holds Pro, the return reads it from Stripe (2026-11-21): held at once, with no webhook at all.
+    remote.push({ ...live, id: 'sub_fake_pro', unitAmountCents: 799, metadata: { userId: CLIENT, plan: 'pro', interval: 'month', marketId: 'mkt_austin' } });
+    expect((await activePlans(db, CLIENT, now)).has('pro')).toBe(false);
+    const back = await planPageData(db, stripe, CLIENT, 'client', now, { notice: 'subscribed', plan: 'pro' });
+    expect(back?.confirming).toBeUndefined();
+    expect(back?.memberships.find((membership) => membership.plan === 'pro')).toMatchObject({ status: 'active', priceCents: 799 });
+    // A plain visit doesn't ask Stripe (only the return does).
+    remote.length = 0;
+    expect((await planPageData(db, stripe, CLIENT, 'client', now))?.memberships.map((membership) => membership.plan).sort()).toEqual(['plus', 'pro']);
+    remote.push(live, { ...live, id: 'sub_fake_pro', unitAmountCents: 799, metadata: { userId: CLIENT, plan: 'pro', interval: 'month', marketId: 'mkt_austin' } });
     // A deletion asked for: nothing renews meanwhile. Done: everything live ends at Stripe.
     await stopRenewalsOf(db, stripe, CLIENT, now);
-    expect(renewalsStopped).toEqual(['sub_fake_live']);
+    expect(renewalsStopped.sort()).toEqual(['sub_fake_live', 'sub_fake_pro']);
     expect((await activePlans(db, CLIENT, now)).get('plus')?.cancelAtPeriodEnd).toBe(true);
     await endSubscriptionsOf(db, stripe, CLIENT, now);
-    expect(canceled).toEqual(['sub_fake_live']);
+    expect(canceled.sort()).toEqual(['sub_fake_live', 'sub_fake_pro']);
     expect((await activePlans(db, CLIENT, now)).size).toBe(0);
   });
 

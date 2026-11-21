@@ -924,7 +924,8 @@ export async function conversationView(db: Db, thread: typeof threads.$inferSele
   const [participants, rows, [task]] = await Promise.all([
     db.select({ userId: threadParticipants.userId }).from(threadParticipants).where(eq(threadParticipants.threadId, thread.id)),
     db.select().from(messages).where(eq(messages.threadId, thread.id)).orderBy(asc(messages.createdAt)),
-    db.select({ title: tasks.title }).from(tasks).where(eq(tasks.id, thread.taskId)).limit(1),
+    // A direct conversation (2026-11-21) has no task: it's titled "Conversation".
+    thread.taskId ? db.select({ title: tasks.title }).from(tasks).where(eq(tasks.id, thread.taskId)).limit(1) : Promise.resolve([]),
   ]);
   const people = await usersById(db, participants.map((row) => row.userId));
   const fileIds = [...new Set(rows.flatMap((row) => row.attachmentFileIds))];

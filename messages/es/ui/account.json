@@ -12,8 +12,8 @@
       "profile": "Foto, nombre, datos de contacto y verificación",
       "security": "Código por correo, Google o Microsoft, llaves de acceso",
       "notifications": "Correos y mensajes de texto, este dispositivo, idioma",
-      "helping": "Tu plan y tu perfil de ayudante",
-      "privacy": "Actividad, una copia de tus datos, eliminar la cuenta, cerrar sesión"
+      "helping": "Tu plan, tus Chispas y tu perfil de ayudante",
+      "privacy": "Actividad, mensajes directos, una copia de tus datos, eliminar la cuenta, cerrar sesión"
     }
   },
   "profile": {
@@ -317,5 +317,31 @@
         "contact": "Si te preocupa tu cuenta, cuéntale a nuestro equipo de soporte qué pasó. Pueden protegerla por ti."
       }
     }
+  },
+  "directMessages": {
+    "title": "Mensajes directos",
+    "description": "Quién puede iniciar una conversación contigo sin una tarea.",
+    "legend": "Quién puede enviarte mensajes directos",
+    "options": {
+      "everyone": {
+        "label": "Todas las personas",
+        "hint": "Cualquier miembro puede escribirte. Puede enviar algunos mensajes hasta que respondas."
+      },
+      "task_contacts": {
+        "label": "Personas con quienes hablé de una tarea",
+        "hint": "Solo personas de una oferta, una solicitud o una reserva contigo."
+      },
+      "nobody": {
+        "label": "Nadie",
+        "hint": "Igual pueden contactarte con ofertas, solicitudes y reservas."
+      }
+    },
+    "hint": "Las conversaciones que ya tienes siguen igual. Para detener una, bloquea a la persona desde la conversación.",
+    "failed": "No se guardó. Inténtalo de nuevo."
+  },
+  "sparks": {
+    "title": "Chispas",
+    "description": "Tu puntuación en la comunidad: cómo se gana, tu nivel y las conversaciones al día que permite.",
+    "link": "Ver tus Chispas"
   }
 }

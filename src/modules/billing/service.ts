@@ -127,7 +127,8 @@ export async function releaseAiSearch(db: Db, userId: string, now: Date): Promis
 const isPlan = (value: unknown): value is PlanCode => (PLAN_CODES as readonly unknown[]).includes(value);
 const isInterval = (value: unknown): value is 'month' | 'year' => (PLAN_INTERVALS as readonly unknown[]).includes(value);
 
-async function customerFor(db: Db, provider: BillingProvider, user: { id: string; email: string; name: string }): Promise<string> {
+/** The person's billing customer at the provider, made at their first checkout (a plan's or a Sparks pack's) and kept. */
+export async function customerFor(db: Db, provider: BillingProvider, user: { id: string; email: string; name: string }): Promise<string> {
   const [existing] = await db.select().from(billingCustomers).where(eq(billingCustomers.userId, user.id)).limit(1);
   if (existing && existing.provider === provider.name) return existing.providerCustomerId;
   const { customerId } = await provider.createCustomer({ userId: user.id, email: user.email, name: user.name });
@@ -264,6 +265,23 @@ export async function syncSubscription(db: Pick<Db, 'select' | 'insert' | 'updat
     await db.insert(billingCustomers).values({ userId, provider: 'stripe', providerCustomerId: sub.customerId }).onConflictDoNothing();
   }
   return true;
+}
+
+/**
+ * Mirrors what Stripe holds for the person's billing customer (their subscriptions, as `syncSubscription` writes them
+ * from webhooks). A failure to reach Stripe leaves the rows as they are: the webhook still comes, and the page shows
+ * the plan as confirming meanwhile.
+ */
+export async function mirrorFromProvider(db: Db, provider: BillingProvider | null, userId: string, now: Date): Promise<void> {
+  if (provider?.name !== 'stripe') return;
+  const [customer] = await db.select().from(billingCustomers).where(eq(billingCustomers.userId, userId)).limit(1);
+  if (!customer || customer.provider !== 'stripe') return;
+  try {
+    const remote = await provider.listSubscriptions(customer.providerCustomerId);
+    for (const sub of remote) await syncLocked(db, sub, now);
+  } catch (error) {
+    console.error('[billing] mirror from Stripe', error);
+  }
 }
 
 /**
@@ -462,6 +480,10 @@ export async function planPageData(
 ): Promise<PlanPageData | null> {
   const user = await homeMarketOf(db, userId);
   if (!user) return null;
+  // Back from paying: read the person's subscriptions from Stripe and mirror them (2026-11-21), so the plan starts
+  // without waiting for its webhook, which may be late or, on a server whose endpoint isn't set up yet, never come.
+  // Still Stripe's word, never the browser's: the return only says when to ask.
+  if (returned.notice === 'subscribed') await mirrorFromProvider(db, provider, userId, now);
   const [{ plans, fees }, held, live, timeZone, aiSearch, [customer]] = await Promise.all([
     marketPlans(db, user.marketId),
     activePlans(db, userId, now),

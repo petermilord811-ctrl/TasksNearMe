@@ -44,7 +44,6 @@ import { taskMapPinOf } from '@/shared/map-pins';
 import { buildBecomeHelperPageData, buildPricingPageData, landingFeeExamples } from './page-data';
 import { quoteBreakdown } from '@/modules/payments/fees';
 import { citiesComingNext, WAITLIST_TAG, waitlistDemand } from './waitlist';
-import { createBillingProvider } from '@/integrations/billing';
 
 /**
  * Public marketing page data. Cached (Cache Components) so the pages prerender and stay fast;
@@ -281,8 +280,10 @@ export async function getPricingPageData(): Promise<PricingPageData> {
   cacheLife('hours');
   cacheTag(marketTag(DEFAULT_MARKET_SLUG));
   const { policy } = await defaultMarketPolicy();
-  // The optional plans (9.13), where subscribing works.
-  return buildPricingPageData(policy, { plansOpen: createBillingProvider() !== null });
+  // The optional plans (9.13) are always listed: they're the market's policy. Whether subscribing works is the plan
+  // page's to say (`unavailable`). This function is prerendered at build time, where CI has no Stripe keys, so a check
+  // for the billing provider here hid the plans on the live site for an hour after every deploy (2026-11-21).
+  return buildPricingPageData(policy, { plansOpen: true });
 }
 
 export async function getBecomeHelperPageData(): Promise<BecomeHelperPageData> {

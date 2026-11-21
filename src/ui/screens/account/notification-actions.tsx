@@ -139,6 +139,7 @@ function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
         <span className={cn('block leading-6 group-hover:underline underline-offset-4', unread && 'font-semibold')}>
           {t(`types.${notification.type}`, {
             title: notification.title ?? t('taskFallback'),
+            hasTitle: notification.title ? 'yes' : 'no',
             actorName: notification.actorName ?? t('actorFallback'),
             hasAmount: notification.params?.amountCents === undefined ? 'no' : 'yes',
             amount: notification.params?.amountCents === undefined ? '' : formatMoney(notification.params.amountCents),

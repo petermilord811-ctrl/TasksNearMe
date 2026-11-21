@@ -28,6 +28,7 @@ import type { Db } from '@/platform/db/connect';
 import type { FileStorage } from '@/integrations/storage';
 import type { ZipEntry } from './zip';
 import { subscriptions } from '@/modules/billing/schema';
+import { sparkPurchases } from '@/modules/sparks/schema';
 
 /**
  * A copy of everything linked to an account (blueprint 08 §5; completion plan 3.3), as one JSON file the
@@ -176,6 +177,7 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
   // ---- Money ----
   const paymentRows = await db.select().from(payments).where(eq(payments.payerUserId, userId)).orderBy(asc(payments.createdAt));
   const planRows = await db.select().from(subscriptions).where(eq(subscriptions.userId, userId)).orderBy(asc(subscriptions.createdAt));
+  const sparkRows = await db.select().from(sparkPurchases).where(eq(sparkPurchases.userId, userId)).orderBy(asc(sparkPurchases.createdAt));
   const refundRows = paymentRows.length ? await db.select().from(refunds).where(inArray(refunds.paymentId, paymentRows.map((row) => row.id))).orderBy(asc(refunds.createdAt)) : [];
   const methodRows = await db.select().from(paymentMethods).where(eq(paymentMethods.userId, userId)).orderBy(asc(paymentMethods.createdAt));
   const earningRows = await db.select().from(earnings).where(eq(earnings.helperUserId, userId)).orderBy(asc(earnings.createdAt));
@@ -305,6 +307,8 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
     savedAndHiddenTasks: marks.map((row) => ({ task: titleOf.get(row.taskId) ?? row.taskId, mark: row.kind, at: iso(row.createdAt) })),
     payments: paymentRows.map((row) => ({ booking: row.bookingId, purpose: row.purpose, amountCents: row.amountCents, status: row.status, card: row.methodLast4 ? (row.methodBrand ? t('card', { brand: row.methodBrand, last4: row.methodLast4 }) : t('cardWithoutBrand', { last4: row.methodLast4 })) : null, at: iso(row.createdAt) })),
     plans: planRows.map((row) => ({ plan: row.plan, interval: row.interval, priceCents: row.priceCents, status: row.status, periodEnd: iso(row.currentPeriodEnd), cancelAtPeriodEnd: row.cancelAtPeriodEnd, endedAt: iso(row.endedAt), at: iso(row.createdAt) })),
+    // Sparks bought (2026-11-21); earned ones are counted from the posts, reactions, bookings and reviews above.
+    sparkPurchases: sparkRows.map((row) => ({ pack: row.pack, points: row.points, amountCents: row.amountCents, status: row.status, at: iso(row.createdAt), paidAt: iso(row.paidAt) })),
     refunds: refundRows.map((row) => ({ booking: row.bookingId, amountCents: row.amountCents, reason: row.reason, status: row.status, at: iso(row.createdAt) })),
     paymentMethods: methodRows.map((row) => ({ brand: row.brand, last4: row.last4, expires: row.expMonth && row.expYear ? `${String(row.expMonth).padStart(2, '0')}/${row.expYear}` : null, default: row.isDefault, removedAt: iso(row.detachedAt), addedAt: iso(row.createdAt) })),
     earnings: earningRows.map((row) => ({ booking: row.bookingId, kind: row.kind, amountCents: row.amountCents, status: row.status, transferredAt: iso(row.transferredAt), at: iso(row.createdAt) })),
