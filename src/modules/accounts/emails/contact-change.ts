@@ -1,6 +1,7 @@
 import { createTranslator } from 'next-intl';
 import { CONTACT_REVERT_DAYS, DEFAULT_LOCALE, routes, type AppLocale } from '@/contracts';
 import { messagesFor, perLocale } from '@/i18n/catalog';
+import { localizedPath } from '@/shared/locale';
 import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
 import type { RenderedEmail } from './welcome';
 
@@ -44,7 +45,7 @@ ${paragraph(t('emailChangeCode.body', { email }))}
 /** `revertUrl`: the change's "Not you?" link (contact-revert-token.ts), which works once for `CONTACT_REVERT_DAYS`. */
 function changedNotice(kind: 'emailChanged' | 'phoneChanged' | 'signInAdded', values: Record<string, string>, revertUrl: string, appUrl: string, locale: AppLocale): RenderedEmail {
   const t = tFor(locale);
-  const helpUrl = `${appUrl}${routes.helpContact()}`;
+  const helpUrl = `${appUrl}${localizedPath(routes.helpContact(), locale)}`;
   const preheader = t(`${kind}.preheader`, values);
   const body = `<tr><td class="card-pad" style="padding:40px 40px 36px;">
 ${heading(t(`${kind}.heading`))}

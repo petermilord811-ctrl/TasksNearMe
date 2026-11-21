@@ -147,7 +147,7 @@ export function createContactChange({ db, auth, email, sms, phoneVerification, a
         metadata: { previousEmail, newEmail },
       });
       const link = await recordContactChange(db, { userId, kind: 'email', previous: previousEmail, next: newEmail }, now());
-      await notify(previousEmail, renderEmailChangedNotice({ newEmail, revertUrl: contactRevertUrl(appUrl, link), appUrl, locale: localeOrDefault(user.locale) }), 'email-changed');
+      await notify(previousEmail, renderEmailChangedNotice({ newEmail, revertUrl: contactRevertUrl(appUrl, link, { locale: localeOrDefault(user.locale) }), appUrl, locale: localeOrDefault(user.locale) }), 'email-changed');
       return { ok: true, code: 'updated' };
     },
 
@@ -205,7 +205,7 @@ export function createContactChange({ db, auth, email, sms, phoneVerification, a
       if (user.phone && user.phone !== result.phone) {
         const locale = localeOrDefault(user.locale);
         const link = await recordContactChange(db, { userId, kind: 'phone', previous: user.phone, next: result.phone }, now());
-        const revertUrl = contactRevertUrl(appUrl, link);
+        const revertUrl = contactRevertUrl(appUrl, link, { locale });
         await notify(user.email, renderPhoneChangedNotice({ last4, revertUrl, appUrl, locale }), 'phone-changed');
         // The old number hears about it too, when it was verified (it was the account's until now).
         if (user.phoneVerifiedAt) await text(user.phone, renderPhoneChangedText({ revertUrl, locale }), 'phone-changed-text');

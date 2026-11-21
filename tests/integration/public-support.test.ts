@@ -121,7 +121,8 @@ describe('staff answering a public request by email', () => {
     expect(sent[0]).toMatchObject({ to: stranger, subject: 'Una respuesta de soporte de TasksNearMe', tag: 'support-reply' });
     // No name is known for an address: the greeting drops it.
     expect(sent[0]!.text).toContain('Hola, gracias por escribir.');
-    expect(sent[0]!.text).toContain('https://tasksnearme.test/help/contact');
+    // Its help link opens in Spanish too (messages pass J-M1).
+    expect(sent[0]!.text).toContain('https://tasksnearme.test/es/help/contact');
 
     const [event] = await db.select().from(supportCaseEvents).where(and(eq(supportCaseEvents.caseId, row!.id), eq(supportCaseEvents.authorUserId, 'usr_alex')));
     expect(event).toMatchObject({ kind: 'message', partyUserId: null, meta: { emailed: true } });

@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { CONTACT_REVERT_DAYS, routes } from '@/contracts';
+import { CONTACT_REVERT_DAYS, DEFAULT_LOCALE, routes, type AppLocale } from '@/contracts';
 import { appSecret } from '@/platform/crypto/app-secret';
+import { localizedPath } from '@/shared/locale';
 
 /**
  * The "Not you?" link in an email or phone change notice (completion plan 5.23), sent to the old address or
@@ -61,7 +62,10 @@ export function checkContactRevertLink(token: string, row: (ContactRevertClaim &
   return { ok: true };
 }
 
-/** Where the link goes: a page that asks first, so a mail scanner opening it changes nothing. */
-export function contactRevertUrl(appUrl: string, claim: ContactRevertClaim, key = appSecret()): string {
-  return `${appUrl}${routes.contactRevert(contactRevertToken(claim, key))}`;
+/**
+ * Where the link goes: a page that asks first, so a mail scanner opening it changes nothing. In the reader's language
+ * (sweep MN12, messages pass J-M1): someone securing their account reads it in Spanish on a phone set to English too.
+ */
+export function contactRevertUrl(appUrl: string, claim: ContactRevertClaim, { key = appSecret(), locale = DEFAULT_LOCALE }: { key?: string; locale?: AppLocale } = {}): string {
+  return `${appUrl}${localizedPath(routes.contactRevert(contactRevertToken(claim, key)), locale)}`;
 }

@@ -1,4 +1,5 @@
-import type { AppLocale } from '@/contracts/locale';
+import { DEFAULT_LOCALE, type AppLocale } from '@/contracts/locale';
+import { localizedPath } from '@/shared/locale';
 /**
  * TasksNearMe's email layout: plain tables and inline styles, so it reads the same in Gmail, Apple Mail and
  * Outlook. Hover effects, dark mode and small animations sit in the <style> block for the apps that support
@@ -89,6 +90,8 @@ const BASE_CSS = `
 
 /** The whole document: the page color, the logo, one card with the body rows, and the footer. */
 export function emailLayout({ title, preheader, appUrl, body, footer, css = '', lang = 'en' }: EmailLayoutInput): string {
+  // The logo opens the home page in the reader's language, like every other link (sweep MN12, messages pass J-M1).
+  const home = lang === DEFAULT_LOCALE ? appUrl : `${appUrl.replace(/\/+$/, '')}${localizedPath('/', lang)}`;
   // Spacer after the preheader, so inbox previews don't run on into the body text.
   const spacer = '&#8204;&nbsp;'.repeat(60);
   return `<!doctype html>
@@ -108,7 +111,7 @@ export function emailLayout({ title, preheader, appUrl, body, footer, css = '', 
 <tr><td align="center" style="padding:28px 12px 40px;">
 <table role="presentation" class="container" width="600" cellspacing="0" cellpadding="0" border="0" style="width:600px;max-width:600px;">
 <tr><td style="padding:0 8px 18px;">
-<a href="${esc(appUrl)}" target="_blank" style="text-decoration:none;font-family:${EMAIL_DISPLAY_FONT};font-size:24px;line-height:28px;font-weight:800;letter-spacing:-0.5px;">`
+<a href="${esc(home)}" target="_blank" style="text-decoration:none;font-family:${EMAIL_DISPLAY_FONT};font-size:24px;line-height:28px;font-weight:800;letter-spacing:-0.5px;">`
     + `<img src="${esc(appUrl.replace(/\/+$/, '') + EMAIL_ICON_PATH)}" width="34" height="34" alt="TasksNearMe" style="display:inline-block;width:34px;height:34px;margin-right:9px;border:0;border-radius:10px;vertical-align:middle;">`
     + `<span class="ink" style="color:${EMAIL_COLORS.ink};vertical-align:middle;">tasks</span><span style="color:#e5508a;vertical-align:middle;">near</span><span class="ink" style="color:${EMAIL_COLORS.ink};vertical-align:middle;">me</span></a>
 </td></tr>

@@ -1,6 +1,7 @@
 import { createTranslator } from 'next-intl';
 import { DEFAULT_LOCALE, type AppLocale } from '@/contracts/locale';
 import { messagesFor, perLocale } from '@/i18n/catalog';
+import { localizedPath } from '@/shared/locale';
 import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
 import type { RenderedEmail } from './welcome';
 
@@ -19,10 +20,10 @@ import type { RenderedEmail } from './welcome';
 
 const tFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.emails' }));
 
-/** The /code page's link for this code: the code and when it expires (Unix seconds), in the fragment only. */
-export function copyCodeUrl(appUrl: string, code: string, expiresAt: Date): string {
+/** The /code page's link for this code: the code and when it expires (Unix seconds), in the fragment only; in the reader's language. */
+export function copyCodeUrl(appUrl: string, code: string, expiresAt: Date, locale: AppLocale = DEFAULT_LOCALE): string {
   const fragment = new URLSearchParams({ c: code, e: String(Math.floor(expiresAt.getTime() / 1000)) });
-  return `${appUrl.replace(/\/+$/, '')}/code#${fragment.toString()}`;
+  return `${appUrl.replace(/\/+$/, '')}${localizedPath('/code', locale)}#${fragment.toString()}`;
 }
 
 export function renderSignInCodeEmail({
@@ -40,7 +41,7 @@ export function renderSignInCodeEmail({
 }): RenderedEmail {
   const t = tFor(locale);
   const preheader = t('signInCode.preheader', { minutes });
-  const copyUrl = copyCodeUrl(appUrl, code, new Date(now.getTime() + minutes * 60_000));
+  const copyUrl = copyCodeUrl(appUrl, code, new Date(now.getTime() + minutes * 60_000), locale);
   const host = new URL(appUrl).host;
   const body = `<tr><td class="card-pad-top" style="padding:40px 40px 0;">
 <p style="margin:0;font-family:${EMAIL_FONT};font-size:13px;line-height:18px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:${EMAIL_COLORS.primary};">${esc(t('signInCode.eyebrow'))}</p>

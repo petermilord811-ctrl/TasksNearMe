@@ -1,6 +1,7 @@
 import { createTranslator } from 'next-intl';
 import { DEFAULT_LOCALE, routes, type AppLocale } from '@/contracts';
 import { messagesFor, perLocale } from '@/i18n/catalog';
+import { localizedPath } from '@/shared/locale';
 import type { RenderedEmail } from '@/modules/accounts/emails/welcome';
 import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
 
@@ -22,7 +23,7 @@ const button = (href: string, label: string) =>
 /** Right after the form is sent. It doesn't repeat the message. */
 export function renderPublicSupportReceived({ appUrl, locale = DEFAULT_LOCALE }: { appUrl: string; locale?: AppLocale }): RenderedEmail {
   const t = tFor(locale);
-  const contactUrl = `${appUrl}${routes.helpContact()}`;
+  const contactUrl = `${appUrl}${localizedPath(routes.helpContact(), locale)}`;
   const preheader = t('supportReceived.preheader');
   const body = `<tr><td class="card-pad" style="padding:40px 40px 36px;">
 ${heading(t('supportReceived.heading'))}
@@ -42,7 +43,7 @@ ${button(contactUrl, t('supportReceived.contact'))}
 /** Support's answer, as staff wrote it (paragraphs kept), signed with their first name. */
 export function renderSupportEmailReply({ body: reply, staffName, appUrl, locale = DEFAULT_LOCALE }: { body: string; staffName: string; appUrl: string; locale?: AppLocale }): RenderedEmail {
   const t = tFor(locale);
-  const contactUrl = `${appUrl}${routes.helpContact()}`;
+  const contactUrl = `${appUrl}${localizedPath(routes.helpContact(), locale)}`;
   const preheader = reply.replace(/\s+/g, ' ').trim().slice(0, 90);
   const paragraphs = reply
     .split(/\n{2,}/)

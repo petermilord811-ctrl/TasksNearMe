@@ -1,6 +1,7 @@
 import { createTranslator } from 'next-intl';
 import { DEFAULT_LOCALE, routes, type AppLocale } from '@/contracts';
 import { messagesFor, perLocale } from '@/i18n/catalog';
+import { localizedPath } from '@/shared/locale';
 import { formatMoney } from '@/shared/format';
 import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
 
@@ -91,7 +92,8 @@ ${last ? '' : `<table role="presentation" cellspacing="0" cellpadding="0" border
 export function renderWelcomeEmail(input: WelcomeEmailInput): RenderedEmail {
   const locale = input.locale ?? DEFAULT_LOCALE;
   const t = tFor(locale);
-  const url = (path: string) => `${input.appUrl}${path}`;
+  // In the reader's language (sweep MN12, messages pass J-M1).
+  const url = (path: string) => `${input.appUrl}${localizedPath(path, locale)}`;
   const offer = input.offer;
   const amount = offer ? formatMoney(offer.amountCents).replace(/\.00$/, '') : '';
   const onboarding = url(routes.app.helperOnboarding());

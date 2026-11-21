@@ -30,7 +30,7 @@ describe('the Not you? link', () => {
   });
 
   it('carries only the id and a signature, in an address that asks first', () => {
-    const url = contactRevertUrl('https://tasksnearme.example', claim, KEY);
+    const url = contactRevertUrl('https://tasksnearme.example', claim, { key: KEY });
     expect(url).toBe(`https://tasksnearme.example/account/not-me?token=${encodeURIComponent(contactRevertToken(claim, KEY))}`);
     expect(url).not.toContain('usr_maya');
   });

@@ -1,6 +1,7 @@
 import { createTranslator } from 'next-intl';
 import { DEFAULT_LOCALE, routes, type AppLocale } from '@/contracts';
 import { messagesFor, perLocale } from '@/i18n/catalog';
+import { localizedPath } from '@/shared/locale';
 import type { RenderedEmail } from '@/modules/accounts/emails/welcome';
 import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
 
@@ -11,7 +12,7 @@ const tFor = perLocale((locale) => createTranslator({ locale, messages: messages
 export function renderAccountDeletedNotice({ appUrl, locale = DEFAULT_LOCALE }: { appUrl: string; locale?: AppLocale }): RenderedEmail {
   const t = tFor(locale);
   // The public contact form (5.22): a deleted account can't sign in to reach support.
-  const helpUrl = `${appUrl}${routes.helpContact()}`;
+  const helpUrl = `${appUrl}${localizedPath(routes.helpContact(), locale)}`;
   const preheader = t('preheader');
   const body = `<tr><td class="card-pad" style="padding:40px 40px 36px;">
 <h1 class="h1 ink" style="margin:0;font-family:${EMAIL_DISPLAY_FONT};font-size:30px;line-height:36px;font-weight:800;letter-spacing:-0.8px;color:${EMAIL_COLORS.ink};">${esc(t('heading'))}</h1>

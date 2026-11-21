@@ -33,7 +33,7 @@ export async function noticeSignInAdded(deps: SignInAddedDeps, input: { userId: 
     if (!user || user.status === 'deleted' || !user.termsAcceptedAt || user.firstName.trim() === '') return false;
     const next = input.method.kind === 'passkey' ? `passkey:${input.method.name}` : input.method.kind;
     const link = await recordContactChange(deps.db, { userId: input.userId, kind: 'sign_in', previous: '', next }, now);
-    const rendered = renderSignInAddedNotice({ method: input.method, revertUrl: contactRevertUrl(deps.appUrl, link), appUrl: deps.appUrl, locale: localeOrDefault(user.locale) });
+    const rendered = renderSignInAddedNotice({ method: input.method, revertUrl: contactRevertUrl(deps.appUrl, link, { locale: localeOrDefault(user.locale) }), appUrl: deps.appUrl, locale: localeOrDefault(user.locale) });
     await deps.email.send({ to: user.email, subject: rendered.subject, text: rendered.text, html: rendered.html, tag: 'sign-in-added' });
     return true;
   } catch (error) {
