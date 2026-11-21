@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { CATEGORY_SLUGS, TASK_TITLE_MAX, type CategorySlug, type Mode } from '@/contracts';
 import { devHelpersOn } from '@/shared/dev-helpers';
 import { CATEGORY_GUIDE } from './category-guide';
-import { aiWriterFromEnv } from './fallback';
+import { aiWriterFromEnv } from './balancer';
 import { asPromptText, oneLine, type AiWriter } from './writer';
 import { createFakeTaskDrafter } from './task-drafter';
 
@@ -10,8 +10,8 @@ import { createFakeTaskDrafter } from './task-drafter';
  * AI search on the dashboard ("describe what you need", completion plan 9.9): someone's own words become search
  * filters (who's asking for what, the category, when, the neighborhood, a few keywords) and, for someone who needs
  * help, a short task title. The app then searches with those filters, so every result is a real row; AI never
- * answers the person directly. With `KIMI_API_KEY` or `ANTHROPIC_API_KEY` a model reads the words (Kimi first, Claude
- * when Kimi isn't working: `fallback.ts`; one structured answer); without either, development and tests use the
+ * answers the person directly. With a model's key a free model reads the words (one structured answer, through the
+ * load balancer: `balancer.ts`, Gemini, then Kimi, then Groq); without one, development and tests use the
  * rule-based matcher below, and production offers no AI search (the plan's gate says `ai_off`).
  */
 

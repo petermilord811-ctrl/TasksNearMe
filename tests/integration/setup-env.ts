@@ -5,5 +5,4 @@ try {
 }
 
 // Tests never call a model (docs/integration-points.md): without keys, the stand-ins answer.
-delete process.env.KIMI_API_KEY;
-delete process.env.ANTHROPIC_API_KEY;
+for (const key of ['GEMINI_API_KEY', 'KIMI_API_KEY', 'GROQ_API_KEY', 'ANTHROPIC_API_KEY']) delete process.env[key];

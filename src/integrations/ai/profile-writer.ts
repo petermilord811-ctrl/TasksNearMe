@@ -1,14 +1,14 @@
 import { z } from 'zod';
 import type { CategorySlug } from '@/contracts';
 import { CATEGORY_GUIDE } from './category-guide';
-import { aiWriterFromEnv } from './fallback';
+import { aiWriterFromEnv } from './balancer';
 import { AiUnavailableError, asPromptText, oneLine, type AiWriter } from './writer';
 import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * "Write it for me" on a helper's profile (onboarding and the editor): their notes, services, area, tools
  * and languages in; a headline and an "about me" out, for them to review before saving. A model with a
- * key (Kimi, then Claude: `fallback.ts`); a plain stand-in without one outside production.
+ * key (the load balancer over free models: `balancer.ts`); a plain stand-in without one outside production.
  */
 
 export const PROFILE_HEADLINE = { min: 10, max: 80 } as const;

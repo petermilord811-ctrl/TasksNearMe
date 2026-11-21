@@ -4,7 +4,7 @@ import { devSignIn } from './support/sign-in';
 /**
  * Writing help (UI-048): "Help me describe this" when posting, and "Write it for me" on a helper's profile
  * and offer message. The `tnm_ai_stand_in` cookie gets the rule-based stand-ins, so these tests never call
- * a model even where KIMI_API_KEY or ANTHROPIC_API_KEY is set. Nothing here saves anything.
+ * a model even where model keys (GEMINI_API_KEY, GROQ_API_KEY, KIMI_API_KEY) are set. Nothing here saves anything.
  */
 
 test.beforeEach(async ({ context, baseURL }) => {

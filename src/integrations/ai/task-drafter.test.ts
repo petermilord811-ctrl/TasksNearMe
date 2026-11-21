@@ -54,4 +54,22 @@ describe('AI task drafter', () => {
     expect(prompts[0]).toMatch(/^Language: Spanish$/m);
     expect(prompts[1]).toMatch(/^Language: English$/m);
   });
+
+  it("never sends a model the poster's phone, email or street address: they're masked in the prompt", async () => {
+    const prompts: string[] = [];
+    const writer: AiWriter = {
+      name: 'stub',
+      write: async ({ prompt }) => {
+        prompts.push(prompt);
+        return { title: 'Assemble two bookshelves', description: 'Two flat-pack bookshelves to put together.', details: {}, openQuestions: [] } as never;
+      },
+    };
+    await createAiTaskDrafter(writer).draft({
+      categorySlug: 'furniture-assembly',
+      text: 'two ikea bookshelves at 4401 SW 34th St Apt 12, text me at (352) 555-0199 or maya.r@example.com',
+      locale: 'en',
+    });
+    expect(prompts[0]).toContain('two ikea bookshelves at [hidden], text me at [hidden] or [hidden]');
+    expect(prompts[0]).not.toMatch(/4401|34th|555-0199|maya\.r|example\.com/);
+  });
 });

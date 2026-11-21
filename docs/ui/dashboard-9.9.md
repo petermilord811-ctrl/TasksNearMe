@@ -125,7 +125,7 @@ offers and bookings as compact lists you can filter, switch to cards or a map, a
   box with "N searches left this month" and the reset date, or the plan link); `consumeAiSearch(db, userId, now)` right
   before each search (checks and counts in one step). 5 searches a month free, 100 with a plan; months are calendar
   months in the person's market zone.
-- A model (Kimi first, Claude when Kimi isn't working: `src/integrations/ai/fallback.ts`; structured output) reads the
+- A free model through the load balancer (`src/integrations/ai/balancer.ts`: Gemini, then Kimi, then Groq; structured output) reads the
   words and returns the intent (get help or find work), the category, the keywords, when and the neighborhood if said,
   and a short task title. Without a key, development and tests use a rule-based stand-in with the same output; tests
   always use it (`tnm_ai_stand_in`).

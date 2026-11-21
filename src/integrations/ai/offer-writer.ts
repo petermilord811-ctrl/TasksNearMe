@@ -1,14 +1,14 @@
 import { z } from 'zod';
 import type { CategorySlug } from '@/contracts';
 import { CATEGORY_GUIDE } from './category-guide';
-import { aiWriterFromEnv } from './fallback';
+import { aiWriterFromEnv } from './balancer';
 import { AiUnavailableError, asPromptText, type AiWriter } from './writer';
 import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
  * "Write it for me" on a helper's offer: the message that goes with the price and start time. It reads the
  * task as the helper sees it (contact details already masked, never the address) and the helper's own
- * profile. A model with a key (Kimi, then Claude: `fallback.ts`); a plain stand-in without one outside production.
+ * profile. A free model with a key (the load balancer: `balancer.ts`); a plain stand-in without one outside production.
  */
 
 export interface OfferFacts {

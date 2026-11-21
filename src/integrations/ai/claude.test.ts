@@ -43,7 +43,9 @@ describe('the Claude writer', () => {
     expect(claudeWriterFromEnv({ ANTHROPIC_API_KEY: '  ' })).toBeNull();
     expect(claudeWriterFromEnv({ ANTHROPIC_API_KEY: 'test-key' })?.name).toBe(`claude:${DEFAULT_CLAUDE_MODEL}`);
     expect(claudeWriterFromEnv({ ANTHROPIC_API_KEY: 'test-key', ANTHROPIC_MODEL: 'claude-haiku-5-5' })?.name).toBe('claude:claude-haiku-5-5');
-    expect(createTaskDrafter({ ANTHROPIC_API_KEY: 'test-key' })?.name).toBe('claude:claude-opus-5-5');
+    // Paid: the balancer asks Claude only when AI_PROVIDERS names it.
+    expect(createTaskDrafter({ ANTHROPIC_API_KEY: 'test-key', AI_PROVIDERS: 'claude' })?.name).toBe('claude:claude-opus-5-5');
+    expect(createTaskDrafter({ ANTHROPIC_API_KEY: 'test-key', NODE_ENV: 'development' })?.name).toBe('rule-based');
     expect(createTaskDrafter({ NODE_ENV: 'development' })?.name).toBe('rule-based');
     expect(createTaskDrafter({ NODE_ENV: 'production' })).toBeNull();
   });

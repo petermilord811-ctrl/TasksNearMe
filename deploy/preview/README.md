@@ -122,12 +122,17 @@ A feature whose keys are empty in `preview.env` is refused, the same as in produ
 - **Google sign-in:** needs `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, plus the redirect URI
   `https://tasksnearme.com/api/auth/callback/google` registered with Google.
 
-Email (Resend), Claude (Anthropic) and address search (Mapbox) use the same keys as development.
+Email (Resend) and address search (Mapbox) use the same keys as development.
 
-Kimi doesn't: development's `KIMI_API_KEY` is NVIDIA's free trial key, whose terms keep it out of production and
-away from real people's data. Leave it out of `preview.env`, so Claude answers the writing help and AI search
-there. Even if it's copied in, a production build ignores it without `KIMI_IN_PRODUCTION=yes`. Add both only
-with a paid plan (docs/integration-points.md, "Writing help and AI search").
+**AI (writing help, AI search, the home page's assistant): free models only** (the owner, 2026-11-21). Without a
+model key these features are off in production, so put in `GEMINI_API_KEY` and `GROQ_API_KEY` (the same free keys as
+development) and list the other AI lines from `.env.example` empty: `AI_PROVIDERS`, `GEMINI_MODEL`,
+`GEMINI_BASE_URL`, `GEMINI_TIMEOUT_SECONDS`, `GROQ_MODEL`, `GROQ_BASE_URL`, `GROQ_TIMEOUT_SECONDS`, `KIMI_API_KEY`,
+`KIMI_MODEL`, `KIMI_BASE_URL`, `KIMI_TIMEOUT_SECONDS`, `KIMI_IN_PRODUCTION`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`.
+Kimi's key stays empty: development's is NVIDIA's free trial key, whose terms keep it out of production and away from
+real people's data, and even copied in, a production build ignores it without `KIMI_IN_PRODUCTION=yes` (set both only
+with a paid plan). Claude is paid and answers only if `AI_PROVIDERS` names it. Details: docs/integration-points.md,
+"Writing help and AI search".
 
 The Content Security Policy is enforced in production builds (development only reports it), so it applies
 here first. When the preview blocks a script, a frame or a connection, the browser console names the

@@ -2,13 +2,13 @@ import { z } from 'zod';
 import type { AiTaskDraft, AppLocale, CategorySlug, DetailFieldDef, TaskDetailsValue } from '@/contracts';
 import { CATEGORY_DETAIL_FIELDS, compactTaskDetails, TASK_DESCRIPTION_MAX, TASK_TITLE_MAX, validateTaskDetails } from '@/contracts';
 import { CATEGORY_GUIDE } from './category-guide';
-import { aiWriterFromEnv } from './fallback';
+import { aiWriterFromEnv } from './balancer';
 import { asPromptText, oneLine, type AiWriter } from './writer';
 import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
- * "Help me describe this" (blueprint 02 J1 step 2). With `KIMI_API_KEY` or `ANTHROPIC_API_KEY`, a model drafts it
- * (Kimi first, Claude when Kimi isn't working: `fallback.ts`); without either, development and tests use the
+ * "Help me describe this" (blueprint 02 J1 step 2). With a model's key, a free model drafts it (the load balancer:
+ * `balancer.ts`, Gemini, then Kimi, then Groq); without one, development and tests use the
  * rule-based drafter below, which turns plain words into the same structured draft, and production doesn't offer
  * it. Nothing is posted.
  */

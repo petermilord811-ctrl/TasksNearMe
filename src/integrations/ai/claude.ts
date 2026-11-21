@@ -4,8 +4,9 @@ import type { z } from 'zod';
 import { AiRefusedError, AiUnavailableError, type AiWriteInput, type AiWriter } from './writer';
 
 /**
- * Claude, through the official Anthropic SDK: it takes over the writing help and AI search when Kimi isn't working
- * (`fallback.ts`), and it alone reads ID and address documents (`id-document-reader.ts`, `document-reader.ts`).
+ * Claude, through the official Anthropic SDK. A paid API, so the load balancer (`balancer.ts`) asks it only when
+ * `AI_PROVIDERS` names it (the owner: no paid plan until the product is popular, 2026-11-21); the document readers use
+ * it only with `DOCUMENT_READER=claude`.
  *
  * The model is Claude Opus 5.5 at low effort (quick answers for a button in a form); `ANTHROPIC_MODEL`
  * overrides it, e.g. `claude-haiku-5-5` for lower cost. The key is `ANTHROPIC_API_KEY` (server only).

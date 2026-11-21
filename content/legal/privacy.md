@@ -23,6 +23,7 @@ To run bookings and payments, verify helpers, prevent fraud and abuse, provide s
 - Other people see your first name and last initial, never your last name.
 - Your exact address goes only to the helper you book, after the booking is confirmed, and is hidden again 48 hours after the task. We delete it 180 days after the last booking there, or after the task closes if nobody booked it.
 - We share data with service providers that help us run TasksNearMe (payments, identity checks, email and text messages, hosting), under contracts that limit their use.
+- When you ask for help writing (a task description, your profile or an offer message) or search with AI, what you typed goes to the AI services that write the answer, with phone numbers, emails, links and street addresses taken out first: Google's Gemini, whose free service lets Google use what it receives to improve its products (people at Google may review it), and Groq, which doesn't keep it. They never get your ID or proof of address.
 
 ## 4. Your choices {#choices}
 You can update your details, download your data, or ask us to delete your account from your account settings.
