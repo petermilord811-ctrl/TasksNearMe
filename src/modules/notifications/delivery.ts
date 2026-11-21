@@ -4,7 +4,7 @@ import type { AppLocale, NotificationTopic, NotificationType, NotificationView, 
 import { DEFAULT_LOCALE, localeOrDefault } from '@/contracts';
 import { messagesFor, perLocale } from '@/i18n/catalog';
 import { createEmailProvider, type EmailProvider } from '@/integrations/email';
-import { createSmsSender, type SmsSender } from '@/integrations/sms';
+import { createSmsSender, smsAvailable, type SmsSender } from '@/integrations/sms';
 import { users } from '@/modules/accounts/schema';
 import { marketTimeZones } from '@/modules/markets/time-zone';
 import { threadParticipants } from '@/modules/messaging/schema';
@@ -30,13 +30,17 @@ import { emailSuppressions, notificationDeliveries, notificationPreferences, not
 
 export interface DeliveryProviders {
   email: EmailProvider;
-  sms: SmsSender;
+  /**
+   * Texts; absent or null where texts are off: a production build without Twilio (`smsAvailable`). No text deliveries are
+   * made there, so none can fail run after run and page the staff on call (when things break, J-O5).
+   */
+  sms?: SmsSender | null;
   /** Notifications on devices; absent or null where push isn't set up. */
   push?: PushSender | null;
 }
 
-export function createDeliveryProviders(db: Db): DeliveryProviders {
-  return { email: createEmailProvider(db), sms: createSmsSender(db), push: pushSenderFromEnv() };
+export function createDeliveryProviders(db: Db, env: Record<string, string | undefined> = process.env): DeliveryProviders {
+  return { email: createEmailProvider(db, env), sms: smsAvailable(env) ? createSmsSender(db, env) : null, push: pushSenderFromEnv() };
 }
 
 const MINUTE = 60_000;
@@ -150,6 +154,7 @@ async function sendOne(db: Db, providers: DeliveryProviders, delivery: DeliveryR
       idempotencyKey: delivery.id,
     });
   } else {
+    if (!providers.sms) throw new Error('Texts are off here');
     await providers.sms.send({ to, text: content.sms });
   }
 }
@@ -273,8 +278,9 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
     const stale = await staleMessage(db, notification);
     // A receipt goes by email only (no rows for the other channels).
     for (const channel of channelsFor(notification.type as NotificationType)) {
-      // Push only where it's set up (no rows otherwise).
+      // Push only where it's set up, texts only where they're on (no rows otherwise).
       if (channel === 'push' && !providers.push) continue;
+      if (channel === 'sms' && !providers.sms) continue;
       const to = addressOf(person, channel);
       const plan = planDelivery({
         type: notification.type as NotificationType,
@@ -331,7 +337,9 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
     // waited; a message may have been read meanwhile.
     const stillOn = person && topic ? channelOn(person, topic, channel) : false;
     const bounced = channel === 'email' && person?.emailSuppressed === true;
-    const skipReason = !to ? missingAddressReason(channel) : bounced ? 'email_suppressed' : !stillOn ? 'preference_off' : await staleMessage(db, notification);
+    // A text from before texts were turned off (or Twilio's keys removed) is dropped, never counted as a failure.
+    const textsOff = channel === 'sms' && !providers.sms;
+    const skipReason = textsOff ? 'texts_off' : !to ? missingAddressReason(channel) : bounced ? 'email_suppressed' : !stillOn ? 'preference_off' : await staleMessage(db, notification);
     const [claimed] = await db
       .update(notificationDeliveries)
       .set(skipReason ? { status: 'skipped', reason: skipReason, sendAfter: null, updatedAt: now } : { status: 'sending', updatedAt: now })

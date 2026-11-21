@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { EmailProvider } from '@/integrations/email';
-import type { SmsSender } from '@/integrations/sms';
+import { smsAvailable, type SmsSender } from '@/integrations/sms';
 import { staffRoles, users } from '@/modules/accounts/schema';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
@@ -96,7 +96,9 @@ export async function pageOnCall(deps: PagerDeps, page: Page, now: Date): Promis
   const env = deps.env ?? process.env;
   const link = `${(env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '')}${page.path}`;
   const { phones, emails } = await onCallContacts(deps.db, env);
-  if (phones.length + emails.length === 0) console.error('[oncall] nobody to page: set ONCALL_PHONES and ONCALL_EMAILS, or give a staff member the trust_safety role');
+  // Where texts are off (a production build without Twilio), a page goes by email only: no text that's sure to fail.
+  const texts = smsAvailable(env);
+  if ((texts ? phones.length : 0) + emails.length === 0) console.error('[oncall] nobody to page: set ONCALL_PHONES and ONCALL_EMAILS, or give a staff member the trust_safety role');
   let sent = 0;
   let failed = 0;
   const attempt = async (send: () => Promise<void>) => {
@@ -108,9 +110,9 @@ export async function pageOnCall(deps: PagerDeps, page: Page, now: Date): Promis
       console.error('[oncall] page failed', error);
     }
   };
-  for (const to of phones) await attempt(() => deps.sms.send({ to, text: `TasksNearMe: ${page.subject}. ${page.text} ${link}` }));
+  for (const to of texts ? phones : []) await attempt(() => deps.sms.send({ to, text: `TasksNearMe: ${page.subject}. ${page.text} ${link}` }));
   for (const to of emails) await attempt(() => deps.email.send({ to, subject: `[On call] ${page.subject}`, text: `${page.text}\n\nOpen it: ${link}`, tag: 'oncall-page' }));
-  const metadata = { subject: page.subject, sent, failed, phones: phones.length, emails: emails.length, ...(page.reportedBy ? { reportedBy: page.reportedBy } : {}) };
+  const metadata = { subject: page.subject, sent, failed, phones: phones.length, emails: emails.length, ...(texts ? {} : { textsOff: true }), ...(page.reportedBy ? { reportedBy: page.reportedBy } : {}) };
   await deps.db.insert(auditLog).values({
     id: newId('aud'),
     at: now.toISOString(),
@@ -118,7 +120,7 @@ export async function pageOnCall(deps: PagerDeps, page: Page, now: Date): Promis
     actorRole: 'system',
     // Reached nobody: kept with its words (never personal details) for `retryFailedPages`, and not counted as paged.
     ...(sent === 0
-      ? { action: 'oncall.page_failed', targetType: 'page', targetId: page.path, metadata: { ...metadata, text: page.text, ...(phones.length + emails.length === 0 ? { reason: 'no_contacts' } : {}) } }
+      ? { action: 'oncall.page_failed', targetType: 'page', targetId: page.path, metadata: { ...metadata, text: page.text, ...(phones.length + emails.length === 0 ? { reason: 'no_contacts' } : !texts && emails.length === 0 ? { reason: 'texts_off' } : {}) } }
       : { action: 'oncall.paged', targetType: 'page', targetId: page.path, metadata }),
   });
   return { sent, failed };

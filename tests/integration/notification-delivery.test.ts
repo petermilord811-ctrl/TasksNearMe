@@ -270,4 +270,28 @@ describe('notification delivery', () => {
     expect(await shortLinkPath(db, 'AAAAAAAAAA')).toBeNull();
     expect(await shortLinkPath(db, 'short')).toBeNull();
   });
+
+  it('makes no texts where texts are off (no Twilio in production), and drops an older one without counting it (J-O5)', async () => {
+    sent = [];
+    const off: DeliveryProviders = { email: providers.email, sms: null };
+    // Monday Dec 7, 2026, 10 am in Austin: no quiet hours.
+    const when = new Date('2026-12-07T16:00:00.000Z');
+    const confirmed = await notify(PERSON, 'booking_confirmed', when);
+    const first = await deliverNotifications(db, when, off, 1_000);
+    const rows = await deliveriesOf(confirmed);
+    expect(rows.email).toMatchObject({ status: 'sent' });
+    expect(rows.sms).toBeUndefined();
+    expect(first.outcomes.sms).toEqual({ sent: 0, failed: 0 });
+    expect(mineSent().filter((item) => item.channel === 'sms')).toEqual([]);
+
+    // A text made while texts were on, failed and due again: dropped, and never a failure for the outage watch.
+    const older = await notify(PERSON, 'booking_confirmed', when);
+    await db.insert(notificationDeliveries).values([
+      { id: 'dlv_textsoff_email', notificationId: older, userId: PERSON, channel: 'email', status: 'sent', sentAt: when, attempts: 1, createdAt: when, updatedAt: when },
+      { id: 'dlv_textsoff_sms', notificationId: older, userId: PERSON, channel: 'sms', status: 'failed', reason: 'Texts need Twilio in production', attempts: 1, sendAfter: when, createdAt: when, updatedAt: when },
+    ]);
+    const second = await deliverNotifications(db, new Date(when.getTime() + 60_000), off, 1_000);
+    expect((await deliveriesOf(older)).sms).toMatchObject({ status: 'skipped', reason: 'texts_off' });
+    expect(second.outcomes.sms).toEqual({ sent: 0, failed: 0 });
+  });
 });

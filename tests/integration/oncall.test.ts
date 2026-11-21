@@ -180,4 +180,16 @@ describe('a page that reaches nobody (when things break, 2026-11-21)', () => {
     const failures = await db.select({ id: auditLog.id }).from(auditLog).where(and(eq(auditLog.targetId, other.path), eq(auditLog.action, 'oncall.page_failed')));
     expect(failures).toHaveLength(PAGE_ATTEMPTS);
   });
+
+  it('pages by email only where texts are off (no Twilio in production): no text that would fail', async () => {
+    const { pageOnCall } = await import('@/modules/oncall/pager');
+    texts = [];
+    emails = [];
+    const byEmail = { ...page, path: '/admin/cases/case_oc_texts_off' };
+    expect(await pageOnCall({ db, sms, email, env: { ...env, NODE_ENV: 'production' } }, byEmail, t0)).toMatchObject({ failed: 0 });
+    expect(texts).toEqual([]);
+    expect(emails.map((message) => message.to)).toContain('oncall@example.test');
+    const [paged] = await db.select({ metadata: auditLog.metadata }).from(auditLog).where(and(eq(auditLog.targetId, byEmail.path), eq(auditLog.action, 'oncall.paged')));
+    expect(paged?.metadata).toMatchObject({ textsOff: true });
+  });
 });
