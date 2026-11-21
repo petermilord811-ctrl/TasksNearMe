@@ -14,9 +14,11 @@ describe('how a person shows to others (J-PR15)', () => {
     expect(shownPerson(gone)).toEqual({ displayName: 'Deleted account', initials: 'DA', deleted: true });
   });
 
-  it('looks the words up only when someone was deleted, and says them in English with no page in reach', async () => {
+  it("looks the words up only when someone was deleted, in the reader's language when given, English otherwise", async () => {
     expect(await deletedLabelFor([maya])).toBeUndefined();
     expect(await deletedLabelFor([maya, gone])).toBe('Deleted account');
-    expect(await deletedAccountLabel()).toBe('Deleted account');
+    expect(await deletedLabelFor([gone], 'es')).toBe('Cuenta eliminada');
+    expect(deletedAccountLabel()).toBe('Deleted account');
+    expect(deletedAccountLabel('es')).toBe('Cuenta eliminada');
   });
 });
