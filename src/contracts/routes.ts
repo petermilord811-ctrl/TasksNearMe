@@ -94,6 +94,13 @@ export const routes = {
   helperProfile: (handle: string) => `/helpers/${enc(handle)}`,
   howItWorks: () => '/how-it-works',
   becomeAHelper: () => '/become-a-helper',
+  /**
+   * The post form for people not signed in yet (visitor-to-first-post walk, J-V5): the same wizard, kept on the
+   * device. "Post task" asks for the account, then the app's post form opens on its review step with the draft.
+   * Signed-in people are sent to `app.newTask`. Never indexed.
+   */
+  postTask: (query: { category?: CategorySlug; title?: string; describe?: string; template?: string } = {}) =>
+    withQuery('/post', { category: query.category, title: query.title, describe: query.describe, template: query.template }),
   pricing: () => '/pricing',
   trustAndSafety: () => '/trust-and-safety',
   /** Who runs TasksNearMe and what it stands for (docs/seo/PLAN.md §11): the organization's page for people and search. */
@@ -141,8 +148,9 @@ export const routes = {
     /** `again`: "Post again" (plan 4.2): one of the poster's own finished tasks, repeated (`PostTaskPageData.repeat`). */
     /** `template`: start from one of the examples (`TASK_TEMPLATE_IDS`), as a page's "Post a task like this". */
     /** `fromPost`: "Ask for help" (plan 9.10): the author's own community post, filled in by the server and linked once posted. */
-    newTask: (query: { category?: CategorySlug; title?: string; describe?: string; ai?: boolean; again?: string; template?: string; fromPost?: string } = {}) =>
-      withQuery('/app/tasks/new', { category: query.category, title: query.title, describe: query.describe, ai: query.ai ? '1' : undefined, again: query.again, template: query.template, from: query.fromPost }),
+    /** `handoff`: the code of a draft made signed out at `postTask` (J-V5): the form takes it over and opens on review. */
+    newTask: (query: { category?: CategorySlug; title?: string; describe?: string; ai?: boolean; again?: string; template?: string; fromPost?: string; handoff?: string } = {}) =>
+      withQuery('/app/tasks/new', { category: query.category, title: query.title, describe: query.describe, ai: query.ai ? '1' : undefined, again: query.again, template: query.template, from: query.fromPost, handoff: query.handoff }),
     task: (taskId: string) => `/app/tasks/${enc(taskId)}`,
     offer: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}`,
     confirmOffer: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}/confirm`,

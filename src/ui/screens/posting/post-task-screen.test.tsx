@@ -8,6 +8,7 @@ import { addressSuggestions, aiDeskDraft, deskBreakdown, deskDraft, fakeHandler,
 import messages from '../../../../messages/en/ui';
 import { PostTaskScreen, type PostTaskScreenProps } from './post-task-screen';
 import { draftStorageKey } from './draft-storage';
+import { HANDOFF_DRAFT_KEY } from '@/ui/lib/personal-drafts';
 
 const navigation = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
@@ -431,5 +432,35 @@ describe('a suggested category', () => {
     await user.type(screen.getByRole('textbox', { name: 'Not sure which one? Describe what you need' }), 'fix a leaking faucet');
     expect(screen.getByText(/need a licensed pro/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Use / })).not.toBeInTheDocument();
+  });
+});
+
+describe('posting before an account (J-V5)', () => {
+  const signedOut = { ...postTaskPageData, guest: true as const, botCheck: undefined };
+
+  it('keeps the draft on this device at Post task and opens sign-up, whose destination carries its code', async () => {
+    const user = userEvent.setup();
+    const { handlers } = mount({ data: signedOut, initialStep: 'review' });
+    expect(screen.getByText(messages.postTask.guest.reviewNote)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Post task' }));
+    await waitFor(() => expect(navigation.push).toHaveBeenCalledTimes(1));
+    expect(handlers.onPost).not.toHaveBeenCalled();
+    const waiting = JSON.parse(sessionStorage.getItem(HANDOFF_DRAFT_KEY)!) as { code: string; draft: { values: TaskDraftInput; step: string } };
+    expect(waiting.draft).toMatchObject({ step: 'review', values: { title: deskDraft.title, description: deskDraft.description } });
+    expect(navigation.push).toHaveBeenCalledWith(`/sign-up?next=${encodeURIComponent(`/app/tasks/new?handoff=${waiting.code}`)}`);
+  });
+
+  it('leaves photos for after the account, and says so where they would be', () => {
+    mount({ data: signedOut, initialStep: 'describe' });
+    expect(screen.getByText(messages.postTask.guest.photosLater)).toBeInTheDocument();
+    expect(screen.queryByText(messages.postTask.photos.label)).not.toBeInTheDocument();
+  });
+
+  it('takes over a draft carried through sign-up with its code, and opens it on review', async () => {
+    sessionStorage.setItem(HANDOFF_DRAFT_KEY, JSON.stringify({ code: 'c0de', draft: { values: deskDraft, step: 'review', address: addressSuggestions[0] } }));
+    mount({ data: { ...postTaskPageData, handoff: 'c0de' }, persistDraft: true, initialValues: undefined, initialAddress: undefined });
+    expect(await screen.findByText('Step 7 of 7 · Review and post')).toBeInTheDocument();
+    expect(screen.getAllByText(deskDraft.title).length).toBeGreaterThan(0);
+    expect(sessionStorage.getItem(HANDOFF_DRAFT_KEY)).toBeNull();
   });
 });

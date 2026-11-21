@@ -114,6 +114,8 @@ const PUBLIC: Record<string, string> = {
   'notifications/unsubscribe-actions#unsubscribeByLinkAction': 'the unsubscribe page, with the email’s signed token',
   'notifications/unsubscribe-actions#resubscribeByLinkAction': 'undoing it on the same page, with the same token',
   'verification/actions#onboardingRefreshStatus': 'without a session it only refreshes the page (reads and writes nothing)',
+  'tasks/guest-actions#searchTaskAddressesSignedOut': 'the signed-out post form’s address search (/post, J-V5): 60 per 10 minutes per address, the default market only',
+  'tasks/guest-actions#quoteTaskPriceSignedOut': 'the signed-out post form’s price quote (/post, J-V5): 120 per 10 minutes per address; reads the published policy only',
 };
 
 const ROOT = path.resolve(__dirname, '../..');

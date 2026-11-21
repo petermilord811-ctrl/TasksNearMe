@@ -58,7 +58,7 @@ describe('PublicShell', () => {
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', routes.signIn());
     // Creating an account has its own page (completion plan 9.6).
     expect(screen.getByRole('link', { name: 'Sign up' })).toHaveAttribute('href', routes.signUp());
-    expect(screen.getByRole('link', { name: 'Post a task' })).toHaveAttribute('href', routes.signIn(routes.app.newTask()));
+    expect(screen.getByRole('link', { name: 'Post a task' })).toHaveAttribute('href', routes.postTask());
     await userEvent.click(screen.getByRole('button', { name: 'Open menu' }));
     const menu = within(screen.getByRole('dialog', { name: 'Explore TasksNearMe' }));
     expect(menu.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', routes.signIn());
@@ -82,7 +82,7 @@ describe('PublicShell', () => {
   });
 
   it.each([
-    [publicViewer, 'Sign in', routes.signIn(), routes.signIn(routes.app.newTask())],
+    [publicViewer, 'Sign in', routes.signIn(), routes.postTask()],
     [mayaShell, 'Go to the app', routes.app.home(), routes.app.newTask()],
     [rileyStaff, 'Staff area', routes.admin.home(), routes.app.newTask()],
   ] as const)('uses the correct account destination and posting CTA for $0.kind', (viewer, accountLabel, accountHref, postHref) => {

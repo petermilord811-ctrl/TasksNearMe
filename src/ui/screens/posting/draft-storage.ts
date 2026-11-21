@@ -1,6 +1,29 @@
 import { CATEGORY_SLUGS, currentPostTaskStep, type AddressSuggestion, type PostTaskStep, type TaskDraftInput } from '@/contracts';
+import { HANDOFF_DRAFT_KEY, storedHandoffCode } from '@/ui/lib/personal-drafts';
 
 export const draftStorageKey = (market: string) => `tasksnearme:post-task:${market}:v1`;
+
+/**
+ * Signed out at "Post task" (J-V5): the draft waits on this device under a one-time code while its person gets an
+ * account (personal-drafts.ts keeps it on that handoff's sign-in and sign-up pages, and clears it anywhere else).
+ */
+export function storeHandoffDraft(storage: Pick<Storage, 'setItem'>, code: string, draft: StoredTaskDraft): void {
+  storage.setItem(HANDOFF_DRAFT_KEY, JSON.stringify({ code, draft }));
+}
+
+/**
+ * Signed in, with the code from the destination: the waiting draft becomes this form's draft (under `key`) on its review
+ * step, and stops waiting. Another code, or none waiting: nothing happens. Returns whether it took one over.
+ */
+export function adoptHandoffDraft(storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>, code: string, key: string): boolean {
+  const raw = storage.getItem(HANDOFF_DRAFT_KEY);
+  if (!raw || storedHandoffCode(raw) !== code) return false;
+  const draft = readStoredDraft(JSON.stringify((JSON.parse(raw) as { draft?: unknown }).draft ?? null));
+  storage.removeItem(HANDOFF_DRAFT_KEY);
+  if (!draft) return false;
+  storage.setItem(key, JSON.stringify({ ...draft, step: 'review' }));
+  return true;
+}
 
 /** `requestKey`: this post's key (bad connections pass, J-N1), kept with the draft so a repeat after a reload still has it. */
 export interface StoredTaskDraft { values: TaskDraftInput; step: PostTaskStep; address?: AddressSuggestion; requestKey?: string }

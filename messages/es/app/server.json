@@ -5,6 +5,10 @@
     "description": "Con {name}. Detalles y dirección: {url}"
   },
   "meta": {
+    "post": {
+      "title": "Publicar una tarea",
+      "description": "Describe la tarea, elige un horario y un precio, y publícala para los ayudantes cercanos."
+    },
     "home": {
       "title": "TasksNearMe: ayuda de confianza cerca de ti",
       "description": "Haz tus tareas de todos los días con ayudantes verificados cerca de ti: armado de muebles, mudanzas, jardín, limpieza y ayuda con computadoras. Ve el precio completo antes de reservar. Ya en {market}.",

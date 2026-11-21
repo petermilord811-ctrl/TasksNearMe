@@ -5,6 +5,10 @@
     "description": "With {name}. Details and the address: {url}"
   },
   "meta": {
+    "post": {
+      "title": "Post a task",
+      "description": "Describe the task, choose a time and a price, and post it to helpers nearby."
+    },
     "home": {
       "title": "TasksNearMe: tasks near me, done by trusted local helpers",
       "description": "Get everyday tasks done by verified helpers near you: furniture assembly, moving, yard work, cleaning, and computer help. See the full price before you book. Now in {market}.",

@@ -4,7 +4,8 @@ import { botCheckForPage } from '@/modules/accounts/bot-check';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
-import { CATEGORY_SLUGS, findTaskTemplate, isTaskTemplateId, routes, TASK_DESCRIPTION_MAX, TASK_TITLE_MAX, type CategorySlug } from '@/contracts';
+import { findTaskTemplate, isTaskTemplateId, routes, TASK_DESCRIPTION_MAX, TASK_TITLE_MAX } from '@/contracts';
+import { carriedWords, handoffCode } from '@/modules/tasks/carried-words';
 import { redeemClientInvite } from '@/modules/beta/actions';
 import { clientInviteFor } from '@/modules/beta/server';
 import { communityPostForTask } from '@/modules/community/service';
@@ -42,16 +43,10 @@ function PostTaskPage({ searchParams }: PageProps<'/[locale]/app/tasks/new'>) {
 
 async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/new'>, 'searchParams'>) {
   const [viewer, search] = await Promise.all([getViewer(), searchParams]);
-  const category = typeof search.category === 'string' ? search.category : undefined;
-  const initialCategory = category && (CATEGORY_SLUGS as readonly string[]).includes(category) ? (category as CategorySlug) : undefined;
-  // The person's own words from the landing page's assistant, or the AI draft they chose there ("Use this draft"):
-  // plain text, spaces tidied, line breaks kept, within the description's limit.
-  const describe =
-    typeof search.describe === 'string'
-      ? search.describe.replace(/\r\n?/g, '\n').replace(/[^\S\n]+/g, ' ').replace(/ ?\n ?/g, '\n').replace(/\n{3,}/g, '\n\n').trim().slice(0, TASK_DESCRIPTION_MAX)
-      : '';
-  // The AI draft's title, when they used one.
-  const title = typeof search.title === 'string' ? search.title.replace(/\s+/g, ' ').trim().slice(0, TASK_TITLE_MAX) : '';
+  // The person's own words from the landing page's assistant (or the AI draft they chose there), a title, the service.
+  const { initialCategory, title, describe } = carriedWords(search);
+  // A draft made signed out on this device (/post, J-V5), carried through sign-up under this code.
+  const handoff = handoffCode(search.handoff);
   // "Draft it with AI" on the landing page: draft from those words as the wizard opens.
   const wantsAiDraft = search.ai === '1' && Boolean(describe);
   // "Post again" (plan 4.2): one of the person's own finished tasks.
@@ -69,8 +64,13 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
     ...(again ? { again } : {}),
     ...(templateId ? { template: templateId } : {}),
     ...(fromPostId ? { fromPost: fromPostId } : {}),
+    ...(handoff ? { handoff } : {}),
   });
-  if (viewer.kind !== 'user') redirect(routes.signIn(here));
+  // Signed out: the same form at /post, with the same words (J-V5). Its "Post task" asks for the account. Post again
+  // and a community post are the person's own, so those need signing in first.
+  if (viewer.kind !== 'user') {
+    redirect(again || fromPostId ? routes.signIn(here) : routes.postTask({ ...(initialCategory ? { category: initialCategory } : {}), ...(title ? { title } : {}), ...(describe ? { describe } : {}), ...(templateId ? { template: templateId } : {}) }));
+  }
   const userId = viewer.user.id;
   // A market opening soon takes clients by invitation (J-V8): that step first, before the phone and the form.
   const clientInvite = await clientInviteFor(db, userId);
@@ -131,6 +131,7 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
         ...(title ? { initialTitle: title } : postTitle ? { initialTitle: postTitle } : {}),
         ...(describe ? { initialDescription: describe } : postWords ? { initialDescription: postWords } : {}),
         ...(fromPost ? { fromPost: { id: fromPost.id, title: fromPost.title } } : {}),
+        ...(handoff ? { handoff } : {}),
       }}
       handlers={{
         onDraftWithAi: draftTaskWithAi,

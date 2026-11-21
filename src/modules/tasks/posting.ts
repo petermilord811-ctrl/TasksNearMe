@@ -111,7 +111,25 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
     const poster = await loadPoster(userId);
     if (!poster) return null;
     const market = await marketFor(poster.homeMarketId);
-    if (!market) return null;
+    return market ? pageDataFor(market) : null;
+  }
+
+  /**
+   * The same for someone not signed in yet (/post, J-V5): the market new accounts start in, open (prelaunch or
+   * live). The draft stays on their device until they have an account.
+   */
+  async function guestPageData(marketSlug: string): Promise<PostTaskPageData | null> {
+    const market = await openMarketBySlug(marketSlug);
+    const data = market ? await pageDataFor(market) : null;
+    return data ? { ...data, guest: true } : null;
+  }
+
+  async function openMarketBySlug(marketSlug: string) {
+    const [market] = await db.select().from(markets).where(and(eq(markets.slug, String(marketSlug)), inArray(markets.status, ['prelaunch', 'live']))).limit(1);
+    return market ?? null;
+  }
+
+  async function pageDataFor(market: NonNullable<Awaited<ReturnType<typeof marketFor>>>): Promise<PostTaskPageData | null> {
     const [policy, categoryViews, marketView] = await Promise.all([
       getPublishedPolicy(market.id, db),
       listCategoryViews(market.id, db),
@@ -137,7 +155,17 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
     if (query.trim().length < 3) return [];
     const poster = await loadPoster(userId);
     const market = poster ? await marketFor(poster.homeMarketId) : null;
-    if (!market) return [];
+    return market ? searchAddressesNear(market, query) : [];
+  }
+
+  /** The address search for someone not signed in yet (/post, J-V5), around the market they draft in. */
+  async function guestSearchAddresses(marketSlug: string, query: string): Promise<AddressSuggestion[]> {
+    if (query.trim().length < 3) return [];
+    const market = await openMarketBySlug(marketSlug);
+    return market ? searchAddressesNear(market, query) : [];
+  }
+
+  async function searchAddressesNear(market: NonNullable<Awaited<ReturnType<typeof marketFor>>>, query: string): Promise<AddressSuggestion[]> {
     const marketAreas = await db.select().from(areas).where(and(eq(areas.marketId, market.id), neighborhoodsOnly()));
     const places = await geocoder.search(query, { near: { lat: market.centerLat, lng: market.centerLng } });
     return Promise.all(places.map(async (place): Promise<AddressSuggestion> => {
@@ -448,7 +476,7 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
     return { ok: true, taskId, slug };
   }
 
-  return { pageData, searchAddresses, post, repeat };
+  return { pageData, guestPageData, searchAddresses, guestSearchAddresses, post, repeat };
 }
 
 export type TaskPosting = ReturnType<typeof createTaskPosting>;

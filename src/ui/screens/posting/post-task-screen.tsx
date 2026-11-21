@@ -23,7 +23,7 @@ import { LocationStep } from './location-step';
 import { ScheduleStep } from './schedule-step';
 import { BudgetStep } from './budget-step';
 import { ReviewStep } from './review-step';
-import { draftStorageKey, readStoredDraft } from './draft-storage';
+import { adoptHandoffDraft, draftStorageKey, readStoredDraft, storeHandoffDraft } from './draft-storage';
 
 export interface PostTaskScreenProps {
   data: PostTaskPageData;
@@ -168,6 +168,9 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
       setRestoringPhotos(false); setPhotoRestoreFailed(false);
       if (persistDraft) {
         try {
+          // A task drafted signed out on this device, carried through sign-up under this code (J-V5): it becomes this
+          // form's draft, on its review step.
+          if (data.handoff) adoptHandoffDraft(sessionStorage, data.handoff, key);
           const raw = sessionStorage.getItem(key);
           const saved = raw ? readStoredDraft(raw) : undefined;
           if (saved) {
@@ -196,7 +199,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
       setReady(true);
     });
     return () => { active = false; };
-  }, [getValues, key, persistDraft, reset]);
+  }, [data.handoff, getValues, key, persistDraft, reset]);
 
   // Nothing left to load once the person removed the saved photos still loading (the query may still be under way).
   const loadingSavedPhotos = restoringPhotos && (values.photoIds ?? []).length > 0;
@@ -312,8 +315,21 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
   // The bot check before "Post": its answer goes with the task, and a turned-down check shows by the widget.
   const check = useBotCheck(data.botCheck, 'post_task');
 
+  /**
+   * Signed out (/post, J-V5): the draft waits on this device under a one-time code, and sign-up opens with the app's
+   * form as its destination, which takes the draft over on its review step. Without storage the draft can't wait.
+   */
+  function handOver(valuesToPost: TaskDraftInput) {
+    const code = newRequestKey();
+    try { storeHandoffDraft(sessionStorage, code, { values: valuesToPost, step: 'review', ...(addressRef.current ? { address: addressRef.current } : {}) }); }
+    catch { setStorageFailed(true); return; }
+    posted.current = true;
+    router.push(routes.signUp(routes.app.newTask({ handoff: code })));
+  }
+
   async function post(valuesToPost: TaskDraftInput) {
     if (lock.current || posted.current) return;
+    if (data.guest) { handOver(valuesToPost); return; }
     lock.current = true; setPending(true); setResult(undefined); setInvalid(false); clearErrors();
     let next: ActionResult;
     // The key goes into the stored draft before the post leaves, so even a reload after a lost answer repeats it.
@@ -347,6 +363,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
         <h1 ref={heading} tabIndex={-1} className="font-heading text-2xl font-bold outline-none md:text-3xl">{t('title')}</h1>
         {/* The intro on the first step only: after that, every step's form starts right under the progress. */}
         {index === 0 && <p className="text-muted-foreground">{t('intro')}</p>}
+        {index === 0 && data.guest && <p className="text-sm text-muted-foreground">{t('guest.intro')}</p>}
         <ol aria-label={t('navigation')} className="grid grid-cols-7 gap-1.5">
           {POST_TASK_STEPS.map((item, itemIndex) => <li key={item} aria-current={item === step ? 'step' : undefined} className="min-w-0">
             <span className={cn('block h-1.5 rounded-full transition-colors duration-500 ease-[var(--ease-out)]', itemIndex < index ? 'bg-primary/70' : itemIndex === index ? 'bg-primary' : 'bg-foreground/[0.08] dark:bg-white/[0.1]')} />
@@ -380,7 +397,11 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
         {step === 'describe' && <div className="space-y-8">
           <DescribeStep data={data} handlers={handlers} initialSuggestion={initialSuggestion} autoDraft={autoDraft} onAutoDraftStarted={autoDraftStarted} />
           {/* Photos under the words, one step fewer (J-V5): optional, and helpers price better with them. */}
-          <div className="border-t border-foreground/[0.07] pt-6 dark:border-white/[0.06]"><PhotosStep data={data} handlers={handlers} photos={photos} onPhotosChange={setPhotos} onBusyChange={setUploading} /></div>
+          <div className="border-t border-foreground/[0.07] pt-6 dark:border-white/[0.06]">
+            {data.guest
+              ? <p className="flex items-start gap-2 rounded-2xl bg-secondary/70 p-4 text-sm text-foreground dark:bg-secondary/40"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('guest.photosLater')}</p>
+              : <PhotosStep data={data} handlers={handlers} photos={photos} onPhotosChange={setPhotos} onBusyChange={setUploading} />}
+          </div>
         </div>}
         {step === 'details' && values.categorySlug && <DetailsStep category={values.categorySlug} />}
         {step === 'where' && <LocationStep data={data} handlers={handlers} selectedAddress={address} onAddressChange={setAddress} initialSuggestions={initialSuggestions} />}
@@ -388,6 +409,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
         {step === 'budget' && <BudgetStep data={data} />}
         {step === 'review' && <ReviewStep data={data} handlers={handlers} values={values} photos={photos} selectedAddress={address} />}
         {step === 'review' && data.botCheck && <BotCheckField check={check} result={result} />}
+        {step === 'review' && data.guest && <p className="rounded-2xl bg-secondary/70 p-4 text-sm text-foreground dark:bg-secondary/40">{t('guest.reviewNote')}</p>}
       </fieldset>
       <footer ref={barRef} className="app-glass sticky bottom-app-navigation z-20 -mx-4 mt-2 flex items-center gap-3 border-t border-foreground/[0.07] px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-white/[0.06]">
         <Button type="button" variant="outline" disabled={index === 0 || pending || checking || uploading || !!result?.ok} onClick={() => {

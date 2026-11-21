@@ -36,6 +36,7 @@ import { db } from '@/platform/db/client';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { fileStorage, homeMarketIdOf, sampleAddressTaskPosting, taskDrafter, taskPosting } from './server';
 import { clientInviteMarket } from '@/modules/beta/server';
+import { isPricingInput } from './pricing-input';
 
 /** Server Actions behind PostTaskScreen (src/contracts/posting.ts, PostTaskHandlers). */
 
@@ -106,20 +107,6 @@ export async function uploadTaskPhoto(formData: FormData): Promise<PhotoUploadRe
   const file = formData.get('file');
   if (!(file instanceof File)) return { ok: false, code: 'unsupported_type' };
   return storePhoto({ db, storage: fileStorage }, { userId, kind: 'task_photo', file });
-}
-
-function isPricingInput(value: unknown): value is PricingInput {
-  const budget = value as PricingInput | undefined;
-  if (!budget) return false;
-  if (budget.type === 'fixed') return Number.isInteger(budget.priceCents) && budget.priceCents > 0;
-  return (
-    budget.type === 'hourly' &&
-    Number.isInteger(budget.rateCents) &&
-    budget.rateCents > 0 &&
-    budget.hoursCap > 0 &&
-    budget.hoursCap <= 24 &&
-    budget.estimatedHours > 0
-  );
 }
 
 /** The poster's price breakdown for the review step, from the fee engine and the market policy. */

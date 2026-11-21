@@ -279,6 +279,14 @@ export interface PostTaskPageData {
    * never shows up for someone else on a shared device. Use it instead of a fixed key.
    */
   draftStorageKey?: string;
+  /**
+   * Signed out, at `routes.postTask()` (visitor-to-first-post walk, J-V5): the same steps without the account's
+   * tools (no photos, no AI). "Post task" keeps the draft on this device under a one-time code and opens sign-up,
+   * whose destination (`routes.app.newTask({ handoff })`) takes the draft over.
+   */
+  guest?: true;
+  /** Signed in, from `?handoff=`: the code of a draft made signed out on this device. The form takes it over and opens on review. */
+  handoff?: string;
 }
 
 /**

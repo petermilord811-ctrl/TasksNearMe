@@ -1,6 +1,5 @@
 import { getSessionCookie } from 'better-auth/cookies';
 import { NextResponse, type NextRequest } from 'next/server';
-import { routes } from '@/contracts';
 import { DEFAULT_LOCALE, isAppLocale } from '@/contracts/locale';
 import { proxySearchIndexing } from '@/modules/seo/proxy-search-indexing';
 import { isSamplePage } from '@/modules/seo/sample-pages';
@@ -10,6 +9,7 @@ import { contentSecurityPolicy, cspHeaderName } from '@/shared/csp';
 import { E2E_BUILD } from '@/shared/dev-helpers';
 import { samplesHiddenInThisBuild } from '@/shared/sample-data';
 import { robotsHeaderFor } from '@/shared/search-indexing';
+import { signedOutAppDestination } from '@/shared/signed-out-app';
 import { taskHubRedirect } from '@/shared/task-hub';
 
 /**
@@ -68,7 +68,8 @@ export async function proxy(request: NextRequest) {
   if (hub) {
     response = NextResponse.redirect(new URL(explicit ? localizedPath(hub, explicit.locale) : hub, request.url), 308);
   } else if (isAppPath(path) && !signedIn) {
-    response = NextResponse.redirect(new URL(routes.signIn(`${path}${search}`), request.url));
+    // The post form goes to /post for someone without an account (J-V5); everything else signs in and comes back.
+    response = NextResponse.redirect(new URL(signedOutAppDestination(path, request.nextUrl.searchParams), request.url));
   } else if (explicit?.locale === DEFAULT_LOCALE) {
     // English has no prefix, for good: a permanent redirect, so search engines keep the plain address (with a 307,
     // Google kept /en/become-a-helper as a page of its own; every page's language switch links to its /en/ copy).

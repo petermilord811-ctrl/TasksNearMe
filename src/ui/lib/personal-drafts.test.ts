@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { forgetPersonalDrafts } from './personal-drafts';
+import { handoffInDestination } from './forget-personal-drafts';
+import { forgetPersonalDrafts, HANDOFF_DRAFT_KEY } from './personal-drafts';
 
 /** A Storage stand-in: what's left after forgetting. */
-function storage(keys: string[]) {
-  const items = new Map(keys.map((key) => [key, '{}']));
+function storage(keys: string[], values: Record<string, string> = {}) {
+  const items = new Map(keys.map((key) => [key, values[key] ?? '{}']));
   return {
     get length() { return items.size; },
     key: (index: number) => [...items.keys()][index] ?? null,
+    getItem: (key: string) => items.get(key) ?? null,
     removeItem: (key: string) => { items.delete(key); },
     keys: () => [...items.keys()].sort(),
   };
@@ -26,6 +28,26 @@ describe('forgetPersonalDrafts (sweep 2026-11-20)', () => {
     ]);
     forgetPersonalDrafts(tab);
     expect(tab.keys()).toEqual(['tnm-map-intro', 'tnm:assistant:help:v1']);
+  });
+
+  it("keeps a task drafted signed out only on its own handoff's pages, and clears it anywhere else (J-V5)", () => {
+    const waiting = { [HANDOFF_DRAFT_KEY]: JSON.stringify({ code: 'c0de', draft: {} }) };
+    const own = storage([HANDOFF_DRAFT_KEY, 'tasksnearme:post-task:gainesville:guest:v1'], waiting);
+    forgetPersonalDrafts(own, 'c0de');
+    // The draft on its way stays; the in-progress copy goes, as every other draft does.
+    expect(own.keys()).toEqual([HANDOFF_DRAFT_KEY]);
+    const other = storage([HANDOFF_DRAFT_KEY], waiting);
+    forgetPersonalDrafts(other, 'another-code');
+    expect(other.keys()).toEqual([]);
+    const plain = storage([HANDOFF_DRAFT_KEY], waiting);
+    forgetPersonalDrafts(plain);
+    expect(plain.keys()).toEqual([]);
+  });
+
+  it("reads the handoff code from a sign-in or sign-up page's destination", () => {
+    expect(handoffInDestination({ origin: 'https://tasksnearme.com', search: '?next=%2Fapp%2Ftasks%2Fnew%3Fhandoff%3Dc0de' })).toBe('c0de');
+    expect(handoffInDestination({ origin: 'https://tasksnearme.com', search: '?next=%2Fapp%2Ftasks%2Fnew' })).toBeUndefined();
+    expect(handoffInDestination({ origin: 'https://tasksnearme.com', search: '' })).toBeUndefined();
   });
 
   it('does nothing when storage is unavailable', () => {
