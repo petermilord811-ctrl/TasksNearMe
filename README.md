@@ -73,3 +73,10 @@ All `/dev` routes are development tools: they're not found in a production build
 - Integration tests (`tests/integration`) run the services against Postgres, including the launch scenarios that need no browser: double submits, money to the cent, rewards, deliveries, daylight saving.
 - E2e tests (`tests/e2e`) drive two or three accounts through the app on phone and desktop. Tests that change bookings write their own rows (`tests/e2e/support/scenarios.ts`) and time-travel with the test clock (`tests/e2e/support/clock.ts`).
 - The preview harness (`tests/ui-previews`) renders every registered screen state with axe.
+
+## License
+
+Copyright © 2026 TasksNearMe. All rights reserved.
+
+No license is granted. Apart from viewing and forking on GitHub, as GitHub's Terms of Service allow, no part of this
+repository may be used, copied, modified or distributed without written permission.
