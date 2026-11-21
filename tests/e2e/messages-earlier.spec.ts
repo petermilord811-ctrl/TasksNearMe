@@ -114,6 +114,11 @@ test('a long conversation loads its earlier messages above, keeping the reader i
     await expect(log.getByText('Note 30', { exact: true })).toHaveCount(0);
     await expect(log.getByText('The gate code is on the mailbox.')).toHaveCount(0);
 
+    // The conversation opens at the newest message once it has hydrated. Scrolling up before that was undone by the
+    // opening scroll, so "before" below was read with the log at the bottom (MN11's flake, thrown 11,798 px: 32's run on
+    // 83c64cf and 4 of 24 repeats here). The reader scrolls up after it, as a person does.
+    await expect(page.locator('[data-hydrating]')).toHaveCount(0, { timeout: 30_000 });
+    await expect.poll(() => log.evaluate((element) => element.scrollHeight - element.scrollTop - element.clientHeight)).toBeLessThan(41);
     const earlier = log.getByRole('link', { name: 'Load earlier messages' });
     await earlier.scrollIntoViewIfNeeded();
     const firstShown = log.getByText('Note 31', { exact: true });
