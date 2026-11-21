@@ -114,11 +114,15 @@ export interface AdminMarketRow {
    * opens); once it's open, they came in and still have to choose one.
    */
   helpersWaiting: number;
+  /** The city the home page shows (DEFAULT_MARKET_SLUG): while it's paused, the home page answers "not found" too. */
+  homePage: boolean;
   /**
    * Its waitlist: `entries` whose ZIP it covers, and its "we're open" email (completion plan 8.3): `told` got it,
-   * `queued` are still going out, `toTell` would get it when it next goes live (never told, still subscribed).
+   * `queued` are still going out, `toTell` would get it when it next goes live (never told, still subscribed), and
+   * `failed` couldn't be sent after every retry (the provider refused them; the launch runbook says how to send them
+   * again).
    */
-  waitlist: { entries: number; told: number; queued: number; toTell: number };
+  waitlist: { entries: number; told: number; queued: number; toTell: number; failed: number };
   /** The last status change (the audit log); absent when it never changed. */
   lastChange?: { at: ISODateTime; by: string; reason: string; from: AdminMarketStatus; to: AdminMarketStatus };
   /**

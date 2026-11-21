@@ -6,6 +6,7 @@ import { helperProfiles } from '@/modules/profiles/schema';
 import type { StaffActor } from '@/modules/support/staff';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
+import { DEFAULT_MARKET_SLUG } from './default-market';
 import { markets } from './schema';
 import { marketStatusActions, openingRefusal } from './status-actions';
 
@@ -80,7 +81,8 @@ export async function getAdminMarkets(db: Db, staff: StaffActor): Promise<AdminM
       zipPrefixes: market.zipPrefixes,
       timeZone: market.timeZone,
       helpersWaiting,
-      waitlist: { entries: sumOver(market.zipPrefixes, entriesBy), told: tells(market.id, ['sent']), queued: tells(market.id, ['queued', 'sending']), toTell },
+      homePage: market.slug === DEFAULT_MARKET_SLUG,
+      waitlist: { entries: sumOver(market.zipPrefixes, entriesBy), told: tells(market.id, ['sent']), queued: tells(market.id, ['queued', 'sending']), toTell, failed: tells(market.id, ['failed']) },
       ...(last && from && to ? { lastChange: { at: isoOf(last.at), by: last.by ?? 'Staff', reason: last.reason ?? '', from, to } } : {}),
       ...(refusal ? { openingRefused: refusal } : {}),
       actions: marketStatusActions(staff.roles, { status: market.status, timeZone: market.timeZone, helpersToBringIn, waitlistToTell: toTell }),

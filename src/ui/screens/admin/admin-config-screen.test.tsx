@@ -117,6 +117,9 @@ describe('the Markets section (plan 8.2)', () => {
     expect(austin.getByText("Goes to 58 people when it's live")).toBeInTheDocument();
     expect(austin.getByText(/^Pre-launch since .* by Riley N\.$/)).toBeInTheDocument();
     expect(card('Tulsa, OK').getByText('Sent to 96, 31 still going out')).toBeInTheDocument();
+    // Sends that failed for good say so, and where to turn (launch rehearsal J-L5); the others say nothing.
+    expect(card('Tulsa, OK').getByText(/^3 couldn't be sent: the email provider refused them after every retry\./)).toBeInTheDocument();
+    expect(austin.queryByText(/couldn't be sent/)).not.toBeInTheDocument();
   });
 
   it('shows the time-zone refusal and offers the opening buttons disabled', () => {
@@ -152,6 +155,17 @@ describe('the Markets section (plan 8.2)', () => {
     await user.click(dialog.getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
     expect(handlers.onSetMarketStatus).not.toHaveBeenCalled();
+  });
+
+  it('warns that pausing the home page’s city takes the home page down, and says how to roll back instead (launch rehearsal J-L1)', async () => {
+    const user = userEvent.setup();
+    mount({ ...adminConfigData, markets: adminConfigData.markets.map((market) => (market.id === 'mkt_tulsa' ? { ...market, homePage: true } : market)) });
+    await user.click(card('Tulsa, OK').getByRole('button', { name: 'Pause Tulsa' }));
+    const dialog = within(await screen.findByRole('alertdialog', { name: 'Pause Tulsa?' }));
+    expect(dialog.getByText(/Tulsa is the home page's city: while it's paused, the home page answers "not found" too\. To roll back a launch, move it to pre-launch instead/)).toBeInTheDocument();
+    await user.click(dialog.getByRole('button', { name: 'Cancel' }));
+    await user.click(card('Austin, TX').getByRole('button', { name: 'Pause Austin' }));
+    expect(within(await screen.findByRole('alertdialog', { name: 'Pause Austin?' })).queryByText(/home page's city/)).not.toBeInTheDocument();
   });
 
   it('shows the server’s time-zone refusal in the confirm step', async () => {

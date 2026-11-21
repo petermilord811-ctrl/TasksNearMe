@@ -101,7 +101,11 @@ describe('the Markets section on /admin/config (plan 8.2)', () => {
       { id: 'paused', helpersIn: 0, waitlistEmails: 0 },
     ]);
     await sendCityOpenEmails(db, { email: quiet, appUrl: 'https://tasksnearme.test' }, now);
-    expect((await wichita(riley)).waitlist).toEqual({ entries: 3, told: 2, queued: 0, toTell: 0 });
+    expect((await wichita(riley)).waitlist).toEqual({ entries: 3, told: 2, queued: 0, toTell: 0, failed: 0 });
+    // One the provider refused after every retry counts as failed, not told (launch rehearsal J-L5).
+    const [first] = await db.select({ id: waitlistEntries.id }).from(waitlistEntries).where(and(eq(waitlistEntries.toldMarketId, WICHITA), eq(waitlistEntries.tellStatus, 'sent'))).limit(1);
+    await db.update(waitlistEntries).set({ tellStatus: 'failed', toldAt: null }).where(eq(waitlistEntries.id, first!.id));
+    expect((await wichita(riley)).waitlist).toEqual({ entries: 3, told: 1, queued: 0, toTell: 0, failed: 1 });
   });
 
   it('refuses a market outside the zones dates can be shown in, as setMarketStatus does', async () => {

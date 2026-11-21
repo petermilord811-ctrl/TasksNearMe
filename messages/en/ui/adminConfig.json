@@ -46,6 +46,7 @@
     "emailSent": "{count, plural, one {Sent to # person} other {Sent to # people}}",
     "emailLater": "{count, plural, =0 {Nobody to email yet} one {Goes to # person when it's live} other {Goes to # people when it's live}}",
     "emailNone": "Nobody to email",
+    "emailFailed": "{count, plural, one {# couldn't be sent: the email provider refused it after every retry. The launch runbook says how to send it again.} other {# couldn't be sent: the email provider refused them after every retry. The launch runbook says how to send them again.}}",
     "lastChange": "{status} since {date}, by {name}",
     "reason": "Reason: {reason}",
     "refused": {
@@ -68,6 +69,7 @@
         "paused": "{name} closes for now: its pages go away, and its ZIP codes count as waiting again. Nobody is emailed."
       },
       "helpersIn": "{count, plural, one {# helper waiting there comes in and is told to choose a neighborhood.} other {# helpers waiting there come in and are told to choose a neighborhood.}}",
+      "homePage": "{name} is the home page's city: while it's paused, the home page answers \"not found\" too. To roll back a launch, move it to pre-launch instead: its pages stay up and nobody is emailed.",
       "waitlistEmails": "{count, plural, =0 {Nobody on its waitlist is left to email.} one {# person on its waitlist gets one email that it's open, in their language.} other {# people on its waitlist get one email that it's open, in their language.}}"
     },
     "saving": "Saving…",

@@ -6,8 +6,7 @@ import { db } from '@/platform/db/client';
 import type { Db } from '@/platform/db/connect';
 import { areas, categories, featureFlags, marketCategories, marketPolicies, markets } from './schema';
 
-/** The market the home page shows. Configurable so another city can launch without code changes. */
-export const DEFAULT_MARKET_SLUG = process.env.DEFAULT_MARKET_SLUG ?? 'gainesville';
+export { DEFAULT_MARKET_SLUG } from './default-market';
 
 const PUBLIC_STATUSES = ['prelaunch', 'live'] as const;
 const KM_PER_MILE = 1.609344;

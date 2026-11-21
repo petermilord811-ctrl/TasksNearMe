@@ -53,6 +53,8 @@ function MarketCard({ market, onSetMarketStatus, marketDialog }: { market: Admin
     t(`confirm.leads.${action.id}`, { name, from: market.status }),
     ...(action.helpersIn > 0 ? [t('confirm.helpersIn', { count: action.helpersIn })] : []),
     ...(action.id === 'live' ? [t('confirm.waitlistEmails', { count: action.waitlistEmails })] : []),
+    // Pausing the home page's city takes the home page down with it (launch rehearsal J-L1).
+    ...(action.id === 'paused' && market.homePage ? [t('confirm.homePage', { name })] : []),
   ].join(' ');
   return <li aria-labelledby={headingId} className={cn(adminSection, 'min-w-0 space-y-4', market.openingRefused && 'border-warning/40 dark:border-warning/40')}>
     <div className="flex flex-wrap items-start justify-between gap-2">
@@ -64,7 +66,7 @@ function MarketCard({ market, onSetMarketStatus, marketDialog }: { market: Admin
       <Fact label={t('timeZone')}>{market.timeZone}</Fact>
       <Fact label={market.status === 'paused' ? t('helpersWaiting') : t('helpersSettling')}>{t('helpers', { count: market.helpersWaiting })}</Fact>
       <Fact label={t('waitlist')}>{t('waitlistEntries', { count: waitlist.entries })}</Fact>
-      <Fact label={t('email')}>{email}</Fact>
+      <Fact label={t('email')}>{email}{waitlist.failed > 0 && <span className="mt-2 block rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-sm">{t('emailFailed', { count: waitlist.failed })}</span>}</Fact>
     </dl>
     {market.lastChange && <div className="space-y-0.5 text-sm text-muted-foreground">
       <p><time dateTime={market.lastChange.at}>{t('lastChange', { status: t(`statuses.${market.lastChange.to}`), date: formatDateTime(market.lastChange.at), name: market.lastChange.by })}</time></p>
