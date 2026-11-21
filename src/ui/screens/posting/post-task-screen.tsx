@@ -12,6 +12,7 @@ import { BotCheckField, useBotCheck } from '@/ui/components/forms/bot-check';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
+import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
 import { cn } from '@/ui/lib/utils';
 import { CategoryStep } from './category-step';
 import { DescribeStep } from './describe-step';
@@ -125,6 +126,11 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
   const [focusField, setFocusField] = useState<string | undefined>(resultFields(initialResult).find((name) => stepForField(name) === step));
   const heading = useRef<HTMLHeadingElement>(null);
   const postButton = useRef<HTMLButtonElement>(null);
+  // A field that focus reaches behind the sticky Back and Next bar, or whose hint is, comes clear of it, also when a
+  // keyboard that shrinks the page opens (journeys on a phone, J-C-m).
+  const formRef = useRef<HTMLFormElement>(null);
+  const barRef = useRef<HTMLElement>(null);
+  useKeepFocusAboveBar(formRef, barRef);
   const lock = useRef(false);
   const posted = useRef(false);
   const stepRef = useRef(step);
@@ -304,7 +310,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
   const botCheckRefused = Boolean(result && !result.ok && result.fieldErrors?.botCheck);
   const unknownFieldFailure = !botCheckRefused && result && !result.ok && result.code === 'validation_failed' && !resultFields(result).some((name) => stepForField(name));
   return <FormProvider {...form}>
-    <form noValidate aria-label={t('title')} aria-busy={pending} className="mx-auto flex min-h-[70dvh] w-full max-w-reading flex-col gap-6" onSubmit={(event) => {
+    <form ref={formRef} noValidate aria-label={t('title')} aria-busy={pending} className="mx-auto flex min-h-[70dvh] w-full max-w-reading flex-col gap-6" onSubmit={(event) => {
       event.preventDefault();
       if (step !== 'review') { void nextStep(); return; }
       // A late Next click or a submit without the review button must never post.
@@ -355,7 +361,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
         {step === 'review' && <ReviewStep data={data} handlers={handlers} values={values} photos={photos} selectedAddress={address} />}
         {step === 'review' && data.botCheck && <BotCheckField check={check} result={result} />}
       </fieldset>
-      <footer className="app-glass sticky bottom-app-navigation z-20 -mx-4 mt-2 flex items-center gap-3 border-t border-foreground/[0.07] px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-white/[0.06]">
+      <footer ref={barRef} className="app-glass sticky bottom-app-navigation z-20 -mx-4 mt-2 flex items-center gap-3 border-t border-foreground/[0.07] px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-white/[0.06]">
         <Button type="button" variant="outline" disabled={index === 0 || pending || checking || uploading || !!result?.ok} onClick={() => {
           // Back through history when this wizard went forward, so this button and the phone's Back agree (J-C9).
           if (stepsPushed.current > 0) { window.history.back(); return; }
