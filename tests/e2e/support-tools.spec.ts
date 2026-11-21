@@ -38,7 +38,7 @@ test('a client asked to verify their ID goes through the check and back to posti
   await expect(page.getByText('Your ID is verified. You can carry on.')).toBeVisible();
 
   await page.getByRole('link', { name: 'Continue' }).click();
-  await expect(page).toHaveURL(/\/app\/tasks\/new$/, { timeout: 45_000 });
+  await expect(page).toHaveURL(/\/app\/tasks\/new(\?step=[a-z]+)?$/, { timeout: 45_000 });
 });
 
 test('a lead writes a saved reply, a case starts from it, and staff read the response times', async ({ page }, testInfo) => {

@@ -63,7 +63,7 @@ test('a poster posts a task with the wizard and finds it on the board', async ({
 
   // Review: nothing is posted until "Post task" (UI-024); the quote comes from the fee engine ($60 + $6 fee)
   await expect(page.getByText('Step 8 of 8', { exact: false })).toBeVisible();
-  await expect(page).toHaveURL(/\/app\/tasks\/new$/);
+  await expect(page).toHaveURL(/\/app\/tasks\/new(\?step=[a-z]+)?$/);
   await expect(page.getByText('$66.00').first()).toBeVisible();
   await page.getByRole('button', { name: 'Post task' }).click();
   // The new task's management page: no offers yet.
@@ -97,4 +97,43 @@ test('posting without a verified phone goes through phone verification first', a
   await expect(page.getByRole('heading', { level: 1, name: 'Sign in', exact: true })).toBeVisible();
   // Signed out: the sign-in flow keeps the destination, which needs a phone (see sign-in.spec.ts).
   expect(page.url()).toContain('next=%2Fapp%2Ftasks%2Fnew');
+});
+
+test("the phone's Back and Forward move between the wizard's steps, and a kept draft says so (journeys on a phone, J-C9)", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'app-mobile', 'the Back gesture is a phone matter; one project is enough');
+  test.setTimeout(150_000);
+  await devSignIn(page, 'maya@example.test');
+  await page.goto('/app/tasks/new');
+  await expect(page.getByRole('heading', { level: 1, name: 'Post a task' })).toBeVisible();
+  const next = () => page.getByRole('button', { name: 'Next', exact: true }).click();
+  const step = (label: string) => expect(page.getByText(label, { exact: false })).toBeVisible();
+
+  await page.getByRole('radio', { name: /Furniture assembly/ }).check();
+  await next();
+  await step('Step 2 of 8');
+  await page.getByLabel('Task title').fill('Assemble a bookshelf for the hallway');
+  await page.getByRole('textbox', { name: 'What do you need help with?' }).fill('Flat-pack bookshelf, about 30 parts. The box is in the hallway.');
+  await next();
+  await step('Step 3 of 8');
+  await expect(page).toHaveURL(/[?&]step=details/);
+
+  // The phone's Back: the step before, with what was typed; Forward: back on Details. No reload either way.
+  await page.goBack();
+  await step('Step 2 of 8');
+  await expect(page.getByLabel('Task title')).toHaveValue('Assemble a bookshelf for the hallway');
+  await page.goForward();
+  await step('Step 3 of 8');
+  // A reload keeps the step.
+  await page.reload();
+  await step('Step 3 of 8');
+
+  // Leaving and coming back: the draft is kept, and says so; Start over begins again.
+  await page.goto('/app');
+  await page.goto('/app/tasks/new');
+  await step('Step 3 of 8');
+  await expect(page.getByText('We kept your draft from earlier.')).toBeVisible();
+  await page.getByRole('button', { name: 'Start over' }).click();
+  await step('Step 1 of 8');
+  await expect(page.getByText('We kept your draft from earlier.')).toHaveCount(0);
+  await expect(page.getByRole('radio', { name: /Furniture assembly/ })).not.toBeChecked();
 });

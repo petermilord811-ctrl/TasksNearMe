@@ -11,6 +11,8 @@
   "saved": "Tu borrador se conserva en esta pestaña hasta que publiques.",
   "storageUnavailable": "Tu navegador no pudo guardar este borrador. Mantén esta pestaña abierta hasta que publiques.",
   "restored": "Tu borrador está listo para continuar.",
+  "keptDraft": "Guardamos tu borrador anterior.",
+  "startOver": "Empezar de nuevo",
   "checkFields": "Revisa los datos resaltados para continuar.",
   "unsupportedOption": "Elige una opción disponible para esta tarea.",
   "prohibitedLink": "Ver tareas prohibidas",

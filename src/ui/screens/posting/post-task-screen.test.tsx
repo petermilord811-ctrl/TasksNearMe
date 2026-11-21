@@ -250,8 +250,44 @@ describe('posting wizard', () => {
   it('recovers from malformed stored review data without rendering an invalid review', async () => {
     sessionStorage.setItem(draftStorageKey('austin'), JSON.stringify({ values: { ...deskDraft, categorySlug: undefined }, step: 'review' }));
     mount({ persistDraft: true });
-    expect(await screen.findByText('Your draft is ready to continue.')).toBeInTheDocument();
+    expect(await screen.findByText('We kept your draft from earlier.')).toBeInTheDocument();
     expect(screen.getByText('Step 1 of 8 · Category')).toBeInTheDocument();
+  });
+
+  it('makes each step a history entry, so the phone’s Back and Forward and the page’s Back move between steps (J-C9)', async () => {
+    const user = userEvent.setup();
+    mount({ initialStep: 'describe' });
+    await waitFor(() => expect(new URL(window.location.href).searchParams.get('step')).toBe('describe'));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByText('Step 3 of 8 · Details')).toBeInTheDocument();
+    expect(new URL(window.location.href).searchParams.get('step')).toBe('details');
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByText('Step 4 of 8 · Photos')).toBeInTheDocument();
+
+    act(() => window.history.back());
+    expect(await screen.findByText('Step 3 of 8 · Details')).toBeInTheDocument();
+    act(() => window.history.forward());
+    expect(await screen.findByText('Step 4 of 8 · Photos')).toBeInTheDocument();
+    // The page's own Back goes back through those entries too, keeping what was typed.
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    expect(await screen.findByText('Step 3 of 8 · Details')).toBeInTheDocument();
+    await waitFor(() => expect(new URL(window.location.href).searchParams.get('step')).toBe('details'));
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    expect(await screen.findByText('Step 2 of 8 · Describe')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: messages.postTask.describe.title })).toHaveValue(deskDraft.title);
+  });
+
+  it('says a draft from earlier was kept, and Start over begins again from an empty wizard (J-C9)', async () => {
+    const user = userEvent.setup();
+    sessionStorage.setItem(draftStorageKey('austin'), JSON.stringify({ values: deskDraft, step: 'photos' }));
+    mount({ persistDraft: true, initialValues: undefined });
+    expect(await screen.findByText('We kept your draft from earlier.')).toBeInTheDocument();
+    expect(screen.getByText('Step 4 of 8 · Photos')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Start over' }));
+    expect(await screen.findByText('Step 1 of 8 · Category')).toBeInTheDocument();
+    expect(screen.queryByText('We kept your draft from earlier.')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveFocus();
+    await waitFor(() => expect(JSON.parse(sessionStorage.getItem(draftStorageKey('austin')) ?? '{"values":{"title":""}}').values.title).toBe(''));
   });
 
   it('uses the supplied storage key and resolves restored photo ids without storing image URLs', async () => {

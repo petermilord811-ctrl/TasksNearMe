@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { FormProvider, useForm, useWatch, type FieldErrors, type FieldPath } from 'react-hook-form';
+import { FormProvider, useForm, useWatch, type FieldErrors, type FieldPath, type DefaultValues } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, Check, Lock, MessagesSquare, Repeat } from 'lucide-react';
 import { createTaskDraftSchema, findTaskTemplate, POST_TASK_STEPS, routes, type ActionResult, type AddressSuggestion, type AiTaskDraft, type Photo, type PostTaskHandlers, type PostTaskPageData, type PostTaskStep, type TaskDraftInput } from '@/contracts';
@@ -78,17 +78,21 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
   // Started from an example (`?template=`): its category, words and details, on the describe step.
   const template = data.repeat ? undefined : findTaskTemplate(data.initialTemplate);
   const category = data.categories.find((item) => item.slug === (template?.categorySlug ?? data.initialCategory));
+  // "Post again" starts from the earlier task's draft (plan 4.2).
+  const openingValues: DefaultValues<TaskDraftInput> = initialValues ?? data.repeat?.draft ?? {
+    categorySlug: template?.categorySlug ?? data.initialCategory,
+    title: template ? t(`templates.${template.id}.title`) : data.initialTitle ?? '',
+    description: template ? t(`templates.${template.id}.description`) : data.initialDescription ?? '',
+    details: template ? { ...template.details } : {}, photoIds: [],
+    location: { mode: 'local', placeId: '' }, schedule: { date: '', flexible: false },
+    budget: category?.defaultPricingType === 'hourly' ? { type: 'hourly', rateCents: 0, estimatedHours: category.minHours ?? 1, hoursCap: category.minHours ?? 1 } : { type: 'fixed', priceCents: 0 },
+  };
+  // What the page opened with: a restored draft's reset(saved) makes the saved values the form's defaults, so "Start
+  // over" (J-C9) resets to these instead.
+  const opening = useRef(openingValues);
   const form = useForm<TaskDraftInput>({
     resolver: zodResolver(schema),
-    // "Post again" starts from the earlier task's draft (plan 4.2).
-    defaultValues: initialValues ?? data.repeat?.draft ?? {
-      categorySlug: template?.categorySlug ?? data.initialCategory,
-      title: template ? t(`templates.${template.id}.title`) : data.initialTitle ?? '',
-      description: template ? t(`templates.${template.id}.description`) : data.initialDescription ?? '',
-      details: template ? { ...template.details } : {}, photoIds: [],
-      location: { mode: 'local', placeId: '' }, schedule: { date: '', flexible: false },
-      budget: category?.defaultPricingType === 'hourly' ? { type: 'hourly', rateCents: 0, estimatedHours: category.minHours ?? 1, hoursCap: category.minHours ?? 1 } : { type: 'fixed', priceCents: 0 },
-    },
+    defaultValues: openingValues,
     shouldFocusError: false,
   });
   const { control, reset, getValues, setError, setFocus, clearErrors, trigger, subscribe } = form;
@@ -128,6 +132,16 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
   const resolvePhotos = useRef(handlers.onResolvePhotos);
   const key = data.draftStorageKey ?? draftStorageKey(data.market.slug);
   const index = POST_TASK_STEPS.indexOf(step);
+  // The phone's Back and Forward move between steps (journeys on a phone, J-C9): each step the person moves on to is a
+  // history entry (?step=). Only this field is given: Next copies its own tree into it, which a copy of history.state
+  // would stop (its __NA marks a router write, app-router.js), and then the router keeps the address.
+  const stepsPushed = useRef(0);
+  const recordStep = useCallback((next: PostTaskStep, push: boolean) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('step', next);
+    if (push) window.history.pushState({ postTaskStep: next }, '', url);
+    else window.history.replaceState({ postTaskStep: next }, '', url);
+  }, []);
 
   useEffect(() => { resolvePhotos.current = handlers.onResolvePhotos; }, [handlers.onResolvePhotos]);
   // The schema is rebuilt from `data` on every refresh (a live notice, coming back to the tab): the restore below reads
@@ -192,6 +206,30 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
     return subscribe({ formState: { values: true }, callback: () => saveDraft() });
   }, [ready, subscribe, saveDraft]);
 
+  // Once the saved draft is back: this entry records its step, and Back and Forward show theirs.
+  useEffect(() => {
+    if (!ready) return;
+    recordStep(stepRef.current, false);
+    const onPopState = () => {
+      const wanted = new URL(window.location.href).searchParams.get('step');
+      if (!wanted || !(POST_TASK_STEPS as readonly string[]).includes(wanted)) return;
+      const target = wanted as PostTaskStep;
+      stepsPushed.current = POST_TASK_STEPS.indexOf(target) < POST_TASK_STEPS.indexOf(stepRef.current) ? Math.max(0, stepsPushed.current - 1) : stepsPushed.current + 1;
+      setInvalid(false); setResult(undefined); setFocusField(undefined); setStep(target); heading.current?.focus();
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [ready, recordStep]);
+
+  // "Start over" from a kept draft: the page as it opened, before anything was typed.
+  const startOver = useCallback(() => {
+    try { sessionStorage.removeItem(key); } catch { /* Storage blocked: nothing was kept either. */ }
+    const fresh: PostTaskStep = data.repeat ? (data.repeat.addressDeleted ? 'where' : 'review') : template || data.initialCategory ? 'describe' : 'category';
+    reset(opening.current); setPhotos([]); setAddress(data.repeat?.address); setResult(undefined); setInvalid(false); setFocusField(undefined); setRestored(false);
+    setStep(fresh); stepRef.current = fresh; stepsPushed.current = 0; recordStep(fresh, false);
+    heading.current?.focus();
+  }, [key, reset, recordStep, data.repeat, data.initialCategory, template]);
+
   useEffect(() => {
     if (!form.formState.isDirty) return;
     const confirmLeave = (event: BeforeUnloadEvent) => { if (!posted.current) event.preventDefault(); };
@@ -203,10 +241,11 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
     const firstStep = firstErrorStep(names);
     if (firstStep) {
       setStep(firstStep);
+      recordStep(firstStep, false);
       setFocusField(names.find((name) => stepForField(name) === firstStep));
     }
     setInvalid(true);
-  }, []);
+  }, [recordStep]);
 
   useEffect(() => {
     if (!result || result.ok || !result.fieldErrors) return;
@@ -232,7 +271,8 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
     const empty = step === 'describe' ? (['title', 'description'] as const).filter((name) => !getValues(name).trim()) : [];
     for (const name of empty) setError(name, { type: 'required', message: 'required' });
     if (valid && !empty.length) {
-      setStep(POST_TASK_STEPS[index + 1] ?? 'review');
+      const following = POST_TASK_STEPS[index + 1] ?? 'review';
+      setStep(following); recordStep(following, true); stepsPushed.current += 1;
       heading.current?.focus();
     } else {
       const errors = fields.flatMap((name) => errorNames({ [name]: form.getFieldState(name).error } as FieldErrors<TaskDraftInput>));
@@ -282,7 +322,12 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
             <span className="sr-only">{t(`steps.${item}`)}</span>
           </li>)}
         </ol>
-        <div aria-live="polite" className="text-xs text-muted-foreground">{storageFailed ? t('storageUnavailable') : restored ? t('restored') : t('saved')}</div>
+        <div aria-live="polite" className="text-xs text-muted-foreground">{storageFailed ? t('storageUnavailable') : restored ? null : t('saved')}</div>
+        {/* A draft kept from earlier says so, with the way to a fresh start (J-C9). */}
+        {restored && !storageFailed && <p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-secondary/70 px-3 py-2 text-sm text-foreground dark:bg-secondary/40">
+          <span>{t('keptDraft')}</span>
+          <button type="button" onClick={startOver} disabled={pending || uploading} className="inline-flex min-h-11 items-center rounded-sm font-medium text-primary underline underline-offset-4 disabled:opacity-50">{t('startOver')}</button>
+        </p>}
       </header>
       {data.fromPost && <p className="flex items-start gap-2.5 rounded-2xl border border-primary/20 bg-primary/[0.06] p-3.5 text-sm">
         <MessagesSquare aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
@@ -311,7 +356,12 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
         {step === 'review' && data.botCheck && <BotCheckField check={check} result={result} />}
       </fieldset>
       <footer className="app-glass sticky bottom-app-navigation z-20 -mx-4 mt-2 flex items-center gap-3 border-t border-foreground/[0.07] px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] dark:border-white/[0.06]">
-        <Button type="button" variant="outline" disabled={index === 0 || pending || checking || uploading || !!result?.ok} onClick={() => { setInvalid(false); setResult(undefined); setFocusField(undefined); setStep(POST_TASK_STEPS[index - 1]!); heading.current?.focus(); }}><ArrowLeft aria-hidden="true" />{t('back')}</Button>
+        <Button type="button" variant="outline" disabled={index === 0 || pending || checking || uploading || !!result?.ok} onClick={() => {
+          // Back through history when this wizard went forward, so this button and the phone's Back agree (J-C9).
+          if (stepsPushed.current > 0) { window.history.back(); return; }
+          const previous = POST_TASK_STEPS[index - 1]!;
+          setInvalid(false); setResult(undefined); setFocusField(undefined); setStep(previous); recordStep(previous, false); heading.current?.focus();
+        }}><ArrowLeft aria-hidden="true" />{t('back')}</Button>
         <span className="hidden flex-1 items-center gap-2 text-sm text-muted-foreground sm:flex"><Lock aria-hidden="true" className="size-4" />{t('steps.review')}</span>
         {step === 'review' ? <Button key="post" ref={postButton} type="submit" className="ml-auto" disabled={pending || !!result?.ok} aria-busy={pending}>{pending ? <Spinner /> : <Check aria-hidden="true" />}{t(pending ? 'posting' : 'post')}</Button> : <Button key="next" type="button" className="ml-auto" onClick={(event) => { event.preventDefault(); void nextStep(); }} disabled={checking || uploading} aria-busy={checking}>{checking ? <Spinner /> : <ArrowRight aria-hidden="true" />}{t(checking ? 'checking' : 'next')}</Button>}
       </footer>

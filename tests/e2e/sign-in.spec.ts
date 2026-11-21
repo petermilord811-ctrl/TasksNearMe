@@ -106,7 +106,7 @@ test.describe('sign-in and sign-up', () => {
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: /Enter the code we texted to \(352\)/ })).toBeVisible();
     await page.locator('input[autocomplete="one-time-code"]').filter({ visible: true }).first().fill(await latestCode(context, `+1352${exchange}${line}`));
-    await expect(page).toHaveURL(/\/app\/tasks\/new$/, { timeout: 30_000 });
+    await expect(page).toHaveURL(/\/app\/tasks\/new(\?step=[a-z]+)?$/, { timeout: 30_000 });
     await expect(page.getByText('Step 1 of 8', { exact: false })).toBeVisible();
   });
 

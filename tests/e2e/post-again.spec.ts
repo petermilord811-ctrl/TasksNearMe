@@ -42,7 +42,8 @@ test('a poster posts a finished task again in two taps', async ({ page }, testIn
   await expect(page.getByRole('heading', { level: 1, name: 'Assemble a wardrobe' })).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Post again' }).click();
 
-  await expect(page).toHaveURL(/\/app\/tasks\/new\?again=tsk_wardrobe$/, { timeout: 30_000 });
+  // The wizard adds its step to the address (?step=; journeys on a phone, J-C9).
+  await expect(page).toHaveURL(/\/app\/tasks\/new\?again=tsk_wardrobe(&step=[a-z]+)?$/, { timeout: 30_000 });
   await expect(page.getByText('Step 8 of 8', { exact: false })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText('Posting “Assemble a wardrobe” again.', { exact: false })).toBeVisible();
   // Only the booked helper ever sees the address; the review shows the poster their own.

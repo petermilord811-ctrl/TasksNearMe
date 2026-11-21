@@ -11,6 +11,8 @@
   "saved": "Your draft stays in this tab until you post.",
   "storageUnavailable": "Your browser couldn't save this draft. Keep this tab open until you post.",
   "restored": "Your draft is ready to continue.",
+  "keptDraft": "We kept your draft from earlier.",
+  "startOver": "Start over",
   "checkFields": "Check the highlighted details to continue.",
   "unsupportedOption": "Choose an available option for this task.",
   "prohibitedLink": "See prohibited tasks",
