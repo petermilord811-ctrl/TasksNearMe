@@ -44,6 +44,9 @@ export function CompletionForm({ data, handlers, initialResult, initialPending =
   useKeepFocusAboveBar(fields, submitBar);
   const busy = pending || uploading || quoting;
   const disabled = busy || Boolean(result?.ok);
+  // The fields lock only for the person's own actions (sending, a photo uploading) and once the work is sent. The
+  // earnings quote runs in the background and never locks what they tick or type: only Send for approval waits for it.
+  const fieldsLocked = pending || uploading || Boolean(result?.ok);
   const { setError } = form;
   useEffect(() => {
     if (!result || result.ok || pending) return;
@@ -57,7 +60,7 @@ export function CompletionForm({ data, handlers, initialResult, initialPending =
   // Nested server errors render in a subsequent commit. Focus only once their
   // controls exist and the fieldset is enabled, without racing a timer.
   useLayoutEffect(() => {
-    if (!focusInvalid.current || disabled) return;
+    if (!focusInvalid.current || fieldsLocked) return;
     const invalid = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"], [data-field-invalid="true"]');
     if (invalid) {
       invalid.focus();
@@ -75,8 +78,8 @@ export function CompletionForm({ data, handlers, initialResult, initialPending =
     if (next.ok && next.redirectTo) router.push(next.redirectTo);
   }
   const feedback = result && !result.ok ? { ...result, fieldErrors: undefined } : result;
-  return <FormProvider {...form}><form ref={formRef} noValidate aria-label={t('form')} aria-busy={busy} className={cn(surface, surfacePad, 'space-y-6')} onSubmit={(event) => { if (disabled) { event.preventDefault(); return; } void form.handleSubmit(submit, () => { focusInvalid.current = true; })(event); }}>
-    <fieldset ref={fields} disabled={disabled} className="min-w-0"><legend className="sr-only">{t('form')}</legend><CompletionFields rules={data.rules} categorySlug={data.booking.task.categorySlug} onUploadPhoto={handlers.onUploadPhoto} onBusyChange={setUploading} expensesCents={expensesCents} /></fieldset>
+  return <FormProvider {...form}><form ref={formRef} noValidate aria-label={t('form')} aria-busy={pending || uploading} className={cn(surface, surfacePad, 'space-y-6')} onSubmit={(event) => { if (disabled) { event.preventDefault(); return; } void form.handleSubmit(submit, () => { focusInvalid.current = true; })(event); }}>
+    <fieldset ref={fields} disabled={fieldsLocked} className="min-w-0"><legend className="sr-only">{t('form')}</legend><CompletionFields rules={data.rules} categorySlug={data.booking.task.categorySlug} onUploadPhoto={handlers.onUploadPhoto} onBusyChange={setUploading} expensesCents={expensesCents} /></fieldset>
     <CompletionEarnings hoursWorked={values.hoursWorked} expensesCents={expensesCents} valid={validQuote} onQuote={handlers.onQuoteFinal} onBusyChange={setQuoting} disabled={pending || uploading} initialError={initialQuoteError} />
     {result && !result.ok && result.code === 'not_allowed' ? <div role="status" className="space-y-3 rounded-2xl border border-warning/40 bg-badge-warning/60 p-4"><p>{t('changed')}</p><Button type="button" variant="outline" disabled={busy} onClick={() => router.refresh()}>{t('reload')}</Button></div> : <FormFeedback result={feedback} successMessage={t('submitted')} />}
     <p id={`${id}-approval`} className={note}>{t('approval')}</p>

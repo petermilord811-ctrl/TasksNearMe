@@ -30,9 +30,6 @@ test('the helper sends the finished work and the client approves it', async ({ p
   // The upload is done when its photo shows; until then the form's fields are disabled.
   await expect(page.getByRole('img', { name: 'Uploaded photo 1' })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText('Photo uploaded.')).toBeVisible();
-  // The form also locks while it works out the earnings, once, just after it opens: a row's text pressed then does
-  // nothing (Playwright waits for a checkbox to be enabled, not for text).
-  await expect(page.getByRole('region', { name: "What you'll earn" }).first()).toHaveAttribute('aria-busy', 'false', { timeout: 30_000 });
   // The furniture checklist is optional: tick two of the four (the checkbox, then a row's text), each one shown
   // ticked before the work goes.
   const level = page.getByRole('checkbox', { name: 'It stands level and stable' });
@@ -97,10 +94,9 @@ test('a press on a checklist box half behind the Send for approval bar still tic
   await devSignIn(page, 'jordan@example.test');
   // The seeded bookcase stays in progress all run (the flow above uses its own copy); nothing is sent here.
   await page.goto('/app/bookings/bkg_bookcase/complete');
-  // Pressed before the page has hydrated, the box has no handler yet; while the form works out the earnings just after
-  // it opens, the box is disabled. Wait for both.
+  // Pressed before the page has hydrated, the box has no handler yet: wait until the gated controls come alive. The
+  // earnings, worked out just after the page opens, may still be on their way: they never lock the box.
   await expect(page.locator('[data-hydrating]')).toHaveCount(0, { timeout: 30_000 });
-  await expect(page.getByRole('region', { name: "What you'll earn" }).first()).toHaveAttribute('aria-busy', 'false', { timeout: 30_000 });
   const level = page.getByRole('checkbox', { name: 'It stands level and stable' });
   await expect(level).not.toBeChecked();
   const send = await page.getByRole('button', { name: 'Send for approval' }).elementHandle();

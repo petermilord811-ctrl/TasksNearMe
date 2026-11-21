@@ -236,7 +236,7 @@ describe('CompletionScreen', () => {
     expect(screen.getByRole('img', { name: photo.alt })).toBeInTheDocument();
   });
 
-  it('retries a failed earnings request and locks the form while the request is pending', async () => {
+  it('retries a failed earnings request; while it runs only Send for approval waits, and the fields stay editable', async () => {
     const user = userEvent.setup();
     let resolve!: (result: PriceBreakdown) => void;
     const onQuoteFinal = vi.fn<CompletionHandlers['onQuoteFinal']>().mockRejectedValueOnce(new Error('unavailable')).mockImplementation(() => new Promise((done) => { resolve = done; }));
@@ -245,7 +245,14 @@ describe('CompletionScreen', () => {
     await user.click(screen.getByRole('button', { name: messages.bookingComplete.retryEarnings }));
     await waitFor(() => expect(onQuoteFinal).toHaveBeenCalledTimes(2));
     expect(send()).toBeDisabled();
-    expect(workInput()).toBeDisabled();
+    // A background quote never locks what the person ticks or types (ab, 2026-11-21).
+    expect(workInput()).toBeEnabled();
+    expect(screen.getByRole('textbox')).toBeEnabled();
+    const boxes = screen.getAllByRole('checkbox');
+    expect(boxes.length).toBeGreaterThan(0);
+    for (const box of boxes) expect(box).toBeEnabled();
+    await user.click(boxes[0]!);
+    expect(boxes[0]).toBeChecked();
     await act(async () => { resolve(deskBreakdown); });
     expect(await screen.findByText('$54.00')).toBeVisible();
     expect(send()).toBeEnabled();
