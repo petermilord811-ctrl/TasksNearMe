@@ -1,9 +1,38 @@
 import { expect, test, type Page } from '@playwright/test';
+import { and, eq } from 'drizzle-orm';
+import { featureFlags } from '../../src/modules/markets/schema';
+import { createDb } from '../../src/platform/db/connect';
+import { exclusive } from './support/exclusive';
+import { devSignIn } from './support/sign-in';
 
 /**
  * What search engines read (src/modules/seo): robots.txt, the sitemap, and the head and structured data of public
- * pages. The e2e build is not the live site (src/shared/search-indexing.ts), so crawlers are asked to stay out.
+ * pages. The e2e build is not the live site (src/shared/search-indexing.ts), so crawlers are asked to stay out, until
+ * the last test sets the admin search setting (and removes it again).
  */
+
+/**
+ * The admin search setting is shared by the whole app: the tests that read or change it take turns across the phone
+ * and desktop projects, which run this file at the same time.
+ */
+const SEARCH_SETTING = 'search-setting';
+
+async function staffSignIn(page: Page, email: string) {
+  await devSignIn(page, email, { landing: /\/admin\/verify$/ });
+  await page.getByLabel('Code').fill('123456');
+  await page.getByRole('button', { name: 'Verify' }).click();
+  await expect(page).toHaveURL(/\/admin$/, { timeout: 30_000 });
+}
+
+/** The e2e database (the suite's own; .env.local only when the shell sets none), for the setting's clean-up. */
+function database() {
+  try {
+    if (!process.env.DATABASE_URL) process.loadEnvFile('.env.local');
+  } catch {
+    // Environment provided by the shell (CI).
+  }
+  return createDb(process.env.DATABASE_URL ?? '', { max: 1 });
+}
 
 async function structuredData(page: Page): Promise<Array<Record<string, unknown>>> {
   const blocks = await page.locator('script[type="application/ld+json"]').allTextContents();
@@ -12,54 +41,60 @@ async function structuredData(page: Page): Promise<Array<Record<string, unknown>
 
 test.describe('search engines', () => {
   test('with indexing off, robots.txt keeps crawlers out and pages say noindex', async ({ request }) => {
-    const robots = await request.get('/robots.txt');
-    expect(robots.ok()).toBe(true);
-    expect((await robots.text()).trim()).toBe('User-Agent: *\nDisallow: /');
-    for (const path of ['/', '/es/austin']) {
-      expect((await request.get(path)).headers()['x-robots-tag'], path).toBe('noindex, nofollow');
-    }
+    test.setTimeout(240_000);
+    await exclusive(SEARCH_SETTING, async () => {
+      const robots = await request.get('/robots.txt');
+      expect(robots.ok()).toBe(true);
+      expect((await robots.text()).trim()).toBe('User-Agent: *\nDisallow: /');
+      for (const path of ['/', '/es/austin']) {
+        expect((await request.get(path)).headers()['x-robots-tag'], path).toBe('noindex, nofollow');
+      }
+    });
   });
 
   test('the sitemap lists the site pages in both languages, and nothing private, unfinished or held back', async ({ request }) => {
-    const response = await request.get('/sitemap.xml');
-    expect(response.ok()).toBe(true);
-    expect(response.headers()['content-type']).toContain('xml');
-    const xml = await response.text();
-    const paths = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => new URL(match[1]!).pathname);
-    for (const path of [
-      '/',
-      '/es',
-      '/pricing',
-      '/es/pricing',
-      '/about',
-      '/es/about',
-      '/help/who-sees-my-address',
-      '/help/contact',
-      // The first city's pages (Gainesville since 2026-11-17).
-      '/gainesville',
-      '/gainesville/tasks',
-      '/gainesville/furniture-assembly',
-      '/es/gainesville/furniture-assembly',
-      '/gainesville/furniture-assembly/cost',
-      '/es/gainesville/furniture-assembly/cost',
-      // A job hub is listed once it has an open task: the seed's Gainesville yard task (no other e2e test posts or
-      // cancels yard tasks, so it stays open whatever the order).
-      '/gainesville/tasks/yard-cleanup',
-      '/es/gainesville/tasks/yard-cleanup',
-      '/cities',
-      '/es/cities',
-      '/cities/florida',
-    ]) {
-      expect(paths, path).toContain(path);
-    }
-    // A later city (Austin, open here only for the test cast) stays out until it is live.
-    expect(paths.filter((path) => /^\/(es\/)?austin(\/|$)/.test(path))).toEqual([]);
-    expect(paths.filter((path) => /^\/(es\/)?(app|admin|dev|api|code|sign-in|waitlist|legal)(\/|$)/.test(path))).toEqual([]);
-    // Task pages and helper profiles are listed only in the `on` mode (the unit tests cover that list).
-    expect(paths.filter((path) => /^\/(es\/)?(tasks|helpers)\//.test(path))).toEqual([]);
-    const entries = xml.split('<url>').slice(1);
-    expect(entries).toHaveLength(paths.length);
-    for (const entry of entries) expect(entry.match(/hreflang="(en-US|es-US|x-default)"/g)).toHaveLength(3);
+    test.setTimeout(240_000);
+    await exclusive(SEARCH_SETTING, async () => {
+      const response = await request.get('/sitemap.xml');
+      expect(response.ok()).toBe(true);
+      expect(response.headers()['content-type']).toContain('xml');
+      const xml = await response.text();
+      const paths = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => new URL(match[1]!).pathname);
+      for (const path of [
+        '/',
+        '/es',
+        '/pricing',
+        '/es/pricing',
+        '/about',
+        '/es/about',
+        '/help/who-sees-my-address',
+        '/help/contact',
+        // The first city's pages (Gainesville since 2026-11-17).
+        '/gainesville',
+        '/gainesville/tasks',
+        '/gainesville/furniture-assembly',
+        '/es/gainesville/furniture-assembly',
+        '/gainesville/furniture-assembly/cost',
+        '/es/gainesville/furniture-assembly/cost',
+        // A job hub is listed once it has an open task: the seed's Gainesville yard task (no other e2e test posts or
+        // cancels yard tasks, so it stays open whatever the order).
+        '/gainesville/tasks/yard-cleanup',
+        '/es/gainesville/tasks/yard-cleanup',
+        '/cities',
+        '/es/cities',
+        '/cities/florida',
+      ]) {
+        expect(paths, path).toContain(path);
+      }
+      // A later city (Austin, open here only for the test cast) stays out until it is live.
+      expect(paths.filter((path) => /^\/(es\/)?austin(\/|$)/.test(path))).toEqual([]);
+      expect(paths.filter((path) => /^\/(es\/)?(app|admin|dev|api|code|sign-in|waitlist|legal)(\/|$)/.test(path))).toEqual([]);
+      // Task pages and helper profiles are listed only in the `on` mode (the unit tests cover that list).
+      expect(paths.filter((path) => /^\/(es\/)?(tasks|helpers)\//.test(path))).toEqual([]);
+      const entries = xml.split('<url>').slice(1);
+      expect(entries).toHaveLength(paths.length);
+      for (const entry of entries) expect(entry.match(/hreflang="(en-US|es-US|x-default)"/g)).toHaveLength(3);
+    });
   });
 
   test('home: the site name and logo, the share card, and the other language', async ({ page, request }) => {
@@ -266,5 +301,50 @@ test.describe('search engines', () => {
     expect(profile).toMatchObject({ '@type': 'ProfilePage', mainEntity: { '@type': 'Person', name: 'Jordan T.' } });
     const person = JSON.stringify(profile);
     for (const field of ['familyName', 'telephone', 'email', 'address', 'image']) expect(person).not.toContain(`"${field}"`);
+  });
+
+  // Last in the file: it changes what the other tests read (robots.txt, the sitemap), and puts it back.
+  test('launch day: an admin opens task pages and profiles to search from the config page, and keeps them out again, without a deploy', async ({ page, request }) => {
+    test.setTimeout(420_000);
+    const robotsTxt = async () => (await request.get('/robots.txt')).text();
+    const sitemapTasks = async () => [...(await (await request.get('/sitemap.xml')).text()).matchAll(/<loc>https?:\/\/[^/<]+(\/tasks\/[^<]+)<\/loc>/g)].map((match) => match[1]!);
+    await exclusive(SEARCH_SETTING, async () => {
+      const { db, pool } = database();
+      try {
+        await staffSignIn(page, 'riley@example.test');
+        await page.goto('/admin/config');
+        const section = page.getByRole('region', { name: 'Search engines' });
+        await expect(section.getByText('Site pages only', { exact: true })).toBeVisible({ timeout: 45_000 });
+        // Never set, this build stays out of search.
+        expect((await robotsTxt()).trim()).toBe('User-Agent: *\nDisallow: /');
+
+        await section.getByRole('button', { name: 'Open tasks and profiles to search' }).click();
+        const open = page.getByRole('alertdialog', { name: 'Open task pages and helper profiles to search?' });
+        await open.getByLabel('Reason').fill('Launch rehearsal: listings open for the seo e2e.');
+        await open.getByRole('button', { name: 'Open tasks and profiles to search' }).click();
+        await expect(section.getByText('Site pages, tasks and profiles', { exact: true })).toBeVisible({ timeout: 30_000 });
+        await expect(section.getByText(/^Reason: Launch rehearsal: listings open/)).toBeVisible();
+        // robots.txt and the sitemap at once; a task page's X-Robots-Tag within the proxy's 15 seconds.
+        expect(await robotsTxt()).toContain('Allow: /');
+        const tasks = await sitemapTasks();
+        expect(tasks.length).toBeGreaterThan(0);
+        await expect.poll(async () => (await request.get(tasks[0]!)).headers()['x-robots-tag'] ?? 'none', { timeout: 40_000 }).toBe('none');
+
+        await section.getByRole('button', { name: 'Keep tasks and profiles out' }).click();
+        const close = page.getByRole('alertdialog', { name: 'Keep task pages and helper profiles out of search?' });
+        await close.getByLabel('Reason').fill('Launch rehearsal: back to site pages only.');
+        await close.getByRole('button', { name: 'Keep tasks and profiles out' }).click();
+        await expect(section.getByText('Site pages only', { exact: true })).toBeVisible({ timeout: 30_000 });
+        expect(await sitemapTasks()).toEqual([]);
+        await expect.poll(async () => (await request.get(tasks[0]!)).headers()['x-robots-tag'] ?? 'none', { timeout: 40_000 }).toBe('noindex');
+      } finally {
+        // This build's own default again (nothing set: out of search) for every later test.
+        await db.delete(featureFlags).where(and(eq(featureFlags.key, 'search.listings'), eq(featureFlags.marketId, 'global')));
+        await pool.end();
+      }
+      // Back to it before other tests read it: robots.txt at once, the proxy's header within its 15 seconds.
+      expect((await robotsTxt()).trim()).toBe('User-Agent: *\nDisallow: /');
+      await expect.poll(async () => (await request.get('/')).headers()['x-robots-tag'], { timeout: 40_000 }).toBe('noindex, nofollow');
+    });
   });
 });

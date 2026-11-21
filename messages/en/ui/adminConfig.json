@@ -21,6 +21,26 @@
     "pausing": "Pausing…",
     "resuming": "Reopening…"
   },
+  "search": {
+    "title": "Search engines",
+    "intro": "What Google, Bing and other search engines may list from tasksnearme.com. Signed-in pages, staff pages and sample data never appear in search.",
+    "site": "Site pages only",
+    "on": "Site pages, tasks and profiles",
+    "siteBody": "Search engines list the site's own pages: home, cities, services, price guides, job boards, help and about. Task pages and helper profiles say noindex and stay out of the sitemap.",
+    "onBody": "Search engines also list open task pages, and helper profiles with a completed task or a review, and the sitemap includes them. Closed tasks and empty profiles stay out.",
+    "default": "No one has changed this yet: it's the site's default.",
+    "changed": "Changed {date} by {name}",
+    "reason": "Reason: {reason}",
+    "elsewhere": "This copy of the app isn't tasksnearme.com, so it stays out of search whatever this says.",
+    "open": "Open tasks and profiles to search",
+    "close": "Keep tasks and profiles out",
+    "openTitle": "Open task pages and helper profiles to search?",
+    "openDescription": "Within a minute, robots.txt, the sitemap and those pages tell search engines they may list them. Only real open tasks, and profiles with a completed task or a review, qualify. Search engines pick it up on their next visit.",
+    "closeTitle": "Keep task pages and helper profiles out of search?",
+    "closeDescription": "Within a minute they say noindex again and leave the sitemap. Search engines drop the ones they listed as they visit them again.",
+    "opening": "Opening…",
+    "closing": "Saving…"
+  },
   "markets": {
     "title": "Markets",
     "intro": "A market covers the ZIP codes that start with its prefixes. Outside every open market, people join the waitlist and helpers wait for their city.",
@@ -147,6 +167,8 @@
     "marketsLive": "Config · take a market live (confirm step)",
     "marketsRefused": "Config · a market refused for its time zone",
     "marketsReadOnly": "Config · markets, read-only for staff who aren’t admins",
-    "marketsEmpty": "Config · no markets"
+    "marketsEmpty": "Config · no markets",
+    "searchOpen": "Config · search engines: tasks and profiles open",
+    "searchElsewhere": "Config · search engines: a copy that stays out of search"
   }
 }

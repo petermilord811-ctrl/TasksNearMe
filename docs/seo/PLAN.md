@@ -463,12 +463,13 @@ loads 233 kB of gzipped JavaScript (445 before). Search Console still answers 40
 
 1. The sample data is gone from public pages, or the demo marketplace is cleared. Done 2026-11-17 (§6.1): the public
    and search engines see real rows only; signed-in testers keep the demo marketplace.
-2. `LIVE_SITE_INDEXING = 'on'`: task pages and helper profiles that pass S2 become indexable, and the sitemap lists
-   them.
+2. Open the listings: an admin turns the config page's **Search engines** to "Open tasks and profiles to search", with
+   a reason (since 2026-11-21, no deploy: §11.6). Task pages and helper profiles that pass S2 become indexable, and the
+   sitemap lists them.
 3. Google Jobs (S6) switches on with its conditions; the server gets the service account to send Indexing API
    notifications.
 4. Split the sitemap by page type (site pages, tasks, helpers) for per-type reports in Search Console.
-5. Ship, then run `node scripts/seo/indexnow.mjs` and submit the sitemaps.
+5. IndexNow announces the new pages at its next run; submit the sitemaps in Search Console.
 
 ## 10. How we'll know it's working
 
@@ -540,8 +541,8 @@ documentation and staff statements through 2026-11; Search Off the Record 112, "
    and leaf season (late winter and spring for the oaks), each from the official pages, dated.
 2. **First-party data** on the category pages and cost guides once there are real bookings: prices paid (with the
    sample size and dates), tasks done, reviews. Data nobody else has is what the city × service pages need most.
-3. **At launch**, `LIVE_SITE_INDEXING = 'on'` (§9): open task pages and helper profiles that pass S2 join search;
-   split the sitemap by type then.
+3. **At launch**, an admin opens the listings from the config page (§9, §11.6): open task pages and helper profiles
+   that pass S2 join search; split the sitemap by type then.
 4. If request-time metadata ever reaches an indexable page, add the AI crawlers (GPTBot, OAI-SearchBot,
    PerplexityBot, ClaudeBot) to Next's `htmlLimitedBots`. Today every indexable page has its title, canonical and
    description in `<head>`.
@@ -556,3 +557,20 @@ documentation and staff statements through 2026-11; Search Off the Record 112, "
 - `node scripts/seo/crawl.mjs [origin]` crawls the site the way a search engine does and lists links to redirects,
   404s and noindex pages, indexable pages missing from the sitemap, sitemap pages that aren't indexable, duplicate
   titles and descriptions, and thin pages.
+
+### 11.6 Search listings are an admin setting (2026-11-21)
+Opening task pages and helper profiles to search used to be a code change (`LIVE_SITE_INDEXING = 'on'`) and a ship,
+and ships can stall (GitHub billing paused them on 11-21). Now it's the config page's **Search engines** section, for
+admins, with a reason (sweep J-L6, ab's request; turning it on stays the owner's call on the day):
+- `site` (the default, `LIVE_SITE_INDEXING`): the site's own pages; task pages and helper profiles answer `noindex` and
+  stay out of the sitemap. `on`: they join, the ones that pass S2.
+- Stored as the global feature flag `search.listings` (absent until the first change); each change is an audit row
+  (`config.search_indexing`, its reason, from and to). The plain flag list doesn't show it and can't change it.
+- Read where it decides: robots.txt and the sitemap on each request (src/modules/seo/indexing-setting.ts), the proxy's
+  X-Robots-Tag every 15 seconds through its own connection (src/modules/seo/proxy-search-indexing.ts), IndexNow at each
+  run. Changing it refreshes the sitemap's cache. No restart.
+- Only the live site follows it. Every other copy of the app stays out of search whatever its database says; the e2e
+  build follows it once a test sets it (seo.spec opens and closes it, then removes it). SEARCH_INDEXING still overrides
+  everything where a server sets it.
+- No "off" on the live site: robots.txt would then block crawling and Google could never see a noindex. For an
+  emergency removal, use Search Console's Removals tool.

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { POLICY_FIELDS, type AdminConfigHandlers } from '@/contracts';
-import { ADMIN_NOW, adminConfigData, adminConfigNoMarketsData, adminConfigPausedData, adminConfigStaleMarketsData, adminMarketsReadOnlyData, fakeHandler } from '@/fixtures';
+import { ADMIN_NOW, adminConfigData, adminConfigNoMarketsData, adminConfigPausedData, adminConfigSearchElsewhereData, adminConfigSearchOpenData, adminConfigStaleMarketsData, adminMarketsReadOnlyData, fakeHandler } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import copy from '../../../../messages/en/ui/adminConfig.json';
 import { AdminConfigScreen, AdminMarketsScreen } from './admin-config-screen';
@@ -22,6 +22,7 @@ function mount(data = adminConfigData) {
     onSetFlag: vi.fn<AdminConfigHandlers['onSetFlag']>(fakeHandler({ ok: true, code: 'updated' }, 0)),
     onSetOutage: vi.fn<AdminConfigHandlers['onSetOutage']>(fakeHandler({ ok: true, code: 'updated' }, 0)),
     onSetMarketStatus: vi.fn<AdminConfigHandlers['onSetMarketStatus']>(fakeHandler({ ok: true, code: 'updated' }, 0)),
+    onSetSearchIndexing: vi.fn<AdminConfigHandlers['onSetSearchIndexing']>(fakeHandler({ ok: true, code: 'updated' }, 0)),
   };
   render(<NextIntlClientProvider locale="en" messages={uiMessages}><AdminConfigScreen data={data} handlers={handlers} now={ADMIN_NOW} /></NextIntlClientProvider>);
   return handlers;
@@ -53,6 +54,40 @@ describe('AdminConfigScreen', () => {
     await user.type(dialog.getByLabelText('Reason'), 'Stripe confirmed the fix.');
     await user.click(dialog.getByRole('button', { name: copy.outage.resume }));
     await waitFor(() => expect(handlers.onSetOutage).toHaveBeenCalledWith({ state: 'open', reason: 'Stripe confirmed the fix.' }));
+  });
+
+  it('opens task pages and helper profiles to search behind a reason dialog (launch day, no deploy)', async () => {
+    const user = userEvent.setup();
+    const handlers = mount();
+    const section = within(screen.getByRole('region', { name: copy.search.title }));
+    expect(section.getByText(copy.search.site)).toBeInTheDocument();
+    expect(section.getByText(copy.search.default)).toBeInTheDocument();
+    await user.click(section.getByRole('button', { name: copy.search.open }));
+    const dialog = within(await screen.findByRole('alertdialog', { name: copy.search.openTitle }));
+    await user.type(dialog.getByLabelText('Reason'), 'Gainesville launch: listings are real and moderated.');
+    await user.click(dialog.getByRole('button', { name: copy.search.open }));
+    await waitFor(() => expect(handlers.onSetSearchIndexing).toHaveBeenCalledWith({ setting: 'on', reason: 'Gainesville launch: listings are real and moderated.' }));
+    expect(navigation.refresh).toHaveBeenCalled();
+  });
+
+  it('shows who opened the listings and why, and offers to keep them out again', async () => {
+    const user = userEvent.setup();
+    const handlers = mount(adminConfigSearchOpenData);
+    const section = within(screen.getByRole('region', { name: copy.search.title }));
+    expect(section.getByText(copy.search.on)).toBeInTheDocument();
+    expect(section.getByText(/^Changed .* by Riley N\.$/)).toBeInTheDocument();
+    expect(section.getByText(`Reason: ${adminConfigSearchOpenData.searchIndexing.lastChange!.reason}`)).toBeInTheDocument();
+    expect(section.queryByText(copy.search.elsewhere)).not.toBeInTheDocument();
+    await user.click(section.getByRole('button', { name: copy.search.close }));
+    const dialog = within(await screen.findByRole('alertdialog', { name: copy.search.closeTitle }));
+    await user.type(dialog.getByLabelText('Reason'), 'A report showed an unmoderated task in search.');
+    await user.click(dialog.getByRole('button', { name: copy.search.close }));
+    await waitFor(() => expect(handlers.onSetSearchIndexing).toHaveBeenCalledWith({ setting: 'site', reason: 'A report showed an unmoderated task in search.' }));
+  });
+
+  it('says when this copy of the app stays out of search whatever the setting says', () => {
+    mount(adminConfigSearchElsewhereData);
+    expect(within(screen.getByRole('region', { name: copy.search.title })).getByText(copy.search.elsewhere)).toBeInTheDocument();
   });
 
   it('has a label for every policy field', () => {

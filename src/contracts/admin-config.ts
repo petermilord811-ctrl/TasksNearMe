@@ -80,6 +80,29 @@ export interface AdminOutageSwitch {
 }
 
 /**
+ * What search engines may list from the live site (docs/seo/PLAN.md §11.6; launch runbook J-L6): an admin setting, so
+ * opening the listings at launch needs no deploy. `site`: the site's own pages (home, cities, services, price guides,
+ * job boards, help, about). `on`: also open task pages and helper profiles with a completed task or a review, and the
+ * sitemap lists them. Signed-in pages, staff pages and sample data never join search.
+ */
+export const SEARCH_INDEXING_SETTINGS = ['site', 'on'] as const;
+export type AdminSearchIndexingSetting = (typeof SEARCH_INDEXING_SETTINGS)[number];
+
+export interface AdminSearchIndexing {
+  /** The setting: the code's default (`site`) until an admin first changes it. */
+  setting: AdminSearchIndexingSetting;
+  /** No admin has changed it yet: the code's default applies. */
+  isDefault: boolean;
+  /**
+   * What this server does with it: the live site follows the setting; any other copy of the app (development, a
+   * staging server) stays out of search, `off`, whatever the setting says. Show it when it differs from `setting`.
+   */
+  effective: 'off' | AdminSearchIndexingSetting;
+  /** The last change (the audit log); absent when it never changed. */
+  lastChange?: { at: ISODateTime; by: string; reason: string; from: AdminSearchIndexingSetting; to: AdminSearchIndexingSetting };
+}
+
+/**
  * Where we're open (completion plan 8.2): a market's status (src/modules/markets/coverage.ts). `prelaunch`: helpers
  * join and the first clients come in by invitation; `live`: open to everyone; `paused`: closed for now.
  */
@@ -147,6 +170,8 @@ export interface AdminConfigPageData {
   /** Every market, by name (completion plan 8.2). */
   markets: AdminMarketRow[];
   outage: AdminOutageSwitch;
+  /** Search engines (the whole site, not one market). */
+  searchIndexing: AdminSearchIndexing;
   /** The published version new bookings use. */
   current: AdminPolicyVersion;
   /** Every version, newest first. */
@@ -177,6 +202,13 @@ export const outageSwitchInputSchema = z.object({
   reason: reason(),
 });
 export type OutageSwitchInput = z.input<typeof outageSwitchInputSchema>;
+
+/** Open the listings to search (`on`) or keep them out (`site`), with the reason for the audit log. */
+export const searchIndexingInputSchema = z.object({
+  setting: z.enum(SEARCH_INDEXING_SETTINGS, code('invalid')),
+  reason: reason(),
+});
+export type SearchIndexingInput = z.input<typeof searchIndexingInputSchema>;
 
 /**
  * An admin opens, pauses or pre-launches a market (owner, 2026-11-14: national, cities open in turn). Moving a
@@ -209,6 +241,12 @@ export interface AdminConfigHandlers {
    * yet) or `fieldErrors.reason`; `not_allowed` (not an admin); `not_found` (no such market); `unknown`.
    */
   onSetMarketStatus: ActionHandler<MarketStatusChangeInput>;
+  /**
+   * A Server Action (the Search engines section's reason dialog calls it with `{ setting, reason }`). ok `updated`
+   * (also when it already was that). Robots.txt, the sitemap and the pages' X-Robots-Tag follow within 15 seconds.
+   * Errors: `validation_failed` (`fieldErrors.reason`), `not_allowed` (not an admin), `unknown`.
+   */
+  onSetSearchIndexing: ActionHandler<SearchIndexingInput>;
 }
 
 /** The read-only Markets page needs no handler: its rows carry no actions. */

@@ -2,13 +2,14 @@ import { getSessionCookie } from 'better-auth/cookies';
 import { NextResponse, type NextRequest } from 'next/server';
 import { routes } from '@/contracts';
 import { DEFAULT_LOCALE, isAppLocale } from '@/contracts/locale';
+import { proxySearchIndexing } from '@/modules/seo/proxy-search-indexing';
 import { isSamplePage } from '@/modules/seo/sample-pages';
 import { LOCALE_COOKIE, LOCALE_COOKIE_OPTIONS, localizedPath, negotiateLocale, splitLocalePath } from '@/shared/locale';
 import { isLocalRequest } from '@/shared/local-request';
 import { contentSecurityPolicy, cspHeaderName } from '@/shared/csp';
 import { E2E_BUILD } from '@/shared/dev-helpers';
 import { samplesHiddenInThisBuild } from '@/shared/sample-data';
-import { robotsHeaderFor, searchIndexing } from '@/shared/search-indexing';
+import { robotsHeaderFor } from '@/shared/search-indexing';
 import { taskHubRedirect } from '@/shared/task-hub';
 
 /**
@@ -99,9 +100,10 @@ export async function proxy(request: NextRequest) {
   // The Content Security Policy for every page (src/shared/csp.ts): enforced in production, reported in development.
   const development = process.env.NODE_ENV !== 'production';
   response.headers.set(cspHeaderName(development), contentSecurityPolicy({ development, mapStyleUrl: process.env.MAP_STYLE_URL, plainHttp: E2E_BUILD }));
-  // Search engines (src/shared/search-indexing.ts): only the live site is indexed, its listings only in the `on` mode,
-  // and signed-in and staff pages never, whatever their own metadata says.
-  const robots = robotsHeaderFor(searchIndexing(), path);
+  // Search engines (src/shared/search-indexing.ts): only the live site is indexed, its listings only in the `on` mode
+  // (the admin setting, within 15 seconds of a change), and signed-in and staff pages never, whatever their own
+  // metadata says.
+  const robots = robotsHeaderFor(await proxySearchIndexing(), path);
   if (robots) response.headers.set('X-Robots-Tag', robots);
   return response;
 }

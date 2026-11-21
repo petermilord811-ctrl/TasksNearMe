@@ -5,7 +5,7 @@ import { Suspense } from 'react';
 import { getAdminConfig } from '@/modules/markets/admin-config';
 import { getAdminMarkets } from '@/modules/markets/admin-markets';
 import { canChangeMarketStatus } from '@/modules/markets/status-actions';
-import { publishPolicyAction, setFeatureFlagAction, setMarketStatusAction, setOutageSwitchAction } from '@/modules/markets/config-actions';
+import { publishPolicyAction, setFeatureFlagAction, setMarketStatusAction, setOutageSwitchAction, setSearchIndexingAction } from '@/modules/markets/config-actions';
 import { DEFAULT_MARKET_SLUG } from '@/modules/markets/queries';
 import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
@@ -18,7 +18,7 @@ export const metadata: Metadata = { title: 'Config', robots: { index: false } };
 
 /**
  * Admins: where we're open (the markets, with Pre-launch, Live and Pause; completion plan 8.2), the launch market's
- * policy versions, the outage switch and the feature flags. Every other staff role reads the markets only.
+ * policy versions, the outage switch, what search engines may list (launch runbook J-L6) and the feature flags. Every other staff role reads the markets only.
  */
 function AdminConfigPage() {
   return (
@@ -44,6 +44,7 @@ async function AdminConfig() {
         onSetFlag: setFeatureFlagAction.bind(null, data.market.slug),
         onSetOutage: setOutageSwitchAction.bind(null, data.market.id),
         onSetMarketStatus: setMarketStatusAction,
+        onSetSearchIndexing: setSearchIndexingAction,
       }}
     />
   );

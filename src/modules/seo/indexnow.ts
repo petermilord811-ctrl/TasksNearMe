@@ -50,7 +50,8 @@ export async function submitToIndexNow(urls: readonly string[], baseUrl: string,
 const accepted = (status: number) => status === 200 || status === 202;
 
 export interface ChangedPagesDeps {
-  mode: () => SearchIndexing;
+  /** This server's mode (the admin setting on the live site): read once per run. */
+  mode: () => SearchIndexing | Promise<SearchIndexing>;
   baseUrl: () => string;
   /** The sitemap's entries for the mode (listings only in `on`). */
   load: (options: { listings: boolean }) => Promise<MetadataRoute.Sitemap>;
@@ -66,8 +67,9 @@ export function changedPagesAnnouncer(deps: ChangedPagesDeps, intervalMs = 15 * 
   const sent = new Map<string, string>();
   let lastRun = -Infinity;
   return async function announce(now: Date): Promise<IndexNowResult | null> {
-    const mode = deps.mode();
-    if (mode === 'off' || now.getTime() - lastRun < intervalMs) return null;
+    if (now.getTime() - lastRun < intervalMs) return null;
+    const mode = await deps.mode();
+    if (mode === 'off') return null;
     lastRun = now.getTime();
     const entries = await deps.load({ listings: mode === 'on' });
     const stamp = (entry: MetadataRoute.Sitemap[number]) => String(entry.lastModified ?? '');

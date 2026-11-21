@@ -12,11 +12,13 @@ import {
   type StaffRole,
 } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
+import { getAdminSearchIndexing } from '@/modules/seo/indexing-setting';
 import type { StaffActor } from '@/modules/support/staff';
 import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { SEARCH_LISTINGS_FLAG } from '@/shared/search-indexing';
 import { getOutageSwitch, OUTAGE_FLAG } from './outage';
 import { featureFlags, marketPolicies, markets } from './schema';
 
@@ -63,6 +65,7 @@ export async function getAdminConfig(db: Db, staff: StaffActor, marketSlug: stri
     db.select().from(featureFlags).where(eq(featureFlags.marketId, 'global')).orderBy(featureFlags.key),
     getOutageSwitch(db, market.id),
   ]);
+  const searchIndexing = await getAdminSearchIndexing(db);
   const publisherIds = [...new Set(versions.flatMap((row) => (row.publishedBy ? [row.publishedBy] : [])))];
   const publishers = publisherIds.length ? await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, publisherIds)) : [];
   const nameOf = new Map(publishers.map((row) => [row.id, row.name]));
@@ -76,10 +79,12 @@ export async function getAdminConfig(db: Db, staff: StaffActor, marketSlug: stri
   return {
     market: { id: market.id, name: market.name, slug: market.slug },
     outage,
+    searchIndexing,
     current,
     history,
-    // The outage switch has its own section (per market); it isn't offered as a plain global flag.
-    flags: flags.filter((row) => row.key !== OUTAGE_FLAG).map((row) => ({ key: row.key, description: row.description, enabled: row.enabled })),
+    // The outage switch (per market) and the search setting have their own sections, with their own audit; neither is
+    // offered as a plain global flag.
+    flags: flags.filter((row) => row.key !== OUTAGE_FLAG && row.key !== SEARCH_LISTINGS_FLAG).map((row) => ({ key: row.key, description: row.description, enabled: row.enabled })),
   };
 }
 
@@ -131,6 +136,8 @@ export async function setFeatureFlag(db: Db, staff: StaffActor, input: FlagSetIn
   const parsed = flagSetInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const { key, enabled, reason } = parsed.data;
+  // The search setting changes through its own section (src/modules/seo/indexing-setting.ts), never as a plain flag.
+  if (key === SEARCH_LISTINGS_FLAG) return { ok: false, code: 'validation_failed', fieldErrors: { key: ['invalid'] } };
   const updated = await db.transaction(async (tx) => {
     const rows = await tx.update(featureFlags).set({ enabled }).where(and(eq(featureFlags.key, key), eq(featureFlags.marketId, 'global'))).returning({ key: featureFlags.key });
     if (rows.length === 0) return false;

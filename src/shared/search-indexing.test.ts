@@ -1,13 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { LIVE_SITE_INDEXING, robotsHeaderFor, searchIndexing } from './search-indexing';
+import { followsSearchSetting, LIVE_SITE_INDEXING, robotsHeaderFor, searchIndexing, storedSearchIndexing } from './search-indexing';
 
 const LIVE = { APP_URL: 'https://tasksnearme.com' };
 const production = { production: true };
 const development = { production: false };
 
 describe('searchIndexing', () => {
-  it('the live site follows the committed choice: the site pages, not the listings (the owner, 2026-11-14)', () => {
-    // At launch this becomes 'on': change LIVE_SITE_INDEXING and this line together.
+  it('the live site follows the committed default until an admin sets it: the site pages, not the listings (the owner, 2026-11-14)', () => {
     expect(LIVE_SITE_INDEXING).toBe('site');
     expect(searchIndexing(LIVE, production)).toBe('site');
     expect(searchIndexing({ APP_URL: 'https://tasksnearme.com/' }, production)).toBe('site');
@@ -34,6 +33,46 @@ describe('searchIndexing', () => {
 
   it('under test (not a production build) it is off unless told otherwise', () => {
     expect(searchIndexing(LIVE)).toBe('off');
+  });
+});
+
+describe('the admin setting (the config page, launch runbook J-L6)', () => {
+  const e2e = { production: false, e2e: true };
+
+  it('reads the stored flag: on when set, site when turned off, nothing when never set', () => {
+    expect(storedSearchIndexing(true)).toBe('on');
+    expect(storedSearchIndexing(false)).toBe('site');
+    expect(storedSearchIndexing(undefined)).toBeNull();
+  });
+
+  it('the live site follows it: on opens the listings, site keeps them out, never set keeps the default', () => {
+    expect(searchIndexing(LIVE, production, 'on')).toBe('on');
+    expect(searchIndexing(LIVE, production, 'site')).toBe('site');
+    expect(searchIndexing(LIVE, production, null)).toBe(LIVE_SITE_INDEXING);
+  });
+
+  it('no other copy of the app follows it, whatever its database says', () => {
+    expect(searchIndexing(LIVE, development, 'on')).toBe('off');
+    expect(searchIndexing({ APP_URL: 'https://dev.tasksnearme.com' }, production, 'on')).toBe('off');
+    expect(searchIndexing({}, production, 'site')).toBe('off');
+  });
+
+  it('the e2e build follows it once a test sets it, and is off otherwise', () => {
+    expect(searchIndexing({ APP_URL: 'http://localhost:3300' }, e2e, 'on')).toBe('on');
+    expect(searchIndexing({ APP_URL: 'http://localhost:3300' }, e2e, 'site')).toBe('site');
+    expect(searchIndexing({ APP_URL: 'http://localhost:3300' }, e2e, null)).toBe('off');
+  });
+
+  it('SEARCH_INDEXING still overrides it', () => {
+    expect(searchIndexing({ ...LIVE, SEARCH_INDEXING: 'site' }, production, 'on')).toBe('site');
+    expect(searchIndexing({ ...LIVE, SEARCH_INDEXING: 'off' }, production, 'on')).toBe('off');
+  });
+
+  it('is read only where it can change the mode', () => {
+    expect(followsSearchSetting(LIVE, production)).toBe(true);
+    expect(followsSearchSetting({ APP_URL: 'http://localhost:3300' }, e2e)).toBe(true);
+    expect(followsSearchSetting(LIVE, development)).toBe(false);
+    expect(followsSearchSetting({ ...LIVE, SEARCH_INDEXING: 'on' }, production)).toBe(false);
   });
 });
 

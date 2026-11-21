@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * (src/modules/seo/sample-pages.ts), stood in for here.
  */
 
-const state = vi.hoisted(() => ({ hidden: false, samples: new Set<string>(), asked: [] as string[] }));
+const state = vi.hoisted(() => ({ hidden: false, samples: new Set<string>(), asked: [] as string[], mode: 'off' as 'off' | 'site' | 'on' }));
 
 vi.mock('@/modules/seo/sample-pages', () => ({
   isSamplePage: vi.fn(async (path: string) => {
@@ -16,6 +16,7 @@ vi.mock('@/modules/seo/sample-pages', () => ({
     return state.samples.has(path);
   }),
 }));
+vi.mock('@/modules/seo/proxy-search-indexing', () => ({ proxySearchIndexing: async () => state.mode }));
 vi.mock('@/shared/sample-data', async (original) => ({
   ...(await original<typeof import('@/shared/sample-data')>()),
   samplesHiddenInThisBuild: () => state.hidden,
@@ -41,6 +42,7 @@ beforeEach(() => {
   state.hidden = false;
   state.samples = new Set();
   state.asked = [];
+  state.mode = 'off';
 });
 
 describe('proxy: language addresses', () => {
@@ -130,5 +132,27 @@ describe('proxy: text messages\' short links (messages pass J-M9)', () => {
 
   it('still runs for pages that only start with an n, and for /n without a code', () => {
     for (const url of ['/notifications', '/app/notifications', '/n', '/es/n/Ab3dE6gH9k', '/neighborhoods']) expect(unstable_doesMiddlewareMatch({ config, url }), url).toBe(true);
+  });
+});
+
+describe('proxy: what search engines may index (the admin setting, read every 15 s)', () => {
+  const robots = async (path: string) => (await get(path)).headers.get('x-robots-tag');
+
+  it('site keeps task pages and helper profiles out; on lets them in; off keeps everything out', async () => {
+    state.mode = 'site';
+    expect(await robots('/tasks/assemble-a-desk-duckpond-9f2e')).toBe('noindex');
+    expect(await robots('/es/helpers/dana-w')).toBe('noindex');
+    expect(await robots('/gainesville')).toBeNull();
+    state.mode = 'on';
+    expect(await robots('/tasks/assemble-a-desk-duckpond-9f2e')).toBeNull();
+    expect(await robots('/helpers/dana-w')).toBeNull();
+    state.mode = 'off';
+    expect(await robots('/gainesville')).toBe('noindex, nofollow');
+  });
+
+  it('never lets signed-in or staff pages in, whatever the setting', async () => {
+    state.mode = 'on';
+    expect((await get('/app/bookings', { ...navigate, cookie: SESSION })).headers.get('x-robots-tag')).toBe('noindex, nofollow');
+    expect(await robots('/admin/config')).toBe('noindex, nofollow');
   });
 });

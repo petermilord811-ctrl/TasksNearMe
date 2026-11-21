@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createProxyDatabase } from './proxy-database';
 import { createDatabaseLookup, isSamplePage, type SamplePageLookup } from './sample-pages';
 
 const REAL_TASK = `tsk_${'a1'.repeat(16)}`;
@@ -66,7 +67,7 @@ describe('createDatabaseLookup', () => {
   it('reads the demo cities once per ten minutes, and each address once per ten minutes', async () => {
     const database = fakeDatabase();
     let clock = 0;
-    const lookup = createDatabaseLookup(database.connect, () => clock);
+    const lookup = createDatabaseLookup(createProxyDatabase(database.connect, () => clock), () => clock);
     expect([...(await lookup.demoMarketSlugs())]).toEqual(['dallas', 'chicago']);
     await lookup.demoMarketSlugs();
     expect(await lookup.taskId('rake-leaves-uptown-1a2b3c')).toBe('tsk_demo_dal_0042');
@@ -85,7 +86,7 @@ describe('createDatabaseLookup', () => {
 
   it('asks only for the demo markets, a task by its slug and a profile by its handle, with parameters', async () => {
     const database = fakeDatabase();
-    const lookup = createDatabaseLookup(database.connect);
+    const lookup = createDatabaseLookup(createProxyDatabase(database.connect));
     await lookup.demoMarketSlugs();
     await lookup.taskId("x' or 1=1 --");
     await lookup.helperUserId('paul-w');
@@ -94,22 +95,5 @@ describe('createDatabaseLookup', () => {
       `select id from tasks where slug = $1 limit 1 ${JSON.stringify(["x' or 1=1 --"])}`,
       'select user_id as id from helper_profiles where handle = $1 limit 1 ["paul-w"]',
     ]);
-  });
-
-  it('pauses for 30 seconds after a failure, so no request waits on a database that is down, then tries again', async () => {
-    let attempts = 0;
-    let clock = 0;
-    const lookup = createDatabaseLookup(async () => {
-      attempts += 1;
-      if (attempts === 1) throw new Error('no database yet');
-      return { query: async () => ({ rows: [{ slug: 'dallas' }] }) };
-    }, () => clock);
-    await expect(lookup.demoMarketSlugs()).rejects.toThrow('no database yet');
-    clock += 10_000;
-    await expect(lookup.taskId('rake-leaves-uptown-1a2b3c')).rejects.toThrow('paused');
-    expect(attempts).toBe(1);
-    clock += 30_000;
-    expect([...(await lookup.demoMarketSlugs())]).toEqual(['dallas']);
-    expect(attempts).toBe(2);
   });
 });

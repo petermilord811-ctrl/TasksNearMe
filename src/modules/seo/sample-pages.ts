@@ -1,4 +1,5 @@
 import { isSampleId } from '@/shared/sample-data';
+import { proxyDatabase, type ProxyDatabase } from './proxy-database';
 
 /**
  * Pages that exist only for the sample marketplace (src/shared/sample-data.ts): a demo city's pages (its market's id is
@@ -11,9 +12,9 @@ import { isSampleId } from '@/shared/sample-data';
  * demo city's noindex pages kept leading it to more of them (830 by 2026-11-20); a 404 is the signal to stop
  * (docs/seo/PLAN.md §11).
  *
- * The answers come from the database, read through one connection of the proxy's own and kept for ten minutes, so a
- * page request costs at most one indexed lookup. Any failure counts as "not a sample page": the page is served as
- * before and answers for itself.
+ * The answers come from the database, read through the proxy's own connection (src/modules/seo/proxy-database.ts) and
+ * kept for ten minutes, so a page request costs at most one indexed lookup. Any failure counts as "not a sample page":
+ * the page is served as before and answers for itself.
  */
 
 export interface SamplePageLookup {
@@ -44,33 +45,11 @@ export async function isSamplePage(path: string, lookup: SamplePageLookup = data
 }
 
 const KEEP_MS = 10 * 60_000;
-/** After a failed query, lookups wait this long before trying the database again (pages are served as before). */
-const PAUSE_AFTER_FAILURE_MS = 30_000;
 /** Answers kept per task slug and helper handle: enough for every sample page Google has seen, bounded. */
 const MAX_KEPT = 5_000;
 
-interface Queryable {
-  query(text: string, values?: unknown[]): Promise<{ rows: Array<Record<string, unknown>> }>;
-}
-
-/** The lookup above against the database, with its answers kept for ten minutes. `connect` is for tests. */
-export function createDatabaseLookup(connect: () => Promise<Queryable>, now: () => number = Date.now): SamplePageLookup {
-  let client: Promise<Queryable> | null = null;
-  // While the database is down, no request waits for its connection timeout: they skip the lookup for a while.
-  let failedAt = Number.NEGATIVE_INFINITY;
-  const run = async (text: string, values?: unknown[]) => {
-    if (now() - failedAt < PAUSE_AFTER_FAILURE_MS) throw new Error('sample page lookup paused after a failure');
-    try {
-      client ??= connect().catch((error: unknown) => {
-        client = null;
-        throw error;
-      });
-      return await (await client).query(text, values);
-    } catch (error) {
-      failedAt = now();
-      throw error;
-    }
-  };
+/** The lookup above over the proxy's database reads (src/modules/seo/proxy-database.ts), answers kept ten minutes. */
+export function createDatabaseLookup(database: ProxyDatabase, now: () => number = Date.now): SamplePageLookup {
   let markets: { slugs: ReadonlySet<string>; at: number } | null = null;
   const kept = new Map<string, { id: string | null; at: number }>();
   const remember = async (key: string, read: () => Promise<string | null>) => {
@@ -84,14 +63,14 @@ export function createDatabaseLookup(connect: () => Promise<Queryable>, now: () 
     return id;
   };
   const single = async (text: string, value: string) => {
-    const { rows } = await run(text, [value]);
+    const { rows } = await database.run(text, [value]);
     const id = rows[0]?.id;
     return typeof id === 'string' ? id : null;
   };
   return {
     async demoMarketSlugs() {
       if (markets && now() - markets.at < KEEP_MS) return markets.slugs;
-      const { rows } = await run("select slug from markets where left(id, 9) = 'mkt_demo_'");
+      const { rows } = await database.run("select slug from markets where left(id, 9) = 'mkt_demo_'");
       markets = { slugs: new Set(rows.map((row) => String(row.slug))), at: now() };
       return markets.slugs;
     },
@@ -102,21 +81,8 @@ export function createDatabaseLookup(connect: () => Promise<Queryable>, now: () 
 
 let shared: SamplePageLookup | null = null;
 
-/**
- * The lookup the proxy uses: its own pool of one connection (the app's pool lives in the pages' module graph), which
- * closes when idle. pg is loaded on first use, so requests that never ask don't load it.
- */
+/** The lookup the proxy uses, over its own connection. */
 export function databaseLookup(): SamplePageLookup {
-  shared ??= createDatabaseLookup(async () => {
-    const { Pool } = await import('pg');
-    return new Pool({
-      connectionString: process.env.DATABASE_URL,
-      max: 1,
-      idleTimeoutMillis: 30_000,
-      connectionTimeoutMillis: 2_000,
-      statement_timeout: 2_000,
-      allowExitOnIdle: true,
-    });
-  });
+  shared ??= createDatabaseLookup(proxyDatabase());
   return shared;
 }

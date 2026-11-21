@@ -2,8 +2,9 @@
 
 import { refresh, updateTag } from 'next/cache';
 import { eq } from 'drizzle-orm';
-import { marketStatusChangeInputSchema, type ActionResult, type FlagSetInput, type MarketStatusChangeInput, type OutageSwitchInput, type PolicyPublishInput } from '@/contracts';
+import { marketStatusChangeInputSchema, type ActionResult, type FlagSetInput, type MarketStatusChangeInput, type OutageSwitchInput, type PolicyPublishInput, type SearchIndexingInput } from '@/contracts';
 import { marketTag } from '@/modules/marketing/queries';
+import { SEARCH_INDEXING_TAGS, setSearchIndexing } from '@/modules/seo/indexing-setting';
 import { staffActorOf } from '@/modules/support/staff';
 import { validationFailed } from '@/platform/actions/results';
 import { getViewer } from '@/platform/auth/viewer';
@@ -50,6 +51,22 @@ export async function setOutageSwitchAction(marketId: string, input: OutageSwitc
   if (!staff) return { ok: false, code: 'not_allowed' };
   const result = await setOutageSwitch(db, staff, String(marketId), input, await requestNow());
   if (result.ok) refresh();
+  return result;
+}
+
+/**
+ * Admins open the live site's task pages and helper profiles to search, or keep them out (the Search engines section;
+ * launch runbook J-L6): no deploy. The sitemap refreshes at once, robots.txt reads the setting on every request, and
+ * the pages' X-Robots-Tag follows within 15 seconds (the proxy's read).
+ */
+export async function setSearchIndexingAction(input: SearchIndexingInput): Promise<ActionResult> {
+  const staff = await signedInStaff();
+  if (!staff) return { ok: false, code: 'not_allowed' };
+  const result = await setSearchIndexing(db, staff, input, await requestNow());
+  if (result.ok) {
+    for (const tag of SEARCH_INDEXING_TAGS) updateTag(tag);
+    refresh();
+  }
   return result;
 }
 

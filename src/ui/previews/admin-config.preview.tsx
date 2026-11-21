@@ -1,5 +1,5 @@
 import { routes, type PreviewEntry } from '@/contracts';
-import { ADMIN_NOW, adminConfigData, adminConfigNeverPausedData, adminConfigNoMarketsData, adminConfigPausedData, adminConfigStaleMarketsData, adminMarketsReadOnlyData, alexStaff, fakeAdminConfigHandlers, fakeHandler, rileyStaff } from '@/fixtures';
+import { ADMIN_NOW, adminConfigData, adminConfigNeverPausedData, adminConfigNoMarketsData, adminConfigPausedData, adminConfigSearchElsewhereData, adminConfigSearchOpenData, adminConfigStaleMarketsData, adminMarketsReadOnlyData, alexStaff, fakeAdminConfigHandlers, fakeHandler, rileyStaff } from '@/fixtures';
 import type { AdminConfigPreviewState } from '@/ui/screens/admin/admin-config-controls';
 import type { AdminMarketsPreviewState } from '@/ui/screens/admin/admin-config-markets';
 import { AdminConfigContent, AdminMarketsScreen } from '@/ui/screens/admin/admin-config-screen';
@@ -31,6 +31,9 @@ export const adminConfigPreviews: PreviewEntry[] = [
   config('outage-paused', p.outagePaused, {}, adminConfigPausedData),
   config('outage-never', p.outageNever, {}, adminConfigNeverPausedData),
   config('outage-dialog', p.outageDialog, { outageOpen: true }),
+  // Search engines (launch runbook J-L6): listings opened on launch day, and a copy of the app that stays out anyway.
+  config('search-open', p.searchOpen, {}, adminConfigSearchOpenData),
+  config('search-elsewhere', p.searchElsewhere, {}, adminConfigSearchElsewhereData),
   // Where we're open (completion plan 8.2): the confirm step for going live (with the waitlist email count, 8.3), the
   // time-zone refusal from the server, no markets, and the section read-only for staff who aren't admins.
   config('markets-live-dialog', p.marketsLive, { marketDialog: { marketId: 'mkt_austin', status: 'live' } }),

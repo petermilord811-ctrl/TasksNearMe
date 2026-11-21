@@ -29,13 +29,14 @@ export function AdminMarketsScreen({ data, handlers = {}, ...preview }: { data: 
 }
 
 /**
- * Admins: the outage switch (completion plan 5.15), where we're open (the markets, 8.2), the market's policy versions
- * and the feature flags (UI-038).
+ * Admins: the outage switch (completion plan 5.15), what search engines may list (launch runbook J-L6), where we're
+ * open (the markets, 8.2), the market's policy versions and the feature flags (UI-038).
  */
 export function AdminConfigContent({ data, handlers, outageOpen = false, marketDialog, ...preview }: AdminConfigScreenProps & AdminConfigPreviewState & AdminMarketsPreviewState & { outageOpen?: boolean }) {
   const { formatDate, formatDateTime } = useFormat();
   const t = useTranslations('adminConfig');
-  const { current, outage } = data;
+  const { current, outage, searchIndexing: search } = data;
+  const listingsOpen = search.setting === 'on';
   const market = data.market.name;
   const summary = (values: AdminConfigPageData['current']['values']) => t('feesSummary', { poster: percentText(values.posterBps), minimum: formatMoney(values.posterMinCents), helper: percentText(values.helperBps) });
   return <div className="min-w-0 space-y-8 [overflow-wrap:anywhere]">
@@ -61,6 +62,30 @@ export function AdminConfigContent({ data, handlers, outageOpen = false, marketD
           field="reason"
           notAllowed={t('notAllowed')}
           initialOpen={outageOpen}
+        />
+      </div>
+    </section>
+    <section aria-labelledby="config-search" className="space-y-3">
+      <div className="space-y-1"><h2 id="config-search" className={adminH2}>{t('search.title')}</h2><p className="text-sm text-muted-foreground">{t('search.intro')}</p></div>
+      <div className={cn(adminSection, 'space-y-3')}>
+        <StatusBadge tone={listingsOpen ? 'success' : 'info'} label={listingsOpen ? t('search.on') : t('search.site')} />
+        <p className="text-sm">{listingsOpen ? t('search.onBody') : t('search.siteBody')}</p>
+        {search.lastChange ? <div className="space-y-0.5 text-sm text-muted-foreground">
+          <p><time dateTime={search.lastChange.at}>{t('search.changed', { date: formatDateTime(search.lastChange.at), name: search.lastChange.by })}</time></p>
+          <p>{t('search.reason', { reason: search.lastChange.reason })}</p>
+        </div> : <p className="text-sm text-muted-foreground">{t('search.default')}</p>}
+        {search.effective !== search.setting && <p className="text-sm text-muted-foreground">{t('search.elsewhere')}</p>}
+        <AdminReasonAction
+          trigger={listingsOpen ? t('search.close') : t('search.open')}
+          title={listingsOpen ? t('search.closeTitle') : t('search.openTitle')}
+          description={listingsOpen ? t('search.closeDescription') : t('search.openDescription')}
+          submit={listingsOpen ? t('search.close') : t('search.open')}
+          pending={listingsOpen ? t('search.closing') : t('search.opening')}
+          destructive={listingsOpen}
+          action={handlers.onSetSearchIndexing}
+          payload={{ setting: listingsOpen ? 'site' : 'on' }}
+          field="reason"
+          notAllowed={t('notAllowed')}
         />
       </div>
     </section>

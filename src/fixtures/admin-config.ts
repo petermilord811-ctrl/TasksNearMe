@@ -75,6 +75,8 @@ export const adminConfigData: AdminConfigPageData = {
   market: { id: 'mkt_austin', name: 'Austin', slug: 'austin' },
   markets: adminMarketRows,
   outage: { paused: false, changed: { at: '2026-11-02T14:05:00.000Z', by: 'Riley N.', reason: 'Stripe confirmed the charge errors are fixed; charges are going through again.' } },
+  // Search engines: never changed, the site's default (site pages only), as on the live site before launch.
+  searchIndexing: { setting: 'site', isDefault: true, effective: 'site' },
   current: { id: 'pol_austin_1', version: 1, status: 'published', publishedAt: '2026-10-15T15:00:00.000Z', publishedBy: 'Riley N.', values: launch },
   history: [
     { id: 'pol_austin_2', version: 2, status: 'draft', values: { ...launch, lateFeeMinCents: 1200 } },
@@ -96,6 +98,20 @@ export const adminConfigPausedData: AdminConfigPageData = {
   ...adminConfigData,
   outage: { paused: true, changed: { at: '2026-11-14T08:42:00.000Z', by: 'Riley N.', reason: 'Card charges are failing for everyone (Stripe incident); pausing new bookings until it clears.' } },
 };
+
+/** Launch day: an admin opened task pages and helper profiles to search (launch runbook J-L6). */
+export const adminConfigSearchOpenData: AdminConfigPageData = {
+  ...adminConfigData,
+  searchIndexing: {
+    setting: 'on',
+    isDefault: false,
+    effective: 'on',
+    lastChange: { at: '2026-11-21T14:00:00.000Z', by: 'Riley N.', reason: 'Gainesville launch: open listings are real and moderated, as the launch runbook says.', from: 'site', to: 'on' },
+  },
+};
+
+/** A copy of the app that isn't the live site (development): the setting says open, but this server stays out of search. */
+export const adminConfigSearchElsewhereData: AdminConfigPageData = { ...adminConfigSearchOpenData, searchIndexing: { ...adminConfigSearchOpenData.searchIndexing, effective: 'off' } };
 
 /** A market whose outage switch was never used. */
 export const adminConfigNeverPausedData: AdminConfigPageData = { ...adminConfigData, outage: { paused: false } };
@@ -122,4 +138,5 @@ export const fakeAdminConfigHandlers: AdminConfigHandlers = {
   onSetFlag: () => wait({ ok: true as const, code: 'updated' as const }),
   onSetOutage: () => wait({ ok: true as const, code: 'updated' as const }),
   onSetMarketStatus: () => wait({ ok: true as const, code: 'updated' as const }),
+  onSetSearchIndexing: () => wait({ ok: true as const, code: 'updated' as const }),
 };
