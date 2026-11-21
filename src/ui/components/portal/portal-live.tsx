@@ -9,6 +9,7 @@ import { PORTAL_GENERAL } from '@/contracts/portal';
 import { setTaskLiveState } from '@/ui/components/search/board-live-store';
 import { useRealtime } from '@/ui/lib/realtime';
 import { cn } from '@/ui/lib/utils';
+import { retryingEventSource } from '@/ui/lib/retrying-event-source';
 
 /** A tab in the background lets its task stream go after this long, and opens it again when it's back. */
 const HIDDEN_CLOSE_MS = 120_000;
@@ -60,31 +61,33 @@ export function PortalLive({ data, listId, onCheckFresh }: { data: Data; listId:
   });
 
   useEffect(() => {
-    let source: EventSource | null = null;
+    let stream: { close: () => void } | null = null;
     let hiddenTimer: number | undefined;
     const open = () => {
-      if (source || typeof EventSource === 'undefined') return;
-      source = new EventSource(`/api/realtime/market/${encodeURIComponent(data.market.slug)}`);
-      source.addEventListener('task', (event) => {
-        try {
-          const task = JSON.parse((event as MessageEvent<string>).data) as TaskPublicView;
-          if (task?.id) onTask(task);
-        } catch {
-          /* not a task: ignore */
-        }
-      });
-      source.addEventListener('task-state', (event) => {
-        try {
-          const state = JSON.parse((event as MessageEvent<string>).data) as TaskLiveState;
-          if (state?.id && typeof state.offerCount === 'number' && typeof state.readAt === 'string') onState(state);
-        } catch {
-          /* not a state: ignore */
-        }
+      if (stream) return;
+      // Opened again after a refused or failed answer (a deploy's restart, too many streams): src/ui/lib/retrying-event-source.ts.
+      stream = retryingEventSource(`/api/realtime/market/${encodeURIComponent(data.market.slug)}`, (source) => {
+        source.addEventListener('task', (event) => {
+          try {
+            const task = JSON.parse((event as MessageEvent<string>).data) as TaskPublicView;
+            if (task?.id) onTask(task);
+          } catch {
+            /* not a task: ignore */
+          }
+        });
+        source.addEventListener('task-state', (event) => {
+          try {
+            const state = JSON.parse((event as MessageEvent<string>).data) as TaskLiveState;
+            if (state?.id && typeof state.offerCount === 'number' && typeof state.readAt === 'string') onState(state);
+          } catch {
+            /* not a state: ignore */
+          }
+        });
       });
     };
     const close = () => {
-      source?.close();
-      source = null;
+      stream?.close();
+      stream = null;
     };
     const onVisibility = () => {
       window.clearTimeout(hiddenTimer);

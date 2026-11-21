@@ -8,6 +8,7 @@ import type { TaskLiveState, TaskPublicView } from '@/contracts';
 import { taskMatchesBoard, type BoardMatchQuery } from '@/shared/board-match';
 import { cn } from '@/ui/lib/utils';
 import { setTaskLiveState } from './board-live-store';
+import { retryingEventSource } from '@/ui/lib/retrying-event-source';
 
 /** A tab in the background lets its stream go after this long, and opens it again when it's back. */
 const HIDDEN_CLOSE_MS = 120_000;
@@ -52,35 +53,33 @@ export function BoardLive({ marketSlug, timeZone, query, areas, shownIds, listId
   });
 
   useEffect(() => {
-    let source: EventSource | null = null;
+    let stream: { close: () => void } | null = null;
     let hiddenTimer: number | undefined;
     const open = () => {
-      if (source || typeof EventSource === 'undefined') return;
-      source = new EventSource(`/api/realtime/market/${encodeURIComponent(marketSlug)}`);
-      source.onopen = () => setConnected(true);
-      // The browser reconnects by itself (the server says when); a refused stream just stays quiet.
-      source.onerror = () => setConnected(source?.readyState === EventSource.OPEN);
-      source.addEventListener('task', (event) => {
-        try {
-          const task = JSON.parse((event as MessageEvent<string>).data) as TaskPublicView;
-          if (task?.id) onTask(task);
-        } catch {
-          /* not a task: ignore */
-        }
-      });
-      source.addEventListener('task-state', (event) => {
-        try {
-          const state = JSON.parse((event as MessageEvent<string>).data) as TaskLiveState;
-          if (state?.id && typeof state.offerCount === 'number' && typeof state.readAt === 'string') onState(state);
-        } catch {
-          /* not a state: ignore */
-        }
-      });
+      if (stream) return;
+      // Opened again after a refused or failed answer (a deploy's restart, too many streams): src/ui/lib/retrying-event-source.ts.
+      stream = retryingEventSource(`/api/realtime/market/${encodeURIComponent(marketSlug)}`, (source) => {
+        source.addEventListener('task', (event) => {
+          try {
+            const task = JSON.parse((event as MessageEvent<string>).data) as TaskPublicView;
+            if (task?.id) onTask(task);
+          } catch {
+            /* not a task: ignore */
+          }
+        });
+        source.addEventListener('task-state', (event) => {
+          try {
+            const state = JSON.parse((event as MessageEvent<string>).data) as TaskLiveState;
+            if (state?.id && typeof state.offerCount === 'number' && typeof state.readAt === 'string') onState(state);
+          } catch {
+            /* not a state: ignore */
+          }
+        });
+      }, setConnected);
     };
     const close = () => {
-      source?.close();
-      source = null;
-      setConnected(false);
+      stream?.close();
+      stream = null;
     };
     const onVisibility = () => {
       window.clearTimeout(hiddenTimer);
