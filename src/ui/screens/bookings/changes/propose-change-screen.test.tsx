@@ -41,7 +41,7 @@ function mount({
 
 async function sendProposal() {
   await userEvent.click(screen.getByRole('button', { name: 'Send change' }));
-  await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Send proposal' }));
+  await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Send change' }));
 }
 
 describe('ProposeChangeScreen', () => {
@@ -53,7 +53,7 @@ describe('ProposeChangeScreen', () => {
     fireEvent.change(screen.getByLabelText('Message'), { target: { value: message } });
     await userEvent.click(screen.getByRole('button', { name: 'Send change' }));
     expect(onPropose).not.toHaveBeenCalled();
-    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Send proposal' }));
+    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Send change' }));
     expect(onPropose).toHaveBeenCalledExactlyOnceWith({ priceCents: 8025, expenseAllowanceCents: 2000, start: '2026-11-21T17:30:00.000Z', message });
   });
 
