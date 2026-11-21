@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -10,14 +11,22 @@ import { useFormat } from '@/ui/lib/format';
 import { ActionBar } from '@/ui/components/actions/action-bar';
 import { Alert, AlertDescription } from '@/ui/primitives/alert';
 import { Button } from '@/ui/primitives/button';
-import { CancelBookingSheet, CantAccessSheet, ReportNoShowSheet, RunningLateSheet, SafetyReportSheet } from './sheets';
+import { Spinner } from '@/ui/primitives/spinner';
 
+/** While a sheet's code arrives (rare: it's loaded at idle once the page has settled), a panel where the sheet opens. */
+function SheetLoading() {
+  return <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center rounded-t-[1.75rem] border-t bg-background p-6 sm:inset-x-auto sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:w-full sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[1.75rem] sm:border"><Spinner /></div>;
+}
+
+// The sheets open on a tap, so their code isn't part of the booking page's first load (speed on a phone): it loads when
+// the browser is idle after the page settles, or on the first tap if that comes sooner. Each still mounts open, so its
+// slide-in and its focus move are as before.
 const sheetComponents = {
-  cancel: CancelBookingSheet,
-  running_late: RunningLateSheet,
-  report_no_show: ReportNoShowSheet,
-  cant_access: CantAccessSheet,
-  safety_report: SafetyReportSheet,
+  cancel: dynamic(() => import('./sheets').then((sheets) => sheets.CancelBookingSheet), { loading: SheetLoading }),
+  running_late: dynamic(() => import('./sheets').then((sheets) => sheets.RunningLateSheet), { loading: SheetLoading }),
+  report_no_show: dynamic(() => import('./sheets').then((sheets) => sheets.ReportNoShowSheet), { loading: SheetLoading }),
+  cant_access: dynamic(() => import('./sheets').then((sheets) => sheets.CantAccessSheet), { loading: SheetLoading }),
+  safety_report: dynamic(() => import('./sheets').then((sheets) => sheets.SafetyReportSheet), { loading: SheetLoading }),
 };
 type SheetAction = keyof typeof sheetComponents;
 
@@ -48,6 +57,18 @@ export function BookingHubActions({ data, handlers, sheets, initialResult, initi
   const [sheetAction, setSheetAction] = useState<SheetAction | null>(null);
   const [sheetSuccess, setSheetSuccess] = useState<{ action: SheetAction; result: ActionResult }>();
   const ActiveSheet = sheetAction ? sheetComponents[sheetAction] : null;
+  // Fetch the sheets' code once the page is idle, so a first tap rarely waits for it.
+  const hasSheets = data.actions.some((action) => isSheetAction(action.id));
+  useEffect(() => {
+    if (!hasSheets) return;
+    const preload = () => { void import('./sheets'); };
+    if (typeof requestIdleCallback === 'function') {
+      const idle = requestIdleCallback(preload, { timeout: 4000 });
+      return () => cancelIdleCallback(idle);
+    }
+    const timer = window.setTimeout(preload, 2000);
+    return () => window.clearTimeout(timer);
+  }, [hasSheets]);
   const savedStatus = data.helperSaved ? <p className="inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-sm font-medium text-secondary-foreground"><BookmarkCheck aria-hidden="true" className="size-4" />{t('saved')}</p> : null;
   const responseDeadline = data.viewerRole === 'poster' ? data.deadlines.posterResponseDueAt : undefined;
 

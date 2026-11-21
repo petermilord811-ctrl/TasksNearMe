@@ -56,5 +56,10 @@ test('phones can reach the booking actions under More (UI-030)', async ({ page }
   await devSignIn(page, 'ben@example.test');
   await page.goto('/app/bookings/bkg_tv');
   await openAction(page, 'Report a safety concern');
+  // The sheets' code loads on first open (speed on a phone): the sheet still opens, in its open state, with focus inside.
+  const sheet = page.getByRole('dialog').or(page.getByRole('alertdialog')).filter({ visible: true }).first();
+  await expect(sheet).toBeVisible();
+  await expect(sheet).toHaveAttribute('data-state', 'open');
+  await expect.poll(() => sheet.evaluate((element) => element.contains(document.activeElement))).toBe(true);
   await expect(page.getByRole('link', { name: /Call 911/ })).toBeVisible();
 });

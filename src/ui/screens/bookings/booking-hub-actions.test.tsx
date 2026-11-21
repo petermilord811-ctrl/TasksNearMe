@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -77,7 +77,8 @@ describe('BookingHubActions', () => {
   it.each(['cancel', 'running_late', 'report_no_show', 'cant_access', 'safety_report'] as const)('opens %s as a sheet without calling the single-tap handler', async (id) => {
     const { onAction } = mount({ ...deskBookingPosterWithSheets, actions: [{ id, kind: 'secondary', enabled: true }] });
     await userEvent.click(screen.getByRole('button', { name: messages.actions[id] }));
-    expect(screen.queryByRole('dialog') ?? screen.queryByRole('alertdialog')).toBeVisible();
+    // The sheets' code loads on first open (speed on a phone), so the sheet can take a moment.
+    await waitFor(() => expect(screen.queryByRole('dialog') ?? screen.queryByRole('alertdialog')).toBeVisible());
     expect(onAction).not.toHaveBeenCalled();
   });
 
