@@ -102,7 +102,7 @@ export function BookingHubActions({ data, handlers, sheets, initialResult, initi
     }}
     onAction={(action) => handlers.onAction({ action: action as BookingActionId })}
     onResult={(result) => {
-      if (result.ok && result.code === 'updated' && !result.redirectTo) router.refresh();
+      if (result.ok && !result.redirectTo) router.refresh();
     }}
     renderResult={(result) => <Alert role="status" className={result.ok ? 'border-success/30' : 'border-destructive/30'}>
       {result.ok ? <CircleCheck aria-hidden="true" className="text-success" /> : <CircleAlert aria-hidden="true" className="text-destructive" />}

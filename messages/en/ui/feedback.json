@@ -18,6 +18,18 @@
   "confirmDescription": "Continue with “{action}”?",
   "confirm": "Confirm",
   "keepEditing": "Go back",
+  "confirmations": {
+    "approve": {
+      "title": "Approve the completed task?",
+      "description": "Approving releases your payment to your helper, and it can't be undone. If something isn't right, go back and choose Report a problem.",
+      "confirm": "Approve and release payment"
+    },
+    "decline_offer": {
+      "title": "Decline this offer?",
+      "description": "The offer closes, and so does your conversation with this helper. You can't undo this. Your other offers stay open.",
+      "confirm": "Decline offer"
+    }
+  },
   "pending": "Working…",
   "previewTitle": "What happens next",
   "resultLabel": "Demo action outcome",
@@ -39,7 +51,8 @@
     "canceled": "Canceled",
     "submitted": "Submitted",
     "redeemed": "Gift card requested",
-    "updated": "Updated"
+    "updated": "Updated",
+    "opened": "Opening…"
   },
   "error": {
     "validation_failed": "Check the details and try again.",

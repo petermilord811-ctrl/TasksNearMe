@@ -51,14 +51,34 @@ export function BookingTipCard({ data, handlers, preview }: {
   return <TipForm tip={tip} helperName={data.helper.displayName} handlers={handlers} preview={preview} />;
 }
 
+/**
+ * When the client's tip went through (ms): the refresh then swaps the form, and the button that had focus, for the
+ * given tip, which takes focus if nothing else has it (journeys on a phone, J-C6). Only for a few seconds, so a later
+ * visit to a tipped booking never moves focus.
+ */
+const tipGiven = { at: 0 };
+function noteTipGiven() { tipGiven.at = Date.now(); }
+/** Whether the client's tip went through in the last few seconds; answers yes once. */
+function tipJustGiven() {
+  const fresh = tipGiven.at > 0 && Date.now() - tipGiven.at < 10_000;
+  tipGiven.at = 0;
+  return fresh;
+}
+
 function TipGiven({ tip, client, otherName }: { tip: Given; client: boolean; otherName: string }) {
   const { formatDateTime } = useFormat();
   const t = useTranslations('bookingHub.tipCard');
   const id = useId();
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (!client || !tipJustGiven()) return;
+    if (document.activeElement && document.activeElement !== document.body) return;
+    heading.current?.focus();
+  }, [client]);
   return <section aria-labelledby={`${id}-title`} className={cn(surface, surfacePad, 'flex items-start gap-4')}>
     <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-2xl bg-success/12 text-success"><HandCoins className="size-5" /></span>
     <div className="min-w-0 space-y-1.5">
-      <h2 id={`${id}-title`} className={sectionTitle}>{client ? t('tippedTitle') : t('receivedTitle', { name: otherName })}</h2>
+      <h2 ref={heading} id={`${id}-title`} tabIndex={-1} className={cn(sectionTitle, 'outline-none')}>{client ? t('tippedTitle') : t('receivedTitle', { name: otherName })}</h2>
       <p className="text-lg font-semibold tabular-nums">{t(client ? 'tipped' : 'received', { amount: formatMoney(tip.amountCents) })}</p>
       <p className="text-sm text-muted-foreground">{client ? t('tippedBody', { name: otherName }) : t('receivedBody')}</p>
       <time dateTime={tip.at} className="block text-sm tabular-nums text-muted-foreground">{formatDateTime(tip.at)}</time>
@@ -113,7 +133,10 @@ function TipForm({ tip, helperName, handlers, preview }: { tip: Available; helpe
     if (needsBankVerification(next)) { setVerification(next.verification); return; }
     setVerification(undefined);
     setResult(next);
-    if (next.ok) router.refresh();
+    if (next.ok) {
+      noteTipGiven();
+      router.refresh();
+    }
   }
 
   function submit(event: FormEvent<HTMLFormElement>) {

@@ -443,9 +443,9 @@ describe("a task's owner actions", () => {
 
     // The owner gets the same actions.
     viewer.id = CLIENT;
-    expect(await taskOwnerAction('tsk_wp_own', { action: 'invite_helpers' })).toEqual({ ok: true, code: 'updated', redirectTo: routes.app.saved() });
-    expect(await taskOwnerAction('tsk_wp_own_done', { action: 'post_again' })).toEqual({ ok: true, code: 'updated', redirectTo: routes.app.newTask({ again: 'tsk_wp_own_done' }) });
-    expect(await posterOfferAction({ offerId, action: 'book_offer' })).toEqual({ ok: true, code: 'updated', redirectTo: routes.app.confirmOffer('tsk_wp_own', offerId) });
+    expect(await taskOwnerAction('tsk_wp_own', { action: 'invite_helpers' })).toEqual({ ok: true, code: 'opened', redirectTo: routes.app.saved() });
+    expect(await taskOwnerAction('tsk_wp_own_done', { action: 'post_again' })).toEqual({ ok: true, code: 'opened', redirectTo: routes.app.newTask({ again: 'tsk_wp_own_done' }) });
+    expect(await posterOfferAction({ offerId, action: 'book_offer' })).toEqual({ ok: true, code: 'opened', redirectTo: routes.app.confirmOffer('tsk_wp_own', offerId) });
     viewer.id = '';
   });
 });

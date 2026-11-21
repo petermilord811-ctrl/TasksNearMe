@@ -18,6 +18,18 @@
   "confirmDescription": "¿Continuar con “{action}”?",
   "confirm": "Confirmar",
   "keepEditing": "Volver",
+  "confirmations": {
+    "approve": {
+      "title": "¿Aprobar la tarea completada?",
+      "description": "Al aprobarla, tu pago se libera para tu ayudante y no se puede deshacer. Si algo no está bien, vuelve y elige Reportar un problema.",
+      "confirm": "Aprobar y liberar el pago"
+    },
+    "decline_offer": {
+      "title": "¿Rechazar esta oferta?",
+      "description": "La oferta se cierra, y también tu conversación con este ayudante. No se puede deshacer. Tus otras ofertas siguen abiertas.",
+      "confirm": "Rechazar oferta"
+    }
+  },
   "pending": "Procesando…",
   "previewTitle": "Qué sigue",
   "resultLabel": "Resultado de la acción de demostración",
@@ -39,7 +51,8 @@
     "canceled": "Cancelado",
     "submitted": "Enviado",
     "redeemed": "Tarjeta de regalo solicitada",
-    "updated": "Actualizado"
+    "updated": "Actualizado",
+    "opened": "Abriendo…"
   },
   "error": {
     "validation_failed": "Revisa los detalles e inténtalo de nuevo.",

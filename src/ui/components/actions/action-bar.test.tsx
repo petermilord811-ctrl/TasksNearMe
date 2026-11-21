@@ -47,9 +47,37 @@ describe('ActionBar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Approve task' }));
     expect(handler).not.toHaveBeenCalled();
     const dialog = screen.getByRole('alertdialog');
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Approve and release payment' }));
     expect(handler).toHaveBeenCalledExactlyOnceWith('approve');
     expect(await screen.findByText('Task approved')).toBeVisible();
+  });
+
+  it('spells out what approving does, and asks other actions generically (journeys on a phone, J-C5)', async () => {
+    show(deskCompletionSubmittedPosterActions);
+    await userEvent.click(screen.getByRole('button', { name: 'Approve task' }));
+    const dialog = screen.getByRole('alertdialog');
+    expect(within(dialog).getByRole('heading', { name: 'Approve the completed task?' })).toBeVisible();
+    expect(dialog).toHaveTextContent(feedback.confirmations.approve.description);
+    expect(within(dialog).getByRole('button', { name: 'Approve and release payment' })).toBeVisible();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Go back' }));
+    cleanup();
+    show([{ id: 'skip_visit', kind: 'destructive', enabled: true, confirm: true }]);
+    await userEvent.click(screen.getByRole('button', { name: actions.skip_visit }));
+    const generic = screen.getByRole('alertdialog');
+    expect(within(generic).getByRole('heading', { name: 'Confirm action' })).toBeVisible();
+    expect(generic).toHaveTextContent(`Continue with “${actions.skip_visit}”?`);
+    expect(within(generic).getByRole('button', { name: 'Confirm' })).toBeVisible();
+  });
+
+  it('opens the next page without a success message when the action only opens it (J-C3)', async () => {
+    const handler = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'opened', redirectTo: '/app/messages/thr_1' }));
+    show([{ id: 'message', kind: 'secondary', enabled: true }], handler);
+    await userEvent.click(screen.getByRole('button', { name: actions.message }));
+    expect(handler).toHaveBeenCalledExactlyOnceWith('message');
+    expect(push).toHaveBeenCalledExactlyOnceWith('/app/messages/thr_1');
+    expect(toastSuccess).not.toHaveBeenCalled();
+    expect(screen.queryByText(feedback.success.opened)).toBeNull();
+    expect(screen.queryByText(feedback.success.updated)).toBeNull();
   });
 
   it('does not invoke an action when confirmation is canceled', async () => {
@@ -115,7 +143,7 @@ describe('ActionBar', () => {
     const approve = screen.getByRole('button', { name: 'Approve task' });
     approve.focus();
     await userEvent.keyboard('{Enter}');
-    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Confirm' }));
+    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Approve and release payment' }));
     expect(await screen.findByText('Task approved')).toBeVisible();
     expect(approve).toHaveFocus();
     // The refreshed booking has other actions: focus moves to the result, not to the top of the page.

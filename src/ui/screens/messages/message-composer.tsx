@@ -53,6 +53,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
   const [uploading, setUploading] = useState(false);
   const lastTyping = useRef(0);
   const locked = useRef(initialPending);
+  const formRef = useRef<HTMLFormElement>(null);
   const uploadLocked = useRef(false);
   const mounted = useRef(true);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -92,6 +93,8 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
     if (!rules.canSend || locked.current || uploadLocked.current) return;
     if (body.length > rules.maxLength) { setError('body', { type: 'maxLength', message: 'too_long' }); setFocus('body'); return; }
     if (input.attachmentIds.length > rules.maxAttachments) { setError('attachmentIds', { type: 'maxLength', message: 'too_long' }); fileInput.current?.focus(); return; }
+    // Writing goes on after a message: focus (and a phone's keyboard) stays in the message box (journeys on a phone, J-C4).
+    const keepFocus = formRef.current?.contains(document.activeElement) ?? false;
     locked.current = true; setPending(true); setResult(undefined);
     let next: ActionResult;
     try { next = await handlers.onSend(replyTo ? { ...input, replyToId: replyTo.id } : input); }
@@ -101,14 +104,16 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
     if (next.ok) {
       if (next.code === 'sent') { form.reset({ body: '', attachmentIds: [] }); setPhotos([]); setReplyTo(null); router.refresh(); }
       if (next.redirectTo) router.push(next.redirectTo);
-    }
+      // By id: reset() has just let go of the field's ref, so setFocus would find nothing.
+      else if (keepFocus) document.getElementById(`${id}-body`)?.focus();
+    } else if (keepFocus && !next.fieldErrors) document.getElementById(`${id}-body`)?.focus();
   }
 
   if (!rules.canSend) return <p role="status" className="flex items-center justify-center gap-2 rounded-xl border bg-muted px-4 py-5 text-sm text-muted-foreground"><Lock aria-hidden="true" className="size-4 shrink-0" />{t(rules.disabledReason ?? 'closed')}</p>;
 
   const specialError = result && !result.ok && (result.code === 'not_allowed' || result.code === 'rate_limited');
   const feedback = result && !result.ok ? { ...result, fieldErrors: undefined } : result;
-  return <form noValidate aria-label={t('label')} aria-busy={pending || uploading} onSubmit={(event) => {
+  return <form ref={formRef} noValidate aria-label={t('label')} aria-busy={pending || uploading} onSubmit={(event) => {
     if (locked.current || uploadLocked.current) { event.preventDefault(); return; }
     void form.handleSubmit(submit)(event);
   }} className="space-y-2.5 border-t border-foreground/[0.07] bg-card px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:pt-4 sm:pb-4 dark:border-white/[0.06]">
@@ -121,7 +126,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
       <FieldLabel htmlFor={`${id}-body`} className="sr-only">{t('label')}</FieldLabel>
       {/* Send sits beside the message, as in any chat (on phones as an icon, still named "Send"). */}
       <div className="flex items-end gap-2">
-      <Textarea {...form.register('body')} id={`${id}-body`} rows={1} maxLength={rules.maxLength} disabled={pending} aria-invalid={!!bodyError} aria-describedby={`${id}-hint ${id}-counter ${id}-body-error`} placeholder={t('label')} className="max-h-40 min-h-12 flex-1 resize-none field-sizing-content" onInput={() => {
+      <Textarea {...form.register('body')} id={`${id}-body`} rows={1} maxLength={rules.maxLength} readOnly={pending} aria-invalid={!!bodyError} aria-describedby={`${id}-hint ${id}-counter ${id}-body-error`} placeholder={t('label')} className="max-h-40 min-h-12 flex-1 resize-none field-sizing-content" onInput={() => {
         // "Typing…" for the other person (completion plan 7.1), at most one ping every 2.5 s; never blocks typing.
         if (!handlers.onTyping || Date.now() - lastTyping.current < 2500) return;
         lastTyping.current = Date.now();
@@ -131,7 +136,8 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
         event.preventDefault();
         if (!empty && !overLimit && !locked.current && !uploadLocked.current) void form.handleSubmit(submit)();
       }} />
-        <Button type="submit" disabled={pending || uploading || empty || overLimit} aria-busy={pending} className="h-12 shrink-0 transition-[transform,box-shadow,background-color,opacity] duration-200 max-sm:w-12 max-sm:px-0 sm:min-w-24">{pending ? <Spinner aria-hidden="true" /> : <Send aria-hidden="true" className="size-4" />}<span className="max-sm:sr-only">{t(pending ? 'sending' : 'send')}</span></Button>
+        {/* A tap on Send leaves focus in the message, so a phone's keyboard stays open for the next one. */}
+        <Button type="submit" disabled={pending || uploading || empty || overLimit} aria-busy={pending} onMouseDown={(event) => event.preventDefault()} className="h-12 shrink-0 transition-[transform,box-shadow,background-color,opacity] duration-200 max-sm:w-12 max-sm:px-0 sm:min-w-24">{pending ? <Spinner aria-hidden="true" /> : <Send aria-hidden="true" className="size-4" />}<span className="max-sm:sr-only">{t(pending ? 'sending' : 'send')}</span></Button>
       </div>
       <div className="flex flex-wrap justify-between gap-x-3 gap-y-0.5 px-1">
         <FieldDescription id={`${id}-hint`} className="text-xs">{t('hint')}</FieldDescription>

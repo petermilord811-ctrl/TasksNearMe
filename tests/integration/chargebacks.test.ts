@@ -194,7 +194,7 @@ describe('T-18: chargebacks', () => {
     expect(rowOf(await getEarningsPage(db, HELPER, new Date()), BEFORE)).toMatchObject({ status: 'on_hold', holdReason: 'dispute', amountCents: breakdown.helperEarningsCents });
 
     // The client approves anyway: the earnings are recorded for the transfer, which waits.
-    expect(await runBookingAction(db, CLIENT, BEFORE, 'approve', new Date())).toEqual({ ok: true, code: 'updated' });
+    expect(await runBookingAction(db, CLIENT, BEFORE, 'approve', new Date())).toEqual({ ok: true, code: 'approved' });
     expect(await statusOf(BEFORE)).toEqual(['scheduled']);
     await runScheduledTransfers(db, connect, new Date());
     expect(await statusOf(BEFORE)).toEqual(['scheduled']);

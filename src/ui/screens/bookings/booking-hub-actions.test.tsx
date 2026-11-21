@@ -163,8 +163,18 @@ describe('BookingHubActions', () => {
     expect(onAction).not.toHaveBeenCalled();
     expect(approve).toHaveFocus();
     await userEvent.click(approve);
-    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Confirm' }));
+    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Approve and release payment' }));
     expect(onAction).toHaveBeenCalledExactlyOnceWith({ action: 'approve' });
+  });
+
+  it('refreshes after any change to the booking, such as approving ("Task approved", not "Updated")', async () => {
+    const { onAction } = mount(deskBookingPosterCompletionSubmitted, vi.fn(fakeHandler({ ok: true, code: 'approved' }, 0)));
+    await userEvent.click(screen.getByRole('button', { name: 'Approve task' }));
+    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Approve and release payment' }));
+    expect(onAction).toHaveBeenCalledExactlyOnceWith({ action: 'approve' });
+    expect(await screen.findByText('Task approved')).toBeVisible();
+    expect(navigation.refresh).toHaveBeenCalledExactlyOnceWith();
+    expect(navigation.push).not.toHaveBeenCalled();
   });
 
   it('keeps disabled actions visible with their reason', async () => {

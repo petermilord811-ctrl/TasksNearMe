@@ -94,6 +94,12 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
     }
     pendingRef.current = false;
     setPendingId(null);
+    // Only another page opens (the conversation, the review form): nothing changed, so there's nothing to confirm.
+    if (result.ok && result.code === 'opened') {
+      if (result.redirectTo) router.push(result.redirectTo);
+      onResult?.(result);
+      return;
+    }
     const text = feedback(`${result.ok ? 'success' : 'error'}.${result.code}`);
     setResult(result);
     if (result.ok) {
@@ -178,6 +184,8 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
   }
 
   if (actions.length === 0) return null;
+  // Actions with consequences to spell out (approving pays the helper) have their own words; the rest ask generically.
+  const confirmationCopy = confirmation && feedback.has(`confirmations.${confirmation.id}.title`) ? confirmation.id : null;
 
   // In the page: a hairline above the actions. Sticky, and fixed on phones: a glass tray kept above the tab dock by
   // `bottom-app-navigation` (`--app-bottom-offset`), floating `--action-tray-gap` higher, so the next step is always
@@ -215,19 +223,19 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
       <AlertDialog open={confirmation !== null} onOpenChange={(open) => { if (!open) setConfirmation(null); }}>
         <AlertDialogContent onCloseAutoFocus={(event) => { event.preventDefault(); if (!pendingRef.current) confirmationTrigger.current?.focus(); }}>
           <AlertDialogHeader>
-            <AlertDialogTitle>{feedback('confirmTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>{feedback('confirmDescription', { action: confirmation ? t(confirmation.id) : '' })}</AlertDialogDescription>
+            <AlertDialogTitle>{confirmationCopy ? feedback(`confirmations.${confirmationCopy}.title`) : feedback('confirmTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{confirmationCopy ? feedback(`confirmations.${confirmationCopy}.description`) : feedback('confirmDescription', { action: confirmation ? t(confirmation.id) : '' })}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{feedback('keepEditing')}</AlertDialogCancel>
-            {confirmation && getActionLink?.(confirmation.id) ? <AlertDialogAction asChild><a href={getActionLink(confirmation.id)?.href} download={getActionLink(confirmation.id)?.download}>{feedback('confirm')}</a></AlertDialogAction> : <AlertDialogAction className={cn(confirmation?.kind === 'destructive' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90')} onClick={() => {
+            {confirmation && getActionLink?.(confirmation.id) ? <AlertDialogAction asChild><a href={getActionLink(confirmation.id)?.href} download={getActionLink(confirmation.id)?.download}>{confirmationCopy ? feedback(`confirmations.${confirmationCopy}.confirm`) : feedback('confirm')}</a></AlertDialogAction> : <AlertDialogAction className={cn(confirmation?.kind === 'destructive' && 'bg-destructive text-destructive-foreground hover:bg-destructive/90')} onClick={() => {
               const action = confirmation;
               setConfirmation(null);
               if (action) {
                 restoreAfterPending.current = true;
                 void run(action);
               }
-            }}>{feedback('confirm')}</AlertDialogAction>}
+            }}>{confirmationCopy ? feedback(`confirmations.${confirmationCopy}.confirm`) : feedback('confirm')}</AlertDialogAction>}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

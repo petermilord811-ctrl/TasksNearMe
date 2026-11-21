@@ -106,13 +106,34 @@ describe('AccountScreen', () => {
     fireEvent.click(control);
     expect(onSavePreference).toHaveBeenCalledExactlyOnceWith({ topic: 'messages', channel: 'sms', enabled: true });
     expect(control).toBeChecked();
-    expect(control).toBeDisabled();
+    // Busy, not disabled: a disabled switch would drop keyboard focus (J-C8). The second click was ignored.
+    expect(control).toBeEnabled();
     expect(control).toHaveAttribute('aria-busy', 'true');
     await act(async () => finish({ ok: false, code: 'not_allowed' }));
     expect(control).not.toBeChecked();
     expect(control).toBeEnabled();
     expect(screen.getByRole('status')).toHaveTextContent(account.preferences.notAllowed);
     expect(navigation.push).not.toHaveBeenCalled();
+  });
+
+  it('keeps focus on a switch while it saves, after, and when a refresh brings the saved value (J-C8)', async () => {
+    const user = userEvent.setup();
+    let finish!: (result: ActionResult) => void;
+    const onSavePreference = vi.fn(() => new Promise<ActionResult>((resolve) => { finish = resolve; }));
+    const { rerender } = mount(mayaAccountData, { onSavePreference });
+    const control = screen.getByRole('switch', { name: /Messages.*SMS/i });
+    control.focus();
+    await user.keyboard(' ');
+    expect(onSavePreference).toHaveBeenCalledExactlyOnceWith({ topic: 'messages', channel: 'sms', enabled: true });
+    expect(control).toHaveFocus();
+    await act(async () => finish({ ok: true, code: 'updated' }));
+    expect(control).toHaveFocus();
+    expect(control).toBeChecked();
+    const refreshed = { ...mayaAccountData, preferences: mayaAccountData.preferences.map((item) => item.topic === 'messages' && item.channel === 'sms' ? { ...item, enabled: true } : item) };
+    rerender(<NextIntlClientProvider locale="en" messages={{ ...messages, account }}><AccountScreen data={refreshed} handlers={{ ...fakeAccountHandlers, onSavePreference }} /></NextIntlClientProvider>);
+    expect(control).toBeInTheDocument();
+    expect(control).toHaveFocus();
+    expect(control).toBeChecked();
   });
 
   it('retains a saved preference and announces success', async () => {

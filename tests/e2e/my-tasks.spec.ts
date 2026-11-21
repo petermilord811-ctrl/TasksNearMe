@@ -41,7 +41,7 @@ test('the poster declines an offer', async ({ page }, testInfo) => {
   const more = page.getByRole('button', { name: 'More' });
   if (await more.isVisible()) await more.click();
   await page.getByRole('button', { name: 'Decline offer' }).first().click();
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Confirm' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Decline offer' }).click();
   // The offer is closed: no more actions on it, and the public count drops to the offers in play. "Not selected"
   // first: while the dialog is open the page's buttons are hidden anyway, so their count alone passes before the
   // decline is saved (5.19).

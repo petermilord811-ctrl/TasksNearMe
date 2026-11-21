@@ -74,6 +74,8 @@ describe('the booking page', () => {
     expect(await runBookingAction(db, 'usr_ana', bookingId, 'on_my_way', minutes(-60))).toEqual({ ok: false, code: 'not_allowed' });
     expect(await runBookingAction(db, 'usr_jordan', bookingId, 'on_my_way', minutes(-60))).toEqual({ ok: true, code: 'updated' });
     expect(await runBookingAction(db, 'usr_jordan', bookingId, 'arrived', minutes(-10))).toEqual({ ok: true, code: 'updated' });
+    // Opening the conversation changes nothing, so the result says so (journeys on a phone, J-C3).
+    expect(await runBookingAction(db, 'usr_ana', bookingId, 'message', minutes(-8))).toEqual({ ok: true, code: 'opened', redirectTo: expect.stringMatching(/^\/app\/messages\/thr_/) });
     const view = await getBookingView(hub, 'usr_jordan', bookingId, minutes(-5));
     expect(view?.status).toBe('in_progress');
     expect(view?.checkIn).toEqual({ onMyWayAt: minutes(-60).toISOString(), arrivedAt: minutes(-10).toISOString() });
@@ -84,7 +86,7 @@ describe('the booking page', () => {
       .update(bookings)
       .set({ status: 'completion_submitted', completionSubmittedAt: minutes(60), approvalDueAt: minutes(60 + 72 * 60) })
       .where(eq(bookings.id, bookingId));
-    expect(await runBookingAction(db, 'usr_ana', bookingId, 'approve', minutes(70))).toEqual({ ok: true, code: 'updated' });
+    expect(await runBookingAction(db, 'usr_ana', bookingId, 'approve', minutes(70))).toEqual({ ok: true, code: 'approved' });
     expect(await runBookingAction(db, 'usr_ana', bookingId, 'approve', minutes(71))).toEqual({ ok: false, code: 'not_allowed' });
     const [task] = await db.select({ status: tasks.status }).from(tasks).where(eq(tasks.id, TASK));
     expect(task?.status).toBe('completed');

@@ -21,13 +21,18 @@ function PreferenceSwitch({ preference, onSave, hintId, onResult }: {
   const t = useTranslations('account');
   const id = useId();
   const [enabled, setEnabled] = useState(preference.enabled);
+  // A refresh brings the saved value: follow it here rather than remounting, which would drop focus (J-C8).
+  const [saved, setSaved] = useState(preference.enabled);
+  if (saved !== preference.enabled) { setSaved(preference.enabled); setEnabled(preference.enabled); }
   const action = useAccountAction();
   const label = t('preferences.switchLabel', { topic: t(`preferences.topics.${preference.topic}`), channel: t(`preferences.channels.${preference.channel}`) });
 
   return <div className="relative flex items-center justify-center">
     <label htmlFor={id} className="relative flex min-h-11 min-w-11 items-center justify-center px-2">
       {/* Always on (bookings, payments, the account's email): fully on, not faded, with a lock on it (audit L8). */}
-      <Switch id={id} aria-label={label} aria-describedby={preference.locked ? hintId : undefined} aria-busy={action.pending} checked={preference.locked || enabled} disabled={preference.locked || action.pending} className={cn(preference.locked && 'disabled:cursor-default disabled:opacity-100')} onCheckedChange={async (nextEnabled) => {
+      <Switch id={id} aria-label={label} aria-describedby={preference.locked ? hintId : undefined} aria-busy={action.pending} checked={preference.locked || enabled} disabled={preference.locked} className={cn(preference.locked && 'disabled:cursor-default disabled:opacity-100')} onCheckedChange={async (nextEnabled) => {
+        // Saving: the switch keeps focus (a disabled one would drop it) and waits for the answer (J-C8).
+        if (action.pending) return;
         const previous = enabled;
         setEnabled(nextEnabled);
         onResult(undefined, label);
@@ -63,7 +68,7 @@ export function AccountPreferences({ preferences, onSave }: {
         <th scope="row" className="py-3 pr-2 text-left font-medium">{t(`preferences.topics.${topic}`)}</th>
         {channels.map((channel) => {
           const preference = preferences.find((item) => item.topic === topic && item.channel === channel);
-          return <td key={channel} className="px-1 py-1">{preference ? <PreferenceSwitch key={`${preference.enabled}-${preference.locked}`} preference={preference} onSave={onSave} hintId={hintId} onResult={(result, label) => setFeedback({ result, label })} /> : <span className="block text-center text-muted-foreground">{t('preferences.unavailable')}</span>}</td>;
+          return <td key={channel} className="px-1 py-1">{preference ? <PreferenceSwitch key={String(preference.locked)} preference={preference} onSave={onSave} hintId={hintId} onResult={(result, label) => setFeedback({ result, label })} /> : <span className="block text-center text-muted-foreground">{t('preferences.unavailable')}</span>}</td>;
         })}
       </tr>)}</tbody>
     </table>

@@ -53,6 +53,11 @@ export const ACTION_SUCCESS_CODES = [
   'submitted',
   'redeemed',
   'updated',
+  /**
+   * The action only opens another page (`redirectTo`), such as the conversation, the review form or checkout:
+   * nothing changed yet, so the UI goes there without a success message (journeys on a phone, J-C3).
+   */
+  'opened',
 ] as const;
 export type ActionSuccessCode = (typeof ACTION_SUCCESS_CODES)[number];
 

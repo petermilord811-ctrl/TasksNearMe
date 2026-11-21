@@ -125,11 +125,33 @@ describe('MessageComposer', () => {
     await user.click(send());
     const pending = screen.getByRole('button', { name: thread.composer.sending });
     expect(pending).toBeDisabled(); expect(pending).toHaveAttribute('aria-busy', 'true');
-    expect(input()).toBeDisabled();
+    // Read-only, not disabled: a disabled box would drop focus and close a phone's keyboard (J-C4).
+    expect(input()).toHaveAttribute('readonly'); expect(input()).not.toBeDisabled();
     fireEvent.submit(screen.getByRole('form'));
     await act(async () => finishSend({ ok: true, code: 'sent', redirectTo: routes.app.messages() }));
     expect(onSend).toHaveBeenCalledOnce();
     expect(navigation.push).toHaveBeenCalledWith(routes.app.messages());
+  });
+
+  it('keeps focus in the message box while sending and after, from a tap on Send or the keyboard (J-C4)', async () => {
+    const user = userEvent.setup();
+    let finishSend!: (result: ActionResult) => void;
+    const onSend = vi.fn(() => new Promise<ActionResult>((resolve) => { finishSend = resolve; }));
+    mount({ handlers: { onSend, onUploadPhoto: vi.fn(async () => ({ ok: true as const, photo: uploadedTaskPhotos[0]! })) } });
+    await user.type(input(), 'On my way up.');
+    await user.click(send());
+    expect(input()).toHaveFocus();
+    await act(async () => finishSend({ ok: true, code: 'sent' }));
+    expect(input()).toHaveValue('');
+    expect(input()).toHaveFocus();
+
+    await user.type(input(), 'The door code is on the note.');
+    await user.tab();
+    expect(send()).toHaveFocus();
+    await user.keyboard('{Enter}');
+    await act(async () => finishSend({ ok: true, code: 'sent' }));
+    expect(onSend).toHaveBeenCalledTimes(2);
+    expect(input()).toHaveFocus();
   });
 
   it.each(['blocked', 'closed'] as const)('renders the %s reason without a send button', (disabledReason) => {

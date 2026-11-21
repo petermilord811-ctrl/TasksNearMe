@@ -104,6 +104,21 @@ describe('BookingTipCard', () => {
     expect(navigation.refresh).toHaveBeenCalledOnce();
   });
 
+  it('moves focus to the given tip once the refresh shows it, but not on a later visit (J-C6)', async () => {
+    const user = userEvent.setup();
+    const { handlers, rerender } = mount();
+    const card = screen.getByRole('region', { name: 'Add a tip for Jordan T.' });
+    await user.click(within(card).getByRole('radio', { name: '$9.00 15%' }));
+    await user.click(within(card).getByRole('button', { name: 'Add a $9.00 tip' }));
+    await waitFor(() => expect(navigation.refresh).toHaveBeenCalledOnce());
+    // The refresh brings the tipped booking, and the button that had focus is gone.
+    rerender(<NextIntlClientProvider locale="en" messages={messages}><BookingTipCard data={deskBookingPosterTipped} handlers={handlers} /></NextIntlClientProvider>);
+    expect(screen.getByRole('heading', { name: copy.tippedTitle })).toHaveFocus();
+    cleanup();
+    mount(deskBookingPosterTipped);
+    expect(screen.getByRole('heading', { name: copy.tippedTitle })).not.toHaveFocus();
+  });
+
   it("shows the tip once given, on the client's side and the helper's", () => {
     mount(deskBookingPosterTipped);
     const given = screen.getByRole('region', { name: copy.tippedTitle });

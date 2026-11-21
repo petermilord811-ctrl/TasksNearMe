@@ -28,8 +28,10 @@ export interface BookingSheetProps {
 }
 
 /** One modal DOM tree at every width, preserving form state and the keyboard path on resize. */
-export function BookingSheetFrame({ title, description, children, emergency, alert = false, locked, open, onOpenChange, returnFocus }: Pick<BookingSheetProps, 'open' | 'onOpenChange' | 'returnFocus'> & {
+export function BookingSheetFrame({ title, description, children, emergency, action, alert = false, locked, open, onOpenChange, returnFocus }: Pick<BookingSheetProps, 'open' | 'onOpenChange' | 'returnFocus'> & {
   title: string; description: string; children: ReactNode; emergency?: ReactNode; alert?: boolean; locked: boolean;
+  /** The sheet's main button (a `SheetSubmit` with its form's id), kept in the footer above Back, so it's always in view (J-C10). */
+  action?: ReactNode;
 }) {
   const t = useTranslations('bookingSheets');
   const changeOpen = (next: boolean) => { if (!locked) onOpenChange(next); };
@@ -54,7 +56,7 @@ export function BookingSheetFrame({ title, description, children, emergency, ale
       {emergency}
       <AlertDialogHeader className="shrink-0 place-items-start p-4 text-left sm:p-6"><AlertDialogTitle>{title}</AlertDialogTitle><AlertDialogDescription>{description}</AlertDialogDescription></AlertDialogHeader>
       {body}
-      <div className="shrink-0 border-t border-foreground/[0.07] p-4 sm:px-6"><AlertDialogCancel disabled={locked} className="w-full">{t('back')}</AlertDialogCancel></div>
+      <div className="shrink-0 space-y-2 border-t border-foreground/[0.07] p-4 sm:px-6">{action}<AlertDialogCancel disabled={locked} className="w-full">{t('back')}</AlertDialogCancel></div>
     </AlertDialogContent>
   </AlertDialog>;
   return <Sheet open={open} onOpenChange={changeOpen}>
@@ -62,7 +64,7 @@ export function BookingSheetFrame({ title, description, children, emergency, ale
       {emergency}
       <SheetHeader className="shrink-0 p-4 sm:p-6"><SheetTitle>{title}</SheetTitle><SheetDescription>{description}</SheetDescription></SheetHeader>
       {body}
-      <div className="shrink-0 border-t border-foreground/[0.07] p-4 sm:px-6"><Button type="button" variant="outline" disabled={locked} className="w-full" onClick={() => changeOpen(false)}>{t('back')}</Button></div>
+      <div className="shrink-0 space-y-2 border-t border-foreground/[0.07] p-4 sm:px-6">{action}<Button type="button" variant="outline" disabled={locked} className="w-full" onClick={() => changeOpen(false)}>{t('back')}</Button></div>
     </SheetContent>
   </Sheet>;
 }
@@ -125,7 +127,7 @@ export function SheetFeedback({ result, successMessage, feedbackRef }: { result?
   </div>;
 }
 
-export function SheetSubmit({ label, pending, disabled, destructive = false }: { label: string; pending: boolean; disabled: boolean; destructive?: boolean }) {
+export function SheetSubmit({ label, pending, disabled, destructive = false, form }: { label: string; pending: boolean; disabled: boolean; destructive?: boolean; form?: string }) {
   const t = useTranslations('bookingSheets');
-  return <Button type="submit" variant={destructive ? 'destructive' : 'default'} disabled={disabled} aria-busy={pending} className="h-auto min-h-11 w-full whitespace-normal">{pending && <Spinner aria-hidden="true" />}{pending ? t('sending') : label}</Button>;
+  return <Button type="submit" form={form} variant={destructive ? 'destructive' : 'default'} disabled={disabled} aria-busy={pending} className="h-auto min-h-11 w-full whitespace-normal">{pending && <Spinner aria-hidden="true" />}{pending ? t('sending') : label}</Button>;
 }

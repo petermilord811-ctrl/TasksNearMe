@@ -40,7 +40,7 @@ test('the helper sends the finished work and the client approves it', async ({ p
   await expect(checklist.getByText('2 of 4 confirmed')).toBeVisible({ timeout: 30_000 });
   await expect(checklist.getByText('It stands level and stable')).toBeVisible();
   await page.getByRole('button', { name: 'Approve task' }).first().click();
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Confirm' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Approve and release payment' }).click();
   await expect(page.getByRole('button', { name: 'Approve task' })).toHaveCount(0, { timeout: 30_000 });
 
   // A tip for Jordan (UI-057): 15% of the $70 bookcase is $10.50, so $11.00. The test card asks for the bank check.

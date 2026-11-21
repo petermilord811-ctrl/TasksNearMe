@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Controller, useForm, useWatch } from 'react-hook-form';
@@ -37,6 +37,7 @@ function CancelBookingContent(props: CancelBookingSheetProps) {
   const form = useForm<CancelBookingInput>({ resolver: zodResolver(cancelBookingInputSchema), defaultValues: { reason: props.initialValues?.reason ?? '', note: props.initialValues?.note ?? '' }, shouldFocusError: false });
   const note = useWatch({ control: form.control, name: 'note' });
   const mutation = useSheetMutation(props, form, fields, props.handlers.onCancel);
+  const formId = useId();
 
   useEffect(() => {
     if (attempt === 0 && (props.initialPreview || props.initialPreviewState)) return;
@@ -48,10 +49,10 @@ function CancelBookingContent(props: CancelBookingSheetProps) {
   }, [attempt, props.handlers, props.initialPreview, props.initialPreviewState]);
 
   const reasonOptions = preview?.by === 'helper' ? HELPER_CANCEL_REASONS : POSTER_CANCEL_REASONS;
-  return <BookingSheetFrame {...props} alert title={t('cancel.title')} description={t('cancel.intro')} locked={mutation.pending}>
+  return <BookingSheetFrame {...props} action={preview ? <SheetSubmit form={formId} label={t('cancel.submit')} pending={mutation.pending} disabled={mutation.disabled} destructive /> : undefined} alert title={t('cancel.title')} description={t('cancel.intro')} locked={mutation.pending}>
     {!preview ? <div aria-live="polite" className="space-y-4 py-4">
       {loadError ? <><p className="flex items-start gap-2"><CircleAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-destructive" />{t('cancel.loadError')}</p><Button type="button" variant="outline" onClick={() => { request.current = undefined; setLoadError(false); setAttempt((value) => value + 1); }}>{t('cancel.retry')}</Button></> : <><p role="status" className="flex items-center gap-2"><Spinner aria-hidden="true" />{t('cancel.loading')}</p><Skeleton aria-hidden="true" className="h-28 rounded-2xl" /></>}
-    </div> : <form noValidate aria-label={t('cancel.title')} aria-busy={mutation.pending} className="space-y-5" onSubmit={form.handleSubmit(mutation.submit, mutation.onInvalid)}>
+    </div> : <form id={formId} noValidate aria-label={t('cancel.title')} aria-busy={mutation.pending} className="space-y-5" onSubmit={form.handleSubmit(mutation.submit, mutation.onInvalid)}>
       <div className="space-y-3 rounded-2xl border border-foreground/[0.06] bg-secondary p-4 text-secondary-foreground">
         {preview.nothingCharged ? <>
           <p className="font-heading text-xl/7 font-semibold tracking-[-0.015em]">{t('cancel.nothingChargedTitle')}</p>
@@ -70,7 +71,6 @@ function CancelBookingContent(props: CancelBookingSheetProps) {
         <SheetText label={t('note')} hint={t('noteHint')} registration={form.register('note')} count={note.length} max={500} error={form.formState.errors.note?.message} />
       </fieldset>
       <SheetFeedback {...mutation} />
-      <SheetSubmit label={t('cancel.submit')} pending={mutation.pending} disabled={mutation.disabled} destructive />
     </form>}
   </BookingSheetFrame>;
 }

@@ -108,6 +108,18 @@ describe('CancelBookingSheet', () => {
     expect(screen.queryByText(copy.cancel.strike)).not.toBeInTheDocument();
   });
 
+  it('keeps the main button in the fixed footer above Back, outside the scrolling fields, so a phone never scrolls to it (J-C10)', async () => {
+    mount(CancelBookingSheet, { handlers: sheetHandlers({ onPreviewCancel: async () => deskCancelPreviewPosterLate }) });
+    const submit = await screen.findByRole('button', { name: copy.cancel.submit });
+    const form = screen.getByRole('form', { name: copy.cancel.title });
+    expect(form).not.toContainElement(submit);
+    expect(submit).toHaveAttribute('form', form.id);
+    expect(submit.closest('.overflow-y-auto')).toBeNull();
+    const back = screen.getByRole('button', { name: copy.back });
+    expect(submit.compareDocumentPosition(back) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(submit.parentElement).toBe(back.parentElement);
+  });
+
   it('sends the chosen reason and trimmed note, locks during cancellation, then closes and refreshes', async () => {
     const user = userEvent.setup();
     const pending = deferred<ActionResult>();

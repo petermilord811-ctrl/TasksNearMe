@@ -440,10 +440,10 @@ export async function runBookingAction(
   switch (action) {
     case 'pay':
       return booking.offerId
-        ? { ok: true, code: 'updated', redirectTo: routes.app.confirmOffer(booking.taskId, booking.offerId) }
+        ? { ok: true, code: 'opened', redirectTo: routes.app.confirmOffer(booking.taskId, booking.offerId) }
         : { ok: false, code: 'not_allowed' };
     case 'add_to_calendar':
-      return { ok: true, code: 'updated', redirectTo: routes.app.bookingCalendar(booking.id) };
+      return { ok: true, code: 'opened', redirectTo: routes.app.bookingCalendar(booking.id) };
     case 'im_here': {
       // Only while the 30 minutes run, so the expiry and the answer can't both land (lifecycle review #12). The report
       // stays on the record (the check-in list shows it), and the helper can't send another one.
@@ -458,24 +458,25 @@ export async function runBookingAction(
     }
     case 'message': {
       const threadId = await ensureThread(db, bookingThreadLink(booking), now);
-      return { ok: true, code: 'updated', redirectTo: routes.app.thread(threadId) };
+      return { ok: true, code: 'opened', redirectTo: routes.app.thread(threadId) };
     }
     case 'submit_completion':
-      return { ok: true, code: 'updated', redirectTo: routes.app.bookingComplete(booking.id) };
+      return { ok: true, code: 'opened', redirectTo: routes.app.bookingComplete(booking.id) };
     case 'review':
-      return { ok: true, code: 'updated', redirectTo: routes.app.bookingReview(booking.id) };
+      return { ok: true, code: 'opened', redirectTo: routes.app.bookingReview(booking.id) };
     case 'save_helper':
       return setHelperSaved(db, booking.posterUserId, booking.helperUserId, true, now);
     case 'report_problem':
-      return { ok: true, code: 'updated', redirectTo: routes.app.bookingProblem(booking.id) };
+      return { ok: true, code: 'opened', redirectTo: routes.app.bookingProblem(booking.id) };
     case 'on_my_way':
       return transition('confirmed', { onMyWayAt: now }, 'booking.on_my_way');
     case 'arrived':
       return transition('confirmed', { status: 'in_progress', arrivedAt: now }, 'booking.arrived');
     case 'approve': {
       const result = await transition('completion_submitted', { status: 'completed', completedVia: 'poster', completedAt: now, approvalDueAt: null }, 'booking.completed');
-      if (result.ok) await recordCompletionMoney(db, booking.id, now);
-      return result;
+      if (!result.ok) return result;
+      await recordCompletionMoney(db, booking.id, now);
+      return { ok: true, code: 'approved' };
     }
     case 'skip_visit':
       return skipVisit(db, userId, booking.id, now);

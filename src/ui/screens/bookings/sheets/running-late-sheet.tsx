@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -20,11 +21,11 @@ function RunningLateContent(props: BookingSheetProps) {
   const t = useTranslations('bookingSheets');
   const form = useForm<{ minutes: LateByMinutes }>({ resolver: zodResolver(runningLateSchema), defaultValues: { minutes: props.initialValues?.minutes }, shouldFocusError: false });
   const mutation = useSheetMutation(props, form, fields, props.handlers.onRunningLate);
-  return <BookingSheetFrame {...props} alert={props.confirm} title={t('late.title')} description={t('late.intro', { client: props.data.poster.displayName })} locked={mutation.pending}>
-    <form noValidate aria-label={t('late.title')} aria-busy={mutation.pending} className="space-y-5" onSubmit={form.handleSubmit(mutation.submit, mutation.onInvalid)}>
+  const formId = useId();
+  return <BookingSheetFrame {...props} action={<SheetSubmit form={formId} label={t('late.submit')} pending={mutation.pending} disabled={mutation.disabled} />} alert={props.confirm} title={t('late.title')} description={t('late.intro', { client: props.data.poster.displayName })} locked={mutation.pending}>
+    <form id={formId} noValidate aria-label={t('late.title')} aria-busy={mutation.pending} className="space-y-5" onSubmit={form.handleSubmit(mutation.submit, mutation.onInvalid)}>
       <Controller control={form.control} name="minutes" render={({ field, fieldState }) => <SheetChoice label={t('late.label')} name={field.name} value={field.value === undefined ? '' : String(field.value)} onChange={(value) => field.onChange(Number(value))} onBlur={field.onBlur} inputRef={field.ref} options={LATE_BY_MINUTES.map((minutes) => ({ value: String(minutes), label: t('late.minutes', { minutes }) }))} disabled={mutation.disabled} error={fieldState.error?.message} />} />
       <SheetFeedback {...mutation} />
-      <SheetSubmit label={t('late.submit')} pending={mutation.pending} disabled={mutation.disabled} />
     </form>
   </BookingSheetFrame>;
 }

@@ -44,10 +44,10 @@ export async function posterOfferAction(input: { offerId: string; action: OfferA
 
   switch (input.action) {
     case 'book_offer':
-      return { ok: true, code: 'updated', redirectTo: routes.app.confirmOffer(row.task.id, row.offer.id) };
+      return { ok: true, code: 'opened', redirectTo: routes.app.confirmOffer(row.task.id, row.offer.id) };
     case 'message_helper': {
       const threadId = await offerThreadId(db, row.offer.id, await requestNow());
-      return threadId ? { ok: true, code: 'updated', redirectTo: routes.app.thread(threadId) } : { ok: false, code: 'not_found' };
+      return threadId ? { ok: true, code: 'opened', redirectTo: routes.app.thread(threadId) } : { ok: false, code: 'not_found' };
     }
     case 'decline_offer': {
       const result = await declineOffer(db, userId, row.offer.id, await requestNow());
@@ -57,7 +57,7 @@ export async function posterOfferAction(input: { offerId: string; action: OfferA
     case 'request_helper': {
       // The request page checks again that the helper can be booked, and lists this task among the client's open ones.
       const [profile] = await db.select({ handle: helperProfiles.handle }).from(helperProfiles).where(eq(helperProfiles.userId, row.offer.helperUserId)).limit(1);
-      return profile ? { ok: true, code: 'updated', redirectTo: routes.app.requestHelper(profile.handle) } : { ok: false, code: 'not_found' };
+      return profile ? { ok: true, code: 'opened', redirectTo: routes.app.requestHelper(profile.handle) } : { ok: false, code: 'not_found' };
     }
     default:
       return { ok: false, code: 'not_allowed' };
@@ -76,9 +76,9 @@ export async function taskOwnerAction(taskId: string, input: { action: Exclude<T
   if (!task) return { ok: false, code: 'not_found' };
   if (input.action === 'post_again' && ['completed', 'canceled', 'expired'].includes(task.status)) {
     // The wizard opens with this task's draft, its saved address and the next fitting date (plan 4.2).
-    return { ok: true, code: 'updated', redirectTo: routes.app.newTask({ again: String(taskId) }) };
+    return { ok: true, code: 'opened', redirectTo: routes.app.newTask({ again: String(taskId) }) };
   }
-  if (input.action === 'invite_helpers' && task.status === 'open') return { ok: true, code: 'updated', redirectTo: routes.app.saved() };
+  if (input.action === 'invite_helpers' && task.status === 'open') return { ok: true, code: 'opened', redirectTo: routes.app.saved() };
   return { ok: false, code: 'not_allowed' };
 }
 

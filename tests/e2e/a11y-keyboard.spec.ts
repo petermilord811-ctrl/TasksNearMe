@@ -233,7 +233,9 @@ test('keyboard only: the client approves and reviews, with focus back on the but
 
   await page.keyboard.press('Enter');
   await expect(dialog).toBeVisible();
-  await press(page, dialog.getByRole('button', { name: 'Confirm' }));
+  // The dialog says what approving does (journeys on a phone, J-C5).
+  await expect(dialog.getByRole('heading', { name: 'Approve the completed task?' })).toBeVisible();
+  await press(page, dialog.getByRole('button', { name: 'Approve and release payment' }));
   // While the dialog is open the page behind it is hidden from the accessibility tree, so wait for it to close.
   await expect(dialog).toHaveCount(0, { timeout: 45_000 });
   await expect(page.getByText('Needs your approval')).toHaveCount(0, { timeout: 30_000 });
