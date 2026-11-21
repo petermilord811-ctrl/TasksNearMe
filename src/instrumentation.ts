@@ -9,6 +9,8 @@ import { E2E_BUILD } from '@/shared/dev-helpers';
 export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs') return;
   if (process.env.NEXT_PHASE === 'phase-production-build') return;
+  // A production server's console lines carry no query values, addresses, emails, phones or secrets (src/platform/redact.ts).
+  if (process.env.NODE_ENV === 'production') (await import('./platform/redact')).installConsoleRedaction();
   if (E2E_BUILD) (await import('./platform/e2e-guard')).refuseUnlessLocal(process.env.APP_URL);
   if (process.env.JOBS_DISABLED === '1') return;
   const [{ startJobRunner }, { db }, { startRealtimeListener }, { startOutboxWake }] = await Promise.all([
