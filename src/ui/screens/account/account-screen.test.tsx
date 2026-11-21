@@ -83,6 +83,12 @@ describe('AccountScreen', () => {
     expect(screen.getByRole('button', { name: 'Remove passkey Laptop' })).toBeEnabled();
   });
 
+  it('names the notifications card for what it holds, not "Notifications" again under the group (journeys on a phone, J-C-m)', () => {
+    mount(mayaAccountData);
+    expect(screen.getByRole('heading', { level: 3, name: 'Emails and texts' })).toBeVisible();
+    expect(screen.queryByRole('heading', { level: 3, name: 'Notifications' })).not.toBeInTheDocument();
+  });
+
   it('keeps locked preference switches on and cannot invoke a mutation for them', async () => {
     const onSavePreference = vi.fn(fakeHandler<Parameters<AccountHandlers['onSavePreference']>[0]>({ ok: true, code: 'updated' }, 0));
     mount(mayaAccountData, { onSavePreference });

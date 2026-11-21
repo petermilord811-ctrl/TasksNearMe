@@ -97,7 +97,7 @@
     "held": "Connecting Google or Microsoft is paused while our team checks your account. You can still disconnect one, and the email code keeps working."
   },
   "preferences": {
-    "title": "Notifications",
+    "title": "Emails and texts",
     "description": "Choose how you hear about your tasks and bookings. Changes save as you make them.",
     "caption": "Notification preferences by topic and channel",
     "topic": "Topic",

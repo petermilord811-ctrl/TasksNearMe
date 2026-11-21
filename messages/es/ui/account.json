@@ -97,7 +97,7 @@
     "held": "Conectar Google o Microsoft está en pausa mientras nuestro equipo revisa tu cuenta. Aún puedes desconectarlos, y el código por correo sigue funcionando."
   },
   "preferences": {
-    "title": "Notificaciones",
+    "title": "Correos y mensajes de texto",
     "description": "Elige cómo te enteras de tus tareas y reservas. Los cambios se guardan al hacerlos.",
     "caption": "Preferencias de notificaciones por tema y canal",
     "topic": "Tema",
