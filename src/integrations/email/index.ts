@@ -4,6 +4,7 @@ import { devOutboxMessages } from '@/platform/dev-outbox/schema';
 import { createPostmarkEmailProvider } from './postmark';
 import { createResendEmailProvider } from './resend';
 import { devHelpersOn } from '@/shared/dev-helpers';
+import { applyFault } from '@/platform/faults';
 
 /**
  * Email provider port. Development and tests use the dev outbox (rows shown at /dev/outbox, with the HTML
@@ -39,6 +40,8 @@ export function createDevOutboxEmailProvider(db: Db): EmailProvider {
   return {
     name: 'dev-outbox',
     async send(message) {
+      // A provider outage on purpose (/dev/faults; src/platform/faults.ts).
+      await applyFault('email');
       await db.insert(devOutboxMessages).values({
         id: newId('msg'),
         channel: 'email',
@@ -91,7 +94,18 @@ export function createEmailProvider(db: Db, env: Record<string, string | undefin
   const postmark = env.POSTMARK_SERVER_TOKEN?.trim();
   const resend = env.RESEND_API_KEY?.trim();
   if (postmark && resend) throw new Error('Both POSTMARK_SERVER_TOKEN and RESEND_API_KEY are set: keep the one email provider you use.');
-  if (!postmark && !resend) return createDevOutboxEmailProvider(db);
+  if (!postmark && !resend) {
+    if (devHelpersOn(env)) return createDevOutboxEmailProvider(db);
+    // Production without a provider: each send fails, as texts do (src/integrations/sms/index.ts), so the failure shows
+    // (the person's error, a failed delivery, the outage page by text) instead of every email going into the dev
+    // outbox, which a production build shows no one (when things break, 2026-11-21).
+    return {
+      name: 'unconfigured',
+      async send() {
+        throw new Error('Emails need Postmark or Resend in production: set POSTMARK_SERVER_TOKEN or RESEND_API_KEY, and EMAIL_FROM.');
+      },
+    };
+  }
   const from = env.EMAIL_FROM?.trim();
   if (!from) throw new Error(`${postmark ? 'POSTMARK_SERVER_TOKEN' : 'RESEND_API_KEY'} is set but EMAIL_FROM is empty: set a sender the provider has verified.`);
   const replyTo = env.EMAIL_REPLY_TO?.trim() || undefined;

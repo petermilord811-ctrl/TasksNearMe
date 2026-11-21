@@ -15,6 +15,7 @@ import { socialStandIn } from '@/integrations/oauth/stand-in';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { createLocaleSyncHook, requestLocaleOf, withRequestLocale } from './locale';
+import { noteCodeNotSent } from './code-delivery';
 
 /** Accounts that can't sign in (src/modules/accounts/sign-in/steps.ts keeps the same list). */
 const BLOCKED_ACCOUNT_STATUSES = new Set(['suspended', 'banned', 'deleted']);
@@ -143,13 +144,23 @@ export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
         // In the language of the page that asked for the code.
         async sendVerificationOTP({ email: to, otp, type }, ctx) {
           const locale = requestLocaleOf(ctx);
+          // Better Auth swallows what this throws, so the asking action hears about a failed send this way
+          // (src/platform/auth/code-delivery.ts; when things break, 2026-11-21).
+          const send = async (message: Parameters<typeof email.send>[0]) => {
+            try {
+              await email.send(message);
+            } catch (error) {
+              noteCodeNotSent();
+              throw error;
+            }
+          };
           if (type === 'change-email') {
             const { subject, text, html } = renderEmailChangeCodeEmail({ code: otp, minutes: 10, email: to, appUrl: appUrl(), locale });
-            await email.send({ to, subject, text, html, tag: 'email-change-code' });
+            await send({ to, subject, text, html, tag: 'email-change-code' });
             return;
           }
           const { subject, text, html } = renderSignInCodeEmail({ code: otp, minutes: 10, appUrl: appUrl(), locale });
-          await email.send({ to, subject, text, html, tag: 'sign-in-code' });
+          await send({ to, subject, text, html, tag: 'sign-in-code' });
         },
       }),
       ...(standIn.length > 0 ? [socialStandIn({ providers: standIn, appUrl: appUrl(), secret: standInSecret(), mapProfile: userFromProviderProfile })] : []),

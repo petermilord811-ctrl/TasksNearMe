@@ -85,6 +85,7 @@
       "identity_required": "ID check needed",
       "paused": "Request — bookings paused",
       "not_ready": "Request — not ready yet",
+      "unavailable": "Request — provider unavailable",
       "unknown": "Request — couldn't send"
     }
   }

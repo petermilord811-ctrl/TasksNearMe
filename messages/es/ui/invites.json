@@ -85,6 +85,7 @@
       "identity_required": "Se necesita verificación de identidad",
       "paused": "Solicitud: reservas en pausa",
       "not_ready": "Solicitud: todavía no está lista",
+      "unavailable": "Solicitud — proveedor no disponible",
       "unknown": "Solicitud — no se pudo enviar"
     }
   }

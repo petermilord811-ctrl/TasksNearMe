@@ -3,6 +3,7 @@ import type { CardBrand, DevTestCard } from '@/contracts';
 import { DEV_TEST_CARDS } from '@/contracts';
 import { createStripePayments } from './stripe';
 import { devHelpersOn } from '@/shared/dev-helpers';
+import { applyFault } from '@/platform/faults';
 
 /**
  * Payments port, shaped like Stripe PaymentIntents (docs/blueprint/04 §1, §4). Development uses a
@@ -127,6 +128,8 @@ export function createDevPaymentProvider(): PaymentProvider {
   return {
     name: 'dev',
     async charge({ method }) {
+      // A provider outage on purpose (/dev/faults; src/platform/faults.ts).
+      await applyFault('payments');
       const providerRef = intentId();
       switch (devCardOf(method.providerRef)) {
         case 'declined':
@@ -140,6 +143,7 @@ export function createDevPaymentProvider(): PaymentProvider {
       }
     },
     async authorize({ method }) {
+      await applyFault('payments');
       const providerRef = intentId();
       switch (devCardOf(method.providerRef)) {
         case 'declined':

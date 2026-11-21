@@ -35,7 +35,8 @@ export function EmailStep({ data, handlers, initialResult, onResult }: SignInSte
     })} aria-busy={action.pending} className="space-y-6">
       <TextFormField control={form.control} name="email" label={fields('email.label')} hint={fields('email.hint')} type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} />
       {data.botCheck && <BotCheckField check={check} result={action.result} />}
-      <FormFeedback result={action.result} successMessage={t('codeSent')} />
+      {/* The code couldn't go out (an email outage): said here, on the email step (when things break, 2026-11-21). */}
+      <FormFeedback result={action.result} successMessage={t('codeSent')} errorMessage={action.result?.ok === false && action.result.code === 'unavailable' ? t('codeUnavailable') : undefined} />
       <ContinueButton pending={action.pending || form.formState.isSubmitting} />
     </form>
     <p className="text-sm text-muted-foreground">{t.rich('email.newHere', {

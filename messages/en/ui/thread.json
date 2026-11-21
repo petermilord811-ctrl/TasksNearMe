@@ -75,6 +75,7 @@
       "rate_limited": "Wait before sending again",
       "paused": "Bookings paused feedback",
       "not_ready": "Not ready yet feedback",
+      "unavailable": "Provider unavailable feedback",
       "unknown": "Message could not be sent",
       "payment_declined": "Payment declined feedback",
       "insufficient_funds": "Insufficient funds feedback",

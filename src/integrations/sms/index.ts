@@ -3,6 +3,7 @@ import { newId } from '@/platform/db/ids';
 import { devOutboxMessages } from '@/platform/dev-outbox/schema';
 import { twilioFromEnv } from './twilio';
 import { devHelpersOn } from '@/shared/dev-helpers';
+import { applyFault } from '@/platform/faults';
 
 export { SmsRejectedError } from './errors';
 
@@ -26,6 +27,8 @@ export function createDevOutboxSmsSender(db: Db): SmsSender {
   return {
     name: 'dev-outbox',
     async send(message) {
+      // A provider outage on purpose (/dev/faults; src/platform/faults.ts).
+      await applyFault('sms');
       await db.insert(devOutboxMessages).values({ id: newId('msg'), channel: 'sms', to: message.to, body: message.text });
     },
   };

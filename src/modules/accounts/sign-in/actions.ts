@@ -33,6 +33,7 @@ import {
 import { profileComplete } from './steps';
 import { displayNameOf, RESEND_AFTER_SECONDS, resolveSignInStep, safeNextPath } from './steps';
 import { requestNow } from '@/platform/clock';
+import { trackCodeDelivery } from '@/platform/auth/code-delivery';
 
 /**
  * Server Actions behind SignInScreen (src/contracts/auth.ts). The page binds `next` into each
@@ -83,7 +84,11 @@ async function sendEmailCode(email: string): Promise<ActionResult> {
 
   // With the request's headers, so the code comes in the language of the page that asked for it (its cookie or the
   // browser's language); without them it always went out in English (messages pass J-M8).
-  await auth.api.sendVerificationOTP({ body: { email, type: 'sign-in' }, headers: await headers() });
+  const requestHeaders = await headers();
+  const { sent } = await trackCodeDelivery(() => auth.api.sendVerificationOTP({ body: { email, type: 'sign-in' }, headers: requestHeaders }));
+  // The provider refused it or didn't answer: say so, rather than show the code step for a code that never comes
+  // (when things break, 2026-11-21).
+  if (!sent) return { ok: false, code: 'unavailable' };
   await writePendingEmail(email, new Date(Date.now() + RESEND_AFTER_SECONDS * 1000));
   refresh();
   return { ok: true, code: 'sent' };

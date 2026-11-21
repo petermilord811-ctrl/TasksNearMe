@@ -73,6 +73,7 @@
     "unknown": "We couldn't complete that action. Try again, or contact support if it keeps happening.",
     "identity_required": "We need to check your ID first. It takes about 2 minutes.",
     "paused": "New bookings and payments are paused for a little while. Nothing was booked or charged, so try again later. Bookings you already have go ahead as planned.",
-    "not_ready": "This isn't ready yet. Try again in a few minutes."
+    "not_ready": "This isn't ready yet. Try again in a few minutes.",
+    "unavailable": "We couldn't reach a service we rely on just now, so nothing was done. Try again in a few minutes."
   }
 }

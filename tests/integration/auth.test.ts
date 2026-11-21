@@ -2,7 +2,9 @@ import { desc, eq } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { staffRoles, users } from '@/modules/accounts/schema';
+import { trackCodeDelivery } from '@/platform/auth/code-delivery';
 import { createAuth } from '@/platform/auth/config';
+import { setFault } from '@/platform/faults';
 import { createDb } from '@/platform/db/connect';
 import { devOutboxMessages } from '@/platform/dev-outbox/schema';
 
@@ -23,6 +25,18 @@ async function latestCode(email: string): Promise<string> {
 }
 
 describe('email one-time-code sign-in', () => {
+  it('hears when a code didn’t go out, though Better Auth answers as if it had (when things break, 2026-11-21)', async () => {
+    const ask = () => auth.api.sendVerificationOTP({ body: { email: 'maya@example.test', type: 'sign-in' } });
+    setFault('email', 'down');
+    try {
+      // Better Auth logs the failed send and answers as usual; the tracker still knows.
+      expect(await trackCodeDelivery(ask)).toEqual({ sent: false });
+    } finally {
+      setFault('email', null);
+    }
+    expect(await trackCodeDelivery(ask)).toEqual({ sent: true });
+  });
+
   it('emails a 6-digit code to the dev outbox and signs a seeded person in with it', async () => {
     await auth.api.sendVerificationOTP({ body: { email: 'maya@example.test', type: 'sign-in' } });
     const code = await latestCode('maya@example.test');

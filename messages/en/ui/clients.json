@@ -87,6 +87,7 @@
       "identity_required": "ID check needed",
       "paused": "Proposal — bookings paused",
       "not_ready": "Proposal — not ready yet",
+      "unavailable": "Proposal — provider unavailable",
       "unknown": "Proposal — couldn't send"
     },
     "repeatChoice": "Yard task: repeat choices",

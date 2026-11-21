@@ -73,6 +73,7 @@
     "unknown": "No pudimos completar esa acción. Inténtalo de nuevo o comunícate con soporte si sigue pasando.",
     "identity_required": "Primero necesitamos verificar tu identidad. Toma unos 2 minutos.",
     "paused": "Las reservas nuevas y los pagos están en pausa por un rato. No se reservó ni se cobró nada, así que inténtalo más tarde. Las reservas que ya tienes siguen según lo previsto.",
-    "not_ready": "Todavía no está listo. Inténtalo de nuevo en unos minutos."
+    "not_ready": "Todavía no está listo. Inténtalo de nuevo en unos minutos.",
+    "unavailable": "No pudimos comunicarnos con un servicio del que dependemos, así que no se hizo nada. Inténtalo de nuevo en unos minutos."
   }
 }

@@ -89,6 +89,11 @@ export const ACTION_ERROR_CODES = [
    * automatic reading, so a duplicate ID is found first). Try again in a few minutes.
    */
   'not_ready',
+  /**
+   * A provider it needs (email, texts, payments) refused or didn't answer, so nothing was done: try again in a few
+   * minutes (when things break, 2026-11-21).
+   */
+  'unavailable',
   'unknown',
 ] as const;
 export type ActionErrorCode = (typeof ACTION_ERROR_CODES)[number];

@@ -35,6 +35,7 @@
   },
   "codeLifetime": "El código sirve durante {minutes, plural, one {# minuto} other {# minutos}}.",
   "codeSent": "Código enviado. Revisa tus mensajes para continuar.",
+  "codeUnavailable": "No pudimos enviar tu código en este momento. No es un problema de tu lado: inténtalo de nuevo en unos minutos.",
   "newCodeSent": "Código nuevo enviado.",
   "resend": "Enviar un código nuevo",
   "resendCountdown": "Podrás enviar un código nuevo en {seconds, plural, one {# segundo} other {# segundos}}.",

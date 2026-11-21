@@ -17,6 +17,7 @@ import { contactRevertUrl } from './contact-revert-token';
 import { renderEmailChangedNotice, renderPhoneChangedNotice, renderPhoneChangedText } from './emails/contact-change';
 import type { PhoneVerification } from './phone-verification';
 import { users } from './schema';
+import { trackCodeDelivery } from '@/platform/auth/code-delivery';
 
 /**
  * Changing the account's email or phone from the account page, each confirmed with a 6-digit code
@@ -108,7 +109,9 @@ export function createContactChange({ db, auth, email, sms, phoneVerification, a
       if (!limited.ok) return rateLimited(limited.retryAt);
       if (await emailInUse(newEmail, userId)) return fieldError('email', 'in_use');
 
-      await auth.api.requestEmailChangeEmailOTP({ body: { newEmail }, headers: requestHeaders });
+      const { sent } = await trackCodeDelivery(() => auth.api.requestEmailChangeEmailOTP({ body: { newEmail }, headers: requestHeaders }));
+      // The provider refused it or didn't answer (src/platform/auth/code-delivery.ts).
+      if (!sent) return { ok: false, code: 'unavailable' };
       return { ok: true, code: 'sent' };
     },
 

@@ -33,8 +33,14 @@ describe('Postmark', () => {
   it('is used when its token is set, and needs a sender', () => {
     const db = {} as never;
     expect(createEmailProvider(db, {}).name).toBe('dev-outbox');
+    // Production without a provider refuses each send (when things break, 2026-11-21): the dev outbox shows no one there.
+    expect(createEmailProvider(db, { NODE_ENV: 'production' }).name).toBe('unconfigured');
     expect(createEmailProvider(db, { POSTMARK_SERVER_TOKEN: 't', EMAIL_FROM: 'hello@tasksnearme.example', NODE_ENV: 'production' }).name).toBe('postmark');
     expect(() => createEmailProvider(db, { POSTMARK_SERVER_TOKEN: 't' })).toThrow(/EMAIL_FROM/);
+  });
+
+  it('refuses each send in production without a provider, saying what to set', async () => {
+    await expect(createEmailProvider({} as never, { NODE_ENV: 'production' }).send(message)).rejects.toThrow(/POSTMARK_SERVER_TOKEN or RESEND_API_KEY/);
   });
 
   it('sends the reply-to address and extra headers', async () => {

@@ -87,6 +87,7 @@
       "identity_required": "Se necesita verificación de identidad",
       "paused": "Propuesta: reservas en pausa",
       "not_ready": "Propuesta: todavía no está lista",
+      "unavailable": "Propuesta — proveedor no disponible",
       "unknown": "Propuesta — no se pudo enviar"
     },
     "repeatChoice": "Tarea de jardín: opciones de repetición",

@@ -63,6 +63,7 @@
       "identity_required": "Se necesita verificación de identidad",
       "paused": "Reservas en pausa",
       "not_ready": "Todavía no está listo",
+      "unavailable": "Proveedor no disponible",
       "unknown": "No se pudo guardar"
     },
     "clientTip": "Cliente · agregar una propina",
