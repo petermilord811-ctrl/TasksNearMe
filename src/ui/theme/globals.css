@@ -835,8 +835,10 @@ html[data-language-switch] #main::after {
 [data-theme="dark"] [data-app-surface] {
   --card-shadow: inset 0 1px 0 rgb(255 255 255 / 0.045), 0 1px 2px rgb(0 0 0 / 0.4), 0 18px 36px -20px rgb(0 0 0 / 0.7);
 }
-/* The app's top bar is pinned: anchors and focused fields scroll to just below it (AppBar keeps the offset). */
-html:has([data-app-surface]) { scroll-padding-top: calc(var(--app-header-offset, 0px) + 0.75rem); }
+/* The app's top bar is pinned: anchors and focused fields scroll to just below it (AppBar keeps the offset; without
+   it, as on public pages, this is 0). A plain rule, not html:has([data-app-surface]): the :has() made the browser restyle
+   the root whenever anything was added to the page, such as a menu or a toast (speed on a phone). */
+html { scroll-padding-top: calc(var(--app-header-offset, -0.75rem) + 0.75rem); }
 
 /* ---- Landing sections ---- */
 /* HoverLift (src/ui/motion/hover-lift.tsx): everything here reads its one spring, `--hover` (0–1), so a card's
