@@ -23,7 +23,7 @@ function ProposalField({ name, label, hint, children }: { name: FieldPath<Rebook
     <FieldLabel htmlFor={id}>{label}</FieldLabel>
     {children(id, !!error)}
     <FieldDescription id={`${id}-hint`}>{hint}</FieldDescription>
-    <div id={`${id}-error`} aria-live="polite">{error?.message && <FieldError>{t(t.has(error.message) ? error.message : 'invalid')}</FieldError>}</div>
+    <div id={`${id}-error`}>{error?.message && <FieldError>{t(t.has(error.message) ? error.message : 'invalid')}</FieldError>}</div>
   </Field>;
 }
 

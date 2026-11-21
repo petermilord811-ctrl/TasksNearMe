@@ -19,7 +19,7 @@ function ChangeField({ name, label, hint, children }: { name: keyof ProposeChang
     <FieldLabel htmlFor={id}>{label}</FieldLabel>
     {children(id, !!error)}
     <FieldDescription id={`${id}-hint`}>{hint}</FieldDescription>
-    <div id={`${id}-error`} aria-live="polite">{error?.message && <FieldError>{t(t.has(`fieldErrors.${error.message}`) ? `fieldErrors.${error.message}` : 'fieldErrors.invalid')}</FieldError>}</div>
+    <div id={`${id}-error`}>{error?.message && <FieldError>{t(t.has(`fieldErrors.${error.message}`) ? `fieldErrors.${error.message}` : 'fieldErrors.invalid')}</FieldError>}</div>
   </Field>;
 }
 

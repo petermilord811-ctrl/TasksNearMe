@@ -59,6 +59,19 @@ describe('helper offer form', () => {
     expect(handlers.onSubmitOffer).not.toHaveBeenCalled();
   });
 
+  it('says a field’s error once: an alert in no other live region, tied to the field (accessibility pass, J-A7)', async () => {
+    const user = userEvent.setup();
+    mount();
+    const price = screen.getByRole('textbox', { name: 'Task price ($)' });
+    await user.clear(price); await user.type(price, '$20');
+    await user.click(screen.getByRole('button', { name: 'Send offer' }));
+    const error = (await screen.findAllByRole('alert')).find((node) => node.textContent === messages.forms.fieldErrors.out_of_range)!;
+    expect(error).toBeDefined();
+    const slot = error.parentElement!;
+    expect(slot.closest('[aria-live]:not([aria-live="off"]), [role="status"], [role="alert"], [role="log"]')).toBeNull();
+    expect(price.getAttribute('aria-describedby')?.split(/\s+/)).toContain(slot.id);
+  });
+
   it('sends contract input with integer cents, selected start and bring chips', async () => {
     const user = userEvent.setup();
     const { handlers } = mount();
@@ -83,6 +96,14 @@ describe('helper offer form', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(handlers.onQuote).toHaveBeenCalledExactlyOnceWith({ pricing: { type: 'fixed', priceCents: 6000 } });
     expect(screen.getByText('$54.00')).toBeInTheDocument();
+  });
+
+  it('puts what you’ll earn under the form’s heading, a level below it (accessibility pass, J-A4)', async () => {
+    mount();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Task price ($)' }), { target: { value: '$60' } });
+    expect(await screen.findByRole('heading', { level: 3, name: messages.helperTask.form.earnings })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 2, name: messages.helperTask.form.earnings })).toBeNull();
+    expect(screen.getByRole('heading', { level: 2, name: messages.helperTask.form.title })).toBeInTheDocument();
   });
 
   it('ignores late earnings responses after the price changes and retries failures', async () => {

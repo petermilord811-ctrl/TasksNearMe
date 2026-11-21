@@ -27,7 +27,7 @@ function ResolutionField({ id, label, hint, error, children }: { id: string; lab
     <FieldLabel htmlFor={id}>{label}</FieldLabel>
     <FieldDescription id={`${id}-hint`}>{hint}</FieldDescription>
     {children}
-    <div id={`${id}-error`} aria-live="polite">{error && <FieldError>{error}</FieldError>}</div>
+    <div id={`${id}-error`}>{error && <FieldError>{error}</FieldError>}</div>
   </Field>;
 }
 

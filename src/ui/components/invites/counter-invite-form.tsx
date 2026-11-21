@@ -53,7 +53,7 @@ export function CounterInviteForm({ invite, headingLevel, pending, result, onSub
       <FieldLabel htmlFor={fieldId}>{label}</FieldLabel>
       {renderInput(fieldId, Boolean(error))}
       <FieldDescription id={`${fieldId}-hint`}>{hint}</FieldDescription>
-      <div id={`${fieldId}-error`} aria-live="polite">{error?.message && <FieldError>{errors.has(error.message) ? errors(error.message) : errors('invalid')}</FieldError>}</div>
+      <div id={`${fieldId}-error`}>{error?.message && <FieldError>{errors.has(error.message) ? errors(error.message) : errors('invalid')}</FieldError>}</div>
     </Field>;
   }
 
@@ -78,7 +78,7 @@ export function CounterInviteForm({ invite, headingLevel, pending, result, onSub
         const [date, time] = event.target.value.split('T');
         try { value.onChange(date && time ? marketLocalToUtc(date, time, timeZone) : ''); } catch { value.onChange(''); }
       }} />} />)}
-      <div id={`${id}-change-error`} aria-live="polite">{formState.errors.pricing?.message && <FieldError>{pricing === undefined && start === undefined ? t('changeRequired') : errors.has(formState.errors.pricing.message) ? errors(formState.errors.pricing.message) : errors('invalid')}</FieldError>}</div>
+      <div id={`${id}-change-error`}>{formState.errors.pricing?.message && <FieldError>{pricing === undefined && start === undefined ? t('changeRequired') : errors.has(formState.errors.pricing.message) ? errors(formState.errors.pricing.message) : errors('invalid')}</FieldError>}</div>
       {field('message', t('message'), t('messageHint'), (fieldId, invalid) => <Textarea {...register('message')} id={fieldId} rows={4} maxLength={1000} aria-invalid={invalid} aria-describedby={`${fieldId}-hint ${fieldId}-error`} />)}
     </fieldset>
     <div className="flex flex-wrap gap-3">

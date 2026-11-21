@@ -88,7 +88,7 @@ export function AvailabilityPostForm({ data, onCreate, now, initialResult, initi
       <FieldLabel htmlFor={fieldId}>{label}</FieldLabel>
       {children({ id: fieldId, 'aria-invalid': Boolean(error), 'aria-describedby': `${fieldId}-hint ${fieldId}-error` })}
       <FieldDescription id={`${fieldId}-hint`}>{hint}</FieldDescription>
-      <div id={`${fieldId}-error`} aria-live="polite">{code && <FieldError>{specific ?? fieldCopy(fieldCopy.has(code) ? code : 'invalid')}</FieldError>}</div>
+      <div id={`${fieldId}-error`}>{code && <FieldError>{specific ?? fieldCopy(fieldCopy.has(code) ? code : 'invalid')}</FieldError>}</div>
     </Field>;
   }
 

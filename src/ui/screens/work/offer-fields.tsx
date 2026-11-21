@@ -25,7 +25,7 @@ function OfferField({ name, label, hint, children, after }: { name: FieldPath<Of
     <FieldLabel htmlFor={id}>{label}</FieldLabel>
     {children(id, !!error)}
     <FieldDescription id={`${id}-hint`}>{hint}</FieldDescription>
-    <div id={`${id}-error`} aria-live="polite">{code && <FieldError>{t(t.has(`fieldErrors.${code}`) ? `fieldErrors.${code}` : 'fieldErrors.invalid')}</FieldError>}</div>
+    <div id={`${id}-error`}>{code && <FieldError>{t(t.has(`fieldErrors.${code}`) ? `fieldErrors.${code}` : 'fieldErrors.invalid')}</FieldError>}</div>
     {after}
   </Field>;
 }
@@ -140,7 +140,7 @@ export function OfferFields({ rules, onDraftMessage }: {
         <Input ref={field.ref} id={id} value={bring} onChange={(event) => { setBring(event.target.value); setBringError(undefined); clearErrors('brings'); }} onBlur={field.onBlur} maxLength={40} readOnly={brings.length >= 10} aria-invalid={invalid || !!bringError} aria-describedby={`${id}-hint ${id}-error ${id}-entry-error`} className="min-w-0 flex-1 scroll-mb-40" onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); addBring(); } }} />
         <Button type="button" variant="outline" onClick={addBring} disabled={brings.length >= 10} className="scroll-mb-40">{t('addBring')}</Button>
       </div>
-      <div id={`${id}-entry-error`} aria-live="polite">{bringError && <FieldError>{fields(`fieldErrors.${bringError}`)}</FieldError>}</div>
+      <div id={`${id}-entry-error`}>{bringError && <FieldError>{fields(`fieldErrors.${bringError}`)}</FieldError>}</div>
       {brings.length > 0 && <ul aria-label={t('brings')} className="flex flex-wrap gap-2">{brings.map((item, index) => <li key={`${index}-${item}`} className="flex max-w-full items-center gap-1 rounded-full border bg-secondary pl-4 text-sm text-secondary-foreground">
         <span className="min-w-0 break-words">{item}</span><Button type="button" variant="ghost" size="icon" aria-label={t('removeBring', { item })} className="shrink-0 scroll-mb-40 rounded-full" onClick={() => { field.onChange(brings.filter((_, position) => position !== index)); clearErrors('brings'); }}><X aria-hidden="true" className="size-4" /></Button>
       </li>)}</ul>}

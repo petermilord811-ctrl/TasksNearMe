@@ -149,7 +149,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
         <FieldDescription id={`${id}-hint`} className="text-xs">{t('hint')}</FieldDescription>
         <p className="flex gap-3 text-xs text-muted-foreground"><span className="hidden lg:inline">{t('keyboardHint')}</span><span id={`${id}-counter`} className="tabular-nums">{t('counter', { count: body.length, maximum: rules.maxLength })}</span></p>
       </div>
-      <div id={`${id}-body-error`} aria-live="polite">{bodyError && <FieldError>{bodyError}</FieldError>}</div>
+      <div id={`${id}-body-error`}>{bodyError && <FieldError>{bodyError}</FieldError>}</div>
     </Field>
     <div className="flex flex-wrap items-start gap-x-2">
     {(handlers.onSaveReply || savedReplies.length > 0) && <Popover open={repliesOpen} onOpenChange={setRepliesOpen}>
