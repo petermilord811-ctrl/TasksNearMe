@@ -145,6 +145,20 @@ describe('ActionBar', () => {
     }
   });
 
+  it('says the session ended, with a sign-in link, when an action gets no answer and the session is gone (bad connections pass, J-N2)', async () => {
+    const fetched = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ signedIn: false }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    try {
+      show([{ id: 'pay', kind: 'primary', enabled: true }], vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
+      await userEvent.click(screen.getByRole('button', { name: 'Finish payment' }));
+      expect(await screen.findByText(feedback.error.signed_out, { exact: false })).toBeVisible();
+      expect(screen.getByRole('link', { name: feedback.error.signInAgain })).toHaveAttribute('href', expect.stringMatching(/^\/sign-in\?next=/));
+      expect(toastError).toHaveBeenCalledWith(feedback.error.signed_out);
+      expect(fetched).toHaveBeenCalledOnce();
+    } finally {
+      fetched.mockRestore();
+    }
+  });
+
   it('follows a successful redirect', async () => {
     show([{ id: 'pay', kind: 'primary', enabled: true }], vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'paid', redirectTo: '/app/bookings/desk' })));
     await userEvent.click(screen.getByRole('button', { name: 'Finish payment' }));

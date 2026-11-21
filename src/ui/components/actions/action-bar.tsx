@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type ReactNode, type Ref } from 'react';
+import Link from 'next/link';
 import { Ellipsis, LoaderCircle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -12,7 +13,7 @@ import { cn } from '@/ui/lib/utils';
 import { Button, buttonVariants } from '@/ui/primitives/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/ui/primitives/sheet';
-import { ConnectionAwareText } from '@/ui/components/forms/connection-aware-text';
+import { ConnectionAwareText, mayBeSignedOut, sessionGone, signInAgainHref } from '@/ui/components/forms/connection-aware-text';
 
 export interface ActionBarProps {
   actions: ActionDescriptor[];
@@ -50,6 +51,7 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
   const moreTrigger = useRef<HTMLButtonElement | null>(null);
   const customFlowRequested = useRef(false);
   const [result, setResult] = useState<ActionResult | undefined>(initialResult);
+  const [signedOutFor, setSignedOutFor] = useState<ActionResult | null>(null);
   const confirmationTrigger = useRef<HTMLElement | null>(null);
   const restoreAfterPending = useRef(false);
   const group = useRef<HTMLDivElement>(null);
@@ -95,6 +97,9 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
     } catch {
       result = { ok: false, code: 'unknown' };
     }
+    // A failure a lost session explains, while online: asked once whether it ended (bad connections pass, J-N2), before
+    // the action frees up.
+    const signedOut = mayBeSignedOut(result) && navigator.onLine && (await sessionGone());
     pendingRef.current = false;
     setPendingId(null);
     // Only another page opens (the conversation, the review form): nothing changed, so there's nothing to confirm.
@@ -103,8 +108,14 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
       onResult?.(result);
       return;
     }
-    // No answer while the phone has no network says so (bad connections pass, J-N3).
-    const text = !result.ok && result.code === 'unknown' && !navigator.onLine ? feedback('error.offline') : feedback(`${result.ok ? 'success' : 'error'}.${result.code}`);
+    // No answer says why when it can: no network (bad connections pass, J-N3), or a session that ended (J-N2), for the
+    // toast and the line below alike.
+    const text = signedOut
+      ? feedback('error.signed_out')
+      : !result.ok && result.code === 'unknown' && !navigator.onLine
+        ? feedback('error.offline')
+        : feedback(`${result.ok ? 'success' : 'error'}.${result.code}`);
+    setSignedOutFor(signedOut ? result : null);
     setResult(result);
     if (result.ok) {
       toast.success(text);
@@ -118,6 +129,7 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
   function resultContent() {
     if (!result) return null;
     if (renderResult) return renderResult(result);
+    if (signedOutFor === result) return <p className="text-sm text-destructive">{feedback('error.signed_out')} <Link href={signInAgainHref()} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">{feedback('error.signInAgain')}</Link></p>;
     return <p className={cn('text-sm', result.ok ? 'text-success' : 'text-destructive')}><ConnectionAwareText text={feedback(`${result.ok ? 'success' : 'error'}.${result.code}`)} offlineText={feedback('error.offline')} unknown={!result.ok && result.code === 'unknown'} /></p>;
   }
 
