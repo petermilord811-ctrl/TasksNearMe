@@ -3,7 +3,9 @@
 Written 2026-11-14 by tasksnearme-b7 for the owner, from four research briefs (the search results for our target
 queries; how TaskRabbit, Thumbtack, Angi, HomeAdvisor, Handy and Airtasker win; how Craigslist, Airtasker, Upwork,
 Nextdoor and Indeed handle listings and Google Jobs; Google's current rules) and an audit of the live site. It is also
-the working plan for the sessions that build it. §5 is the backlog, §7 the schedule, §8 the owner's checklist.
+the working plan for the sessions that build it. §5 is the backlog, §7 the schedule, §8 the owner's checklist. §11 is the
+restart of 2026-11-20 (tasksnearme-7e): what each line of Search Console's indexing report was, what changed, and why
+the bare brand search "tasksnearme" doesn't show the site yet.
 
 ## 1. The goal, and what is realistic
 
@@ -426,21 +428,26 @@ loads 233 kB of gzipped JavaScript (445 before). Search Console still answers 40
 
 ## 8. The owner's checklist
 
-1. **Search Console access:**
-   - Under Settings → Users and permissions, add
-     `service-account-for-seo@gen-lang-client-0595306371.iam.gserviceaccount.com` as **Owner** of the verified Domain
-     property `tasksnearme.com`.
-   - Leave the AI features control at "Include".
-2. **Request indexing** (URL Inspection → Request indexing), about 10 a day. Gainesville's pages, since 2026-11-18:
-   - `https://tasksnearme.com/` (Google's copy still shows Austin), `/gainesville`, `/gainesville/tasks`;
-   - `/cities`, `/cities/florida`;
-   - the five `/gainesville/<category>` pages;
-   - the next days: `/es/gainesville`, the cost guides (`/gainesville/<category>/cost`), the newest help guides.
-3. **Bing Webmaster Tools:** sign in, "Import from Google Search Console".
+1. ~~**Search Console access.**~~ Done 2026-11-17 (the service account is an Owner of the Domain property).
+2. **Request indexing** (URL Inspection → Request indexing), about 10 a day, once per page (asking again doesn't help).
+   After the ship that carries §11:
+   - `https://tasksnearme.com/about` and `/es/about` (new), `https://tasksnearme.com/` (so Google rereads the
+     organization's markup);
+   - the cost guides not indexed yet: `/gainesville/yard-cleanup/cost`, then the Spanish ones;
+   - `/help/contact`, `/es/help/what-you-can-get-help-with`.
+   Don't request the job hubs while they have no open task: they say noindex until their first one (§11.1).
+   **"Validate fix"** in the indexing report: press it only on the "Not found (404)" line, a week after that ship
+   (the demo pages turn from noindex into 404s). The other lines are intended or are Google's own pace: validating
+   "Excluded by noindex", "Page with redirect" or "Blocked by robots.txt" will "fail", harmlessly, because those pages
+   are meant to stay out; "Discovered/Crawled – currently not indexed" can't be validated into the index.
+3. **Bing Webmaster Tools:** sign in at bing.com/webmasters, "Import from Google Search Console" (5 minutes). Bing
+   feeds DuckDuckGo, Copilot and ChatGPT search, and it reads our IndexNow notices only once the site is verified there.
 4. ~~**Decide on the sample data** (§6.1).~~ Done 2026-11-17: (a), hidden from the public and search engines.
-5. **Profiles named exactly "TasksNearMe"**, each linking to tasksnearme.com: LinkedIn, Facebook, Instagram, X, a
-   Nextdoor business page, Crunchbase, a Product Hunt launch. Send the URLs, and they go into the Organization's
-   `sameAs`.
+5. **Profiles named exactly "TasksNearMe"**, each linking to tasksnearme.com, with the same logo: LinkedIn (company
+   page), Facebook, Instagram, X, YouTube, TikTok, a Nextdoor business page, Crunchbase, a Product Hunt launch (about
+   2 hours). Send the URLs: they go into `BRAND_PROFILES` (src/modules/seo/structured-data.ts), the organization's
+   `sameAs`. This is the biggest single step for the bare brand search (§11.3). Print "tasksnearme.com" on every flyer,
+   sign and email: a search for the domain is never mistaken for the generic phrase.
 6. **Gainesville links and mentions** (never paid links), the first city since 2026-11-17:
    - neighborhood associations and newsletters (Duckpond, Pleasant Street, University Heights, Haile Plantation);
    - UF's off-campus housing and move-in pages, and student organizations;
@@ -472,3 +479,80 @@ loads 233 kB of gzipped JavaScript (445 before). Search Console still answers 40
 | "tasks near me" | Search Console, query report | Impressions first, then position ≤ 20 |
 | Austin long tail | Search Console | Impressions for category, cost and Spanish queries |
 | Bing | Bing Webmaster Tools | Pages indexed; AI Performance citations |
+
+## 11. Restart, 2026-11-20 (tasksnearme-7e)
+
+The owner's view that day: Search Console's "Why pages aren't indexed" read Not found (404) 2, Alternate page with
+proper canonical tag 1, Discovered – currently not indexed 31, Excluded by 'noindex' tag 830 (rising), Page with
+redirect 3, Blocked by robots.txt 1, Crawled – currently not indexed 11. And the bare brand search "tasksnearme" didn't
+show the site on page 1, while "tasksnearme austin" and "tasksnearme gainesville" did. Sources: URL Inspection of each
+kind of address, a crawl of the live site (`node scripts/seo/crawl.mjs`), and three research briefs (Google's
+documentation and staff statements through 2026-11; Search Off the Record 112, "How to read the Indexing Report").
+
+### 11.1 What each line was, and what changed
+| Line | What it was | Done |
+|---|---|---|
+| Excluded by 'noindex' tag: 830 | Pages Google crawled on 11-14 while the demo marketplace was public: the 14 demo cities (city, board, categories, cost guides, job hubs, in both languages), sample task pages and sample helper profiles; also /sign-in, /waitlist and /app (noindex on purpose). The demo pages still answered 200 with noindex, and the demo cities' pages linked to each other, so Google kept finding more. No live page links to any of them any more. | Demo cities, sample tasks and sample helpers answer a real 404 to anyone without a session (src/proxy.ts, src/modules/seo/sample-pages.ts); testers still see them. Google stops recrawling a 404, not a noindex page. The count moves to "Not found (404)" over the next weeks: harmless, and it shrinks as Google gives up on them. |
+| Not found (404): 2 | Austin's pages. Austin is a later city (owner, 11-17: out of search until it opens). 26 of its 34 pages are still indexed and leave as Google recrawls them. | Kept. The not-found page offers "see where we are" and the waitlist to anyone who clicks an old result. |
+| Page with redirect: 3 | http → https and www → tasksnearme.com (expected), and /en/become-a-helper: every page's language switch links to its /en/ copy, which answered a temporary 307, and Google kept /en/become-a-helper as its own canonical. | /en/… answers a permanent 308 (Cache-Control: no-store, so a browser never skips the language choice it carries). |
+| Blocked by robots.txt: 1 | dev.tasksnearme.com (every non-live server's robots.txt shuts crawlers out). | Expected. |
+| Alternate page with proper canonical tag: 1 | A sign-up address with ?next= (canonical: /sign-up). | Expected. |
+| Discovered – currently not indexed: 31 | Mostly Gainesville's job hubs and the newest pages in Spanish. The hubs were empty ("No open tasks right now"). | Empty boards and job hubs: noindex, follow and out of the sitemap until their first open task (`taskListIndexable`, src/modules/seo/indexable.ts); then they join with the task's date. |
+| Crawled – currently not indexed: 11 | The API doesn't list them; most likely the same empty or thin pages. | As above, and the content work in §11.4. |
+
+### 11.2 One address per page and language
+- /en/… → 308, as above.
+- A plain address shows English, or the language the device chose (the NEXT_LOCALE cookie). Before, a browser whose
+  Accept-Language preferred Spanish got the Spanish page at the plain address, with its canonical pointing at /es/…: if
+  Googlebot crawled that way (Google's documented locale-adaptive crawling), the English page would have declared itself
+  a copy of the Spanish one. Now a first visit from such a browser gets a temporary redirect to /es/…, which then
+  becomes the device's choice. Search engines (no cookies) read English at every plain address.
+
+### 11.3 The bare brand search "tasksnearme"
+- Google treats the one word as the generic local search "tasks near me" (its spelling and compound-splitting
+  systems), where a week-old domain with no links doesn't rank. With a city added, the search is rare enough that the
+  site is the best match, which is why "tasksnearme gainesville" works. Search Console hides searches made by few
+  people, so its "no impressions" for "tasksnearme" doesn't mean nobody searched.
+- Markup doesn't make a site rank (Mueller, 2025). What makes Google treat a word as a brand: references to it across
+  the web (the brand's own profiles, local press, directories), people searching for it and choosing the site, and
+  time. For a name made of a generic phrase, expect months (Mueller on generic names, 2024–25).
+- Done on the site, so that what Google reads is unambiguous:
+  - `/about` and `/es/about`: what TasksNearMe is, its principles, where it's open, trust, helpers, languages and
+    support; AboutPage and organization JSON-LD; in the sitemap and every page's footer.
+  - The organization node is an `OnlineBusiness` (the most specific type that fits) with a support contactPoint, and
+    gets `sameAs` from `BRAND_PROFILES` once the owner sends the profiles (§8.5).
+  - "Tasks Near Me" left both alternateName lists: it named the brand after the generic search. The WebSite node keeps
+    only "tasksnearme.com", Google's fallback.
+  - Every page's footer reads "tasksnearme.com", so the exact word is on every page as text (the wordmark already
+    reads "tasksnearme").
+- Not published, because nothing is on record: a legal name, founding date, founders, address, phone or email. Each
+  would strengthen the about page and the organization's markup (legalName, foundingDate, email): send them and they
+  go in.
+- Off the site (§8): the profiles (§8.5), Gainesville press and partners (§8.6), Bing Webmaster Tools (§8.3), the
+  domain printed on everything. Avoid paid links, link networks, low-quality directories and click schemes.
+
+### 11.4 Next
+1. **Gainesville guides, starting before December's move-outs** (around UF's fall finals). Done:
+   [Moving out in Gainesville](/help/moving-out-in-gainesville) (help center, Guides; both languages): the lease
+   turnovers, the City's bulk pickup and yard waste rules and the county's, utilities, cleaning for the deposit, with
+   links into the service pages and price guides. Every rule in it was read on gainesvillefl.gov and alachuacounty.us
+   on 2026-11-20. Next: hurricane-season prep (yard and outdoor items), moving into a Gainesville rental in August,
+   and leaf season (late winter and spring for the oaks), each from the official pages, dated.
+2. **First-party data** on the category pages and cost guides once there are real bookings: prices paid (with the
+   sample size and dates), tasks done, reviews. Data nobody else has is what the city × service pages need most.
+3. **At launch**, `LIVE_SITE_INDEXING = 'on'` (§9): open task pages and helper profiles that pass S2 join search;
+   split the sitemap by type then.
+4. If request-time metadata ever reaches an indexable page, add the AI crawlers (GPTBot, OAI-SearchBot,
+   PerplexityBot, ClaudeBot) to Next's `htmlLimitedBots`. Today every indexable page has its title, canonical and
+   description in `<head>`.
+5. An option for the owner, not taken: Austin's cost guides back in search before Austin opens (they had impressions,
+   e.g. "/es/austin/moving-help/cost" at position 7), as a 200 page that says Austin opens later.
+
+### 11.5 Measuring it
+- The daily report (`scripts/seo/report.mjs`, cron 12:30 UTC, docs/seo/reports/latest.md) now also shows brand
+  searches over 90 days, the addresses leaving search (Austin, demo cities, /en/) with Google's status for each, pages
+  that had impressions but no longer answer 200, and it resubmits the sitemap when it changed after Google last read
+  it.
+- `node scripts/seo/crawl.mjs [origin]` crawls the site the way a search engine does and lists links to redirects,
+  404s and noindex pages, indexable pages missing from the sitemap, sitemap pages that aren't indexable, duplicate
+  titles and descriptions, and thin pages.
