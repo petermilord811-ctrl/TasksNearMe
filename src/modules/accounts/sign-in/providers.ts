@@ -1,5 +1,5 @@
 import type { SignInConnectResult, SocialProvider, SocialSignInError } from '@/contracts';
-import { SOCIAL_PROVIDERS } from '@/contracts';
+import { nameProblem, SOCIAL_PROVIDERS } from '@/contracts';
 import { displayNameOf } from './steps';
 
 /**
@@ -38,13 +38,16 @@ export function providerEmailConfirmed(provider: SocialProvider, claims: Provide
 
 /** Given and family names, or `name` split at its last space. Trimmed to the profile step's limits. */
 export function providerNames(claims: ProviderClaims): { firstName: string; lastName: string } {
+  // A provider's name follows the app's rule for names too (abuse rehearsal J-AB3): one with contact details or that
+  // passes for our team is left empty, and the person gives their name as anyone signing up with an email does.
+  const allowed = (names: { firstName: string; lastName: string }) => ({ firstName: nameProblem(names.firstName) ? '' : names.firstName, lastName: nameProblem(names.lastName) ? '' : names.lastName });
   const given = text(claims.given_name);
   const family = text(claims.family_name);
-  if (given || family) return { firstName: given.slice(0, 40), lastName: family.slice(0, 60) };
+  if (given || family) return allowed({ firstName: given.slice(0, 40), lastName: family.slice(0, 60) });
   const full = text(claims.name).replace(/\s+/g, ' ');
   const cut = full.lastIndexOf(' ');
-  if (cut <= 0) return { firstName: full.slice(0, 40), lastName: '' };
-  return { firstName: full.slice(0, cut).slice(0, 40), lastName: full.slice(cut + 1).slice(0, 60) };
+  if (cut <= 0) return allowed({ firstName: full.slice(0, 40), lastName: '' });
+  return allowed({ firstName: full.slice(0, cut).slice(0, 40), lastName: full.slice(cut + 1).slice(0, 60) });
 }
 
 /**

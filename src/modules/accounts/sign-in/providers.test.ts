@@ -46,6 +46,12 @@ describe('providerNames', () => {
     expect(providerNames({})).toEqual({ firstName: '', lastName: '' });
   });
 
+  it("leaves out a provider's name that carries contact details or passes for our team, so the person gives theirs (J-AB3)", () => {
+    expect(providerNames({ given_name: 'TasksNearMe', family_name: 'Support' })).toEqual({ firstName: '', lastName: '' });
+    expect(providerNames({ given_name: 'Maya', family_name: '3525550101' })).toEqual({ firstName: 'Maya', lastName: '' });
+    expect(providerNames({ name: 'Support Desk' })).toEqual({ firstName: '', lastName: 'Desk' });
+  });
+
   it('drops control characters and keeps to the profile limits', () => {
     expect(providerNames({ given_name: 'Ro\u0000bin', family_name: 'A'.repeat(80) })).toEqual({ firstName: 'Robin', lastName: 'A'.repeat(60) });
   });

@@ -119,8 +119,10 @@ export const FIELD_ERROR_CODES = [
   'unchanged',
   /** Text describing something on the prohibited-tasks list. */
   'prohibited',
-  /** A phone number, an email or a link where it would be public (a task's title; sweep 2026-11-20, PT8). */
+  /** A phone number, an email or a link where it would be public (a task's title; sweep 2026-11-20, PT8; a name, J-AB3). */
   'contact_details',
+  /** A name that would pass for our team ("TasksNearMe", "Support", "Admin"…; abuse rehearsal J-AB3). */
+  'name_reserved',
   /** A date or time outside what the policy allows (too soon, too far out, end before start). */
   'out_of_range',
   /** A checkbox that must be ticked (age, terms). */

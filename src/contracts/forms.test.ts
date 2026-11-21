@@ -45,6 +45,18 @@ describe('form schemas speak in field error codes', () => {
     ).toMatchObject({ firstName: 'Maya' });
   });
 
+  it('names carry no contact details and never pass for our team (abuse rehearsal J-AB3)', () => {
+    const name = (firstName: string, lastName = 'Rivera') => firstErrors(profileInputSchema, { firstName, lastName, adultAttested: true, termsAccepted: true });
+    // A number, an email or a link would show beside offers and messages, before contact details are shared.
+    for (const firstName of ['Text 3525550101', 'Maya３', 'maya@example.test', 'www.mayacleans', 'mayacleans.com', 'https://x']) expect(name(firstName)).toEqual({ firstName: 'contact_details' });
+    for (const firstName of ['TasksNearMe', 'Tasks Near Me', 'Support', 'Soporte', 'Admin', 'Staff', 'Equipo', 'Official', 'Deleted']) expect(name(firstName)).toEqual({ firstName: 'name_reserved' });
+    expect(name('Maya', 'Support Team')).toEqual({ lastName: 'name_reserved' });
+    // Real names stay fine: accents, hyphens, apostrophes, initials, other scripts, and words that merely contain one.
+    for (const [firstName, lastName] of [['María José', 'García-López'], ["D'Andre", "O'Neil"], ['J.R.', 'Smith'], ['Zoë', 'Teams'], ['李', '小龙'], ['Stafford', 'Supportman'], ['Adminah', 'Equipol']]) {
+      expect(name(firstName!, lastName)).toEqual({});
+    }
+  });
+
   it('waitlist: email, ZIP, and interest', () => {
     expect(firstErrors(waitlistInputSchema, { email: 'a@b.co', zip: '1000', interest: undefined })).toEqual({
       zip: 'invalid',

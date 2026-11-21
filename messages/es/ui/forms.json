@@ -11,6 +11,7 @@
     "must_accept": "Marca esta casilla para continuar.",
     "prohibited": "Esto no está permitido en TasksNearMe. Consulta la lista de tareas prohibidas.",
     "contact_details": "No incluyas teléfonos, correos ni enlaces: podrás compartirlos cuando se confirme una reserva.",
+    "name_reserved": "Usa tu propio nombre. Los nombres como «Soporte» o «TasksNearMe» están reservados para nuestro equipo.",
     "out_of_range": "Elige un valor dentro del rango permitido.",
     "unchanged": "Eso es lo que tienes ahora.",
     "in_market": "Eso está en una ciudad donde ya estamos. Elígela de la lista.",
