@@ -14,7 +14,8 @@ import { Input } from '@/ui/primitives/input';
 import { Textarea } from '@/ui/primitives/textarea';
 import { Button } from '@/ui/primitives/button';
 
-function OfferField({ name, label, hint, children }: { name: FieldPath<OfferInput>; label: string; hint: string; children: (id: string, invalid: boolean) => ReactNode }) {
+/** `after`: what follows the field's hint and error, such as the message's "Write it for me". */
+function OfferField({ name, label, hint, children, after }: { name: FieldPath<OfferInput>; label: string; hint: string; children: (id: string, invalid: boolean) => ReactNode; after?: ReactNode }) {
   const id = useId();
   const { getFieldState, formState } = useFormContext<OfferInput>();
   const { error } = getFieldState(name, formState);
@@ -25,6 +26,7 @@ function OfferField({ name, label, hint, children }: { name: FieldPath<OfferInpu
     {children(id, !!error)}
     <FieldDescription id={`${id}-hint`}>{hint}</FieldDescription>
     <div id={`${id}-error`} aria-live="polite">{code && <FieldError>{t(t.has(`fieldErrors.${code}`) ? `fieldErrors.${code}` : 'fieldErrors.invalid')}</FieldError>}</div>
+    {after}
   </Field>;
 }
 
@@ -119,10 +121,11 @@ export function OfferFields({ rules, onDraftMessage }: {
       <option value="" disabled>{t('chooseStart')}</option>
       {rules.startTimes.map((time) => <option key={time} value={time}>{formatTime(marketLocalToUtc(rules.date, time, rules.timeZone))}</option>)}
     </select>}</OfferField>
-    <OfferField name="message" label={t('message')} hint={t('privacy')}>{(id, invalid) => <>
+    {/* The hint and error right under the count, "Write it for me" after them: with a phone's keyboard open, the
+        message, its count and its hint fit above Send offer (journeys on a phone). */}
+    <OfferField name="message" label={t('message')} hint={t('privacy')} after={onDraftMessage && <MessageDraft onDraft={onDraftMessage} />}>{(id, invalid) => <>
       <Textarea {...register('message')} id={id} maxLength={rules.messageMaxLength} rows={4} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error ${id}-count`} className="min-h-28 scroll-mb-40" />
       <p id={`${id}-count`} className="text-right text-sm tabular-nums text-muted-foreground">{t('messageCount', { count: message.length, maximum: rules.messageMaxLength })}</p>
-      {onDraftMessage && <MessageDraft onDraft={onDraftMessage} />}
     </>}</OfferField>
     <OfferField name="brings" label={t('brings')} hint={t('bringsHint')}>{(id, invalid) => <Controller name="brings" control={control} render={({ field }) => <div className="space-y-3">
       <div className="flex flex-wrap gap-2">

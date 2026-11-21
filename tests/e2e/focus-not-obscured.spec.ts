@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { submittedBooking } from './support/scenarios';
+import { closeTask, openTask, submittedBooking } from './support/scenarios';
 import { devSignIn } from './support/sign-in';
 
 /**
@@ -103,4 +103,22 @@ test('the review form: Send review never covers the review being typed, or its c
   const send = page.getByRole('button', { name: 'Send review' });
   await tabToFieldBehindBar(page, body, send);
   await expectAboveBar(body, send);
+});
+
+test('the offer form: Send offer never covers the message being typed, or its count', async ({ page }) => {
+  test.setTimeout(150_000);
+  const task = await openTask('focus-offer');
+  try {
+    await devSignIn(page, 'jordan@example.test');
+    await page.goto(`/app/find-work/${task.taskId}`);
+    const message = page.getByLabel('Message to the client');
+    await expect(message).toBeVisible({ timeout: 30_000 });
+
+    await keyboardOpen(page);
+    const send = page.getByRole('button', { name: 'Send offer' });
+    await tabToFieldBehindBar(page, message, send);
+    await expectAboveBar(message, send);
+  } finally {
+    await closeTask(task.taskId);
+  }
 });

@@ -22,6 +22,16 @@ function show(data: HelperTaskView, overrides: Partial<HelperWorkHandlers> = {})
 }
 
 describe('"Write it for me" on the offer message', () => {
+  it('comes after the message’s count, privacy hint and error, so a phone with the keyboard open fits the field and its hint above Send offer', () => {
+    show(helperMovingHourly);
+    const message = screen.getByLabelText(form.message);
+    const described = (message.getAttribute('aria-describedby') ?? '').split(' ').map((id) => document.getElementById(id)!);
+    expect(described.map((node) => node.textContent)).toContain(form.privacy);
+    const draft = screen.getByRole('button', { name: form.aiDraft });
+    // Every node that describes the message comes before "Write it for me".
+    for (const node of described) expect(node.compareDocumentPosition(draft) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('is offered only when drafting is on', () => {
     show({ ...helperMovingHourly, aiDraftingEnabled: false });
     expect(screen.queryByRole('button', { name: form.aiDraft })).not.toBeInTheDocument();

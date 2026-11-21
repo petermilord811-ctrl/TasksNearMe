@@ -174,6 +174,25 @@ export function confirmedBooking(name: string, priceCents: number): Promise<Book
   return scenario(name, { kind: 'confirmed' }, 3 * 24 * HOUR, priceCents);
 }
 
+/** A copy of the desk posted by Chris, open with no offers, three days out: a task Jordan can offer on. */
+export async function openTask(name: string): Promise<{ taskId: string; title: string }> {
+  const { db, pool } = database();
+  try {
+    const run = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+    const taskId = `tsk_e2e_${name}_${run}`;
+    const title = `Assemble a desk (e2e ${name} ${run})`;
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    if (!desk) throw new Error('The seeded desk is missing');
+    const now = new Date();
+    const start = new Date(now.getTime() + 3 * 24 * HOUR);
+    const end = new Date(start.getTime() + 3 * HOUR);
+    await db.insert(tasks).values({ ...desk, id: taskId, slug: taskId.replaceAll('_', '-'), title, posterUserId: 'usr_chris', status: 'open', offerCount: 0, version: 1, windowStart: start, windowEnd: end, expiresAt: end, publishedAt: now, createdAt: now, updatedAt: now });
+    return { taskId, title };
+  } finally {
+    await pool.end();
+  }
+}
+
 /** Takes a scenario's task off the board again (a replacement search reopened it). */
 export async function closeTask(taskId: string): Promise<void> {
   const { db, pool } = database();

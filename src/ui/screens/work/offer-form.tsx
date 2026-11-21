@@ -9,6 +9,7 @@ import { createOfferInputSchema, type ActionResult, type HelperTaskView, type He
 import { marketLocalToUtc } from '@/shared/format';
 import { BotCheckField, useBotCheck } from '@/ui/components/forms/bot-check';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
+import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 import { OfferFields } from './offer-fields';
@@ -47,6 +48,10 @@ export function OfferForm({ data, handlers, revising = false, onCancel, onSent, 
   const locked = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const submitBar = useRef<HTMLDivElement>(null);
+  // A field that focus reaches behind the sticky Send offer bar, or whose hint or count is, comes clear of it, also
+  // when a keyboard that shrinks the page opens (WCAG 2.4.11).
+  const fields = useRef<HTMLFieldSetElement>(null);
+  useKeepFocusAboveBar(fields, submitBar);
   useEffect(() => { if (revising) heading.current?.focus(); }, [revising]);
 
   // A new offer's words survive a reload or Back (journeys on a phone, J-H7: a 500-character message was lost): they come
@@ -130,13 +135,7 @@ export function OfferForm({ data, handlers, revising = false, onCancel, onSent, 
     <h2 ref={heading} tabIndex={-1} id={`${id}-title`} className="rounded-sm font-heading text-xl font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{t(revising ? 'reviseTitle' : 'title')}</h2>
     <p className="text-sm text-muted-foreground">{t('intro')}</p>
     <FormProvider {...form}><form noValidate aria-labelledby={`${id}-title`} aria-busy={pending} onSubmit={(event) => { void form.handleSubmit(submit)(event); }} className="space-y-6">
-      <fieldset disabled={pending} className="min-w-0" onFocusCapture={(event) => {
-        const bar = submitBar.current;
-        // Native Tab scrolling can leave a partly visible field behind the sticky action bar.
-        if (bar && event.target.getBoundingClientRect().bottom > bar.getBoundingClientRect().top) {
-          event.target.scrollIntoView({ block: 'center', behavior: 'instant' });
-        }
-      }}><legend className="sr-only">{t('details')}</legend><OfferFields rules={data.offerRules} onDraftMessage={data.aiDraftingEnabled ? handlers.onDraftOfferMessage : undefined} /></fieldset>
+      <fieldset ref={fields} disabled={pending} className="min-w-0"><legend className="sr-only">{t('details')}</legend><OfferFields rules={data.offerRules} onDraftMessage={data.aiDraftingEnabled ? handlers.onDraftOfferMessage : undefined} /></fieldset>
       <OfferEarnings pricing={pricing} valid={validPricing} onQuote={handlers.onQuote} />
       {!revising && data.botCheck && <BotCheckField check={check} result={result} />}
       <FormFeedback result={feedback} />

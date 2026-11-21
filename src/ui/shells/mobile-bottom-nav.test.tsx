@@ -53,6 +53,45 @@ function example(layout: 'tabs' | 'flow' = 'tabs', position: 'mobileFixed' | 'st
   </NextIntlClientProvider>;
 }
 
+describe('the phone keyboard (ab, 2026-11-21)', () => {
+  const pointer = (coarse: boolean) => vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: coarse && query === '(pointer: coarse)', media: query, onchange: null,
+    addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false,
+  }));
+  beforeEach(() => {
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callback(0); return 1; });
+    vi.stubGlobal('cancelAnimationFrame', () => {});
+  });
+
+  it('steps the dock aside while a text field has focus, so sticky bars sit right above the keyboard', () => {
+    pointer(true);
+    const { container } = render(<>{example()}<input aria-label="Message" /><input type="checkbox" aria-label="Agree" /><textarea aria-label="Note" readOnly /></>);
+    const shell = container.querySelector<HTMLElement>('[data-app-shell]')!;
+    const nav = container.querySelector<HTMLElement>('[data-mobile-bottom-nav]')!;
+    expect(shell.style.getPropertyValue('--app-bottom-nav-height')).toBe('96px');
+    act(() => screen.getByRole('textbox', { name: 'Message' }).focus());
+    expect(nav).toHaveAttribute('data-typing');
+    expect(nav).toHaveAttribute('inert');
+    expect(shell.style.getPropertyValue('--app-bottom-nav-height')).toBe('0px');
+    // A checkbox, or a read-only field, brings no keyboard: the dock comes back.
+    act(() => screen.getByRole('checkbox', { name: 'Agree' }).focus());
+    expect(nav).not.toHaveAttribute('data-typing');
+    expect(nav).not.toHaveAttribute('inert');
+    expect(shell.style.getPropertyValue('--app-bottom-nav-height')).toBe('96px');
+    act(() => screen.getByRole('textbox', { name: 'Note' }).focus());
+    expect(nav).not.toHaveAttribute('data-typing');
+  });
+
+  it('keeps the dock with a mouse (a narrow desktop window), where no keyboard opens', () => {
+    pointer(false);
+    const { container } = render(<>{example()}<input aria-label="Message" /></>);
+    const shell = container.querySelector<HTMLElement>('[data-app-shell]')!;
+    act(() => screen.getByRole('textbox', { name: 'Message' }).focus());
+    expect(container.querySelector('[data-mobile-bottom-nav]')).not.toHaveAttribute('data-typing');
+    expect(shell.style.getPropertyValue('--app-bottom-nav-height')).toBe('96px');
+  });
+});
+
 describe('mobile navigation clearance', () => {
   it.each(['mobileFixed', 'sticky'] as const)('connects the %s action offset and page clearance to the measured tab bar', (position) => {
     const { container } = render(example('tabs', position));

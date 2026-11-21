@@ -9,6 +9,7 @@ import { invitePricingSchema, rebookProposalInputSchema, type ActionResult, type
 import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
+import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
 import { usePriceQuote } from '@/ui/lib/use-price-quote';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -43,6 +44,10 @@ export function ProposeRebookForm({ data, handlers, now, initialResult, initialP
   const [pending, setPending] = useState(initialPending);
   const locked = useRef(initialPending || Boolean(initialResult?.ok));
   const submitBar = useRef<HTMLDivElement>(null);
+  // A field that focus reaches behind the sticky Send proposal bar, or whose hint or count is, comes clear of it, also
+  // when a keyboard that shrinks the page opens (WCAG 2.4.11).
+  const fields = useRef<HTMLFieldSetElement>(null);
+  useKeepFocusAboveBar(fields, submitBar);
   const feedbackSection = useRef<HTMLDivElement>(null);
   const disabled = pending || Boolean(result?.ok);
 
@@ -72,9 +77,7 @@ export function ProposeRebookForm({ data, handlers, now, initialResult, initialP
   return <FormProvider {...form}><form noValidate aria-labelledby={`${id}-title`} aria-busy={pending} onSubmit={(event) => { void form.handleSubmit(submit)(event); }} className="space-y-6">
     <section className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]">
       <h2 id={`${id}-title`} className="font-display text-xl/7 font-semibold tracking-[-0.015em]">{t('details')}</h2>
-      <fieldset disabled={disabled} className="min-w-0" onFocusCapture={(event) => {
-        if (submitBar.current && event.target.getBoundingClientRect().bottom > submitBar.current.getBoundingClientRect().top) event.target.scrollIntoView({ block: 'center', behavior: 'instant' });
-      }}><legend className="sr-only">{t('details')}</legend><ProposeRebookFields data={data} disabled={disabled} earliest={earliest} /></fieldset>
+      <fieldset ref={fields} disabled={disabled} className="min-w-0"><legend className="sr-only">{t('details')}</legend><ProposeRebookFields data={data} disabled={disabled} earliest={earliest} /></fieldset>
     </section>
     <div aria-live="polite" aria-busy={quote.pending}>
       {quote.breakdown ? <PriceBreakdown breakdown={quote.breakdown} variant="helper" title={t('earnings')} />

@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { createCompletionInputSchema, type ActionResult, type CompletionHandlers, type CompletionInput, type CompletionPageData } from '@/contracts';
 import { actionTray, note, surface, surfacePad } from '@/ui/components/bookings/surface';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
+import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
 import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -37,6 +38,10 @@ export function CompletionForm({ data, handlers, initialResult, initialPending =
   const formRef = useRef<HTMLFormElement>(null);
   const focusInvalid = useRef(false);
   const submitBar = useRef<HTMLDivElement>(null);
+  // A field that focus reaches behind the sticky Send for approval bar, or whose hint or count is, comes clear of it,
+  // also when a keyboard that shrinks the page opens (WCAG 2.4.11).
+  const fields = useRef<HTMLFieldSetElement>(null);
+  useKeepFocusAboveBar(fields, submitBar);
   const busy = pending || uploading || quoting;
   const disabled = busy || Boolean(result?.ok);
   const { setError } = form;
@@ -71,7 +76,7 @@ export function CompletionForm({ data, handlers, initialResult, initialPending =
   }
   const feedback = result && !result.ok ? { ...result, fieldErrors: undefined } : result;
   return <FormProvider {...form}><form ref={formRef} noValidate aria-label={t('form')} aria-busy={busy} className={cn(surface, surfacePad, 'space-y-6')} onSubmit={(event) => { if (disabled) { event.preventDefault(); return; } void form.handleSubmit(submit, () => { focusInvalid.current = true; })(event); }}>
-    <fieldset disabled={disabled} className="min-w-0" onFocusCapture={(event) => { const bar = submitBar.current; if (bar && event.target.getBoundingClientRect().bottom > bar.getBoundingClientRect().top) event.target.scrollIntoView({ block: 'center', behavior: 'instant' }); }}><legend className="sr-only">{t('form')}</legend><CompletionFields rules={data.rules} categorySlug={data.booking.task.categorySlug} onUploadPhoto={handlers.onUploadPhoto} onBusyChange={setUploading} expensesCents={expensesCents} /></fieldset>
+    <fieldset ref={fields} disabled={disabled} className="min-w-0"><legend className="sr-only">{t('form')}</legend><CompletionFields rules={data.rules} categorySlug={data.booking.task.categorySlug} onUploadPhoto={handlers.onUploadPhoto} onBusyChange={setUploading} expensesCents={expensesCents} /></fieldset>
     <CompletionEarnings hoursWorked={values.hoursWorked} expensesCents={expensesCents} valid={validQuote} onQuote={handlers.onQuoteFinal} onBusyChange={setQuoting} disabled={pending || uploading} initialError={initialQuoteError} />
     {result && !result.ok && result.code === 'not_allowed' ? <div role="status" className="space-y-3 rounded-2xl border border-warning/40 bg-badge-warning/60 p-4"><p>{t('changed')}</p><Button type="button" variant="outline" disabled={busy} onClick={() => router.refresh()}>{t('reload')}</Button></div> : <FormFeedback result={feedback} successMessage={t('submitted')} />}
     <p id={`${id}-approval`} className={note}>{t('approval')}</p>

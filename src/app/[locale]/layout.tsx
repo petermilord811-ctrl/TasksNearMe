@@ -46,6 +46,10 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  // The phone's keyboard resizes the page (ab, 2026-11-21; journeys on a phone): sticky bars (Send offer, Save and
+  // continue, a booking's actions) sit above it instead of under it, and the tab dock steps aside while a text field has
+  // focus (MobileBottomNav). Android Chrome follows it; iOS Safari ignores it and still covers bottom bars (left so).
+  interactiveWidget: 'resizes-content',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#FBF7F2' },
     { media: '(prefers-color-scheme: dark)', color: '#0F0D0B' },
