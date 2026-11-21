@@ -18,9 +18,10 @@ const nextConfig: NextConfig = {
   ...(process.env.TNM_E2E_BUILD === '1' ? { typescript: { ignoreBuildErrors: true } } : {}),
   // CI's preview build (.github/workflows/ci.yml, scripts/preview/bundle.sh): a self-contained server folder.
   ...(process.env.NEXT_OUTPUT === 'standalone' ? { output: 'standalone' as const } : {}),
-  // The server's document readers (src/integrations/ocr/engine.ts) load Tesseract, its English data and unpdf in a
-  // short-lived process of their own at run time, out of the bundler's sight, so the standalone folder is told to keep
-  // them. Only the LSTM builds of the core (the readers' engine mode); nothing is ever downloaded.
+  // The server's document readers (src/integrations/ocr/engine.ts) load Tesseract, its English data, zxing-wasm's
+  // barcode reader and unpdf in a short-lived process of their own at run time, out of the bundler's sight, so the
+  // standalone folder is told to keep them. Only the LSTM builds of Tesseract's core (the readers' engine mode), and
+  // only zxing's CommonJS reader with its WebAssembly binary (the process reads it from here: nothing is downloaded).
   outputFileTracingIncludes: {
     '/**': [
       './node_modules/tesseract.js/package.json',
@@ -29,6 +30,11 @@ const nextConfig: NextConfig = {
       './node_modules/tesseract.js-core/tesseract-core-*lstm.{js,wasm}',
       './node_modules/@tesseract.js-data/eng/4.0.0_best_int/**',
       './node_modules/{regenerator-runtime,is-url,wasm-feature-detect,bmp-js}/**',
+      './node_modules/zxing-wasm/package.json',
+      './node_modules/zxing-wasm/dist/cjs/package.json',
+      './node_modules/zxing-wasm/dist/cjs/share.js',
+      './node_modules/zxing-wasm/dist/cjs/reader/index.js',
+      './node_modules/zxing-wasm/dist/reader/zxing_reader.wasm',
       './node_modules/unpdf/package.json',
       './node_modules/unpdf/dist/**',
     ],

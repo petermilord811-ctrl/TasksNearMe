@@ -4,6 +4,7 @@ import type {
   AdminVerificationHandlers,
   AdminVerificationsPageData,
   IdentityAutoCheck,
+  IdentityDetailsRevealResult,
   PersonSummary,
 } from '@/contracts';
 
@@ -18,8 +19,8 @@ const ana: PersonSummary = { id: 'usr_ana', displayName: 'Ana V.', initials: 'AV
 const kai: PersonSummary = { id: 'usr_kai', displayName: 'Kai D.', initials: 'KD', memberSince: '2026-11-19T15:00:00.000Z', phoneVerified: true };
 
 /** What the automatic reading of an ID found: everything matches, or the name and expiry need a look. */
-const idAllMatch: IdentityAutoCheck = { readable: true, nameMatches: true, isAdult: true, notExpired: true, expires: { month: 4, year: 2029 }, documentType: 'drivers_license' };
-const idFlags: IdentityAutoCheck = { readable: true, nameMatches: false, isAdult: true, notExpired: false, expires: { month: 10, year: 2026 }, documentType: 'state_id' };
+const idAllMatch: IdentityAutoCheck = { readable: true, nameMatches: true, isAdult: true, notExpired: true, expires: { month: 4, year: 2029 }, documentType: 'drivers_license', addressMatches: true, source: 'barcode', frontAgrees: true };
+const idFlags: IdentityAutoCheck = { readable: true, nameMatches: false, isAdult: true, notExpired: false, expires: { month: 10, year: 2026 }, documentType: 'state_id', addressMatches: false, source: 'barcode', frontAgrees: false };
 
 /** Our own ID check's tries as staff see them (stage 1). */
 const rosaInReview: AdminIdentityCaptureView = { id: 'idc_rosa', status: 'submitted', documentType: 'drivers_license', submittedAt: '2026-11-19T18:20:00.000Z', prompt: 'look_left', autoCheck: idAllMatch, photos: ['front', 'back', 'selfie'] };
@@ -259,10 +260,37 @@ export const identityCaptureRevealed = {
   expiresAt: '2026-11-20T16:05:00.000Z',
 };
 
+/** Rosa's license read from its barcode when staff ask (fictional): everything matches the account. */
+export const identityDetailsRevealed: Extract<IdentityDetailsRevealResult, { ok: true }> = {
+  ok: true,
+  details: {
+    documentType: 'drivers_license',
+    issuingState: 'TX',
+    name: { given: 'Rosa', middle: 'Maria', surname: 'Torres' },
+    dateOfBirth: '1994-03-12',
+    age: 32,
+    expiryDate: '2029-04-30',
+    issueDate: '2021-04-30',
+    documentNumber: '12345678',
+    address: { line1: '4401 Example Ave', line2: 'Apt 12', city: 'Austin', state: 'TX', zip: '78723' },
+    sex: 'female',
+    height: '5-05',
+    eyeColor: 'BRO',
+    matches: { name: true, address: true, adult: true, notExpired: true },
+  },
+};
+
+/** The same license where the name and the address differ from the account, and no address on file elsewhere. */
+export const identityDetailsMismatch: Extract<IdentityDetailsRevealResult, { ok: true }> = {
+  ok: true,
+  details: { ...identityDetailsRevealed.details, name: { given: 'Rosa', surname: 'Lopez' }, address: { line1: '18 Other St', city: 'Dallas', state: 'TX', zip: '75201' }, matches: { name: false, address: false, adult: true, notExpired: true } },
+};
+
 export const fakeAdminVerificationHandlers: AdminVerificationHandlers = {
   onRevealAddressProof: () => wait({ ok: true, address: '1234 Example Lane, Austin, TX 78723', document: { url: '/samples/proof-of-address.svg', kind: 'image' }, expiresAt: '2026-11-20T16:05:00.000Z' }),
   onDecideAddress: () => wait({ ok: true, code: 'updated' }),
   onRevealIdentityCapture: () => wait(identityCaptureRevealed),
+  onRevealIdentityDetails: () => wait(identityDetailsRevealed),
   onDecideIdentityCapture: () => wait({ ok: true, code: 'updated' }),
   onVerificationAction: () => wait({ ok: true, code: 'updated' }),
 };

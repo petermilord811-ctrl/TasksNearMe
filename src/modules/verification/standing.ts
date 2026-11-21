@@ -380,7 +380,7 @@ export function calendarDate(value: string | undefined): { year: number; month: 
 }
 
 /** Today's date where the person lives (their market's zone), as the ID's dates are calendar dates there. */
-function localToday(now: Date, timeZone: TimeZone): { year: number; month: number; day: number } {
+export function localToday(now: Date, timeZone: TimeZone): { year: number; month: number; day: number } {
   const [year, month, day] = marketDayKey(now, timeZone).split('-').map(Number) as [number, number, number];
   return { year, month, day };
 }

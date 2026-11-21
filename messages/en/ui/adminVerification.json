@@ -183,6 +183,8 @@
     "sectionPoster": "Person: a client",
     "sectionCapture": "Person: ID photos to review",
     "sectionCaptureOpened": "Person: ID photos opened",
+    "sectionCaptureDetails": "Person: ID details from the barcode, all matching",
+    "sectionCaptureDetailsMismatch": "Person: ID details from the barcode, name and address differ",
     "sectionCaptureReadOnly": "Person: ID photos, read-only",
     "sectionDoubleCheck": "Person: the double check didn't confirm",
     "sectionDuplicate": "Person: the same ID on another account",
@@ -228,7 +230,13 @@
       "notExpired": "Not expired: {answer}",
       "expires": "Expires {month}/{year}",
       "documentType": "Looks like: {type}",
-      "other": "something else"
+      "other": "something else",
+      "address": "Address matches: {answer}",
+      "source": {
+        "barcode": "Read from the barcode",
+        "front": "Read from the front"
+      },
+      "frontAgrees": "Front and barcode agree: {answer}"
     },
     "rejectionReasons": {
       "document_unreadable": "the ID is unreadable",
@@ -257,6 +265,56 @@
       },
       "none": "The photos were deleted.",
       "expires": "These links work until {time}."
+    },
+    "details": {
+      "open": "Show the ID's details",
+      "title": "Show the ID's details",
+      "description": "This server reads the barcode on the back of the license or ID again and shows what it says, without opening the photos. Nothing it shows is stored. Why you need it is logged with your name and the time.",
+      "reason": "Why you need it",
+      "reasonHint": "At least 10 characters, for example: comparing the name and address with the account before approving.",
+      "reasonRequired": "Say why in at least 10 characters.",
+      "submit": "Show the details",
+      "cancel": "Cancel",
+      "logged": "Shown and logged: read from the ID's barcode.",
+      "notStored": "Read just now from the barcode and never stored. Compare it with the photos before you decide.",
+      "name": "Name",
+      "dateOfBirth": "Date of birth",
+      "age": "{age} years old",
+      "expires": "Expires",
+      "issued": "Issued",
+      "number": "ID number",
+      "issuer": "Issued by",
+      "issuedBy": "{type}, {state}",
+      "address": "Address",
+      "physical": "Description",
+      "sex": {
+        "male": "Male",
+        "female": "Female",
+        "unspecified": "Not specified"
+      },
+      "height": "Height {height}",
+      "eyes": "Eyes {eyes}",
+      "matches": {
+        "name": {
+          "yes": "matches the account",
+          "no": "doesn't match the account's legal name"
+        },
+        "adult": {
+          "yes": "18 or older",
+          "no": "under 18"
+        },
+        "notExpired": {
+          "yes": "not expired",
+          "no": "expired"
+        },
+        "address": {
+          "yes": "matches the home address on file",
+          "no": "doesn't match the home address on file",
+          "none": "no home address on file to compare"
+        }
+      },
+      "noBarcode": "The back has no barcode this server can read (too blurry, or a card without one). Open the photos to check the details.",
+      "unavailable": "The reader couldn't run just now. Try again in a minute, or open the photos."
     },
     "decide": {
       "open": "Review",

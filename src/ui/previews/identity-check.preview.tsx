@@ -9,6 +9,8 @@ import {
   fakeHandler,
   fakeOnboardingHandlers,
   identityCaptureRevealed,
+  identityDetailsMismatch,
+  identityDetailsRevealed,
   kaiDuplicateVerification,
   morganStaff,
   onboardingIdentityCapture,
@@ -100,6 +102,14 @@ export const identityCheckPreviews: PreviewEntry[] = [
   {
     id: 'screen-admin-user/verification-id-photos-opened', title: a.sectionCaptureOpened, group: a.group, layout: 'fullscreen',
     render: () => <Admin path={routes.admin.user('usr_rosa')}><div className="mx-auto max-w-content p-gutter"><AdminVerificationSection userId="usr_rosa" verification={rosaVerification} handlers={fakeAdminUserHandlers} now={ADMIN_NOW} initialCaptureRevealed={{ captureId: 'idc_rosa', result: identityCaptureRevealed }} /></div></Admin>,
+  },
+  {
+    id: 'screen-admin-user/verification-id-details', title: a.sectionCaptureDetails, group: a.group, layout: 'fullscreen',
+    render: () => <Admin path={routes.admin.user('usr_rosa')}><div className="mx-auto max-w-content p-gutter"><AdminVerificationSection userId="usr_rosa" verification={rosaVerification} handlers={fakeAdminUserHandlers} now={ADMIN_NOW} initialDetailsRevealed={{ captureId: 'idc_rosa', details: identityDetailsRevealed.details }} /></div></Admin>,
+  },
+  {
+    id: 'screen-admin-user/verification-id-details-mismatch', title: a.sectionCaptureDetailsMismatch, group: a.group, layout: 'fullscreen',
+    render: () => <Admin path={routes.admin.user('usr_rosa')}><div className="mx-auto max-w-content p-gutter"><AdminVerificationSection userId="usr_rosa" verification={rosaVerification} handlers={fakeAdminUserHandlers} now={ADMIN_NOW} initialDetailsRevealed={{ captureId: 'idc_rosa', details: identityDetailsMismatch.details }} /></div></Admin>,
   },
   {
     id: 'screen-admin-user/verification-double-check', title: a.sectionDoubleCheck, group: a.group, layout: 'fullscreen',

@@ -114,6 +114,13 @@ test('a new helper finishes onboarding, staff verify the ID photos and the home 
   await helperLink().click();
   await expect(page).toHaveURL(new RegExp(`/admin/users/${helper.id}$`), { timeout: 60_000 });
   const staffSection = page.getByRole('region', { name: 'Verification' });
+  // Before the photos: the ID's details from its barcode, with a logged reason (a test account's are made up from it).
+  await staffSection.getByRole('button', { name: "Show the ID's details" }).click();
+  const details = page.getByRole('dialog', { name: "Show the ID's details" });
+  await details.getByLabel('Why you need it').fill('Comparing the name with the account before the photos.');
+  await details.getByRole('button', { name: 'Show the details' }).click();
+  await expect(staffSection.getByText("Shown and logged: read from the ID's barcode.")).toBeVisible();
+  await expect(staffSection.getByText('(matches the account)')).toBeVisible();
   await staffSection.getByRole('button', { name: 'Open the photos' }).click();
   const openPhotos = page.getByRole('dialog', { name: 'Open the ID photos' });
   await openPhotos.getByLabel('Reason').fill('Comparing the ID photos Priya just sent.');

@@ -3,8 +3,8 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { IDENTITY_CAPTURE_REJECTION_REASONS, IDENTITY_PROVIDER_OUTCOMES, LIVENESS_PROMPTS, type ActionResult, type AdminVerificationHandlers, type IdentityCaptureRevealResult } from '@/contracts';
-import { ADMIN_NOW, adminVerificationsIdentityData, anaDoubleCheckVerification, kaiDuplicateVerification, fakeAdminVerificationHandlers, identityCaptureRevealed, jordanVerification, rosaReadOnlyVerification, rosaVerification } from '@/fixtures';
+import { IDENTITY_CAPTURE_REJECTION_REASONS, IDENTITY_PROVIDER_OUTCOMES, LIVENESS_PROMPTS, type ActionResult, type AdminVerificationHandlers, type IdentityCaptureRevealResult, type IdentityDetailsRevealResult } from '@/contracts';
+import { ADMIN_NOW, adminVerificationsIdentityData, anaDoubleCheckVerification, kaiDuplicateVerification, fakeAdminVerificationHandlers, identityCaptureRevealed, identityDetailsMismatch, jordanVerification, rosaReadOnlyVerification, rosaVerification } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import copy from '../../../../messages/en/ui/adminVerification.json';
 import { AdminVerificationSection } from './admin-verification-section';
@@ -54,6 +54,41 @@ describe('staff review of our ID photos', () => {
     expect(await screen.findByText(c.reveal.logged)).toBeVisible();
     for (const kind of ['front', 'back', 'selfie'] as const) expect(screen.getByRole('img', { name: c.reveal.alt[kind] })).toHaveAttribute('src', identityCaptureRevealed.photos.find((photo) => photo.kind === kind)!.url);
     expect(screen.getByText(c.promptHint)).toBeVisible();
+  });
+
+  it("shows the ID's details from its barcode only with a reason, beside how they compare with the account, photos still closed", async () => {
+    const onRevealIdentityDetails = vi.fn(async (): Promise<IdentityDetailsRevealResult> => identityDetailsMismatch);
+    show(rosaVerification, { onRevealIdentityDetails });
+    const first = [...screen.getByRole('list', { name: c.title }).querySelectorAll<HTMLElement>(':scope > li')][0]!;
+    const reading = within(first).getByRole('list', { name: c.autoCheck.title });
+    expect(reading).toHaveTextContent('Address matches: yes');
+    expect(reading).toHaveTextContent(c.autoCheck.source.barcode);
+    expect(reading).toHaveTextContent('Front and barcode agree: yes');
+    await userEvent.click(within(first).getByRole('button', { name: c.details.open }));
+    const dialog = screen.getByRole('dialog', { name: c.details.title });
+    await userEvent.click(within(dialog).getByRole('button', { name: c.details.submit }));
+    expect(within(dialog).getByText(c.details.reasonRequired)).toBeVisible();
+    expect(onRevealIdentityDetails).not.toHaveBeenCalled();
+    await userEvent.type(within(dialog).getByLabelText(c.details.reason), 'Comparing the name before approving');
+    await userEvent.click(within(dialog).getByRole('button', { name: c.details.submit }));
+    expect(onRevealIdentityDetails).toHaveBeenCalledExactlyOnceWith({ captureId: 'idc_rosa', reason: 'Comparing the name before approving' });
+    expect(await screen.findByText(c.details.logged)).toBeVisible();
+    expect(screen.getByText(/Rosa Lopez/)).toBeVisible();
+    expect(screen.getByText(`(${c.details.matches.name.no})`)).toBeVisible();
+    expect(screen.getByText(`(${c.details.matches.address.no})`)).toBeVisible();
+    expect(screen.getByText(`(${c.details.matches.adult.yes})`)).toBeVisible();
+    expect(screen.getByText('12345678')).toBeVisible();
+    expect(screen.getByText(c.details.notStored)).toBeVisible();
+    expect(screen.queryByRole('img', { name: c.reveal.alt.front })).not.toBeInTheDocument();
+  });
+
+  it("says when the back has no barcode to read, so staff open the photos instead", async () => {
+    show(rosaVerification, { onRevealIdentityDetails: async () => ({ ok: false, code: 'no_barcode' }) });
+    await userEvent.click(screen.getAllByRole('button', { name: c.details.open })[0]!);
+    const dialog = screen.getByRole('dialog', { name: c.details.title });
+    await userEvent.type(within(dialog).getByLabelText(c.details.reason), 'Checking the details first');
+    await userEvent.click(within(dialog).getByRole('button', { name: c.details.submit }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(c.details.noBarcode);
   });
 
   it('needs a reason the helper sees to turn photos down, and a note for the log', async () => {

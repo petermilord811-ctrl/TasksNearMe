@@ -2,6 +2,7 @@
 
 import { refresh } from 'next/cache';
 import { aiReadingSetUp } from '@/integrations/ai';
+import { readIdBarcode } from '@/integrations/ocr';
 import { createFileStorage } from '@/integrations/storage';
 import { byteCipherFromEnv } from '@/platform/crypto/field-encryption';
 import type {
@@ -12,6 +13,8 @@ import type {
   IdentityCaptureDecisionInput,
   IdentityCaptureRevealInput,
   IdentityCaptureRevealResult,
+  IdentityDetailsRevealInput,
+  IdentityDetailsRevealResult,
   VerificationActionInput,
 } from '@/contracts';
 import { staffActorOf } from '@/modules/support/staff';
@@ -20,7 +23,7 @@ import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
 import { verificationCipher, verificationProviders } from './server';
 import type { IdReadingDeps } from './auto-check';
-import { canDecideVerification, decideAddress, decideIdentityCapture, readCaptureNow, revealAddressProof, revealIdentityCapture, verificationAction } from './staff';
+import { canDecideVerification, decideAddress, decideIdentityCapture, readCaptureNow, revealAddressProof, revealIdentityCapture, revealIdentityDetails, verificationAction } from './staff';
 
 /** Server Actions behind staff verification reviews (src/contracts/admin-verification.ts). */
 
@@ -66,6 +69,16 @@ export async function revealIdentityCaptureAction(input: IdentityCaptureRevealIn
   const result = await revealIdentityCapture(db, { secret }, staff, input, now);
   if (read) refresh();
   return result;
+}
+
+/**
+ * The ID's details from the barcode on its back, before the photos (owner, 2026-11-21). The barcode is read in the
+ * readers' own process (a fraction of a second, after any read the job is running), never stored; why is logged.
+ */
+export async function revealIdentityDetailsAction(input: IdentityDetailsRevealInput): Promise<IdentityDetailsRevealResult> {
+  const staff = await signedInStaff();
+  if (!staff) return { ok: false, code: 'not_allowed' };
+  return revealIdentityDetails(db, { storage: createFileStorage(), files: byteCipherFromEnv(), addressCipher: verificationCipher, readBarcode: (back) => readIdBarcode(back) }, staff, input, await requestNow());
 }
 
 export async function decideIdentityCaptureAction(input: IdentityCaptureDecisionInput): Promise<ActionResult> {

@@ -1,21 +1,26 @@
-import { ADDRESS_PROOF_RULES } from '@/contracts';
+import { ADDRESS_PROOF_RULES, type IdentityDocumentType } from '@/contracts';
 import type { AddressDocumentReader, AddressDocumentReading } from '@/integrations/ai/document-reader';
 import type { IdDocumentReader, IdDocumentReading } from '@/integrations/ai/id-document-reader';
 import { AiUnavailableError } from '@/integrations/ai/writer';
+import { parseAamva, type IdBarcodeDetails } from './aamva';
 import { judgeAddressProof, type ProofText } from './address-proof';
+import { barcodeReading } from './back';
 import { EngineFailureError, OverBudgetError, UnreadableDocumentError, withReadSession, type OcrPass, type ReadBudget, type ReadSession } from './engine';
 import { combineFronts, completeFront, readLicenseFront } from './license';
 import { confirmedNames, findPassportZone } from './mrz';
 import { words } from './text';
 import { lineText, type OcrPage } from './types';
 
+export { parseAamva, type IdBarcodeDetails } from './aamva';
+
 /**
  * The server's own document readers (owner, 2026-11-21: "for ID check: our own server"; no paid AI). They run
- * here, free, with no outside service and no network call: Tesseract reads photos, PDF.js reads a PDF's own text.
- * They answer only what they read with confidence and say unreadable otherwise; staff still decide every case.
- * Only the job runner calls them (verification.read_documents), never a request: a photo takes a second or two of
- * CPU and up to about 200 MB, one read at a time per process (engine.ts). Nothing they read is logged or kept
- * beyond the reading they return.
+ * here, free, with no outside service and no network call: zxing decodes a license or ID card's barcode,
+ * Tesseract reads photos, PDF.js reads a PDF's own text. They answer only what they read with confidence and say
+ * unreadable otherwise; staff still decide every case. The job runner calls the readers
+ * (verification.read_documents); a staff action reads a back's barcode on demand (`readIdBarcode`, about a second).
+ * A read takes a second or a few of CPU and up to about 400 MB (a license's back and front), one read at a time
+ * per process (engine.ts). Nothing they read is logged or kept beyond the reading they return.
  */
 
 export const SERVER_READER_NAME = 'server:ocr';
@@ -43,12 +48,12 @@ export interface ServerReaderOptions {
   now?: () => Date;
 }
 
-/** Over budget or a file that won't open: unreadable. The engine failing: unavailable (logged, never retried). */
-async function guarded<T extends { readable: boolean }>(read: () => Promise<T>): Promise<T | { readable: false }> {
+/** Over budget or a file that won't open: `unreadable`. The engine failing: unavailable (logged, never retried). */
+async function guarded<T>(read: () => Promise<T>, unreadable: T): Promise<T> {
   try {
     return await read();
   } catch (error) {
-    if (error instanceof OverBudgetError || error instanceof UnreadableDocumentError) return { readable: false };
+    if (error instanceof OverBudgetError || error instanceof UnreadableDocumentError) return unreadable;
     if (error instanceof EngineFailureError) throw new AiUnavailableError(error.message, { cause: error });
     throw error;
   }
@@ -107,38 +112,85 @@ async function readPassport(session: ReadSession, photo: Photo, first: OcrPage, 
   };
 }
 
-/** The server's ID reader: a passport's MRZ, or a US license or state ID's labeled fields. */
+/** The front's photo: a passport's MRZ, or a US license or state ID's labeled fields (or a passport sent as one). */
+async function readFront(session: ReadSession, bytes: Buffer, declaredType: IdentityDocumentType, today: Date): Promise<IdDocumentReading> {
+  const passport = declaredType === 'passport';
+  const first = await firstPass(session, bytes, passport ? PSM.AUTO : PSM.SPARSE_TEXT);
+  if (passport) return (await readPassport(session, first.photo, first.page, today)) ?? { readable: false };
+  const fronts = [readLicenseFront(first.page.lines, today)];
+  if (!completeFront(fronts[0]!) && first.page.lines.some((line) => lineText(line).includes('<<'))) {
+    // A passport sent as a license or ID.
+    const zone = await readPassport(session, first.photo, first.page, today);
+    if (zone) return zone;
+  }
+  // Otsu's threshold when the fields or the header (a light-on-dark band) didn't all read, then the photo
+  // segmented another way (a card's columns joined into lines) when the fields still didn't.
+  if (!completeFront(fronts[0]!) || !fronts[0]!.documentType || !fronts[0]!.issuingState) {
+    fronts.push(readLicenseFront((await recognizePhoto(session, first.photo, PSM.SPARSE_TEXT, { threshold: 'otsu' })).lines, today));
+  }
+  if (!fronts.some(completeFront)) {
+    fronts.push(readLicenseFront((await recognizePhoto(session, first.photo, PSM.AUTO)).lines, today));
+  }
+  return combineFronts(fronts);
+}
+
+/** A step whose photo won't open reads nothing; the read goes on with the other photo. */
+async function unlessUnreadable<T>(step: () => Promise<T>, unreadable: T): Promise<T> {
+  try {
+    return await step();
+  } catch (error) {
+    if (error instanceof UnreadableDocumentError) return unreadable;
+    throw error;
+  }
+}
+
+/** The fields of the barcode in a photo of a card's back, or null when none decodes or it isn't an AAMVA one. */
+async function backBarcode(session: ReadSession, bytes: Buffer, today: Date): Promise<IdBarcodeDetails | null> {
+  const text = await session.barcode(bytes);
+  return text ? parseAamva(text, today) : null;
+}
+
+/**
+ * The server's ID reader. A license or state ID with its back: the back's barcode first, every field exact and from it
+ * (`source: 'barcode'`, the kind of card from its subfile), then the front as before, only to say whether it agrees
+ * (`frontAgrees`). Without a barcode that decodes: the front's labeled fields (`source: 'front'`). A passport: its MRZ.
+ */
 export function createServerIdReader(options: ServerReaderOptions = {}): IdDocumentReader {
   const now = options.now ?? (() => new Date());
   return {
     name: SERVER_READER_NAME,
-    async read({ document, declaredType }) {
-      if (!IMAGE_TYPES.includes(document.contentType)) return { readable: false };
+    async read({ document, back, declaredType }) {
+      const passport = declaredType === 'passport';
+      const backPhoto = !passport && back && IMAGE_TYPES.includes(back.contentType) ? back : undefined;
+      const frontPhoto = IMAGE_TYPES.includes(document.contentType);
+      if (!frontPhoto && !backPhoto) return { readable: false };
       const today = now();
-      return guarded(() =>
-        withReadSession(async (session): Promise<IdDocumentReading> => {
-          const passport = declaredType === 'passport';
-          const first = await firstPass(session, document.bytes, passport ? PSM.AUTO : PSM.SPARSE_TEXT);
-          if (passport) return (await readPassport(session, first.photo, first.page, today)) ?? { readable: false };
-          const fronts = [readLicenseFront(first.page.lines, today)];
-          if (!completeFront(fronts[0]!) && first.page.lines.some((line) => lineText(line).includes('<<'))) {
-            // A passport sent as a license or ID.
-            const zone = await readPassport(session, first.photo, first.page, today);
-            if (zone) return zone;
-          }
-          // Otsu's threshold when the fields or the header (a light-on-dark band) didn't all read, then the photo
-          // segmented another way (a card's columns joined into lines) when the fields still didn't.
-          if (!completeFront(fronts[0]!) || !fronts[0]!.documentType || !fronts[0]!.issuingState) {
-            fronts.push(readLicenseFront((await recognizePhoto(session, first.photo, PSM.SPARSE_TEXT, { threshold: 'otsu' })).lines, today));
-          }
-          if (!fronts.some(completeFront)) {
-            fronts.push(readLicenseFront((await recognizePhoto(session, first.photo, PSM.AUTO)).lines, today));
-          }
-          return combineFronts(fronts);
-        }, options.budget),
+      return guarded(
+        () =>
+          withReadSession(async (session): Promise<IdDocumentReading> => {
+            const details = backPhoto ? await unlessUnreadable(() => backBarcode(session, backPhoto.bytes, today), null) : null;
+            const front: IdDocumentReading = frontPhoto ? await unlessUnreadable(() => readFront(session, document.bytes, declaredType, today), { readable: false }) : { readable: false };
+            if (details) return barcodeReading(details, front);
+            return passport || !front.readable ? front : { ...front, source: 'front' };
+          }, options.budget),
+        { readable: false },
       );
     },
   };
+}
+
+/**
+ * The fields of the barcode on a license or state ID card's back, read on demand (a staff action shows them before
+ * the photos are opened): one read session, about a second. Null for a photo that won't open or shows no AAMVA
+ * barcode; throws `AiUnavailableError` when the engine fails.
+ */
+export async function readIdBarcode(back: { bytes: Buffer; contentType: string }, options: ServerReaderOptions = {}): Promise<IdBarcodeDetails | null> {
+  if (!IMAGE_TYPES.includes(back.contentType)) return null;
+  const today = (options.now ?? (() => new Date()))();
+  return guarded(async () => {
+    const text = await withReadSession((session) => session.barcode(back.bytes), options.budget);
+    return text ? parseAamva(text, today) : null;
+  }, null);
 }
 
 /** A photographed proof's text: the words read well enough, line by line. */
@@ -164,7 +216,7 @@ export function createServerAddressReader(options: ServerReaderOptions = {}): Ad
           return photoText((await firstPass(session, document.bytes, PSM.AUTO)).page);
         }, options.budget);
         return proof ? judgeAddressProof(proof, expected) : { readable: false };
-      });
+      }, { readable: false });
     },
   };
 }

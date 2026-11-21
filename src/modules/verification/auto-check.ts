@@ -16,6 +16,8 @@ import { identityDocumentHash, identityDocumentHasherFromEnv } from './document-
 import { addressVerifications, identityCaptures, type StoredAddressAutoCheck, type StoredIdentityAutoCheck } from './schema';
 import { deriveIdentityAutoCheck } from './standing';
 import { addressLabel } from './state';
+import { homeAddressOf, sameAddress } from './id-details';
+import type { IdReadingNotice } from './notify-deciders';
 
 /**
  * The automatic reading of documents (the job runner, a few at a time): each proof of address waiting
@@ -40,6 +42,23 @@ export interface IdReadingDeps {
    * for the job. What a request may do: the server's own reader runs only in the job.
    */
   testAccountsOnly?: boolean;
+  /** Decrypts the home address on file, which the ID's barcode address is compared with. */
+  addressCipher?: FieldCipher | null;
+  /** Tells the staff who decide ID checks that a reading is ready (never for test accounts). */
+  notify?: (notice: IdReadingNotice) => Promise<unknown>;
+}
+
+/** A stored ID photo, decrypted in memory; null when it's gone or won't decrypt. */
+export async function openIdPhoto(db: Db, deps: { storage: FileStorage; files: ByteCipher }, fileId: string | null): Promise<{ bytes: Buffer; contentType: string } | null> {
+  if (!fileId) return null;
+  const [file] = await db.select().from(files).where(eq(files.id, fileId)).limit(1);
+  const sealed = file ? await deps.storage.get(file.storageKey) : null;
+  if (!file || !sealed) return null;
+  try {
+    return { bytes: deps.files.decrypt(sealed), contentType: file.contentType };
+  } catch {
+    return null;
+  }
 }
 
 /** A minute's worth: the runner waits for these, so they go last and few at a time. */
@@ -140,22 +159,26 @@ export async function readPendingIds(db: Db, deps: IdReadingDeps, now: Date, sco
   for (const { capture, email, firstName, lastName, homeMarketId } of rows) {
     const reader = isReservedEmailAddress(email) ? createStandInIdReader() : deps.testAccountsOnly ? null : deps.reader;
     if (!reader) continue;
-    const [file] = await db.select().from(files).where(eq(files.id, capture.frontFileId!)).limit(1);
-    const sealed = file ? await deps.storage.get(file.storageKey) : null;
-    let bytes: Buffer | null = null;
-    try {
-      bytes = sealed ? deps.files.decrypt(sealed) : null;
-    } catch {
-      bytes = null;
-    }
+    const front = await openIdPhoto(db, deps, capture.frontFileId);
+    // The back's barcode (licenses and state IDs) is read first: far more reliable than the front's print.
+    const back = capture.documentType === 'passport' ? null : await openIdPhoto(db, deps, capture.backFileId);
     let check: StoredIdentityAutoCheck;
     let documentHash: string | null = null;
-    if (!file || !bytes) {
+    if (!front) {
       check = { readable: false, by: reader.name, at: now.toISOString() };
     } else {
       try {
-        const reading = await reader.read({ document: { bytes, contentType: file.contentType }, declaredType: capture.documentType as IdentityDocumentType });
-        check = { ...deriveIdentityAutoCheck(reading, { firstName, lastName }, now, zones.get(homeMarketId)!), by: reader.name, at: now.toISOString() };
+        const reading = await reader.read({ document: front, ...(back ? { back } : {}), declaredType: capture.documentType as IdentityDocumentType });
+        // The barcode's address against the home address on file; neither is kept, only the answer.
+        const home = reading.readable && reading.address ? await homeAddressOf(db, deps.addressCipher, capture.userId) : null;
+        check = {
+          ...deriveIdentityAutoCheck(reading, { firstName, lastName }, now, zones.get(homeMarketId)!),
+          ...(home && reading.address ? { addressMatches: sameAddress(reading.address, home) } : {}),
+          ...(reading.readable && reading.source ? { source: reading.source } : {}),
+          ...(reading.readable && reading.frontAgrees !== undefined ? { frontAgrees: reading.frontAgrees } : {}),
+          by: reader.name,
+          at: now.toISOString(),
+        };
         // The number lives only in `reading`, for this hash.
         documentHash = reading.readable && hasher ? identityDocumentHash(reading, hasher) : null;
       } catch (error) {
@@ -171,6 +194,14 @@ export async function readPendingIds(db: Db, deps: IdReadingDeps, now: Date, sco
       .where(and(eq(identityCaptures.id, capture.id), isNull(identityCaptures.autoCheck)))
       .returning({ id: identityCaptures.id });
     if (saved && documentHash) await flagDuplicateId(db, { captureId: capture.id, userId: capture.userId, documentHash }, now);
+    if (saved && deps.notify && !isReservedEmailAddress(email)) {
+      try {
+        await deps.notify({ userId: capture.userId, captureId: capture.id, check });
+      } catch (error) {
+        // The reading is saved and shows in the queue; a failed email never undoes it.
+        console.error('[id-reader] notifying staff failed:', error instanceof Error ? error.name : 'error');
+      }
+    }
     read += 1;
   }
   return read;

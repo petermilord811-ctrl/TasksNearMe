@@ -25,6 +25,8 @@ import type {
   IdentityCaptureRejectionReason,
   IdentityCaptureRevealInput,
   IdentityCaptureRevealResult,
+  IdentityDetailsRevealInput,
+  IdentityDetailsRevealResult,
   IdentityCaptureStatus,
   IdentityDocumentType,
   IdentityProviderOutcome,
@@ -41,9 +43,12 @@ import {
   IDENTITY_PROVIDER_OUTCOMES,
   identityCaptureDecisionInputSchema,
   identityCaptureRevealInputSchema,
+  identityDetailsRevealInputSchema,
   verificationActionInputSchema,
 } from '@/contracts';
-import { aiReadingSetUp } from '@/integrations/ai';
+import { aiReadingSetUp, AiUnavailableError } from '@/integrations/ai';
+import { isReservedEmailAddress } from '@/integrations/email';
+import type { IdBarcodeDetails } from '@/integrations/ocr';
 import type { FileStorage } from '@/integrations/storage';
 import { AGREEMENT_VERSIONS } from '@/modules/accounts/agreements';
 import { users } from '@/modules/accounts/schema';
@@ -56,7 +61,8 @@ import { auditLog } from '@/platform/audit/schema';
 import type { ByteCipher, FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
-import { readPendingIds, type IdReadingDeps } from './auto-check';
+import { openIdPhoto, readPendingIds, type IdReadingDeps } from './auto-check';
+import { compareIdDetails, homeAddressOf, type PostalAddress } from './id-details';
 import { captureFileIds, IDENTITY_FILE_KINDS } from './capture';
 import type { VerificationProviders } from './providers';
 import { addressVerifications, backgroundChecks, identityCaptures, identityVerifications, type StoredAddressAutoCheck, type StoredIdentityAutoCheck } from './schema';
@@ -107,6 +113,9 @@ function identityAutoCheckView(stored: StoredIdentityAutoCheck | null): Identity
     ...(stored.notExpired !== undefined ? { notExpired: stored.notExpired } : {}),
     ...(stored.expiresMonth && stored.expiresYear ? { expires: { month: stored.expiresMonth, year: stored.expiresYear } } : {}),
     ...(stored.documentType ? { documentType: stored.documentType as IdentityDocumentType | 'other' } : {}),
+    ...(stored.addressMatches !== undefined ? { addressMatches: stored.addressMatches } : {}),
+    ...(stored.source ? { source: stored.source } : {}),
+    ...(stored.frontAgrees !== undefined ? { frontAgrees: stored.frontAgrees } : {}),
   };
 }
 
@@ -764,6 +773,96 @@ export async function revealIdentityCapture(db: Db, deps: { secret: string }, st
   const photos = photosOf(row).map((kind) => ({ kind, url: `/api/verification-documents/${documentToken({ fileId: row[PHOTO_COLUMN[kind]]!, staffUserId: staff.id, expiresAt }, deps.secret)}` }));
   await audit(db, staff, 'identity_capture.viewed', row.userId, parsed.data.reason, { captureId: row.id, photos: photos.length });
   return { ok: true, photos, prompt: row.promptKey as LivenessPrompt, expiresAt: expiresAt.toISOString() };
+}
+
+/**
+ * The ID's details for staff before they open the photos (owner, 2026-11-21): the barcode on the back of a license or
+ * state ID is read again on this server (in the readers' own process, never stored or logged) and compared with the
+ * account and the home address on file. Why is logged, as for the photos. Test accounts get details made up from their
+ * account, so flows and tests can show the panel.
+ */
+export async function revealIdentityDetails(
+  db: Db,
+  deps: {
+    storage: FileStorage;
+    files: ByteCipher;
+    addressCipher: FieldCipher | null;
+    readBarcode: (back: { bytes: Buffer; contentType: string }) => Promise<IdBarcodeDetails | null>;
+  },
+  staff: StaffActor,
+  input: IdentityDetailsRevealInput,
+  now: Date,
+): Promise<IdentityDetailsRevealResult> {
+  if (!canDecideVerification(staff)) return { ok: false, code: 'not_allowed' };
+  const parsed = identityDetailsRevealInputSchema.safeParse(input);
+  if (!parsed.success) {
+    const result = validationFailed(parsed.error);
+    return { ok: false, code: 'validation_failed', ...(result.ok === false && result.fieldErrors ? { fieldErrors: result.fieldErrors } : {}) };
+  }
+  const [row] = await db
+    .select({ capture: identityCaptures, email: users.email, firstName: users.firstName, lastName: users.lastName, homeMarketId: users.homeMarketId })
+    .from(identityCaptures)
+    .innerJoin(users, eq(users.id, identityCaptures.userId))
+    .where(eq(identityCaptures.id, parsed.data.captureId))
+    .limit(1);
+  if (!row) return { ok: false, code: 'not_found' };
+  const { capture } = row;
+  // Staff never open their own verification documents (as with the photos and the proofs of address).
+  if (capture.userId === staff.id) return { ok: false, code: 'not_allowed' };
+  if (capture.documentType === 'passport') return { ok: false, code: 'no_barcode' };
+  if (!capture.backFileId) return { ok: false, code: capture.filesDeletedAt ? 'not_found' : 'no_barcode' };
+  const home = await homeAddressOf(db, deps.addressCipher, capture.userId);
+  let details: IdBarcodeDetails | null;
+  if (isReservedEmailAddress(row.email)) {
+    details = standInDetails(row, home, now);
+  } else {
+    const back = await openIdPhoto(db, deps, capture.backFileId);
+    if (!back) return { ok: false, code: 'not_found' };
+    try {
+      details = await deps.readBarcode(back);
+    } catch (error) {
+      if (error instanceof AiUnavailableError) return { ok: false, code: 'unavailable' };
+      throw error;
+    }
+  }
+  if (!details) return { ok: false, code: 'no_barcode' };
+  const timeZone = (await marketTimeZones(db, [row.homeMarketId])).get(row.homeMarketId)!;
+  const { age, matches } = compareIdDetails(details, row, home, now, timeZone);
+  // Who, why and which capture; never what it said.
+  await audit(db, staff, 'identity_capture.details_viewed', capture.userId, parsed.data.reason, { captureId: capture.id });
+  return {
+    ok: true,
+    details: {
+      documentType: details.documentType,
+      issuingState: details.issuingState,
+      name: { given: details.givenNames, surname: details.surname, ...(details.middleNames ? { middle: details.middleNames } : {}), ...(details.suffix ? { suffix: details.suffix } : {}) },
+      dateOfBirth: details.dateOfBirth,
+      age: age ?? 0,
+      expiryDate: details.expiryDate,
+      ...(details.issueDate ? { issueDate: details.issueDate } : {}),
+      documentNumber: details.documentNumber,
+      ...(details.address ? { address: details.address } : {}),
+      ...(details.sex ? { sex: details.sex } : {}),
+      ...(details.height ? { height: details.height } : {}),
+      ...(details.eyeColor ? { eyeColor: details.eyeColor } : {}),
+      matches,
+    },
+  };
+}
+
+/** A test account's made-up license: its account's name, an adult's birth date, a valid card and its home address. */
+function standInDetails(account: { firstName: string; lastName: string }, home: PostalAddress | null, now: Date): IdBarcodeDetails {
+  const year = now.getUTCFullYear();
+  return {
+    documentType: 'drivers_license',
+    issuingState: home?.state ?? 'TX',
+    givenNames: account.firstName,
+    surname: account.lastName,
+    dateOfBirth: `${year - 30}-01-15`,
+    expiryDate: `${year + 4}-01-15`,
+    documentNumber: 'TEST0000',
+    ...(home ? { address: home } : {}),
+  };
 }
 
 /**

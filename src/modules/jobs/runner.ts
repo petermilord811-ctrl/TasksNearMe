@@ -23,6 +23,7 @@ import { verificationProvidersFor } from '@/modules/verification/providers';
 import { runVerificationTimers } from '@/modules/verification/timers';
 import { runWelcomeRewards } from '@/modules/rewards/welcome';
 import { readPendingDocuments } from '@/modules/verification/auto-check';
+import { notifyDecidersOfIdReading } from '@/modules/verification/notify-deciders';
 import { runPrivacyRequests } from '@/modules/privacy/requests';
 import { retentionDue, runRetention } from '@/modules/privacy/retention';
 import { checkrFromEnv } from '@/integrations/checkr';
@@ -119,7 +120,7 @@ export const JOBS: Job[] = [
     name: 'verification.read_documents',
     run: (db, now) => {
       const storage = createFileStorage();
-      return readPendingDocuments(db, { storage, cipher: fieldCipherFromEnv(), reader: documentReaderFromEnv(), identity: { storage, files: byteCipherFromEnv(), reader: idReaderFromEnv() } }, now);
+      return readPendingDocuments(db, { storage, cipher: fieldCipherFromEnv(), reader: documentReaderFromEnv(), identity: { storage, files: byteCipherFromEnv(), reader: idReaderFromEnv(), addressCipher: fieldCipherFromEnv(), notify: (notice) => notifyDecidersOfIdReading(db, createEmailProvider(db), notice, (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '')) } }, now);
     },
   },
 ];

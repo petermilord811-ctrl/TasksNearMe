@@ -21,8 +21,10 @@ import {
   type BadgeTone,
   type IdentityAutoCheck,
   type IdentityCaptureRejectionReason,
+  type IdentityCaptureDetails,
   type IdentityCaptureRevealResult,
   type IdentityCaptureStatus,
+  type IdentityDetailsRevealResult,
   type ISODateTime,
 } from '@/contracts';
 import { useFormat } from '@/ui/lib/format';
@@ -67,16 +69,21 @@ function IdAutoCheck({ check }: { check: IdentityAutoCheck }) {
     <li className="rounded-full border px-2.5 py-1">{t('capture.autoCheck.notExpired', { answer: answer(check.notExpired) })}</li>
     {check.expires && <li className="rounded-full border px-2.5 py-1 tabular-nums">{t('capture.autoCheck.expires', { month: check.expires.month, year: check.expires.year })}</li>}
     {check.documentType && <li className="rounded-full border px-2.5 py-1">{t('capture.autoCheck.documentType', { type: check.documentType === 'other' ? t('capture.autoCheck.other') : t(`capture.documentTypes.${check.documentType}`) })}</li>}
+    {check.addressMatches !== undefined && <li className="rounded-full border px-2.5 py-1">{t('capture.autoCheck.address', { answer: answer(check.addressMatches) })}</li>}
+    {check.source && <li className="rounded-full border px-2.5 py-1">{t(`capture.autoCheck.source.${check.source}`)}</li>}
+    {check.frontAgrees !== undefined && <li className="rounded-full border px-2.5 py-1">{t('capture.autoCheck.frontAgrees', { answer: answer(check.frontAgrees) })}</li>}
   </ul>;
 }
 
 /** Our own ID check's tries (stage 1): what was sent, the automatic reading, the decision, and the photos once opened. */
-function CaptureList({ captures, canView, canReview, revealed, onOpen, onReview, now }: {
+function CaptureList({ captures, canView, canReview, revealed, detailsRevealed, onOpen, onDetails, onReview, now }: {
   captures: AdminIdentityCaptureView[];
   canView: boolean;
   canReview: boolean;
   revealed?: { captureId: string; result: Extract<IdentityCaptureRevealResult, { ok: true }> };
+  detailsRevealed?: { captureId: string; details: IdentityCaptureDetails };
   onOpen: (capture: AdminIdentityCaptureView) => void;
+  onDetails: (capture: AdminIdentityCaptureView) => void;
   onReview: (capture: AdminIdentityCaptureView) => void;
   now: ISODateTime;
 }) {
@@ -99,6 +106,7 @@ function CaptureList({ captures, canView, canReview, revealed, onOpen, onReview,
         {capture.duplicateOf && capture.duplicateOf.length > 0 && <p className="font-medium">{t('capture.duplicateOf')}{capture.duplicateOf.map((other, index) => <span key={other.id}>{index > 0 ? ', ' : ''}<Link href={routes.admin.user(other.id)} className="underline underline-offset-4">{other.displayName}</Link></span>)}</p>}
         {capture.duplicateClearedAt && <p className="text-muted-foreground">{t('capture.duplicateCleared', { date: formatDateTime(capture.duplicateClearedAt) })}</p>}
         <p className="text-muted-foreground">{capture.photos.length > 0 ? t('capture.photosKept', { count: capture.photos.length }) : capture.photosDeletedAt ? t('capture.photosDeleted', { date: formatDate(capture.photosDeletedAt) }) : t('capture.photosNone')}</p>
+        {detailsRevealed?.captureId === capture.id && <IdDetailsPanel details={detailsRevealed.details} />}
         {revealed?.captureId === capture.id && <div className="space-y-3 rounded-lg border border-primary/40 p-3">
           <p role="status" className="flex items-center gap-2 font-medium text-success"><LockKeyhole aria-hidden="true" className="size-4" />{t('capture.reveal.logged')}</p>
           <div><p className="font-medium">{t('capture.prompt', { prompt: t(`capture.prompts.${revealed.result.prompt}`) })}</p><p className="text-muted-foreground">{t('capture.promptHint')}</p></div>
@@ -111,6 +119,7 @@ function CaptureList({ captures, canView, canReview, revealed, onOpen, onReview,
           <p className="text-muted-foreground tabular-nums">{t('capture.reveal.expires', { time: formatDateTime(revealed.result.expiresAt) })}</p>
         </div>}
         {((canView && capture.photos.length > 0) || (canReview && capture.status === 'submitted')) && <div className="flex flex-wrap gap-2">
+          {canView && hasBarcodeSide(capture) && <Button type="button" variant="outline" size="sm" onClick={() => onDetails(capture)}>{t('capture.details.open')}</Button>}
           {canView && capture.photos.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => onOpen(capture)}>{t('capture.reveal.open')}</Button>}
           {canReview && capture.status === 'submitted' && <Button type="button" size="sm" onClick={() => onReview(capture)}>{t('capture.decide.open')}</Button>}
         </div>}
@@ -120,7 +129,7 @@ function CaptureList({ captures, canView, canReview, revealed, onOpen, onReview,
 }
 
 /** A person's verification, as staff see it: statuses, our ID photos, the proofs of address, and the decisions the app allows. */
-export function AdminVerificationSection({ userId, verification, handlers, now, initialRevealed, initialCaptureRevealed }: {
+export function AdminVerificationSection({ userId, verification, handlers, now, initialRevealed, initialCaptureRevealed, initialDetailsRevealed }: {
   userId: string;
   verification: AdminPersonVerification;
   handlers: AdminVerificationHandlers;
@@ -129,6 +138,8 @@ export function AdminVerificationSection({ userId, verification, handlers, now, 
   initialRevealed?: { proofId: string; result: Extract<AddressProofRevealResult, { ok: true }> };
   /** Previews: ID photos already opened. */
   initialCaptureRevealed?: { captureId: string; result: Extract<IdentityCaptureRevealResult, { ok: true }> };
+  /** Previews: an ID's barcode details already shown. */
+  initialDetailsRevealed?: { captureId: string; details: IdentityCaptureDetails };
 }) {
   const { formatDate, formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('adminVerification');
@@ -142,6 +153,8 @@ export function AdminVerificationSection({ userId, verification, handlers, now, 
   const [result, setResult] = useState<ActionResult>();
   const [revealCapture, setRevealCapture] = useState<AdminIdentityCaptureView>();
   const [captureRevealed, setCaptureRevealed] = useState(initialCaptureRevealed);
+  const [detailsCapture, setDetailsCapture] = useState<AdminIdentityCaptureView>();
+  const [detailsRevealed, setDetailsRevealed] = useState(initialDetailsRevealed);
   const [decideCapture, setDecideCapture] = useState<AdminIdentityCaptureView>();
   const otherActions = verification.actions.filter((action): action is OtherAction => !OWN_BUTTONS.includes(action));
   const captureStatus = useTranslations('verification.capture.statuses');
@@ -176,7 +189,9 @@ export function AdminVerificationSection({ userId, verification, handlers, now, 
           canView={verification.actions.includes('view_identity_photos')}
           canReview={verification.actions.includes('review_identity_capture')}
           revealed={captureRevealed}
+          detailsRevealed={detailsRevealed}
           onOpen={setRevealCapture}
+          onDetails={setDetailsCapture}
           onReview={(capture) => { setResult(undefined); setDecideCapture(capture); }}
           now={now}
         />
@@ -228,6 +243,7 @@ export function AdminVerificationSection({ userId, verification, handlers, now, 
 
     <RevealDialog proof={reveal} onClose={() => setReveal(undefined)} onReveal={handlers.onRevealAddressProof} onRevealed={(proofId, value) => { setRevealed({ proofId, result: value }); setReveal(undefined); }} />
     <CaptureRevealDialog capture={revealCapture} onClose={() => setRevealCapture(undefined)} onReveal={handlers.onRevealIdentityCapture} onRevealed={(captureId, value) => { setCaptureRevealed({ captureId, result: value }); setRevealCapture(undefined); }} />
+    <DetailsRevealDialog capture={detailsCapture} onClose={() => setDetailsCapture(undefined)} onReveal={handlers.onRevealIdentityDetails} onRevealed={(captureId, details) => { setDetailsRevealed({ captureId, details }); setDetailsCapture(undefined); }} />
     <CaptureDecideDialog capture={decideCapture} onClose={() => setDecideCapture(undefined)} onDecide={handlers.onDecideIdentityCapture} onDone={(value) => { setResult(value); setDecideCapture(undefined); }} />
     <DecideDialog proof={decide} onClose={() => setDecide(undefined)} onDecide={handlers.onDecideAddress} onDone={(value) => { setResult(value); setDecide(undefined); }} />
     <ActionDialog userId={userId} action={other} onClose={() => setOther(undefined)} onAction={handlers.onVerificationAction} onDone={(value) => { setResult(value); setOther(undefined); }} />
@@ -307,6 +323,84 @@ function CaptureRevealDialog({ capture, onClose, onReveal, onRevealed }: {
       <form noValidate className="space-y-4" aria-busy={pending} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
         <NoteField id={`${id}-reason`} label={t('reason')} hint={t('reasonHint')} value={reason} onChange={setReason} error={error} disabled={pending} />
         <FormFeedback result={failure} />
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" disabled={pending} onClick={onClose}>{t('cancel')}</Button><Button type="submit" disabled={pending} aria-busy={pending}>{pending && <Spinner aria-hidden="true" />}{t('submit')}</Button></div>
+      </form>
+    </DialogContent>
+  </Dialog>;
+}
+
+/** A license or state ID whose back is still stored: its barcode can be read. */
+function hasBarcodeSide(capture: AdminIdentityCaptureView): boolean {
+  return (capture.documentType === 'drivers_license' || capture.documentType === 'state_id') && capture.photos.includes('back');
+}
+
+/** What the ID's barcode says, beside how it compares with the account; shown once staff give a reason (logged). */
+function IdDetailsPanel({ details }: { details: IdentityCaptureDetails }) {
+  const t = useTranslations('adminVerification.capture.details');
+  const types = useTranslations('adminVerification.capture.documentTypes');
+  const { formatDate } = useFormat();
+  // Calendar dates as encoded: noon UTC falls on the same day in every US time zone.
+  const day = (value: string) => formatDate(`${value}T12:00:00.000Z`, { withYear: true });
+  const { name, address, matches } = details;
+  const physical = [details.sex && t(`sex.${details.sex}`), details.height && t('height', { height: details.height }), details.eyeColor && t('eyes', { eyes: details.eyeColor })].filter(Boolean).join(' · ');
+  return <div className="space-y-3 rounded-lg border border-primary/40 p-3">
+    <p role="status" className="flex items-center gap-2 font-medium text-success"><LockKeyhole aria-hidden="true" className="size-4" />{t('logged')}</p>
+    <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-[max-content_1fr]">
+      <dt className="font-medium">{t('name')}</dt>
+      <dd className="break-words">{[name.given, name.middle, name.surname, name.suffix].filter(Boolean).join(' ')} <Match ok={matches.name} yes={t('matches.name.yes')} no={t('matches.name.no')} /></dd>
+      <dt className="font-medium">{t('dateOfBirth')}</dt>
+      <dd className="tabular-nums">{day(details.dateOfBirth)} · {t('age', { age: details.age })} <Match ok={matches.adult} yes={t('matches.adult.yes')} no={t('matches.adult.no')} /></dd>
+      <dt className="font-medium">{t('expires')}</dt>
+      <dd className="tabular-nums">{day(details.expiryDate)} <Match ok={matches.notExpired} yes={t('matches.notExpired.yes')} no={t('matches.notExpired.no')} /></dd>
+      {details.issueDate && <><dt className="font-medium">{t('issued')}</dt><dd className="tabular-nums">{day(details.issueDate)}</dd></>}
+      <dt className="font-medium">{t('number')}</dt>
+      <dd className="break-all font-mono">{details.documentNumber}</dd>
+      <dt className="font-medium">{t('issuer')}</dt>
+      <dd>{t('issuedBy', { type: types(details.documentType), state: details.issuingState })}</dd>
+      {address && <><dt className="font-medium">{t('address')}</dt>
+        <dd className="break-words">{[address.line1, address.line2, `${address.city}, ${address.state} ${address.zip}`].filter(Boolean).join(', ')} <Match ok={matches.address} yes={t('matches.address.yes')} no={t('matches.address.no')} unknown={t('matches.address.none')} /></dd></>}
+      {physical && <><dt className="font-medium">{t('physical')}</dt><dd>{physical}</dd></>}
+    </dl>
+    <p className="text-muted-foreground">{t('notStored')}</p>
+  </div>;
+}
+
+/** A comparison with the account, in words (never color alone). */
+function Match({ ok, yes, no, unknown }: { ok: boolean | null; yes: string; no: string; unknown?: string }) {
+  if (ok === null) return <span className="text-muted-foreground">({unknown ?? no})</span>;
+  return <span className={ok ? 'font-medium text-success' : 'font-medium text-warning'}>({ok ? yes : no})</span>;
+}
+
+function DetailsRevealDialog({ capture, onClose, onReveal, onRevealed }: {
+  capture?: AdminIdentityCaptureView;
+  onClose: () => void;
+  onReveal: AdminVerificationHandlers['onRevealIdentityDetails'];
+  onRevealed: (captureId: string, details: IdentityCaptureDetails) => void;
+}) {
+  const t = useTranslations('adminVerification.capture.details');
+  const id = useId();
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState<string>();
+  const [pending, setPending] = useState(false);
+  const [failure, setFailure] = useState<Extract<IdentityDetailsRevealResult, { ok: false }>>();
+  async function submit() {
+    if (!capture || pending) return;
+    if (reason.trim().length < 10) { setError(t('reasonRequired')); return; }
+    setError(undefined);
+    setPending(true);
+    let result: IdentityDetailsRevealResult;
+    try { result = await onReveal({ captureId: capture.id, reason: reason.trim() }); } catch { result = { ok: false, code: 'unknown' }; }
+    setPending(false);
+    if (result.ok) { setReason(''); setFailure(undefined); onRevealed(capture.id, result.details); return; }
+    setFailure(result);
+  }
+  return <Dialog open={capture !== undefined} onOpenChange={(open) => { if (!open && !pending) onClose(); }}>
+    <DialogContent>
+      <DialogHeader><DialogTitle>{t('title')}</DialogTitle><DialogDescription>{t('description')}</DialogDescription></DialogHeader>
+      <form noValidate className="space-y-4" aria-busy={pending} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+        <NoteField id={`${id}-reason`} label={t('reason')} hint={t('reasonHint')} value={reason} onChange={setReason} error={error} disabled={pending} />
+        {failure && (failure.code === 'no_barcode' || failure.code === 'unavailable') && <p role="alert" className="text-sm font-medium text-warning">{t(failure.code === 'no_barcode' ? 'noBarcode' : 'unavailable')}</p>}
+        <FormFeedback result={failure && failure.code !== 'no_barcode' && failure.code !== 'unavailable' ? { ok: false, code: failure.code, ...(failure.fieldErrors ? { fieldErrors: failure.fieldErrors } : {}) } : undefined} />
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="outline" disabled={pending} onClick={onClose}>{t('cancel')}</Button><Button type="submit" disabled={pending} aria-busy={pending}>{pending && <Spinner aria-hidden="true" />}{t('submit')}</Button></div>
       </form>
     </DialogContent>

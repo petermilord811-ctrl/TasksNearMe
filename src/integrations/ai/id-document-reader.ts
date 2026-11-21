@@ -8,18 +8,20 @@ import { documentReaderChoice } from './reader-choice';
 import { AiRefusedError, AiUnavailableError } from './writer';
 
 /**
- * Reads the photo of an ID's front once for our trust team (our own ID check, stage 1; completion plan
- * 6.1): the name, birth date, expiry date, document type, issuing state and document number, as printed.
+ * Reads an ID's photos once for our trust team (our own ID check, stage 1; completion plan 6.1): the front, and
+ * the back's barcode for the server's reader: the name, birth date, expiry date, document type, issuing state and
+ * document number, as printed.
  * The app compares them with the account at once and keeps only yes/no answers and the expiry month and
  * year (`deriveIdentityAutoCheck`), plus a keyed hash of the number, state and birth date to spot the same
  * ID on two accounts (6.3); the name, birth date and document number themselves are never stored or logged. No
  * reader is shown the selfie or compares faces: staff do that, and the provider double-checks.
- * The server's own reader reads it by default, everywhere (owner, 2026-11-21: `src/integrations/ocr`, Tesseract
- * on this server: a passport's machine-readable zone with its check digits, or a US license or state ID's labeled
- * fields; unreadable whenever it isn't sure). `DOCUMENT_READER=claude` with `ANTHROPIC_API_KEY` hands it to Claude
- * instead (the official SDK, with the server-side fallback for a declined request). Test accounts get the
- * stand-in (`auto-check.ts`). Never Kimi: an ID is government data with a name, birth date and number, NVIDIA's
- * free key may not be sent personal data, and another reader would need its own privacy review first.
+ * The server's own reader reads it by default, everywhere (owner, 2026-11-21: `src/integrations/ocr`, on this
+ * server: a US license or state ID's PDF417 barcode on the back first, the AAMVA fields exact, with the front read
+ * to check it agrees; otherwise Tesseract on the front, a passport's machine-readable zone with its check digits or a
+ * license's labeled fields; unreadable whenever it isn't sure). `DOCUMENT_READER=claude` with `ANTHROPIC_API_KEY`
+ * hands the front to Claude instead (the official SDK, with the server-side fallback for a declined request). Test
+ * accounts get the stand-in (`auto-check.ts`). Never Kimi: an ID is government data with a name, birth date and
+ * number, NVIDIA's free key may not be sent personal data, and another reader would need its own privacy review first.
  */
 
 export interface IdDocumentReading {
@@ -35,11 +37,22 @@ export interface IdDocumentReading {
   issuingState?: string;
   /** The license, ID card or passport number, as printed. Read once for a keyed hash, never stored or logged. */
   documentNumber?: string;
+  /** Where the fields came from (the server's reader, for a license or state ID): the barcode on the back, or the front. */
+  source?: 'barcode' | 'front';
+  /** The holder's address, from the barcode. Read, never stored. */
+  address?: { line1: string; line2?: string; city: string; state: string; zip: string };
+  /**
+   * With the barcode's fields: whether the front, read too, printed the same surname, birth date and number (the
+   * number when the front's was read). Undefined when the front didn't read.
+   */
+  frontAgrees?: boolean;
 }
 
 export interface IdDocumentInput {
   /** The front of the ID (a re-encoded WebP photo). */
   document: { bytes: Buffer; contentType: string };
+  /** The back of a license or state ID (the same kind of photo), where its barcode is; passports have none. */
+  back?: { bytes: Buffer; contentType: string };
   declaredType: IdentityDocumentType;
 }
 
@@ -136,7 +149,7 @@ export function createClaudeIdReader({ client, model }: { client: ClaudeBetaClie
   };
 }
 
-/** Test accounts (reserved email domains, `auto-check.ts`): reads nothing, trusts the declared type, and says so (staff see "not sure"). */
+/** Test accounts (reserved email domains, `auto-check.ts`): reads nothing (neither side), trusts the declared type, and says so (staff see "not sure"). */
 export function createStandInIdReader(): IdDocumentReader {
   return {
     name: 'stand-in',

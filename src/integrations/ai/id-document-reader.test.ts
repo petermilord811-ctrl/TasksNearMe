@@ -11,7 +11,8 @@ function stubClient(answer: { parsed_output?: unknown; stop_reason?: string } | 
   return { client: { beta: { messages: { parse } } } as unknown as ClaudeBetaClient, parse };
 }
 
-const input = (contentType = 'image/webp'): IdDocumentInput => ({ document: { bytes: Buffer.from('not really an ID'), contentType }, declaredType: 'drivers_license' });
+// With the back too: only the server's reader reads its barcode; Claude is sent the front alone.
+const input = (contentType = 'image/webp'): IdDocumentInput => ({ document: { bytes: Buffer.from('not really an ID'), contentType }, back: { bytes: Buffer.from('not really a back'), contentType }, declaredType: 'drivers_license' });
 const full = { readable: true, documentType: 'drivers_license', givenNames: ' Vera Lynn ', surname: 'Tester', dateOfBirth: '1990-04-02', expiryDate: '2029-04-02', issuingState: 'tx', documentNumber: ' 12345678 ' };
 
 describe('the ID reader', () => {

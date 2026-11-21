@@ -3,11 +3,13 @@ import { describe, expect, it } from 'vitest';
 import type { AddressDocumentInput } from '@/integrations/ai/document-reader';
 import { withReadSession } from './engine';
 import { createServerAddressReader, createServerIdReader } from './index';
+import { aamvaText, cardBack, pdf417, photograph, TEXAS_LICENSE } from './test-barcodes';
 
 /**
- * The server's readers on documents rendered here from SVG text: a fictional Texas license, the ICAO Doc 9303
- * specimen passport (ERIKSSON ANNA MARIA), a fictional utility bill and small PDFs. Real OCR, a few seconds a
- * read, so few cases and generous timeouts. Skipped where no fonts are installed (nothing would render).
+ * The server's readers on documents rendered here from SVG text: a fictional Texas license (its back's barcode drawn
+ * with zxing's writer), the ICAO Doc 9303 specimen passport (ERIKSSON ANNA MARIA), a fictional utility bill and small
+ * PDFs. Real OCR, a few seconds a read, so few cases and generous timeouts. Skipped where no fonts are installed
+ * (nothing would render).
  */
 
 const now = () => new Date('2026-11-21T12:00:00Z');
@@ -129,6 +131,7 @@ describe.skipIf(!fontsRender)("the server's document readers", () => {
     expect(ids.name).toBe('server:ocr');
     await expect(id(await photo(licenseFront(), '#d8d8d8'), 'drivers_license')).resolves.toEqual({
       readable: true,
+      source: 'front',
       documentType: 'drivers_license',
       surname: 'SAMPLE',
       givenNames: 'ALEX RIVER',
@@ -147,7 +150,40 @@ describe.skipIf(!fontsRender)("the server's document readers", () => {
     const page = await webp(passportPage([MRZ_1, MRZ_2]));
     const reading = { readable: true, documentType: 'passport', surname: 'ERIKSSON', givenNames: 'ANNA MARIA', dateOfBirth: '1974-08-12', expiryDate: '2012-04-15', issuingState: 'UTO', documentNumber: 'L898902C3' };
     await expect(id(page, 'passport')).resolves.toEqual(reading);
-    await expect(id(page, 'drivers_license')).resolves.toEqual(reading);
+    await expect(id(page, 'drivers_license')).resolves.toEqual({ ...reading, source: 'front' });
+  });
+
+  it("reads a license's barcode first and checks the front agrees, and reads the front alone without one", { timeout: SLOW }, async () => {
+    const front = { bytes: await photo(licenseFront(), '#d8d8d8'), contentType: 'image/webp' };
+    const back = async (elements: string[]) => ({ bytes: await photograph(await cardBack(await pdf417(aamvaText({ subfiles: [['DL', elements]] }), { columns: 13, module: 5 })), { angle: 4, quality: 70, blur: 1 }), contentType: 'image/webp' });
+    const fromBarcode = {
+      readable: true,
+      source: 'barcode',
+      documentType: 'drivers_license',
+      surname: 'SAMPLE',
+      givenNames: 'ALEX RIVER',
+      dateOfBirth: '1990-04-02',
+      expiryDate: '2030-04-02',
+      issuingState: 'TX',
+      documentNumber: '12345678',
+      address: { line1: '1234 EXAMPLE LANE', line2: 'APT 2', city: 'AUSTIN', state: 'TX', zip: '78723' },
+    };
+    await expect(ids.read({ document: front, back: await back(TEXAS_LICENSE), declaredType: 'drivers_license' })).resolves.toEqual({ ...fromBarcode, frontAgrees: true });
+    // Another card's back (another birth date and number): its fields, and the front disagrees.
+    const otherCard = TEXAS_LICENSE.map((element) => (element.startsWith('DBB') ? 'DBB04021991' : element.startsWith('DAQ') ? 'DAQ87654321' : element));
+    await expect(ids.read({ document: front, back: await back(otherCard), declaredType: 'drivers_license' })).resolves.toEqual({ ...fromBarcode, dateOfBirth: '1991-04-02', documentNumber: '87654321', frontAgrees: false });
+    // A back without a barcode: the front's fields, as before.
+    await expect(ids.read({ document: front, back: { bytes: await photograph(await cardBack(null)), contentType: 'image/webp' }, declaredType: 'drivers_license' })).resolves.toEqual({
+      readable: true,
+      source: 'front',
+      documentType: 'drivers_license',
+      surname: 'SAMPLE',
+      givenNames: 'ALEX RIVER',
+      dateOfBirth: '1990-04-02',
+      expiryDate: '2030-04-02',
+      issuingState: 'TX',
+      documentNumber: '12345678',
+    });
   });
 
   it('says unreadable for a failed check digit, a blurry photo and an empty one', { timeout: SLOW }, async () => {

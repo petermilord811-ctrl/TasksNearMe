@@ -189,12 +189,14 @@ describe('the automatic reading', () => {
     const reader = stub(async () => full);
     const scope = { userIds: [MAIN, READER] };
     expect(await readPendingDocuments(db, { storage, cipher, reader: null, identity: { storage, files: fileCipher, reader } }, at(0.1), scope)).toEqual({ read: 2 });
-    // The test account (example.test) got the stand-in; the other the configured reader, with the front only.
+    // The test account (example.test) got the stand-in; the other the configured reader, with the front and the back
+    // (its barcode is read first).
     expect(reader.read).toHaveBeenCalledTimes(1);
     const input = vi.mocked(reader.read).mock.calls[0]![0];
     expect(input.declaredType).toBe('drivers_license');
     expect(input.document.contentType).toBe('image/webp');
     expect(input.document.bytes.subarray(8, 12).toString('latin1')).toBe('WEBP');
+    expect(input.back?.bytes.subarray(8, 12).toString('latin1')).toBe('WEBP');
     const [read] = await capturesOf(READER);
     expect(read!.autoCheck).toEqual({ readable: true, nameMatches: true, isAdult: true, notExpired: true, expiresMonth: 4, expiresYear: 2029, documentType: 'drivers_license', by: 'stub', at: at(0.1).toISOString() });
     expect(JSON.stringify(read!.autoCheck)).not.toMatch(/VERA|TESTER|1990|TX/);

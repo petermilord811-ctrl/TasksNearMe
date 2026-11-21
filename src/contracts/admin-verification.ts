@@ -90,6 +90,12 @@ export interface IdentityAutoCheck {
   expires?: { month: number; year: number };
   /** What the document looks like. */
   documentType?: IdentityDocumentType | 'other';
+  /** The address on the ID's barcode matches the person's home address on file (absent when either is missing). */
+  addressMatches?: boolean;
+  /** Where the reading came from: the barcode on the back (licenses and state IDs) or the front's print. */
+  source?: 'barcode' | 'front';
+  /** The front's printed birth date, number and surname agree with the barcode (when both were read). */
+  frontAgrees?: boolean;
 }
 
 /** An ID check waiting on staff: photos to compare, a name that differs from the account's, or 5 tries without a pass. */
@@ -347,11 +353,55 @@ export type IdentityCaptureRevealResult =
   | { ok: true; photos: { kind: IdentityCapturePhoto; url: string }[]; prompt: LivenessPrompt; expiresAt: ISODateTime }
   | { ok: false; code: 'validation_failed' | 'not_allowed' | 'not_found' | 'unknown'; fieldErrors?: Partial<Record<string, FieldErrorCode[]>> };
 
+/** Reading the ID's details (the barcode on the back of a license or state ID) before opening the photos: why, logged. */
+export const identityDetailsRevealInputSchema = z.object({
+  captureId: z.string(code('required')).min(1, code('required')),
+  reason: z.string(code('required')).trim().min(10, code('too_short')).max(500, code('too_long')),
+});
+export type IdentityDetailsRevealInput = z.input<typeof identityDetailsRevealInputSchema>;
+
+/**
+ * What the barcode on the back of a license or state ID says, read on this server when staff ask (never stored, never
+ * logged), and how it compares with the account.
+ */
+export interface IdentityCaptureDetails {
+  documentType: Extract<IdentityDocumentType, 'drivers_license' | 'state_id'>;
+  /** The issuing state's two-letter code. */
+  issuingState: string;
+  name: { given: string; middle?: string; surname: string; suffix?: string };
+  /** YYYY-MM-DD, as encoded. */
+  dateOfBirth: string;
+  /** Whole years on the day of the reading, on the person's market's clock. */
+  age: number;
+  expiryDate: string;
+  issueDate?: string;
+  documentNumber: string;
+  address?: { line1: string; line2?: string; city: string; state: string; zip: string };
+  sex?: 'male' | 'female' | 'unspecified';
+  height?: string;
+  eyeColor?: string;
+  /**
+   * How it compares: the account's legal name; the home address on file (`null`: no address on file, or none on the
+   * ID); 18 or older; not expired. The account has no birth date to compare with.
+   */
+  matches: { name: boolean; address: boolean | null; adult: boolean; notExpired: boolean };
+}
+
+/**
+ * `no_barcode`: the back has no barcode that reads (a passport, no back photo, or one too blurry): open the photos.
+ * `unavailable`: the reader failed this time. `not_allowed` for other roles; `not_found` for an unknown capture or one
+ * whose photos are deleted.
+ */
+export type IdentityDetailsRevealResult =
+  | { ok: true; details: IdentityCaptureDetails }
+  | { ok: false; code: 'validation_failed' | 'not_allowed' | 'not_found' | 'no_barcode' | 'unavailable' | 'unknown'; fieldErrors?: Partial<Record<string, FieldErrorCode[]>> };
+
 /** ok `updated` (refresh). Errors: `validation_failed`, `not_allowed` (your role, or the item moved on), `not_found`. */
 export interface AdminVerificationHandlers {
   onRevealAddressProof: QueryHandler<AddressProofRevealInput, AddressProofRevealResult>;
   onDecideAddress: ActionHandler<AddressDecisionInput>;
   onRevealIdentityCapture: QueryHandler<IdentityCaptureRevealInput, IdentityCaptureRevealResult>;
+  onRevealIdentityDetails: QueryHandler<IdentityDetailsRevealInput, IdentityDetailsRevealResult>;
   onDecideIdentityCapture: ActionHandler<IdentityCaptureDecisionInput>;
   onVerificationAction: ActionHandler<VerificationActionInput>;
 }

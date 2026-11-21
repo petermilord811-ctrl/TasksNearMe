@@ -77,7 +77,13 @@ export interface StoredIdentityAutoCheck {
   expiresYear?: number;
   /** What the document looks like: drivers_license | state_id | passport | other. */
   documentType?: string;
-  /** Which reader produced it (`claude:<model>` or `stand-in`). */
+  /** The address on the ID's barcode matches the home address on file (absent when either is missing). */
+  addressMatches?: boolean;
+  /** Where the reading came from: the barcode on the back (licenses and state IDs) or the front's print. */
+  source?: 'barcode' | 'front';
+  /** The front's printed birth date, number and surname agree with the barcode (when both were read). */
+  frontAgrees?: boolean;
+  /** Which reader produced it (`server:ocr`, `claude:<model>` or `stand-in`). */
   by: string;
   at: string;
 }

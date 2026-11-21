@@ -7,12 +7,13 @@ import type { OcrPage } from './types';
 /**
  * Where the server's document readers do their work: a Node process of their own, started for one read and
  * killed after it, that prepares photos (sharp), runs Tesseract on them (tesseract.js, English data shipped in
- * node_modules, nothing ever downloaded) and reads PDFs' text (unpdf's PDF.js build). One read at a time per
- * server process, within a time and memory budget: past either, the process is killed and the read ends as over
- * budget, which the readers report as unreadable. A process of its own, not a thread: a crash inside sharp,
- * Tesseract or PDF.js (a broken or hostile file, a missing data file) never reaches the server; the system takes
- * all its memory back when it ends (a thread's would stay with the server); its memory is measured on its own; and
- * it gets none of the server's environment (only NODE_ENV), so no secret is in reach of a file crafted against
+ * node_modules, nothing ever downloaded), decodes the PDF417 barcode on the back of a license or ID card (zxing-wasm,
+ * its WebAssembly binary read from node_modules, never fetched) and reads PDFs' text (unpdf's PDF.js build). One read
+ * at a time per server process, within a time and memory budget: past either, the process is killed and the read ends
+ * as over budget, which the readers report as unreadable. A process of its own, not a thread: a crash inside sharp,
+ * Tesseract, zxing or PDF.js (a broken or hostile file, a missing data file) never reaches the server; the system
+ * takes all its memory back when it ends (a thread's would stay with the server); its memory is measured on its own;
+ * and it gets none of the server's environment (only NODE_ENV), so no secret is in reach of a file crafted against
  * PDF.js. Its output (Tesseract's warnings) is dropped, so nothing a document says can reach a log.
  */
 
@@ -28,8 +29,8 @@ const langPath = () => path.join(/*turbopackIgnore: true*/ process.cwd(), 'node_
 
 /**
  * The reader's process, as source run with `node -e`, so no bundler rewrites it: Next's server bundle can't keep a
- * script file of its own, and tesseract.js and unpdf resolve from node_modules where the server runs (the project
- * folder, or the standalone bundle, which next.config.ts tells to include them).
+ * script file of its own, and tesseract.js, zxing-wasm and unpdf resolve from node_modules where the server runs (the
+ * project folder, or the standalone bundle, which next.config.ts tells to include them).
  */
 const READER_SOURCE = String.raw`
 const sharp = require('sharp');
@@ -37,6 +38,7 @@ const sharp = require('sharp');
 sharp.cache(false);
 sharp.concurrency(1);
 let tesseract = null;
+let zxing = null;
 
 const unreadable = () => Object.assign(new Error('image'), { name: 'UnreadableImage' });
 
@@ -117,6 +119,133 @@ async function recognize({ bytes, turn, band, psm, whitelist, threshold }) {
   return trimmed(data);
 }
 
+// The barcode reader (zxing-cpp built to WebAssembly), loaded once per process. Its binary is read from node_modules:
+// left alone, the package fetches it from a CDN (jsDelivr), and this process never goes online.
+function barcodeReader() {
+  if (zxing) return zxing;
+  const reader = require('zxing-wasm/reader');
+  const wasm = require.resolve('zxing-wasm/reader/zxing_reader.wasm');
+  reader.prepareZXingModule({ overrides: { wasmBinary: require('node:fs').readFileSync(wasm), locateFile: () => wasm } });
+  zxing = reader;
+  return zxing;
+}
+
+// PDF417 only (the AAMVA barcode), as hard as zxing tries: turned a quarter or half, inverted, and scaled down when big.
+const BARCODE_OPTIONS = { formats: ['PDF417'], tryHarder: true, tryRotate: true, tryInvert: true, tryDownscale: true, maxNumberOfSymbols: 1 };
+// The stored photos' size (the capture scales them to it); a bigger photo is scaled down to it first.
+const BARCODE_EDGE = 2000;
+// The last try enlarges the photo up to this, so the barcode's thin bars survive being turned.
+const BARCODE_ZOOMED_EDGE = 3200;
+
+// A photo of a card's back, upright, on white, one gray channel, at most BARCODE_EDGE px on the longer side.
+async function barcodePhoto(bytes) {
+  try {
+    const { data, info } = await sharp(Buffer.from(bytes), { failOn: 'error', limitInputPixels: 40000000 })
+      .autoOrient()
+      .flatten({ background: '#ffffff' })
+      .resize({ width: BARCODE_EDGE, height: BARCODE_EDGE, fit: 'inside', withoutEnlargement: true })
+      .toColourspace('b-w')
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    if (info.channels !== 1) throw unreadable();
+    return { data, width: info.width, height: info.height };
+  } catch {
+    throw unreadable();
+  }
+}
+
+const grayImage = (photo) => sharp(photo.data, { raw: { width: photo.width, height: photo.height, channels: 1 } });
+
+// The photo's tilt: its strongest edge directions folded into a quarter turn (a card's edges, its print and the
+// barcode's bars and rows all run at the card's angle), from a softened copy about 1,000 px wide (Scharr's gradients,
+// weighted by strength, in half-degree bins). Signed degrees in (-45, 45], the strongest first; the barcode reads
+// only within about 2 degrees of level, and quarter turns are zxing's own to try.
+async function tilts(photo) {
+  const { data, info } = await grayImage(photo)
+    .resize({ width: 1000, height: 1000, fit: 'inside', withoutEnlargement: true })
+    .blur(1)
+    .toColourspace('b-w')
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const width = info.width;
+  const BINS = 180;
+  const strengths = new Float64Array(BINS);
+  for (let y = 1; y < info.height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const i = y * width + x;
+      const gx = 3 * (data[i - width + 1] - data[i - width - 1] + data[i + width + 1] - data[i + width - 1]) + 10 * (data[i + 1] - data[i - 1]);
+      const gy = 3 * (data[i + width - 1] - data[i - width - 1] + data[i + width + 1] - data[i - width + 1]) + 10 * (data[i + width] - data[i - width]);
+      const strength = gx * gx + gy * gy;
+      // A step of about 40 gray levels or more.
+      if (strength < 409600) continue;
+      const angle = ((Math.atan2(gy, gx) * 180) / Math.PI + 360) % 90;
+      strengths[Math.min(BINS - 1, Math.floor(angle * 2))] += Math.sqrt(strength);
+    }
+  }
+  const smooth = new Float64Array(BINS);
+  for (let b = 0; b < BINS; b++) for (let d = -2; d <= 2; d++) smooth[b] += strengths[(b + d + BINS) % BINS] * (3 - Math.abs(d));
+  const at = (b) => smooth[((b % BINS) + BINS) % BINS];
+  const peaks = [];
+  for (let b = 0; b < BINS; b++) {
+    let top = at(b) > 0;
+    for (let d = 1; d <= 8 && top; d++) top = at(b) >= at(b - d) && at(b) > at(b + d);
+    if (!top) continue;
+    const curve = at(b - 1) + at(b + 1) - 2 * at(b);
+    const offset = curve < 0 ? (0.5 * (at(b - 1) - at(b + 1))) / curve : 0;
+    const angle = ((((b + 0.5 + offset) / 2) % 90) + 90) % 90;
+    peaks.push({ angle: angle > 45 ? angle - 90 : angle, weight: at(b) });
+  }
+  peaks.sort((a, b) => b.weight - a.weight);
+  return peaks.filter((peak) => peak.weight >= peaks[0].weight / 4).slice(0, 3).map((peak) => peak.angle);
+}
+
+// AAMVA's text is ASCII; UTF-8 when it decodes as such, else Latin-1 (every byte kept).
+function barcodeText(bytes) {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return Buffer.from(bytes).toString('latin1');
+  }
+}
+
+// One try: the photo enlarged (zoom), turned clockwise (turn, degrees), contrast stretched, then decoded.
+async function decodeBarcode(photo, turn, zoom) {
+  let image = grayImage(photo);
+  if (zoom > 1) {
+    const width = Math.round(photo.width * zoom);
+    const height = Math.round(photo.height * zoom);
+    image = sharp(await image.resize({ width, height, kernel: 'lanczos3' }).toColourspace('b-w').raw().toBuffer(), { raw: { width, height, channels: 1 } });
+  }
+  if (turn) image = image.rotate(turn, { background: '#ffffff' });
+  const { data, info } = await image.normalize().toColourspace('srgb').ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const pixels = { width: info.width, height: info.height, data: new Uint8ClampedArray(data.buffer, data.byteOffset, data.length), colorSpace: 'srgb' };
+  const results = await barcodeReader().readBarcodes(pixels, BARCODE_OPTIONS);
+  const found = results.find((result) => result.isValid && result.bytes && result.bytes.length > 0);
+  return found ? barcodeText(found.bytes) : null;
+}
+
+// The back's PDF417 text, or null: the photo as it is; then turned level at its strongest tilts (the strongest a
+// half degree either way too); then enlarged and turned at the strongest. The first that decodes wins.
+async function barcode({ bytes }) {
+  const photo = await barcodePhoto(bytes);
+  const text = await decodeBarcode(photo, 0, 1);
+  if (text !== null) return text;
+  const found = await tilts(photo);
+  const turns = [];
+  for (const [index, tilt] of found.entries()) {
+    if (Math.abs(tilt) < 0.75) continue;
+    for (const nudge of index === 0 ? [0, 0.5, -0.5] : [0]) turns.push(-(tilt + nudge));
+  }
+  for (const turn of turns) {
+    const turned = await decodeBarcode(photo, turn, 1);
+    if (turned !== null) return turned;
+  }
+  const zoom = BARCODE_ZOOMED_EDGE / Math.max(photo.width, photo.height);
+  if (zoom < 1.25) return null;
+  const strongest = found.length > 0 && Math.abs(found[0]) >= 0.75 ? -found[0] : 0;
+  return decodeBarcode(photo, strongest, Math.min(2, zoom));
+}
+
 async function pdfText({ bytes, maxPages, readPages }) {
   const { getDocumentProxy } = await import('unpdf');
   const pdf = await getDocumentProxy(new Uint8Array(bytes), {
@@ -142,7 +271,7 @@ const DOCUMENT_ERRORS = ['UnreadableImage', 'InvalidPDFException', 'PasswordExce
 
 process.on('message', async (message) => {
   try {
-    const result = message.type === 'ocr' ? await recognize(message) : await pdfText(message);
+    const result = message.type === 'ocr' ? await recognize(message) : message.type === 'barcode' ? await barcode(message) : await pdfText(message);
     process.send({ id: message.id, ok: true, result });
   } catch (error) {
     // Only the kind of failure crosses back: an error's text could quote the document.
@@ -200,9 +329,11 @@ export interface PdfLimits {
   readPages: number;
 }
 
-/** One read's process: OCR passes and PDF text, each answered in turn. */
+/** One read's process: OCR passes, barcodes and PDF text, each answered in turn. */
 export interface ReadSession {
   recognize(pass: OcrPass): Promise<OcrPage>;
+  /** The text of the PDF417 barcode in a photo (the back of a license or ID card), or null when none decodes. */
+  barcode(bytes: Buffer): Promise<string | null>;
   pdfText(bytes: Buffer, limits: PdfLimits): Promise<{ pages: number; text: string | null }>;
 }
 
@@ -290,6 +421,7 @@ export function withReadSession<T>(work: (session: ReadSession) => Promise<T>, b
     const session: ReadSession = {
       recognize: (pass) =>
         ask<OcrPage>({ type: 'ocr', bytes: pass.bytes, turn: pass.turn ?? 0, band: pass.band ?? null, psm: pass.psm, whitelist: pass.whitelist ?? '', threshold: pass.threshold ?? 'sauvola' }),
+      barcode: (bytes) => ask<string | null>({ type: 'barcode', bytes }),
       pdfText: (bytes, limits) => ask<{ pages: number; text: string | null }>({ type: 'pdf', bytes, maxPages: limits.maxPages, readPages: limits.readPages }),
     };
     try {

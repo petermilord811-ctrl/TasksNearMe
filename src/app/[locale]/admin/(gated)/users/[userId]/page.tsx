@@ -3,7 +3,7 @@ import { withClientMessages } from '@/i18n/client-messages';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 import { reverseStrikeAction, setHelperSuspensionAction } from '@/modules/accounts/staff-actions';
-import { decideAddressAction, decideIdentityCaptureAction, revealAddressProofAction, revealIdentityCaptureAction, verificationStaffAction } from '@/modules/verification/staff-actions';
+import { decideAddressAction, decideIdentityCaptureAction, revealAddressProofAction, revealIdentityCaptureAction, revealIdentityDetailsAction, verificationStaffAction } from '@/modules/verification/staff-actions';
 import { getAdminUser } from '@/modules/accounts/staff';
 import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
@@ -47,6 +47,7 @@ async function AdminUser({ params }: Pick<PageProps<'/[locale]/admin/users/[user
         onRevealAddressProof: revealAddressProofAction,
         onDecideAddress: decideAddressAction,
         onRevealIdentityCapture: revealIdentityCaptureAction,
+        onRevealIdentityDetails: revealIdentityDetailsAction,
         onDecideIdentityCapture: decideIdentityCaptureAction,
         onVerificationAction: verificationStaffAction,
       }}
