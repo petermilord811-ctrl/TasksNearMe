@@ -10,6 +10,12 @@ What staff and the on-call engineer do when something goes wrong in production (
 | [Reward fraud review](reward-review.md) | Gift-card rewards are under review, show risk signals, or fail to deliver. |
 | [Safety escalation](safety-escalation.md) | Someone reports a safety problem, or an exact address or message may have reached the wrong person. |
 | [Gainesville launch day](gainesville-launch.md) | Taking Gainesville (or the next city) live, watching its waitlist emails, and rolling a launch back. Rehearsed 2026-11-21. |
+| [Email or texts down](email-and-sms-down.md) | Postmark, Resend or Twilio refuse or don't answer: sign-in codes, notifications, pages. |
+| [Stripe errors and late webhooks](stripe-errors.md) | Paying fails, Stripe is slow, or its events arrive late or not at all. |
+| [Background jobs stall or crash](job-runner.md) | A job keeps failing, the runner is stuck, or a server stopped mid-run. |
+| [The database is unreachable](database-unreachable.md) | Postgres stops answering. |
+| [Live updates stop](realtime-dropping.md) | Open pages stop updating by themselves. |
+| [A deploy rolled back](deploy-rollback.md) | A deploy switched back, by `deploy.sh` or by hand, while people were using the site. |
 
 ## Who is on call
 
@@ -41,14 +47,16 @@ Blueprint 10 §5 asks for these before launch. Fill in the names before the beta
 | Who did what | `/admin/audit` (admins and support leads only) |
 | Market health | `/admin/metrics` (the launch targets, the funnel, liquidity, reward spend) |
 | Feature flags and policies | `/admin/config` (admins only) |
-| Background jobs | Server logs only: lines starting `[jobs] <name> failed` ([src/modules/jobs/runner.ts](../../src/modules/jobs/runner.ts)) |
+| Background jobs | The on-call pages for a job that keeps failing or a stuck run; otherwise server logs: lines starting `[jobs] <name> failed` ([src/modules/jobs/runner.ts](../../src/modules/jobs/runner.ts)). Logs carry no personal details: a failed query shows its statement without its values, and emails, phones and secrets are masked ([src/platform/redact.ts](../../src/platform/redact.ts)) |
+| Is it up? | `/api/health`: 200, or 503 with the part that's down (the database, the job runner), for an outside monitor |
 | Provider events | `/admin/webhooks` (admins and finance): the webhook inbox's failing and dead events, with replay and dismiss. Older history and events that never reached us: each provider's dashboard |
 
 ## Built-in gaps
 
 These aren't built yet, so the runbooks handle them by hand. Close them before the gaps cost more than the manual steps.
 
-- **Jobs have no dashboard.** The runner logs failures and retries every minute; there's no jobs table to inspect.
+- **Jobs have no dashboard.** The runner logs failures and retries every minute, and pages for a job that keeps failing or a stuck run; there's no jobs table to inspect.
+- **Nothing outside watches the site.** The pager needs the database, so a database that's down, or a server that's gone, pages no one until an outside monitor calls `/api/health` (decisions, 2026-11-21).
 
 ## After every SEV1 or SEV2
 

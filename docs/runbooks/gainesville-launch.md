@@ -63,6 +63,14 @@ Rehearsed end to end on 2026-11-21, on the e2e build with its own database (swee
 | The email provider says "too many requests" (429) | Nothing at first: each send waits and tries once more, and the waitlist's next batch comes a minute later. If it goes on, stop bulk sends elsewhere on the same Resend team. | |
 | The job runner looks stuck (the card doesn't move for 3 minutes) | The engineer checks the logs for `[jobs] waitlist.city_open failed`, and that the runner is on (no `JOBS_DISABLED`). | One run sends for at most 30 seconds before the next job's turn (J-L3), so a slow provider can't hold up charges and payouts. |
 
+For a failure beyond the launch itself, use its runbook:
+- [Email or texts down](email-and-sms-down.md)
+- [Stripe errors and late webhooks](stripe-errors.md)
+- [Background jobs stall or crash](job-runner.md)
+- [The database is unreachable](database-unreachable.md)
+- [Live updates stop](realtime-dropping.md)
+- [A deploy rolled back](deploy-rollback.md)
+
 ## Read-only queries
 
 ```sql
