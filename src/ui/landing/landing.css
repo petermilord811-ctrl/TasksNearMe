@@ -215,12 +215,13 @@ html[data-motion="on"] [data-reveal]:not([data-revealed]) .reveal-fill { transfo
     radial-gradient(44% 38% at 12% 16%, var(--season-glow, color-mix(in oklab, var(--iri-1) 9%, transparent)), transparent 72%),
     radial-gradient(36% 30% at 34% 6%, color-mix(in oklab, var(--iri-3) 7%, transparent), transparent 74%);
 }
-/* Late fall: a low golden sun, olive-gold parks. Plum to amber on the closing card. */
+/* Late fall: a low golden sun, soft sage parks. Plum to amber on the closing card. The map's land stays a clean warm
+   off-white (owner, 2026-11-21: the peach land and olive parks read as a strange cast over the whole map). */
 [data-season="fall"] {
   --season-sky: rgb(255 186 112 / 0.26);
   --season-glow: rgb(255 150 80 / 0.12);
-  --map-park: #e2e0b9;
-  --map-land: #f0e3d0;
+  --map-park: #e1e8cf;
+  --map-land: #f2ece3;
   --closing-gradient: linear-gradient(120deg, #3a1532, #7a2442 30%, #c4462b 62%, #f08a33);
 }
 /* Winter: a cold clear sky, snow on the land and in the parks, icy water. Night blue to ice on the closing card. */

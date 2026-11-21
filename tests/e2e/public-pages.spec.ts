@@ -171,15 +171,15 @@ test.describe('public pages', () => {
     await expect(page.getByText(/\d+ (Example|Sample) (Lane|Street|Road)/)).toHaveCount(0);
   });
 
-  test('home map: outside the service area, the city list and helper sign-up', async ({ page, context }) => {
+  test('home map: outside the service area, how far it is and the city list, in one line', async ({ page, context }) => {
     await context.grantPermissions(['geolocation']);
     await context.setGeolocation({ latitude: 32.7767, longitude: -96.797 }); // Dallas
     await page.goto('/');
     const map = page.locator('#tasks-near-you');
     // Found without a press (allowed before). National, cities open in turn (owner, 2026-11-14).
-    await expect(map.getByText("We're not in your city yet: we're opening across the US one city at a time.")).toBeVisible();
+    // One line over the map: how far, and the city's list (owner, 2026-11-21: fewer elements there).
+    await expect(map.getByText(/^You're [\d,]+ mi from Gainesville: we're opening city by city\.$/)).toBeVisible();
     await expect(map.getByRole('link', { name: "Join your city's list" })).toHaveAttribute('href', '/waitlist');
-    await expect(map.getByRole('link', { name: 'Can help? Get verified now' })).toHaveAttribute('href', '/become-a-helper');
   });
 
   test('home map: today, this weekend or this week, and one neighborhood at a time', async ({ page }) => {
@@ -246,10 +246,10 @@ test.describe('public pages', () => {
       await expect(map.getByText('Starting from your home area, Duckpond.')).toBeVisible();
       await expect(map.getByRole('list', { name: 'Open tasks nearest you' })).toBeVisible();
       // Not Dallas: the device's location wasn't used.
-      await expect(map.getByText(/We're not in your city yet/)).toHaveCount(0);
+      await expect(map.getByText(/we're opening city by city/)).toHaveCount(0);
       // "Where I am now" asks the device (here, Dallas: outside the city).
       await map.getByRole('button', { name: 'Use where I am now' }).click();
-      await expect(map.getByText("We're not in your city yet: we're opening across the US one city at a time.")).toBeVisible();
+      await expect(map.getByText(/^You're [\d,]+ mi from Gainesville: we're opening city by city\.$/)).toBeVisible();
     } finally {
       await helper.remove();
     }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extrusionLayers, firstSymbolLayer, POI_CLASSES, restylePlan, styleFont, type MapColors } from './restyle';
+import { extrusionLayers, firstSymbolLayer, NEIGHBORHOOD_NAMES_ZOOM, POI_CLASSES, restylePlan, styleFont, type MapColors } from './restyle';
 
 const colors: MapColors = {
   land: 'land',
@@ -90,6 +90,11 @@ describe('restylePlan', () => {
     expect(step('highway-name-major', 'text-color')).toBe('label');
     expect(step('water_name_point_label', 'text-color')).toBe('water-label');
     expect(step('label_city', 'text-color')).toBe('strong');
+  });
+
+  it('shows the base map’s neighborhood names only close in, where tasks no longer group under their names', () => {
+    expect(plan.find((item) => item.layer === 'label_other' && item.kind === 'zoom')?.value).toEqual([NEIGHBORHOOD_NAMES_ZOOM, 24]);
+    expect(plan.some((item) => item.layer === 'label_city' && item.kind === 'zoom')).toBe(false);
   });
 });
 

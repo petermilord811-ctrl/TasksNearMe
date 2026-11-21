@@ -32,6 +32,8 @@ const HERO_WAIT_MS = 6000;
  * after (its first frames compile shaders, which would make the growth stutter). Its style is fetched at once.
  */
 const HERO_SETTLE_MS = 400;
+/** How far past the service area drive times are still offered (the map loads the roads around the visitor). */
+const DRIVE_REACH_MILES = 25;
 
 /**
  * The map frame: the drawn map right away, then (in `interactive` mode) the live MapLibre map, which fades in
@@ -147,6 +149,8 @@ export function TaskMap({
 
   // Distances on the pins' cards only for a visitor in or near the market (`listOrigin`).
   const origin = listOrigin(map, userPoint);
+  // Drive times start from the visitor: offered only in or near the market, where the map's roads reach them.
+  const driveFar = Boolean(userPoint) && distanceMiles(map.center, userPoint!) > map.serviceRadiusMiles + DRIVE_REACH_MILES;
   const milesById = useMemo(
     () => (origin ? new Map(pinsShown.map((pin) => [pin.id, roundMiles(distanceMiles(origin, pin.point))])) : undefined),
     [origin, pinsShown],
@@ -391,7 +395,7 @@ export function TaskMap({
             arrival={arrival}
             arrivalSource={arrivalSource}
             edgeInsets={fullscreen ? FULLSCREEN_EDGE : edgeInsets}
-            layers={layers}
+            layers={driveFar && layers.driveTimes ? { ...layers, driveTimes: false } : layers}
             fullscreen={fullscreen}
             request={explorer?.request ?? null}
             onControls={(next) => setControls(() => next)}
@@ -429,6 +433,7 @@ export function TaskMap({
 
       {fill && liveReady && controls && (
         <div
+          data-map-panel=""
           // Waiting, they're out of reach for the keyboard too (focus in the explorer lands the arrival, and they come).
           inert={waiting || undefined}
           className={cn(
@@ -473,6 +478,7 @@ export function TaskMap({
             }}
             above={row}
             minimapOffered={fill && fine}
+            driveNote={driveFar && market ? t('driveFar', { market }) : undefined}
           />
           {/* Watch an area: draw around part of the map, then get alerts for new tasks in its neighborhoods. */}
           {explorer && marketSlug && (
@@ -524,22 +530,27 @@ export function TaskMap({
               <Minus aria-hidden="true" className="size-4" />
             </button>
           </div>
-          {/* Drive times' key: an estimate from the roads' speeds, and from where (the device, or home). */}
-          {layers.driveTimes && userPoint && driveState !== 'off' && (
-            <p role="status" className="glass inline-flex min-h-11 items-center gap-2.5 rounded-full px-3.5 text-xs font-medium whitespace-nowrap text-foreground">
-              <Car aria-hidden="true" className="size-3.5 text-violet" />
-              {driveState === 'none' ? (
-                t('driveNone')
-              ) : (
-                <>
-                  <span>{userSource === 'home' ? t('driveFromHome') : t('driveFromYou')}</span>
-                  <span className="inline-flex items-center gap-1"><span aria-hidden="true" className="h-1 w-4 rounded-full bg-violet" />{t('driveMinutes', { minutes: 10 })}</span>
-                  <span className="inline-flex items-center gap-1"><span aria-hidden="true" className="h-1 w-4 rounded-full bg-[var(--iri-3)] opacity-70" />{t('driveMinutes', { minutes: 20 })}</span>
-                </>
-              )}
-            </p>
-          )}
         </div>
+      )}
+
+      {/* Drive times' key: an estimate from the roads' speeds, and from where (the device, or home). */}
+      {fill && liveReady && controls && layers.driveTimes && userPoint && driveState !== 'off' && !waiting && (
+        <p
+          role="status"
+          data-map-panel=""
+          className={cn('glass absolute z-[3] inline-flex min-h-10 items-center gap-2.5 rounded-full px-3.5 text-xs font-medium whitespace-nowrap text-foreground shadow-overlay', fullscreen ? 'top-4 left-1/2 -translate-x-1/2' : 'top-3 left-3 lg:top-auto lg:bottom-[max(1.25rem,2.5svh)] lg:left-1/2 lg:-translate-x-1/2')}
+        >
+          <Car aria-hidden="true" className="size-3.5 text-violet" />
+          {driveState === 'none' ? (
+            t('driveNone')
+          ) : (
+            <>
+              <span>{userSource === 'home' ? t('driveFromHome') : t('driveFromYou')}</span>
+              <span className="inline-flex items-center gap-1"><span aria-hidden="true" className="h-1 w-4 rounded-full bg-violet" />{t('driveMinutes', { minutes: 10 })}</span>
+              <span className="inline-flex items-center gap-1"><span aria-hidden="true" className="h-1 w-4 rounded-full bg-sky-400" />{t('driveMinutes', { minutes: 20 })}</span>
+            </>
+          )}
+        </p>
       )}
 
       {/* The minimap: the whole service area, with the part the map shows framed (a mouse only; full screen too). */}
@@ -550,6 +561,9 @@ export function TaskMap({
           controls={controls}
           userPoint={userPoint}
           selectedArea={area?.name ?? null}
+          market={market}
+          marketSlug={marketSlug}
+          timeZone={explorer?.timeZone}
           className={cn('absolute z-[2] hidden transition-opacity duration-500 lg:block', fullscreen ? 'top-4 left-4 block' : minimapClassName)}
         />
       )}
@@ -597,6 +611,12 @@ export function TaskMap({
       )}
       {/* Full screen: the tasks as a row of cards along the bottom, in step with the pins. */}
       {fill && liveReady && fullscreen && <MapCardRail map={explorer ? { ...map, pins: pinsShown } : map} className="absolute inset-x-0 bottom-0 z-[2]" />}
+      {/* Full screen covers the page, its attribution too: whose map it is, here instead. */}
+      {fill && fullscreen && (
+        <p className="pointer-events-none absolute top-4 left-1/2 z-[2] -translate-x-1/2 text-[11px] text-foreground/70">
+          <span className="glass rounded-full px-2.5 py-1">{map.attribution}</span>
+        </p>
+      )}
       {fill && failed && mode !== 'static' && (
         <div className={cn('absolute z-[2] flex flex-col items-end gap-2', controlsClassName)}>
           <button
@@ -661,7 +681,7 @@ function firstVisitToMap(): boolean {
 }
 
 /** The layers: the tasks as pins or as a glow of where help is needed, 3D buildings, and the service area. */
-function LayersControl({ layers, onChange, above = false, minimapOffered = false }: { layers: MapLayers; onChange: (layers: MapLayers) => void; above?: boolean; minimapOffered?: boolean }) {
+function LayersControl({ layers, onChange, above = false, minimapOffered = false, driveNote }: { layers: MapLayers; onChange: (layers: MapLayers) => void; above?: boolean; minimapOffered?: boolean; /** Why drive times can't be shown (the visitor is far away): the switch is off and says so. */ driveNote?: string }) {
   const t = useTranslations('landing.map');
   const [open, setOpen] = useState(false);
   const panelId = useId();
@@ -683,18 +703,22 @@ function LayersControl({ layers, onChange, above = false, minimapOffered = false
     };
   }, [open]);
 
-  const option = (on: boolean, Icon: typeof MapPinned, text: string, toggle: () => void, kind: 'radio' | 'switch') => (
+  const option = (on: boolean, Icon: typeof MapPinned, text: string, toggle: () => void, kind: 'radio' | 'switch', note?: string) => (
     <button
       type="button"
       role={kind === 'radio' ? 'radio' : 'switch'}
       aria-checked={on}
       onClick={toggle}
-      className={cn('flex min-h-11 w-full items-center gap-2.5 rounded-xl px-2.5 text-left text-sm transition-colors hover:bg-foreground/[0.05]', on && 'font-semibold')}
+      disabled={note !== undefined}
+      className={cn('flex min-h-11 w-full items-center gap-2.5 rounded-xl px-2.5 text-left text-sm transition-colors hover:bg-foreground/[0.05] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent', on && 'font-semibold')}
     >
       <span className={cn('grid size-7 shrink-0 place-items-center rounded-lg transition-colors', on ? 'bg-violet text-white' : 'bg-foreground/[0.06] text-foreground/70')}>
         <Icon aria-hidden="true" className="size-3.5" />
       </span>
-      <span className="flex-1">{text}</span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        {text}
+        {note && <span className="text-[11px] leading-4 font-normal text-muted-foreground">{note}</span>}
+      </span>
       {kind === 'switch' && (
         <span aria-hidden="true" className={cn('relative h-5 w-8 rounded-full transition-colors', on ? 'bg-violet' : 'bg-foreground/15')}>
           <span className={cn('absolute top-0.5 size-4 rounded-full bg-white shadow transition-[left]', on ? 'left-3.5' : 'left-0.5')} />
@@ -731,7 +755,7 @@ function LayersControl({ layers, onChange, above = false, minimapOffered = false
         <span aria-hidden="true" className="mx-2.5 my-1.5 block h-px bg-foreground/10" />
         {option(layers.buildings, Building2, t('layerBuildings'), () => onChange({ ...layers, buildings: !layers.buildings }), 'switch')}
         {option(layers.serviceArea, Target, t('layerService'), () => onChange({ ...layers, serviceArea: !layers.serviceArea }), 'switch')}
-        {option(layers.driveTimes, Car, t('layerDrive'), () => onChange({ ...layers, driveTimes: !layers.driveTimes }), 'switch')}
+        {option(layers.driveTimes && !driveNote, Car, t('layerDrive'), () => onChange({ ...layers, driveTimes: !layers.driveTimes }), 'switch', driveNote)}
         {option(layers.clock, SunMoon, t('layerClock'), () => onChange({ ...layers, clock: !layers.clock }), 'switch')}
         {minimapOffered && <div className="max-lg:hidden">{option(layers.minimap, MapGlyph, t('layerMinimap'), () => onChange({ ...layers, minimap: !layers.minimap }), 'switch')}</div>}
       </div>

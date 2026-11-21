@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, isNotNull } from 'drizzle-orm';
+import { and, count, eq, inArray, isNotNull, like } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { users } from '@/modules/accounts/schema';
 import { communityPosts } from '@/modules/community/schema';
@@ -177,6 +177,12 @@ describe('the market and home pages', () => {
     expect(shown.map.areas.reduce((sum, area) => sum + area.helperCount, 0)).toBe(shown.helpers.verified);
     expect(testers.map.areas.reduce((sum, area) => sum + area.helperCount, 0)).toBe(testers.helpers.verified);
     expect(shown.categories).toEqual(testers.categories);
+    // The minimap's cities: open or opening, and the demo marketplace's only for testers.
+    const demo = (await db.select({ slug: markets.slug }).from(markets).where(like(markets.id, 'mkt_demo_%'))).map((row) => row.slug);
+    expect(shown.map.cities.length).toBeGreaterThanOrEqual(1);
+    expect(shown.map.cities.filter((city) => demo.includes(city.slug))).toEqual([]);
+    expect(shown.map.cities.every((city) => city.status === 'live' || city.status === 'prelaunch')).toBe(true);
+    if (demo.length > 0) expect(testers.map.cities.some((city) => demo.includes(city.slug))).toBe(true);
   });
 });
 

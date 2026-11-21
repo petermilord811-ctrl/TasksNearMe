@@ -5,24 +5,26 @@ import {
   arrivalCamera,
   BLOOM_MAX,
   bloomOffsets,
-  inTimeRange,
-  medianCents,
-  pinIdsMatching,
   circleBounds,
   circleRing,
   donutArcs,
+  driveMinutes,
   edgeMarker,
   effectiveSort,
   inBounds,
   insideServiceArea,
+  inTimeRange,
   listOrigin,
+  type MapCamera,
+  medianCents,
   nearbyPins,
   outsideCircle,
+  pinIdsMatching,
   pinnedArrivalProgress,
   pixelsPerMile,
   projector,
   shownAmountCents,
-  type MapCamera,
+  stepAroundPanels,
 } from './map-math';
 
 const inMueller: LatLng = { lat: 30.2989, lng: -97.7064 };
@@ -252,5 +254,35 @@ describe('a cluster in bloom', () => {
     expect(medianCents([])).toBeNull();
     expect(medianCents([9000, 4500, 6000])).toBe(6000);
     expect(medianCents([4000, 5000, 7000, 9000])).toBe(6000);
+  });
+});
+
+describe('the marker that points to the visitor, around the panels', () => {
+  const box = { left: 0, top: 0, right: 1000, bottom: 800 };
+  const half = { x: 60, y: 20 };
+
+  it('stays where it is when no panel is in the way', () => {
+    expect(stepAroundPanels({ x: 500, y: 400 }, half, box, [{ left: 0, top: 0, right: 300, bottom: 300 }])).toEqual({ x: 500, y: 400 });
+  });
+
+  it('leaves a panel the shortest way: just under the heading card, it steps below it', () => {
+    const heading = { left: 20, top: 100, right: 420, bottom: 380 };
+    expect(stepAroundPanels({ x: 100, y: 360 }, half, box, [heading])).toEqual({ x: 100, y: 380 + 20 + 10 });
+  });
+
+  it('never leaves the box: a full-height explorer on the right sends it to the explorer’s left', () => {
+    const explorer = { left: 900, top: 0, right: 1000, bottom: 800 };
+    expect(stepAroundPanels({ x: 940, y: 400 }, half, box, [explorer])).toEqual({ x: 900 - 60 - 10, y: 400 });
+  });
+});
+
+describe('drive estimates from a straight-line distance', () => {
+  it('reads as minutes across town and hours across the country', () => {
+    expect(driveMinutes(3)).toBeGreaterThanOrEqual(8);
+    expect(driveMinutes(3)).toBeLessThanOrEqual(15);
+    expect(driveMinutes(20)).toBeGreaterThan(driveMinutes(3));
+    // About 1,060 miles away (the owner's case): around 19 hours on the road.
+    expect(driveMinutes(1060)).toBeGreaterThan(16 * 60);
+    expect(driveMinutes(1060)).toBeLessThan(21 * 60);
   });
 });

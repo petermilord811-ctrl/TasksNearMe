@@ -2,7 +2,7 @@
 
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useTranslations } from 'next-intl';
-import { ArrowRight, CalendarDays, MapPin, MessageSquareText, X } from 'lucide-react';
+import { ArrowUpRight, CalendarDays, MapPin, X } from 'lucide-react';
 import { routes, type TaskMapPin } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
@@ -76,15 +76,24 @@ export function PinCardBody({
   placement?: 'above' | 'below';
   picked?: boolean;
 }) {
-  const { formatDate } = useFormat();
+  const { formatDate, formatTimeRange } = useFormat();
   const below = placement === 'below';
   const t = useTranslations('landing.map');
   const categories = useTranslations('helperCard.categories');
   const Icon = CATEGORY_ICONS[pin.categorySlug];
   const color = `var(--cat-${pin.categorySlug})`;
+  // A whole day (or more) reads as such, not as "12:00 am–11:59 pm".
+  const startDate = formatDate(pin.windowStart);
+  const endDate = formatDate(pin.windowEnd);
+  const wholeDay = Date.parse(pin.windowEnd) - Date.parse(pin.windowStart) >= 23.5 * 3_600_000;
+  const whenText = wholeDay
+    ? startDate === endDate
+      ? t('cardAnyTime', { date: startDate })
+      : t('cardDays', { from: startDate, to: endDate })
+    : t('cardWhenValue', { date: startDate, time: formatTimeRange(pin.windowStart, pin.windowEnd) });
   return (
     <>
-      <div className="group/pin relative rounded-2xl border border-foreground/[0.08] bg-card p-3.5 text-left text-foreground shadow-overlay">
+      <div className="group/pin relative rounded-2xl border border-foreground/[0.08] bg-card p-4 text-left text-foreground shadow-overlay">
         <div className="flex items-center gap-2 pr-7 text-xs font-medium text-muted-foreground">
           <span className="grid size-6 shrink-0 place-items-center rounded-full" style={{ background: `color-mix(in oklab, ${color} 16%, transparent)`, color }}>
             <Icon aria-hidden="true" className="size-3.5" />
@@ -102,23 +111,39 @@ export function PinCardBody({
             <X aria-hidden="true" className="size-4" />
           </button>
         )}
+        {/* The whole card opens the task, in a new tab: the map stays as it was (owner, 2026-11-21). */}
         <Link
           href={routes.publicTask(pin.slug)}
+          target="_blank"
+          rel="noopener"
           tabIndex={-1}
-          className="mt-2 block font-display text-[15px]/5 font-semibold tracking-[-0.01em] text-foreground no-underline outline-offset-4 after:absolute after:inset-0 after:rounded-2xl after:content-[''] group-hover/pin:underline"
+          className="mt-2.5 line-clamp-2 font-display text-[17px]/[1.3] font-semibold tracking-[-0.015em] text-foreground no-underline outline-offset-4 after:absolute after:inset-0 after:rounded-2xl after:content-[''] group-hover/pin:underline"
         >
           {pin.title}
         </Link>
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1"><MapPin aria-hidden="true" className="size-3.5" />{miles !== undefined ? t('areaAway', { area: pin.areaName, miles }) : pin.areaName}</span>
-          <span className="inline-flex items-center gap-1"><CalendarDays aria-hidden="true" className="size-3.5" />{formatDate(pin.windowStart)}</span>
-          <span className="inline-flex items-center gap-1"><MessageSquareText aria-hidden="true" className="size-3.5" />{t('offers', { count: pin.offerCount })}</span>
-        </div>
-        <div className="mt-3 flex items-center justify-between border-t border-foreground/[0.07] pt-2.5">
-          <span className="text-base font-semibold tabular-nums">{pinPrice(pin, (rate) => t('perHour', { rate }))}</span>
-          <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary">
+        {/* Where (the neighborhood, never an address), when, and where it stands, one per line. */}
+        <dl className="mt-3 grid gap-1.5 text-[13px] text-foreground/85">
+          <div className="flex min-w-0 items-center gap-2">
+            <dt className="sr-only">{t('cardWhere')}</dt>
+            <MapPin aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
+            <dd className="min-w-0 truncate">{miles !== undefined ? t('areaAway', { area: pin.areaName, miles }) : pin.areaName}</dd>
+          </div>
+          <div className="flex min-w-0 items-center gap-2">
+            <dt className="sr-only">{t('cardWhen')}</dt>
+            <CalendarDays aria-hidden="true" className="size-3.5 shrink-0 text-muted-foreground" />
+            <dd className="min-w-0 truncate">{whenText}</dd>
+          </div>
+          <div className="flex min-w-0 items-center gap-2">
+            <dt className="sr-only">{t('cardStatus')}</dt>
+            <span aria-hidden="true" className="grid size-3.5 shrink-0 place-items-center"><span className="size-2 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgb(16_185_129/0.18)]" /></span>
+            <dd className="min-w-0 truncate">{t('cardOpen', { count: pin.offerCount })}</dd>
+          </div>
+        </dl>
+        <div className="mt-3.5 flex items-center justify-between gap-3 border-t border-foreground/[0.07] pt-3">
+          <span className="text-lg font-semibold tabular-nums">{pinPrice(pin, (rate) => t('perHour', { rate }))}</span>
+          <span className="inline-flex min-h-9 items-center gap-1 rounded-full bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground transition-[filter] group-hover/pin:brightness-110">
             {t('viewTask')}
-            <ArrowRight aria-hidden="true" className="size-3.5 transition-transform duration-200 group-hover/pin:translate-x-0.5" />
+            <ArrowUpRight aria-hidden="true" className="size-3.5 transition-transform duration-200 group-hover/pin:translate-x-0.5 group-hover/pin:-translate-y-0.5" />
           </span>
         </div>
       </div>

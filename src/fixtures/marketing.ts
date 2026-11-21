@@ -240,6 +240,10 @@ export const austinLandingMap: LandingMapData = {
   attribution: 'OpenFreeMap © OpenMapTiles Data from OpenStreetMap',
   areas: austinMapAreas,
   pins: austinMapPins,
+  cities: [
+    { slug: 'austin', name: 'Austin', state: 'TX', status: 'prelaunch', point: { lat: 30.2672, lng: -97.7431 } },
+    { slug: 'gainesville', name: 'Gainesville', state: 'FL', status: 'live', point: { lat: 29.6516, lng: -82.3248 } },
+  ],
 };
 
 export const homePageData: HomePageData = {

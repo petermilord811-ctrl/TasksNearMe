@@ -179,15 +179,13 @@ describe('HomeScreen (the landing page)', () => {
     const hrefs = within(list).getAllByRole('link').map((link) => link.getAttribute('href'));
     const nearest = [...homePageData.map.pins].sort((a, b) => distanceMiles(inMueller, a.point) - distanceMiles(inMueller, b.point));
     expect(hrefs).toEqual(nearest.slice(0, hrefs.length).map((pin) => routes.publicTask(pin.slug)));
-    expect(screen.queryByText(t('map.outside'))).not.toBeInTheDocument();
+    expect(screen.queryByText(/we're opening city by city/)).not.toBeInTheDocument();
   });
 
-  it('says so when the visitor is outside the service area, and offers the waitlist', () => {
+  it('says how far the visitor is when outside the service area, and offers the waitlist (one line, one link)', () => {
     show(homePageData, { location: inDallas });
-    expect(screen.getByText(t('map.outside'))).toBeInTheDocument();
+    expect(screen.getByText(/^You're [\d,]+ mi from Austin: we're opening city by city\.$/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: t('map.waitlist') })).toHaveAttribute('href', routes.waitlist());
-    // Helpers anywhere can get verified before their city opens.
-    expect(screen.getByRole('link', { name: t('map.outsideHelpers') })).toHaveAttribute('href', routes.becomeAHelper());
   });
 
   it('filters the map and its list by category', async () => {

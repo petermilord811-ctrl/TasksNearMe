@@ -103,21 +103,24 @@ export function mixHex(a: string, b: string, t: number): string {
 
 /** Tints toward, per palette color: the low sun's warmth, and the night (dark theme's night is mostly the roads lit). */
 const SUNSET: Partial<Record<keyof MapColors, [string, number]>> = {
-  land: ['#ffcfa0', 0.16],
-  building: ['#ffc996', 0.14],
-  park: ['#e8cf8f', 0.1],
-  water: ['#f4b893', 0.12],
-  roadMajor: ['#ffad73', 0.3],
+  // A hint of the low sun in the light theme, no more (a stronger cast tinted the whole page peach).
+  land: ['#ffcfa0', 0.08],
+  building: ['#ffc996', 0.07],
+  park: ['#e8cf8f', 0.05],
+  water: ['#f4b893', 0.06],
+  roadMajor: ['#ffad73', 0.18],
 };
+// The light theme's night stays light (owner, 2026-11-21: a slate tint read as a muddy page): cool, moonlit paper, a
+// deeper blue for water, and warm lit roads. The dark theme's night is already dark; it only lights the roads.
 const NIGHT_LIGHT: Partial<Record<keyof MapColors, [string, number]>> = {
-  land: ['#4a587a', 0.3],
-  building: ['#525d78', 0.3],
-  park: ['#3c5a58', 0.3],
-  water: ['#2b4a78', 0.34],
-  civic: ['#4a587a', 0.26],
-  roadCasing: ['#46506a', 0.32],
-  road: ['#ffe2b8', 0.32],
-  roadMajor: ['#ffbe78', 0.5],
+  land: ['#d3dbec', 0.42],
+  building: ['#c7d0e3', 0.42],
+  park: ['#c6d9d6', 0.38],
+  water: ['#86acd8', 0.38],
+  civic: ['#d3dbec', 0.36],
+  roadCasing: ['#b4bfd6', 0.38],
+  road: ['#fff3dd', 0.35],
+  roadMajor: ['#ffc589', 0.5],
 };
 const NIGHT_DARK: Partial<Record<keyof MapColors, [string, number]>> = {
   road: ['#5a4630', 0.45],

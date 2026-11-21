@@ -165,6 +165,17 @@ export interface LandingMapData {
   attribution: string;
   areas: MapArea[];
   pins: TaskMapPin[];
+  /** Every city open or opening, for the minimap's view of the country (the demo marketplace's only for testers). */
+  cities: MapCity[];
+}
+
+/** A city TasksNearMe is open in or opening in, by its center: the landing map's minimap shows the country with them. */
+export interface MapCity {
+  slug: string;
+  name: string;
+  state: string;
+  status: 'live' | 'prelaunch';
+  point: { lat: number; lng: number };
 }
 
 export interface MarketPageData {

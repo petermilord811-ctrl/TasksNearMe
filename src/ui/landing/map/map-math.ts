@@ -213,6 +213,54 @@ export function edgeMarker(point: { x: number; y: number }, box: EdgeBox): { x: 
   return { x: cx + dx * reach, y: cy + dy * reach, angle: Math.atan2(dy, dx) };
 }
 
+/** A panel over the map (pixels from the map's top-left corner). */
+export interface ScreenRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/**
+ * Moves a pill (centered at `at`, `half` its half size) out from under the page's panels over the map (the heading's
+ * card, the explorer, the controls, the minimap), staying inside `box`: of the four ways out of a panel it overlaps
+ * (below, above, right, left of it), the shortest that stays inside. Where none does, it stays put.
+ */
+export function stepAroundPanels(at: { x: number; y: number }, half: { x: number; y: number }, box: EdgeBox, panels: ScreenRect[], gap = 10): { x: number; y: number } {
+  let { x, y } = at;
+  for (let round = 0; round < 4; round += 1) {
+    const hit = panels.find((panel) => x + half.x + gap > panel.left && x - half.x - gap < panel.right && y + half.y + gap > panel.top && y - half.y - gap < panel.bottom);
+    if (!hit) break;
+    const ways = [
+      { x, y: hit.bottom + half.y + gap },
+      { x, y: hit.top - half.y - gap },
+      { x: hit.right + half.x + gap, y },
+      { x: hit.left - half.x - gap, y },
+    ].filter((spot) => spot.x - half.x >= box.left && spot.x + half.x <= box.right && spot.y - half.y >= box.top && spot.y + half.y <= box.bottom);
+    if (ways.length === 0) break;
+    const next = ways.reduce((best, spot) => (Math.hypot(spot.x - x, spot.y - y) < Math.hypot(best.x - x, best.y - y) ? spot : best));
+    x = next.x;
+    y = next.y;
+  }
+  return { x, y };
+}
+
+/**
+ * A rough drive time, in minutes, for a straight-line distance: roads run longer than the line (more so across town),
+ * and the average speed grows with the trip (city streets, then highways). Shown as an estimate wherever it shows; the
+ * distance is worked out on the device and goes nowhere.
+ */
+/** Miles as people say them: to the mile (a tenth under one), to the nearest 10 past 100 (879 and 881 both read 880). */
+export function aboutMiles(miles: number): number {
+  return miles >= 100 ? Math.round(miles / 10) * 10 : roundMiles(miles);
+}
+
+export function driveMinutes(miles: number): number {
+  const road = miles * (miles < 30 ? 1.35 : miles < 120 ? 1.25 : 1.15);
+  const mph = miles < 8 ? 22 : miles < 30 ? 30 : miles < 120 ? 50 : 65;
+  return Math.max(1, Math.round((road / mph) * 60));
+}
+
 /**
  * The camera at `t` (0–1) on the way from a close, tilted view of one task's area (`from`) to the city view
  * (`to`): it pulls back and flattens. The center moves so the task drifts smoothly on screen from the middle to

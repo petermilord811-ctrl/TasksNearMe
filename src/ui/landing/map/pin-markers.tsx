@@ -23,6 +23,7 @@ export function PinMarker({
   lit,
   picked,
   quiet,
+  dimmed = false,
   hidden,
   appear,
   onEnter,
@@ -36,6 +37,8 @@ export function PinMarker({
   lit: boolean;
   picked: boolean;
   quiet: boolean;
+  /** Another task is pointed at: this one steps back a little, so that one stands out. */
+  dimmed?: boolean;
   hidden: boolean;
   /** How it comes onto the map: `drop` (a task posted just now), `fade` (a filter brought it back), or simply there. */
   appear?: 'drop' | 'fade';
@@ -72,6 +75,7 @@ export function PinMarker({
       className={cn(
         'relative grid place-items-center transition-[opacity,filter,transform] duration-300 ease-[var(--ease-out)]',
         quiet && !on && 'opacity-25 saturate-50',
+        dimmed && !quiet && !on && 'opacity-45',
         hidden && 'pointer-events-none scale-75 opacity-0',
       )}
       onPointerEnter={onEnter}
@@ -124,6 +128,7 @@ export function ClusterMarker({
   activeCategory,
   hidden,
   blooming = false,
+  dimmed = false,
   onExpand,
 }: {
   counts: number[];
@@ -131,11 +136,14 @@ export function ClusterMarker({
   label?: string;
   activeCategory: string | null;
   hidden: boolean;
-  /** Its tasks are fanned out around it: it stays as their middle, a little quieter. */
+  /** Its tasks are fanned out around it: it stays as their middle, collapsed to its count. */
   blooming?: boolean;
+  /** Another group is open, or a neighborhood is picked that isn't this one's: it steps back. */
+  dimmed?: boolean;
   onExpand: () => void;
 }) {
-  const size = label ? 40 : total >= 25 ? 58 : total >= 10 ? 52 : 46;
+  const named = blooming ? undefined : label;
+  const size = named ? 40 : total >= 25 ? 58 : total >= 10 ? 52 : 46;
   const radius = 19;
   const circumference = 2 * Math.PI * radius;
   const arcs = donutArcs(counts);
@@ -150,9 +158,10 @@ export function ClusterMarker({
       }}
       className={cn(
         'inline-flex cursor-pointer items-center rounded-full bg-card shadow-[0_10px_26px_-12px_rgb(0_0_0/0.55)] transition-[opacity,transform] duration-300 ease-[var(--ease-out)] hover:scale-[1.05] active:scale-95',
-        label && 'gap-1.5 py-1 pr-3 pl-1',
+        named && 'gap-1.5 py-1 pr-3 pl-1',
         activeCount === 0 && 'opacity-35',
-        blooming && 'scale-90 ring-2 ring-violet/40',
+        blooming && 'scale-90 ring-2 ring-violet/60',
+        dimmed && !blooming && 'opacity-30 saturate-50',
         hidden && 'pointer-events-none scale-75 opacity-0',
       )}
     >
@@ -179,9 +188,9 @@ export function ClusterMarker({
             );
           })}
         </svg>
-        <span className={cn('relative font-display leading-none font-semibold tabular-nums', label ? 'text-[13px]' : 'text-[15px]')}>{activeCount ?? total}</span>
+        <span className={cn('relative font-display leading-none font-semibold tabular-nums', named ? 'text-[13px]' : 'text-[15px]')}>{activeCount ?? total}</span>
       </span>
-      {label && <span className="text-[13px] font-semibold whitespace-nowrap">{label}</span>}
+      {named && <span className="text-[13px] font-semibold whitespace-nowrap">{named}</span>}
     </button>
   );
 }
@@ -196,6 +205,7 @@ export function BloomBadge({
   at,
   order,
   lit,
+  dimmed = false,
   reduced,
   onEnter,
   onLeave,
@@ -205,6 +215,8 @@ export function BloomBadge({
   at: { x: number; y: number };
   order: number;
   lit: boolean;
+  /** Another task of the group is pointed at. */
+  dimmed?: boolean;
   reduced: boolean;
   onEnter: () => void;
   onLeave: () => void;
@@ -238,8 +250,9 @@ export function BloomBadge({
         onPick();
       }}
       className={cn(
-        'pointer-events-auto absolute top-0 left-0 grid size-[34px] cursor-pointer place-items-center rounded-full border-[2.5px] bg-card shadow-[0_8px_18px_-8px_rgb(0_0_0/0.55)] transition-[box-shadow,background-color,color] duration-200',
-        lit && 'text-white',
+        'pointer-events-auto absolute top-0 left-0 grid size-[34px] cursor-pointer place-items-center rounded-full border-[2.5px] bg-card shadow-[0_8px_18px_-8px_rgb(0_0_0/0.55)] transition-[box-shadow,background-color,color,opacity,scale] duration-200',
+        lit && 'z-[1] scale-[1.18] text-white shadow-[0_12px_26px_-8px_rgb(0_0_0/0.65)]',
+        dimmed && !lit && 'opacity-40',
       )}
       style={{ transform: `translate(-50%, -50%) translate(${at.x}px, ${at.y}px)`, borderColor: color, ...(lit ? { background: `color-mix(in oklab, ${color} 68%, black)` } : { color }) }}
     >

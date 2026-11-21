@@ -183,14 +183,15 @@ export function NearbyList({ map, limit = 7, fill = false, className }: { map: L
                       className={cn(
                         'group/row relative flex items-center rounded-2xl border pr-1 transition-[background-color,border-color,box-shadow,translate] duration-300 ease-[var(--ease-out)]',
                         lit ? '-translate-y-px border-foreground/[0.07] bg-card shadow-[0_12px_28px_-18px_rgb(0_0_0/0.5)]' : 'border-transparent',
-                        picked && 'outline-2 outline-offset-2 outline-violet',
+                        // Drawn inside the row: the list's scrolling box would cut an outline outside it.
+                        picked && 'outline-2 -outline-offset-2 outline-violet',
                       )}
                     >
                       <Link
                         href={routes.publicTask(pin.slug)}
                         onFocus={(event) => focusRow(event, pin.id)}
                         onBlur={letGo}
-                        className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-2xl py-2.5 pl-3 outline-offset-2"
+                        className="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-2xl py-2.5 pl-3 -outline-offset-2"
                       >
                         <span aria-hidden="true" className="relative grid size-9 shrink-0 place-items-center rounded-full transition-transform duration-300 ease-[var(--ease-out)] group-hover/row:scale-105" style={{ background: `color-mix(in oklab, var(--cat-${pin.categorySlug}) 16%, transparent)`, color: `var(--cat-${pin.categorySlug})` }}>
                           <Icon className="size-4" />

@@ -63,6 +63,8 @@ interface ExplorerState {
   /** The live map is up (its own controls only make sense then). */
   liveReady: boolean;
   setLiveReady: (ready: boolean) => void;
+  /** The market's time zone (the minimap's hour). */
+  timeZone?: TimeZone;
   /** The visitor has come to the map (it's loading, or up): the tasks are kept live from then on. */
   setNear: (near: boolean) => void;
   request: MapFocusRequest | null;
@@ -180,6 +182,7 @@ export function MapExplorerProvider({
       setView,
       liveReady,
       setLiveReady,
+      timeZone,
       setNear,
       request,
       requestFocus,
@@ -199,7 +202,7 @@ export function MapExplorerProvider({
       watchAreas,
       setWatchAreas,
     }),
-    [sortChoice, withinMiles, followMap, view, setView, liveReady, request, requestFocus, layers, live.pins, live.arrivals, live.pulses, live.latest, live.dismissLatest, when, whenRange, mapPins, drawing, watchAreas],
+    [sortChoice, withinMiles, followMap, view, setView, liveReady, timeZone, request, requestFocus, layers, live.pins, live.arrivals, live.pulses, live.latest, live.dismissLatest, when, whenRange, mapPins, drawing, watchAreas],
   );
   return <ExplorerContext.Provider value={value}>{children}</ExplorerContext.Provider>;
 }

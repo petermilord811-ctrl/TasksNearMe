@@ -78,11 +78,15 @@ describe('the map’s palette for the light', () => {
     expect(mixHex('oklch(0.5 0.1 200)', '#fff', 0.5)).toBe('oklch(0.5 0.1 200)');
   });
 
-  it('keeps the day’s palette by day, and dims the land with the roads lit at night', () => {
+  it('keeps the day’s palette by day; at night the light theme turns cool and moonlit but stays light, roads lit', () => {
     expect(clockColors(light, clockLight(30, false), false)).toEqual(light);
     const night = clockColors(light, clockLight(-20, false), false);
-    expect(luminance(night.land)).toBeLessThan(luminance(light.land) * 0.8);
-    expect(luminance(night.land)).toBeGreaterThan(0.3);
+    // Owner, 2026-11-21: a slate tint read as a muddy page. A little dimmer and bluer, never dark.
+    expect(luminance(night.land)).toBeLessThan(luminance(light.land));
+    expect(luminance(night.land)).toBeGreaterThan(luminance(light.land) * 0.82);
+    const red = (hex: string) => parseInt(hex.slice(1, 3), 16);
+    const blue = (hex: string) => parseInt(hex.slice(5, 7), 16);
+    expect(blue(night.land) - red(night.land)).toBeGreaterThan(blue(light.land) - red(light.land));
     expect(night.roadMajor).not.toBe(light.roadMajor);
     // Labels keep their colors (they stay readable).
     expect(night.labelStrong).toBe(light.labelStrong);

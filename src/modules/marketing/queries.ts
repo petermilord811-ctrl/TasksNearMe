@@ -17,6 +17,7 @@ import type {
   WaitlistDemand,
   WaitlistPageData,
   LandingMapData,
+  MapCity,
   TaskMapPin,
 } from '@/contracts';
 import {
@@ -145,7 +146,7 @@ const MAP_PINS = 60;
 const KM_PER_MILE = 1.609344;
 
 async function landingMap(market: { id: string; centerLat: number; centerLng: number; serviceRadiusKm: number }, rows: RowScope): Promise<LandingMapData> {
-  const [open, areaRows, helperRows] = await Promise.all([
+  const [open, areaRows, helperRows, cityRows] = await Promise.all([
     listRecentOpenTasks(db, { marketId: market.id, limit: MAP_PINS, now: new Date(), rows }),
     db
       .select({ id: areaTable.id, name: areaTable.name, slug: areaTable.slug, lat: areaTable.centerLat, lng: areaTable.centerLng })
@@ -161,6 +162,12 @@ async function landingMap(market: { id: string; centerLat: number; centerLng: nu
       .innerJoin(areaTable, eq(areaTable.id, helperProfiles.areaId))
       .where(and(eq(areaTable.marketId, market.id), eq(helperProfiles.status, 'active'), isNotNull(helperProfiles.idVerifiedAt), eq(users.status, 'active'), rowScopeCondition(rows, users.id)))
       .groupBy(helperProfiles.areaId),
+    // The cities for the minimap's view of the country: open or opening (a paused one isn't offered anywhere).
+    db
+      .select({ id: marketTable.id, slug: marketTable.slug, name: marketTable.name, state: marketTable.state, status: marketTable.status, lat: marketTable.centerLat, lng: marketTable.centerLng })
+      .from(marketTable)
+      .where(inArray(marketTable.status, ['live', 'prelaunch']))
+      .orderBy(asc(marketTable.name)),
   ]);
   const helpersByArea = new Map(helperRows.map((row) => [row.areaId, row.value]));
   const pins: TaskMapPin[] = open.flatMap((task) => taskMapPinOf(task) ?? []);
@@ -173,6 +180,9 @@ async function landingMap(market: { id: string; centerLat: number; centerLng: nu
     attribution: process.env.MAP_ATTRIBUTION || 'OpenFreeMap © OpenMapTiles Data from OpenStreetMap',
     areas: areaRows.map((row) => ({ name: row.name, slug: row.slug, point: { lat: row.lat, lng: row.lng }, helperCount: helpersByArea.get(row.id) ?? 0 })),
     pins,
+    cities: cityRows
+      .filter((row) => rows === 'all' || !row.id.startsWith('mkt_demo_'))
+      .map((row) => ({ slug: row.slug, name: row.name, state: row.state, status: row.status as MapCity['status'], point: { lat: row.lat, lng: row.lng } })),
   };
 }
 

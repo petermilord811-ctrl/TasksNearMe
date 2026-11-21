@@ -64,9 +64,9 @@ test.describe('the live map', () => {
 
   test('the minimap frames what the map shows, and a press there moves the map', async ({ page }) => {
     const map = await openLiveMap(page);
-    const minimap = map.locator('[data-minimap] svg');
+    const minimap = map.locator('[data-minimap-city]');
     await expect(minimap).toBeVisible();
-    const frame = map.locator('[data-minimap] polygon').last();
+    const frame = minimap.locator('polygon').last();
     await expect.poll(() => frame.getAttribute('points')).toMatch(/\d/);
     // Once the map has come to rest: the frame stops changing.
     let before = await frame.getAttribute('points');
@@ -94,6 +94,76 @@ test.describe('the live map', () => {
     await map.getByRole('switch', { name: 'Drive times' }).click();
     await expect(map.getByText('Driving from you, estimated:')).toBeVisible({ timeout: 30_000 });
     await expect(map.getByText('10 min')).toBeVisible();
+  });
+
+  test('far away: the minimap opens on the country, and the marker pointing to the visitor stays clear of the panels', async ({ page, context }) => {
+    await context.grantPermissions(['geolocation']);
+    await context.setGeolocation({ latitude: 32.7767, longitude: -96.797 }); // Dallas
+    const map = await openLiveMap(page);
+    const minimap = map.locator('[data-minimap]');
+    await expect(minimap.getByRole('button', { name: 'US', pressed: true })).toBeVisible();
+    // The nearest open city (or opening one, while none is open), and about how long the drive is.
+    await expect(minimap.getByText(/^You're [\d,]+ mi from [A-Z][a-z]+ · ≈\d+ (h|min) drive$/)).toBeVisible();
+    // Open cities link to their page, opening ones to the waitlist.
+    await expect(minimap.getByRole('link', { name: 'Gainesville' })).toHaveAttribute('href', /^\/(gainesville|waitlist)$/);
+    // The marker on the map's edge: solid, with the distance and the drive, and over none of the page's panels.
+    const pill = map.getByRole('button', { name: /^You're [\d,]+ mi from the middle of the map/ });
+    await expect(pill).toBeVisible();
+    await expect(pill).toContainText(/h drive/);
+    const box = (await pill.boundingBox())!;
+    for (const panel of await page.locator('[data-map-panel]').all()) {
+      const rect = await panel.boundingBox();
+      if (!rect || !(await panel.isVisible())) continue;
+      const overlaps = box.x < rect.x + rect.width && box.x + box.width > rect.x && box.y < rect.y + rect.height && box.y + box.height > rect.y;
+      expect(overlaps, `the marker over ${await panel.evaluate((element) => element.className.slice(0, 60))}`).toBe(false);
+    }
+    // Back to the city's view.
+    await minimap.getByRole('button', { name: 'City' }).click();
+    await expect(map.locator('[data-minimap-city]')).toBeVisible();
+  });
+
+  test("a task's card takes the pointer: crossing to it keeps it open, and its link opens the task in a new tab", async ({ page }) => {
+    const map = await openLiveMap(page);
+    const free = await page.evaluate(() => {
+      const heading = document.querySelector('[data-map-heading]')!.getBoundingClientRect();
+      const explorer = document.querySelector('[data-map-explorer]')!.getBoundingClientRect();
+      return { left: heading.right + 20, right: explorer.left - 20, top: 140, bottom: window.innerHeight - 160 };
+    });
+    let hovered = false;
+    for (const marker of await map.locator('.tnm-marker > div').all()) {
+      const box = await marker.boundingBox();
+      if (!box || box.x < free.left || box.x + box.width > free.right || box.y < free.top || box.y > free.bottom) continue;
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 4 });
+      if (await map.getByText('View task').isVisible()) {
+        hovered = true;
+        break;
+      }
+      await page.waitForTimeout(700);
+      if (await map.getByText('View task').isVisible()) {
+        hovered = true;
+        break;
+      }
+    }
+    expect(hovered).toBe(true);
+    const card = map.getByText('View task');
+    const target = (await card.boundingBox())!;
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 10 });
+    await page.waitForTimeout(600);
+    await expect(card).toBeVisible();
+    await expect(card.locator('xpath=ancestor::div[contains(@class,"group/pin")]//a')).toHaveAttribute('target', '_blank');
+  });
+
+  test('full screen: the row of tasks turns with a mouse wheel, and the map keeps its attribution', async ({ page }) => {
+    const map = await openLiveMap(page);
+    await map.getByRole('button', { name: 'Open the map full screen' }).click();
+    const rail = page.getByRole('list', { name: 'Tasks on the map' });
+    await expect(rail).toBeVisible();
+    await expect(page.getByText(/OpenStreetMap/).first()).toBeVisible();
+    const box = (await rail.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    const before = await rail.evaluate((element) => element.scrollLeft);
+    await page.mouse.wheel(0, 120);
+    await expect.poll(() => rail.evaluate((element) => element.scrollLeft)).toBeGreaterThan(before);
   });
 
   test("a neighborhood's card under the pointer, and a click narrows the list to it", async ({ page }) => {

@@ -4,13 +4,14 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, LazyMotion, domMax, m } from 'motion/react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { ArrowUp, House } from 'lucide-react';
 import { LngLat, LngLatBounds, Map as MapLibreMap, Marker, getVersion, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl';
 import { CATEGORY_SLUGS, routes, type LandingMapData, type MapArea, type TaskMapPin } from '@/contracts';
 import { formatMoney } from '@/shared/format';
-import { distanceMiles, roundMiles, type LatLng } from '@/shared/geo';
+import { distanceMiles, type LatLng } from '@/shared/geo';
 import { usePrefersReducedMotion } from '@/ui/motion';
+import { localeHref } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
 import { addAreaGlowLayers, createAreaGlow, type AreaGlow } from './area-glow';
 import { applyRestyle, CLOCK_GLOW_LAYER, preparedBaseStyle } from './base-style';
@@ -18,11 +19,11 @@ import { clockColors, isDarkColor, lightAt, roadGlowOpacity, sameLight, type Clo
 import { buildRoadGraph, reachedRoads, ROAD_MPH, type RoadLine } from './drive-times';
 import { simplifyPath, usableOutline, type ScreenPoint } from './lasso';
 import type { MapPulse } from './live';
-import { areaCells, ringBounds, type AreaCell } from './neighborhoods';
+import { areaCells, type AreaCell } from './neighborhoods';
 import { watchPlainWheel, type WheelHint } from './wheel-hint';
 import type { ArrivalSource } from './arrival';
 import { DEFAULT_LAYERS as DEFAULT_VIEW_LAYERS, type MapFocusRequest, type MapLayers } from './explorer-state';
-import { arrivalCamera, BLOOM_MAX, bloomOffsets, circleBounds, circleRing, edgeMarker, medianCents, METERS_PER_MILE, outsideCircle, type EdgeBox, type MapCamera, type ViewBounds } from './map-math';
+import { aboutMiles, arrivalCamera, BLOOM_MAX, bloomOffsets, circleBounds, circleRing, driveMinutes, edgeMarker, medianCents, METERS_PER_MILE, outsideCircle, stepAroundPanels, type EdgeBox, type MapCamera, type ScreenRect, type ViewBounds } from './map-math';
 import { PinCardBody, pinPrice } from './pin-card';
 import { BloomBadge, CHIP_ZOOM, ClusterMarker, PinMarker } from './pin-markers';
 import { extrusionLayers, firstSymbolLayer, readMapColors, restylePlan, type MapColors } from './restyle';
@@ -134,8 +135,8 @@ const RADIUS = 'you-radius';
 const SERVICE = 'service-area';
 const OUTSIDE = 'service-outside';
 /** The pin card needs about this much room above its pin; nearer the top edge it opens below. */
-const CARD_ROOM_PX = 236;
-const CARD_HALF_WIDTH_PX = 132;
+const CARD_ROOM_PX = 290;
+const CARD_HALF_WIDTH_PX = 144;
 /** Moving from one pin to the next, the open card glides there (ms, ease-out). */
 const CARD_GLIDE_MS = 280;
 const EASE_OUT = 'cubic-bezier(0.22, 1, 0.36, 1)';
@@ -156,11 +157,15 @@ const AREAS = 'areas';
 const DRIVE = 'drive-times';
 /** A home neighborhood is drawn as a soft area about this wide (its center isn't the house). */
 const HOME_AREA_METERS = 900;
+/** How close a press on a neighborhood brings the map, at most. */
+const AREA_FOCUS_MAX_ZOOM = 15;
 /** The pointer rests this long over a neighborhood before its card shows. */
 const AREA_CARD_DELAY_MS = 280;
 /** Drive times: the roads reached within these many minutes. */
 const DRIVE_BANDS = [10, 20];
 const DRIVE_REVEAL_MS = 1100;
+/** The 20-minute band's color (sky blue; the 10-minute band is the page's violet). */
+const DRIVE_FAR_COLOR = '#38bdf8';
 /** The map's light is checked against the clock this often. */
 const CLOCK_CHECK_MS = 5 * 60_000;
 /** A chip's rough width for its price (DM Sans digits), for laying chips out without overlaps. */
@@ -189,7 +194,33 @@ type MarkerView = Omit<MarkerRecord, 'marker'>;
 function paddingFor(room: Padding | undefined, width: number, height: number) {
   if (!room) return { top: 0, right: 0, bottom: 0, left: 0 };
   const visible = Math.min(height, typeof window === 'undefined' ? height : window.innerHeight);
-  return { top: room.top * visible, right: room.right * width, bottom: height - visible + room.bottom * visible, left: room.left * width };
+  // A fraction of the map, or pixels (above 1: a panel measured by the page).
+  const across = (value: number, size: number) => (value > 1 ? value : value * size);
+  return { top: across(room.top, visible), right: across(room.right, width), bottom: height - visible + across(room.bottom, visible), left: across(room.left, width) };
+}
+
+/**
+ * The page's panels over the map (`data-map-panel`: the heading's card, the explorer, the controls, the minimap), as
+ * rectangles on the map: the marker that points to the visitor steps around them. Hidden ones (full screen) don't count.
+ */
+const panelCache = new WeakMap<HTMLElement, { at: number; rects: ScreenRect[] }>();
+function panelRects(container: HTMLElement): ScreenRect[] {
+  // Read at most every 200 ms: the panels don't move with the map, and this runs on each frame of a move.
+  const cached = panelCache.get(container);
+  if (cached && performance.now() - cached.at < 200) return cached.rects;
+  const rects = readPanelRects(container);
+  panelCache.set(container, { at: performance.now(), rects });
+  return rects;
+}
+function readPanelRects(container: HTMLElement): ScreenRect[] {
+  const box = container.getBoundingClientRect();
+  const scope = container.closest('section') ?? document;
+  return Array.from(scope.querySelectorAll<HTMLElement>('[data-map-panel]')).flatMap((panel) => {
+    if (panel.offsetParent === null || getComputedStyle(panel).visibility === 'hidden') return [];
+    const rect = panel.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return [];
+    return [{ left: rect.left - box.left, top: rect.top - box.top, right: rect.right - box.left, bottom: rect.bottom - box.top }];
+  });
 }
 
 /**
@@ -332,9 +363,20 @@ export function MapLibreView({
     window.clearTimeout(clearTimer.current);
     clearTimer.current = window.setTimeout(() => {
       if (latest.current.lit === id) latest.current.onHighlight(null);
-    }, 260);
+    }, 340);
   };
   const pinsById = useMemo(() => new Map(pins.map((pin) => [pin.id, pin])), [pins]);
+  const locale = useLocale();
+  /** A press on a task with a mouse opens its page in a new tab, so the map stays as it was (owner, 2026-11-21); a tap
+   * on a touch screen opens its card first (there's no pointing there), whose link does the same. */
+  const pressTask = (pin: TaskMapPin) => {
+    stopArrival.current();
+    if (typeof window.matchMedia === 'function' && window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      window.open(localeHref(routes.publicTask(pin.slug), locale), '_blank', 'noopener');
+      return;
+    }
+    onPick?.(pin.id);
+  };
   // A bloom whose tasks went (a new time filter, a booking) is closed.
   const bloom = bloomState && bloomState.ids.every((id) => pinsById.has(id)) ? bloomState : null;
 
@@ -576,8 +618,9 @@ export function MapLibreView({
       set('service-line', 'line-color', ring);
       set('service-outside-fill', 'fill-color', land);
       for (const layer of ['areas-fill', 'areas-line', 'areas-glow']) set(layer, layer === 'areas-fill' ? 'fill-color' : 'line-color', violet);
-      set('drive-glow', 'line-color', violet);
-      set('drive-line', 'line-color', ['match', ['get', 'band'], DRIVE_BANDS[0]!, violet, ring]);
+      // 10 minutes in violet, 20 in sky blue: two bands that tell apart at a glance (both violet didn't).
+      set('drive-glow', 'line-color', ['match', ['get', 'band'], DRIVE_BANDS[0]!, violet, DRIVE_FAR_COLOR]);
+      set('drive-line', 'line-color', ['match', ['get', 'band'], DRIVE_BANDS[0]!, violet, DRIVE_FAR_COLOR]);
       // The roads lit at night: warm, and only while the map follows the clock.
       const dark = isDarkColor(css(container, '--map-land', '#efe5d7'));
       set(CLOCK_GLOW_LAYER, 'line-color', dark ? '#ff9a4a' : '#ffb35c');
@@ -653,6 +696,7 @@ export function MapLibreView({
         if (recordsNow.has(key)) continue;
         const element = document.createElement('div');
         element.className = 'tnm-marker';
+        element.dataset.markerKey = key;
         element.setAttribute('aria-hidden', 'true');
         const marker = new Marker({ element, anchor: 'center', pitchAlignment: 'viewport', rotationAlignment: 'viewport' }).setLngLat(view.at).addTo(instance);
         recordsNow.set(key, { ...view, element, marker });
@@ -1059,8 +1103,10 @@ export function MapLibreView({
     const element = document.createElement('div');
     element.className = 'tnm-you';
     element.setAttribute('aria-hidden', 'true');
-    // The dot never stands in the way of a pin under it.
+    // Over the tasks, so "here" always shows (owner, 2026-11-21: it got lost under a group), yet it never stands in the
+    // way of a pin under it: clicks go through.
     element.style.pointerEvents = 'none';
+    element.style.zIndex = '5';
     return element;
   });
   const youMarker = useRef<Marker | null>(null);
@@ -1122,6 +1168,11 @@ export function MapLibreView({
   const edgeRef = useRef<HTMLButtonElement>(null);
   const arrowRef = useRef<SVGSVGElement>(null);
   const [edgeMiles, setEdgeMiles] = useState<number | null>(null);
+  /** About how long the drive is (an estimate from the straight-line distance, worked out on the device). */
+  const tripLabel = (miles: number) => {
+    const minutes = driveMinutes(miles);
+    return minutes < 60 ? t('tripMinutes', { minutes }) : t('tripHours', { hours: Math.round(minutes / 60) });
+  };
   const placeEdge = useRef<() => void>(() => {});
   useEffect(() => {
     if (!live || live !== mapRef.current || !userPoint || !settled) return;
@@ -1137,9 +1188,11 @@ export function MapLibreView({
       // Left and right: clear of the page's panels (the explorer); top: the page's bar; bottom: what the camera keeps
       // clear there (the full screen's cards) or the page's own buttons, within the part of the map a screen shows.
       const visible = Math.min(height, window.innerHeight);
+      const panels = panelRects(container);
       const box: EdgeBox = {
-        left: Math.max(14, room.left * 0.4),
-        right: width - Math.max(14, room.right + 10),
+        left: 14,
+        // Phones and full screen have no panels over the map: the camera's room stands in for what's there.
+        right: width - (panels.length > 0 ? 14 : Math.max(14, room.right + 10)),
         top: insets.top,
         bottom: visible - Math.max(insets.bottom, room.bottom - (height - visible), 14),
       };
@@ -1151,12 +1204,17 @@ export function MapLibreView({
         return;
       }
       const center = live.getCenter();
-      const miles = roundMiles(distanceMiles({ lat: center.lat, lng: center.lng }, userPoint));
+      const miles = aboutMiles(distanceMiles({ lat: center.lat, lng: center.lng }, userPoint));
       setEdgeMiles((current) => (current === miles ? current : miles));
       if (!element) return;
-      // The pill stays whole inside the box; its arrow keeps pointing at the place itself.
-      const x = Math.min(Math.max(spot.x, box.left + EDGE_HALF.x), box.right - EDGE_HALF.x);
-      const y = Math.min(Math.max(spot.y, box.top + EDGE_HALF.y), box.bottom - EDGE_HALF.y);
+      // The pill stays whole inside the box and clear of the panels; its arrow keeps pointing at the place itself.
+      const half = { x: Math.max(EDGE_HALF.x, element.offsetWidth / 2), y: EDGE_HALF.y };
+      const { x, y } = stepAroundPanels(
+        { x: Math.min(Math.max(spot.x, box.left + half.x), box.right - half.x), y: Math.min(Math.max(spot.y, box.top + half.y), box.bottom - half.y) },
+        half,
+        box,
+        panels,
+      );
       element.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0) translate(-50%, -50%)`;
       const angle = Math.atan2(at.y - y, at.x - x);
       if (arrowRef.current) arrowRef.current.style.transform = `rotate(${angle + Math.PI / 2}rad)`;
@@ -1224,6 +1282,7 @@ export function MapLibreView({
 
   // Drive times from the visitor: the roads reached within 10 and 20 minutes, worked out here from the roads the map
   // has loaded (again after a move brings in more), fading in outward from them the first time.
+  const driveFramed = useRef(false);
   useEffect(() => {
     if (!live || live !== mapRef.current) return;
     const source = live.getSource(DRIVE) as GeoJSONSource | undefined;
@@ -1234,7 +1293,21 @@ export function MapLibreView({
       // Faded right out, so turning them on again fades in from nothing.
       for (const layer of ['drive-glow', 'drive-line']) if (live.getLayer(layer)) live.setPaintProperty(layer, 'line-opacity', 0);
       latest.current.onDriveTimes?.('off');
+      driveFramed.current = false;
       return;
+    }
+    // Just turned on: bring the roads around the start into the map (20 minutes reach about 8 miles), once, unless
+    // they're already there at a useful zoom.
+    if (!driveFramed.current) {
+      driveFramed.current = true;
+      const at = live.project([origin.lng, origin.lat]);
+      const box = live.getContainer();
+      const room = live.getPadding();
+      const inSight = at.x >= (room.left ?? 0) && at.x <= box.clientWidth - (room.right ?? 0) && at.y >= (room.top ?? 0) && at.y <= box.clientHeight - (room.bottom ?? 0);
+      if (!inSight || live.getZoom() < 10.4 || live.getZoom() > 12.8) {
+        stopArrival.current();
+        live.flyTo({ center: [origin.lng, origin.lat], zoom: 11.2, ...(lastBuildings.current ? {} : { pitch: 0, bearing: 0 }), duration: latest.current.reduced ? 0 : 1100 });
+      }
     }
     const roads = Object.entries(live.getStyle().sources ?? {}).find(([, spec]) => spec.type === 'vector')?.[0];
     if (!roads) {
@@ -1343,6 +1416,45 @@ export function MapLibreView({
   // A cluster in bloom: its tasks fanned out in a ring around it, which follows the map as it moves. A click
   // elsewhere, Escape, or zooming closes it; the cluster's own button again zooms in, as before.
   const bloomPins = useMemo(() => (bloom ? bloom.ids.flatMap((id) => pinsById.get(id) ?? []) : []), [bloom, pinsById]);
+  /**
+   * Which groups carry their neighborhood's name: one per neighborhood (its biggest: two groups in one neighborhood said
+   * it twice), and none whose name would run over another group or a name already placed (biggest groups first). A
+   * dropped name comes back closer in, as the groups spread out.
+   */
+  const labelOwners = useMemo(() => {
+    const owners = new Map<string, { key: string; total: number }>();
+    for (const view of markers) {
+      if (view.kind !== 'cluster' || !view.label) continue;
+      const best = owners.get(view.label);
+      if (!best || (view.total ?? 0) > best.total) owners.set(view.label, { key: view.key, total: view.total ?? 0 });
+    }
+    if (!live) return owners;
+    const clusters = markers.filter((view) => view.kind === 'cluster').map((view) => ({ view, at: live.project(view.at) }));
+    // Every group's circle is taken; a name, once placed, takes its pill too.
+    const taken: ScreenRect[] = clusters.map(({ at }) => ({ left: at.x - 22, top: at.y - 22, right: at.x + 22, bottom: at.y + 22 }));
+    const named = clusters.filter(({ view }) => view.label && owners.get(view.label)?.key === view.key).sort((a, b) => (b.view.total ?? 0) - (a.view.total ?? 0));
+    for (const { view, at } of named) {
+      const pill = { left: at.x + 22, top: at.y - 16, right: at.x + 30 + view.label!.length * 7.6, bottom: at.y + 16 };
+      const own = { left: at.x - 22, top: at.y - 22, right: at.x + 22, bottom: at.y + 22 };
+      const hit = taken.some((box) => !(box.left === own.left && box.top === own.top) && pill.left < box.right && box.left < pill.right && pill.top < box.bottom && box.top < pill.bottom);
+      if (hit) owners.delete(view.label!);
+      else taken.push(pill);
+    }
+    return owners;
+  }, [markers, live]);
+  // Stacking: an open group over everything, then the groups that carry a name (another group beside them goes under
+  // their label, rather than cutting it), then single tasks.
+  useLayoutEffect(() => {
+    const container = live?.getContainer();
+    if (!container) return;
+    for (const view of markers) {
+      if (view.kind !== 'cluster') continue;
+      const element = container.querySelector<HTMLElement>(`[data-marker-key="${view.key}"]`);
+      if (!element) continue;
+      const named = Boolean(view.label && labelOwners.get(view.label)?.key === view.key);
+      element.style.zIndex = bloom?.key === view.key ? '4' : named ? '3' : '2';
+    }
+  }, [live, markers, labelOwners, bloom]);
   /** Where each task of the bloom sits, from the cluster's middle (pixels): its card opens there. */
   const bloomSpots = useMemo(() => {
     const offsets = bloomOffsets(bloomPins.length);
@@ -1422,12 +1534,20 @@ export function MapLibreView({
     stopArrival.current();
     const duration = reduced ? 0 : 1000;
     if (request.kind === 'area') {
-      // The whole neighborhood (as the map draws it), or its center when it has no area on this map.
+      // In to the neighborhood's tasks (or its middle), and never farther out than the map is now: a press is to see
+      // it closer (fitting a big neighborhood's whole outline used to pull the map back out).
       const cell = cellsRef.current.find((item) => Math.abs(item.point.lat - request.point.lat) < 1e-9 && Math.abs(item.point.lng - request.point.lng) < 1e-9);
-      if (cell) {
-        const box = ringBounds(cell.ring);
-        live.fitBounds([box.west, box.south, box.east, box.north], { padding: 48, maxZoom: 13.6, duration });
-      } else live.flyTo({ center: [request.point.lng, request.point.lat], zoom: 13.4, pitch: live.getPitch(), duration });
+      const inside = cell ? pins.filter((pin) => pin.areaName === cell.name) : [];
+      const closer = Math.min(AREA_FOCUS_MAX_ZOOM, live.getZoom() + 1);
+      if (inside.length > 1) {
+        const bounds = new LngLatBounds();
+        for (const pin of inside) bounds.extend([pin.point.lng, pin.point.lat]);
+        const fit = live.cameraForBounds(bounds, { padding: 72, maxZoom: AREA_FOCUS_MAX_ZOOM });
+        live.flyTo({ center: bounds.getCenter(), zoom: Math.min(AREA_FOCUS_MAX_ZOOM, Math.max(fit?.zoom ?? closer, closer)), pitch: live.getPitch(), duration });
+      } else {
+        const at = inside[0]?.point ?? request.point;
+        live.flyTo({ center: [at.lng, at.lat], zoom: Math.min(AREA_FOCUS_MAX_ZOOM, Math.max(13.6, closer)), pitch: live.getPitch(), duration });
+      }
       return;
     }
     const pin = pins.find((item) => item.id === request.id);
@@ -1469,14 +1589,26 @@ export function MapLibreView({
       // A task of a cluster in bloom: its card opens where it sits in the ring.
       const spot = bloom && bloomSpots.get(cardPin.id);
       const at = spot ? { x: live.project(bloom.at).x + spot.x, y: live.project(bloom.at).y + spot.y } : projected;
-      // Keep the card inside the map's width (it's 256 px wide, centered on the pin).
-      const width = live.getContainer().clientWidth;
-      const x = Math.min(Math.max(at.x, CARD_HALF_WIDTH_PX), Math.max(CARD_HALF_WIDTH_PX, width - CARD_HALF_WIDTH_PX));
+      const container = live.getContainer();
+      const width = container.clientWidth;
+      const panels = panelRects(container);
+      const half = CARD_HALF_WIDTH_PX;
+      // Above the pin, unless the room there (to the map's top, or to a panel over the map) is short: then below.
+      const ceiling = Math.max(0, ...panels.filter((panel) => panel.bottom <= at.y && panel.right > at.x - half && panel.left < at.x + half).map((panel) => panel.bottom));
+      const placement = at.y - ceiling < CARD_ROOM_PX ? 'below' : 'above';
+      // Inside the map's width, and off the side of any panel it would cover (the card is 288 px wide, on the pin).
+      const top = placement === 'above' ? at.y - CARD_ROOM_PX : at.y;
+      const bottom = placement === 'above' ? at.y : at.y + CARD_ROOM_PX;
+      let x = Math.min(Math.max(at.x, half), Math.max(half, width - half));
+      for (const panel of panels) {
+        if (panel.bottom <= top || panel.top >= bottom || x + half + 8 <= panel.left || x - half - 8 >= panel.right) continue;
+        if (panel.left >= at.x) x = Math.min(x, panel.left - half - 8);
+        else if (panel.right <= at.x) x = Math.max(x, panel.right + half + 8);
+      }
       const fromX = Number.parseFloat(element.style.left);
       const fromY = Number.parseFloat(element.style.top);
       element.style.left = `${x}px`;
       element.style.top = `${at.y}px`;
-      const placement = at.y < CARD_ROOM_PX ? 'below' : 'above';
       setCardPlacement((current) => (current === placement ? current : placement));
       if (glide && !latest.current.reduced && Number.isFinite(fromX) && Number.isFinite(fromY) && (fromX !== x || fromY !== at.y)) {
         element.animate([{ transform: `translate(${fromX - x}px, ${fromY - at.y}px)` }, { transform: 'translate(0, 0)' }], { duration: CARD_GLIDE_MS, easing: EASE_OUT });
@@ -1540,10 +1672,12 @@ export function MapLibreView({
             <ClusterMarker
               counts={view.counts ?? []}
               total={view.total ?? 0}
-              label={view.label}
+              label={view.label && labelOwners.get(view.label)?.key === view.key ? view.label : undefined}
               activeCategory={activeCategory}
               hidden={heat}
               blooming={bloom?.key === view.key}
+              // Focus: another group open, or a neighborhood picked that isn't this one's.
+              dimmed={(Boolean(bloom) && bloom?.key !== view.key) || (selectedArea !== null && selectedArea !== undefined && view.label !== selectedArea)}
               onExpand={async () => {
                 const source = live?.getSource(TASKS) as GeoJSONSource | undefined;
                 if (!live || !source || view.clusterId === undefined) return;
@@ -1555,6 +1689,8 @@ export function MapLibreView({
                     const ids = leaves.map((leaf) => String(leaf.properties?.pinId)).filter((id) => pinsById.has(id));
                     if (ids.length > 1) {
                       setBloom({ key: view.key, at: view.at, ids });
+                      // Into the middle of the free part of the map, without zooming (that would close it).
+                      live.easeTo({ center: view.at, duration: reduced ? 0 : 650 });
                       return;
                     }
                   } catch {
@@ -1579,7 +1715,8 @@ export function MapLibreView({
             chip={band === 'near' && chips.has(pin.id)}
             lit={pin.id === shownId}
             picked={pin.id === pickedTaskId}
-            quiet={(activeCategory !== null && pin.categorySlug !== activeCategory) || Boolean(outside?.has(pin.id))}
+            quiet={(activeCategory !== null && pin.categorySlug !== activeCategory) || Boolean(outside?.has(pin.id)) || (Boolean(selectedArea) && pin.areaName !== selectedArea) || Boolean(bloom)}
+            dimmed={Boolean(litTaskId) && litTaskId !== pin.id}
             hidden={heat || Boolean(bloom?.ids.includes(pin.id))}
             appear={arrivals?.has(pin.id) ? 'drop' : entering.has(pin.id) ? 'fade' : undefined}
             onEnter={() => {
@@ -1587,10 +1724,7 @@ export function MapLibreView({
               onHighlight(pin.id);
             }}
             onLeave={() => letGoSoon(pin.id)}
-            onPick={() => {
-              stopArrival.current();
-              onPick?.(pin.id);
-            }}
+            onPick={() => pressTask(pin)}
           />,
           view.element,
           view.key,
@@ -1608,15 +1742,21 @@ export function MapLibreView({
           aria-label={edgeMiles !== null ? t(userSource === 'home' ? 'homeEdgeLabel' : 'youEdgeLabel', { miles: edgeMiles }) : undefined}
           title={edgeMiles !== null ? t(userSource === 'home' ? 'homeEdgeLabel' : 'youEdgeLabel', { miles: edgeMiles }) : undefined}
           className={cn(
-            'glass absolute top-0 left-0 z-[6] inline-flex h-10 items-center gap-2 rounded-full pr-3.5 pl-1.5 text-xs font-semibold whitespace-nowrap text-foreground shadow-overlay transition-[opacity,scale] duration-300 ease-[var(--ease-out)] will-change-transform hover:text-violet active:scale-95',
+            // Solid and ringed in white, so it reads over any part of the map, in both themes.
+            'absolute top-0 left-0 z-[6] inline-flex h-10 items-center gap-2 rounded-full bg-violet pr-3.5 pl-1.5 text-xs font-semibold whitespace-nowrap text-white shadow-[0_0_0_2px_rgb(255_255_255/0.92),0_12px_28px_-10px_rgb(0_0_0/0.65)] transition-[opacity,scale,filter] duration-300 ease-[var(--ease-out)] will-change-transform hover:brightness-110 active:scale-95',
             edgeShown ? 'scale-100 opacity-100' : 'pointer-events-none scale-90 opacity-0',
           )}
         >
-          <span aria-hidden="true" className="relative grid size-7 shrink-0 place-items-center rounded-full bg-violet text-white">
-            <span className="absolute inset-0 animate-[live-ping_2.6s_var(--ease-out)_infinite] rounded-full bg-violet motion-reduce:animate-none" />
-            <ArrowUp ref={arrowRef} className="relative size-3.5" />
+          <span aria-hidden="true" className="relative grid size-7 shrink-0 place-items-center rounded-full bg-white text-violet">
+            <span className="absolute inset-0 animate-[live-ping_2.6s_var(--ease-out)_infinite] rounded-full bg-white/70 motion-reduce:animate-none" />
+            <ArrowUp ref={arrowRef} className="relative size-3.5" strokeWidth={2.75} />
           </span>
-          {edgeMiles !== null && t(userSource === 'home' ? 'homeEdge' : 'youEdge', { miles: edgeMiles })}
+          {edgeMiles !== null && (
+            <>
+              {t(userSource === 'home' ? 'homeEdge' : 'youEdge', { miles: edgeMiles })}
+              <span className="font-medium text-white/85">· {tripLabel(edgeMiles)}</span>
+            </>
+          )}
         </button>
       )}
       {/* A neighborhood pointed at: its card by the pointer (decorative; the explorer's picker and the list are the
@@ -1651,13 +1791,14 @@ export function MapLibreView({
               at={bloomSpots.get(pin.id)!}
               order={index}
               lit={pin.id === shownId || pin.id === pickedTaskId}
+              dimmed={Boolean(litTaskId) && litTaskId !== pin.id}
               reduced={reduced}
               onEnter={() => {
                 window.clearTimeout(clearTimer.current);
                 onHighlight(pin.id);
               }}
               onLeave={() => letGoSoon(pin.id)}
-              onPick={() => onPick?.(pin.id)}
+              onPick={() => pressTask(pin)}
             />
           ))}
         </div>
@@ -1707,7 +1848,12 @@ export function MapLibreView({
               <m.div
                 // A pointed-at task's card is a preview: clicks go through it to the pins under it. A picked one's
                 // takes them (its link, its close button).
-                className={cn('absolute left-0 w-64 -translate-x-1/2', cardPin.id === pickedTaskId ? 'pointer-events-auto' : 'pointer-events-none', cardPlacement === 'below' ? 'top-[26px]' : 'bottom-[26px]')}
+                // It takes clicks (its link opens the task in a new tab), and a bridge over the gap to its pin keeps it
+                // open while the pointer crosses to it.
+                className={cn(
+                  "pointer-events-auto absolute left-0 w-72 -translate-x-1/2 before:absolute before:inset-x-6 before:h-[30px] before:content-['']",
+                  cardPlacement === 'below' ? 'top-[26px] before:-top-[28px]' : 'bottom-[26px] before:-bottom-[28px]',
+                )}
                 style={{ transformOrigin: cardPlacement === 'below' ? '50% 0%' : '50% 100%' }}
                 initial={reduced ? false : { opacity: 0, scale: 0.93, y: cardPlacement === 'below' ? -8 : 8 }}
                 animate={{ opacity: 1, scale: 1, y: 0, transition: reduced ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 32, mass: 0.75 } }}
@@ -1747,16 +1893,52 @@ export function MapLibreView({
   );
 }
 
-/** A signed-in helper's home neighborhood on the map: a house in a violet badge, with its name under it (still: a home
- * doesn't move, so nothing breathes). */
+/**
+ * Where the visitor is: a target (a ring with four ticks, like a plus) around a violet dot ringed in white, with a soft
+ * breath, so it reads as "here" over any part of the map, in both themes, and never as a task. "You" under it.
+ */
+function YouDot({ label }: { label: string }) {
+  return (
+    <span className="relative grid size-14 place-items-center">
+      <span className="absolute inset-3 animate-[live-ping_2.6s_var(--ease-out)_infinite] rounded-full bg-violet/45 motion-reduce:animate-none" />
+      <PlusTarget />
+      <span className="relative size-4 rounded-full border-[3px] border-white bg-violet shadow-[0_0_0_1.5px_rgb(0_0_0/0.4),0_2px_10px_rgb(0_0_0/0.45)]" />
+      <MarkerLabel>{label}</MarkerLabel>
+    </span>
+  );
+}
+
+/** A signed-in helper's home neighborhood: the same target around a house (still: a home doesn't move, so nothing
+ * breathes), with its name under it. */
 function HomeDot({ label }: { label: string }) {
   return (
-    <span className="relative grid size-8 place-items-center">
-      <span className="relative grid size-7 place-items-center rounded-[10px] border-2 border-white bg-violet text-white shadow-[0_3px_12px_rgb(0_0_0/0.35)]">
+    <span className="relative grid size-14 place-items-center">
+      <PlusTarget />
+      <span className="relative grid size-7 place-items-center rounded-[10px] border-2 border-white bg-violet text-white shadow-[0_0_0_1.5px_rgb(0_0_0/0.4),0_3px_12px_rgb(0_0_0/0.4)]">
         <House className="size-3.5" />
       </span>
-      <span className="absolute top-[calc(100%+3px)] left-1/2 -translate-x-1/2 rounded-full bg-violet px-1.5 text-[10px] leading-4 font-semibold whitespace-nowrap text-white shadow-[0_2px_6px_rgb(0_0_0/0.25)]">{label}</span>
+      <MarkerLabel>{label}</MarkerLabel>
     </span>
+  );
+}
+
+/** The target's ring and four ticks, with a dark edge under the violet so it holds on light and dark maps. */
+function PlusTarget() {
+  return (
+    <svg viewBox="0 0 56 56" aria-hidden="true" focusable="false" className="absolute inset-0 size-full overflow-visible">
+      <g fill="none" strokeLinecap="round">
+        <circle cx="28" cy="28" r="17" stroke="rgb(0 0 0 / 0.35)" strokeWidth="4.5" />
+        <path d="M28 2.5v9M28 44.5v9M2.5 28h9M44.5 28h9" stroke="rgb(0 0 0 / 0.35)" strokeWidth="5.5" />
+        <circle cx="28" cy="28" r="17" stroke="var(--violet)" strokeWidth="2.25" />
+        <path d="M28 2.5v9M28 44.5v9M2.5 28h9M44.5 28h9" stroke="var(--violet)" strokeWidth="3" />
+      </g>
+    </svg>
+  );
+}
+
+function MarkerLabel({ children }: { children: string }) {
+  return (
+    <span className="absolute top-[calc(100%-4px)] left-1/2 -translate-x-1/2 rounded-full bg-violet px-2 text-[11px] leading-5 font-semibold whitespace-nowrap text-white shadow-[0_0_0_1.5px_rgb(255_255_255/0.9),0_3px_8px_rgb(0_0_0/0.3)]">{children}</span>
   );
 }
 
@@ -1794,12 +1976,3 @@ function pulseElement(color: string, words: string): HTMLDivElement {
 }
 
 /** The visitor on the live map: a violet dot that breathes (it's live), and a small "You" under it. */
-function YouDot({ label }: { label: string }) {
-  return (
-    <span className="relative grid size-6 place-items-center">
-      <span className="absolute inset-0 animate-[live-ping_2.6s_var(--ease-out)_infinite] rounded-full bg-violet/50 motion-reduce:animate-none" />
-      <span className="relative size-[18px] rounded-full border-[3px] border-white bg-violet shadow-[0_2px_10px_rgb(0_0_0/0.35)]" />
-      <span className="absolute top-[calc(100%+3px)] left-1/2 -translate-x-1/2 rounded-full bg-violet px-1.5 text-[10px] leading-4 font-semibold whitespace-nowrap text-white shadow-[0_2px_6px_rgb(0_0_0/0.25)]">{label}</span>
-    </span>
-  );
-}

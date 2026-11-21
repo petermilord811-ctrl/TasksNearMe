@@ -6,6 +6,7 @@ import { AnimatePresence, LazyMotion, domMax, m } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { ArrowDownUp, ChevronDown, House, LocateFixed, Loader2, MapPin, Moon, Navigation, ShieldCheck, Sparkles, Sun, Sunrise, Sunset, X } from 'lucide-react';
 import { CATEGORY_SLUGS, routes, type CategorySlug, type HomePageData, type LandingMapData, type MapArea, type TaskBoardWhen } from '@/contracts';
+import { distanceMiles } from '@/shared/geo';
 import { readTaskIntent } from '@/shared/task-intent';
 import { useFormat } from '@/ui/lib/format';
 import { Reveal, spring, usePrefersReducedMotion } from '@/ui/motion';
@@ -15,16 +16,20 @@ import { MAP_LANDED_ATTRIBUTE, MAP_SECTION_ID, useLanding } from './landing-stat
 import { useArrivalDriver, WIDE_QUERY } from './map/arrival';
 import { lightAt, type ClockPhase } from './map/clock';
 import { MapExplorerProvider, useMapExplorer } from './map/explorer-state';
-import { effectiveSort, insideServiceArea, listOrigin, nearbyPins, type ListSort } from './map/map-math';
+import { aboutMiles, effectiveSort, insideServiceArea, listOrigin, nearbyPins, type ListSort } from './map/map-math';
 import { LIST_VIEWPORT_ATTRIBUTE, NearbyList } from './map/nearby-list';
 import { LiveTaskNote, TaskMap, type MapMode } from './map/task-map';
 
-/** Room the panels take over the full-width map on wide screens (fractions of the map): the camera stays clear. */
-const WIDE_PADDING = { top: 0.5, right: 0.38, bottom: 0.14, left: 0.09 };
+/**
+ * Room the panels take over the full-width map on wide screens, as fractions of the map (pixels above 1): the camera
+ * keeps tasks clear of the heading's card (top left), the explorer (right: measured, as it sits at the window's edge),
+ * and the controls and minimap (bottom left).
+ */
+const WIDE_PADDING = { top: 0.42, right: 0.36, bottom: 0.08, left: 0.1 };
 const DISTANCES = [1, 3, 5] as const;
-/** Room kept clear for the marker that points to the visitor: the top bar and the bottom's caption (wide), or the
- * "Explore the map" button (phones). */
-const WIDE_EDGE = { top: 96, bottom: 128 };
+/** Room kept clear for the marker that points to the visitor: the top bar and the attribution (wide; the panels are
+ * stepped around as they are), or the "Explore the map" button (phones). */
+const WIDE_EDGE = { top: 96, bottom: 44 };
 const PHONE_EDGE = { top: 14, bottom: 104 };
 /**
  * The pinned stretch on wide screens, as the page's CSS: `ARRIVAL_SCROLL` (0.8 of a screen) for the arrival, then
@@ -131,6 +136,21 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
     liveReady: explorer.liveReady,
     reduced,
   });
+  // Wide screens: the explorer sits at the window's right edge, so the room it takes from the map is measured (its
+  // layout box: the slide-in's translate doesn't count).
+  const [explorerRoom, setExplorerRoom] = useState<number | null>(null);
+  useEffect(() => {
+    const panel = panelRef.current;
+    const stage = stageRef.current;
+    if (!wide || !panel || !stage || typeof ResizeObserver === 'undefined') return;
+    const measure = () => setExplorerRoom(Math.round(stage.clientWidth - panel.offsetLeft + 24));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, [wide]);
+  const widePadding = useMemo(() => (explorerRoom ? { ...WIDE_PADDING, right: explorerRoom } : WIDE_PADDING), [explorerRoom]);
+  const outsideMiles = outside && location.status === 'granted' ? aboutMiles(distanceMiles(location.point, data.map.center)) : null;
 
   // The visitor has reached the map (it crosses the middle of the window): find them, without a press. Wide screens
   // measure the sheet, since the map itself is fixed to the window behind it.
@@ -189,7 +209,7 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
             way. Full screen lifts the clip. On phones and tablets: the heading, the map and the explorer in turn. */}
         <div
           ref={stageRef}
-          className="relative grid grid-cols-1 lg:sticky lg:top-0 lg:h-svh lg:min-h-[36rem] lg:grid-cols-[minmax(var(--page-gutter),1fr)_minmax(0,38rem)_minmax(0,31rem)_minmax(var(--page-gutter),1fr)] lg:gap-x-10 lg:[clip-path:inset(0_round_2.75rem_2.75rem_0_0)] lg:has-[[aria-modal=true]]:[clip-path:none]"
+          className="group/stage relative grid grid-cols-1 lg:sticky lg:top-0 lg:h-svh lg:min-h-[36rem] lg:grid-cols-[minmax(var(--page-gutter),1fr)_minmax(0,38rem)_minmax(0,31rem)_minmax(var(--page-gutter),1fr)] lg:gap-x-10 lg:[clip-path:inset(0_round_2.75rem_2.75rem_0_0)] lg:has-[[aria-modal=true]]:[clip-path:none]"
         >
           {/* The real map: between the heading and the list on phones; on wide screens fixed to the window, under
               everything. */}
@@ -204,41 +224,44 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
                 mode={mapMode}
                 variant="fill"
                 className="max-lg:min-h-0 max-lg:flex-1"
-                padding={wide ? WIDE_PADDING : undefined}
+                padding={wide ? widePadding : undefined}
                 arrival={arrival}
                 arrivalSource={arrivalSource}
                 edgeInsets={wide ? WIDE_EDGE : PHONE_EDGE}
                 fillFade={wide ? 'top' : 'vertical'}
                 watchRef={stageRef}
-                controlsRow={wide}
-                controlsClassName="right-[var(--page-gutter)] bottom-[16%] lg:right-auto lg:bottom-[max(4.25rem,9svh)] lg:left-[max(var(--page-gutter),calc(50%-35.5rem))]"
-                minimapClassName="lg:bottom-[calc(max(4.25rem,9svh)+3.5rem)] lg:left-[max(var(--page-gutter),calc(50%-35.5rem))]"
-                noteClassName="top-3 left-1/2 -translate-x-1/2 justify-center lg:top-auto lg:bottom-[calc(max(4.25rem,9svh)+3.5rem)] lg:left-[max(var(--page-gutter),calc(50%-35.5rem))] lg:translate-x-0 lg:justify-start"
+                controlsClassName="right-[var(--page-gutter)] bottom-[16%] lg:right-auto lg:bottom-[max(1.25rem,2.5svh)] lg:left-[max(var(--page-gutter),calc(50%-35.5rem))] lg:items-start"
+                minimapClassName="lg:bottom-[max(1.25rem,2.5svh)] lg:left-[calc(max(var(--page-gutter),calc(50%-35.5rem))+3.5rem)]"
+                noteClassName="top-3 left-1/2 -translate-x-1/2 justify-center lg:top-[calc(var(--top-bar-offset,5.5rem)+1rem)]"
               />
               <figcaption className="pointer-events-none flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-gutter pt-2 text-xs text-muted-foreground lg:hidden">
                 <MapCaption attribution={data.map.attribution} map={data.map} market={market} timeZone={data.market.timeZone} />
               </figcaption>
             </figure>
           </div>
-          {/* Wide screens, on the stage (so it moves with it): paper behind the heading, so it reads over the map and
-              melts into it with no edge (close around the words only: audit M8, a wider one read as a haze over a
-              quarter of the map). The map runs to the window's bottom edge while pinned; the caption sits on it in
-              glass. */}
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden lg:block" style={{ background: 'radial-gradient(40% 30% at 4% 19%, var(--background) 36%, color-mix(in oklab, var(--background) 60%, transparent) 56%, transparent 76%)' }} />
-          <p className="pointer-events-none absolute inset-x-0 bottom-0 mx-auto hidden max-w-[78rem] flex-wrap items-center justify-between gap-x-2 gap-y-1 px-gutter pb-[max(1rem,2.5svh)] text-xs text-foreground/75 lg:flex [&>span]:glass [&>span]:rounded-full [&>span]:px-3 [&>span]:py-1.5">
-            <MapCaption attribution={data.map.attribution} map={data.map} market={market} timeZone={data.market.timeZone} />
+          {/* Wide screens: whose map it is, small, in the bottom right corner (what the map shows went into the explorer,
+              the market's hour into the minimap). Full screen has its own. */}
+          <p className="pointer-events-none absolute right-[max(1rem,calc(var(--page-gutter)/2))] bottom-[max(0.5rem,1svh)] hidden text-[11px] text-foreground/70 lg:block lg:group-has-[[aria-modal=true]]/stage:invisible">
+            <span className="glass rounded-full px-2.5 py-1">{data.map.attribution}</span>
           </p>
 
-          {/* The heading. Over the map on wide screens, where its words let clicks through to the map under them: only
-              its button and links take them. */}
-          <div className="relative order-1 px-gutter pt-14 sm:pt-20 lg:pointer-events-none lg:order-none lg:col-start-2 lg:row-start-1 lg:self-start lg:px-0 lg:pt-[max(8.5rem,16svh)]">
-            <Reveal className="max-w-xl">
-              <p className="text-xs font-semibold tracking-[0.18em] text-primary uppercase">{t('eyebrow')}</p>
-              <h2 id="map-title" className="mt-3 font-display text-4xl leading-[1.02] font-semibold tracking-[-0.035em] sm:text-5xl">
-                {t('title')} <span className="font-accent font-normal tracking-[-0.01em] text-violet italic">{t('titleAccent')}</span>
+          {/* The heading: on wide screens a card of its own in the top left corner (no map runs under its words),
+              matching the explorer's on the right; on phones, above the map. */}
+          <div data-map-heading="" data-map-panel="" className="relative order-1 px-gutter pt-14 sm:pt-20 lg:absolute lg:top-[calc(var(--top-bar-offset,5.5rem)+1rem)] lg:left-[max(var(--page-gutter),calc(50%-35.5rem))] lg:order-none lg:w-[min(26.5rem,calc(50%-2.5rem))] lg:p-0 lg:transition-[top] lg:duration-500 lg:ease-[var(--ease-out)] lg:group-has-[[aria-modal=true]]/stage:invisible">
+            <Reveal className="max-w-xl lg:glass lg:rounded-[1.75rem] lg:px-6 lg:py-5">
+              <p className="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-primary uppercase">
+                <span aria-hidden="true" className="relative inline-flex size-2">
+                  <span className="absolute inset-0 animate-[live-ping_2.6s_var(--ease-out)_infinite] rounded-full bg-primary/60 motion-reduce:animate-none" />
+                  <span className="relative size-2 rounded-full bg-primary" />
+                </span>
+                {t('eyebrow')}
+              </p>
+              <h2 id="map-title" className="mt-3 font-display text-4xl leading-[1.02] font-semibold tracking-[-0.035em] sm:text-5xl lg:text-[2.75rem]">
+                {/* "right now" on a line of its own (balanced wrapping split it as "Tasks near / you, right now"). */}
+                {t('title')} <span className="block font-accent font-normal tracking-[-0.01em] text-violet italic">{t('titleAccent')}</span>
               </h2>
-              <p className="mt-4 text-lg text-muted-foreground">{t('body', { market })}</p>
-              <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2">
+              <p className="mt-3 text-lg text-muted-foreground lg:text-base">{t('body', { market })}</p>
+              <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
                 <m.button
                   layout
                   transition={reduced ? { duration: 0 } : spring.bloom}
@@ -257,9 +280,9 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
                     {location.status === 'locating' ? t('locating') : location.status === 'granted' ? (fromHome ? (outside ? t('showHome') : t('nearHome')) : outside ? t('showMe') : t('nearYou')) : t('useLocation')}
                   </m.span>
                 </m.button>
-                <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck aria-hidden="true" className="size-3.5" />{t('privacy')}</p>
+                {location.status !== 'granted' && <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck aria-hidden="true" className="size-3.5" />{t('privacy')}</p>}
               </div>
-              <div role="status" aria-live="polite" className="mt-3 min-h-6 text-sm">
+              <div role="status" aria-live="polite" className="text-sm [&:not(:empty)]:mt-3">
                 {/* A helper's home neighborhood: the map starts there, and "where I am now" is a press away. */}
                 {fromHome && (
                   <p className="text-muted-foreground">
@@ -271,12 +294,10 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
                 )}
                 {location.status === 'denied' && <p className="text-muted-foreground">{t('denied', { market })}</p>}
                 {location.status === 'unavailable' && <p className="text-muted-foreground">{t('unavailable', { market })}</p>}
-                {outside && (
+                {outside && outsideMiles !== null && (
                   <p className="text-foreground">
-                    <span>{t('outside')}</span>{' '}
+                    <span>{t('outsideFar', { miles: outsideMiles, market })}</span>{' '}
                     <Link href={routes.waitlist()} className="pointer-events-auto font-semibold text-primary underline-offset-4 hover:underline">{t('waitlist')}</Link>
-                    {' · '}
-                    <Link href={routes.becomeAHelper()} className="pointer-events-auto font-semibold text-primary underline-offset-4 hover:underline">{t('outsideHelpers')}</Link>
                   </p>
                 )}
               </div>
@@ -287,7 +308,7 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
               accessible twin). On wide screens it keeps one size whatever the list holds (its rows scroll in a fixed
               viewport), sits just under the top bar (following the bar as it slips away and comes back), and slides
               in as the map arrives. */}
-          <div ref={panelRef} data-map-explorer="" className="relative order-3 px-gutter pt-6 pb-16 sm:pb-20 lg:order-none lg:col-start-3 lg:row-start-1 lg:top-[calc(var(--top-bar-offset,5.5rem)+1rem)] lg:w-[min(100%,26.5rem)] lg:self-start lg:justify-self-end lg:px-0 lg:py-0 lg:transition-[top] lg:duration-500 lg:ease-[var(--ease-out)]">
+          <div ref={panelRef} data-map-explorer="" data-map-panel="" className="relative order-3 px-gutter pt-6 pb-16 sm:pb-20 lg:absolute lg:top-[calc(var(--top-bar-offset,5.5rem)+1rem)] lg:right-[max(1rem,calc(var(--page-gutter)/2))] lg:order-none lg:w-[26.5rem] lg:px-0 lg:py-0 lg:transition-[top] lg:duration-500 lg:ease-[var(--ease-out)] lg:group-has-[[aria-modal=true]]/stage:invisible">
             <div style={EXPLORER_IN}>
               <Reveal variant="bloom" origin="100% 50%" className="lg:glass lg:rounded-[1.75rem] lg:p-2.5">
                 <SmartSearch />
@@ -307,6 +328,8 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
                     <Link href={routes.taskBoard(data.market.slug)} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline">{t('browseAll')}</Link>
                   </div>
                 )}
+                {/* What the map shows and doesn't (wide screens; phones read it under the map). */}
+                <p className="hidden px-3 pb-1.5 text-[11px] leading-4 text-muted-foreground lg:flex lg:items-start lg:gap-1.5"><MapPin aria-hidden="true" className="mt-px size-3 shrink-0" />{t('caption')}</p>
               </Reveal>
             </div>
           </div>

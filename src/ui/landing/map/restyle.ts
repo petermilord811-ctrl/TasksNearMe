@@ -56,6 +56,8 @@ export type RestyleStep =
 
 const has = (id: string, ...parts: string[]) => parts.some((part) => id.includes(part));
 const SOFT_HALO = 1.4;
+/** The base map's own neighborhood names show from this zoom (past where tasks group). */
+export const NEIGHBORHOOD_NAMES_ZOOM = 13.5;
 
 /** The changes to apply, in order (pure, so it's testable). */
 export function restylePlan(layers: StyleLayer[], colors: MapColors): RestyleStep[] {
@@ -129,11 +131,13 @@ export function restylePlan(layers: StyleLayer[], colors: MapColors): RestyleSte
         paint(layer.id, 'text-halo-color', colors.land);
         paint(layer.id, 'text-halo-width', SOFT_HALO);
       } else if (has(id, 'label_other', 'neighbourhood', 'neighborhood', 'suburb', 'quarter', 'place_other', 'hamlet')) {
-        // Neighborhood names: what people in Austin say ("Mueller", "Hyde Park"), so a little stronger.
+        // Neighborhood names only close in: farther out, the task groups already name their neighborhoods, and the
+        // two together read as clutter (owner, 2026-11-21). Close in they help find a street's surroundings.
+        plan.push({ layer: layer.id, kind: 'zoom', value: [NEIGHBORHOOD_NAMES_ZOOM, 24] });
         paint(layer.id, 'text-color', colors.labelStrong);
         paint(layer.id, 'text-halo-color', colors.land);
         paint(layer.id, 'text-halo-width', 1.8);
-        layout(layer.id, 'text-size', ['interpolate', ['linear'], ['zoom'], 9, 10, 12, 12, 15, 14]);
+        layout(layer.id, 'text-size', ['interpolate', ['linear'], ['zoom'], 13, 11, 15, 13]);
       } else if (has(id, 'country', 'state', 'continent')) {
         hide(layer.id);
       } else {
