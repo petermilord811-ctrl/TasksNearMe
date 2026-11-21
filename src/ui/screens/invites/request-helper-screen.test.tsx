@@ -52,6 +52,13 @@ async function send(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('RequestHelperScreen', () => {
+  it('names a same-day window’s day once (Spanish pass, 2026-11-21)', async () => {
+    mount();
+    await ready();
+    const line = screen.getByText((text) => text.includes('Dec 12') && text.includes('Central Time'));
+    expect(line.textContent).toMatch(/^Sat, Dec 12 · 9:00\sam–3:00\spm · Central Time$/);
+  });
+
   it('prefills the slot price and sends its id with a start inside both windows', async () => {
     const user = userEvent.setup();
     const data: RequestHelperPageData = { ...requestJordanSlotData, tasks: [{ ...requestJordanSlotData.tasks[0], windowStart: '2026-12-12T16:00:00.000Z' }] };

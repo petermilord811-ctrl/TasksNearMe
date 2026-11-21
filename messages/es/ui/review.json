@@ -14,7 +14,7 @@
   "bodyCount": "{count} / 1,000 caracteres",
   "privateLabel": "¿Algo para nuestro equipo? (opcional)",
   "privateHint": "Solo el soporte de TasksNearMe lo lee; {name} nunca lo ve. Te responderemos si lo necesitamos.",
-  "privacyNote": "Las reseñas permanecen ocultas hasta que ambos envíen la suya, o hasta el {date}.",
+  "privacyNote": "Las reseñas permanecen ocultas hasta que se envíen las dos, o hasta el {date}.",
   "send": "Enviar reseña",
   "sending": "Enviando reseña…",
   "sent": "Reseña enviada. Puedes ver su estado de visibilidad en la reserva.",

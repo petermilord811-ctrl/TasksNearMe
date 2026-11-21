@@ -81,7 +81,7 @@
     "rewardConditions": "Los reembolsos, las disputas o las revisiones de seguridad pueden retrasar o cambiar la elegibilidad. Las tarjetas de regalo pueden considerarse ingresos sujetos a impuestos. Los programas pueden cambiar o terminar en cualquier momento.",
     "rewardPolicy": "Las recompensas nunca dependen de reseñas ni calificaciones.",
     "rewardTermsLink": "Lee los términos de las recompensas",
-    "closingTitle": "¿Listo para ayudar a tus vecinos?",
+    "closingTitle": "¿Te animas a ayudar a tus vecinos?",
     "closingDescription": "Empieza con tu perfil, tus servicios y las zonas que cubres."
   },
   "shared": {
@@ -176,7 +176,7 @@
     "backgroundNote": "Los ayudantes que hacen tareas en casa deben completar una verificación de antecedentes. La insignia muestra la fecha de la verificación; no es una garantía de la calidad del trabajo ni de la seguridad.",
     "remoteNote": "La ayuda remota con computadoras se hace compartiendo la pantalla. Tú mantienes el control de tu dispositivo y escribes tus propias contraseñas. No se usan herramientas de acceso remoto sin supervisión.",
     "helpersTitle": "Ayudantes de esta categoría",
-    "ctaTitle": "¿Listo para resolverlo?",
+    "ctaTitle": "¿Lo resolvemos?",
     "ctaBody": "Describe el trabajo, elige tu horario y compara ofertas antes de reservar.",
     "seo": {
       "helpers": "{count, plural, one {# ayudante verificado} other {# ayudantes verificados}}",

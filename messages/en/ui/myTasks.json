@@ -42,7 +42,7 @@
   "needsYou": {
     "for": ": {title}",
     "messages": {
-      "finish_payment": "Finish paying to confirm {helper}. The hold ends {relative}.",
+      "finish_payment": "To confirm {helper}, finish paying. The hold ends {relative}.",
       "retry_payment": "The payment for {helper} didn't go through. Pay by {date} to keep the booking.",
       "review_work": "{helper} marked the work complete. Review it by {date}, or it's approved automatically.",
       "choose_soon": "{count, plural, one {# offer is waiting, and it ends} other {# offers are waiting, and they end}} {relative}.",

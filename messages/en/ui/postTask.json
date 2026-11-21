@@ -212,7 +212,7 @@
     }
   },
   "schedule": {
-    "policy": "Choose a start at least {hours, plural, one {# hour} other {# hours}} from now and no more than {days, plural, one {# day} other {# days}} ahead. All times are in {market}.",
+    "policy": "Choose a start at least {hours, plural, one {# hour} other {# hours}} from now and no more than {days, plural, one {# day} other {# days}} ahead. All times are in {zone}.",
     "date": "Date",
     "dateHint": "Pick a day for the task.",
     "timing": "Time preference",

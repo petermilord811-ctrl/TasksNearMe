@@ -98,7 +98,7 @@
       "address": "Domicilio",
       "payout": "Configuración de pagos",
       "background": "Verificación de antecedentes",
-      "done": "Listo para ayudar"
+      "done": "Todo listo para ayudar"
     },
     "states": {
       "done": "Listo",
@@ -124,7 +124,7 @@
     "backgroundSkipped": "No se necesita verificación de antecedentes para los servicios que elegiste.",
     "doneReady": "Ya puedes hacer ofertas",
     "donePending": "Faltan unos pasos",
-    "doneReadyBody": "Estás listo para ayudar en estas categorías.",
+    "doneReadyBody": "Ya puedes ayudar en estas categorías.",
     "donePendingBody": "Termina los pasos disponibles de abajo. El estado de tu configuración se actualizará después de cada verificación.",
     "donePendingReviewBody": "Nuestro equipo está revisando lo que enviaste, normalmente en un día. Te avisaremos, y podrás hacer ofertas en cuanto se apruebe.",
     "remaining": "Por terminar",

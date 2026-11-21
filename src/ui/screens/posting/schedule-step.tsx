@@ -5,10 +5,13 @@ import { useTranslations } from 'next-intl';
 import type { PostTaskPageData, TaskDraftInput } from '@/contracts';
 import { marketDayKey } from '@/shared/format';
 import { MarketDateInput, MarketTimeSelect } from '@/ui/components/forms/market-schedule-fields';
+import { useFormat } from '@/ui/lib/format';
 import { PostingField, postingFieldId } from './posting-field';
 
 export function ScheduleStep({ data }: { data: PostTaskPageData }) {
   const t = useTranslations('postTask');
+  // The market's zone by name ("Central Time", "hora central"), never a city's (completion plan 8.1).
+  const { zoneName } = useFormat();
   const { register, watch, setValue, clearErrors, getFieldState, formState } = useFormContext<TaskDraftInput>();
   const schedule = watch('schedule');
   // Today on the poster's market clock (completion plan 8.1).
@@ -19,7 +22,7 @@ export function ScheduleStep({ data }: { data: PostTaskPageData }) {
   const dateId = postingFieldId('schedule.date');
   const flexibleId = postingFieldId('schedule.flexible');
   return <div className="space-y-6">
-    <p className="rounded-2xl bg-secondary/70 p-4 text-sm text-foreground dark:bg-secondary/40">{t('schedule.policy', { hours: data.rules.minLeadHours, days: data.rules.maxLeadDays, market: data.market.name })}</p>
+    <p className="rounded-2xl bg-secondary/70 p-4 text-sm text-foreground dark:bg-secondary/40">{t('schedule.policy', { hours: data.rules.minLeadHours, days: data.rules.maxLeadDays, zone: zoneName })}</p>
     <PostingField name="schedule.date" label={t('schedule.date')} hint={t('schedule.dateHint')}>
       <MarketDateInput {...register('schedule.date')} id={dateId} min={minimumDate} max={maximumDate} aria-invalid={getFieldState('schedule.date', formState).invalid} aria-describedby={`${dateId}-hint ${dateId}-error`} className="max-w-sm" />
     </PostingField>

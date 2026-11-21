@@ -41,6 +41,9 @@ function endOf(view: BookingView): Date {
   return new Date(windowEnd > start + HOUR ? windowEnd : start + 2 * HOUR);
 }
 
+/** A name that ends a sentence ends in its own initial's stop ("With Jordan T. Details…"), never two (Spanish pass, 2026-11-21). */
+const oneStop = (line: string) => line.replace(/([.?!…])\.(?=\s|$)/gu, '$1');
+
 export function bookingCalendarFile(view: BookingView, bookingUrl: string, now: Date, locale: AppLocale = DEFAULT_LOCALE): string {
   const t = tFor(locale);
   const where = view.location.kind === 'remote' ? t('remote') : `${view.location.areaName}, ${view.location.marketName}`;
@@ -58,7 +61,7 @@ export function bookingCalendarFile(view: BookingView, bookingUrl: string, now: 
     `DTEND:${stamp(endOf(view))}`,
     `SUMMARY:${text(t('eventTitle', { title: view.task.title }))}`,
     `LOCATION:${text(where)}`,
-    `DESCRIPTION:${text(t('description', { name: other, url: bookingUrl }))}`,
+    `DESCRIPTION:${text(oneStop(t('description', { name: other, url: bookingUrl })))}`,
     `URL:${bookingUrl}`,
     'END:VEVENT',
     'END:VCALENDAR',

@@ -61,7 +61,7 @@ function RequestField({ name, label, hint, errorText, children }: { name: FieldP
 
 export function RequestHelperFields({ data, disabled }: { data: RequestHelperPageData; disabled: boolean }) {
   // The page's market clock (completion plan 8.1): shown, typed and converted in it.
-  const { formatDate, formatDateTime, timeZone, zoneName } = useFormat();
+  const { formatDate, formatDateTime, formatTime, dayKey, timeZone, zoneName } = useFormat();
   const t = useTranslations('invites');
   const categories = useTranslations('helperCard.categories');
   const { control, register, watch, setValue, clearErrors } = useFormContext<RequestHelperInput>();
@@ -89,7 +89,7 @@ export function RequestHelperFields({ data, disabled }: { data: RequestHelperPag
           </span> : <span className="min-w-0 space-y-1">
             <span className="block font-medium break-words">{task.title}</span>
             <span className="block text-sm text-muted-foreground">{categories(task.categorySlug)}</span>
-            <span className="block text-sm tabular-nums text-muted-foreground">{t('window', { start: formatDateTime(task.windowStart), end: formatDateTime(task.windowEnd), zone: zoneName })}</span>
+            <span className="block text-sm tabular-nums text-muted-foreground">{/* A same-day window names its day once. */}{t('window', { start: formatDateTime(task.windowStart), end: dayKey(task.windowStart) === dayKey(task.windowEnd) ? formatTime(task.windowEnd) : formatDateTime(task.windowEnd), zone: zoneName })}</span>
           </span>}
         </label>)}
       </RadioGroup>} />}</RequestField>

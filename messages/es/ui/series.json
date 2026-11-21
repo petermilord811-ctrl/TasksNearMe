@@ -77,7 +77,7 @@
   },
   "end": {
     "title": "¿Terminar las visitas regulares?",
-    "description": "Las visitas hasta el {date} se siguen haciendo. Las posteriores se eliminan y se avisa a {name}.",
+    "description": "Las visitas hasta el {date} se siguen haciendo. Las posteriores se eliminan y {name} recibe un aviso.",
     "confirm": "Terminar visitas regulares",
     "success": "Las visitas regulares terminarán después del {date}."
   },

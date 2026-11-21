@@ -212,7 +212,7 @@
     }
   },
   "schedule": {
-    "policy": "Elige un inicio con al menos {hours, plural, one {# hora} other {# horas}} de anticipación y no más de {days, plural, one {# día} other {# días}} adelante. Todas las horas son de {market}.",
+    "policy": "Elige un inicio con al menos {hours, plural, one {# hora} other {# horas}} de anticipación y no más de {days, plural, one {# día} other {# días}} adelante. Todos los horarios están en {zone}.",
     "date": "Fecha",
     "dateHint": "Elige un día para la tarea.",
     "timing": "Preferencia de horario",

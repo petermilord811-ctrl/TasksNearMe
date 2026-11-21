@@ -18,12 +18,12 @@
     "private": "Solo {helper} ve esta solicitud. No se publica para otros ayudantes.",
     "description": "Qué hay que hacer",
     "descriptionHint": "Como la última vez. Cambia lo que sea distinto.",
-    "startHint": "Cuando quieras, desde dentro de 2 horas hasta 14 días. Las horas son de {zone}.",
+    "startHint": "Cuando quieras, desde dentro de 2 horas hasta 14 días. Los horarios están en {zone}.",
     "remote": "A distancia",
-    "requestOpen": "Ya le enviaste esta solicitud a {helper}. Está esperando en Mis tareas."
+    "requestOpen": "Ya le enviaste esta solicitud a {helper}, y está esperando en Mis tareas."
   },
   "task": "Elige tu tarea",
-  "taskHint": "Estas son tus tareas abiertas en las categorías de {helper}.",
+  "taskHint": "Estas son tus tareas abiertas en categorías en las que {helper} ayuda.",
   "window": "{start}–{end} · {zone}",
   "details": "Detalles de la solicitud",
   "start": "Hora de inicio",
