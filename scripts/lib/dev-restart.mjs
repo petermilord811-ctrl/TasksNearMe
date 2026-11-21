@@ -88,7 +88,22 @@ export async function pauseDevServer({ port = 3000, timeoutMs = 2 * 60_000, log 
   }
   log('The dev server is paused.');
   return () => {
-    fs.rmSync(PAUSE_REQUEST, { force: true });
+    releasePause(PAUSE_REQUEST, process.pid);
     log('The dev server may start again.');
   };
+}
+
+/**
+ * Ends a pause only if it's still this process's (2026-11-21): a pause taken later by someone else (its pid now in the
+ * file) stays, where removing the file had ended it and restarted the dev server in the middle of their work. Pause only
+ * while holding the heavy lock, so two pauses never overlap. Returns whether the request was removed.
+ */
+export function releasePause(file, pid) {
+  try {
+    if (fs.readFileSync(file, 'utf8').trim() !== String(pid)) return false;
+  } catch {
+    return false;
+  }
+  fs.rmSync(file, { force: true });
+  return true;
 }
