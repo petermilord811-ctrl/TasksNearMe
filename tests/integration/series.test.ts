@@ -174,7 +174,7 @@ describe('regular visits', () => {
 
   it('keeps one conversation for the whole series', async () => {
     const opened = await seriesConversation(db, 'usr_jordan', seriesId, start);
-    expect(opened).toMatchObject({ ok: true, redirectTo: expect.stringMatching(/^\/app\/messages\//) });
+    expect(opened).toMatchObject({ ok: true, code: 'opened', redirectTo: expect.stringMatching(/^\/app\/messages\//) });
     const fromVisit = await runBookingAction(db, 'usr_ben', (await visit(3)).id, 'message', start);
     expect(fromVisit).toMatchObject({ ok: true, redirectTo: (opened as { redirectTo: string }).redirectTo });
     const [thread] = await db.select().from(threads).where(and(eq(threads.kind, 'series'), eq(threads.linkedId, seriesId)));

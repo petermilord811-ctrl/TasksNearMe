@@ -494,7 +494,8 @@ export async function seriesConversation(db: Db, userId: string, seriesId: strin
   const own = await ownSeries(db, userId, seriesId);
   if (!own) return { ok: false, code: 'not_found' };
   const threadId = await ensureThread(db, seriesThreadLink(own.series), now);
-  return { ok: true, code: 'updated', redirectTo: routes.app.thread(threadId) };
+  // Only opens the conversation: no "Updated" (88's 'opened', 701ed9f; journeys on a phone).
+  return { ok: true, code: 'opened', redirectTo: routes.app.thread(threadId) };
 }
 
 // ---- Reading ----------------------------------------------------------------------------------------------

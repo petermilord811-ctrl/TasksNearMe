@@ -115,6 +115,8 @@ describe("the helper's side of offers", () => {
   it('withdraws, then lets the helper offer again', async () => {
     const [row] = await db.select().from(offers).where(and(eq(offers.taskId, TASK), eq(offers.helperUserId, 'usr_jordan')));
     expect(await helperOfferAction(db, 'usr_jordan', row!.id, 'reconfirm_offer', now())).toEqual({ ok: false, code: 'not_allowed' });
+    // Messaging the client only opens the conversation ('opened': no "Updated").
+    expect(await helperOfferAction(db, 'usr_jordan', row!.id, 'message_poster', now())).toMatchObject({ ok: true, code: 'opened', redirectTo: expect.stringMatching(/^\/app\/messages\//) });
     expect(await helperOfferAction(db, 'usr_maya', row!.id, 'withdraw_offer', now())).toEqual({ ok: false, code: 'not_found' });
     expect(await helperOfferAction(db, 'usr_jordan', row!.id, 'withdraw_offer', now())).toEqual({ ok: true, code: 'updated' });
     expect(await offerCount()).toBe(0);

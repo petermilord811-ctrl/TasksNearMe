@@ -637,7 +637,8 @@ export async function helperOfferAction(db: Db, userId: string, offerId: string,
   if (!allowed?.enabled) return { ok: false, code: 'not_allowed' };
   if (action === 'message_poster') {
     const threadId = await offerThreadId(db, found.offer.id, now);
-    return threadId ? { ok: true, code: 'updated', redirectTo: routes.app.thread(threadId) } : { ok: false, code: 'not_found' };
+    // Only opens the conversation: no "Updated" (88's 'opened', 701ed9f; journeys on a phone).
+    return threadId ? { ok: true, code: 'opened', redirectTo: routes.app.thread(threadId) } : { ok: false, code: 'not_found' };
   }
   if (action !== 'withdraw_offer' && action !== 'reconfirm_offer') return { ok: false, code: 'not_allowed' };
 
