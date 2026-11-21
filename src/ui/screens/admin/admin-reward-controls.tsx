@@ -27,7 +27,8 @@ export function AdminRewardActionButtons({ row }: { row: AdminRewardRow }) {
   const t = useTranslations('adminRewards');
   const controls = useContext(RewardControlsContext);
   if (!controls) return null;
-  if (row.actions.length === 0) return <p className="text-sm text-muted-foreground">{t('noActions')}</p>;
+  // Nothing for this viewer: say who acts on it, so finance and agents aren't left guessing (staff tools pass, J-S3).
+  if (row.actions.length === 0) return <p className="text-sm text-muted-foreground">{t(row.status === 'in_review' ? 'noActionsReview' : row.status === 'failed' ? 'noActionsFailed' : 'noActions')}</p>;
   return <div role="group" aria-label={t('actionsLabel', { name: row.helper.displayName })} className="flex flex-wrap gap-2">
     {row.actions.map((action) => <Button key={action} type="button" variant={action === 'approve_review' || action === 'reissue' ? 'default' : 'outline'} disabled={controls.busy} className="h-auto min-h-11 whitespace-normal" onClick={(event) => controls.open(row, action, event.currentTarget)}>{t(`actions.${action}`)}</Button>)}
   </div>;

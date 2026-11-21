@@ -59,7 +59,11 @@ export function AdminReplyForm({ data, handlers, focusId, initialResult, initial
   const t = useTranslations('adminCase');
   const fieldCopy = useFieldCopy();
   const id = useId();
-  const form = useForm<StaffReplyInput>({ resolver: zodResolver(staffReplyInputSchema), defaultValues: { partyId: '', body: initialBody } });
+  const messageable = data.parties.filter((party) => party.canMessage);
+  // One person to write to: they're chosen already (staff tools pass, J-S1). With two (a dispute) staff choose, so a
+  // reply never goes to the wrong side by default.
+  const onlyPerson = messageable.length === 1 ? messageable[0]!.person.id : '';
+  const form = useForm<StaffReplyInput>({ resolver: zodResolver(staffReplyInputSchema), defaultValues: { partyId: onlyPerson, body: initialBody } });
   const action = useCaseForm(form, { initialResult, onSuccess: (result) => { if (result.ok && result.code === 'sent') form.reset({ partyId: form.getValues('partyId'), body: '' }); } });
   const pending = action.pending || form.formState.isSubmitting || initialPending;
   const personCode = form.formState.errors.partyId?.message;
@@ -76,7 +80,7 @@ export function AdminReplyForm({ data, handlers, focusId, initialResult, initial
       <CaseField id={focusId} label={t('reply.person')} hint={t('reply.personHint')} error={personError}>
         <select {...form.register('partyId')} id={focusId} required aria-invalid={Boolean(personError)} aria-describedby={`${focusId}-hint${personError ? ` ${focusId}-error` : ''}`} className={selectClass}>
           <option value="">{t('reply.choosePerson')}</option>
-          {data.parties.filter((party) => party.canMessage).map(({ person }) => <option key={person.id} value={person.id}>{person.displayName}</option>)}
+          {messageable.map(({ person }) => <option key={person.id} value={person.id}>{person.displayName}</option>)}
         </select>
       </CaseField>
       <CaseField id={`${id}-body`} label={t('reply.body')} hint={t('reply.bodyHint')} error={bodyError}>

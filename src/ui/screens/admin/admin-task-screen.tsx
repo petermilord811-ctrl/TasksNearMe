@@ -39,7 +39,7 @@ export function AdminTaskScreen(props: AdminTaskScreenProps) { return <AdminTask
 
 /** Staff: one task, its reports, and moderation (UI-033). Never the exact address (the data has none). */
 export function AdminTaskContent({ data, handlers, now, ...preview }: AdminTaskScreenProps & AdminTaskPreviewState) {
-  const { formatDateTime, formatRelative } = useFormat();
+  const { dayKey, formatDate, formatDateTime, formatRelative, formatTimeRange } = useFormat();
   const t = useTranslations('adminTask');
   const categories = useTranslations('helperCard.categories');
   const { task } = data;
@@ -55,7 +55,7 @@ export function AdminTaskContent({ data, handlers, now, ...preview }: AdminTaskS
       <dl className="grid gap-4 border-t border-foreground/[0.07] pt-4 text-sm sm:grid-cols-2 lg:grid-cols-3 dark:border-white/[0.07]">
         <div className="space-y-1"><dt className="text-muted-foreground">{t('facts.category')}</dt><dd>{categories(task.categorySlug)}</dd></div>
         <div className="space-y-1"><dt className="text-muted-foreground">{t('facts.area')}</dt><dd>{task.areaName ?? t('facts.remote')}</dd></div>
-        <div className="space-y-1"><dt className="text-muted-foreground">{t('facts.when')}</dt><dd className="tabular-nums">{t('window', { start: formatDateTime(task.windowStart), end: formatDateTime(task.windowEnd) })}</dd></div>
+        <div className="space-y-1"><dt className="text-muted-foreground">{t('facts.when')}</dt><dd className="tabular-nums">{/* A same-day window names its day once (staff tools pass, J-S2); one over two days names both. */}{dayKey(task.windowStart) === dayKey(task.windowEnd) ? t('window', { date: formatDate(task.windowStart), times: formatTimeRange(task.windowStart, task.windowEnd) }) : formatTimeRange(task.windowStart, task.windowEnd)}</dd></div>
         <div className="space-y-1"><dt className="text-muted-foreground">{t('facts.budget')}</dt><dd className="font-semibold tabular-nums"><Budget budget={task.budget} /></dd></div>
         <div className="space-y-1"><dt className="text-muted-foreground">{t('facts.offers')}</dt><dd className="tabular-nums">{t('offerCount', { count: task.offerCount })}</dd></div>
         <div className="space-y-1"><dt className="text-muted-foreground">{t('facts.posted')}</dt><dd className="tabular-nums"><time dateTime={task.postedAt} title={formatRelative(task.postedAt, now)}>{formatDateTime(task.postedAt)}</time></dd></div>

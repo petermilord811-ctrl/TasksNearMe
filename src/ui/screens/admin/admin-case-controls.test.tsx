@@ -46,10 +46,12 @@ describe('AdminCaseControls', () => {
     const { handlers } = mount(reportAdminCaseData);
     const person = screen.getByRole('combobox', { name: adminCase.reply.person });
     const body = screen.getByRole('textbox', { name: adminCase.reply.body });
+    // The one person who can be written to is chosen already (staff tools pass, J-S1).
+    expect(person).toHaveValue(reportAdminCaseData.parties[0]!.person.id);
     await user.click(screen.getByRole('button', { name: adminCase.reply.send }));
-    expect(await screen.findByText(adminCase.reply.personRequired)).toBeInTheDocument();
-    expect(screen.getByText(adminCase.reply.bodyRequired)).toBeInTheDocument();
-    await waitFor(() => expect(person).toHaveFocus());
+    expect(await screen.findByText(adminCase.reply.bodyRequired)).toBeInTheDocument();
+    expect(screen.queryByText(adminCase.reply.personRequired)).toBeNull();
+    await waitFor(() => expect(body).toHaveFocus());
     expect(within(person).getAllByRole('option').map((option) => option.textContent)).toEqual([adminCase.reply.choosePerson, reportAdminCaseData.parties[0]!.person.displayName]);
     await user.selectOptions(person, reportAdminCaseData.parties[0]!.person.id);
     fireEvent.change(body, { target: { value: 'x'.repeat(4001) } });
@@ -62,6 +64,17 @@ describe('AdminCaseControls', () => {
     expect(body).toHaveValue('');
     expect(await screen.findByText(adminCase.reply.sent)).toBeInTheDocument();
     expect(navigation.refresh).toHaveBeenCalledOnce();
+  });
+
+  it('asks which person to write to when two can be written to (a dispute), so no reply goes to the wrong side by default', async () => {
+    const user = userEvent.setup();
+    const { handlers } = mount(disputeAdminCaseData);
+    const person = screen.getByRole('combobox', { name: adminCase.reply.person });
+    expect(person).toHaveValue('');
+    fireEvent.change(screen.getByRole('textbox', { name: adminCase.reply.body }), { target: { value: 'Both of you: we are looking into it.' } });
+    await user.click(screen.getByRole('button', { name: adminCase.reply.send }));
+    expect(await screen.findByText(adminCase.reply.personRequired)).toBeInTheDocument();
+    expect(handlers.onReply).not.toHaveBeenCalled();
   });
 
   it('focuses the separate reply and note forms and submits an internal note as body only', async () => {

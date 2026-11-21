@@ -15,7 +15,7 @@
     "offers": "Offers",
     "posted": "Posted"
   },
-  "window": "{start} to {end}",
+  "window": "{date} · {times}",
   "hourly": "{rate}/h · about {hours, plural, one {# hour} other {# hours}} · up to {cap, plural, one {# hour} other {# hours}}",
   "offerCount": "{count, plural, =0 {No offers} one {# offer} other {# offers}}",
   "poster": "Client",

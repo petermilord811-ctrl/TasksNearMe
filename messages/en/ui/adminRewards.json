@@ -55,6 +55,8 @@
   "emptyBody": "Rewards appear here when they need a decision or help with delivery. Choose all rewards to see other grants.",
   "viewAll": "View all rewards",
   "noActions": "No actions available",
+  "noActionsReview": "A support lead approves or rejects it",
+  "noActionsFailed": "Support reissues it",
   "actionsLabel": "Reward actions for {name}",
   "actions": {
     "approve_review": "Approve",

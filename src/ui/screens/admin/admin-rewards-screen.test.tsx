@@ -107,7 +107,16 @@ describe('AdminRewardsScreen', () => {
     view.unmount();
     mount({ ...adminRewardsReviewData, rows: [{ ...row, actions: [] }] });
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
-    for (const message of screen.getAllByText(copy.noActions)) expect(message).toBeVisible();
+    // A review this viewer can't decide (finance, say) says who does (staff tools pass, J-S3).
+    for (const message of screen.getAllByText(copy.noActionsReview)) expect(message).toBeVisible();
+  });
+
+  it('says who acts on a row this viewer has no actions for: a lead for a review, support for a failed card', () => {
+    const view = mount({ ...adminRewardsFailedData, rows: adminRewardsFailedData.rows.map((row) => ({ ...row, actions: [] })) });
+    expect(screen.getAllByText(copy.noActionsFailed)[0]).toBeVisible();
+    view.unmount();
+    mount({ ...adminRewardsReviewData, rows: [{ ...adminRewardsReviewData.rows[0]!, status: 'delivered', actions: [] }] });
+    expect(screen.getAllByText(copy.noActions)[0]).toBeVisible();
   });
 
   it('keeps person-page reward rows read-only even when their fixture supplies actions', () => {
