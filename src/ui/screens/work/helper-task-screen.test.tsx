@@ -34,6 +34,15 @@ function show(data: HelperTaskView = helperDeskWithOffer, handlers = makeHandler
 }
 
 describe('HelperTaskScreen', () => {
+  it('puts the pay and the time before the area and its map, as a phone reads the card (journeys on a phone)', () => {
+    show(helperDeskWithOffer);
+    const location = helperDeskWithOffer.task.location;
+    if (location.kind !== 'local') throw new Error('the desk is local');
+    const pay = screen.getByText(helperTask.budget);
+    const area = screen.getAllByText(new RegExp(location.areaName))[0]!;
+    expect(pay.compareDocumentPosition(area) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it.each([helperDeskWithOffer, helperDeskStaleOffer])('keeps the desk address private, showing only its area and supplied details', (data) => {
     const { container } = show(data);
     expect(container).not.toHaveTextContent('1234 Example Lane');

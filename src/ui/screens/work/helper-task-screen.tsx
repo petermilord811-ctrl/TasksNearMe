@@ -43,11 +43,13 @@ export function HelperTaskScreen({ data, handlers, now, initialRevising, initial
       <h1 className="break-words font-heading text-2xl/8 font-bold md:text-3xl/9.5">{task.title}</h1>
       <p className="text-sm tabular-nums text-muted-foreground"><time dateTime={task.postedAt} title={formatDateTime(task.postedAt)}>{card('posted', { relative: formatRelative(task.postedAt, now) })}</time></p>
     </header>
-    <div className="space-y-4 rounded-xl border bg-card p-card shadow-card">
-      <GeneralArea location={task.location} showMap liveMap={liveMap} />
+    {/* Pay and time first, then the area and its map: a phone reads the card in this order (journeys on a phone, ab
+        decided); wider screens show the map first. */}
+    <div className="flex flex-col gap-4 rounded-xl border bg-card p-card shadow-card">
+      <div className="sm:order-1 sm:border-t sm:pt-4"><p className="text-sm text-muted-foreground">{t('budget')}</p><p className="mt-1 text-xl font-semibold tabular-nums">{task.budget.type === 'fixed' ? formatMoney(task.budget.priceCents) : card('hourlyBudget', { rate: formatMoney(task.budget.rateCents), cap: formatHours(task.budget.hoursCap) })}</p></div>
       <p className="flex items-start gap-2 tabular-nums"><CalendarDays aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" /><span>{schedule}</span></p>
-      <div className="border-t pt-4"><p className="text-sm text-muted-foreground">{t('budget')}</p><p className="mt-1 text-xl font-semibold tabular-nums">{task.budget.type === 'fixed' ? formatMoney(task.budget.priceCents) : card('hourlyBudget', { rate: formatMoney(task.budget.rateCents), cap: formatHours(task.budget.hoursCap) })}</p></div>
-      {task.location.kind === 'local' && <p className="flex items-start gap-2 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('privacy')}</p>}
+      <div className="border-t pt-4 sm:order-first sm:border-t-0 sm:pt-0"><GeneralArea location={task.location} showMap liveMap={liveMap} /></div>
+      {task.location.kind === 'local' && <p className="flex items-start gap-2 text-sm text-muted-foreground sm:order-2"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('privacy')}</p>}
     </div>
     <section aria-labelledby="helper-task-about" className="space-y-3"><h2 id="helper-task-about" className="font-heading text-xl font-semibold md:text-[22px]/7.5">{t('about')}</h2><p className="whitespace-pre-wrap break-words leading-7">{data.description}</p></section>
     <section aria-labelledby="helper-task-details" className="space-y-4 rounded-xl border bg-card p-card shadow-card">
