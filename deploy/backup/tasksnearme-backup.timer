@@ -1,0 +1,14 @@
+# Starts tasksnearme-backup.service every night at 3:30 in Gainesville (fewest people on the site), within 10 minutes.
+# A night the server was off runs at the next boot (Persistent). Enable it only after a manual run worked:
+#   sudo systemctl start tasksnearme-backup && journalctl -u tasksnearme-backup
+#   sudo systemctl enable --now tasksnearme-backup.timer
+[Unit]
+Description=Run the TasksNearMe backup every night
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 America/New_York
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

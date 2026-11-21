@@ -1,0 +1,21 @@
+# The nightly backup of the live site (docs/runbooks/backup-and-restore.md), run by tasksnearme-backup.timer.
+# Installed as /etc/systemd/system/tasksnearme-backup.service by deploy/backup/setup-backup.sh.
+#
+# Runs as root, from root-owned copies in /usr/local/lib/tasksnearme-backup, never from a release: a deploy can't change
+# what runs here. It needs `docker exec` into the database container, read access to the uploaded files and preview.env,
+# and the backup bucket's keys, which only root can read (/etc/tasksnearme-backup/backup.env).
+[Unit]
+Description=TasksNearMe nightly backup (docs/runbooks/backup-and-restore.md)
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/tasksnearme-backup/backup.env
+ExecStart=/usr/local/lib/tasksnearme-preview/node /usr/local/lib/tasksnearme-backup/backup.cjs
+Nice=10
+IOSchedulingClass=idle
+PrivateTmp=yes
+NoNewPrivileges=yes
+ProtectHome=yes
+TimeoutStartSec=2h
