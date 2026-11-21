@@ -21,7 +21,7 @@ async function keyboardOpen(page: Page): Promise<void> {
 /** The top of the sticky bar that holds `button`. */
 function barTop(button: Locator): Promise<number> {
   return button.evaluate((element) => {
-    for (let node: HTMLElement | null = element; node; node = node.parentElement) {
+    for (let node: Element | null = element; node; node = node.parentElement) {
       if (getComputedStyle(node).position === 'sticky') return node.getBoundingClientRect().top;
     }
     throw new Error('no sticky bar holds this button');
