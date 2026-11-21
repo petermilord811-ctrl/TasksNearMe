@@ -14,6 +14,12 @@
     "lists": "Your tasks, offers and bookings"
   },
   "caughtUp": "You’re all caught up. Anything that needs you will show here.",
+  "firstRun": {
+    "title": "Post your first task",
+    "body": "Tell nearby helpers what you need. They send offers, and you choose who to book. You pay only when you book.",
+    "post": "Post a task",
+    "browse": "Find helpers"
+  },
   "earnings": {
     "upcoming": "Earned, not paid out yet",
     "onTheWay": "On the way",

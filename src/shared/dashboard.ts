@@ -162,6 +162,14 @@ export function dashboardSummary(attentionCount: number, bookings: readonly Dash
   return { needsYou: attentionCount, upcoming: bookings.filter((item) => item.stage === 'booked' && Date.parse(item.when.start) >= today).length };
 }
 
+/**
+ * A client's first visit (journeys on a phone, J-C1): no task posted, and no offer or booking on either side, ever. The
+ * page then leads with posting a first task instead of empty lists, filters and an all-caught-up note.
+ */
+export function isDashboardFirstRun(mode: Mode, sides: { client: boolean; helper: boolean }, itemsOf: Readonly<Record<'tasks' | 'offers' | 'bookings', readonly DashboardItem[]>>): boolean {
+  return mode === 'poster' && !sides.helper && itemsOf.tasks.length === 0 && itemsOf.offers.length === 0 && itemsOf.bookings.length === 0;
+}
+
 /** A map helps when the items are in two or more neighborhoods (a client's own tasks at home don't need one). */
 export function dashboardMapHelps(items: readonly DashboardItem[]): boolean {
   return new Set(items.flatMap((item) => (item.location.kind === 'local' ? [item.location.areaName] : []))).size >= 2;

@@ -41,6 +41,7 @@ import {
   dashboardSeeAll,
   dashboardSummary,
   dashboardTabsFor,
+  isDashboardFirstRun,
   nearbyItem,
   ownTaskItem,
   receivedOfferItem,
@@ -356,6 +357,7 @@ export async function getDashboard(db: Db, viewer: DashboardViewer, query: Dashb
     ...(helper && !helper.state.setup.bookable ? { setup: helper.state.setup } : {}),
     ...(helper?.feed?.waitingFor ? { waitingFor: helper.feed.waitingFor } : {}),
     aiSearch: access,
+    ...(isDashboardFirstRun(viewer.mode, sides, itemsOf) ? { firstRun: true } : {}),
   };
 }
 

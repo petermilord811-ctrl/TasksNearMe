@@ -275,6 +275,12 @@ export interface DashboardData {
   waitingFor?: FindWorkWaiting;
   /** AI search ("describe what you need"): whether the plan allows it now (completion plan 9.13). */
   aiSearch: AiSearchAccess;
+  /**
+   * A client's first visit: no task posted, and no offer or booking on either side, ever (`isDashboardFirstRun`).
+   * The page leads with posting a first task; the empty lists, their filters and the all-caught-up note stay out
+   * until there's something to show or the person searches (journeys on a phone, J-C1).
+   */
+  firstRun?: boolean;
 }
 
 // ---- AI search ("describe what you need") ---------------------------------------------------------

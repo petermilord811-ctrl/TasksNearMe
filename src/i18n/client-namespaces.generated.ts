@@ -21,6 +21,7 @@ export const CLIENT_NAMESPACES = {
   "[locale]/(app)/app/(flow)/tasks/new/page.tsx": ["common.loading", "common.mapCmdZoom", "common.mapCtrlZoom", "common.mapTwoFingers", "feedback.error", "feedback.success", "forms", "helperCard.categories", "location.mapDescription", "money", "postTask"],
   "[locale]/(app)/app/(flow)/template.tsx": [],
   "[locale]/(app)/app/(flow)/verify-identity/page.tsx": ["common.loading", "feedback.error", "feedback.success", "forms.actionErrors", "forms.getHelp", "forms.retryAt", "forms.verifyIdentity", "helperCard.categories", "posterIdentity", "verification"],
+  "[locale]/(app)/app/(flow)/verify-phone/page.tsx": ["beta.code.accepted", "beta.code.hint", "beta.code.label", "beta.signUp.description", "beta.signUp.otherEmail", "beta.signUp.submit", "beta.signUp.title", "beta.waitlist.body", "beta.waitlist.link", "beta.waitlist.title", "common.loading", "feedback.error", "feedback.success", "forms", "signIn"],
   "[locale]/(app)/app/(main)/[...missing]/page.tsx": [],
   "[locale]/(app)/app/(main)/account/page.tsx": ["account", "common.close", "common.loading", "feedback.error", "feedback.success", "forms", "push.device", "push.prompt", "signIn.social.names", "verification.avatar", "verification.photo"],
   "[locale]/(app)/app/(main)/availability/page.tsx": ["actions", "availability", "clients.form", "common.loading", "feedback.error", "feedback.success", "forms.actionErrors", "forms.fieldErrors", "forms.getHelp", "forms.retryAt", "forms.verifyIdentity", "helperProfile.categories", "invites"],

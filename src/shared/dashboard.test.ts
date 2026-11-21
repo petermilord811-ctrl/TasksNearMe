@@ -27,6 +27,7 @@ import {
   dashboardSummary,
   dashboardTabsFor,
   filterDashboardItems,
+  isDashboardFirstRun,
   matchesDate,
   matchesKeyword,
   nearbyItem,
@@ -168,6 +169,19 @@ describe('the filters', () => {
     const nearby = [nearbyItem(deskPublicTask, 'client', context.now)];
     expect(filterDashboardItems(nearby, { ...all, q: 'words only in the description' }, { ...context, keywordApplied: true })).toHaveLength(1);
     expect(filterDashboardItems(nearby, { ...all, q: 'words only in the description' }, context)).toHaveLength(0);
+  });
+});
+
+describe('a first visit (journeys on a phone, J-C1)', () => {
+  it('is a client with no task, offer or booking yet, on neither side', () => {
+    const none = { tasks: [], offers: [], bookings: [] };
+    expect(isDashboardFirstRun('poster', { client: true, helper: false }, none)).toBe(true);
+    expect(isDashboardFirstRun('poster', { client: true, helper: false }, { ...none, bookings: mayaBookingItems })).toBe(false);
+    expect(isDashboardFirstRun('poster', { client: true, helper: false }, { ...none, tasks: mayaTaskItems })).toBe(false);
+    expect(isDashboardFirstRun('poster', { client: true, helper: true }, none)).toBe(false);
+    expect(isDashboardFirstRun('helper', { client: false, helper: true }, none)).toBe(false);
+    expect(ruthDashboardData.firstRun).toBe(true);
+    expect(mayaDashboardData.firstRun).toBeUndefined();
   });
 });
 

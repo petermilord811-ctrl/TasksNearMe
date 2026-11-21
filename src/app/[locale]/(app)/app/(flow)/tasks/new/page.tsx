@@ -66,8 +66,8 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
   });
   if (viewer.kind !== 'user') redirect(routes.signIn(here));
   const userId = viewer.user.id;
-  // The sign-in flow asks for (and verifies) a phone when the destination needs one (only where texts work, plan 9.2).
-  if (!(await phoneGateOpen(userId))) redirect(routes.signIn(here));
+  // A phone first (only where texts work, plan 9.2): sign-in's phone steps, inside the app (journeys on a phone, J-C2).
+  if (!(await phoneGateOpen(userId))) redirect(routes.app.verifyPhone(here));
   // Risk may ask for an ID check before posting (blueprint 01 P2); it comes back here once it passes.
   await requirePosterIdentity(db, userId, await requestNow(), here);
 

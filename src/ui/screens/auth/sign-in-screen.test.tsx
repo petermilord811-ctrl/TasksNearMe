@@ -65,6 +65,17 @@ describe('moving between steps (journeys on a phone, J-H1)', () => {
   });
 });
 
+describe("posting's phone check inside the app (journeys on a phone, J-C2)", () => {
+  it('shows the phone step without the account line that sign-in ends with', () => {
+    show(<SignInScreen inApp data={signInPhoneStep} handlers={handlers()} />);
+    expect(screen.getByRole('heading', { level: 1, name: signIn.phone.title })).toBeVisible();
+    expect(screen.queryByText(signIn.oneAccount)).not.toBeInTheDocument();
+    cleanup();
+    show(<SignInScreen data={signInPhoneStep} handlers={handlers()} />);
+    expect(screen.getByText(signIn.oneAccount)).toBeVisible();
+  });
+});
+
 describe('sign-in forms', () => {
   it('focuses the required email field without sending an empty request', async () => {
     const onRequestEmailCode = vi.fn();

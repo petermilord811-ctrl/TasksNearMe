@@ -17,6 +17,7 @@ import {
   dashboardSeeAll,
   dashboardSummary,
   dashboardTabsFor,
+  isDashboardFirstRun,
   matchesKeyword,
   nearbyItem,
   ownTaskItem,
@@ -122,6 +123,7 @@ export function dashboardOf({ firstName, mode, sides, attention, itemsOf: given,
     seeAll: dashboardSeeAll(state.tab, { mode, sides, market: 'austin', words }),
     map: { styleUrl: findWorkPageData.map.styleUrl, attribution: findWorkPageData.map.attribution, center: findWorkPageData.map.marketCenter },
     aiSearch: { allowed: true, remaining: null },
+    ...(isDashboardFirstRun(mode, sides, itemsOf) ? { firstRun: true } : {}),
     ...extra,
   };
 }

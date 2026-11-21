@@ -14,6 +14,12 @@
     "lists": "Tus tareas, ofertas y reservas"
   },
   "caughtUp": "Estás al día. Lo que requiera tu atención aparecerá aquí.",
+  "firstRun": {
+    "title": "Publica tu primera tarea",
+    "body": "Cuéntales a los ayudantes cercanos qué necesitas. Te envían ofertas y tú eliges a quién reservar. Solo pagas cuando reservas.",
+    "post": "Publicar una tarea",
+    "browse": "Buscar ayudantes"
+  },
   "earnings": {
     "upcoming": "Ganado, aún sin pagar",
     "onTheWay": "En camino",

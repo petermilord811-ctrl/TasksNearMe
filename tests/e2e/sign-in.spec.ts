@@ -85,6 +85,31 @@ test.describe('sign-in and sign-up', () => {
     await expect(page).toHaveURL(/\/app\/find-work\/tsk_desk$/);
   });
 
+  test('posting asks a signed-in person for their phone inside the app, then opens the wizard (journeys on a phone, J-C2)', async ({ page, context }, testInfo) => {
+    const email = freshEmail(testInfo.project.name);
+    const line = String(Math.floor(1000 + Math.random() * 9000));
+    const exchange = String(Math.floor(200 + Math.random() * 700));
+    await page.goto('/sign-in');
+    await requestCode(page, email);
+    await page.getByLabel('6-digit code').fill(await latestCode(context, email));
+    await completeProfile(page, 'Lee', 'Park');
+    await expect(page).toHaveURL(/\/app$/);
+
+    await page.goto('/app/tasks/new');
+    await expect(page).toHaveURL(/\/app\/verify-phone\?next=%2Fapp%2Ftasks%2Fnew$/);
+    await expect(page.getByRole('heading', { level: 1, name: 'Add your phone number' })).toBeVisible();
+    // The app's own frame (the account button with the person's initials), not the public site's, and no sign-in
+    // account line.
+    await expect(page.getByText('LP', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('One account for getting help and for helping out.')).toHaveCount(0);
+    await page.getByLabel('Phone number').fill(`(352) ${exchange}-${line}`);
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 1, name: /Enter the code we texted to \(352\)/ })).toBeVisible();
+    await page.locator('input[autocomplete="one-time-code"]').filter({ visible: true }).first().fill(await latestCode(context, `+1352${exchange}${line}`));
+    await expect(page).toHaveURL(/\/app\/tasks\/new$/, { timeout: 30_000 });
+    await expect(page.getByText('Step 1 of 8', { exact: false })).toBeVisible();
+  });
+
   test('a code sent before the account was suspended no longer signs in', async ({ page, context }, testInfo) => {
     const email = freshEmail(testInfo.project.name);
     await page.goto('/sign-in');

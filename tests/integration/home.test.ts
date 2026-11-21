@@ -13,13 +13,15 @@ const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
 afterAll(async () => {
   await db.delete(offers).where(eq(offers.taskId, 'tsk_home_ana'));
   await db.delete(tasks).where(inArray(tasks.id, ['tsk_home_ana']));
-  await db.delete(users).where(eq(users.id, CLIENT));
+  await db.delete(users).where(inArray(users.id, [CLIENT, NEW_CLIENT]));
   await pool.end();
 });
 
 const ZONE = 'America/Chicago';
 // A client of the test's own (a copy of Ana): other files post as Ana, and the dashboard lists five rows a tab.
 const CLIENT = 'usr_home_client';
+// A client who has nothing yet (journeys on a phone, J-C1).
+const NEW_CLIENT = 'usr_home_new';
 const ana = { id: CLIENT, firstName: 'Ana', mode: 'poster' as const, timeZone: ZONE };
 const jordan = { id: 'usr_jordan', firstName: 'Jordan', mode: 'helper' as const, timeZone: ZONE };
 
@@ -27,6 +29,7 @@ beforeAll(async () => {
   const [seeded] = await db.select().from(users).where(eq(users.id, 'usr_ana'));
   if (!seeded) throw new Error('The seeded Ana is missing');
   await db.insert(users).values({ ...seeded, id: CLIENT, email: 'home-client@example.test', phone: null, phoneVerifiedAt: null });
+  await db.insert(users).values({ ...seeded, id: NEW_CLIENT, email: 'home-new@example.test', phone: null, phoneVerifiedAt: null });
   // The client's own copy of the desk with one new offer from Jordan.
   const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
   const [offer] = await db.select().from(offers).where(eq(offers.id, 'off_jordan'));
@@ -165,6 +168,12 @@ describe('the dashboard (completion plan 9.9)', () => {
     expect(nearby.items.every((item) => item.kind === 'nearby' && item.side === 'helper' && item.target.kind === 'find_work_task')).toBe(true);
     expect(nearby.items.some((item) => item.target.kind === 'find_work_task' && before.has(item.target.taskId) && after.has(item.target.taskId))).toBe(false);
     expect(nearby.seeAll).toEqual({ kind: 'find_work', query: {} });
+  });
+
+  it('leads a brand-new client with posting a first task, and nobody else (journeys on a phone, J-C1)', async () => {
+    expect((await getDashboard(db, { id: NEW_CLIENT, firstName: 'Dana', mode: 'poster', timeZone: ZONE }, {}, new Date())).firstRun).toBe(true);
+    expect((await getDashboard(db, ana, {}, new Date())).firstRun).toBeUndefined();
+    expect((await getDashboard(db, jordan, {}, new Date())).firstRun).toBeUndefined();
   });
 
   it('asks a helper who is not set up to finish first', async () => {

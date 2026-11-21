@@ -126,7 +126,7 @@ describe('Needs your attention', () => {
   });
 
   it('says so in one line when nothing needs the person', () => {
-    renderDashboard(ruthDashboardData);
+    renderDashboard({ ...ruthDashboardData, firstRun: false });
     expect(region('Needs your attention').getByText(/You’re all caught up/)).toBeVisible();
     expect(region('Needs your attention').queryByRole('list')).not.toBeInTheDocument();
   });
@@ -238,7 +238,7 @@ describe('the lists', () => {
   });
 
   it('offers the map only where it helps, and draws the areas with remote items counted', () => {
-    renderDashboard({ ...ruthDashboardData, mapAvailable: false });
+    renderDashboard({ ...ruthDashboardData, firstRun: false, mapAvailable: false });
     const views = within(screen.getByRole('group', { name: 'Show as' }));
     expect(views.getAllByRole('link').map((link) => link.textContent)).toEqual(['List', 'Cards']);
     cleanup();
@@ -261,9 +261,34 @@ describe('the lists', () => {
   });
 });
 
-describe('empty lists', () => {
-  it('says how each list fills up for a new client, with the first step', () => {
+describe('a first visit (journeys on a phone, J-C1)', () => {
+  it('leads with posting a first task, without "nothing" lines, empty lists, filters or See all', () => {
     renderDashboard(ruthDashboardData);
+    const card = region('Post your first task');
+    expect(card.getByRole('link', { name: 'Post a task' })).toHaveAttribute('href', routes.app.newTask());
+    expect(card.getByRole('link', { name: 'Find helpers' })).toHaveAttribute('href', routes.app.helpers());
+    expect(screen.queryByText('Nothing needs you right now')).not.toBeInTheDocument();
+    expect(screen.queryByText('No bookings coming up')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Needs your attention' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Your tasks, offers and bookings' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Show as' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /See all/ })).not.toBeInTheDocument();
+    // The search stays: it's another way in.
+    expect(screen.getByRole('search')).toBeInTheDocument();
+  });
+
+  it('still shows what needs the person, and the lists while searching', () => {
+    renderDashboard({ ...ruthDashboardData, attention: [{ id: 'route', kind: 'unread_messages', count: 1, target: { kind: 'messages' } }] });
+    expect(region('Needs your attention').getByRole('link')).toBeVisible();
+    cleanup();
+    renderDashboard({ ...ruthDashboardData, query: { ...ruthDashboardData.query, q: 'desk' } });
+    expect(screen.getByRole('region', { name: 'Your tasks, offers and bookings' })).toBeInTheDocument();
+  });
+});
+
+describe('empty lists', () => {
+  it('says how each list fills up for a client with nothing in it now, with the first step', () => {
+    renderDashboard({ ...ruthDashboardData, firstRun: false });
     expect(screen.getByRole('heading', { name: 'No tasks yet' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Post a task' })).toHaveAttribute('href', routes.app.newTask());
   });
