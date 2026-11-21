@@ -1,4 +1,4 @@
-import { and, eq, inArray, like, or } from 'drizzle-orm';
+import { and, eq, inArray, isNull, like, or } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { AdminMarketRow } from '@/contracts';
 import type { EmailMessage, EmailProvider } from '@/integrations/email';
@@ -51,11 +51,29 @@ const providers: DeliveryProviders = { email: box, sms: { name: 'test', async se
 const setStatus = (status: 'prelaunch' | 'live' | 'paused') => setMarketStatus(db, riley, BOISE, { status, reason: `Boise goes ${status} for the test` }, new Date());
 const boise = async (): Promise<AdminMarketRow> => (await getAdminMarkets(db, riley)).find((row) => row.id === BOISE)!;
 const told = () => db.select({ userId: notifications.userId, type: notifications.type, target: notifications.target }).from(notifications).where(eq(notifications.sourceEventId, cityLiveKey(BOISE)));
+/**
+ * The job runner's two steps until this file's part is done. Both take the oldest work first (200 events and 100
+ * notifications a run), so in a whole test:db other files' leftovers could fill the run and Boise's waited: the order
+ * of files decided the outcome (ab's catch, 2026-11-21). Each step runs again, a bounded number of times, until
+ * nothing of this file's is waiting.
+ */
 async function dispatchAndDeliver() {
-  await dispatchNotifications(db, new Date());
-  // Past every notification the suite's earlier files made and never delivered: those are still fresh (48 h) and go
-  // first, oldest first, so the default 100 stopped short of this file's own in a full run.
-  await deliverNotifications(db, new Date(), providers, 2_000);
+  for (let run = 0; ; run += 1) {
+    const waiting = await db.select({ id: outboxEvents.id }).from(outboxEvents).where(and(eq(outboxEvents.aggregateId, BOISE), isNull(outboxEvents.dispatchedAt)));
+    if (waiting.length === 0) break;
+    if (run === 10) throw new Error("Boise's events were still waiting after 10 dispatch runs");
+    await dispatchNotifications(db, new Date());
+  }
+  for (let run = 0; ; run += 1) {
+    const waiting = await db
+      .select({ id: notifications.id })
+      .from(notifications)
+      .leftJoin(notificationDeliveries, eq(notificationDeliveries.notificationId, notifications.id))
+      .where(and(inArray(notifications.userId, ids), isNull(notificationDeliveries.id)));
+    if (waiting.length === 0) return;
+    if (run === 10) throw new Error("this file's notifications were still waiting after 10 delivery runs");
+    await deliverNotifications(db, new Date(), providers, 1_000);
+  }
 }
 
 beforeAll(async () => {
