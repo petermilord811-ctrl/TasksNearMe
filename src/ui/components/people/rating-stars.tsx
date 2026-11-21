@@ -4,9 +4,11 @@ import type { RatingSummary } from '@/contracts';
 
 export interface RatingStarsProps {
   rating?: RatingSummary;
+  /** One review's rating: "5 out of 5", without a count that would read like an average of one. */
+  single?: boolean;
 }
 
-export function RatingStars({ rating }: RatingStarsProps) {
+export function RatingStars({ rating, single = false }: RatingStarsProps) {
   const t = useTranslations('verification');
 
   if (!rating) {
@@ -26,7 +28,7 @@ export function RatingStars({ rating }: RatingStarsProps) {
           </span>
         ))}
       </span>
-      <span className="text-sm tabular-nums">{t('ratingSummary', { average: rating.average, count: rating.count })}</span>
+      <span className="text-sm tabular-nums">{single ? t('ratingOutOfFive', { average: rating.average }) : t('ratingSummary', { average: rating.average, count: rating.count })}</span>
     </div>
   );
 }

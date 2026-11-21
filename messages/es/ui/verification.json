@@ -3,6 +3,7 @@
   "photo": "Foto de perfil de {name}",
   "new": "Nuevo",
   "ratingSummary": "{average, number} de 5, {count, plural, one {# reseña} other {# reseñas}}",
+  "ratingOutOfFive": "{average, number} de 5",
   "badges": "Insignias de verificación",
   "identity": "Identidad verificada",
   "identityAt": "Identidad verificada · {date}",

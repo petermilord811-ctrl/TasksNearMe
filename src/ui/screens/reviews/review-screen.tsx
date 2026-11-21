@@ -46,7 +46,7 @@ export function ReviewContent({ data, handlers, now, initialResult, initialPendi
         <h2 className="font-heading text-xl/7 font-semibold">{t('yourReview')}</h2>
         <p className="text-sm tabular-nums text-muted-foreground">{t('submittedAt', { date: formatDateTime(mine.submittedAt), relative: formatRelative(mine.submittedAt, now) })}</p>
       </div>
-      <RatingStars rating={{ average: mine.rating, count: 1 }} />
+      <RatingStars rating={{ average: mine.rating, count: 1 }} single />
       {mine.tags.length > 0 && <ul className="flex flex-wrap gap-2">{mine.tags.map((tag) => <li key={tag}><Badge variant="secondary" className="whitespace-normal px-3 py-1 text-sm">{t(`tags.${tag}`)}</Badge></li>)}</ul>}
       {mine.body && <p className="whitespace-pre-wrap break-words leading-6">{mine.body}</p>}
       <p className="flex items-start gap-2 border-t pt-4 text-sm">
@@ -66,7 +66,7 @@ export function ReviewContent({ data, handlers, now, initialResult, initialPendi
           <p className="text-sm tabular-nums text-muted-foreground"><time dateTime={theirs.publishedAt}>{t('theirs.published', { date: formatDate(theirs.publishedAt) })}</time></p>
         </div>
       </div>
-      <RatingStars rating={{ average: theirs.rating, count: 1 }} />
+      <RatingStars rating={{ average: theirs.rating, count: 1 }} single />
       {theirs.tags.length > 0 && <ul className="flex flex-wrap gap-2">{theirs.tags.map((tag) => <li key={tag}><Badge variant="secondary" className="whitespace-normal px-3 py-1 text-sm">{t(`tags.${tag}`)}</Badge></li>)}</ul>}
       {theirs.body && <p className="whitespace-pre-wrap break-words leading-6">{theirs.body}</p>}
     </section> : data.theirsMissing && <p className="px-1 text-sm text-muted-foreground">{t('theirs.missing', { name: data.subject.displayName })}</p>}

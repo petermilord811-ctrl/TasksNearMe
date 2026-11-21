@@ -206,7 +206,7 @@ describe('ReviewScreen', () => {
   it('shows a sent review read-only and keeps the supplied hidden state even after its date', () => {
     mount({ data: deskReviewSubmittedData, now: '2026-12-06T15:00:00.000Z' });
     expect(screen.getByText(deskReviewSubmittedData.mine!.body!)).toBeInTheDocument();
-    expect(screen.getByText('5 out of 5, 1 review')).toBeInTheDocument();
+    expect(screen.getByText('5 out of 5')).toBeInTheDocument();
     expect(screen.getByText('Becomes visible when Jordan T. sends theirs, or on Sat, Dec 5.')).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: messages.review.send })).not.toBeInTheDocument();
@@ -214,7 +214,7 @@ describe('ReviewScreen', () => {
 
   it('shows the supplied publication date and does not suppress low ratings', () => {
     mount({ data: { ...deskReviewPublishedData, mine: { ...deskReviewPublishedData.mine!, rating: 1 } } });
-    expect(screen.getByText('1 out of 5, 1 review')).toBeInTheDocument();
+    expect(screen.getByText('1 out of 5')).toBeInTheDocument();
     expect(screen.getByText(`Visible since ${formatDate(deskReviewPublishedData.mine!.publishedAt!)}`)).toBeInTheDocument();
     expect(screen.queryByRole('radio')).not.toBeInTheDocument();
   });
@@ -229,7 +229,8 @@ describe('ReviewScreen', () => {
   it("shows the other person's review once it's published, with its tags and text (sweep RV2)", () => {
     mount({ data: deskReviewPublishedData });
     const theirs = screen.getByRole('region', { name: "Jordan T.'s review of you" });
-    expect(theirs).toHaveTextContent('5 out of 5, 1 review');
+    expect(theirs).toHaveTextContent('5 out of 5');
+    expect(theirs).not.toHaveTextContent('1 review');
     expect(theirs).toHaveTextContent(messages.review.tags.clear_instructions);
     expect(theirs).toHaveTextContent(deskReviewPublishedData.theirs!.body!);
     expect(within(theirs).getByText(`Published ${formatDate(deskReviewPublishedData.theirs!.publishedAt)}`)).toBeInTheDocument();

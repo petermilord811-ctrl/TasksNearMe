@@ -19,7 +19,9 @@ describe('ReviewCard', () => {
     const review = samProfilePageData.reviews[0]!;
     renderReview(review);
     expect(screen.getByRole('article', { name: 'Review by Maya R.' })).toBeInTheDocument();
-    expect(screen.getByText('5 out of 5, 1 review')).toBeInTheDocument();
+    expect(screen.getByText('5 out of 5')).toBeInTheDocument();
+    // One review's stars carry no count (journeys on a phone, J-H17).
+    expect(screen.queryByText(/1 review/)).not.toBeInTheDocument();
     expect(screen.getByText('Sun, Nov 8, 2026')).toHaveAttribute('dateTime', review.publishedAt);
     expect(screen.getByText('Furniture assembly')).toBeInTheDocument();
     expect(screen.getByText(review.body!)).toBeInTheDocument();
@@ -37,7 +39,7 @@ describe('ReviewCard', () => {
     renderReview(samProfilePageData.reviews[2]!);
     expect(screen.getByText('Good value')).toBeInTheDocument();
     expect(screen.getByText('Ana P.')).toBeInTheDocument();
-    expect(screen.getByText('4 out of 5, 1 review')).toBeInTheDocument();
+    expect(screen.getByText('4 out of 5')).toBeInTheDocument();
     expect(screen.getByRole('article').querySelector('p.whitespace-pre-wrap')).toBeNull();
   });
 
