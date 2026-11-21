@@ -34,6 +34,7 @@ import { profileComplete } from './steps';
 import { displayNameOf, RESEND_AFTER_SECONDS, resolveSignInStep, safeNextPath } from './steps';
 import { requestNow } from '@/platform/clock';
 import { trackCodeDelivery } from '@/platform/auth/code-delivery';
+import { askForCodeWithinLimits, emailCodeLimits } from './code-limits';
 
 /**
  * Server Actions behind SignInScreen (src/contracts/auth.ts). The page binds `next` into each
@@ -41,12 +42,6 @@ import { trackCodeDelivery } from '@/platform/auth/code-delivery';
  * or the result carries `redirectTo` when the flow is complete.
  */
 
-const EMAIL_SEND_RULES = {
-  perEmail: { limit: 3, windowSeconds: 10 * 60 },
-  /** A day's codes to one address (security review 2026-11-20): enough to sign in on every device, not 400 emails. */
-  perEmailDay: { limit: 20, windowSeconds: 24 * 3600 },
-  perIp: { limit: 10, windowSeconds: 10 * 60 },
-};
 
 /** Starting a Google or Microsoft sign-in: plenty for a person, little for a script. */
 const SOCIAL_START_RULE = { limit: 20, windowSeconds: 10 * 60 };
@@ -72,26 +67,22 @@ async function continueAfterSignIn(rawNext: string, userId: string, code: 'updat
 
 async function sendEmailCode(email: string): Promise<ActionResult> {
   const ip = await limitAddress();
-  const limited = await consumeRateLimits(db, [
-    { key: `email-code:email:${email}`, rule: EMAIL_SEND_RULES.perEmail },
-    { key: `email-code:email-day:${email}`, rule: EMAIL_SEND_RULES.perEmailDay },
-    ...(ip ? [{ key: `email-code:ip:${ip}`, rule: EMAIL_SEND_RULES.perIp }] : []),
-  ]);
-  if (!limited.ok) return rateLimited(limited.retryAt);
+  // Counted first; a code that didn't go out is given back (code-limits.ts).
+  return askForCodeWithinLimits(db, emailCodeLimits(email, ip), async () => {
+    const [existing] = await db.select({ status: users.status }).from(users).where(eq(users.email, email)).limit(1);
+    if (existing && BLOCKED_STATUSES.has(existing.status)) return { ok: false, code: 'not_allowed' };
 
-  const [existing] = await db.select({ status: users.status }).from(users).where(eq(users.email, email)).limit(1);
-  if (existing && BLOCKED_STATUSES.has(existing.status)) return { ok: false, code: 'not_allowed' };
-
-  // With the request's headers, so the code comes in the language of the page that asked for it (its cookie or the
-  // browser's language); without them it always went out in English (messages pass J-M8).
-  const requestHeaders = await headers();
-  const { sent } = await trackCodeDelivery(() => auth.api.sendVerificationOTP({ body: { email, type: 'sign-in' }, headers: requestHeaders }));
-  // The provider refused it or didn't answer: say so, rather than show the code step for a code that never comes
-  // (when things break, 2026-11-21).
-  if (!sent) return { ok: false, code: 'unavailable' };
-  await writePendingEmail(email, new Date(Date.now() + RESEND_AFTER_SECONDS * 1000));
-  refresh();
-  return { ok: true, code: 'sent' };
+    // With the request's headers, so the code comes in the language of the page that asked for it (its cookie or the
+    // browser's language); without them it always went out in English (messages pass J-M8).
+    const requestHeaders = await headers();
+    const { sent } = await trackCodeDelivery(() => auth.api.sendVerificationOTP({ body: { email, type: 'sign-in' }, headers: requestHeaders }));
+    // The provider refused it or didn't answer: say so, rather than show the code step for a code that never comes
+    // (when things break, 2026-11-21).
+    if (!sent) return { ok: false, code: 'unavailable' };
+    await writePendingEmail(email, new Date(Date.now() + RESEND_AFTER_SECONDS * 1000));
+    refresh();
+    return { ok: true, code: 'sent' };
+  });
 }
 
 /**
