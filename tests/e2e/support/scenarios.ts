@@ -38,26 +38,42 @@ export interface BookingScenario {
 
 type ScenarioState =
   | { kind: 'canceled'; reason: 'helper' | 'helper_no_show' }
-  /** Jordan sent the work now; Chris has 72 h to approve. */
+  /** Jordan sent the work now; the client has 72 h to approve. */
   | { kind: 'completion_submitted' }
-  | { kind: 'confirmed' };
+  | { kind: 'confirmed' }
+  /** Jordan was on his way 30 minutes before the start and arrived at it: he can send the work for approval. */
+  | { kind: 'in_progress' };
+
+/** The seeded task and offer a scenario copies, and who posted it. */
+interface Template {
+  taskId: string;
+  offerId: string;
+  /** The copy's title is this, then ` (e2e <name> <run>)`. */
+  title: string;
+  posterUserId: string;
+  /** A helper whose offer was declined at booking. */
+  declinedHelperId?: string;
+}
+
+const DESK: Template = { taskId: 'tsk_desk', offerId: 'off_jordan', title: 'Assemble a desk', posterUserId: 'usr_chris', declinedHelperId: 'usr_sam' };
+const BOOKCASE: Template = { taskId: 'tsk_bookcase', offerId: 'off_bookcase_jordan', title: 'Assemble a bookcase', posterUserId: 'usr_ruth' };
 
 /**
- * A copy of the desk posted by Chris, booked with Jordan ($60; Sam's offer declined at booking), in
- * `state`. `startsInMs` places the start (negative: past).
+ * A copy of a seeded task booked with Jordan, in `state`: by default the desk posted by Chris ($60; Sam's offer
+ * declined at booking). `startsInMs` places the start (negative: past).
  */
-async function scenario(name: string, state: ScenarioState, startsInMs: number, priceCents = 6000): Promise<BookingScenario> {
+async function scenario(name: string, state: ScenarioState, startsInMs: number, priceCents = 6000, template: Template = DESK): Promise<BookingScenario> {
   const { db, pool } = database();
   try {
     // Unique even for two copies started in the same millisecond (--repeat-each runs them side by side).
     const run = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
     const taskId = `tsk_e2e_${name}_${run}`;
     const bookingId = `bkg_e2e_${name}_${run}`;
-    const title = `Assemble a desk (e2e ${name} ${run})`;
-    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
-    const [offer] = await db.select().from(offers).where(eq(offers.id, 'off_jordan'));
-    if (!desk || !offer) throw new Error('The seeded desk is missing');
-    const [policy] = await db.select().from(marketPolicies).where(and(eq(marketPolicies.marketId, desk.marketId), eq(marketPolicies.status, 'published')));
+    const title = `${template.title} (e2e ${name} ${run})`;
+    const [seeded] = await db.select().from(tasks).where(eq(tasks.id, template.taskId));
+    const [offer] = await db.select().from(offers).where(eq(offers.id, template.offerId));
+    if (!seeded || !offer) throw new Error(`The seeded ${template.taskId} or ${template.offerId} is missing`);
+    const [policy] = await db.select().from(marketPolicies).where(and(eq(marketPolicies.marketId, seeded.marketId), eq(marketPolicies.status, 'published')));
     if (!policy) throw new Error('No published market policy');
 
     const now = new Date();
@@ -69,11 +85,11 @@ async function scenario(name: string, state: ScenarioState, startsInMs: number, 
 
     await db.transaction(async (tx) => {
       await tx.insert(tasks).values({
-        ...desk,
+        ...seeded,
         id: taskId,
         slug: taskId.replaceAll('_', '-'),
         title,
-        posterUserId: 'usr_chris',
+        posterUserId: template.posterUserId,
         status: canceled ? 'canceled' : 'assigned',
         budgetCents: priceCents,
         offerCount: 0,
@@ -88,15 +104,15 @@ async function scenario(name: string, state: ScenarioState, startsInMs: number, 
       const common = { ...offer, taskId, priceCents, revision: 1, proposedStart: start, expiresAt: start, closedAt: bookedAt, createdAt: bookedAt, updatedAt: bookedAt };
       await tx.insert(offers).values([
         { ...common, id: `off_e2e_${name}_${run}`, status: 'accepted' },
-        { ...common, id: `off_e2e_${name}_${run}_sam`, helperUserId: 'usr_sam', status: 'declined' },
+        ...(template.declinedHelperId ? [{ ...common, id: `off_e2e_${name}_${run}_sam`, helperUserId: template.declinedHelperId, status: 'declined' as const }] : []),
       ]);
       await tx.insert(bookings).values({
         id: bookingId,
         taskId,
         offerId: `off_e2e_${name}_${run}`,
-        posterUserId: 'usr_chris',
-        helperUserId: 'usr_jordan',
-        marketId: desk.marketId,
+        posterUserId: template.posterUserId,
+        helperUserId: offer.helperUserId,
+        marketId: seeded.marketId,
         policyVersionId: policy.id,
         startAt: start,
         confirmedAt: bookedAt,
@@ -106,7 +122,9 @@ async function scenario(name: string, state: ScenarioState, startsInMs: number, 
           ? { status: 'canceled', cancelReason: state.reason, canceledBy: state.reason === 'helper' ? 'helper' : 'poster', canceledAt: changedAt }
           : state.kind === 'confirmed'
             ? { status: 'confirmed' }
-            : { status: 'completion_submitted', arrivedAt: start, completionSubmittedAt: now, approvalDueAt: new Date(now.getTime() + 72 * HOUR) }),
+            : state.kind === 'in_progress'
+              ? { status: 'in_progress', onMyWayAt: new Date(start.getTime() - HOUR / 2), arrivedAt: start }
+              : { status: 'completion_submitted', arrivedAt: start, completionSubmittedAt: now, approvalDueAt: new Date(now.getTime() + 72 * HOUR) }),
       });
       await tx.insert(bookingTerms).values({
         id: `btm_e2e_${name}_${run}`,
@@ -115,7 +133,7 @@ async function scenario(name: string, state: ScenarioState, startsInMs: number, 
         pricingType: 'fixed',
         priceCents,
         breakdown,
-        scopeText: desk.description,
+        scopeText: seeded.description,
         startAt: start,
         createdAt: bookedAt,
       });
@@ -125,7 +143,7 @@ async function scenario(name: string, state: ScenarioState, startsInMs: number, 
         id: paymentId,
         bookingId,
         purpose: 'booking_funding',
-        payerUserId: 'usr_chris',
+        payerUserId: template.posterUserId,
         amountCents: breakdown.posterTotalCents,
         status: canceled ? 'refunded' : 'succeeded',
         provider: 'dev',
@@ -172,6 +190,14 @@ export function submittedBooking(name: string): Promise<BookingScenario> {
 /** Confirmed for `priceCents`, starting in 3 days (a bigger job for staff refunds). */
 export function confirmedBooking(name: string, priceCents: number): Promise<BookingScenario> {
   return scenario(name, { kind: 'confirmed' }, 3 * 24 * HOUR, priceCents);
+}
+
+/**
+ * A copy of Ruth's bookcase with Jordan ($70), started an hour ago with Jordan there: he can send the work for
+ * approval. Its own booking for each call, so a test that completes it can be retried or repeated side by side.
+ */
+export function inProgressBookcase(name: string): Promise<BookingScenario> {
+  return scenario(name, { kind: 'in_progress' }, -HOUR, 7000, BOOKCASE);
 }
 
 /** A copy of the desk posted by Chris, open with no offers, three days out: a task Jordan can offer on. */

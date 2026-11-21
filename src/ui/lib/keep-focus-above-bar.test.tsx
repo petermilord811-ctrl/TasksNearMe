@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { useRef } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useKeepFocusAboveBar } from './keep-focus-above-bar';
+import { PRESS_SETTLE_MS, useKeepFocusAboveBar } from './keep-focus-above-bar';
 
 /** A 430 px tall screen (a phone with the keyboard open) whose sticky bar starts at 353. */
 const BAR_TOP = 353;
@@ -95,6 +95,54 @@ describe('useKeepFocusAboveBar (journeys on a phone, J-C-m)', () => {
     window.dispatchEvent(new Event('resize'));
     expect(scrollIntoView).toHaveBeenCalledOnce();
     expect(scrollIntoView.mock.contexts[0]).toBe(field);
+  });
+
+  it('waits for the click before moving a control that a press focused, which would land the click beside it', () => {
+    vi.useFakeTimers();
+    try {
+      const { field, hint, count } = mount();
+      place(field, BAR_TOP - 40, 64);
+      place(hint, BAR_TOP + 30, 40);
+      place(count, BAR_TOP + 30, 20);
+      field.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      field.focus();
+      field.dispatchEvent(new Event('pointerup', { bubbles: true }));
+      expect(scrollIntoView).not.toHaveBeenCalled();
+      field.click();
+      expect(scrollIntoView).not.toHaveBeenCalled();
+      vi.runOnlyPendingTimers();
+      expect(scrollIntoView).toHaveBeenCalledOnce();
+      expect(scrollIntoView.mock.contexts[0]).toBe(field);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('moves it shortly after the release when no click follows, and at once when the press is cancelled', () => {
+    vi.useFakeTimers();
+    try {
+      const { field, hint, count } = mount();
+      place(field, BAR_TOP - 40, 64);
+      place(hint, BAR_TOP + 30, 40);
+      place(count, BAR_TOP + 30, 20);
+      field.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      field.focus();
+      field.dispatchEvent(new Event('pointerup', { bubbles: true }));
+      vi.advanceTimersByTime(PRESS_SETTLE_MS - 1);
+      expect(scrollIntoView).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      vi.runOnlyPendingTimers();
+      expect(scrollIntoView).toHaveBeenCalledOnce();
+
+      field.blur();
+      field.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      field.focus();
+      window.dispatchEvent(new Event('pointercancel'));
+      vi.runOnlyPendingTimers();
+      expect(scrollIntoView).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("leaves the bar's own buttons, and focus outside the form, alone", () => {
