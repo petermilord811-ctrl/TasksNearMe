@@ -16,7 +16,7 @@ import { HelperTaskScreen } from './helper-task-screen';
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); window.sessionStorage.clear(); });
 
 const now = '2026-11-17T15:00:00.000Z';
 function makeHandlers(overrides: Partial<HelperWorkHandlers> = {}): HelperWorkHandlers {
@@ -67,6 +67,22 @@ describe('HelperTaskScreen', () => {
     show({ ...helperMovingHourly, blockedReason: 'task_closed' });
     expect(screen.getByText('$20.00')).toBeVisible();
     expect(screen.getByText(helperMovingHourly.expenseAllowance!.description)).toBeVisible();
+  });
+
+  it('after Send offer, the summary that replaces the form takes focus (journeys on a phone, J-H8)', async () => {
+    window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    const handlers = makeHandlers();
+    const fresh = { ...helperDeskWithOffer, myOffer: undefined };
+    const { rerender } = show(fresh, handlers);
+    await userEvent.click(screen.getByRole('button', { name: 'Send offer' }));
+    await waitFor(() => expect(handlers.onSubmitOffer).toHaveBeenCalledOnce());
+    // The page comes back with the offer (the server's refresh).
+    rerender(<NextIntlClientProvider locale="en" messages={{ ...messages, helperTask, findWork }}><HelperTaskScreen data={helperDeskWithOffer} handlers={handlers} now={now} /></NextIntlClientProvider>);
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Your offer' })).toHaveFocus());
+    // Only right after sending: the page loaded with the offer takes no focus.
+    cleanup();
+    show(helperDeskWithOffer, makeHandlers());
+    expect(screen.getByRole('heading', { name: 'Your offer' })).not.toHaveFocus();
   });
 
   it('opens the revision form with the offer values and submits to onReviseOffer', async () => {

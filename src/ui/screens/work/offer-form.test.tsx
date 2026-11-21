@@ -10,7 +10,7 @@ import { OfferForm, type OfferFormProps } from './offer-form';
 
 const navigation = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
-afterEach(() => { cleanup(); vi.useRealTimers(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.clearAllMocks(); window.sessionStorage.clear(); });
 
 const desk = { ...helperDeskWithOffer, myOffer: undefined };
 function mount(props: Partial<OfferFormProps> = {}) {
@@ -19,6 +19,23 @@ function mount(props: Partial<OfferFormProps> = {}) {
 }
 
 describe('helper offer form', () => {
+  it('keeps a new offer’s words in this tab across a reload, and forgets them once it’s sent (journeys on a phone, J-H7)', async () => {
+    const user = userEvent.setup();
+    const first = mount();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Proposed start' }), '10:30');
+    await user.type(screen.getByRole('textbox', { name: 'Message to the client' }), 'I bring my own drill.');
+    first.unmount();
+    // The page again (a reload, or Back to it): the words are there.
+    const onSent = vi.fn();
+    const { handlers } = mount({ onSent });
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Message to the client' })).toHaveValue('I bring my own drill.'));
+    expect(screen.getByRole('combobox', { name: 'Proposed start' })).toHaveValue('10:30');
+    await user.click(screen.getByRole('button', { name: 'Send offer' }));
+    await waitFor(() => expect(handlers.onSubmitOffer).toHaveBeenCalledOnce());
+    await waitFor(() => expect(onSent).toHaveBeenCalledOnce());
+    expect(window.sessionStorage.getItem(`tnm:offer:${desk.task.id}`)).toBeNull();
+  });
+
   it('limits the select to supplied start times and rejects a tampered start', async () => {
     const user = userEvent.setup();
     const { handlers } = mount();

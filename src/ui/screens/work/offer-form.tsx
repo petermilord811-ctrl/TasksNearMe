@@ -19,11 +19,16 @@ export interface OfferFormProps {
   handlers: HelperWorkHandlers;
   revising?: boolean;
   onCancel?: () => void;
+  /** A new offer went: the summary that replaces this form takes focus (J-H8). */
+  onSent?: () => void;
   /** Preview-only result state. */
   initialResult?: ActionResult;
 }
 
-export function OfferForm({ data, handlers, revising = false, onCancel, initialResult }: OfferFormProps) {
+/** A new offer's words for a task, kept in this tab until it's sent (personal drafts: gone at sign-out). */
+export const offerDraftKey = (taskId: string) => `tnm:offer:${taskId}`;
+
+export function OfferForm({ data, handlers, revising = false, onCancel, onSent, initialResult }: OfferFormProps) {
   const t = useTranslations('helperTask.form');
   const id = useId();
   const router = useRouter();
@@ -43,6 +48,39 @@ export function OfferForm({ data, handlers, revising = false, onCancel, initialR
   const heading = useRef<HTMLHeadingElement>(null);
   const submitBar = useRef<HTMLDivElement>(null);
   useEffect(() => { if (revising) heading.current?.focus(); }, [revising]);
+
+  // A new offer's words survive a reload or Back (journeys on a phone, J-H7: a 500-character message was lost): they come
+  // back once, after hydration, where the task's rules still take them.
+  const draftAt = offerDraftKey(data.task.id);
+  useEffect(() => {
+    if (revising) return;
+    let saved: Partial<OfferInput> | null = null;
+    try {
+      saved = JSON.parse(window.sessionStorage.getItem(draftAt) ?? 'null') as Partial<OfferInput> | null;
+    } catch {
+      return;
+    }
+    if (!saved || typeof saved !== 'object') return;
+    form.reset({
+      ...form.getValues(),
+      ...(typeof saved.message === 'string' ? { message: saved.message } : {}),
+      ...(Array.isArray(saved.brings) ? { brings: saved.brings.filter((item): item is string => typeof item === 'string').slice(0, 10) } : {}),
+      ...(typeof saved.startTime === 'string' && data.offerRules.startTimes.includes(saved.startTime) ? { startTime: saved.startTime } : {}),
+      ...(saved.pricing && saved.pricing.type === data.offerRules.pricingType ? { pricing: saved.pricing } : {}),
+    }, { keepDefaultValues: true });
+    // Once, on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Saved as it's typed (after the restore above, which runs first and has read what was kept).
+  const typed = useWatch({ control: form.control });
+  useEffect(() => {
+    if (revising) return;
+    try {
+      window.sessionStorage.setItem(draftAt, JSON.stringify(typed));
+    } catch {
+      // Storage off (a private window): nothing is kept.
+    }
+  }, [typed, revising, draftAt]);
 
   useEffect(() => {
     if (!result || result.ok || pending) return;
@@ -73,6 +111,14 @@ export function OfferForm({ data, handlers, revising = false, onCancel, initialR
     catch { next = { ok: false, code: 'unknown' }; }
     if (!next.ok) check.reset();
     locked.current = false; setPending(false); setResult(next);
+    if (next.ok && !revising) {
+      try {
+        window.sessionStorage.removeItem(draftAt);
+      } catch {
+        // Storage off: nothing was kept.
+      }
+      onSent?.();
+    }
     if (next.ok && next.redirectTo) router.push(next.redirectTo);
   }
 

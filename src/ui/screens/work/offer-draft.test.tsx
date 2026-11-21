@@ -10,7 +10,7 @@ import helperTask from '../../../../messages/en/ui/helperTask.json';
 import { OfferForm } from './offer-form';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); window.sessionStorage.clear(); });
 
 const form = helperTask.form;
 const status = messages.forms.aiDraft;

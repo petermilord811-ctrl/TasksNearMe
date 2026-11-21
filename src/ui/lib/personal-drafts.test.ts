@@ -18,6 +18,8 @@ describe('forgetPersonalDrafts (sweep 2026-11-20)', () => {
       'tasksnearme:post-task:gainesville:0123456789abcdef:v1',
       'tasksnearme:post-task:gainesville:fedcba9876543210:template:desk:v1',
       'tnm:helper-setup:usr_maya',
+      'tnm:offer:tsk_desk',
+      'tnm:offer:sent:tsk_desk',
       'tnm:assistant:help:v1',
       'tnm-map-intro',
     ]);
