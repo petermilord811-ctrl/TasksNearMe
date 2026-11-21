@@ -249,6 +249,19 @@ describe('creating an account (/sign-up)', () => {
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', routes.signIn(signInSignUpStep.next));
   });
 
+  it('starts on helping out when the person was headed to an offer, and sends that unless they change it (J-V)', async () => {
+    const onStartSignUp = vi.fn(async (): Promise<ActionResult> => signInResults.codeSent);
+    show(<SignInScreen data={{ ...signInSignUpStep, next: routes.app.findWorkTask('tsk_desk'), suggestedIntent: 'help_out' }} handlers={handlers({ onStartSignUp })} />);
+    expect(screen.getByRole('radio', { name: /I want to help and earn/ })).toBeChecked();
+    await userEvent.type(screen.getByLabelText('First name'), 'Bea');
+    await userEvent.type(screen.getByLabelText('Last name'), 'Tester');
+    await userEvent.type(screen.getByLabelText('Email'), 'bea@example.test');
+    await userEvent.click(screen.getByRole('checkbox', { name: "I'm 18 or older" }));
+    await userEvent.click(screen.getByRole('checkbox', { name: /I agree to the Terms of service/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    await waitFor(() => expect(onStartSignUp).toHaveBeenCalledWith(expect.objectContaining({ intent: 'help_out' })));
+  });
+
   it('carries the choice to Google and Microsoft', async () => {
     const onSignUpWith = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'sent', redirectTo: '#provider' }));
     show(<SignInScreen data={signInSignUpStepWithProviders} handlers={handlers({ onSignUpWith })} />);

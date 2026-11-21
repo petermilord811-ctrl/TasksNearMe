@@ -75,6 +75,11 @@ export interface SignInPageData {
   profileDefaults?: { firstName: string; lastName: string };
   /** `email`: the other ways to sign in, in this order. Empty or absent: only the email code. */
   socialProviders?: SocialProvider[];
+  /**
+   * `sign_up`: the choice the form starts on, from where the person was headed (an offer or helper setup: help out).
+   * Absent: get help.
+   */
+  suggestedIntent?: SignUpIntent;
   /** `email`: a sign-in with Google or Microsoft that came back without signing in. */
   socialError?: { provider: SocialProvider; reason: SocialSignInError };
   /** `invite_code`: the market that's invite-only, and the code from an invite link the person opened. */

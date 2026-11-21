@@ -9,6 +9,7 @@ import { Section } from '@/ui/components/layout/section';
 import { ServicePhoto } from '@/ui/components/media/service-photo';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { RelatedLinks } from './category-seo-sections';
+import { CategoryNextStep } from './category-next-step';
 
 /**
  * A city's cost guide for one service (docs/seo/PLAN.md S5): the question people search as the heading, the typical
@@ -29,6 +30,7 @@ export function CostGuideScreen({ data }: { data: CostGuidePageData }) {
           <ArrowLeft aria-hidden="true" className="size-4" />{t('costGuide.back', { category: categoryName(category.slug), market: market.name })}
         </Link>
         <PageHeader title={data.question} description={t(`categories.${category.slug}.pricing`)} />
+        <CategoryNextStep category={category.slug} />
       </div>
       {/* The category's second photo, so the guide doesn't repeat its category page (src/shared/service-photos.ts). */}
       <ServicePhoto category={category.slug} slot="alternate" crop="landscape" sizes="(min-width: 1024px) 22rem, 100vw" className="rounded-[1.375rem] border border-foreground/[0.07]" />
@@ -59,7 +61,7 @@ export function CostGuideScreen({ data }: { data: CostGuidePageData }) {
         {(['post', 'offers', 'book'] as const).map((step) => <li key={step} className="pl-1">{t(`costGuide.steps.${step}`)}</li>)}
       </ol>
     </Section>
-    <ClosingCta title={t('category.ctaTitle')} body={t('category.ctaBody')} action={{ href: routes.app.newTask(), label: t('shared.postTask') }} />
+    <ClosingCta title={t('category.ctaTitle')} body={t('category.ctaBody')} action={{ href: routes.app.newTask({ category: category.slug }), label: t('shared.postTask') }} />
     <RelatedLinks links={data.related} market={market.name} />
   </div>;
 }

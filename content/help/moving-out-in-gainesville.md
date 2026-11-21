@@ -4,6 +4,8 @@ summary: A checklist for move-out week: the City's bulk pickup and yard waste ru
 topic: guides
 order: 5
 updated: 2026-11-20
+action: post_task
+category: moving-help
 ---
 Gainesville moves in waves. Many leases near the University of Florida run out at the end of July, a couple of weeks before new ones start in August, and the weeks around fall finals in December bring another round of move-outs. Here's what to plan, with the City's own rules, and the parts a helper on TasksNearMe can take on.
 

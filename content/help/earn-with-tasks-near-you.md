@@ -4,6 +4,7 @@ summary: Choose the work, set your price, and get paid for tasks close to home.
 topic: guides
 order: 3
 updated: 2026-11-18
+action: become_helper
 ---
 If you're handy, strong or patient with a computer, your neighbors need you. On TasksNearMe you pick the tasks, set your price and get paid through the app.
 

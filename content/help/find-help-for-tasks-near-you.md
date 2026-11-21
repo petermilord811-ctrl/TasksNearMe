@@ -4,6 +4,7 @@ summary: Describe the task, compare offers from verified neighbors, and book wit
 topic: guides
 order: 1
 updated: 2026-11-17
+action: post_task
 ---
 Furniture to put together, a truck to load, leaves to bag: most everyday tasks go faster with one more pair of hands. This is how to find the right person for yours.
 

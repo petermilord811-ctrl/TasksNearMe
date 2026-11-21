@@ -20,6 +20,7 @@ import {
 import { botCheckForPage } from '@/modules/accounts/bot-check';
 import { resolveCurrentSignIn } from '@/modules/accounts/sign-in/server';
 import { signUpWith, startSignUp } from '@/modules/accounts/sign-in/sign-up-actions';
+import { intentForNext } from '@/modules/accounts/sign-in/sign-up-domain';
 import { redeemSignUpInvite } from '@/modules/beta/actions';
 import { publicPageMetadata } from '@/i18n/metadata';
 import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
@@ -52,7 +53,7 @@ async function SignUp({ searchParams }: Pick<PageProps<'/[locale]/sign-up'>, 'se
   // The first step here is the sign-up form; the others are sign-in's. Both forms that finish sign-up run the bot check.
   const step = resolution.data.step === 'email' ? 'sign_up' : resolution.data.step;
   const botCheck = step === 'sign_up' || step === 'profile' ? await botCheckForPage() : undefined;
-  const data = { ...resolution.data, step, ...(botCheck ? { botCheck } : {}) };
+  const data = { ...resolution.data, step, ...(botCheck ? { botCheck } : {}), ...(step === 'sign_up' ? { suggestedIntent: intentForNext(resolution.data.next) } : {}) };
   return (
     <SignInScreen
       data={data}

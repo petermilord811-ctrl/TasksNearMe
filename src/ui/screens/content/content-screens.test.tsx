@@ -60,6 +60,17 @@ describe('Help article', () => {
     expect(screen.getByRole('link', { name: helpArticleWhenCharged.topic.title }).getAttribute('href')).toBe(`${routes.help()}#payments`);
     expect(screen.getByText(`Updated ${formatDate(helpArticleWhenCharged.updatedAt, { withYear: true })}`)).toBeDefined();
     expect(screen.getByRole('link', { name: /Canceling a booking/ }).getAttribute('href')).toBe(routes.help('cancel-a-booking'));
+    // A guide without an action ends without one.
+    expect(screen.queryByRole('link', { name: help.action.postTask.label })).toBeNull();
+  });
+
+  it("ends a guide with its next step: posting (on its service, when it has one) or becoming a helper (J-V)", () => {
+    const { unmount } = renderScreen(<HelpArticleScreen data={{ ...helpArticleWhenCharged, action: { kind: 'post_task', category: 'moving-help' } }} />);
+    expect(screen.getByRole('heading', { level: 2, name: help.action.postTask.title })).toBeDefined();
+    expect(screen.getByRole('link', { name: help.action.postTask.label }).getAttribute('href')).toBe(routes.app.newTask({ category: 'moving-help' }));
+    unmount();
+    renderScreen(<HelpArticleScreen data={{ ...helpArticleWhenCharged, action: { kind: 'become_helper' } }} />);
+    expect(screen.getByRole('link', { name: help.action.becomeHelper.label }).getAttribute('href')).toBe(routes.becomeAHelper());
   });
 });
 

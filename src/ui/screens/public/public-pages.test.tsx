@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { CATEGORY_SLUGS, routes } from '@/contracts';
@@ -71,6 +71,21 @@ describe('public screen interactions', () => {
     await user.keyboard('{Enter}');
     expect(question.getAttribute('aria-expanded')).toBe('true');
     expect(screen.getAllByRole('link', { name: /Post a task/ }).every((link) => link.getAttribute('href') === routes.app.newTask())).toBe(true);
+  });
+
+  it('puts the next step and why to trust it on the first screen, and every "Post a task" opens the wizard on the service (J-V)', () => {
+    renderScreen(<CategoryScreen data={furnitureCategoryPageData} now={now} />);
+    const posts = screen.getAllByRole('link', { name: 'Post a task' });
+    // The first screen's and the closing one, at least.
+    expect(posts.length).toBeGreaterThanOrEqual(2);
+    for (const link of posts) expect(link.getAttribute('href')).toBe(routes.app.newTask({ category: 'furniture-assembly' }));
+    expect(screen.getByText(messages.publicPages.shared.freeToPost)).toBeDefined();
+    const trust = screen.getByRole('list', { name: messages.publicPages.shared.trustPoints.label });
+    expect(within(trust).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['ID-verified helpers', 'Reviews only from completed bookings', 'Price agreed before you book']);
+    // Before anyone posts here: the first-of-its-kind card's button too.
+    cleanup();
+    renderScreen(<CategoryScreen data={{ ...furnitureCategoryPageData, recentTasks: [], topHelpers: [] }} now={now} />);
+    for (const link of screen.getAllByRole('link', { name: 'Post a task' })) expect(link.getAttribute('href')).toBe(routes.app.newTask({ category: 'furniture-assembly' }));
   });
 
   it('shows remote guidance only when the supplied category allows it', () => {

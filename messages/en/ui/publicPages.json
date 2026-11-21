@@ -86,6 +86,13 @@
   },
   "shared": {
     "postTask": "Post a task",
+    "freeToPost": "Free to post. You pay when you book, and your helper is paid after the work is done.",
+    "trustPoints": {
+      "label": "Why you can trust it",
+      "verified": "ID-verified helpers",
+      "reviews": "Reviews only from completed bookings",
+      "price": "Price agreed before you book"
+    },
     "categoriesTitle": "What could you use a hand with?",
     "categoriesDescription": "Everyday tasks, with a clear scope and a price agreed up front.",
     "recentTasks": "Recent tasks",

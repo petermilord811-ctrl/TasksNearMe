@@ -9,6 +9,18 @@
   "emptyDescription": "Prueba con otra palabra o contacta a soporte para recibir ayuda con tu pregunta.",
   "updated": "Actualizado el {date}",
   "relatedTitle": "Artículos relacionados",
+  "action": {
+    "postTask": {
+      "title": "¿Publicamos tu tarea?",
+      "body": "Publicar es gratis. Solo pagas cuando reservas a un ayudante.",
+      "label": "Publicar una tarea"
+    },
+    "becomeHelper": {
+      "title": "¿Empezamos a ayudar?",
+      "body": "Crea tu perfil de ayudante y luego envía ofertas para tareas cerca de ti.",
+      "label": "Hazte ayudante"
+    }
+  },
   "supportTitle": "¿Aún necesitas ayuda?",
   "supportDescription": "Cuéntanos qué pasó. Nuestro equipo de soporte puede ayudarte a encontrar el siguiente paso.",
   "supportLink": "Contactar a soporte",

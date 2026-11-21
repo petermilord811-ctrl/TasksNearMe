@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
-import type { PublicTaskPageData } from '@/contracts';
+import { routes, type PublicTaskPageData } from '@/contracts';
 import { publicTaskAssignedPageData, publicTaskPageData, publicRemoteTaskPageData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import publicTask from '../../../../messages/en/ui/publicTask.json';
@@ -40,6 +40,7 @@ describe('PublicTaskScreen', () => {
     renderTask(publicRemoteTaskPageData);
     expect(screen.getByText('Remote')).toBeDefined();
     expect(screen.queryByRole('heading', { name: 'Similar tasks' })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Need something similar? Post a task' }).getAttribute('href')).toBe('/app/tasks/new');
+    // The wizard opens on this task's service (J-V).
+    expect(screen.getByRole('link', { name: 'Need something similar? Post a task' }).getAttribute('href')).toBe(routes.app.newTask({ category: publicRemoteTaskPageData.category.slug }));
   });
 });

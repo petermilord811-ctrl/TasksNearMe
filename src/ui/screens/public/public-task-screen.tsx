@@ -83,7 +83,7 @@ export function PublicTaskScreen({ data, now }: PublicTaskScreenProps) {
         {data.similarTasks.map((similar) => <li key={similar.id}><TaskRow task={similar} now={now} /></li>)}
       </ol>
     </Section>}
-    <div className="border-t pt-4 text-center"><Link href={routes.app.newTask()} className={buttonVariants({ variant: 'link', className: 'h-auto min-h-11 max-w-full whitespace-normal' })}>{t('postSimilar')}</Link></div>
+    <div className="border-t pt-4 text-center"><Link href={routes.app.newTask({ category: category.slug })} className={buttonVariants({ variant: 'link', className: 'h-auto min-h-11 max-w-full whitespace-normal' })}>{t('postSimilar')}</Link></div>
     <p className="text-center"><Link href={routes.app.report('task', task.id)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"><Flag aria-hidden="true" className="size-4" />{report('links.task')}</Link></p>
   </div>;
 }

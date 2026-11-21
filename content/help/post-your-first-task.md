@@ -4,6 +4,7 @@ summary: What to include so helpers can make a clear offer.
 topic: getting-started
 order: 1
 updated: 2026-11-11
+action: post_task
 ---
 Posting is free. You only pay when you book a helper.
 

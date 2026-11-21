@@ -9,6 +9,7 @@ import { ClosingCta } from '@/ui/components/layout/closing-cta';
 import { Section } from '@/ui/components/layout/section';
 import { ServicePhoto } from '@/ui/components/media/service-photo';
 import { buttonVariants } from '@/ui/primitives/button';
+import { CategoryNextStep } from './category-next-step';
 import { CategoryAbout, CategoryCounts, CategoryFaq, CategoryRelated } from './category-seo-sections';
 import { MarketActivity, categoryIcons } from './marketing-sections';
 
@@ -21,7 +22,7 @@ export function CategoryScreen({ data, now }: { data: CategoryPageData; now: ISO
   const excluded = Object.keys(t.raw(`categories.${category.slug}.excluded`) as Record<string, string>);
   return <div className="space-y-section">
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,30rem)] lg:items-center lg:gap-10">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5"><ViewTransition name={`category-icon-${category.slug}`} share="category-morph" default="none"><span className="grid size-14 shrink-0 place-items-center rounded-2xl shadow-[inset_0_0_0_1px_color-mix(in_oklab,currentColor_18%,transparent)]" style={{ background: `color-mix(in oklab, var(--cat-${category.slug}) 15%, transparent)`, color: `var(--cat-${category.slug})` }}><Icon aria-hidden="true" className="size-7" /></span></ViewTransition><div className="min-w-0 flex-1"><PageHeader title={t('category.title', { category: categoryName(category.slug), market: market.name })} description={t(`categories.${category.slug}.intro`)} />{data.seo && <CategoryCounts seo={data.seo} />}</div></div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5"><ViewTransition name={`category-icon-${category.slug}`} share="category-morph" default="none"><span className="grid size-14 shrink-0 place-items-center rounded-2xl shadow-[inset_0_0_0_1px_color-mix(in_oklab,currentColor_18%,transparent)]" style={{ background: `color-mix(in oklab, var(--cat-${category.slug}) 15%, transparent)`, color: `var(--cat-${category.slug})` }}><Icon aria-hidden="true" className="size-7" /></span></ViewTransition><div className="min-w-0 flex-1"><PageHeader title={t('category.title', { category: categoryName(category.slug), market: market.name })} description={t(`categories.${category.slug}.intro`)} />{data.seo && <CategoryCounts seo={data.seo} />}<div className="mt-5"><CategoryNextStep category={category.slug} /></div></div></div>
       {/* A real photo of this kind of work, described by what's in it (src/shared/service-photos.ts). Often the page's
           largest paint, so it's preloaded; beside the heading on wide screens, under it on phones. */}
       <ServicePhoto category={category.slug} crop="wide" preload sizes="(min-width: 1024px) 30rem, 100vw" className="rounded-[1.375rem] border border-foreground/[0.07]" />
@@ -43,9 +44,9 @@ export function CategoryScreen({ data, now }: { data: CategoryPageData; now: ISO
       <p className="text-sm text-muted-foreground">{t('shared.privacy')}</p>
     </div>
     {data.seo && <CategoryAbout seo={data.seo} market={market.name} />}
-    <MarketActivity tasks={data.recentTasks} helpers={data.topHelpers} now={now} market={data.market} helpersTitle={t('category.helpersTitle')} />
+    <MarketActivity tasks={data.recentTasks} helpers={data.topHelpers} now={now} market={data.market} helpersTitle={t('category.helpersTitle')} category={category.slug} />
     {data.seo && <CategoryFaq seo={data.seo} />}
-    <ClosingCta title={t('category.ctaTitle')} body={t('category.ctaBody')} action={{ href: routes.app.newTask(), label: t('shared.postTask') }} />
+    <ClosingCta title={t('category.ctaTitle')} body={t('category.ctaBody')} action={{ href: routes.app.newTask({ category: category.slug }), label: t('shared.postTask') }} />
     {data.seo && <CategoryRelated seo={data.seo} market={market.name} />}
   </div>;
 }

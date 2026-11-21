@@ -26,7 +26,7 @@ export function SignUpStep({ data, handlers, initialResult, onResult }: SignInSt
   const forms = useTranslations('forms');
   const form = useForm<SignUpInput>({
     resolver: zodResolver(signUpInputSchema),
-    defaultValues: { firstName: '', lastName: '', email: '', intent: 'get_help', adultAttested: false, termsAccepted: false },
+    defaultValues: { firstName: '', lastName: '', email: '', intent: data.suggestedIntent ?? 'get_help', adultAttested: false, termsAccepted: false },
   });
   const action = useFormAction(form, { initialResult, onResult, navigation: 'replace' });
   const check = useBotCheck(data.botCheck, 'sign_up');

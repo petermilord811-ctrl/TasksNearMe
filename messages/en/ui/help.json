@@ -9,6 +9,18 @@
   "emptyDescription": "Try a different word, or contact support for help with your question.",
   "updated": "Updated {date}",
   "relatedTitle": "Related articles",
+  "action": {
+    "postTask": {
+      "title": "Ready to post your task?",
+      "body": "Posting is free. You only pay when you book a helper.",
+      "label": "Post a task"
+    },
+    "becomeHelper": {
+      "title": "Ready to start helping?",
+      "body": "Set up your helper profile, then send offers on tasks near you.",
+      "label": "Become a helper"
+    }
+  },
   "supportTitle": "Still need help?",
   "supportDescription": "Tell us what happened. Our support team can help you find the next step.",
   "supportLink": "Contact support",

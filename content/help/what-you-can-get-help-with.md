@@ -4,6 +4,7 @@ summary: Five everyday services, what each one covers, and what's out of scope.
 topic: guides
 order: 4
 updated: 2026-11-17
+action: post_task
 ---
 TasksNearMe covers five everyday services. Knowing what each includes helps you post a task helpers can say yes to.
 

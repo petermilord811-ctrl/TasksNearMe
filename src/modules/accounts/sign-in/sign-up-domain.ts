@@ -13,6 +13,15 @@ export function destinationAfterSignUp(intent: SignUpIntent, next: string): stri
   return intent === 'help_out' ? routes.app.helperOnboarding() : next;
 }
 
+/**
+ * What someone signing up is likely here for, from where they were headed: an offer or helper setup means helping out
+ * (visitor-to-first-post walk, J-V). The form starts on it and they can change it. Anything else: getting help.
+ */
+export function intentForNext(next: string): SignUpIntent {
+  const path = next.split(/[?#]/)[0] ?? '';
+  return path.startsWith('/app/find-work') || path.startsWith('/app/helper/') ? 'help_out' : 'get_help';
+}
+
 /** The side of the app a new account opens on. Either side is one switch away later. */
 export function modeForIntent(intent: SignUpIntent): Mode {
   return intent === 'help_out' ? 'helper' : 'poster';

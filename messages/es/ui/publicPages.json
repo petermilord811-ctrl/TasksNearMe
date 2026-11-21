@@ -86,6 +86,13 @@
   },
   "shared": {
     "postTask": "Publicar una tarea",
+    "freeToPost": "Publicar es gratis. Pagas al reservar, y tu ayudante cobra cuando el trabajo está terminado.",
+    "trustPoints": {
+      "label": "Por qué puedes confiar",
+      "verified": "Ayudantes con identidad verificada",
+      "reviews": "Reseñas solo de reservas completadas",
+      "price": "Precio acordado antes de reservar"
+    },
     "categoriesTitle": "¿En qué te vendría bien una mano?",
     "categoriesDescription": "Tareas de todos los días, con un alcance claro y un precio acordado desde el principio.",
     "recentTasks": "Tareas recientes",

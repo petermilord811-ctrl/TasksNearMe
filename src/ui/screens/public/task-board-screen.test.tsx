@@ -30,6 +30,16 @@ const group = (name: string) => within(screen.getByRole('group', { name }));
 const board = (data: TaskBoardPageData, change: Parameters<typeof routes.taskBoard>[1] = {}) => routes.taskBoard(data.market.slug, { ...data.query, page: undefined, ...change });
 
 describe('TaskBoardScreen', () => {
+  it("opens the wizard on the board's service from a service's board, and with nothing chosen otherwise (J-V)", () => {
+    renderBoard(taskBoardHubData);
+    const links = screen.getAllByRole('link', { name: 'Post a task' });
+    expect(links.length).toBeGreaterThan(0);
+    for (const link of links) expect(hrefOf(link)).toBe(routes.app.newTask({ category: 'furniture-assembly' }));
+    cleanup();
+    renderBoard(taskBoardPageData);
+    for (const link of screen.getAllByRole('link', { name: 'Post a task' })) expect(hrefOf(link)).toBe(routes.app.newTask());
+  });
+
   it('shows a category’s task types as tiles, busiest first, with what their tasks offer (plan 7.5)', () => {
     renderBoard(taskBoardHubData);
     const tiles = within(screen.getByRole('navigation', { name: 'Popular task types' })).getAllByRole('link');

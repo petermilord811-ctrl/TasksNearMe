@@ -57,6 +57,14 @@ describe('help content', () => {
     }
   });
 
+  it("ends the guides that lead somewhere with their next step, in every language (J-V)", () => {
+    expect(getHelpArticle('post-your-first-task')?.action).toEqual({ kind: 'post_task' });
+    expect(getHelpArticle('moving-out-in-gainesville')?.action).toEqual({ kind: 'post_task', category: 'moving-help' });
+    expect(getHelpArticle('earn-with-tasks-near-you')?.action).toEqual({ kind: 'become_helper' });
+    expect(getHelpArticle('cancel-a-booking')?.action).toBeUndefined();
+    expect(getHelpArticle('moving-out-in-gainesville', 'es')?.action).toEqual({ kind: 'post_task', category: 'moving-help' });
+  });
+
   it('refuses unknown or unsafe slugs', () => {
     expect(getHelpArticle('nope')).toBeNull();
     expect(getHelpArticle('../legal/terms')).toBeNull();

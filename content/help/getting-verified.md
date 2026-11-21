@@ -4,6 +4,7 @@ summary: ID and home address checks, payout setup, a background check for in-hom
 topic: helpers
 order: 1
 updated: 2026-11-14
+action: become_helper
 ---
 Before you can send offers, we check a few things. The steps take about 10 minutes; our team reviews some of them, usually within a day.
 

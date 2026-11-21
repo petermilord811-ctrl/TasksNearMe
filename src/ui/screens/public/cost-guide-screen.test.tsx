@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
+import { routes } from '@/contracts';
 import { furnitureCostGuideData, movingCostGuideData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { CostGuideScreen } from './cost-guide-screen';
@@ -13,6 +14,15 @@ function renderScreen(element: ReactElement) {
 }
 
 describe('CostGuideScreen', () => {
+  it('puts the next step and why to trust it under the question, and every "Post a task" opens the wizard on the service (J-V)', () => {
+    renderScreen(<CostGuideScreen data={furnitureCostGuideData} />);
+    const posts = screen.getAllByRole('link', { name: 'Post a task' });
+    expect(posts.length).toBeGreaterThanOrEqual(2);
+    for (const link of posts) expect(link.getAttribute('href')).toBe(routes.app.newTask({ category: furnitureCostGuideData.category.slug }));
+    expect(screen.getByText(messages.publicPages.shared.freeToPost)).toBeDefined();
+    expect(within(screen.getByRole('list', { name: messages.publicPages.shared.trustPoints.label })).getAllByRole('listitem')).toHaveLength(3);
+  });
+
   it('answers the question with the typical range and what each end costs and earns', () => {
     renderScreen(<CostGuideScreen data={furnitureCostGuideData} />);
     expect(screen.getByRole('heading', { level: 1, name: 'How much does furniture assembly cost in Austin?' })).toBeTruthy();

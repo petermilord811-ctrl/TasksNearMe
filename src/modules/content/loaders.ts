@@ -1,8 +1,8 @@
 import 'server-only';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { AppLocale, ContentBlock, HelpArticleData, HelpArticleSummary, HelpCenterData, ISODateTime, LegalDoc, LegalDocData } from '@/contracts';
-import { DEFAULT_LOCALE, LEGAL_DOCS } from '@/contracts';
+import type { AppLocale, CategorySlug, ContentBlock, HelpArticleAction, HelpArticleData, HelpArticleSummary, HelpCenterData, ISODateTime, LegalDoc, LegalDocData } from '@/contracts';
+import { CATEGORY_SLUGS, DEFAULT_LOCALE, LEGAL_DOCS } from '@/contracts';
 import { parseBlocks, parseSections, splitFrontMatter } from './markdown';
 
 /**
@@ -27,6 +27,21 @@ interface HelpArticleFile extends HelpArticleSummary {
   order: number;
   updatedAt: ISODateTime;
   body: string;
+  action?: HelpArticleAction;
+}
+
+/** A guide's `action` (and `category`) front matter. Every language shows the English file's. */
+function actionOf(meta: Record<string, string>, file: string): HelpArticleAction | undefined {
+  const { action, category } = meta;
+  if (!action) {
+    if (category) throw new Error(`${file}: "category" goes with "action: post_task"`);
+    return undefined;
+  }
+  if (action === 'become_helper' && !category) return { kind: 'become_helper' };
+  if (action !== 'post_task') throw new Error(`${file}: "action" must be post_task or become_helper (become_helper takes no category)`);
+  if (!category) return { kind: 'post_task' };
+  if (!(CATEGORY_SLUGS as readonly string[]).includes(category)) throw new Error(`${file}: unknown category "${category}"`);
+  return { kind: 'post_task', category: category as CategorySlug };
 }
 
 /** "2026-11-11" → late morning in Austin that day, so it displays as Nov 11 in Central time. */
@@ -76,6 +91,7 @@ function readHelpArticles(locale: AppLocale = DEFAULT_LOCALE): HelpArticleFile[]
         order: Number(meta.order ?? 99),
         updatedAt: dateToIso(meta.updated, file),
         body,
+        action: actionOf(meta, file),
       };
       const words = translated && path.join(translated, file);
       if (!words || !fs.existsSync(words)) return article;
@@ -124,6 +140,7 @@ export function getHelpArticle(slug: string, locale: AppLocale = DEFAULT_LOCALE)
     updatedAt: article.updatedAt,
     blocks: parseBlocks(article.body),
     related: [...sameTopic, ...others].slice(0, 3).map(summaryOf),
+    ...(article.action ? { action: article.action } : {}),
   };
 }
 

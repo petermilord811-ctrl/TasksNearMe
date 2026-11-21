@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { routes, signUpInputSchema, signUpSocialInputSchema } from '@/contracts';
-import { destinationAfterSignUp, LINK_LEEWAY_MS, modeForIntent, signUpIntentApplies } from './sign-up-domain';
+import { destinationAfterSignUp, intentForNext, LINK_LEEWAY_MS, modeForIntent, signUpIntentApplies } from './sign-up-domain';
 import { decodePendingSignUp, encodePendingSignUp, type PendingSignUp } from './sign-up-pending';
 import { safeNextPath } from './steps';
 
@@ -17,6 +17,16 @@ describe('where a new account starts', () => {
   it('keeps a destination the person was already headed to', () => {
     expect(destinationAfterSignUp('help_out', routes.app.newTask())).toBe(routes.app.newTask());
     expect(destinationAfterSignUp('get_help', '/app/find-work/tsk_desk')).toBe('/app/find-work/tsk_desk');
+  });
+
+  it('starts the form on helping out for someone headed to an offer or helper setup, and on getting help otherwise (J-V)', () => {
+    expect(intentForNext(routes.app.findWorkTask('tsk_desk'))).toBe('help_out');
+    expect(intentForNext(routes.app.findWork())).toBe('help_out');
+    expect(intentForNext(routes.app.helperOnboarding())).toBe('help_out');
+    expect(intentForNext(routes.app.newTask({ category: 'furniture-assembly' }))).toBe('get_help');
+    expect(intentForNext(routes.app.home())).toBe('get_help');
+    // Words that merely start the same don't count.
+    expect(intentForNext('/app/helpers/priya-s/request')).toBe('get_help');
   });
 
   it('never sends the flow back to sign-in or sign-up', () => {

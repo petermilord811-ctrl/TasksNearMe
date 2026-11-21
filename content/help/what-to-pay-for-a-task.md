@@ -4,6 +4,7 @@ summary: Fixed price or by the hour, what moves the price, and the fees you see 
 topic: guides
 order: 2
 updated: 2026-11-17
+action: post_task
 ---
 On TasksNearMe you agree on the price with your helper before you book, so there are no surprises on the day.
 

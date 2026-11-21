@@ -38,29 +38,29 @@ export function CategoryGrid({ categories, market }: { categories: CategoryView[
 /**
  * A city's or service's tasks and helpers (audit M41, 2026-11-18). With neither yet, one "Be among the first" card with
  * two different next steps, instead of two identical empty cards that each said "Post a task". With tasks but no
- * helpers, the empty helpers block is left out.
+ * helpers, the empty helpers block is left out. On a service's page (`category`), "Post a task" opens the wizard on it.
  */
-export function MarketActivity({ tasks, helpers, now, market, helpersTitle }: { tasks: TaskPublicView[]; helpers: HelperSummary[]; now: ISODateTime; market: MarketView; helpersTitle?: string }) {
+export function MarketActivity({ tasks, helpers, now, market, helpersTitle, category }: { tasks: TaskPublicView[]; helpers: HelperSummary[]; now: ISODateTime; market: MarketView; helpersTitle?: string; category?: CategorySlug }) {
   const t = useTranslations('publicPages.shared');
   if (tasks.length === 0 && helpers.length === 0) {
     return <Section title={t('firstTitle', { market: market.name })} description={t('firstBody')}>
       <div className="flex flex-wrap gap-3">
-        <Link href={routes.app.newTask()} className={buttonVariants({ size: 'lg' })}>{t('postTask')}</Link>
+        <Link href={routes.app.newTask({ category })} className={buttonVariants({ size: 'lg' })}>{t('postTask')}</Link>
         <Link href={routes.becomeAHelper()} className={buttonVariants({ size: 'lg', variant: 'outline' })}>{t('becomeHelper')}</Link>
       </div>
     </Section>;
   }
   return <>
-    <RecentTasks tasks={tasks} now={now} />
+    <RecentTasks tasks={tasks} now={now} category={category} />
     {helpers.length > 0 && <FeaturedHelpers helpers={helpers} {...(helpersTitle ? { title: helpersTitle } : {})} />}
   </>;
 }
 
-export function RecentTasks({ tasks, now }: { tasks: TaskPublicView[]; now: ISODateTime }) {
+export function RecentTasks({ tasks, now, category }: { tasks: TaskPublicView[]; now: ISODateTime; category?: CategorySlug }) {
   const t = useTranslations('publicPages.shared');
   return <Section title={t('recentTasks')} description={t('recentTasksDescription')}>
     {tasks.length ? <ul className="grid gap-4 md:grid-cols-2">{tasks.map((task) => <li key={task.id} className="min-w-0"><PublicTaskCard task={task} now={now} /></li>)}</ul>
-      : <EmptyState title={t('noTasksTitle')} body={t('noTasksBody')} action={{ label: t('postTask'), href: routes.app.newTask() }} />}
+      : <EmptyState title={t('noTasksTitle')} body={t('noTasksBody')} action={{ label: t('postTask'), href: routes.app.newTask({ category }) }} />}
   </Section>;
 }
 

@@ -1,4 +1,4 @@
-import type { ISODateTime } from './common';
+import type { CategorySlug, ISODateTime } from './common';
 import type { LegalDoc } from './routes';
 
 /**
@@ -37,6 +37,12 @@ export interface HelpCenterData {
   topics: HelpTopicView[];
 }
 
+/**
+ * What a guide leads to, from its front matter (`action: post_task`, with an optional `category:`, or
+ * `action: become_helper`): the next step at its end, so a reader ready to act needn't look for it.
+ */
+export type HelpArticleAction = { kind: 'post_task'; category?: CategorySlug } | { kind: 'become_helper' };
+
 export interface HelpArticleData {
   slug: string;
   title: string;
@@ -45,6 +51,7 @@ export interface HelpArticleData {
   updatedAt: ISODateTime;
   blocks: ContentBlock[];
   related: HelpArticleSummary[];
+  action?: HelpArticleAction;
 }
 
 export interface LegalSection {

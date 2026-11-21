@@ -176,9 +176,9 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
       {hub
         ? <div className="flex shrink-0 flex-wrap gap-2">
             <Link href={routes.becomeAHelper()} className={buttonVariants()}>{t('becomeHelper')}</Link>
-            <Link href={routes.app.newTask()} className={buttonVariants({ variant: 'outline' })}><Plus aria-hidden="true" className="size-4" />{t('postTask')}</Link>
+            <Link href={routes.app.newTask({ category: query.category })} className={buttonVariants({ variant: 'outline' })}><Plus aria-hidden="true" className="size-4" />{t('postTask')}</Link>
           </div>
-        : <Link href={routes.app.newTask()} className={buttonVariants({ className: 'shrink-0' })}><Plus aria-hidden="true" className="size-4" />{t('postTask')}</Link>}
+        : <Link href={routes.app.newTask({ category: query.category })} className={buttonVariants({ className: 'shrink-0' })}><Plus aria-hidden="true" className="size-4" />{t('postTask')}</Link>}
     </header>
 
     <div className={cn('grid items-start gap-5', !nothingYet && 'lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-6')}>
