@@ -70,7 +70,7 @@ export function generateStaticParams() {
  */
 export const unstable_paramMatching = { locale: 'not-found' };
 
-export default async function RootLayout({ children }: LayoutProps<'/[locale]'>) {
+export default async function RootLayout({ children, modal }: LayoutProps<'/[locale]'>) {
   const locale = await rootParams.locale();
   if (!isAppLocale(locale)) notFound();
   return (
@@ -82,6 +82,8 @@ export default async function RootLayout({ children }: LayoutProps<'/[locale]'>)
         {/* Only the root's own copy (the toaster): each layout and page below gives its client components theirs. */}
         <ClientMessages route="[locale]/layout.tsx">
           <MapTilesProvider tiles={{ ...mapTiles(), live: true }}>{children}</MapTilesProvider>
+          {/* A page opened as a dialog over this one (src/app/[locale]/@modal), or nothing. */}
+          {modal}
           <AppToaster />
         </ClientMessages>
       </body>

@@ -28,7 +28,7 @@ export function ReviewForm({ data, handlers, initialResult, initialPending = fal
   const id = useId();
   const schema = useMemo(() => createReviewInputSchema(data.direction), [data.direction]);
   const form = useForm<ReviewInput>({ resolver: zodResolver(schema), defaultValues: { rating: 0, tags: [], body: '', privateFeedback: '' } });
-  const action = useFormAction(form, { initialResult });
+  const action = useFormAction(form, { initialResult, successToast: t('sent') });
   const pending = action.pending || initialPending;
   const disabled = pending || Boolean(action.result?.ok);
   const body = useWatch({ control: form.control, name: 'body' });

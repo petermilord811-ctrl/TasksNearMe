@@ -20,6 +20,7 @@ import { RadioGroup, RadioGroupItem } from '@/ui/primitives/radio-group';
 import { Spinner } from '@/ui/primitives/spinner';
 import { Textarea } from '@/ui/primitives/textarea';
 import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
+import { useRouteDialog } from '@/ui/lib/route-dialog';
 import type { ReportProblemScreenProps } from './report-problem-screen';
 
 export function ReportProblemForm({ data, handlers, initialResult, initialPending = false }: Omit<ReportProblemScreenProps, 'now'> & {
@@ -29,6 +30,7 @@ export function ReportProblemForm({ data, handlers, initialResult, initialPendin
   const t = useTranslations('reportProblem');
   const fieldCopy = useTranslations('forms.fieldErrors');
   const router = useRouter();
+  const dialog = useRouteDialog();
   const id = useId();
   const form = useForm<ReportProblemInput>({
     resolver: zodResolver(reportProblemInputSchema),
@@ -89,7 +91,9 @@ export function ReportProblemForm({ data, handlers, initialResult, initialPendin
     setConfirmation(undefined);
     setResult(next);
     locked.current = next.ok;
-    if (next.ok && next.redirectTo) router.push(next.redirectTo);
+    // In a route dialog it closes over the booking, which then shows the problem; the full page goes to the booking.
+    if (next.ok && dialog) dialog.finish(next, t('success'));
+    else if (next.ok && next.redirectTo) router.push(next.redirectTo);
   }
 
   const errorText = (code: string) => fieldCopy(fieldCopy.has(code) ? code : 'invalid');

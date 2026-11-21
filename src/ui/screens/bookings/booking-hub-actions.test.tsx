@@ -64,6 +64,16 @@ describe('BookingHubActions', () => {
     link.addEventListener('click', (event) => event.preventDefault(), { once: true });
     fireEvent.click(link);
     expect(onAction).not.toHaveBeenCalled();
+    // With the router, so the form opens as a dialog over the booking (src/app/[locale]/@modal).
+    expect(navigation.push).toHaveBeenCalledWith(routes.app.bookingProposeChange(deskBookingPosterConfirmed.id));
+  });
+
+  it('leaves a click for a new tab to the browser', () => {
+    mount({ ...deskBookingPosterConfirmed, actions: [{ id: 'propose_change', kind: 'secondary', enabled: true }] });
+    const link = screen.getByRole('link', { name: messages.actions.propose_change });
+    link.addEventListener('click', (event) => event.preventDefault(), { once: true });
+    fireEvent.click(link, { metaKey: true });
+    expect(navigation.push).not.toHaveBeenCalled();
   });
 
   it('preserves a disabled proposal and its reason without enabling navigation', () => {

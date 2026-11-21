@@ -1,0 +1,132 @@
+'use client';
+
+import { Fragment, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
+import { RouteDialogContext, useRouteDialog, type RouteDialogControls } from '@/ui/lib/route-dialog';
+import { Button } from '@/ui/primitives/button';
+import { Dialog, DialogContent } from '@/ui/primitives/dialog';
+import { Skeleton } from '@/ui/primitives/skeleton';
+import { RouteDialogBody, RouteDialogHeader } from './route-dialog';
+
+/**
+ * The dialog that a page opens in when it's reached from inside the site (src/app/[locale]/@modal): "Leave a
+ * review", "Report a problem", "Save this search" and the like show over the page they were opened from, which stays
+ * where it was underneath. One frame for all of them; each page fills it with a `RouteDialogHeader` and a
+ * `RouteDialogBody`. A sheet from the bottom on phones, a centered dialog from 640 px.
+ *
+ * Closing (the X, Escape, a tap outside, the form's Cancel) goes back, as the browser's Back button does, so the URL and
+ * the history always say what's on screen. It fades and slides in without scaling, so nothing in it is ever drawn at a
+ * fraction of its size (a 1 px screen-reader radio scaled to 95% lost its click point in the e2e run). The router keeps a closed dialog's screen hidden for Back and Forward; a
+ * dialog that finished (its form was sent) starts afresh the next time it opens, one closed half-way keeps its draft.
+ */
+export function RouteDialogFrame({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const feedback = useTranslations('feedback');
+  // Effects run while the dialog is on screen and are cleaned up when the router hides it, so this says whether a
+  // late result (a submit that ended after the dialog was closed) should still close it.
+  const visible = useRef(false);
+  const finished = useRef(false);
+  const [generation, setGeneration] = useState(0);
+  const content = useRef<HTMLDivElement>(null);
+  // What opened the dialog (the link or button that navigated here), for focus to go back to: Radix's own return
+  // goes to a Dialog.Trigger, and a route dialog has none.
+  const opener = useRef<HTMLElement | null>(null);
+
+  useLayoutEffect(() => {
+    visible.current = true;
+    const active = document.activeElement;
+    opener.current = active instanceof HTMLElement && active !== document.body && !content.current?.contains(active) ? active : null;
+    if (finished.current) {
+      finished.current = false;
+      // The router is showing a finished dialog again (React Activity): it starts afresh before it paints.
+      setGeneration((value) => value + 1);
+    }
+    return () => {
+      visible.current = false;
+    };
+  }, []);
+
+  const controls = useMemo<RouteDialogControls>(() => ({
+    close: (options) => {
+      if (!visible.current) return;
+      if (options?.done) finished.current = true;
+      router.back();
+    },
+    finish: (result, message) => {
+      if (result.ok) toast.success(message ?? feedback(`success.${result.code}`));
+      if (!visible.current) {
+        router.refresh();
+        return;
+      }
+      finished.current = true;
+      // The page underneath is the one the router had before the dialog opened: refresh it once it's back.
+      window.addEventListener('popstate', () => router.refresh(), { once: true });
+      router.back();
+    },
+  }), [router, feedback]);
+
+  // A link inside the dialog (Get help, Manage your saved searches, View change) closes the dialog first, then opens its
+  // page: the router keeps the dialog's slot as it is on a page the slot has no route for, so the dialog would stay
+  // over the new page. A new tab, a download or another site is left to the browser.
+  const followLink = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+    if (!(link instanceof HTMLAnchorElement) || (link.target && link.target !== '_self') || link.hasAttribute('download')) return;
+    const url = new URL(link.href, window.location.href);
+    if (url.origin !== window.location.origin) return;
+    if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return;
+    event.preventDefault();
+    if (!visible.current) return;
+    window.addEventListener('popstate', () => router.push(`${url.pathname}${url.search}${url.hash}`), { once: true });
+    router.back();
+  };
+
+  return <RouteDialogContext.Provider value={controls}>
+    <Dialog open onOpenChange={(open) => { if (!open) controls.close(); }}>
+      <DialogContent
+        ref={content}
+        data-route-dialog=""
+        onClickCapture={followLink}
+        // The primitive's zoom (95%) is set to none here: it fades, and slides up from the bottom on phones.
+        style={{ '--tw-enter-scale': 1, '--tw-exit-scale': 1 } as CSSProperties}
+        // The dialog itself takes focus, so its title is read first and a phone's keyboard doesn't open over a field.
+        onOpenAutoFocus={(event) => { event.preventDefault(); content.current?.focus({ preventScroll: true }); }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          if (opener.current?.isConnected) opener.current.focus({ preventScroll: true });
+        }}
+        className="top-auto bottom-0 flex max-h-[92dvh] w-full max-w-full translate-y-0 flex-col gap-0 overflow-hidden rounded-b-none bg-background p-0 max-sm:data-[state=open]:slide-in-from-bottom max-sm:data-[state=closed]:slide-out-to-bottom sm:top-1/2 sm:bottom-auto sm:max-h-[min(88dvh,60rem)] sm:max-w-xl sm:-translate-y-1/2 sm:rounded-[1.75rem] sm:p-0"
+      >
+        <span aria-hidden="true" className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-foreground/15 sm:hidden" />
+        <Fragment key={generation}>{children}</Fragment>
+      </DialogContent>
+    </Dialog>
+  </RouteDialogContext.Provider>;
+}
+
+/** While the page's data arrives: the frame is already open, so the tap answers at once. */
+export function RouteDialogLoading() {
+  const t = useTranslations('common');
+  return <>
+    <RouteDialogHeader title={<><span className="sr-only">{t('loading')}</span><span aria-hidden="true" className="ui-shimmer block h-7 w-2/3 max-w-72 rounded-xl" /></>} />
+    <RouteDialogBody className="space-y-4">
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-5/6" />
+      <Skeleton className="h-32 w-full rounded-[1.375rem]" />
+      <Skeleton className="h-11 w-40 rounded-full" />
+    </RouteDialogBody>
+  </>;
+}
+
+/** A dialog's page that isn't there, or isn't this person's (its notFound()). */
+export function RouteDialogNotFound() {
+  const t = useTranslations('notFound');
+  const common = useTranslations('common');
+  const dialog = useRouteDialog();
+  return <>
+    <RouteDialogHeader title={t('title')} description={t('appBody')} />
+    <RouteDialogBody><Button type="button" variant="outline" onClick={() => dialog?.close()}>{common('close')}</Button></RouteDialogBody>
+  </>;
+}

@@ -24,6 +24,7 @@
   "save": "Guardar esta búsqueda",
   "new": {
     "title": "Guardar esta búsqueda",
+    "intro": "Vuelve a estas tareas con un toque y elige cuándo enterarte de las nuevas.",
     "back": "Volver al tablero",
     "filters": "Filtros",
     "name": "Nombre",

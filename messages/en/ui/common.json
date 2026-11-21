@@ -23,6 +23,8 @@
   "errorPreview": "Error and retry",
   "skeletonsPreview": "Loading skeletons",
   "demoPreview": "Demo markers",
+  "dialogPreviewsGroup": "Route dialogs",
+  "dialogPreviewTitle": "{name}, as a dialog",
   "retryComplete": "Ready to try again.",
   "listSkeleton": "List",
   "detailSkeleton": "Detail",

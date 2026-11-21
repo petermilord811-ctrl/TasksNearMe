@@ -4,15 +4,19 @@ import { devSignIn } from './support/sign-in';
 /**
  * Saved searches (completion plan 7.10): from a filtered board, "Save this search" names it after its filters,
  * saves it with a morning digest, lists it with its open count, changes the alerts, and opens the same view again.
+ * Saving and editing open as dialogs over the page they're reached from (src/app/[locale]/@modal), which closes once
+ * it's saved and leaves the person where they were.
  */
 test('a board view is saved with alerts, listed, changed and opened again', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-desktop', 'changes shared data; desktop only');
   test.setTimeout(150_000);
   await devSignIn(page, 'ana@example.test');
   await page.goto('/austin/tasks?category=furniture-assembly&area=mueller');
+  const board = page.url();
   await page.getByRole('link', { name: 'Save this search' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Save this search' })).toBeVisible({ timeout: 30_000 });
-  const form = page.getByRole('form', { name: 'Save this search' });
+  const dialog = page.getByRole('dialog', { name: 'Save this search' });
+  await expect(dialog.getByRole('heading', { level: 1, name: 'Save this search' })).toBeVisible({ timeout: 30_000 });
+  const form = dialog.getByRole('form', { name: 'Save this search' });
   await expect(form.getByText('Furniture assembly', { exact: true })).toBeVisible();
   await expect(form.getByText('Mueller', { exact: true })).toBeVisible();
   const name = `Desks in Mueller ${Date.now().toString(36)}`;
@@ -20,7 +24,10 @@ test('a board view is saved with alerts, listed, changed and opened again', asyn
   await form.getByRole('radio', { name: 'Morning digest' }).check();
   await form.getByRole('button', { name: 'Save search' }).click();
 
-  await expect(page).toHaveURL(/\/app\/saved-searches$/, { timeout: 30_000 });
+  // Saved: the dialog closes on the board, still on the same view.
+  await expect(dialog).toHaveCount(0, { timeout: 30_000 });
+  expect(page.url()).toBe(board);
+  await page.goto('/app/saved-searches');
   const card = page.getByRole('listitem').filter({ hasText: name });
   await expect(card.getByRole('radio', { name: 'Morning digest' })).toHaveAttribute('aria-checked', 'true');
   await expect(card.getByText(/open tasks?$|No open tasks right now/)).toBeVisible();
@@ -38,21 +45,24 @@ test('find work saves its view, and the saved search is edited and opened again'
   await devSignIn(page, 'jordan@example.test');
   await page.goto('/app/find-work?category=furniture-assembly&distance=within_5_mi');
   await page.getByRole('link', { name: 'Save this search' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Save this search' })).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole('link', { name: 'Back to find work' })).toBeVisible();
-  const form = page.getByRole('form', { name: 'Save this search' });
+  const dialog = page.getByRole('dialog', { name: 'Save this search' });
+  await expect(dialog.getByRole('heading', { level: 1, name: 'Save this search' })).toBeVisible({ timeout: 30_000 });
+  const form = dialog.getByRole('form', { name: 'Save this search' });
   await expect(form.getByText('Within 5 miles', { exact: true })).toBeVisible();
   const name = `Desks near me ${Date.now().toString(36)}`;
   await form.getByLabel('Name').fill(name);
   await form.getByRole('button', { name: 'Save search' }).click();
 
-  await expect(page).toHaveURL(/\/app\/saved-searches$/, { timeout: 30_000 });
+  // Saved: the dialog closes on find work.
+  await expect(dialog).toHaveCount(0, { timeout: 30_000 });
+  await expect(page).toHaveURL(/\/app\/find-work\?.*category=furniture-assembly/);
+  await page.goto('/app/saved-searches');
   const card = page.getByRole('listitem').filter({ hasText: name });
   await expect(card.getByText('Find work', { exact: true })).toBeVisible();
   await card.getByRole('link', { name: `Edit ${name}` }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'Edit saved search' })).toBeVisible({ timeout: 30_000 });
-  // The form on screen (the page before can stay in the document, hidden, for Back).
-  const edit = page.getByRole('form', { name: 'Edit saved search' });
+  const editDialog = page.getByRole('dialog', { name: 'Edit saved search' });
+  await expect(editDialog.getByRole('heading', { level: 1, name: 'Edit saved search' })).toBeVisible({ timeout: 30_000 });
+  const edit = editDialog.getByRole('form', { name: 'Edit saved search' });
   const renamed = `${name} again`;
   await edit.getByLabel('Name').fill(renamed);
   await edit.getByLabel('Category').selectOption('moving-help');
@@ -60,7 +70,9 @@ test('find work saves its view, and the saved search is edited and opened again'
   await edit.getByText('Evening (after 5 pm)', { exact: true }).click();
   await edit.getByRole('button', { name: 'Save changes' }).click();
 
-  await expect(page).toHaveURL(/\/app\/saved-searches$/, { timeout: 30_000 });
+  // The dialog closes over the list, which shows the change.
+  await expect(editDialog).toHaveCount(0, { timeout: 30_000 });
+  await expect(page).toHaveURL(/\/app\/saved-searches$/);
   const edited = page.getByRole('listitem').filter({ hasText: renamed });
   await expect(edited.getByText('Moving help', { exact: true })).toBeVisible();
   await expect(edited.getByText('Within 10 miles', { exact: true })).toBeVisible();

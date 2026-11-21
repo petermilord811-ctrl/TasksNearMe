@@ -71,6 +71,7 @@ import { communityPreviews } from './community.preview';
 import { portalPreviews } from './portal.preview';
 import { questionPreviews } from './questions.preview';
 import { searchPreviews } from './searches.preview';
+import { routeDialogPreviews } from './route-dialogs.preview';
 import { rewardsPreviews } from './rewards.preview';
 import { planPreviews } from './plan.preview';
 import { changesPreviews } from './changes.preview';
@@ -168,4 +169,5 @@ export const previews: PreviewEntry[] = [
   ...portalPreviews,
   ...questionPreviews,
   ...searchPreviews,
+  ...routeDialogPreviews,
 ];

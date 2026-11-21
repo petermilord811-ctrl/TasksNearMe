@@ -30,6 +30,7 @@
     "retry": "Intentar cargar el dinero otra vez",
     "send": "Enviar cambio",
     "sending": "Enviando cambio…",
+    "sent": "Cambio enviado",
     "confirmTitle": "¿Enviar este cambio?",
     "confirmDescription": "La otra persona revisará tu cambio. Tus condiciones actuales siguen vigentes hasta que se acepte el cambio y se complete cualquier pago.",
     "keepEditing": "Seguir editando",

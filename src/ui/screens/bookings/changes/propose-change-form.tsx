@@ -12,6 +12,7 @@ import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
 import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
+import { useRouteDialog } from '@/ui/lib/route-dialog';
 import { ChangeQuote } from './change-quote';
 import { ProposeChangeFields } from './propose-change-fields';
 import { changedInput, changeDefaults, startOutsideWindow } from './propose-change-values';
@@ -26,6 +27,7 @@ export interface ProposeChangeFormProps {
 export function ProposeChangeForm({ data, handlers, initialInput, initialResult }: ProposeChangeFormProps) {
   const t = useTranslations('changes.propose');
   const router = useRouter();
+  const dialog = useRouteDialog();
   const form = useForm<ProposeChangeInput>({ defaultValues: { ...changeDefaults(data), ...initialInput } });
   const values = useWatch({ control: form.control }) as ProposeChangeInput;
   const input = changedInput(data, values);
@@ -89,7 +91,9 @@ export function ProposeChangeForm({ data, handlers, initialInput, initialResult 
     try { response = await handlers.onPropose(next); }
     catch { response = { ok: false, code: 'unknown' }; }
     locked.current = false; setPending(false); setResult(response);
-    if (response.ok && response.redirectTo) router.push(response.redirectTo);
+    // A route dialog closes over the booking, which shows the open change; the full page opens the change.
+    if (response.ok && dialog) dialog.finish(response, t('sent'));
+    else if (response.ok && response.redirectTo) router.push(response.redirectTo);
   }
 
   return <FormProvider {...form}>

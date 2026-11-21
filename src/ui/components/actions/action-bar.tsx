@@ -171,6 +171,14 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
               event.preventDefault();
               confirmationTrigger.current = event.currentTarget;
               setConfirmation(action);
+              return;
+            }
+            // A page of the app opens with the router, not a full load, so one with a dialog version opens over this page
+            // (Propose a change, Propose a booking; src/app/[locale]/@modal). A download, or a click for a new tab, stays
+            // the browser's.
+            if (!link.download && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+              event.preventDefault();
+              router.push(link.href);
             }
           }}
         >{t(action.id)}</a> : <Button

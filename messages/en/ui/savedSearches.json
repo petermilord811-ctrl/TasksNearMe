@@ -24,6 +24,7 @@
   "save": "Save this search",
   "new": {
     "title": "Save this search",
+    "intro": "Come back to these tasks in one tap, and choose when to hear about new ones.",
     "back": "Back to the board",
     "filters": "Filters",
     "name": "Name",

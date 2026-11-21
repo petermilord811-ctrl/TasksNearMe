@@ -4,14 +4,18 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { FieldValues, Path, UseFormReturn } from 'react-hook-form';
 import type { ActionHandler, ActionResult } from '@/contracts';
+import { useRouteDialog } from './route-dialog';
 
 /** Shares result handling, but leaves validation and flow decisions with the contracts/app. */
 export function useFormAction<T extends FieldValues>(form: UseFormReturn<T>, options: {
   initialResult?: ActionResult;
   onResult?: (result: ActionResult) => void;
   navigation?: 'push' | 'replace';
+  /** In a route dialog, said as a toast when the result closes it (the form's own success line goes with the dialog). */
+  successToast?: string;
 } = {}) {
   const router = useRouter();
+  const dialog = useRouteDialog();
   const [result, setResult] = useState(options.initialResult);
   const [pending, setPending] = useState(false);
   const locked = useRef(false);
@@ -44,7 +48,11 @@ export function useFormAction<T extends FieldValues>(form: UseFormReturn<T>, opt
     setPending(false);
     setResult(next);
     options.onResult?.(next);
-    if (next.ok && next.redirectTo) router[options.navigation ?? 'push'](next.redirectTo);
+    // A full page goes where the result says; a route dialog closes over the page it was opened from instead.
+    if (next.ok && next.redirectTo) {
+      if (dialog) dialog.finish(next, options.successToast);
+      else router[options.navigation ?? 'push'](next.redirectTo);
+    }
     return next;
   }
 

@@ -9,17 +9,43 @@ import type { ActionResult } from '@/contracts/actions';
 import { routes } from '@/contracts/routes';
 import { SAVED_SEARCH_ALERTS, SAVED_SEARCH_MAX, type NewSavedSearchHandlers, type NewSavedSearchPageData, type SavedSearchAlert } from '@/contracts/searches';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
+import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
 import { SavedSearchFilterChips, useFilterLabels } from '@/ui/components/search/saved-search-filters';
 import { LocaleLink as Link, localeHref } from '@/ui/lib/locale-link';
+import { useRouteDialog } from '@/ui/lib/route-dialog';
 import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
 import { Input } from '@/ui/primitives/input';
 import { Spinner } from '@/ui/primitives/spinner';
 
+interface NewSavedSearchProps { data: NewSavedSearchPageData; handlers: NewSavedSearchHandlers }
+
 /** Saving a board or find work view (completion plan 7.10): its filters, a name (suggested from them), and the alerts. */
-export function NewSavedSearchScreen({ data, handlers }: { data: NewSavedSearchPageData; handlers: NewSavedSearchHandlers }) {
+export function NewSavedSearchScreen({ data, handlers }: NewSavedSearchProps) {
+  const t = useTranslations('savedSearches');
+  return <div className="mx-auto w-full max-w-reading space-y-5">
+    <Link href={data.from} className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"><ArrowLeft aria-hidden="true" className="size-4" />{t(data.source === 'find_work' ? 'new.backFindWork' : 'new.back')}</Link>
+    <h1 className="font-display text-[1.75rem]/[1.15] font-semibold tracking-[-0.02em]">{t('new.title')}</h1>
+    <NewSavedSearchForm data={data} handlers={handlers} />
+  </div>;
+}
+
+/**
+ * The same as a dialog over the board, find work or the map it was saved from (src/app/[locale]/@modal): once it's
+ * saved the dialog closes and the person carries on browsing where they were.
+ */
+export function NewSavedSearchDialog({ data, handlers }: NewSavedSearchProps) {
+  const t = useTranslations('savedSearches');
+  return <>
+    <RouteDialogHeader title={t('new.title')} description={t('new.intro')} />
+    <RouteDialogBody><NewSavedSearchForm data={data} handlers={handlers} /></RouteDialogBody>
+  </>;
+}
+
+function NewSavedSearchForm({ data, handlers }: NewSavedSearchProps) {
   const t = useTranslations('savedSearches');
   const router = useRouter();
+  const dialog = useRouteDialog();
   const locale = useLocale();
   const id = useId();
   const labels = useFilterLabels()(data.filters);
@@ -36,13 +62,14 @@ export function NewSavedSearchScreen({ data, handlers }: { data: NewSavedSearchP
     }
     setResult(next);
     if (next.ok) {
-      toast.success(t('updated'));
-      router.push(localeHref(next.redirectTo ?? routes.app.savedSearches(), locale));
+      if (dialog) dialog.finish(next, t('updated'));
+      else {
+        toast.success(t('updated'));
+        router.push(localeHref(next.redirectTo ?? routes.app.savedSearches(), locale));
+      }
     }
   });
-  return <div className="mx-auto w-full max-w-reading space-y-5">
-    <Link href={data.from} className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"><ArrowLeft aria-hidden="true" className="size-4" />{t(data.source === 'find_work' ? 'new.backFindWork' : 'new.back')}</Link>
-    <h1 className="font-display text-[1.75rem]/[1.15] font-semibold tracking-[-0.02em]">{t('new.title')}</h1>
+  return <>
     {data.full
       ? <p role="status" className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm">{t('new.full', { max: SAVED_SEARCH_MAX })} <Link href={routes.app.savedSearches()} className="font-semibold text-primary underline underline-offset-4">{t('new.manage')}</Link></p>
       : <form noValidate aria-label={t('new.title')} className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]" onSubmit={(event) => { event.preventDefault(); if (!pending) submit(); }}>
@@ -67,5 +94,5 @@ export function NewSavedSearchScreen({ data, handlers }: { data: NewSavedSearchP
           {result && !result.ok && <FormFeedback result={result} />}
           <Button type="submit" disabled={pending || name.trim().length < 2} aria-busy={pending}>{pending && <Spinner aria-hidden="true" />}{t(pending ? 'new.submitting' : 'new.submit')}</Button>
         </form>}
-  </div>;
+  </>;
 }

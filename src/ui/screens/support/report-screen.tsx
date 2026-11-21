@@ -1,11 +1,14 @@
 'use client';
 
 import Link from 'next/link';
+import { useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, ReportInput, ReportPageData, ReportPageHandlers } from '@/contracts';
+import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
 import { ReportForm } from '@/ui/components/safety/report-dialog';
+import { useRouteDialog } from '@/ui/lib/route-dialog';
 
 export interface ReportScreenProps {
   data: ReportPageData;
@@ -41,4 +44,31 @@ export function ReportContent({ data, handlers, initialResult, initialPending, i
     </section>
     <p className="text-sm text-muted-foreground">{t('urgent')}</p>
   </div>;
+}
+
+/**
+ * The same report as a dialog over the page it was opened from (src/app/[locale]/@modal): a task, a profile, a review
+ * or a post stays where it was underneath. Cancel and Done close it.
+ */
+export function ReportDialogScreen({ data, handlers }: ReportScreenProps) {
+  const t = useTranslations('report');
+  const dialog = useRouteDialog();
+  const sent = useRef(false);
+  const { kind, name } = data.target;
+  return <>
+    <RouteDialogHeader title={t(`title.${kind}`)} description={t(`subject.${kind}`, { name })} />
+    <RouteDialogBody className="space-y-5">
+      <p className="text-muted-foreground">{t('intro')}</p>
+      <ReportForm
+        onReport={async (input) => {
+          const result = await handlers.onReport(input);
+          if (result.ok) sent.current = true;
+          return result;
+        }}
+        onClose={() => dialog?.close({ done: sent.current })}
+        onPendingChange={() => {}}
+      />
+      <p className="text-sm text-muted-foreground">{t('urgent')}</p>
+    </RouteDialogBody>
+  </>;
 }

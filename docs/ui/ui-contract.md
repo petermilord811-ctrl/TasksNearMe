@@ -465,3 +465,12 @@ Timing rules: start ≥ 3 h from now, ≤ 14 days ahead. Blocked keywords stop p
 | `/dev/scenarios`, `/dev/components` | Dev only; 404 in production |
 
 Invites open as a sheet on `/app/offers?invite=<id>`, which notifications link to.
+
+### Route dialogs (2026-11-21)
+
+These routes open as a **dialog over the page they're reached from** on a client navigation (a link or the action bar inside the site), and as the **full page** when the URL is loaded on its own: `/app/report/[kind]/[id]`, `/app/saved-searches/new`, `/app/saved-searches/[searchId]/edit`, `/app/bookings/[bookingId]/review`, `…/problem`, `…/changes/new` and `…/rebook`. The interception lives in `src/app/[locale]/@modal/(.)app/` (the root layout's `modal` slot); each page there loads the same data and passes the same Server Actions as its full page.
+
+- **UI.** Each screen offers a dialog version (`ReportDialogScreen`, `NewSavedSearchDialog`, `EditSavedSearchDialog`, `ReviewDialogScreen`, `ReportProblemDialogScreen`, `ProposeChangeDialogScreen`, `ProposeRebookDialogScreen`) made of `RouteDialogHeader` (the page's h1 and a subtitle) and `RouteDialogBody` (`src/ui/components/layout/route-dialog.tsx`), shown in the shared `RouteDialogFrame` (`route-dialog-frame.tsx`).
+- **Results.** A form inside a route dialog never follows `redirectTo`: it calls `useRouteDialog().finish(result, message)` (`src/ui/lib/route-dialog.ts`), which toasts the message, goes back and refreshes the page underneath. `useFormAction` does this by itself (`successToast` for the message). Cancel and Done call `close()`.
+- **Links.** A link inside a route dialog closes it, then opens its page (the frame handles it; the slot has no catch-all page, see its `default.tsx`). Links that should open a dialog must navigate with the router (`Link`, `router.push`): a full page load always gets the full page.
+- **Not intercepted** (full pages): checkout (`…/offers/[offerId]/confirm`), `…/complete`, the change review `…/changes/[changeId]`, `/app/helpers/[handle]/request`, conversations.

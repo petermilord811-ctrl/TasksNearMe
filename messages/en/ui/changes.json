@@ -30,6 +30,7 @@
     "retry": "Try loading the money again",
     "send": "Send change",
     "sending": "Sending change…",
+    "sent": "Change sent",
     "confirmTitle": "Send this change?",
     "confirmDescription": "The other person will review your change. Your current terms stay in place until the change is accepted and any payment is complete.",
     "keepEditing": "Keep editing",

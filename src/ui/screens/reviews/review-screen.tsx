@@ -3,6 +3,7 @@ import { ArrowLeft, CalendarDays, CircleAlert, CircleCheck, Lock } from 'lucide-
 import { useTranslations } from 'next-intl';
 import { routes, type ActionResult, type ISODateTime, type ReviewHandlers, type ReviewPageData } from '@/contracts';
 import { useFormat } from '@/ui/lib/format';
+import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { RatingStars } from '@/ui/components/people/rating-stars';
 import { Badge } from '@/ui/primitives/badge';
@@ -18,15 +19,12 @@ export function ReviewScreen(props: ReviewScreenProps) {
   return <ReviewContent {...props} />;
 }
 
+type ReviewState = { initialResult?: ActionResult; initialPending?: boolean };
+
 /** Initial states support previews; app callers use ReviewScreen. */
-export function ReviewContent({ data, handlers, now, initialResult, initialPending }: ReviewScreenProps & {
-  initialResult?: ActionResult;
-  initialPending?: boolean;
-}) {
-  const { formatDate, formatDateTime, formatRelative } = useFormat();
+export function ReviewContent({ data, handlers, now, initialResult, initialPending }: ReviewScreenProps & ReviewState) {
+  const { formatDate } = useFormat();
   const t = useTranslations('review');
-  const mine = data.mine;
-  const theirs = data.theirs;
   return <div className="mx-auto max-w-reading space-y-6">
     <Link href={routes.app.booking(data.booking.id)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline">
       <ArrowLeft aria-hidden="true" className="size-4" />{t('backToBooking')}
@@ -41,6 +39,33 @@ export function ReviewContent({ data, handlers, now, initialResult, initialPendi
         <p className="flex items-center gap-2 text-sm text-muted-foreground"><CalendarDays aria-hidden="true" className="size-4 shrink-0" /><time dateTime={data.booking.start} className="tabular-nums">{formatDate(data.booking.start, { withYear: true })}</time></p>
       </div>
     </header>
+    <ReviewBody data={data} handlers={handlers} now={now} initialResult={initialResult} initialPending={initialPending} />
+  </div>;
+}
+
+/**
+ * The same as a dialog over the booking (or wherever it was opened from; src/app/[locale]/@modal). Sending closes it
+ * and the booking shows the review's status.
+ */
+export function ReviewDialogScreen({ data, handlers, now, initialResult, initialPending }: ReviewScreenProps & ReviewState) {
+  const { formatDate } = useFormat();
+  const t = useTranslations('review');
+  return <>
+    <RouteDialogHeader
+      title={t('title', { name: data.subject.displayName })}
+      description={<>{data.booking.title} · <time dateTime={data.booking.start} className="tabular-nums">{formatDate(data.booking.start, { withYear: true })}</time></>}
+    />
+    <RouteDialogBody><ReviewBody data={data} handlers={handlers} now={now} initialResult={initialResult} initialPending={initialPending} /></RouteDialogBody>
+  </>;
+}
+
+/** Your review (the form, or what you sent) and theirs once it's out: on the page and in the dialog. */
+function ReviewBody({ data, handlers, now, initialResult, initialPending }: ReviewScreenProps & ReviewState) {
+  const { formatDate, formatDateTime, formatRelative } = useFormat();
+  const t = useTranslations('review');
+  const mine = data.mine;
+  const theirs = data.theirs;
+  return <>
     {mine ? <section aria-label={t('yourReview')} className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card sm:p-6">
       <div className="space-y-2">
         <h2 className="font-heading text-xl/7 font-semibold">{t('yourReview')}</h2>
@@ -70,5 +95,5 @@ export function ReviewContent({ data, handlers, now, initialResult, initialPendi
       {theirs.tags.length > 0 && <ul className="flex flex-wrap gap-2">{theirs.tags.map((tag) => <li key={tag}><Badge variant="secondary" className="whitespace-normal px-3 py-1 text-sm">{t(`tags.${tag}`)}</Badge></li>)}</ul>}
       {theirs.body && <p className="whitespace-pre-wrap break-words leading-6">{theirs.body}</p>}
     </section> : data.theirsMissing && <p className="px-1 text-sm text-muted-foreground">{t('theirs.missing', { name: data.subject.displayName })}</p>}
-  </div>;
+  </>;
 }

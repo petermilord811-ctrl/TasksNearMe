@@ -10,6 +10,7 @@ import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
+import { useRouteDialog } from '@/ui/lib/route-dialog';
 import { usePriceQuote } from '@/ui/lib/use-price-quote';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -20,6 +21,7 @@ export function ProposeRebookForm({ data, handlers, now, initialResult, initialP
   const t = useTranslations('clients.form');
   const id = useId();
   const router = useRouter();
+  const dialog = useRouteDialog();
   const earliestStart = new Date(Date.parse(now) + data.limits.leadHours * 3_600_000);
   // On the booking's market clock (completion plan 8.1).
   const zone = data.timeZone;
@@ -71,7 +73,9 @@ export function ProposeRebookForm({ data, handlers, now, initialResult, initialP
     try { next = await handlers.onPropose({ ...input, message: input.message?.trim() || undefined }); }
     catch { next = { ok: false, code: 'unknown' }; }
     locked.current = next.ok; setPending(false); setResult(next);
-    if (next.ok && next.redirectTo) router.push(next.redirectTo);
+    // A route dialog closes over the page it was opened from (the booking, My clients); the full page goes to My clients.
+    if (next.ok && dialog) dialog.finish(next, t('sent'));
+    else if (next.ok && next.redirectTo) router.push(next.redirectTo);
   }
 
   return <FormProvider {...form}><form noValidate aria-labelledby={`${id}-title`} aria-busy={pending} onSubmit={(event) => { void form.handleSubmit(submit)(event); }} className="space-y-6">

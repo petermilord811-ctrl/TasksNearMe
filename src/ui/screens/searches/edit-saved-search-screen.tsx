@@ -12,7 +12,9 @@ import { SAVED_SEARCH_ALERTS, SAVED_SEARCH_PRICE_MAX, type EditSavedSearchHandle
 import { TASK_BOARD_POSTED, TASK_BOARD_Q_MAX, TASK_BOARD_TIMES, TASK_BOARD_WHEN } from '@/contracts/tasks';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { nativeSelectClassName } from '@/ui/components/forms/native-select';
+import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
 import { LocaleLink as Link, localeHref } from '@/ui/lib/locale-link';
+import { useRouteDialog } from '@/ui/lib/route-dialog';
 import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
 import { Input } from '@/ui/primitives/input';
@@ -43,18 +45,51 @@ const dollars = (value: string): number | undefined => {
   return Number.isInteger(number) && number >= 0 ? number : Number.NaN;
 };
 
+interface EditSavedSearchProps { data: EditSavedSearchPageData; handlers: EditSavedSearchHandlers; initialResult?: ActionResult }
+
 /**
  * Editing a saved search (completion plan 7.10, sweep SS5): its name, its alerts, and its filters, the board's own
  * (keyword, category and task type, neighborhoods, price, when, time of day, posted, remote, few offers), plus the
  * distance for a search saved from find work. The server stores it as the board would; the page only collects it.
  */
-export function EditSavedSearchScreen({ data, handlers, initialResult }: { data: EditSavedSearchPageData; handlers: EditSavedSearchHandlers; initialResult?: ActionResult }) {
+export function EditSavedSearchScreen({ data, handlers, initialResult }: EditSavedSearchProps) {
+  const t = useTranslations('savedSearches');
+  return <div className="mx-auto w-full max-w-reading space-y-5">
+    <Link href={routes.app.savedSearches()} className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"><ArrowLeft aria-hidden="true" className="size-4" />{t('edit.back')}</Link>
+    <div className="space-y-1.5">
+      <h1 className="font-display text-[1.75rem]/[1.15] font-semibold tracking-[-0.02em]">{t('edit.title')}</h1>
+      <p className="text-sm text-muted-foreground"><EditSummary data={data} /></p>
+    </div>
+    <EditSavedSearchForm data={data} handlers={handlers} initialResult={initialResult} />
+  </div>;
+}
+
+/**
+ * The same as a dialog over the saved searches (src/app/[locale]/@modal). Saving or Cancel closes it, and the list
+ * shows the change.
+ */
+export function EditSavedSearchDialog({ data, handlers, initialResult }: EditSavedSearchProps) {
+  const t = useTranslations('savedSearches');
+  return <>
+    <RouteDialogHeader title={t('edit.title')} description={<EditSummary data={data} />} />
+    <RouteDialogBody><EditSavedSearchForm data={data} handlers={handlers} initialResult={initialResult} /></RouteDialogBody>
+  </>;
+}
+
+/** Where the search was saved from, and how many open tasks fit it now. */
+function EditSummary({ data }: { data: EditSavedSearchPageData }) {
+  const t = useTranslations('savedSearches');
+  return <>{t(data.source === 'find_work' ? 'edit.fromFindWork' : 'edit.fromBoard', { market: data.marketName })} · <span className="tabular-nums">{t('openCount', { count: data.openCount })}</span></>;
+}
+
+function EditSavedSearchForm({ data, handlers, initialResult }: EditSavedSearchProps) {
   const t = useTranslations('savedSearches');
   const board = useTranslations('taskBoard');
   const taskCard = useTranslations('taskCard');
   const work = useTranslations('findWork');
   const fields = useTranslations('forms.fieldErrors');
   const router = useRouter();
+  const dialog = useRouteDialog();
   const locale = useLocale();
   const id = useId();
   const [name, setName] = useState(data.name);
@@ -97,18 +132,15 @@ export function EditSavedSearchScreen({ data, handlers, initialResult }: { data:
     }
     setResult(next);
     if (next.ok) {
-      toast.success(t('updated'));
-      router.push(localeHref(next.redirectTo ?? routes.app.savedSearches(), locale));
+      if (dialog) dialog.finish(next, t('updated'));
+      else {
+        toast.success(t('updated'));
+        router.push(localeHref(next.redirectTo ?? routes.app.savedSearches(), locale));
+      }
     }
   });
 
-  return <div className="mx-auto w-full max-w-reading space-y-5">
-    <Link href={routes.app.savedSearches()} className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"><ArrowLeft aria-hidden="true" className="size-4" />{t('edit.back')}</Link>
-    <div className="space-y-1.5">
-      <h1 className="font-display text-[1.75rem]/[1.15] font-semibold tracking-[-0.02em]">{t('edit.title')}</h1>
-      <p className="text-sm text-muted-foreground">{t(data.source === 'find_work' ? 'edit.fromFindWork' : 'edit.fromBoard', { market: data.marketName })} · <span className="tabular-nums">{t('openCount', { count: data.openCount })}</span></p>
-    </div>
-    <form noValidate aria-label={t('edit.title')} aria-busy={pending} className="space-y-5" onSubmit={(event) => { event.preventDefault(); if (!pending && !invalid) submit(); }}>
+  return <form noValidate aria-label={t('edit.title')} aria-busy={pending} className="space-y-5" onSubmit={(event) => { event.preventDefault(); if (!pending && !invalid) submit(); }}>
       <div className={card}>
         <div className="space-y-1.5">
           <label htmlFor={`${id}-name`} className={legendClass}>{t('new.name')}</label>
@@ -220,9 +252,10 @@ export function EditSavedSearchScreen({ data, handlers, initialResult }: { data:
 
       {result && !result.ok && <FormFeedback result={result} errorMessage={result.code === 'not_found' ? t('edit.notFound') : undefined} />}
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
-        <Link href={routes.app.savedSearches()} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-medium text-muted-foreground hover:text-foreground">{t('edit.cancel')}</Link>
+        {dialog
+          ? <Button type="button" variant="ghost" className="text-muted-foreground" onClick={() => dialog.close()}>{t('edit.cancel')}</Button>
+          : <Link href={routes.app.savedSearches()} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-medium text-muted-foreground hover:text-foreground">{t('edit.cancel')}</Link>}
         <Button type="submit" disabled={pending || invalid} aria-busy={pending}>{pending && <Spinner aria-hidden="true" />}{t(pending ? 'new.submitting' : 'edit.submit')}</Button>
       </div>
-    </form>
-  </div>;
+    </form>;
 }
