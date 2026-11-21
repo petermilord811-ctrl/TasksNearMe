@@ -74,6 +74,9 @@ afterAll(async () => {
   await db.delete(refundRequests).where(like(refundRequests.bookingId, 'bkg\\_tmp\\_sec\\_%'));
   await db.update(tasks).set({ status: 'canceled' }).where(like(tasks.id, 'tsk\\_sec\\_%'));
   await db.update(bookings).set({ status: 'canceled' }).where(like(bookings.id, 'bkg\\_tmp\\_sec\\_%'));
+  // And the bookings this file made through confirmBooking (their ids are random): SEC13's, booked 20 days out and never
+  // paid, was expired by series.test's unpaid-visit sweep when this file ran first ("skips a visit nobody paid" got 1, not 0).
+  await db.update(bookings).set({ status: 'canceled' }).where(like(bookings.taskId, 'tsk\\_sec\\_%'));
   await db.update(supportCases).set({ status: 'closed' }).where(like(supportCases.id, 'case\\_tmp\\_sec\\_%'));
   await pool.end();
 });
