@@ -6,6 +6,7 @@ import type { FileStorage } from '@/integrations/storage';
 import { passkeys, sessions, users } from '@/modules/accounts/schema';
 import { billingCustomers } from '@/modules/billing/schema';
 import { forgetBillingCustomerOf } from '@/modules/billing/service';
+import { clientSummary } from '@/modules/bookings/people';
 import { bookings, bookingTerms } from '@/modules/bookings/schema';
 import { invites } from '@/modules/invites/schema';
 import { notificationDeliveries, notifications, privacyRequests, pushSubscriptions } from '@/modules/notifications/schema';
@@ -14,6 +15,7 @@ import { offers } from '@/modules/offers/schema';
 import { prepareDueExports, processDueDeletions, readReadyExport, requestAccountDeletion, requestDataExport } from '@/modules/privacy/requests';
 import { readZip } from '@/modules/privacy/zip';
 import { rebookProposals } from '@/modules/rebook/schema';
+import { getHelperSummaries } from '@/modules/profiles/queries';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { userBadges } from '@/modules/badges/schema';
 import { savedSearches } from '@/modules/searches/schema';
@@ -285,6 +287,14 @@ describe('the privacy rehearsal: a copy of the data, then deleting the account (
     expect(new Map(kept.map((row) => [row.id, row.address !== null]))).toEqual(new Map([['adr_pr_helper', true], ['adr_pr_failer', false]]));
     expect(canceledInvitations).toEqual(['cand_pr_helper']);
     expect((await db.select({ status: backgroundChecks.status }).from(backgroundChecks).where(eq(backgroundChecks.id, 'bgc_pr_helper')))[0]?.status).toBe('canceled');
+  });
+
+  it('shows them to others as "Deleted account", flagged so nothing links to the profile that\'s gone (J-PR15)', async () => {
+    // In the reader's language on a page; English here, with no page in reach.
+    expect(await clientSummary(db, CLIENT)).toMatchObject({ displayName: 'Deleted account', initials: 'DA', deleted: true });
+    expect((await getHelperSummaries([HELPER], db)).get(HELPER)).toMatchObject({ displayName: 'Deleted account', initials: 'DA', deleted: true });
+    // Everyone else is as they were.
+    expect((await clientSummary(db, 'usr_maya'))?.deleted).toBeUndefined();
   });
 
   it('leaves her audit rows ids and what happened, not her contact details, and takes her waitlist entry (J-PR13)', async () => {

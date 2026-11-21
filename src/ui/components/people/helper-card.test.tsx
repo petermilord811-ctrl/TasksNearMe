@@ -72,6 +72,12 @@ describe('HelperCard', () => {
     expect(screen.getByRole('button', { name: 'Ask Jordan T.' }).closest('article')).toBeInTheDocument();
   });
 
+  it("shows a deleted account's name without a link, since its profile is gone (J-PR15)", () => {
+    renderHelper({ ...jordan, displayName: 'Deleted account', initials: 'DA', deleted: true });
+    expect(screen.getByRole('heading', { name: 'Deleted account' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Deleted account' })).toBeNull();
+  });
+
   it('does not invent a response time or amount when optional data is absent', () => {
     renderHelper({ ...lee, responseTime: undefined, services: [{ categorySlug: 'computer-help', pricingType: 'fixed' }] });
     expect(screen.queryByText(/Usually replies/)).not.toBeInTheDocument();

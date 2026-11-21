@@ -4,6 +4,9 @@
     "remote": "Remoto",
     "description": "Con {name}. Detalles y dirección: {url}"
   },
+  "people": {
+    "deletedAccount": "Cuenta eliminada"
+  },
   "meta": {
     "post": {
       "title": "Publicar una tarea",

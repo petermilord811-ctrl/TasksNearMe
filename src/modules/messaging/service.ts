@@ -23,7 +23,6 @@ import { profilePhotoOf } from '@/modules/files/photos';
 import { notifications } from '@/modules/notifications/schema';
 import { declinedByCancel } from '@/modules/offers/closing';
 import { offers } from '@/modules/offers/schema';
-import { initialsOf } from '@/modules/profiles/queries';
 import { files, tasks } from '@/modules/tasks/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
 import { shortenSegments, toMessageSegments } from '@/modules/trust/message-segments';
@@ -38,6 +37,7 @@ import { publishNotices } from '@/platform/realtime/publish';
 import { presenceOf } from '@/modules/realtime/presence';
 import { firstMessagesLeft } from './direct-rules';
 import { messageReactions, messages, savedReplies, threadParticipants, threads } from './schema';
+import { deletedLabelFor, shownPerson } from '@/modules/accounts/shown-name';
 
 /**
  * Threads between the two people on an offer or a booking (blueprint 02 J2 step 6, 06, 08). Bodies are
@@ -261,11 +261,11 @@ export async function directFirstMessagesLeft(db: Db, thread: ThreadRow, viewerI
   return firstMessagesLeft({ viewerStarted: true, viewerSent, otherSent });
 }
 
-function personOf(user: typeof users.$inferSelect): PersonSummary {
+/** `deletedLabel`: the reader's "Deleted account" (shown-name.ts), for someone whose account was deleted (J-PR15). */
+function personOf(user: typeof users.$inferSelect, deletedLabel?: string): PersonSummary {
   return {
     id: user.id,
-    displayName: user.name,
-    initials: initialsOf(user.firstName, user.lastName),
+    ...shownPerson(user, deletedLabel),
     ...profilePhotoOf(user),
     memberSince: user.createdAt.toISOString(),
     phoneVerified: user.phoneVerifiedAt !== null,
@@ -325,6 +325,7 @@ async function summariesOf(db: Db, list: ThreadRow[], viewerId: string, now: Dat
   ]);
   const latestByThread = new Map(latestRows.map((row) => [row.threadId, row]));
   const unreadByThread = new Map(unreadRows.map((row) => [row.threadId, row.value]));
+  const deletedLabel = await deletedLabelFor(people.map((person) => person.user));
   for (const thread of list) {
     const context = contexts.get(thread.id);
     const here = people.filter((person) => person.threadId === thread.id);
@@ -338,7 +339,7 @@ async function summariesOf(db: Db, list: ThreadRow[], viewerId: string, now: Dat
         id: thread.id,
         kind: thread.kind as ThreadKind,
         title: context.title,
-        otherParty: personOf(other),
+        otherParty: personOf(other, deletedLabel),
         subject: context.subject,
         ...(latestView
           ? {

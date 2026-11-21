@@ -27,6 +27,7 @@ import { helperProfiles, helperServices, helperWorkSamples } from './schema';
 import { badgesFor } from '@/modules/badges/service';
 import { marketTimeZone } from '@/modules/markets/time-zone';
 import { rowScopeCondition, type RowScope } from '@/shared/sample-data';
+import { deletedLabelFor, shownPerson } from '@/modules/accounts/shown-name';
 
 /**
  * Public helper cards. Only active helpers with active accounts appear. Last names, exact
@@ -43,12 +44,12 @@ type ProfileRow = typeof helperProfiles.$inferSelect;
 type UserRow = typeof users.$inferSelect;
 
 /** `badges`: the helper's shown achievement badges, most notable first (cards show the top 3; completion plan 6.4). */
-export function toHelperSummary(profile: ProfileRow, user: UserRow, areaName: string, services: ServiceSummary[], badges: BadgeView[] = []): HelperSummary {
+/** `deletedLabel`: the reader's "Deleted account" (shown-name.ts), for a helper whose account was deleted (J-PR15). */
+export function toHelperSummary(profile: ProfileRow, user: UserRow, areaName: string, services: ServiceSummary[], badges: BadgeView[] = [], deletedLabel?: string): HelperSummary {
   const phoneVerified = user.phoneVerifiedAt !== null;
   return {
     id: user.id,
-    displayName: user.name,
-    initials: initialsOf(user.firstName, user.lastName),
+    ...shownPerson(user, deletedLabel),
     ...(user.avatarFileId ? { photo: avatarPhoto(user.avatarFileId, user.name) } : {}),
     memberSince: user.createdAt.toISOString(),
     phoneVerified,
@@ -233,6 +234,8 @@ export async function getHelperProfile(handle: string, database: Db = db, rows: 
       .where(eq(helperWorkSamples.userId, userId))
       .orderBy(asc(helperWorkSamples.position)),
   ]);
+  // A review whose author deleted their account stays, under the reader's "Deleted account" (J-PR15).
+  const reviewerDeletedLabel = await deletedLabelFor(reviewRows.map(({ author }) => author));
 
   const services: HelperServiceDetail[] = serviceRows.map(({ service, slug }) => ({
     categorySlug: slug as CategorySlug,
@@ -274,7 +277,7 @@ export async function getHelperProfile(handle: string, database: Db = db, rows: 
       tags: review.tags.filter((tag): tag is HelperReviewTag => tagSet.has(tag)),
       // Public and indexed: contact details are masked, as in tasks, questions and posts (sweep RV5). Staff read it as written.
       ...(review.body ? { body: maskContactDetails(review.body).text } : {}),
-      author: { displayName: author.name, initials: initialsOf(author.firstName, author.lastName) },
+      author: (({ displayName, initials }) => ({ displayName, initials }))(shownPerson(author, reviewerDeletedLabel)),
       categorySlug: categorySlug as CategorySlug,
       publishedAt: (review.publishedAt ?? review.createdAt).toISOString(),
     })),
@@ -369,5 +372,7 @@ export async function getHelperSummaries(userIds: string[], database: Db = db): 
   }
   const badges = await badgesFor(database, rows.map(({ user }) => user.id));
   const recommended = await recommendedByCounts(database, rows.map(({ user }) => user.id));
-  return new Map(rows.map(({ profile, user, areaName }) => [user.id, withRecommended(toHelperSummary(profile, user, areaName, services.get(user.id) ?? [], badges.get(user.id)), recommended)]));
+  // A helper on a past booking or an old offer whose account was deleted shows as the reader's "Deleted account" (J-PR15).
+  const deletedLabel = await deletedLabelFor(rows.map(({ user }) => user));
+  return new Map(rows.map(({ profile, user, areaName }) => [user.id, withRecommended(toHelperSummary(profile, user, areaName, services.get(user.id) ?? [], badges.get(user.id), deletedLabel), recommended)]));
 }

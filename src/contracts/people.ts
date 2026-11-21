@@ -17,6 +17,11 @@ export interface PersonSummary {
   photo?: Photo;
   memberSince: ISODateTime;
   phoneVerified: boolean;
+  /**
+   * The account was deleted (privacy rehearsal J-PR15): `displayName` is "Deleted account" in the reader's language,
+   * and nothing links to them (their profile is gone).
+   */
+  deleted?: true;
 }
 
 export interface VerificationBadges {

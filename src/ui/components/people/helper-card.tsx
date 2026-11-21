@@ -33,9 +33,12 @@ export function HelperCard({ helper, variant = 'full', footer }: HelperCardProps
         </span>
         <div className="min-w-0 flex-1">
           <h3 className="font-display text-[17px]/6 font-semibold tracking-[-0.01em] md:text-lg/6.5">
-            <Link href={routes.helperProfile(helper.handle)} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">
-              {helper.displayName}
-            </Link>
+            {/* A deleted account's profile is gone (J-PR15): the name, with nowhere to link. */}
+            {helper.deleted
+              ? <span className="inline-flex min-h-11 items-center">{helper.displayName}</span>
+              : <Link href={routes.helperProfile(helper.handle)} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">
+                {helper.displayName}
+              </Link>}
           </h3>
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground"><MapPin aria-hidden="true" className="size-4 shrink-0" />{helper.areaName}</p>
         </div>

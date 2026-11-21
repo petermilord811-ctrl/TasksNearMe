@@ -4,6 +4,9 @@
     "remote": "Remote",
     "description": "With {name}. Details and the address: {url}"
   },
+  "people": {
+    "deletedAccount": "Deleted account"
+  },
   "meta": {
     "post": {
       "title": "Post a task",

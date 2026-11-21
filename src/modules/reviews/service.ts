@@ -4,7 +4,7 @@ import { createReviewInputSchema } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { bookings } from '@/modules/bookings/schema';
 import { categories } from '@/modules/markets/schema';
-import { getHelperSummaries, initialsOf } from '@/modules/profiles/queries';
+import { getHelperSummaries } from '@/modules/profiles/queries';
 import { profilePhotoOf } from '@/modules/files/photos';
 import { openReviewFeedbackCase } from '@/modules/support/service';
 import { tasks } from '@/modules/tasks/schema';
@@ -17,6 +17,7 @@ import { isUniqueViolation } from '@/platform/db/errors';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { reviews, savedHelpers } from './schema';
+import { deletedLabelFor, shownPerson } from '@/modules/accounts/shown-name';
 
 /**
  * Reviews after a completed booking (blueprint 02 J8): two-way, double-blind. A review becomes visible
@@ -164,8 +165,8 @@ export async function getReviewPage(db: Db, userId: string, bookingId: string, n
     direction: found.direction,
     subject: {
       id: subject.id,
-      displayName: subject.name,
-      initials: initialsOf(subject.firstName, subject.lastName),
+      // The person under review whose account was deleted: the reader's "Deleted account" (J-PR15).
+      ...shownPerson(subject, await deletedLabelFor([subject])),
       ...profilePhotoOf(subject),
       memberSince: subject.createdAt.toISOString(),
       phoneVerified: subject.phoneVerifiedAt !== null,
