@@ -12,6 +12,7 @@ import { cn } from '@/ui/lib/utils';
 import { Button, buttonVariants } from '@/ui/primitives/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/ui/primitives/sheet';
+import { ConnectionAwareText } from '@/ui/components/forms/connection-aware-text';
 
 export interface ActionBarProps {
   actions: ActionDescriptor[];
@@ -102,7 +103,8 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
       onResult?.(result);
       return;
     }
-    const text = feedback(`${result.ok ? 'success' : 'error'}.${result.code}`);
+    // No answer while the phone has no network says so (bad connections pass, J-N3).
+    const text = !result.ok && result.code === 'unknown' && !navigator.onLine ? feedback('error.offline') : feedback(`${result.ok ? 'success' : 'error'}.${result.code}`);
     setResult(result);
     if (result.ok) {
       toast.success(text);
@@ -116,7 +118,7 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
   function resultContent() {
     if (!result) return null;
     if (renderResult) return renderResult(result);
-    return <p className={cn('text-sm', result.ok ? 'text-success' : 'text-destructive')}>{feedback(`${result.ok ? 'success' : 'error'}.${result.code}`)}</p>;
+    return <p className={cn('text-sm', result.ok ? 'text-success' : 'text-destructive')}><ConnectionAwareText text={feedback(`${result.ok ? 'success' : 'error'}.${result.code}`)} offlineText={feedback('error.offline')} unknown={!result.ok && result.code === 'unknown'} /></p>;
   }
 
   function renderAction(action: ActionDescriptor, context: string) {

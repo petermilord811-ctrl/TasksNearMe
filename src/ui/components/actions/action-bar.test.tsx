@@ -133,6 +133,18 @@ describe('ActionBar', () => {
     expect(await screen.findByText(feedback.error.unknown)).toBeVisible();
   });
 
+  it('says the phone is offline when an action gets no answer without a network (bad connections pass, J-N3)', async () => {
+    Object.defineProperty(window.navigator, 'onLine', { configurable: true, get: () => false });
+    try {
+      show([{ id: 'pay', kind: 'primary', enabled: true }], vi.fn(async () => { throw new TypeError('Failed to fetch'); }));
+      await userEvent.click(screen.getByRole('button', { name: 'Finish payment' }));
+      expect(await screen.findByText(feedback.error.offline)).toBeVisible();
+      expect(toastError).toHaveBeenCalledWith(feedback.error.offline);
+    } finally {
+      delete (window.navigator as unknown as { onLine?: boolean }).onLine;
+    }
+  });
+
   it('follows a successful redirect', async () => {
     show([{ id: 'pay', kind: 'primary', enabled: true }], vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'paid', redirectTo: '/app/bookings/desk' })));
     await userEvent.click(screen.getByRole('button', { name: 'Finish payment' }));
