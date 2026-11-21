@@ -19,9 +19,9 @@ test('the helper sends the finished work and the client approves it', async ({ p
   test.setTimeout(150_000);
   await devSignIn(page, 'jordan@example.test');
   await page.goto('/app/bookings/bkg_bookcase');
-  await page.getByRole('button', { name: 'Submit completed task' }).first().click();
+  await page.getByRole('button', { name: 'Send for approval' }).filter({ visible: true }).first().click();
   await expect(page).toHaveURL(/\/app\/bookings\/bkg_bookcase\/complete$/, { timeout: 30_000 });
-  await expect(page.getByRole('heading', { level: 1, name: 'Mark the work complete' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Send for approval' })).toBeVisible();
 
   await page.locator('input[type="file"]').first().setInputFiles(await photo());
   await expect(page.getByRole('img', { name: /./ }).first()).toBeVisible({ timeout: 30_000 });
