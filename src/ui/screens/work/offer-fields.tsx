@@ -1,7 +1,7 @@
 'use client';
 
 import { useId, useState, type ReactNode } from 'react';
-import { Controller, useFormContext, type FieldPath } from 'react-hook-form';
+import { Controller, useFormContext, useWatch, type FieldPath } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
 import type { OfferInput, OfferMessageDraftInput, OfferMessageDraftResult, OfferRules, QueryHandler } from '@/contracts';
@@ -28,6 +28,13 @@ function OfferField({ name, label, hint, children, after }: { name: FieldPath<Of
     <div id={`${id}-error`} aria-live="polite">{code && <FieldError>{t(t.has(`fieldErrors.${code}`) ? `fieldErrors.${code}` : 'fieldErrors.invalid')}</FieldError>}</div>
     {after}
   </Field>;
+}
+
+/** The message's count, in a leaf of its own: a keystroke re-renders only this line. */
+function MessageCount({ id, maximum }: { id: string; maximum: number }) {
+  const t = useTranslations('helperTask.form');
+  const message = useWatch<OfferInput, 'message'>({ name: 'message' });
+  return <p id={id} className="text-right text-sm tabular-nums text-muted-foreground">{t('messageCount', { count: message.length, maximum })}</p>;
 }
 
 function OfferMoneyField({ name, label, hint }: { name: 'pricing.priceCents' | 'pricing.rateCents'; label: string; hint: string }) {
@@ -93,11 +100,12 @@ export function OfferFields({ rules, onDraftMessage }: {
   const { formatTime, zoneName } = useFormat(rules.timeZone);
   const t = useTranslations('helperTask.form');
   const fields = useTranslations('forms');
-  const { register, watch, control, setValue, setError, clearErrors } = useFormContext<OfferInput>();
+  const { register, control, setValue, setError, clearErrors } = useFormContext<OfferInput>();
   const [bring, setBring] = useState('');
   const [bringError, setBringError] = useState<string>();
-  const brings = watch('brings');
-  const message = watch('message');
+  // Named subscriptions: a keystroke in the message re-renders only its count (MessageCount), not every field; watch()
+  // re-rendered the whole form (speed on a phone: INP).
+  const brings = useWatch({ control, name: 'brings' });
 
   function addBring() {
     const value = bring.trim();
@@ -125,7 +133,7 @@ export function OfferFields({ rules, onDraftMessage }: {
         message, its count and its hint fit above Send offer (journeys on a phone). */}
     <OfferField name="message" label={t('message')} hint={t('privacy')} after={onDraftMessage && <MessageDraft onDraft={onDraftMessage} />}>{(id, invalid) => <>
       <Textarea {...register('message')} id={id} maxLength={rules.messageMaxLength} rows={4} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error ${id}-count`} className="min-h-28 scroll-mb-40" />
-      <p id={`${id}-count`} className="text-right text-sm tabular-nums text-muted-foreground">{t('messageCount', { count: message.length, maximum: rules.messageMaxLength })}</p>
+      <MessageCount id={`${id}-count`} maximum={rules.messageMaxLength} />
     </>}</OfferField>
     <OfferField name="brings" label={t('brings')} hint={t('bringsHint')}>{(id, invalid) => <Controller name="brings" control={control} render={({ field }) => <div className="space-y-3">
       <div className="flex flex-wrap gap-2">

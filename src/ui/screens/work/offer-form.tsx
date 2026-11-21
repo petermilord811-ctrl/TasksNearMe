@@ -76,16 +76,22 @@ export function OfferForm({ data, handlers, revising = false, onCancel, onSent, 
     // Once, on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  // Saved as it's typed (after the restore above, which runs first and has read what was kept).
-  const typed = useWatch({ control: form.control });
+  // Saved as it's typed (after the restore above, which runs first and has read what was kept), through a subscription:
+  // a keystroke doesn't re-render the form (speed on a phone: typing the message cost 456 ms at 4× CPU).
+  const { subscribe } = form;
   useEffect(() => {
     if (revising) return;
-    try {
-      window.sessionStorage.setItem(draftAt, JSON.stringify(typed));
-    } catch {
-      // Storage off (a private window): nothing is kept.
-    }
-  }, [typed, revising, draftAt]);
+    return subscribe({
+      formState: { values: true },
+      callback: ({ values }) => {
+        try {
+          window.sessionStorage.setItem(draftAt, JSON.stringify(values));
+        } catch {
+          // Storage off (a private window): nothing is kept.
+        }
+      },
+    });
+  }, [subscribe, revising, draftAt]);
 
   useEffect(() => {
     if (!result || result.ok || pending) return;
