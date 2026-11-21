@@ -1,5 +1,5 @@
 {
-  "task": { "draft": "Borrador", "open": "Abierta", "assigned": "Reservada", "completed": "Completada", "canceled": "Cancelada", "expired": "Vencida" },
+  "task": { "draft": "Solicitud enviada", "open": "Abierta", "assigned": "Reservada", "completed": "Completada", "canceled": "Cancelada", "expired": "Vencida" },
   "booking": {
     "poster": { "pending_funding": "Completa el pago", "scheduled": "Reservada · se paga después", "confirmed": "Reservada", "in_progress": "En curso", "completion_submitted": "Necesita tu aprobación", "disputed": "Problema reportado", "completed": "Completada", "canceled": "Cancelada" },
     "helper": { "pending_funding": "El cliente está reservando", "scheduled": "Reservada", "confirmed": "Reservada", "in_progress": "En curso", "completion_submitted": "Esperando aprobación", "disputed": "Problema reportado", "completed": "Completada", "canceled": "Cancelada" },

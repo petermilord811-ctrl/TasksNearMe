@@ -16,7 +16,7 @@ import { Button } from '@/ui/primitives/button';
 import { Checkbox } from '@/ui/primitives/checkbox';
 import { Spinner } from '@/ui/primitives/spinner';
 import { usePriceQuote } from '@/ui/lib/use-price-quote';
-import { RequestHelperFields, requestStartWindow, suggestedPricing } from './request-helper-fields';
+import { isBookAgain, RequestHelperFields, requestOptions, requestStartWindow, suggestedPricing } from './request-helper-fields';
 import type { RequestHelperScreenProps } from './request-helper-screen';
 
 export function RequestHelperForm({ data, handlers, initialResult, initialPending = false, initialBreakdown }: Omit<RequestHelperScreenProps, 'now'> & {
@@ -34,22 +34,27 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
   const [verification, setVerification] = useState<PaymentVerification | undefined>(() => initialResult && needsBankVerification(initialResult) ? initialResult.verification : undefined);
   const [pending, setPending] = useState(initialPending);
   const locked = useRef(initialPending || Boolean(initialResult?.ok));
+  const options = useMemo(() => requestOptions(data), [data]);
   const schema = useMemo(() => requestHelperInputSchema.superRefine((input, context) => {
-    const task = data.tasks.find((candidate) => candidate.id === input.taskId);
+    const task = options.find((candidate) => candidate.id === input.taskId);
     if (!task) context.addIssue({ code: 'custom', path: ['taskId'], message: 'invalid' });
     else {
       const window = requestStartWindow(data, task);
       if (Date.parse(input.start) < Date.parse(window.start) || Date.parse(input.start) > Date.parse(window.end)) {
         context.addIssue({ code: 'custom', path: ['start'], message: 'out_of_range' });
       }
+      // Book again (J-C7): the task's description this time.
+      if (isBookAgain(task.id) && !input.description) context.addIssue({ code: 'custom', path: ['description'], message: 'required' });
     }
-  }), [data]);
-  const task = data.tasks.find((candidate) => candidate.id === data.suggestion?.taskId) ?? data.tasks[0];
+  }), [data, options]);
+  // Book again's past task first: it's what the person came for (J-C7).
+  const task = options.find((candidate) => isBookAgain(candidate.id)) ?? data.tasks.find((candidate) => candidate.id === data.suggestion?.taskId) ?? data.tasks[0]!;
   const form = useForm<RequestHelperInput>({
     resolver: zodResolver(schema),
     mode: 'onTouched',
     defaultValues: {
       taskId: task.id, start: requestStartWindow(data, task).start, pricing: suggestedPricing(data, task), message: '',
+      ...(isBookAgain(task.id) && data.fromBooking ? { description: data.fromBooking.description } : {}),
       ...(data.slot && !data.slotUnavailable ? { slotId: data.slot.id } : {}),
       payment: getDefaultPaymentChoice(data.payment), acceptTerms: initialPending || Boolean(initialResult && (initialResult.ok || initialResult.code !== 'validation_failed')),
     },
@@ -62,7 +67,7 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
 
   useEffect(() => {
     if (!result || pending || verification) return;
-    const names: FieldPath<RequestHelperInput>[] = ['taskId', 'start', 'pricing.type', 'pricing.priceCents', 'pricing.rateCents', 'pricing.estimatedHours', 'pricing.hoursCap', 'message', 'payment', 'acceptTerms'];
+    const names: FieldPath<RequestHelperInput>[] = ['taskId', 'description', 'start', 'pricing.type', 'pricing.priceCents', 'pricing.rateCents', 'pricing.estimatedHours', 'pricing.hoursCap', 'message', 'payment', 'acceptTerms'];
     let first: FieldPath<RequestHelperInput> | undefined;
     for (const name of names) {
       const code = !result.ok ? result.fieldErrors?.[name]?.[0]
@@ -99,7 +104,10 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
       if (bar && !bar.contains(event.target) && event.target.getBoundingClientRect().bottom > bar.getBoundingClientRect().top) event.target.scrollIntoView({ block: 'center', behavior: 'instant' });
     }} onSubmit={(event) => {
       if (disabled || locked.current || !quote.breakdown) { event.preventDefault(); return; }
-      void form.handleSubmit((input) => run(() => handlers.onRequest({ ...input, message: input.message?.trim() || undefined })))(event);
+      // Book again sends the past booking and the description; an open task sends its id (J-C7).
+      void form.handleSubmit((input) => run(() => handlers.onRequest(isBookAgain(input.taskId) && data.fromBooking
+        ? { ...input, taskId: undefined, fromBookingId: data.fromBooking.bookingId, message: input.message?.trim() || undefined }
+        : { ...input, description: undefined, message: input.message?.trim() || undefined })))(event);
     }}>
       <fieldset disabled={disabled} className="min-w-0"><legend className="sr-only">{t('details')}</legend><RequestHelperFields data={data} disabled={disabled} /></fieldset>
       <div aria-live="polite" aria-busy={quote.pending} className="space-y-3">

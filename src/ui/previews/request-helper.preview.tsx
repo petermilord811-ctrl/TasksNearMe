@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
 import { ACTION_ERROR_CODES, routes, type ActionResult, type AppShellHandlers, type PaymentAttemptResult, type PreviewEntry, type PriceBreakdown, type RequestHelperHandlers, type RequestHelperPageData } from '@/contracts';
-import { fakeHandler, fakeRequestHelperHandlers, jordanYardSlot, mayaShell, movingConfirmHourlyData, myOffersPageData, requestJordanData, requestJordanSlotData, requestJordanSlotTakenData, requestNoTasksData } from '@/fixtures';
+import { fakeHandler, fakeRequestHelperHandlers, jordanYardSlot, mayaShell, movingConfirmHourlyData, myOffersPageData, requestBookAgainData, requestBookAgainOnlyData, requestJordanData, requestJordanSlotData, requestJordanSlotTakenData, requestNoTasksData } from '@/fixtures';
 import { RequestHelperContent } from '@/ui/screens/invites/request-helper-screen';
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/invites.json';
@@ -40,6 +40,9 @@ export const requestHelperPreviews: PreviewEntry[] = [
   preview('slot-taken', copy.previews['slot-taken'], requestJordanSlotTakenData),
   preview('slot-not-allowed', copy.previews['slot-not-allowed'], requestJordanSlotData, { initialResult: { ok: false, code: 'not_allowed' }, initialBreakdown: slotBreakdown, handlers: { ...slotHandlers, onRequest: fakeHandler({ ok: false, code: 'not_allowed' }) } }),
   preview('no-tasks', copy.previews['no-tasks'], requestNoTasksData),
+  preview('book-again', copy.previews['book-again'], requestBookAgainData),
+  preview('book-again-only', copy.previews['book-again-only'], requestBookAgainOnlyData),
+  preview('book-again-open', copy.previews['book-again-open'], requestBookAgainData, { initialResult: { ok: false, code: 'validation_failed', fieldErrors: { taskId: ['in_use'] } } }),
   preview('quote-pending', copy.previews['quote-pending'], requestJordanData, { handlers: { ...fakeRequestHelperHandlers, onQuote: () => new Promise(() => {}) } }),
   preview('quote-error', copy.previews['quote-error'], requestJordanData, { handlers: { ...fakeRequestHelperHandlers, onQuote: async () => { throw new Error('quote unavailable'); } } }),
   preview('bank-verification', copy.previews['bank-verification'], requestJordanData, { initialResult: verification, handlers: { ...fakeRequestHelperHandlers, onRequest: async () => { await fakeHandler()(undefined); return verification; }, onFinishVerification: (input) => input.outcome === 'approved' ? fakeRequestHelperHandlers.onFinishVerification(input) : fakeHandler({ ok: false, code: 'payment_declined' })(undefined) } }),

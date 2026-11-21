@@ -19,6 +19,7 @@ import { getHelperSummaries } from '@/modules/profiles/queries';
 import { isReliable, reliabilityFacts } from '@/modules/profiles/reliability';
 import { pushSetup } from '@/modules/notifications/push';
 import { closeTaskInvites } from '@/modules/invites/holds';
+import { invites } from '@/modules/invites/schema';
 import { readExactAddress } from '@/modules/tasks/locations';
 import { budgetOf } from '@/modules/tasks/projections';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
@@ -84,7 +85,13 @@ export async function getMyTasks(db: Db, userId: string, now: Date): Promise<MyT
     .from(tasks)
     .where(eq(tasks.posterUserId, userId))
     .orderBy(desc(tasks.createdAt));
-  const visible = rows.filter((row) => row.status !== 'draft');
+  // Book again's drafts (J-C7): one whose request is waiting on the helper shows as a request in progress; one whose
+  // request ended without a booking (canceled, never published) leaves nothing behind. Other drafts stay out of sight.
+  const drafts = rows.filter((row) => row.status === 'draft').map((row) => row.id);
+  const requested = new Set(drafts.length
+    ? (await db.select({ taskId: invites.taskId }).from(invites).where(and(inArray(invites.taskId, drafts), eq(invites.source, 'rebook'), inArray(invites.status, ['sent', 'countered'])))).map((row) => row.taskId)
+    : []);
+  const visible = rows.filter((row) => (row.status === 'draft' ? requested.has(row.id) : !(row.status === 'canceled' && !row.publishedAt)));
   const ids = visible.map((row) => row.id);
   // Open offers, newest first: their count, the unopened ones, and the newest one per task. The ones the task page
   // lists: not expired, not from someone either side blocked, and none from before Find a replacement reopened it.
@@ -193,7 +200,7 @@ export async function getMyTasks(db: Db, userId: string, now: Date): Promise<MyT
   const startOf = (row: OwnerTaskRow) => row.booking?.start ?? row.schedule.windowStart;
   return {
     needsYou: all.filter((row) => row.attention).sort(byAttention),
-    open: all.filter((row) => row.status === 'open'),
+    open: all.filter((row) => row.status === 'open' || row.status === 'draft'),
     booked: all.filter((row) => row.status === 'assigned').sort((a, b) => startOf(a).localeCompare(startOf(b))),
     past: all.filter((row) => row.status === 'completed' || row.status === 'canceled' || row.status === 'expired'),
   };
@@ -242,7 +249,10 @@ async function offerViews(deps: OwnerDeps, task: typeof tasks.$inferSelect, rows
 
 export async function getTaskOwnerView(deps: OwnerDeps, userId: string, taskId: string, now: Date): Promise<TaskOwnerView | null> {
   const task = await ownedTask(deps.db, userId, taskId);
-  if (!task || task.status === 'draft') return null;
+  if (!task) return null;
+  // Book again's task (J-C7), never posted: the page shows its request, never offers. Any other draft stays out of sight.
+  const [request] = task.publishedAt ? [] : await deps.db.select({ id: invites.id }).from(invites).where(and(eq(invites.taskId, taskId), eq(invites.source, 'rebook'))).limit(1);
+  if (task.status === 'draft' && !request) return null;
   const found = await findTaskWithPublicView(deps.db, taskId);
   if (!found) return null;
 
@@ -281,6 +291,7 @@ export async function getTaskOwnerView(deps: OwnerDeps, userId: string, taskId: 
     actions: taskOwnerActions(task),
     ...(bookingId ? { bookingId } : {}),
     ...(task.status === 'open' && pushSetup() ? { push: pushSetup()! } : {}),
+    ...(request ? { privateRequest: true } : {}),
   };
 }
 

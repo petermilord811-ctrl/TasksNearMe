@@ -5,9 +5,11 @@ import type { ActionHandler, FieldErrorCode, QueryHandler } from './actions';
 import type { BotCheckConfig, BotCheckInput } from './bot-check';
 import type { CategorySlug, Cents, ISODateTime } from './common';
 import { mustAcceptField } from './forms';
+import type { TaskLocation } from './location';
 import type { PriceBreakdown, PricingInput } from './money';
 import { paymentChoiceSchema, type PaymentAttemptResult, type PaymentPanelData } from './payments';
 import type { ClientSummary, HelperSummary } from './people';
+import { TASK_DESCRIPTION_MAX } from './posting';
 import type { InviteStatus } from './status';
 
 /**
@@ -46,6 +48,32 @@ export interface InvitableTask {
   windowEnd: ISODateTime;
 }
 
+/**
+ * Book again's start (blueprint 02 J3): at least 2 hours ahead, at most 14 days, so an accepted request is booked
+ * well inside a card hold's 7 days (journeys on a phone, J-C7).
+ */
+export const BOOK_AGAIN_RULES = { leadHours: 2, maxDaysAhead: 14 } as const;
+export const BOOK_AGAIN_DESCRIPTION_MIN = 20;
+
+/**
+ * Book again from a past booking (blueprint 02 J3 and J8; journeys on a phone, J-C7): that task again, as a request
+ * of its own. Sending it copies the task as a draft that never reaches the board, with the place as it was and the
+ * new description, time and price; if no booking comes of the request, the draft is canceled with it.
+ */
+export interface BookAgainSource {
+  bookingId: string;
+  /** When the past booking started ("From your booking on Fri, Nov 20"). */
+  bookedFor: ISODateTime;
+  title: string;
+  categorySlug: CategorySlug;
+  /** The general area (the exact address is copied as it was, and stays private). */
+  location: TaskLocation;
+  /** The past booking's agreed scope, to edit. */
+  description: string;
+  /** The earliest and latest start, from the rules above. */
+  startWindow: { start: ISODateTime; end: ISODateTime };
+}
+
 /** `routes.app.requestHelper(handle, { fromBookingId })`. */
 export interface RequestHelperPageData {
   helper: HelperSummary;
@@ -54,6 +82,8 @@ export interface RequestHelperPageData {
   listedPricing: Partial<Record<CategorySlug, PricingInput>>;
   /** Book again: the past booking's task and last price as suggestions. */
   suggestion?: { taskId?: string; pricing: PricingInput };
+  /** Book again: the past task, offered first, beside the client's open tasks in its category (J-C7). */
+  fromBooking?: BookAgainSource;
   /**
    * `?slot=<id>` (UI-029): the helper's open slot. `tasks` are then the client's tasks in the slot's category
    * whose window overlaps it; the start must fall inside both the slot and the task's window; the slot's
@@ -65,8 +95,15 @@ export interface RequestHelperPageData {
   payment: PaymentPanelData;
 }
 
+/**
+ * A request is for one of the client's open tasks (`taskId`), or for a past booking's task again (`fromBookingId`,
+ * with the task's `description` this time; J-C7): exactly one. A second Book again of the same booking while one is
+ * open answers `taskId: ['in_use']`.
+ */
 export const requestHelperInputSchema = z.object({
-  taskId: z.string(code('required')).min(1, code('required')),
+  taskId: z.string(code('required')).min(1, code('required')).optional(),
+  fromBookingId: z.string(code('required')).min(1, code('required')).optional(),
+  description: z.string(code('required')).trim().min(BOOK_AGAIN_DESCRIPTION_MIN, code('too_short')).max(TASK_DESCRIPTION_MAX, code('too_long')).optional(),
   start: z.string(code('required')).datetime({ offset: true, message: code('invalid') }),
   pricing: invitePricingSchema,
   message: z.string(code('invalid')).trim().max(1000, code('too_long')).optional(),
@@ -74,6 +111,10 @@ export const requestHelperInputSchema = z.object({
   acceptTerms: mustAcceptField,
   /** Requesting an open slot (UI-029). */
   slotId: z.string().min(1).optional(),
+}).superRefine((input, context) => {
+  if (!input.taskId === !input.fromBookingId) context.addIssue({ code: 'custom', path: ['taskId'], message: code('required') });
+  if (input.fromBookingId && !input.description) context.addIssue({ code: 'custom', path: ['description'], message: code('required') });
+  if (input.fromBookingId && input.slotId) context.addIssue({ code: 'custom', path: ['slotId'], message: code('invalid') });
 });
 export type RequestHelperInput = z.input<typeof requestHelperInputSchema>;
 

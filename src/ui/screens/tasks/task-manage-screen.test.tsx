@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, TASK_CANCEL_REASONS, routes, type ActionResult, type TaskOwnerHandlers, type TaskOwnerView } from '@/contracts';
-import { bookshelfOwnerWithInviteView, deskOwnerBookedView, deskOwnerExpiredView, deskOwnerNoOffersView, deskOwnerSomeExpiredView, deskOwnerView, fakeInviteHandlers, remoteOwnerView } from '@/fixtures';
+import { bookAgainOwnerView, bookshelfOwnerWithInviteView, deskOwnerBookedView, deskOwnerExpiredView, deskOwnerNoOffersView, deskOwnerSomeExpiredView, deskOwnerView, fakeInviteHandlers, remoteOwnerView } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import taskManage from '../../../../messages/en/ui/taskManage.json';
 import inviteCard from '../../../../messages/en/ui/inviteCard.json';
@@ -33,6 +33,14 @@ function show(data: TaskOwnerView = deskOwnerView, handlers = ownerHandlers(), e
 }
 
 describe('TaskManageScreen actions', () => {
+  it("shows Book again's private request as the page: its status and request, and no offers section (J-C7)", () => {
+    render(<NextIntlClientProvider locale="en" messages={{ ...messages, inviteCard }}><TaskManageScreen data={bookAgainOwnerView} handlers={ownerHandlers()} inviteHandlers={fakeInviteHandlers} now={now} /></NextIntlClientProvider>);
+    expect(screen.getByRole('region', { name: 'Invites you sent' })).toBeVisible();
+    expect(screen.queryByRole('region', { name: /offers/i })).not.toBeInTheDocument();
+    expect(screen.getByText('Request sent')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Cancel task' })).not.toBeInTheDocument();
+  });
+
   it('shows sent invites above offers with the supplied response actions', () => {
     render(<NextIntlClientProvider locale="en" messages={{ ...messages, inviteCard }}><TaskManageScreen data={bookshelfOwnerWithInviteView} handlers={ownerHandlers()} inviteHandlers={fakeInviteHandlers} now={now} /></NextIntlClientProvider>);
     const invites = screen.getByRole('region', { name: 'Invites you sent' });

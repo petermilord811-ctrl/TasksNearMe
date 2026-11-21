@@ -47,6 +47,11 @@ export const invites = pgTable(
     paymentId: text('payment_id'),
     /** Accepted: the booking. */
     bookingId: text('booking_id'),
+    /**
+     * Book again (`source` = `rebook`): the past booking this request repeats. Its task is a draft copy that never
+     * reaches the board, canceled with the request if no booking comes of it (journeys on a phone, J-C7).
+     */
+    sourceBookingId: text('source_booking_id'),
     /** Requested from one of the helper's open slots (UI-029): the slot is held while this waits. */
     slotId: text('slot_id').references(() => availabilityPosts.id),
     expiresAt: timestamp('expires_at', { withTimezone: true }),
@@ -58,6 +63,8 @@ export const invites = pgTable(
     uniqueIndex('invites_open_idx').on(t.taskId, t.helperUserId).where(sql`status in ('authorizing', 'sent', 'countered')`),
     // One waiting request per slot.
     uniqueIndex('invites_open_slot_idx').on(t.slotId).where(sql`status in ('authorizing', 'sent', 'countered')`),
+    // Book again: one open request per client, helper and past booking, so a double send makes one draft and one hold.
+    uniqueIndex('invites_open_source_booking_idx').on(t.posterUserId, t.helperUserId, t.sourceBookingId).where(sql`status in ('authorizing', 'sent', 'countered')`),
     index('invites_helper_idx').on(t.helperUserId, t.createdAt),
     index('invites_task_idx').on(t.taskId, t.createdAt),
   ],

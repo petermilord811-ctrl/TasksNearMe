@@ -1,0 +1,2 @@
+ALTER TABLE "invites" ADD COLUMN "source_booking_id" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "invites_open_source_booking_idx" ON "invites" USING btree ("poster_user_id","helper_user_id","source_booking_id") WHERE status in ('authorizing', 'sent', 'countered');

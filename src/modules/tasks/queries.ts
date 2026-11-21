@@ -1,4 +1,4 @@
-import { and, asc, count, desc, gt, gte, ilike, inArray, isNull, lt, lte, ne, notInArray, or, eq, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, gte, ilike, inArray, isNotNull, isNull, lt, lte, ne, notInArray, or, sql, type SQL } from 'drizzle-orm';
 import type { TimeZone } from '@/contracts/common';
 import type { CategorySlug, FindWorkPageData, TaskBoardQueryState, TaskBoardSort, TaskBoardTime, TaskPublicView } from '@/contracts';
 import { taskTypesFor } from '@/shared/task-types';
@@ -361,7 +361,8 @@ export async function listOpenTaskDates(
 
 /**
  * A task anyone may see by its slug (drafts never), and whether it still takes offers. With `rows: 'real'` a sample
- * task is not found (the public where samples are hidden).
+ * task is not found (the public where samples are hidden). A task never posted has no public page in any status:
+ * Book again's request (J-C7), a rebooking or a regular visit stays private when it's canceled or booked too.
  */
 export async function findPublicTask(
   db: Db,
@@ -370,7 +371,7 @@ export async function findPublicTask(
   rows: RowScope = 'all',
 ): Promise<{ task: TaskPublicView; marketId: string; marketSlug: string; acceptingOffers: boolean } | null> {
   const [row] = await selectPublic(db)
-    .where(and(eq(tasks.slug, slug), ne(tasks.status, 'draft'), isNull(tasks.hiddenAt), rowScopeCondition(rows, tasks.id)))
+    .where(and(eq(tasks.slug, slug), ne(tasks.status, 'draft'), isNotNull(tasks.publishedAt), isNull(tasks.hiddenAt), rowScopeCondition(rows, tasks.id)))
     .limit(1);
   if (!row) return null;
   return {

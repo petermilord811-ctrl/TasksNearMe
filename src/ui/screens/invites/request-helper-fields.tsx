@@ -13,8 +13,22 @@ import { RadioGroup, RadioGroupItem } from '@/ui/primitives/radio-group';
 import { Textarea } from '@/ui/primitives/textarea';
 import { cn } from '@/ui/lib/utils';
 
+/** Book again's past task, offered as the first choice (J-C7): its value is `again:<bookingId>`. */
+export const BOOK_AGAIN_PREFIX = 'again:';
+export const isBookAgain = (taskId: string | undefined) => Boolean(taskId?.startsWith(BOOK_AGAIN_PREFIX));
+
+/** The choices: Book again's past task first (its window is Book again's start rules), then the client's open tasks. */
+export function requestOptions(data: RequestHelperPageData): InvitableTask[] {
+  const again = data.fromBooking;
+  return [
+    ...(again ? [{ id: `${BOOK_AGAIN_PREFIX}${again.bookingId}`, title: again.title, categorySlug: again.categorySlug, windowStart: again.startWindow.start, windowEnd: again.startWindow.end }] : []),
+    ...data.tasks,
+  ];
+}
+
 export function suggestedPricing(data: RequestHelperPageData, task: InvitableTask): PricingInput {
   if (data.slot && !data.slotUnavailable) return data.slot.pricing;
+  if (isBookAgain(task.id)) return data.suggestion?.pricing ?? data.listedPricing[task.categorySlug] ?? { type: 'fixed', priceCents: 0 };
   return data.suggestion && (!data.suggestion.taskId || data.suggestion.taskId === task.id)
     ? data.suggestion.pricing : data.listedPricing[task.categorySlug] ?? { type: 'fixed', priceCents: 0 };
 }
@@ -32,7 +46,7 @@ function localStart(value: string, timeZone: string) {
   return value && Number.isFinite(new Date(value).getTime()) ? `${marketDayKey(value, timeZone)}T${marketClockTime(value, timeZone)}` : '';
 }
 
-function RequestField({ name, label, hint, children }: { name: FieldPath<RequestHelperInput>; label: string; hint: string; children: (id: string, invalid: boolean) => ReactNode }) {
+function RequestField({ name, label, hint, errorText, children }: { name: FieldPath<RequestHelperInput>; label: string; hint: string; errorText?: (code: string) => string | undefined; children: (id: string, invalid: boolean) => ReactNode }) {
   const id = useId();
   const { getFieldState, formState } = useFormContext<RequestHelperInput>();
   const { error } = getFieldState(name, formState);
@@ -41,41 +55,50 @@ function RequestField({ name, label, hint, children }: { name: FieldPath<Request
     <FieldLabel htmlFor={id}>{label}</FieldLabel>
     {children(id, !!error)}
     <FieldDescription id={`${id}-hint`}>{hint}</FieldDescription>
-    <div id={`${id}-error`} aria-live="polite">{error?.message && <FieldError>{t(t.has(error.message) ? error.message : 'invalid')}</FieldError>}</div>
+    <div id={`${id}-error`} aria-live="polite">{error?.message && <FieldError>{errorText?.(error.message) ?? t(t.has(error.message) ? error.message : 'invalid')}</FieldError>}</div>
   </Field>;
 }
 
 export function RequestHelperFields({ data, disabled }: { data: RequestHelperPageData; disabled: boolean }) {
   // The page's market clock (completion plan 8.1): shown, typed and converted in it.
-  const { formatDateTime, timeZone, zoneName } = useFormat();
+  const { formatDate, formatDateTime, timeZone, zoneName } = useFormat();
   const t = useTranslations('invites');
   const categories = useTranslations('helperCard.categories');
   const { control, register, watch, setValue, clearErrors } = useFormContext<RequestHelperInput>();
   const taskId = watch('taskId');
-  const selected = data.tasks.find((task) => task.id === taskId);
+  const options = requestOptions(data);
+  const selected = options.find((task) => task.id === taskId);
   const window = selected ? requestStartWindow(data, selected) : undefined;
   const hasSlot = !!data.slot && !data.slotUnavailable;
+  const again = data.fromBooking;
+  const againChosen = isBookAgain(taskId) && !!again;
   return <div className="space-y-6">
     <section className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06] bg-card p-4 shadow-card sm:p-6">
       <h2 className="font-heading text-xl/7 font-semibold">{t('task')}</h2>
-      <RequestField name="taskId" label={t('task')} hint={t(hasSlot ? 'slotTaskHint' : 'taskHint', { helper: data.helper.displayName })}>{(id, invalid) => <Controller name="taskId" control={control} render={({ field }) => <RadioGroup id={id} name={field.name} value={field.value} onBlur={field.onBlur} disabled={disabled} aria-label={t('task')} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} onValueChange={(value) => {
-        const task = data.tasks.find((candidate) => candidate.id === value);
+      <RequestField name="taskId" label={t('task')} hint={t(hasSlot ? 'slotTaskHint' : 'taskHint', { helper: data.helper.displayName })} errorText={(code) => (code === 'in_use' ? t('again.requestOpen', { helper: data.helper.displayName }) : undefined)}>{(id, invalid) => <Controller name="taskId" control={control} render={({ field }) => <RadioGroup id={id} name={field.name} value={field.value} onBlur={field.onBlur} disabled={disabled} aria-label={t('task')} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} onValueChange={(value) => {
+        const task = options.find((candidate) => candidate.id === value);
         if (!task) return;
-        field.onChange(value); setValue('start', requestStartWindow(data, task).start); setValue('pricing', suggestedPricing(data, task)); setValue('acceptTerms', false); clearErrors();
+        field.onChange(value); setValue('start', requestStartWindow(data, task).start); setValue('pricing', suggestedPricing(data, task)); setValue('description', isBookAgain(value) ? again?.description : undefined); setValue('acceptTerms', false); clearErrors();
       }}>
-        {data.tasks.map((task, index) => <label key={task.id} htmlFor={`${id}-${index}`} className={cn('flex min-h-16 cursor-pointer items-start gap-3 rounded-lg border p-4', task.id === field.value && 'border-primary bg-secondary/40', disabled && 'cursor-not-allowed opacity-60')}>
+        {options.map((task, index) => <label key={task.id} htmlFor={`${id}-${index}`} className={cn('flex min-h-16 cursor-pointer items-start gap-3 rounded-lg border p-4', task.id === field.value && 'border-primary bg-secondary/40', disabled && 'cursor-not-allowed opacity-60')}>
           <RadioGroupItem ref={task.id === field.value ? field.ref : undefined} id={`${id}-${index}`} value={task.id} className="mt-1 shrink-0 scroll-mb-40" />
-          <span className="min-w-0 space-y-1">
+          {isBookAgain(task.id) && again ? <span className="min-w-0 space-y-1">
+            <span className="block text-sm font-medium text-primary">{t('again.label', { date: formatDate(again.bookedFor) })}</span>
+            <span className="block font-medium break-words">{task.title}</span>
+            <span className="block text-sm text-muted-foreground">{categories(task.categorySlug)} · {again.location.kind === 'local' ? again.location.areaName : t('again.remote')}</span>
+          </span> : <span className="min-w-0 space-y-1">
             <span className="block font-medium break-words">{task.title}</span>
             <span className="block text-sm text-muted-foreground">{categories(task.categorySlug)}</span>
             <span className="block text-sm tabular-nums text-muted-foreground">{t('window', { start: formatDateTime(task.windowStart), end: formatDateTime(task.windowEnd), zone: zoneName })}</span>
-          </span>
+          </span>}
         </label>)}
       </RadioGroup>} />}</RequestField>
+      {againChosen && <p className="text-sm text-muted-foreground">{t('again.private', { helper: data.helper.displayName })}</p>}
     </section>
     <section className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06] bg-card p-4 shadow-card sm:p-6">
       <h2 className="font-heading text-xl/7 font-semibold">{t('details')}</h2>
-      <RequestField name="start" label={t('start')} hint={t(hasSlot ? 'slotStartHint' : 'startHint', { zone: zoneName })}>{(id, invalid) => <Controller name="start" control={control} render={({ field }) => <Input id={id} name={field.name} ref={field.ref} onBlur={field.onBlur} type="datetime-local" value={localStart(field.value, timeZone)} min={window ? localStart(window.start, timeZone) : undefined} max={window ? localStart(window.end, timeZone) : undefined} step={60} onChange={(event) => {
+      {againChosen && <RequestField name="description" label={t('again.description')} hint={t('again.descriptionHint')}>{(id, invalid) => <Textarea {...register('description')} id={id} rows={4} maxLength={2000} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="scroll-mb-40" />}</RequestField>}
+      <RequestField name="start" label={t('start')} hint={againChosen ? t('again.startHint', { zone: zoneName }) : t(hasSlot ? 'slotStartHint' : 'startHint', { zone: zoneName })}>{(id, invalid) => <Controller name="start" control={control} render={({ field }) => <Input id={id} name={field.name} ref={field.ref} onBlur={field.onBlur} type="datetime-local" value={localStart(field.value, timeZone)} min={window ? localStart(window.start, timeZone) : undefined} max={window ? localStart(window.end, timeZone) : undefined} step={60} onChange={(event) => {
         const [date, time] = event.target.value.split('T');
         field.onChange(date && time ? marketLocalToUtc(date, time, timeZone) : '');
       }} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="max-w-sm scroll-mb-40 tabular-nums" />} />}</RequestField>

@@ -51,6 +51,7 @@
   },
   "previews": {
     "withInvite": "Invitación directa",
+    "bookAgain": "Volver a reservar: una solicitud privada, sin ofertas",
     "group": "Gestión de tareas",
     "offers": "Tarea con tres ofertas",
     "expired-offers": "Todas las ofertas vencieron: vuelve a pedir o invita ayudantes",

@@ -1,8 +1,9 @@
-import { and, desc, eq, inArray, isNull, like, lte, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, like, lte, ne, or, sql } from 'drizzle-orm';
 import { posterIdentityRequirement } from '@/modules/trust/poster-risk';
 import type {
   ActionResult,
   AvailabilitySlotView,
+  BookAgainSource,
   CategorySlug,
   CounterInviteInput,
   InvitableTask,
@@ -15,13 +16,14 @@ import type {
   RequestHelperInput,
   RequestHelperPageData,
 } from '@/contracts';
-import { counterInviteInputSchema, requestHelperInputSchema, routes } from '@/contracts';
+import { BOOK_AGAIN_RULES, counterInviteInputSchema, requestHelperInputSchema, routes } from '@/contracts';
 import type { PaymentProvider } from '@/integrations/payments';
 import { users } from '@/modules/accounts/schema';
 import { availabilityPosts } from '@/modules/availability/schema';
 import { bookSlot, holdSlot, openSlotOf, releaseSlot, slotViewOf } from '@/modules/availability/slots';
 import { bankStep, chargeMethodOf, confirmFundedBooking, customerFor, methodForChoice, paymentPanel, type BookingDeps } from '@/modules/bookings/confirm';
 import { clientSummary } from '@/modules/bookings/hub';
+import { pricingColumnsForTask } from '@/modules/bookings/pricing-columns';
 import { bookingTerms, bookings } from '@/modules/bookings/schema';
 import { getPublishedPolicy } from '@/modules/markets/queries';
 import { categories } from '@/modules/markets/schema';
@@ -30,7 +32,9 @@ import { quoteBreakdown } from '@/modules/payments/fees';
 import { payments } from '@/modules/payments/schema';
 import { helperProfiles, helperServices } from '@/modules/profiles/schema';
 import { getHelperSummaries } from '@/modules/profiles/queries';
-import { tasks } from '@/modules/tasks/schema';
+import { withCopySlug } from '@/modules/tasks/copy-slug';
+import { findTaskWithPublicView } from '@/modules/tasks/queries';
+import { taskLocations, tasks } from '@/modules/tasks/schema';
 import { maskContactDetails } from '@/modules/trust/contact-masking';
 import { isBlockedBetween } from '@/modules/trust/blocks';
 import { validationFailed } from '@/platform/actions/results';
@@ -59,6 +63,8 @@ const AUTHORIZING_MS = 30 * 60_000;
 
 /** Someone else requested the slot between the page and the request. */
 class SlotTaken extends Error {}
+/** Book again: a request for the same past booking is already open (J-C7). */
+class RequestOpen extends Error {}
 
 /** A task fits a slot when it's in the slot's category and its window overlaps the slot. */
 const fitsSlot = (task: Pick<InvitableTask, 'categorySlug' | 'windowStart' | 'windowEnd'>, slot: AvailabilitySlotView) =>
@@ -110,13 +116,29 @@ async function feesOf(db: Db, marketId: string) {
 /** The invite ended (canceled, declined, expired) or another acceptance took it, between reading it and booking. */
 class InviteTaken extends Error {}
 
+type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
+
+/**
+ * Book again's draft ends with its request when no booking comes of it (declined, canceled, expired, a declined
+ * counter, a card that failed; J-C7), in the same transaction as the request. Only a draft: a task the client posted
+ * is never touched.
+ */
+async function cancelDraftTask(tx: Tx, taskId: string, now: Date): Promise<void> {
+  await tx.update(tasks).set({ status: 'canceled', updatedAt: now }).where(and(eq(tasks.id, taskId), eq(tasks.status, 'draft')));
+}
+
 /** Expires open invites past their time and lets go of every hold they made (lazily and from the job runner). */
 export async function expireDueInvites(db: Db, payments_: PaymentProvider | null, now: Date): Promise<void> {
-  const due = await db
-    .update(invites)
-    .set({ status: 'expired', decidedAt: now, updatedAt: now })
-    .where(and(inArray(invites.status, OPEN), lte(invites.expiresAt, now)))
-    .returning({ id: invites.id, slotId: invites.slotId });
+  // A bank step abandoned during the first hold stays `authorizing` until this (OPEN includes it).
+  const due = await db.transaction(async (tx) => {
+    const rows = await tx
+      .update(invites)
+      .set({ status: 'expired', decidedAt: now, updatedAt: now })
+      .where(and(inArray(invites.status, OPEN), lte(invites.expiresAt, now)))
+      .returning({ id: invites.id, slotId: invites.slotId, taskId: invites.taskId });
+    for (const row of rows) await cancelDraftTask(tx, row.taskId, now);
+    return rows;
+  });
   for (const row of due) {
     await releaseInviteHolds(db, payments_, row.id, now);
     await releaseSlot(db, row.slotId, now);
@@ -176,6 +198,25 @@ export async function getRequestHelperPage(
   ]);
   const helper = summaries.get(helperId);
   if (!helper) return null;
+  // Book again (J-C7): the past task, to request again as a draft of its own.
+  let fromBooking: BookAgainSource | undefined;
+  if (options.fromBookingId) {
+    const source = await bookAgainSourceOf(db, posterId, helperId, String(options.fromBookingId));
+    const state = source ? await loadHelperState(db, helperId, now) : null;
+    const found = source && state?.facts.bookableCategories.includes(source.categorySlug) ? await findTaskWithPublicView(db, source.task.id) : null;
+    if (source && found) {
+      const window = bookAgainWindow(now);
+      fromBooking = {
+        bookingId: source.booking.id,
+        bookedFor: source.booking.startAt.toISOString(),
+        title: source.task.title,
+        categorySlug: source.categorySlug,
+        location: found.view.location,
+        description: source.terms.scopeText ?? source.task.description,
+        startWindow: { start: window.start.toISOString(), end: window.end.toISOString() },
+      };
+    }
+  }
   let suggestion: RequestHelperPageData['suggestion'];
   if (options.fromBookingId) {
     const [past] = await db
@@ -207,6 +248,7 @@ export async function getRequestHelperPage(
     tasks: offered.map(({ marketId: _market, ...task }) => task),
     listedPricing,
     ...(suggestion ? { suggestion } : {}),
+    ...(fromBooking && !options.slotId ? { fromBooking } : {}),
     ...(slot ? { slot } : {}),
     ...(options.slotId && !slot ? { slotUnavailable: true } : {}),
     payment: panel,
@@ -227,6 +269,7 @@ export async function requestHelper(deps: BookingDeps, posterId: string, handle:
   if (!parsed.success) return validationFailed(parsed.error);
   const helperId = await helperIdOf(db, handle);
   if (!helperId || helperId === posterId || (await isBlockedBetween(db, posterId, helperId))) return { ok: false, code: 'not_allowed' };
+  if (parsed.data.fromBookingId) return requestAgain(deps, posterId, helperId, { ...parsed.data, fromBookingId: parsed.data.fromBookingId, description: parsed.data.description ?? '' }, now);
   const task = (await invitableTasks(db, posterId, helperId, now)).find((item) => item.id === parsed.data.taskId);
   if (!task) return { ok: false, code: 'validation_failed', fieldErrors: { taskId: ['invalid'] } };
   if (await pricingRefused(db, task.categorySlug, parsed.data.pricing)) return { ok: false, code: 'validation_failed', fieldErrors: { pricing: ['out_of_range'] } };
@@ -305,6 +348,153 @@ export async function requestHelper(deps: BookingDeps, posterId: string, handle:
   return settleRequest(db, inviteId, paymentId, result.status === 'authorized' ? { status: 'authorized', providerRef: result.providerRef } : result, now, deps.payments);
 }
 
+// ---- Book again (J-C7) ----------------------------------------------------------------------------
+
+/**
+ * A past booking of the client's with this helper, for Book again: done, or canceled by the helper (the two that offer
+ * Book again). Its place must still be kept: once retention deleted the address, there's nothing to copy (rebook's
+ * rule), and the client posts the task again instead.
+ */
+async function bookAgainSourceOf(db: Db, posterId: string, helperId: string, bookingId: string) {
+  const [row] = await db
+    .select({ booking: bookings, task: tasks, slug: categories.slug, terms: bookingTerms })
+    .from(bookings)
+    .innerJoin(tasks, eq(tasks.id, bookings.taskId))
+    .innerJoin(categories, eq(categories.id, tasks.categoryId))
+    .innerJoin(bookingTerms, and(eq(bookingTerms.bookingId, bookings.id), eq(bookingTerms.version, bookings.termsVersion)))
+    .where(and(eq(bookings.id, bookingId), eq(bookings.posterUserId, posterId), eq(bookings.helperUserId, helperId), or(eq(bookings.status, 'completed'), and(eq(bookings.status, 'canceled'), eq(bookings.cancelReason, 'helper')))))
+    .limit(1);
+  if (!row) return null;
+  if (row.task.locationId) {
+    const [place] = await db.select({ deletedAt: taskLocations.deletedAt }).from(taskLocations).where(eq(taskLocations.id, row.task.locationId)).limit(1);
+    if (!place || place.deletedAt) return null;
+  }
+  return { ...row, categorySlug: row.slug as CategorySlug };
+}
+
+/** Book again's start: from 2 hours to 14 days ahead (BOOK_AGAIN_RULES). */
+function bookAgainWindow(now: Date): { start: Date; end: Date } {
+  return { start: new Date(now.getTime() + BOOK_AGAIN_RULES.leadHours * HOUR), end: new Date(now.getTime() + BOOK_AGAIN_RULES.maxDaysAhead * 24 * HOUR) };
+}
+
+/**
+ * Book again (blueprint 02 J3, J8): the past task copied as a draft that never reaches the board, with the place as
+ * it was (the exact address stays encrypted) and this request's description, time and price; no photos, questions or
+ * offers. The draft, the request and its hold's payment row are written together before the card is asked, and a
+ * second send of the same booking while one is open gets `taskId: ['in_use']` (the booking's row is the lock both
+ * sends queue on; invites_open_source_booking_idx backs it up).
+ */
+async function requestAgain(
+  deps: BookingDeps,
+  posterId: string,
+  helperId: string,
+  input: Omit<RequestHelperInput, 'fromBookingId' | 'description' | 'pricing'> & { fromBookingId: string; description: string; pricing: PricingInput },
+  now: Date,
+): Promise<PaymentAttemptResult> {
+  const { db } = deps;
+  const source = await bookAgainSourceOf(db, posterId, helperId, input.fromBookingId);
+  if (!source) return { ok: false, code: 'not_allowed' };
+  const helper = await loadHelperState(db, helperId, now);
+  if (!helper.facts.bookableCategories.includes(source.categorySlug)) return { ok: false, code: 'not_allowed' };
+  if (await pricingRefused(db, source.categorySlug, input.pricing)) return { ok: false, code: 'validation_failed', fieldErrors: { pricing: ['out_of_range'] } };
+  const start = new Date(input.start);
+  const window = bookAgainWindow(now);
+  if (!(start >= window.start && start <= window.end)) return { ok: false, code: 'validation_failed', fieldErrors: { start: ['out_of_range'] } };
+  const marketId = source.task.marketId;
+  const paused = await pausedIn(db, marketId);
+  if (paused) return paused;
+  // The fees in force now, never the past booking's breakdown.
+  const fees = await feesOf(db, marketId);
+  if (!fees) return { ok: false, code: 'unknown' };
+  const breakdown = quoteBreakdown(fees, input.pricing);
+  if (await posterIdentityRequirement(db, posterId, now, breakdown.posterTotalCents)) return { ok: false, code: 'identity_required' };
+  const limited = await consumeRateLimit(db, `invites:${posterId}`, REQUEST_RULE, now);
+  if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
+  const method = await methodForChoice(deps, posterId, input.payment);
+  if (!('providerRef' in method)) return method;
+
+  const inviteId = newId('inv');
+  const paymentId = newId('pay');
+  const draftId = newId('tsk');
+  const length = Math.min(12 * HOUR, Math.max(HOUR, source.task.windowEnd.getTime() - source.task.windowStart.getTime()));
+  try {
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`select id from bookings where id = ${source.booking.id} for update`);
+      const [open] = await tx
+        .select({ id: invites.id })
+        .from(invites)
+        .where(and(eq(invites.sourceBookingId, source.booking.id), eq(invites.posterUserId, posterId), eq(invites.helperUserId, helperId), inArray(invites.status, OPEN)))
+        .limit(1);
+      if (open) throw new RequestOpen();
+      await tx.insert(payments).values({
+        id: paymentId,
+        purpose: 'invite_authorization',
+        payerUserId: posterId,
+        amountCents: breakdown.posterTotalCents,
+        status: 'processing',
+        provider: deps.payments.name,
+        paymentMethodId: method.paymentMethodId,
+        methodRef: method.providerRef,
+        methodBrand: method.brand,
+        methodLast4: method.last4,
+        methodExpMonth: method.expMonth,
+        methodExpYear: method.expYear,
+        saveMethod: false,
+        idempotencyKey: `invite:${inviteId}:${paymentId}`,
+        createdAt: now,
+        updatedAt: now,
+      });
+      const { id: _id, slug: _slug, createdAt: _created, updatedAt: _updated, publishedAt: _published, expiresAt: _expires, aiGenerationId: _ai, reopenedAt: _reopened, hiddenAt: _hidden, hiddenByUserId: _hiddenBy, hiddenReason: _hiddenReason, ...copy } = source.task;
+      // In a savepoint, so a slug that's taken is tried again with another (repeats review #16).
+      await withCopySlug(source.task.slug, (slug) =>
+        tx.transaction((savepoint) =>
+          savepoint.insert(tasks).values({
+            ...copy,
+            id: draftId,
+            slug,
+            status: 'draft',
+            description: input.description,
+            ...pricingColumnsForTask(input.pricing),
+            // The request has no expense allowance (the hold doesn't cover one), so the past one isn't copied (32's review).
+            expenseAllowanceCents: 0,
+            expenseAllowanceNote: null,
+            windowStart: start,
+            windowEnd: new Date(start.getTime() + length),
+            flexible: false,
+            offerCount: 0,
+            version: 1,
+            createdAt: now,
+            updatedAt: now,
+          }),
+        ),
+      );
+      await tx.insert(invites).values({
+        id: inviteId,
+        taskId: draftId,
+        posterUserId: posterId,
+        helperUserId: helperId,
+        status: 'authorizing',
+        source: 'rebook',
+        sourceBookingId: source.booking.id,
+        ...pricingColumns(input.pricing),
+        startAt: start,
+        message: input.message?.trim() || null,
+        breakdown,
+        paymentId,
+        slotId: null,
+        expiresAt: new Date(now.getTime() + AUTHORIZING_MS),
+        createdAt: now,
+        updatedAt: now,
+      });
+    });
+  } catch (error) {
+    if (error instanceof RequestOpen || isUniqueViolation(error)) return { ok: false, code: 'validation_failed', fieldErrors: { taskId: ['in_use'] } };
+    throw error;
+  }
+  const result = await deps.payments.authorize({ amountCents: breakdown.posterTotalCents, method: chargeMethodOf(method), idempotencyKey: `invite:${inviteId}:${paymentId}`, description: `TasksNearMe invite ${inviteId}`, paymentId });
+  return settleRequest(db, inviteId, paymentId, result.status === 'authorized' ? { status: 'authorized', providerRef: result.providerRef } : result, now, deps.payments);
+}
+
 /** A hold not decided yet: the first answer decides it (5.17: the browser and Stripe's webhook both finish one). */
 const UNDECIDED = ['processing', 'requires_confirmation'];
 
@@ -345,7 +535,11 @@ async function settleRequest(
     return { ok: false, code: 'requires_bank_verification', verification: provider ? await bankStep(provider, paymentId, result.providerRef) : { paymentId, kind: 'dev' } };
   }
   if (result.status === 'failed') {
-    const [failed] = await db.update(invites).set({ status: 'auth_failed', decidedAt: now, updatedAt: now }).where(and(eq(invites.id, inviteId), eq(invites.status, 'authorizing'))).returning({ slotId: invites.slotId });
+    const failed = await db.transaction(async (tx) => {
+      const [row] = await tx.update(invites).set({ status: 'auth_failed', decidedAt: now, updatedAt: now }).where(and(eq(invites.id, inviteId), eq(invites.status, 'authorizing'))).returning({ slotId: invites.slotId, taskId: invites.taskId });
+      if (row) await cancelDraftTask(tx, row.taskId, now);
+      return row;
+    });
     if (!failed) return settledRequest(db, inviteId);
     await db.update(payments).set({ status: 'failed', failureCode: result.failureCode, providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
     await releaseSlot(db, failed.slotId ?? null, now);
@@ -393,7 +587,9 @@ async function book(deps: BookingDeps, invite: InviteRow, pricing: PricingInput,
   const [row] = await db.select({ task: tasks, categorySlug: categories.slug }).from(tasks).innerJoin(categories, eq(categories.id, tasks.categoryId)).where(eq(tasks.id, invite.taskId)).limit(1);
   const task = row?.task;
   const policy = task ? await getPublishedPolicy(task.marketId, db) : null;
-  if (!row || !task || !policy || task.status !== 'open') return { ok: false, code: 'not_allowed' };
+  // An open task, or Book again's draft (J-C7): settle() books a draft too, and moves it to assigned.
+  const bookable = task?.status === 'open' || (task?.status === 'draft' && invite.source === 'rebook');
+  if (!row || !task || !policy || !bookable) return { ok: false, code: 'not_allowed' };
   // Every way in checks the same (repeats review #9): the client accepting a counter too, not only the helper accepting.
   // No block between the two, and the helper can still take work in this category.
   if (await isBlockedBetween(db, invite.posterUserId, invite.helperUserId)) return { ok: false, code: 'not_allowed' };
@@ -467,8 +663,11 @@ async function book(deps: BookingDeps, invite: InviteRow, pricing: PricingInput,
   if (captured.status === 'failed') {
     await db.update(payments).set({ status: 'failed', failureCode: captured.failureCode, updatedAt: now }).where(and(eq(payments.id, payment.id), eq(payments.status, 'processing')));
     await db.update(bookings).set({ status: 'canceled', cancelReason: 'funding_failed', canceledAt: now, fundingExpiresAt: null, updatedAt: now }).where(eq(bookings.id, bookingId));
-    // The invite ends with its hold, and its slot opens again.
-    await db.update(invites).set({ status: 'auth_failed', updatedAt: now }).where(and(eq(invites.id, invite.id), eq(invites.status, 'accepted')));
+    // The invite ends with its hold (and Book again's draft with it), and its slot opens again.
+    await db.transaction(async (tx) => {
+      const [ended] = await tx.update(invites).set({ status: 'auth_failed', updatedAt: now }).where(and(eq(invites.id, invite.id), eq(invites.status, 'accepted'))).returning({ id: invites.id });
+      if (ended) await cancelDraftTask(tx, invite.taskId, now);
+    });
     await releaseSlot(db, invite.slotId, now);
     return { ok: false, code: unanswered ? 'unknown' : captured.failureCode };
   }
@@ -498,11 +697,15 @@ export async function acceptInvite(deps: BookingDeps, helperId: string, inviteId
 
 async function closeInvite(db: Db, payments_: PaymentProvider | null, invite: InviteRow, status: 'declined' | 'canceled', from: InviteStatus[], now: Date): Promise<ActionResult> {
   if (!from.includes(invite.status as InviteStatus)) return { ok: false, code: invite.status === 'expired' ? 'expired' : 'not_allowed' };
-  const [closed] = await db
-    .update(invites)
-    .set({ status, decidedAt: now, updatedAt: now })
-    .where(and(eq(invites.id, invite.id), inArray(invites.status, from)))
-    .returning({ id: invites.id });
+  const closed = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(invites)
+      .set({ status, decidedAt: now, updatedAt: now })
+      .where(and(eq(invites.id, invite.id), inArray(invites.status, from)))
+      .returning({ id: invites.id });
+    if (row) await cancelDraftTask(tx, invite.taskId, now);
+    return row;
+  });
   if (!closed) return { ok: false, code: 'not_allowed' };
   await releaseInviteHolds(db, payments_, invite.id, now);
   await releaseSlot(db, invite.slotId, now);
@@ -511,11 +714,15 @@ async function closeInvite(db: Db, payments_: PaymentProvider | null, invite: In
 
 /** The helper canceled a requested slot: its waiting request is declined and the client's hold released. */
 export async function closeSlotRequests(db: Db, payments_: PaymentProvider | null, slotId: string, now: Date): Promise<void> {
-  const closed = await db
-    .update(invites)
-    .set({ status: 'declined', decidedAt: now, updatedAt: now })
-    .where(and(eq(invites.slotId, slotId), inArray(invites.status, OPEN)))
-    .returning({ id: invites.id });
+  const closed = await db.transaction(async (tx) => {
+    const rows = await tx
+      .update(invites)
+      .set({ status: 'declined', decidedAt: now, updatedAt: now })
+      .where(and(eq(invites.slotId, slotId), inArray(invites.status, OPEN)))
+      .returning({ id: invites.id, taskId: invites.taskId });
+    for (const row of rows) await cancelDraftTask(tx, row.taskId, now);
+    return rows;
+  });
   for (const invite of closed) await releaseInviteHolds(db, payments_, invite.id, now);
 }
 

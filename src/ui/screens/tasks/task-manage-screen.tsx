@@ -64,7 +64,8 @@ export function TaskManageScreen({ data, handlers, inviteHandlers, now, initialS
       <h2 id="task-invites-title" className="font-heading text-xl font-semibold md:text-[22px]/7.5">{t('invites')}</h2>
       <ul className="grid gap-4 lg:grid-cols-2">{data.invites.map((invite) => <li key={invite.id} className="min-w-0"><InviteCard invite={invite} handlers={inviteHandlers} now={now} headingLevel={3} /></li>)}</ul>
     </section>}
-    <section aria-labelledby="task-offers-title" className="space-y-4">
+    {/* Book again's request (J-C7) was never posted for offers: its request is the page. */}
+    {!data.privateRequest && <section aria-labelledby="task-offers-title" className="space-y-4">
       <h2 id="task-offers-title" className="font-heading text-xl font-semibold tabular-nums md:text-[22px]/7.5">{t('offers', { count: current.length })}</h2>
       {current.length > 0
         ? <TaskOffers offers={current} now={now} onAction={handlers.onOfferAction} initialSelectedOfferIds={initialSelectedOfferIds} />
@@ -82,7 +83,7 @@ export function TaskManageScreen({ data, handlers, inviteHandlers, now, initialS
         </summary>
         <ul className="mt-3 grid min-w-0 gap-4 lg:grid-cols-2">{earlier.map((offer) => <li key={offer.id} className="min-w-0"><OfferCard offer={offer} now={now} onAction={handlers.onOfferAction} /></li>)}</ul>
       </details>}
-    </section>
+    </section>}
     <TaskDetails data={data} />
   </div>;
 }

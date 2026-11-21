@@ -114,6 +114,11 @@ export interface TaskOwnerView {
   invites?: InviteView[];
   /** An open task can offer notifications on this device ("hear about offers as they come"). */
   push?: PushSetup;
+  /**
+   * Book again's task (J-C7): a request to one helper, never posted, so the page shows the request and no offers
+   * (status `draft` while it waits, canceled if it ended without a booking).
+   */
+  privateRequest?: boolean;
 }
 
 /** `/app/tasks/[taskId]/offers/[offerId]`: one offer in full. */

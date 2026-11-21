@@ -5,7 +5,7 @@ import { and, eq, inArray, like } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { routes, needsBankVerification } from '@/contracts';
 import { acceptChange, finishChangeVerification, payChangeDifference, proposeChange } from '@/modules/bookings/changes';
-import { acceptCounter, counterInvite, finishCounterVerification, finishRequestVerification, requestHelper } from '@/modules/invites/service';
+import { acceptCounter, counterInvite, expireDueInvites, finishCounterVerification, finishRequestVerification, requestHelper } from '@/modules/invites/service';
 import { invites } from '@/modules/invites/schema';
 import { getPublishedPolicy } from '@/modules/markets/queries';
 import { quoteBreakdown } from '@/modules/payments/fees';
@@ -487,5 +487,42 @@ describe('5.17: a rebooking proposal paid while the client is away', () => {
     expect(await finishProposalVerification(deps, c.client, c.proposalId, c.paymentId, 'approved', new Date())).toEqual({ ok: true, code: 'booked', redirectTo: routes.app.booking(c.bookingId) });
     expect(await deliver({ id: 'evt_t06_rbk_client', type: 'payment_intent.succeeded', intent: c.intent })).toEqual({ status: 200, body: { ok: true, ignored: true } });
     expect(await proposalStateOf(c)).toEqual(PROPOSAL_ACCEPTED);
+  });
+});
+
+describe('Book again: a hold the bank grants after its request ended (J-C7)', () => {
+  it('lets go of it at the provider, and the draft stays canceled', async () => {
+    const client = await throwawayClient(db, 'usr_t06_again');
+    clients.push(client);
+    // The desk Jordan assembled for this client last week, to book again.
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    const policy = await getPublishedPolicy(desk!.marketId, db);
+    const start = new Date(Date.now() - 7 * 24 * HOUR);
+    await db.insert(tasks).values({ ...desk!, id: 'tsk_t06_again', slug: 'tsk-t06-again', posterUserId: client, status: 'completed', offerCount: 0, version: 1, windowStart: start, windowEnd: new Date(start.getTime() + 3 * HOUR), publishedAt: start });
+    await db.insert(bookings).values({ id: 'bkg_t06_again', taskId: 'tsk_t06_again', posterUserId: client, helperUserId: 'usr_jordan', marketId: desk!.marketId, policyVersionId: policy!.id, status: 'completed', startAt: start, confirmedAt: start, completedAt: start });
+    await db.insert(bookingTerms).values({ id: 'btm_t06_again', bookingId: 'bkg_t06_again', version: 1, pricingType: 'fixed', priceCents: 6000, breakdown: quoteBreakdown(policy!.fees, { type: 'fixed', priceCents: 6000 }), scopeText: desk!.description, startAt: start });
+    const sent = await requestHelper(deps, client, 'jordan-t', {
+      fromBookingId: 'bkg_t06_again',
+      description: 'The same desk again, for the second bedroom. About 40 parts.',
+      start: new Date(Date.now() + 3 * 24 * HOUR).toISOString(),
+      pricing: { type: 'fixed', priceCents: 6000 },
+      payment: { kind: 'stripe_card', paymentMethodId: 'pm_t06_again', save: false },
+      acceptTerms: true,
+    }, new Date());
+    if (!needsBankVerification(sent)) throw new Error(`Expected the bank's step: ${JSON.stringify(sent)}`);
+    const [invite] = await db.select().from(invites).where(eq(invites.paymentId, sent.verification.paymentId));
+    const [payment] = await db.select().from(payments).where(eq(payments.id, sent.verification.paymentId));
+    expect(invite).toMatchObject({ status: 'authorizing', source: 'rebook', sourceBookingId: 'bkg_t06_again' });
+
+    // The client never finishes the bank's step: the request expires, its draft is canceled and the hold let go.
+    await db.update(invites).set({ expiresAt: new Date(Date.now() - 60_000) }).where(eq(invites.id, invite!.id));
+    await expireDueInvites(db, deps.payments, new Date());
+    expect(stripe.intents.get(payment!.providerRef!)).toBe('canceled');
+    // Then the bank authorizes it after all, and says so: it's let go again at once.
+    stripe.intents.set(payment!.providerRef!, 'requires_capture');
+    expect(await capturable(payment!.providerRef!, 'evt_t06_again')).toEqual({ status: 200, body: { ok: true } });
+    expect(stripe.intents.get(payment!.providerRef!)).toBe('canceled');
+    expect((await db.select().from(invites).where(eq(invites.id, invite!.id)))[0]?.status).toBe('expired');
+    expect((await db.select().from(tasks).where(eq(tasks.id, invite!.taskId)))[0]?.status).toBe('canceled');
   });
 });

@@ -4,6 +4,7 @@ import { mayaPaymentPanel } from './bookings';
 import { myOffersPageData } from './helper-work';
 import { bookshelfBreakdown, bookshelfCounterBreakdown } from './money';
 import { deskOwnerNoOffersView } from './offers';
+import { muellerArea } from './locations';
 import { jordan, maya } from './people';
 
 /**
@@ -27,6 +28,27 @@ export const requestJordanData: RequestHelperPageData = {
 
 /** No open task in Jordan's categories yet: the page points to posting one. */
 export const requestNoTasksData: RequestHelperPageData = { ...requestJordanData, tasks: [], suggestion: undefined };
+
+/**
+ * Book again from the desk (J-C7): the desk again, as a request of its own, offered first beside the open bookshelf;
+ * the last price ($60) suggested. The start runs from 2 hours to 14 days after the previews' now (Tue Dec 8, 10:00 am).
+ */
+export const requestBookAgainData: RequestHelperPageData = {
+  ...requestJordanData,
+  suggestion: { pricing: { type: 'fixed', priceCents: 6000 } },
+  fromBooking: {
+    bookingId: 'bkg_desk',
+    bookedFor: '2026-11-21T16:30:00.000Z',
+    title: 'Assemble a desk (flat-pack, 1 item)',
+    categorySlug: 'furniture-assembly',
+    location: muellerArea,
+    description: 'A flat-pack desk, about 40 parts, already unboxed in the spare room. Wall anchoring not needed.',
+    startWindow: { start: '2026-12-08T18:00:00.000Z', end: '2026-12-22T16:00:00.000Z' },
+  },
+};
+
+/** Book again with no open task in the category: the past task is the only choice, so no "Post a task first". */
+export const requestBookAgainOnlyData: RequestHelperPageData = { ...requestBookAgainData, tasks: [] };
 
 const sent: InviteView = {
   id: 'inv_bookshelf',
@@ -74,6 +96,14 @@ export const bookshelfOwnerWithInviteView: TaskOwnerView = {
   details: compactTaskDetails({ itemType: 'bookshelf', itemCount: 1, floor: 2, elevator: true, toolsOnSite: false }),
   photos: [],
   invites: [bookshelfInviteCounteredPoster],
+};
+
+/** Book again's request (J-C7): the bookshelf as a private draft waiting on Jordan, the page its request, no offers. */
+export const bookAgainOwnerView: TaskOwnerView = {
+  ...bookshelfOwnerWithInviteView,
+  task: { ...bookshelfOwnerWithInviteView.task, status: 'draft' },
+  actions: [],
+  privateRequest: true,
 };
 
 const wait = <T,>(value: T, ms = 400) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));

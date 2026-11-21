@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, routes, type PaymentAttemptResult, type RequestHelperHandlers, type RequestHelperInput, type RequestHelperPageData } from '@/contracts';
-import { bookshelfBreakdown, fakeHandler, jordanYardSlot, movingFundedBreakdown, movingPublicTask, requestJordanData, requestJordanSlotData, requestJordanSlotTakenData, requestNoTasksData } from '@/fixtures';
+import { bookshelfBreakdown, fakeHandler, jordanYardSlot, movingFundedBreakdown, movingPublicTask, requestBookAgainData, requestBookAgainOnlyData, requestJordanData, requestJordanSlotData, requestJordanSlotTakenData, requestNoTasksData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { RequestHelperContent, RequestHelperScreen } from './request-helper-screen';
 import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
@@ -321,5 +321,63 @@ describe('RequestHelperScreen', () => {
     expect(container.querySelector('form')).not.toBeInTheDocument();
     expect(handlers.onQuote).not.toHaveBeenCalled();
     expect(handlers.onRequest).not.toHaveBeenCalled();
+  });
+});
+
+describe('Book again (journeys on a phone, J-C7)', () => {
+  const choices = () => within(screen.getByRole('radiogroup', { name: 'Choose your task' }));
+  const description = () => screen.getByRole('textbox', { name: 'What needs doing' });
+
+  it('offers the past task first, its description to edit and Book again’s start, and sends the booking, not a task', async () => {
+    const user = userEvent.setup();
+    const { handlers } = mount(requestBookAgainData);
+    expect(choices().getAllByRole('radio')).toHaveLength(2);
+    expect(choices().getAllByRole('radio')[0]).toBeChecked();
+    expect(screen.getByText('From your booking on Sat, Nov 21')).toBeVisible();
+    expect(screen.getByText(/^Only Jordan T\. sees this request\./)).toBeVisible();
+    expect(description()).toHaveValue(requestBookAgainData.fromBooking!.description);
+    expect(price()).toHaveValue('60');
+    expect(start()).toHaveValue('2026-12-08T12:00');
+    await user.clear(description());
+    await user.type(description(), 'Two desks this time, the same model. About 80 parts in all.');
+    fireEvent.change(start(), { target: { value: '2026-12-10T10:00' } });
+    await send(user);
+    await waitFor(() => expect(handlers.onRequest).toHaveBeenCalledExactlyOnceWith({
+      fromBookingId: 'bkg_desk', description: 'Two desks this time, the same model. About 80 parts in all.', start: '2026-12-10T16:00:00.000Z',
+      pricing: { type: 'fixed', priceCents: 6000 }, payment: { kind: 'saved', methodId: 'pm_maya_visa' }, acceptTerms: true,
+    }));
+    expect(vi.mocked(handlers.onRequest).mock.calls[0]![0]).not.toHaveProperty('taskId', expect.anything());
+  });
+
+  it('sends an open task instead when one is chosen, without the description', async () => {
+    const user = userEvent.setup();
+    const { handlers } = mount(requestBookAgainData);
+    await user.click(choices().getByRole('radio', { name: /Assemble a bookshelf/ }));
+    expect(screen.queryByRole('textbox', { name: 'What needs doing' })).not.toBeInTheDocument();
+    await send(user);
+    await waitFor(() => expect(handlers.onRequest).toHaveBeenCalledOnce());
+    const input = vi.mocked(handlers.onRequest).mock.calls[0]![0];
+    expect(input).toMatchObject({ taskId: 'tsk_bookshelf' });
+    expect(input.fromBookingId).toBeUndefined();
+    expect(input.description).toBeUndefined();
+  });
+
+  it('needs a description of the task this time', async () => {
+    const user = userEvent.setup();
+    const { handlers } = mount(requestBookAgainData);
+    await user.clear(description());
+    await send(user);
+    await waitFor(() => expect(description()).toHaveAttribute('aria-invalid', 'true'));
+    expect(handlers.onRequest).not.toHaveBeenCalled();
+  });
+
+  it('keeps the form without an open task, and says a request for this booking is already waiting', () => {
+    const { container } = mount(requestBookAgainOnlyData);
+    expect(screen.queryByRole('heading', { name: 'Post a task first' })).not.toBeInTheDocument();
+    expect(container.querySelector('form')).toBeInTheDocument();
+    expect(choices().getAllByRole('radio')).toHaveLength(1);
+    cleanup();
+    mount(requestBookAgainData, {}, { ok: false, code: 'validation_failed', fieldErrors: { taskId: ['in_use'] } });
+    expect(screen.getByText("You already sent Jordan T. this request. It's waiting in My tasks.")).toBeVisible();
   });
 });

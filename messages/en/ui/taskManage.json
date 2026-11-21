@@ -51,6 +51,7 @@
   },
   "previews": {
     "withInvite": "Direct invite",
+    "bookAgain": "Book again: a private request, no offers",
     "group": "Task management",
     "offers": "Task with three offers",
     "expired-offers": "Every offer expired: ask again or invite helpers",

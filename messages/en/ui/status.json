@@ -1,5 +1,5 @@
 {
-  "task": { "draft": "Draft", "open": "Open", "assigned": "Booked", "completed": "Done", "canceled": "Canceled", "expired": "Expired" },
+  "task": { "draft": "Request sent", "open": "Open", "assigned": "Booked", "completed": "Done", "canceled": "Canceled", "expired": "Expired" },
   "booking": {
     "poster": { "pending_funding": "Finish payment", "scheduled": "Booked · pays later", "confirmed": "Booked", "in_progress": "In progress", "completion_submitted": "Needs your approval", "disputed": "Problem reported", "completed": "Done", "canceled": "Canceled" },
     "helper": { "pending_funding": "Client is booking", "scheduled": "Booked", "confirmed": "Booked", "in_progress": "In progress", "completion_submitted": "Waiting for approval", "disputed": "Problem reported", "completed": "Done", "canceled": "Canceled" },

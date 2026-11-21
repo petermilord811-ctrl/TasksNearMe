@@ -34,7 +34,7 @@ export function RequestHelperContent({ data, handlers, initialResult, initialPen
       <h2 className="font-heading text-xl/7 font-semibold">{t('slotTitle')}</h2>
       <AvailabilitySlotSummary slot={data.slot} />
     </section>}
-    {data.tasks.length === 0 ? <section className="space-y-3 rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06] bg-card p-4 shadow-card sm:p-6">
+    {data.tasks.length === 0 && !data.fromBooking ? <section className="space-y-3 rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06] bg-card p-4 shadow-card sm:p-6">
       <h2 className="font-heading text-xl/7 font-semibold">{t(data.slot && !data.slotUnavailable ? 'noSlotTasksTitle' : 'noTasksTitle')}</h2>
       <p className="text-muted-foreground">{t(data.slot && !data.slotUnavailable ? 'noSlotTasksDescription' : 'noTasksDescription')}</p>
       <Link href={routes.app.newTask()} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('postTask')}</Link>
