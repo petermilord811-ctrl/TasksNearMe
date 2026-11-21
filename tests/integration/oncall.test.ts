@@ -142,3 +142,42 @@ describe('a payment nothing is owed for', () => {
     expect(await db.select().from(refunds).where(eq(refunds.paymentId, 'pay_oc_tip_by_hand'))).toHaveLength(0);
   });
 });
+
+describe('a page that reaches nobody (when things break, 2026-11-21)', () => {
+  const t0 = new Date('2031-05-05T12:00:00.000Z');
+  const at = (minutes: number) => new Date(t0.getTime() + minutes * 60_000);
+  const page = { subject: 'Urgent safety report', text: 'Someone reported "other" on a booking. Reply within minutes.', path: '/admin/cases/case_oc_down' };
+  const down = {
+    sms: { name: 'down', send: async () => { throw new Error('Twilio 503'); } } as SmsSender,
+    email: { name: 'down', send: async () => { throw new Error('Postmark 503'); } } as unknown as EmailProvider,
+  };
+  const actions = async () => (await db.select({ action: auditLog.action }).from(auditLog).where(eq(auditLog.targetId, page.path)).orderBy(auditLog.at)).map((row) => row.action);
+
+  it('isn’t counted as paged, and the runner sends it again 5 minutes later, once', async () => {
+    const { pageOnCall, retryFailedPages } = await import('@/modules/oncall/pager');
+    texts = [];
+    emails = [];
+    expect(await pageOnCall({ db, ...down, env }, page, t0)).toMatchObject({ sent: 0 });
+    expect(await actions()).toEqual(['oncall.page_failed']);
+    const [failed] = await db.select({ metadata: auditLog.metadata }).from(auditLog).where(and(eq(auditLog.targetId, page.path), eq(auditLog.action, 'oncall.page_failed')));
+    expect(failed?.metadata).toMatchObject({ subject: page.subject, text: page.text, sent: 0 });
+
+    expect(await retryFailedPages({ db, sms, email, env }, at(4))).toBe(0);
+    expect(await retryFailedPages({ db, sms, email, env }, at(5))).toBe(1);
+    expect(texts.map((message) => message.text)).toContainEqual(expect.stringContaining('Urgent safety report'));
+    expect(await actions()).toEqual(['oncall.page_failed', 'oncall.paged']);
+    // Done: no more tries, and no second page.
+    texts = [];
+    expect(await retryFailedPages({ db, sms, email, env }, at(30))).toBe(0);
+    expect(texts).toEqual([]);
+  });
+
+  it('gives up after 5 tries in a day', async () => {
+    const { pageOnCall, retryFailedPages, PAGE_ATTEMPTS } = await import('@/modules/oncall/pager');
+    const other = { ...page, path: '/admin/cases/case_oc_down2' };
+    await pageOnCall({ db, ...down, env }, other, t0);
+    for (let minute = 5; minute <= 30; minute += 5) await retryFailedPages({ db, ...down, env }, at(minute));
+    const failures = await db.select({ id: auditLog.id }).from(auditLog).where(and(eq(auditLog.targetId, other.path), eq(auditLog.action, 'oncall.page_failed')));
+    expect(failures).toHaveLength(PAGE_ATTEMPTS);
+  });
+});

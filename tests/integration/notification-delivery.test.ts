@@ -206,6 +206,17 @@ describe('notification delivery', () => {
     }
   });
 
+  it('keeps a provider’s echo of the address out of the reason staff read (when things break, 2026-11-21)', async () => {
+    // Saturday Feb 13, 2027, 10 am in Austin: away from the other tests' notifications.
+    const at = new Date('2027-02-13T16:00:00.000Z');
+    const offer = await notify(PERSON, 'offer_received', at);
+    const refusing: DeliveryProviders = { ...providers, email: { name: 'refusing', send: (message) => Promise.reject(new Error(`Postmark 422: you tried to send to an inactive recipient: ${message.to}`)) } };
+    const run = await deliverNotifications(db, at, refusing, 1_000);
+    expect((await deliveriesOf(offer)).email).toMatchObject({ status: 'failed', reason: 'Postmark 422: you tried to send to an inactive recipient: [email]' });
+    // The run's tally, which the job runner's outage watch reads (provider-watch.ts).
+    expect(run.outcomes.email).toEqual({ sent: 0, failed: 1 });
+  });
+
   it('stops sending when its run is out of time, and tries a send that timed out again later (sweep MN7)', async () => {
     // Saturday Feb 6, 2027, 10 am in Austin: away from the other tests' notifications.
     const at = new Date('2027-02-06T16:00:00.000Z');

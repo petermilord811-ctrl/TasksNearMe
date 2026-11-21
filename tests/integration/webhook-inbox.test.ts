@@ -10,7 +10,7 @@ import { createDb } from '@/platform/db/connect';
  */
 
 type Outcome = { status: number; body: Record<string, unknown> } | null;
-const handler = vi.hoisted(() => ({ next: 'ok' as 'ok' | 'ignored' | 'bad' | 'throw' | 'off', calls: [] as { headers: Record<string, string | null> }[] }));
+const handler = vi.hoisted(() => ({ next: 'ok' as 'ok' | 'ignored' | 'bad' | 'throw' | 'leak' | 'off', calls: [] as { headers: Record<string, string | null> }[] }));
 vi.mock('@/modules/webhooks/dispatch', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/modules/webhooks/dispatch')>();
   return {
@@ -18,6 +18,8 @@ vi.mock('@/modules/webhooks/dispatch', async (importOriginal) => {
     dispatchWebhook: async (_provider: string, _db: unknown, _payload: string, headers: Record<string, string | null>): Promise<Outcome> => {
       handler.calls.push({ headers });
       if (handler.next === 'throw') throw new Error('Database unreachable');
+      // A failed query, as Drizzle reports it: the statement and the values it carried.
+      if (handler.next === 'leak') throw Object.assign(new Error('Failed query: update "users" set "email" = $1 where "id" = $2\nparams: jane@example.com,usr_jane'), { query: 'update "users" set "email" = $1 where "id" = $2' });
       if (handler.next === 'off') return null;
       if (handler.next === 'bad') return { status: 401, body: { ok: false } };
       return { status: 200, body: { ok: true, ...(handler.next === 'ignored' ? { ignored: true } : {}) } };
@@ -25,7 +27,7 @@ vi.mock('@/modules/webhooks/dispatch', async (importOriginal) => {
   };
 });
 
-const { dismissWebhook, receiveWebhook, retryDueWebhooks, RETRY_DELAYS_MS } = await import('@/modules/webhooks/inbox');
+const { dismissWebhook, pageDeadWebhooks, receiveWebhook, retryDueWebhooks, RETRY_DELAYS_MS } = await import('@/modules/webhooks/inbox');
 const { webhookEvents } = await import('@/modules/webhooks/schema');
 const { actOnWebhook, getAdminWebhooks } = await import('@/modules/webhooks/staff');
 const { auditLog } = await import('@/platform/audit/schema');
@@ -55,6 +57,14 @@ describe('the webhook inbox', () => {
     expect(await rowOf('msg_inbox_a')).toMatchObject({ status: 'processed', attempts: 1, payload: null, type: 'email.bounced' });
     expect(await receiveWebhook(db, 'resend', payload('a'), headers('msg_inbox_a'), now)).toEqual({ status: 200, body: { ok: true, duplicate: true } });
     expect(handler.calls).toHaveLength(1);
+  });
+
+  it('keeps a failed query’s values out of the error staff read (when things break, 2026-11-21)', async () => {
+    handler.next = 'leak';
+    await receiveWebhook(db, 'resend', payload('leak'), headers('msg_inbox_leak'), now);
+    const row = await rowOf('msg_inbox_leak');
+    expect(row?.lastError).toBe('Error: Failed query: update "users" set "email" = $1 where "id" = $2');
+    await db.delete(webhookEvents).where(and(eq(webhookEvents.provider, 'resend'), eq(webhookEvents.eventId, 'msg_inbox_leak')));
   });
 
   it('keeps ignored events apart, and records nothing for a bad signature or an endpoint that is off', async () => {
@@ -101,6 +111,32 @@ describe('the webhook inbox', () => {
     expect(await dismissWebhook(db, dead!.id, at)).toBe(true);
     expect(await rowOf('msg_inbox_f')).toMatchObject({ status: 'ignored', payload: null });
     expect(await dismissWebhook(db, dead!.id, at)).toBe(false);
+  });
+
+  it('pages the staff on call about dead events, once a day per provider (when things break, 2026-11-21)', async () => {
+    handler.next = 'throw';
+    await receiveWebhook(db, 'resend', payload('page'), headers('msg_inbox_page'), now);
+    await db.update(webhookEvents).set({ status: 'dead', nextAttemptAt: null }).where(eq(webhookEvents.eventId, 'msg_inbox_page'));
+    const texts: string[] = [];
+    const deps = {
+      db,
+      sms: { name: 'test', send: async (message: { text: string }) => void texts.push(message.text) },
+      email: { name: 'test', send: async () => {} } as never,
+      env: { ONCALL_PHONES: '+15125550901', ONCALL_EMAILS: '', APP_URL: 'https://app.example.test' },
+    };
+    try {
+      await pageDeadWebhooks(deps, now);
+      const paged = texts.filter((text) => text.includes('Provider events failed for good') && /\d+ resend events? failed 5 times/.test(text));
+      expect(paged.length).toBeGreaterThan(0);
+      expect(paged[0]).toContain('https://app.example.test/admin/webhooks?provider=resend&day=2031-03-03');
+      // Later the same day: no second page about resend.
+      texts.length = 0;
+      await pageDeadWebhooks(deps, later(60 * 60_000));
+      expect(texts.filter((text) => text.includes('resend'))).toEqual([]);
+    } finally {
+      await db.delete(webhookEvents).where(and(eq(webhookEvents.provider, 'resend'), eq(webhookEvents.eventId, 'msg_inbox_page')));
+      await db.delete(auditLog).where(like(auditLog.targetId, '/admin/webhooks?provider=%&day=2031-03-03'));
+    }
   });
 
   it('lists dead events for admins and finance, who replay or dismiss them (audited)', async () => {

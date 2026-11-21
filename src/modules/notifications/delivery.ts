@@ -11,6 +11,7 @@ import { threadParticipants } from '@/modules/messaging/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { safeErrorText } from '@/platform/redact';
 import { formatDatePhrase, formatMoney } from '@/shared/format';
 import { localizedPath } from '@/shared/locale';
 import { pushSenderFromEnv, type PushMessage, type PushSender } from '@/integrations/push/web-push';
@@ -225,7 +226,8 @@ async function attempt(db: Db, providers: DeliveryProviders, delivery: DeliveryR
       .set({
         status: 'failed',
         attempts,
-        reason: (error instanceof Error ? error.message : String(error)).slice(0, 300),
+        // Shown to staff on the person's page: redacted (a provider's refusal can echo the address; src/platform/redact.ts).
+        reason: safeErrorText(error, 300, { frames: false, name: false }),
         sendAfter: retryIn === undefined ? null : new Date(now.getTime() + retryIn * MINUTE),
         updatedAt: now,
       })
@@ -235,8 +237,18 @@ async function attempt(db: Db, providers: DeliveryProviders, delivery: DeliveryR
 }
 
 /** Plans new notifications (one row per channel) and sends what's due, oldest first, for up to `budgetMs`. */
-export async function deliverNotifications(db: Db, now: Date, providers: DeliveryProviders = createDeliveryProviders(db), limit = 100, budgetMs = DELIVERY_BUDGET_MS): Promise<{ sent: number }> {
+/** Sends that went out and that failed in one run, per channel: the job runner's outage watch reads them (provider-watch.ts). */
+export type DeliveryOutcomes = Record<DeliveryChannel, { sent: number; failed: number }>;
+
+export async function deliverNotifications(db: Db, now: Date, providers: DeliveryProviders = createDeliveryProviders(db), limit = 100, budgetMs = DELIVERY_BUDGET_MS): Promise<{ sent: number; outcomes: DeliveryOutcomes }> {
   let sent = 0;
+  const outcomes: DeliveryOutcomes = { email: { sent: 0, failed: 0 }, sms: { sent: 0, failed: 0 }, push: { sent: 0, failed: 0 } };
+  const counted = async (channel: string, outcome: Promise<boolean>) => {
+    const ok = await outcome;
+    const tally = outcomes[channel as DeliveryChannel];
+    if (tally) tally[ok ? 'sent' : 'failed'] += 1;
+    return ok;
+  };
   // Real time, not `now` (the test clock moves that one).
   const started = performance.now();
   const outOfTime = () => performance.now() - started > budgetMs;
@@ -251,7 +263,7 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
   const people = await peopleOf(db, [...new Set(fresh.map(({ notification }) => notification.userId))]);
   for (const { notification } of fresh) {
     // Between notifications only: one whose channels were planned is never fresh again, so all of them go now.
-    if (outOfTime()) return { sent };
+    if (outOfTime()) return { sent, outcomes };
     const person = people.get(notification.userId);
     if (!person) continue;
     const topic: NotificationTopic | undefined = NOTIFICATION_TOPIC[notification.type as NotificationType];
@@ -287,12 +299,12 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
         })
         .onConflictDoNothing({ target: [notificationDeliveries.notificationId, notificationDeliveries.channel] })
         .returning();
-      if (claimed && plan.action === 'send' && to && (await attempt(db, providers, claimed, notification, to, now, person))) sent += 1;
+      if (claimed && plan.action === 'send' && to && (await counted(claimed.channel, attempt(db, providers, claimed, notification, to, now, person)))) sent += 1;
     }
   }
 
   // Held through quiet hours, failed and due for another try, or stuck mid-send.
-  if (outOfTime()) return { sent };
+  if (outOfTime()) return { sent, outcomes };
   const stuckBefore = new Date(now.getTime() - STUCK_MS);
   const due = await db
     .select({ delivery: notificationDeliveries, notification: notifications })
@@ -330,7 +342,7 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
         ),
       )
       .returning();
-    if (claimed && claimed.status === 'sending' && to && person && (await attempt(db, providers, claimed, notification, to, now, person))) sent += 1;
+    if (claimed && claimed.status === 'sending' && to && person && (await counted(claimed.channel, attempt(db, providers, claimed, notification, to, now, person)))) sent += 1;
   }
-  return { sent };
+  return { sent, outcomes };
 }

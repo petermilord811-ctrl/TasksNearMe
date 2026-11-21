@@ -33,7 +33,11 @@ import type { Db } from '@/platform/db/connect';
 import { expireEndedTasks } from '@/modules/tasks/expiry';
 import { pruneCacheTags } from '@/platform/cache/prune';
 import { announceChangedPages } from '@/modules/seo/indexnow-job';
-import { retryDueWebhooks } from '@/modules/webhooks/inbox';
+import { pageDeadWebhooks, retryDueWebhooks } from '@/modules/webhooks/inbox';
+import { createSmsSender } from '@/integrations/sms';
+import { pageOnCall, retryFailedPages, type Page } from '@/modules/oncall/pager';
+import { failingJobPage, noteJobRun, publishRunnerState, STALLED_AFTER_MS, stalledRunPage, type RunnerState } from './watch';
+import { noteDeliveryRun, providerOutagePage, type OutageState } from '@/modules/notifications/provider-watch';
 
 /**
  * The in-process job runner (blueprint 07: jobs). Every minute it runs the due-work functions that
@@ -51,6 +55,9 @@ export interface Job {
   name: string;
   run: (db: Db, now: Date) => Promise<unknown>;
 }
+
+/** Email, text and push sends failing run after run, per channel, for this server process (provider-watch.ts). */
+const deliveryOutages: OutageState = new Map();
 
 /** Expiries first, then what they produce (notifications last). */
 export const JOBS: Job[] = [
@@ -81,12 +88,23 @@ export const JOBS: Job[] = [
   // Saved searches' morning digest (completion plan 7.10): once a day from 8 am, before the dispatch.
   { name: 'searches.digest', run: (db, now) => runSavedSearchDigests(db, now).then(() => undefined) },
   { name: 'notifications.dispatch', run: (db, now) => dispatchNotifications(db, now) },
-  { name: 'notifications.deliver', run: (db, now) => deliverNotifications(db, now) },
+  // Sends that all fail on a channel, run after run, page the staff on call (provider-watch.ts; when things break).
+  {
+    name: 'notifications.deliver',
+    run: async (db, now) => {
+      const { outcomes } = await deliverNotifications(db, now);
+      for (const { channel, failed } of noteDeliveryRun(deliveryOutages, outcomes)) await pageAboutJobs(db, providerOutagePage(channel, failed, now), now);
+    },
+  },
   // The waitlist of a market that went live hears it's open (completion plan 8.3), a batch a minute.
   { name: 'waitlist.city_open', run: (db, now) => sendCityOpenEmails(db, { email: createEmailProvider(db), appUrl: (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '') }, now) },
   { name: 'privacy.requests', run: (db, now) => runPrivacyRequests(db, { storage: createFileStorage(), cipher: fieldCipherFromEnv(), email: createEmailProvider(db), payments: createPaymentProvider(), appUrl: (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '') }, now) },
   // Webhook events whose processing failed, again on their backoff (completion plan 5.11).
   { name: 'webhooks.retry', run: (db, now) => retryDueWebhooks(db, now) },
+  // Events that failed for good page the staff on call, once a day per provider while they're there (when things break).
+  { name: 'webhooks.page_dead', run: (db, now) => pageDeadWebhooks({ db, sms: createSmsSender(db), email: createEmailProvider(db) }, now) },
+  // On-call pages that reached nobody, again 5 minutes later (src/modules/oncall/pager.ts; when things break).
+  { name: 'oncall.retry_pages', run: (db, now) => retryFailedPages({ db, sms: createSmsSender(db), email: createEmailProvider(db) }, now) },
   { name: 'retention.sweep', run: (db, now) => (retentionDue(now) ? runRetention(db, { storage: createFileStorage() }, now) : Promise.resolve()) },
   // Shared 'use cache' tag rows a week old (cache-handlers/shared-tags.mjs).
   { name: 'cache.prune_tags', run: async (db, now) => { await pruneCacheTags(db, now); } },
@@ -130,12 +148,46 @@ export async function runDueJobs(db: Db, now: Date, jobs: Job[] = JOBS): Promise
 
 const RUNNER = Symbol.for('tasksnearme.jobRunner');
 
-/** Starts the runner once per server process (dev reloads keep the first one). */
+/** Pages the staff on call about the runner; a page that can't go out is logged, never stops the runner. */
+async function pageAboutJobs(db: Db, page: Page, now: Date) {
+  try {
+    await pageOnCall({ db, sms: createSmsSender(db), email: createEmailProvider(db) }, page, now);
+  } catch (error) {
+    console.error('[jobs] paging the staff on call failed', error);
+  }
+}
+
+/**
+ * Starts the runner once per server process (dev reloads keep the first one). A run starts only when the last one
+ * finished; one that's still going after `STALLED_AFTER_MS` pages the staff on call, and so does a job that fails
+ * `FAILED_RUNS_TO_PAGE` runs in a row (src/modules/jobs/watch.ts).
+ */
 export function startJobRunner(db: Db, intervalMs = 60_000): void {
   const holder = globalThis as unknown as Record<symbol, NodeJS.Timeout | undefined>;
   if (holder[RUNNER]) return;
-  const tick = () => {
-    runDueJobs(db, new Date()).catch((error: unknown) => console.error('[jobs] run failed', error));
+  const failing = new Map<string, number>();
+  let runningSince: Date | null = null;
+  // What /api/health reads (watch.ts): when this runner started, the run in progress, the last one that finished.
+  const state: RunnerState = { startedAt: Date.now(), runningSince: null, lastFinishedAt: null };
+  publishRunnerState(state);
+  const tick = async () => {
+    const now = new Date();
+    if (runningSince) {
+      if (now.getTime() - runningSince.getTime() >= STALLED_AFTER_MS) await pageAboutJobs(db, stalledRunPage(runningSince, now), now);
+      return;
+    }
+    runningSince = now;
+    state.runningSince = now.getTime();
+    try {
+      const result = await runDueJobs(db, now);
+      if (result.ran) for (const name of noteJobRun(failing, JOBS.map((job) => job.name), result.failed)) await pageAboutJobs(db, failingJobPage(name, now), now);
+      state.lastFinishedAt = Date.now();
+    } catch (error) {
+      console.error('[jobs] run failed', error);
+    } finally {
+      runningSince = null;
+      state.runningSince = null;
+    }
   };
   holder[RUNNER] = setInterval(tick, intervalMs);
   holder[RUNNER].unref();

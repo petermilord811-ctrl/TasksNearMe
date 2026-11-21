@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto';
-import { and, asc, eq, inArray, lte } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, lte } from 'drizzle-orm';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { safeErrorText } from '@/platform/redact';
+import { pageOnCall, type PagerDeps } from '@/modules/oncall/pager';
 import { dispatchWebhook, eventIdentity, signAgain, type WebhookHeaders, type WebhookOutcome, type WebhookProvider } from './dispatch';
 import { webhookEvents } from './schema';
 
@@ -21,7 +23,8 @@ const MAX_ATTEMPTS = RETRY_DELAYS_MS.length + 1;
 const RETRY_BATCH = 20;
 
 const hashOf = (payload: string) => createHash('sha256').update(payload).digest('hex');
-const errorText = (error: unknown) => (error instanceof Error ? `${error.name}: ${error.message}` : String(error)).slice(0, 500);
+// Shown to staff on /admin/webhooks: redacted (a failed query's values, a provider's echo of an address; src/platform/redact.ts).
+const errorText = (error: unknown) => safeErrorText(error, 500, { frames: false });
 
 type Row = typeof webhookEvents.$inferSelect;
 
@@ -95,6 +98,24 @@ export async function retryDueWebhooks(db: Db, now: Date): Promise<number> {
   let succeeded = 0;
   for (const row of due) if (await replayWebhook(db, row, now)) succeeded += 1;
   return succeeded;
+}
+
+/**
+ * Dead events page the staff on call (when things break, 2026-11-21): what they report (a payment, a check, a bounce)
+ * isn't in the app until someone replays or dismisses them on /admin/webhooks. One page per provider a day while any
+ * are dead (the path is the pager's once-only key). Run every minute by the job runner, outside the webhook's request.
+ */
+export async function pageDeadWebhooks(deps: PagerDeps, now: Date): Promise<number> {
+  const dead = await deps.db.select({ provider: webhookEvents.provider, events: count() }).from(webhookEvents).where(eq(webhookEvents.status, 'dead')).groupBy(webhookEvents.provider);
+  const day = now.toISOString().slice(0, 10);
+  for (const { provider, events } of dead) {
+    await pageOnCall(deps, {
+      subject: 'Provider events failed for good',
+      text: `${events} ${provider} ${events === 1 ? 'event' : 'events'} failed 5 times and stopped retrying, so the app doesn't know what ${events === 1 ? 'it reports' : 'they report'}. Replay or dismiss on /admin/webhooks; see docs/runbooks/webhook-backlog.md.`,
+      path: `/admin/webhooks?provider=${encodeURIComponent(provider)}&day=${day}`,
+    }, now);
+  }
+  return dead.length;
 }
 
 /** Staff decided a dead (or failed) event needs nothing more: it leaves the list, its payload is dropped. */
