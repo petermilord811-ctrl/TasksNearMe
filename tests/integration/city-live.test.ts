@@ -53,7 +53,9 @@ const boise = async (): Promise<AdminMarketRow> => (await getAdminMarkets(db, ri
 const told = () => db.select({ userId: notifications.userId, type: notifications.type, target: notifications.target }).from(notifications).where(eq(notifications.sourceEventId, cityLiveKey(BOISE)));
 async function dispatchAndDeliver() {
   await dispatchNotifications(db, new Date());
-  await deliverNotifications(db, new Date(), providers);
+  // Past every notification the suite's earlier files made and never delivered: those are still fresh (48 h) and go
+  // first, oldest first, so the default 100 stopped short of this file's own in a full run.
+  await deliverNotifications(db, new Date(), providers, 2_000);
 }
 
 beforeAll(async () => {
