@@ -12,6 +12,7 @@
   "earnShort": "Ganas {amount}",
   "hourlyPrice": "{rate}/h · {hours} estimadas · límite de {cap}",
   "priceFact": "Tu precio {price}",
+  "priceWas": "antes {price}",
   "remote": "A distancia",
   "expires": "Vence {relative}",
   "updatedOffer": "Oferta actualizada",

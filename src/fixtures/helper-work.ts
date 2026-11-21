@@ -12,7 +12,7 @@ import type {
 } from '@/contracts';
 import { crestviewArea, muellerAreaForJordan } from './locations';
 import { categoryViews, cleaningPublicTask, deskPublicTask, remoteComputerPublicTask, yardPublicTask } from './marketing';
-import { deskBreakdown, movingFundedBreakdown } from './money';
+import { deskBreakdown, deskWithChairBreakdown, movingFundedBreakdown } from './money';
 import { chris } from './people';
 import { deskDraft, uploadedTaskPhotos } from './posting';
 import { compactTaskDetails } from '@/contracts';
@@ -289,6 +289,17 @@ export const myOffersPageData: MyOffersPageData = {
 };
 
 export const myOffersEmptyData: MyOffersPageData = { active: [], booked: [], closed: [] };
+
+/** Booked: the desk offered at $60, then Maya's chair change accepted ($80 now). */
+export const myOffersBookedChangedData: MyOffersPageData = {
+  active: [],
+  booked: [{
+    offer: { ...myOffersPageData.active[0]!.offer, status: 'accepted' },
+    task: deskForJordan,
+    current: { pricing: { type: 'fixed', priceCents: 8000 }, breakdown: deskWithChairBreakdown, start: jordanDeskOffer.proposedStart },
+  }],
+  closed: [],
+};
 
 const wait = <T,>(value: T, ms = 500) => new Promise<T>((resolve) => setTimeout(() => resolve(value), ms));
 

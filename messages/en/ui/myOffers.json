@@ -8,6 +8,7 @@
   "earnShort": "You earn {amount}",
   "hourlyPrice": "{rate}/h · {hours} estimated · {cap} cap",
   "priceFact": "Your price {price}",
+  "priceWas": "was {price}",
   "remote": "Remote",
   "expires": "Expires {relative}",
   "updatedOffer": "Updated offer",

@@ -9,7 +9,10 @@ import {
   reviseOffer,
   submitOffer,
 } from '@/modules/offers/helper';
+import { bookingTerms, bookings } from '@/modules/bookings/schema';
+import { getPublishedPolicy } from '@/modules/markets/queries';
 import { offers } from '@/modules/offers/schema';
+import { quoteBreakdown } from '@/modules/payments/fees';
 import { tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
 import { outboxEvents } from '@/platform/outbox/schema';
@@ -139,5 +142,35 @@ describe("the helper's side of offers", () => {
     const mine = await getMyOffers(db, 'usr_jordan', now());
     expect(mine.closed.find((r) => r.offer.id === active!.id)?.offer.status).toBe('expired');
     expect(await offerCount()).toBe(0);
+  });
+});
+
+describe('My offers after a change (journeys on a phone, ab decided)', () => {
+  it('shows a booked offer as its booking stands now, the offer kept as it was sent', async () => {
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    const [sent] = await db.select().from(offers).where(eq(offers.id, 'off_jordan'));
+    const policy = await getPublishedPolicy(desk!.marketId, db);
+    const start = sent!.proposedStart;
+    const ids = { task: 'tsk_myoffers_change', offer: 'off_myoffers_change', booking: 'bkg_myoffers_change' };
+    try {
+      await db.insert(tasks).values({ ...desk!, id: ids.task, slug: 'myoffers-change-desk', posterUserId: 'usr_chris', status: 'assigned', offerCount: 1, version: 1 });
+      await db.insert(offers).values({ ...sent!, id: ids.offer, taskId: ids.task, status: 'accepted', priceCents: 6000, revision: 1, closedAt: now() });
+      await db.insert(bookings).values({ id: ids.booking, taskId: ids.task, offerId: ids.offer, posterUserId: 'usr_chris', helperUserId: 'usr_jordan', marketId: desk!.marketId, policyVersionId: policy!.id, status: 'confirmed', startAt: start, confirmedAt: now(), termsVersion: 2 });
+      const terms = (version: number, priceCents: number) => ({ id: `btm_myoffers_change_${version}`, bookingId: ids.booking, version, pricingType: 'fixed', priceCents, breakdown: quoteBreakdown(policy!.fees, { type: 'fixed', priceCents }), scopeText: desk!.description, startAt: start });
+      await db.insert(bookingTerms).values([terms(1, 6000), terms(2, 8000)]);
+
+      const mine = await getMyOffers(db, 'usr_jordan', now());
+      const row = mine.booked.find((entry) => entry.offer.id === ids.offer);
+      expect(row?.offer.pricing).toEqual({ type: 'fixed', priceCents: 6000 });
+      expect(row?.current).toEqual({ pricing: { type: 'fixed', priceCents: 8000 }, breakdown: quoteBreakdown(policy!.fees, { type: 'fixed', priceCents: 8000 }), start: start.toISOString() });
+      // A booking still on the offer's terms carries no "now".
+      await db.update(bookings).set({ termsVersion: 1 }).where(eq(bookings.id, ids.booking));
+      expect((await getMyOffers(db, 'usr_jordan', now())).booked.find((entry) => entry.offer.id === ids.offer)?.current).toBeUndefined();
+    } finally {
+      await db.delete(bookingTerms).where(eq(bookingTerms.bookingId, ids.booking));
+      await db.delete(bookings).where(eq(bookings.id, ids.booking));
+      await db.delete(offers).where(eq(offers.id, ids.offer));
+      await db.delete(tasks).where(eq(tasks.id, ids.task));
+    }
   });
 });

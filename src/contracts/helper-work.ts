@@ -285,6 +285,11 @@ export interface HelperWorkHandlers {
 export interface MyOfferRow {
   offer: Pick<HelperOfferView, 'id' | 'status' | 'pricing' | 'proposedStart' | 'expiresAt' | 'revision' | 'breakdown' | 'taskCanceled'>;
   task: TaskPublicView;
+  /**
+   * A booked offer whose booking changed since (an accepted change): the booking's price, earnings and start now.
+   * The row shows these, with the offer's price as "was" (journeys on a phone).
+   */
+  current?: { pricing: PricingInput; breakdown: PriceBreakdown; start: ISODateTime };
 }
 
 /** `/app/offers`: the helper's offers (invites join this page in UI-010). */

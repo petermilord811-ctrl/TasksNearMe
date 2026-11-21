@@ -21,6 +21,7 @@ import type {
 } from '@/contracts';
 import { createOfferInputSchema, FIND_WORK_DISTANCES, FIND_WORK_SORTS, routes } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
+import { bookingTerms, bookings } from '@/modules/bookings/schema';
 import { photoFromFile } from '@/modules/files/uploads';
 import { getPublishedPolicy, listCategoryViews } from '@/modules/markets/queries';
 import { offerThreadId } from '@/modules/messaging/service';
@@ -686,6 +687,15 @@ export async function getMyOffers(db: Db, userId: string, now: Date): Promise<My
   const feesByMarket = new Map<string, FeeSchedule | null>();
   // Declined by the task's cancellation, not by the client's choice (sweep D9): "Task canceled", not "Not selected".
   const canceled = await declinedByCancel(db, rows, (taskId) => views.get(taskId)?.row.status);
+  // A booked offer's booking as its terms stand now: a change may have moved its price or start (journeys on a phone).
+  const bookedIds = rows.filter((row) => row.status === 'accepted').map((row) => row.id);
+  const terms = new Map(
+    (bookedIds.length === 0 ? [] : await db
+      .select({ offerId: bookings.offerId, pricingType: bookingTerms.pricingType, priceCents: bookingTerms.priceCents, hourlyRateCents: bookingTerms.hourlyRateCents, estimatedHours: bookingTerms.estimatedHours, hoursCap: bookingTerms.hoursCap, breakdown: bookingTerms.breakdown, startAt: bookingTerms.startAt })
+      .from(bookings)
+      .innerJoin(bookingTerms, and(eq(bookingTerms.bookingId, bookings.id), eq(bookingTerms.version, bookings.termsVersion)))
+      .where(inArray(bookings.offerId, bookedIds))).map((row) => [row.offerId, row] as const),
+  );
   const toRow = async (row: OfferRow): Promise<MyOfferRow | null> => {
     const found = views.get(row.taskId);
     if (!found) return null;
@@ -694,7 +704,11 @@ export async function getMyOffers(db: Db, userId: string, now: Date): Promise<My
     const fees = feesByMarket.get(marketId);
     if (!fees) return null;
     const pricing = offerPricing(row);
+    const standing = row.status === 'accepted' ? terms.get(row.id) : undefined;
+    const currentPricing = standing ? offerPricing(standing) : undefined;
+    const changed = standing && currentPricing && (JSON.stringify(currentPricing) !== JSON.stringify(pricing) || standing.startAt.getTime() !== row.proposedStart.getTime());
     return {
+      ...(changed ? { current: { pricing: currentPricing, breakdown: standing.breakdown, start: standing.startAt.toISOString() } } : {}),
       offer: {
         id: row.id,
         status: row.status as OfferStatus,

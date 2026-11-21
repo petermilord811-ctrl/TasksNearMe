@@ -35,10 +35,14 @@ export function OfferRow({ row, now, tab, headingLevel = 2 }: { row: MyOfferRow;
   const { offer, task } = row;
   const status = useOfferStatus(offer.status, 'helper', { taskCanceled: offer.taskCanceled });
   const CategoryIcon = CATEGORY_ICONS[task.categorySlug];
-  const price = offer.pricing.type === 'fixed' ? formatMoney(offer.pricing.priceCents) : t('hourlyPrice', {
-    rate: formatMoney(offer.pricing.rateCents), hours: formatHours(offer.pricing.estimatedHours), cap: formatHours(offer.pricing.hoursCap),
+  const priceOf = (pricing: MyOfferRow['offer']['pricing']) => pricing.type === 'fixed' ? formatMoney(pricing.priceCents) : t('hourlyPrice', {
+    rate: formatMoney(pricing.rateCents), hours: formatHours(pricing.estimatedHours), cap: formatHours(pricing.hoursCap),
   });
-  const earnings = formatMoney(offer.breakdown.helperEarningsCents);
+  // A booking that changed since the offer shows as it stands now, the offer's price as "was" (journeys on a phone).
+  const shown = row.current ?? { pricing: offer.pricing, breakdown: offer.breakdown, start: offer.proposedStart };
+  const price = priceOf(shown.pricing);
+  const was = row.current ? priceOf(offer.pricing) : undefined;
+  const earnings = formatMoney(shown.breakdown.helperEarningsCents);
   const waiting = tab ? tab === 'active' : offer.status === 'pending' || offer.status === 'stale';
 
   return <CompactRow
@@ -46,14 +50,14 @@ export function OfferRow({ row, now, tab, headingLevel = 2 }: { row: MyOfferRow;
     title={task.title}
     href={routes.app.findWorkTask(task.id)}
     headingLevel={headingLevel}
-    leading={<DayTile at={offer.proposedStart} />}
+    leading={<DayTile at={shown.start} />}
     titleExtra={offer.revision > 1 ? <span className="ml-2 inline-flex translate-y-[-1px] items-center rounded-full bg-badge-brand px-1.5 py-px align-middle text-[11px] font-semibold text-badge-brand-foreground">{t('updatedOffer')}</span> : undefined}
     facts={<>
       <StatusBadge size="sm" {...status} />
       <RowFact icon={CategoryIcon}>{taskCopy(`categories.${task.categorySlug}`)}</RowFact>
       <RowFact icon={task.location.kind === 'remote' ? Laptop : MapPin}>{task.location.kind === 'remote' ? t('remote') : task.location.areaName}</RowFact>
-      <RowFact icon={Clock} className="tabular-nums"><time dateTime={offer.proposedStart}>{formatTime(offer.proposedStart)}</time></RowFact>
-      <RowFact className="tabular-nums">{t('priceFact', { price })}</RowFact>
+      <RowFact icon={Clock} className="tabular-nums"><time dateTime={shown.start}>{formatTime(shown.start)}</time></RowFact>
+      <RowFact className="tabular-nums">{t('priceFact', { price })}{was && was !== price && <span className="text-muted-foreground"> · {t('priceWas', { price: was })}</span>}</RowFact>
       {waiting && <RowFact icon={Hourglass} className="tabular-nums"><time dateTime={offer.expiresAt}>{t('expires', { relative: formatRelative(offer.expiresAt, now) })}</time></RowFact>}
     </>}
     trailing={<RowMoney caption={t('earnings')} amount={earnings} />}

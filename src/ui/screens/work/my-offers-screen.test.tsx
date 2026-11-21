@@ -4,7 +4,7 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { routes, type MyOffersPageData } from '@/contracts';
-import { fakeInviteHandlers, myOffersEmptyData, myOffersPageData, myOffersWithInviteData } from '@/fixtures';
+import { fakeInviteHandlers, myOffersBookedChangedData, myOffersEmptyData, myOffersPageData, myOffersWithInviteData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import myOffers from '../../../../messages/en/ui/myOffers.json';
 import inviteCard from '../../../../messages/en/ui/inviteCard.json';
@@ -18,6 +18,14 @@ function renderOffers(data: MyOffersPageData = myOffersPageData, initialTab: 'ac
 }
 
 describe('MyOffersScreen', () => {
+  it('shows a booked offer as its booking stands after a change, with the offer’s price as “was” (journeys on a phone)', () => {
+    renderOffers(myOffersBookedChangedData, 'booked');
+    expect(screen.getByText(/Your price \$80\.00/)).toBeVisible();
+    expect(screen.getByText('· was $60.00')).toBeVisible();
+    expect(screen.getAllByText(/\$72\.00/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/\$54\.00/)).not.toBeInTheDocument();
+  });
+
   it('opens the requested invite in a sheet, retains supplied order, and restores focus', async () => {
     const user = userEvent.setup();
     const data = { ...myOffersWithInviteData, invites: myOffersWithInviteData.invites?.map((invite, index) => index ? { ...invite, id: `${invite.id}-expired` } : invite) };
