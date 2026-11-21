@@ -81,7 +81,9 @@ async function sendEmailCode(email: string): Promise<ActionResult> {
   const [existing] = await db.select({ status: users.status }).from(users).where(eq(users.email, email)).limit(1);
   if (existing && BLOCKED_STATUSES.has(existing.status)) return { ok: false, code: 'not_allowed' };
 
-  await auth.api.sendVerificationOTP({ body: { email, type: 'sign-in' } });
+  // With the request's headers, so the code comes in the language of the page that asked for it (its cookie or the
+  // browser's language); without them it always went out in English (messages pass J-M8).
+  await auth.api.sendVerificationOTP({ body: { email, type: 'sign-in' }, headers: await headers() });
   await writePendingEmail(email, new Date(Date.now() + RESEND_AFTER_SECONDS * 1000));
   refresh();
   return { ok: true, code: 'sent' };

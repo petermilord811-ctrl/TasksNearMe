@@ -74,6 +74,11 @@ test('someone who signs up in Spanish gets a Spanish account, and can switch it 
   await page.goto('/sign-in');
   await expect(page.locator('html')).toHaveAttribute('lang', 'es');
   await submitEmailStep(page, email, { email: formsEs.fields.email.label, submit: formsEs.continue, next: signInEs.emailCode.title });
+  // The code comes in the language of the page that asked for it: the first message a new person gets (messages pass J-M8).
+  const outbox = await context.newPage();
+  await outbox.goto(`/dev/outbox?to=${encodeURIComponent(email)}`);
+  await expect(outbox.locator(`[data-testid="outbox-message"][data-to="${email}"][data-tag="sign-in-code"]`).first()).toContainText(/\d{6} es tu código de TasksNearMe/);
+  await outbox.close();
   await page.getByLabel(formsEs.fields.code.label).fill(await latestCode(context, email));
   await expect(page.getByRole('heading', { level: 1, name: signInEs.profile.title })).toBeVisible();
   await page.getByLabel(formsEs.fields.firstName.label).fill('Rosa');
