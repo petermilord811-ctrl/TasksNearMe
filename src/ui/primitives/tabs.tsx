@@ -87,7 +87,9 @@ function TabsContent({
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      className={cn("flex-1 outline-none", className)}
+      // Radix puts the panel in the Tab order (tabIndex 0): keyboard users land on it, so it shows where focus is
+      // (accessibility pass, WCAG 2.4.7); outline-none left them nothing to see.
+      className={cn("flex-1 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring", className)}
       {...props}
     />
   )
