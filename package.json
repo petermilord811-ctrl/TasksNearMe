@@ -2,6 +2,20 @@
   "name": "tasksnearme",
   "version": "0.1.0",
   "private": true,
+  "sideEffects": [
+    "**/*.css",
+    "./src/app/**",
+    "./src/ui/**",
+    "./src/modules/**",
+    "./src/platform/**",
+    "./src/integrations/**",
+    "./src/i18n/**",
+    "./src/shared/**",
+    "./src/fixtures/**",
+    "./src/proxy.ts",
+    "./src/instrumentation*.ts",
+    "./instrumentation*.ts"
+  ],
   "engines": {
     "node": ">=24"
   },
