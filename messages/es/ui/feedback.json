@@ -52,6 +52,8 @@
     "submitted": "Enviado",
     "redeemed": "Tarjeta de regalo solicitada",
     "updated": "Actualizado",
+    "on_the_way": "El cliente sabe que vas en camino.",
+    "arrived": "Llegada registrada. Cuando termines, envía el trabajo para su aprobación.",
     "opened": "Abriendo…"
   },
   "error": {

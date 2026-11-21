@@ -72,8 +72,9 @@ describe('the booking page', () => {
   it('checks in on the day: on my way, then arrived', async () => {
     expect(await runBookingAction(db, 'usr_jordan', bookingId, 'arrived', minutes(-120))).toEqual({ ok: false, code: 'not_allowed' });
     expect(await runBookingAction(db, 'usr_ana', bookingId, 'on_my_way', minutes(-60))).toEqual({ ok: false, code: 'not_allowed' });
-    expect(await runBookingAction(db, 'usr_jordan', bookingId, 'on_my_way', minutes(-60))).toEqual({ ok: true, code: 'updated' });
-    expect(await runBookingAction(db, 'usr_jordan', bookingId, 'arrived', minutes(-10))).toEqual({ ok: true, code: 'updated' });
+    // Said as what happened (journeys on a phone, J-H10: both said only "Updated").
+    expect(await runBookingAction(db, 'usr_jordan', bookingId, 'on_my_way', minutes(-60))).toEqual({ ok: true, code: 'on_the_way' });
+    expect(await runBookingAction(db, 'usr_jordan', bookingId, 'arrived', minutes(-10))).toEqual({ ok: true, code: 'arrived' });
     // Opening the conversation changes nothing, so the result says so (journeys on a phone, J-C3).
     expect(await runBookingAction(db, 'usr_ana', bookingId, 'message', minutes(-8))).toEqual({ ok: true, code: 'opened', redirectTo: expect.stringMatching(/^\/app\/messages\/thr_/) });
     const view = await getBookingView(hub, 'usr_jordan', bookingId, minutes(-5));

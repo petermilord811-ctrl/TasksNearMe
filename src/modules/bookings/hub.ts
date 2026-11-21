@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gt, inArray, isNull, ne, or } from 'drizzle-orm';
 import { maskContactDetails } from '@/modules/trust/contact-masking';
 import type {
   ActionResult,
+  ActionSuccessCode,
   BookingActionId,
   BookingListRow,
   BookingPaymentLine,
@@ -420,7 +421,7 @@ export async function runBookingAction(
   if (!allowed?.enabled) return { ok: false, code: 'not_allowed' };
 
   const threadEvent: Partial<Record<BookingActionId, TimelineEvent['type']>> = { on_my_way: 'on_my_way', arrived: 'arrived', approve: 'approved' };
-  const transition = async (expected: string, set: Partial<BookingRow>, event: string): Promise<ActionResult> => {
+  const transition = async (expected: string, set: Partial<BookingRow>, event: string, code: ActionSuccessCode = 'updated'): Promise<ActionResult> => {
     const updated = await db.transaction(async (tx) => {
       const rows = await tx
         .update(bookings)
@@ -434,7 +435,7 @@ export async function runBookingAction(
       if (type) await postEvent(tx, bookingThreadLink(booking), 'status', { type }, now, userId);
       return true;
     });
-    return updated ? { ok: true, code: 'updated' } : { ok: false, code: 'version_conflict' };
+    return updated ? { ok: true, code } : { ok: false, code: 'version_conflict' };
   };
 
   switch (action) {
@@ -469,9 +470,10 @@ export async function runBookingAction(
     case 'report_problem':
       return { ok: true, code: 'opened', redirectTo: routes.app.bookingProblem(booking.id) };
     case 'on_my_way':
-      return transition('confirmed', { onMyWayAt: now }, 'booking.on_my_way');
+      // Said as what happened, not "Updated" (journeys on a phone, J-H10).
+      return transition('confirmed', { onMyWayAt: now }, 'booking.on_my_way', 'on_the_way');
     case 'arrived':
-      return transition('confirmed', { status: 'in_progress', arrivedAt: now }, 'booking.arrived');
+      return transition('confirmed', { status: 'in_progress', arrivedAt: now }, 'booking.arrived', 'arrived');
     case 'approve': {
       const result = await transition('completion_submitted', { status: 'completed', completedVia: 'poster', completedAt: now, approvalDueAt: null }, 'booking.completed');
       if (!result.ok) return result;

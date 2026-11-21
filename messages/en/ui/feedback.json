@@ -52,6 +52,8 @@
     "submitted": "Submitted",
     "redeemed": "Gift card requested",
     "updated": "Updated",
+    "on_the_way": "The client knows you're on your way.",
+    "arrived": "Marked as arrived. When you're done, send the work for approval.",
     "opened": "Opening…"
   },
   "error": {
