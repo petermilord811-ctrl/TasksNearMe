@@ -20,7 +20,8 @@ import type { PhoneCheck } from '@/modules/accounts/phone-check';
  * the provider's double check; the provider's result is what verifies.
  *
  * Locks: the phone opens once the profile basics are saved; the ID check after the phone; the home
- * address and payouts (side by side) once the ID is verified; the background check once payouts are
+ * address and payouts (side by side) once the ID photos are with our team (ab, 2026-11-21: the helper uses the wait,
+ * up to a day; before, they waited for the verified ID); the background check once the ID is verified and payouts are
  * active. A helper is bookable in a category once the agreement, phone, ID (with its name matched or
  * confirmed), home address and payouts are done and, for in-home categories, a background check is
  * clear (or approved) and current.
@@ -52,7 +53,7 @@ export interface OnboardingFacts {
    * confirm them, or the same ID on another account. `renewal`: a new check was asked for because the ID
    * runs out, while the earlier one still counts (`cleared`; plan 6.3).
    */
-  identity: { status: IdentityStatus; cleared: boolean; captureInReview?: boolean; renewal?: boolean };
+  identity: { status: IdentityStatus; cleared: boolean; captureInReview?: boolean; captureApproved?: boolean; renewal?: boolean };
   address: { status: AddressVerificationStatus; verified: boolean };
   payout: PayoutAccountStatus;
   background: { status: BackgroundCheckStatus; eligible: boolean };
@@ -72,6 +73,8 @@ export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingSt
   const waiting = facts.awaitingCity === true;
   // A renewal's earlier check still counts, so the steps after it stay open.
   const identityVerified = facts.identity.status === 'verified' || facts.identity.cleared;
+  // The ID under way: the photos with our team or approved, or the provider's check running (or done).
+  const identityUnderway = identityVerified || facts.identity.captureInReview === true || facts.identity.captureApproved === true || facts.identity.status === 'processing';
   const done: Record<OnboardingStep, boolean> = {
     profile: facts.profileComplete && facts.agreementAccepted,
     services: facts.services.length > 0,
@@ -102,8 +105,8 @@ export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingSt
     area: false,
     phone: !basics,
     identity: !basics || !phoneOk,
-    address: !basics || !phoneOk || !identityVerified,
-    payout: !basics || !phoneOk || !identityVerified,
+    address: !basics || !phoneOk || !identityUnderway,
+    payout: !basics || !phoneOk || !identityUnderway,
     background: !basics || !phoneOk || !identityVerified || !done.payout,
     done: !(basics && phoneOk && identityVerified && done.payout),
   };

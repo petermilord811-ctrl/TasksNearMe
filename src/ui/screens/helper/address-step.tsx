@@ -73,12 +73,14 @@ export function AddressStep({ verification, handlers, initialSuggestions, initia
 function AddressStanding({ verification }: { verification: VerificationSummary }) {
   const { formatDate } = useFormat();
   const t = useTranslations('verification.homeAddress');
-  const { status, label, verifiedAt, submittedAt, rejectionReason, update } = verification.address;
+  const { status, label, verifiedAt, submittedAt, rejectionReason, update, recheck } = verification.address;
   return <div className="space-y-3 text-sm leading-6">
     {status === 'not_started' && <p className="text-muted-foreground">{t('explanation')}</p>}
     {status === 'requested' && <p className="flex items-start gap-2 rounded-lg bg-badge-warning p-3 text-badge-warning-foreground"><TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('requested')}</p>}
     {status === 'in_review' && <div className="space-y-2 rounded-lg bg-badge-info p-3 text-badge-info-foreground">
       <p className="flex items-start gap-2 font-medium"><Clock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('inReview')}</p>
+      {/* Back with our team because the ID's legal name differs (ab, 2026-11-21): why, and that there's nothing to do. */}
+      {recheck === 'name_differs' && <p>{t('recheckNameDiffers')}</p>}
       {submittedAt && <p>{t('sentAt', { date: formatDate(submittedAt) })}</p>}
     </div>}
     {status === 'rejected' && <p className="flex items-start gap-2 rounded-lg bg-badge-warning p-3 text-badge-warning-foreground"><TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t(`rejectionReasons.${rejectionReason ?? 'other'}`)}</p>}

@@ -78,7 +78,8 @@
     "review_prompt": "¿Qué tal te fue con {actorName}? Deja una reseña sobre {title}",
     "review_reminder": "{days, plural, one {Queda un día} other {Quedan # días}} para dejar tu reseña de {actorName} sobre {title}",
     "saved_searches_digest": "{count, plural, one {# tarea nueva} other {# tareas nuevas}} para tus búsquedas guardadas, entre ellas {search}",
-    "payment_refunded": "Te devolvimos {hasAmount, select, yes {{amount}} other {un pago}} de {title}"
+    "payment_refunded": "Te devolvimos {hasAmount, select, yes {{amount}} other {un pago}} de {title}",
+    "address_recheck": "Estamos revisando de nuevo tu domicilio: el nombre de tu identificación es distinto del de tu cuenta"
   },
   "previews": {
     "group": "Notificaciones",

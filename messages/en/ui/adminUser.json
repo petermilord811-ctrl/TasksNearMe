@@ -165,7 +165,8 @@
     "review_prompt": "Review prompt",
     "review_reminder": "Review reminder",
     "saved_searches_digest": "Saved searches digest",
-    "payment_refunded": "Automatic refund"
+    "payment_refunded": "Automatic refund",
+    "address_recheck": "Home address checked again (ID name)"
   },
   "previews": {
     "group": "Admin · person details",

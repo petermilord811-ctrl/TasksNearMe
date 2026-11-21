@@ -31,7 +31,8 @@ import { addressStanding, backgroundStanding, identityStanding, livenessPromptFo
 
 export type VerificationTrack = 'phone' | 'identity' | 'address' | 'payout' | 'background' | 'helper' | 'poster_identity';
 /** `city_open` (track `helper`): a helper who waited outside the cities we're open in can choose a neighborhood now. */
-export type VerificationOutcome = 'passed' | 'action_needed' | 'expiring' | 'expired' | 'ready' | 'city_open';
+/** `recheck`: a step checked again by our team, nothing for the person to do (the home address, when the ID's legal name differs). */
+export type VerificationOutcome = 'passed' | 'action_needed' | 'expiring' | 'expired' | 'ready' | 'city_open' | 'recheck';
 
 /** `verification.updated` in the outbox: the dispatcher turns it into the person's notification. */
 export async function emitVerificationEvent(
@@ -97,6 +98,7 @@ export async function loadOnboardingState(db: Db, userId: string, now: Date) {
       status: identity.status,
       cleared: identity.cleared,
       captureInReview: identity.capture?.status === 'submitted' || identity.blocked === 'double_check_review' || identity.blocked === 'duplicate_id',
+      ...(identity.captureApproved ? { captureApproved: true } : {}),
       ...(identity.renewal ? { renewal: true } : {}),
     },
     address: { status: address.status, verified: address.verified },
@@ -209,6 +211,8 @@ export function verificationSummary(state: OnboardingState, backgroundRequired: 
       ...(latestAddress?.submittedAt ? { submittedAt: latestAddress.submittedAt.toISOString() } : {}),
       ...(address.documentType ? { documentType: address.documentType } : {}),
       ...(address.rejectionReason ? { rejectionReason: address.rejectionReason } : {}),
+      // Back with our team because the ID's legal name differs from the account's (ab, 2026-11-21): said on the step.
+      ...(address.status === 'in_review' && identity.nameCheck ? { recheck: 'name_differs' as const } : {}),
       ...(address.update
         ? { update: { status: address.update.status, ...(reason(address.update.row.rejectionReason) ? { rejectionReason: reason(address.update.row.rejectionReason) } : {}) } }
         : {}),

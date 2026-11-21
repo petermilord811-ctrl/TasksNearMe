@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq, ne } from 'drizzle-orm';
 import type { ActionResult, BackgroundCheckStatus, IdentityFailureReason, PayoutAccountStatus } from '@/contracts';
 import { recordAgreement, type RequestOrigin } from '@/modules/accounts/agreements';
 import { users } from '@/modules/accounts/schema';
@@ -10,7 +10,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { computeOnboarding } from './progress';
 import type { VerificationProviders } from './providers';
-import { backgroundChecks, identityVerifications, payoutAccounts } from './schema';
+import { addressVerifications, backgroundChecks, identityVerifications, payoutAccounts } from './schema';
 import { BACKGROUND_RULES, namesMatch, normalizeName } from './standing';
 import { emitVerificationEvent, loadOnboardingState, syncHelperProfile } from './state';
 import { workLocationFor, type WorkLocation } from './work-location';
@@ -91,25 +91,43 @@ export async function recordIdentityResult(db: Db, sessionId: string, result: Id
     const [account] = await db.select({ firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, row.userId)).limit(1);
     nameMatches = !result.verifiedName || !account ? true : namesMatch(account, result.verifiedName);
   }
-  await db
-    .update(identityVerifications)
-    .set({
-      status: result.status,
-      failureReason: result.status === 'requires_input' ? result.reason : null,
-      isAdult: result.status === 'verified' ? true : result.status === 'requires_input' && result.reason === 'under_18' ? false : null,
-      nameMatches,
-      verifiedAt: result.status === 'verified' ? now : null,
-      ...(event.at ? { providerEventAt: event.at } : {}),
-      ...(event.outcome ? { providerOutcome: event.outcome } : {}),
-      updatedAt: now,
-    })
-    .where(eq(identityVerifications.id, row.id));
+  const rechecked = await db.transaction(async (tx) => {
+    await tx
+      .update(identityVerifications)
+      .set({
+        status: result.status,
+        failureReason: result.status === 'requires_input' ? result.reason : null,
+        isAdult: result.status === 'verified' ? true : result.status === 'requires_input' && result.reason === 'under_18' ? false : null,
+        nameMatches,
+        verifiedAt: result.status === 'verified' ? now : null,
+        ...(event.at ? { providerEventAt: event.at } : {}),
+        ...(event.outcome ? { providerOutcome: event.outcome } : {}),
+        updatedAt: now,
+      })
+      .where(eq(identityVerifications.id, row.id));
+    // The ID's legal name differs from the account's (ab, 2026-11-21): a home address our team verified against the
+    // account's name goes back to them, in this same write. (It can be verified first now: the address opens while
+    // the ID photos are in review.)
+    if (nameMatches !== false) return false;
+    const [latest] = await tx
+      .select({ id: addressVerifications.id, status: addressVerifications.status })
+      .from(addressVerifications)
+      .where(and(eq(addressVerifications.userId, row.userId), ne(addressVerifications.status, 'withdrawn')))
+      .orderBy(desc(addressVerifications.createdAt))
+      .limit(1);
+    if (latest?.status !== 'verified') return false;
+    await tx.update(addressVerifications).set({ status: 'in_review', decidedAt: null, decidedByUserId: null }).where(eq(addressVerifications.id, latest.id));
+    return true;
+  });
+  if (rechecked) await audit(db, 'address.recheck', row.userId, { reason: 'id_name_differs' });
   await audit(db, `identity.${result.status}`, row.userId, nameMatches === false ? { nameMatches: false } : {});
   // Helpers hear about it in setup; clients (asked by risk) on their own ID page.
   const [helper] = await db.select({ userId: helperProfiles.userId }).from(helperProfiles).where(eq(helperProfiles.userId, row.userId)).limit(1);
   const track = helper ? 'identity' : 'poster_identity';
   if (result.status === 'verified') await emitVerificationEvent(db, row.userId, track, nameMatches === false ? 'action_needed' : 'passed');
   if (result.status === 'requires_input') await emitVerificationEvent(db, row.userId, track, 'action_needed');
+  // The helper hears why their home address is in review again (address_recheck).
+  if (rechecked) await emitVerificationEvent(db, row.userId, 'address', 'recheck');
   await syncHelperProfile(db, row.userId, now);
   return row.userId;
 }

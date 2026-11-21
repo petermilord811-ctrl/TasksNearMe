@@ -11,7 +11,7 @@ import { VERIFICATION_TRACKS } from '@/contracts';
  */
 export interface PlannedVerificationNotification {
   userId: string;
-  type: Extract<NotificationType, 'verification_passed' | 'verification_action_needed' | 'background_check_expiring' | 'id_expiring' | 'helper_ready' | 'city_open'>;
+  type: Extract<NotificationType, 'verification_passed' | 'verification_action_needed' | 'background_check_expiring' | 'id_expiring' | 'helper_ready' | 'city_open' | 'address_recheck'>;
   target: AttentionTarget;
   /** `city_open`: the city's name. */
   title?: string;
@@ -41,6 +41,8 @@ export function verificationNotificationFor(payload: Record<string, unknown>): P
     const days = typeof payload.days === 'number' && outcome === 'expiring' ? Math.max(0, Math.round(payload.days)) : 0;
     return { userId, type: step === 'identity' ? 'id_expiring' : 'background_check_expiring', target: { kind: 'onboarding', step }, params: { days } };
   }
+  // The home address back with our team: the ID's legal name differs from the account's (ab, 2026-11-21).
+  if (outcome === 'recheck') return step === 'address' ? { userId, type: 'address_recheck', target: { kind: 'onboarding', step: 'address' } } : null;
   if (outcome !== 'passed' && outcome !== 'action_needed') return null;
   return { userId, type: outcome === 'passed' ? 'verification_passed' : 'verification_action_needed', target: { kind: 'onboarding', step }, params: { track: step } };
 }

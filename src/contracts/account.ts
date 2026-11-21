@@ -138,6 +138,11 @@ export const NOTIFICATION_TYPES = [
    * `params.refundFor` (it came after the booking ended, a second tip, a change paid after the booking moved on).
    */
   'payment_refunded',
+  /**
+   * The helper's home address is with our team again because their ID's legal name differs from the account's (ab,
+   * 2026-11-21): nothing to do, we'll say when it's checked.
+   */
+  'address_recheck',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

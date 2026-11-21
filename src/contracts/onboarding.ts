@@ -406,6 +406,8 @@ export interface VerificationSummary {
     rejectionReason?: AddressRejectionReason;
     /** A newer proof (after a move, say) is in review or was turned down; the earlier verification still counts. */
     update?: { status: 'in_review' | 'rejected'; rejectionReason?: AddressRejectionReason };
+    /** In review again because the ID's legal name differs from the account's: nothing for the helper to do. */
+    recheck?: 'name_differs';
   };
   payout: { status: PayoutAccountStatus };
   background: {

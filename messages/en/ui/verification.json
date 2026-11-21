@@ -197,6 +197,7 @@
     "moving": "Moved? Send a new proof",
     "requested": "Our team asked for a new proof of your home address. Send one below; offers are paused until it is approved.",
     "inReview": "We're reviewing your document. It usually takes a day or two, and you can set up payouts meanwhile.",
+    "recheckNameDiffers": "We're checking it again because the name on your ID differs from the one on your account. There's nothing you need to do.",
     "sentAt": "Sent {date}.",
     "verified": "Your home address is verified.",
     "verifiedAt": "Your home address was verified on {date}.",
@@ -356,7 +357,7 @@
       "sending": "Sending…",
       "sent": "Sent. We'll let you know when our team has looked at your photos."
     },
-    "inReview": "We're comparing your photos, usually within a day. We'll let you know, and then you'll finish with a quick double check.",
+    "inReview": "We're comparing your photos, usually within a day. Meanwhile, you can add your home address and set up payouts. We'll let you know, and then you'll finish with a quick double check.",
     "sentAt": "Sent {date}.",
     "checkStatus": "Check status",
     "rejectionReasons": {

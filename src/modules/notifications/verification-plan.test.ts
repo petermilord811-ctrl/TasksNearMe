@@ -17,6 +17,11 @@ describe('verification notifications', () => {
     });
   });
 
+  it('tells the helper their home address is with our team again when their ID’s legal name differs (ab, 2026-11-21)', () => {
+    expect(verificationNotificationFor({ userId: 'usr_priya', track: 'address', outcome: 'recheck' })).toEqual({ userId: 'usr_priya', type: 'address_recheck', target: { kind: 'onboarding', step: 'address' } });
+    expect(verificationNotificationFor({ userId: 'usr_priya', track: 'identity', outcome: 'recheck' })).toBeNull();
+  });
+
   it('warns before the background check runs out, and when it has', () => {
     expect(verificationNotificationFor({ userId: 'usr_lee', track: 'background', outcome: 'expiring', days: 30 })).toMatchObject({ type: 'background_check_expiring', params: { days: 30 } });
     expect(verificationNotificationFor({ userId: 'usr_lee', track: 'background', outcome: 'expired', days: 4 })).toMatchObject({ type: 'background_check_expiring', params: { days: 0 } });

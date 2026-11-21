@@ -1,6 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import sharp from 'sharp';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createHelperServicesSchema } from '@/contracts';
@@ -34,6 +34,8 @@ import { addressVerifications, identityCaptures } from '@/modules/verification/s
 import { decideAddress, decideIdentityCapture } from '@/modules/verification/staff';
 import { createByteCipher, createFieldCipher } from '@/platform/crypto/field-encryption';
 import { createDb } from '@/platform/db/connect';
+import { auditLog } from '@/platform/audit/schema';
+import { outboxEvents } from '@/platform/outbox/schema';
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
 afterAll(() => pool.end());
@@ -161,6 +163,47 @@ describe('helper onboarding', () => {
     expect(done?.welcomeReward).toMatchObject({ state: 'earned', amountCents: 5000, checks: [{ check: 'phone', state: 'done' }, { check: 'identity', state: 'done' }, { check: 'background', state: 'done' }] });
     await db.update(helperProfiles).set({ foundingNumber: 98 }).where(eq(helperProfiles.userId, userId));
     expect((await getOnboardingPageData(db, userId, 'done', now()))?.welcomeReward).toMatchObject({ state: 'earned', amountCents: 5000, foundingNumber: 98 });
+  });
+
+  it('opens the home address and payouts while the ID photos are in review; a confirmed ID with another legal name sends a verified address back to our team (ab, 2026-11-21)', async () => {
+    const helper = 'usr_parallel';
+    await db.insert(users).values({ id: helper, email: 'parallel@example.test', name: 'Lena R.', firstName: 'Lena', lastName: 'Rivera', homeMarketId: 'mkt_austin', phone: '+15125550392', phoneVerifiedAt: now() });
+    expect(await saveHelperProfile(db, helper, { headline: 'Yard help on weekends', bio: 'I rake, weed and haul yard waste, and I always leave the yard tidy and swept.', languages: ['en'], acceptHelperAgreement: true }, now(), { requireAgreement: true })).toEqual({ ok: true, code: 'saved' });
+    expect(await saveHelperServices(db, helper, { services: [{ categorySlug: 'yard-cleanup', pricingType: 'hourly', hourlyRateCents: 3000, minHours: 2, description: '' }] }, now())).toEqual({ ok: true, code: 'saved' });
+    expect(await saveHelperArea(db, helper, { areaId: 'area_mueller', serviceRadiusMiles: 5, remoteOk: false }, now())).toEqual({ ok: true, code: 'saved' });
+    const states = async () => Object.fromEntries((await getOnboardingPageData(db, helper, 'done', now()))!.progress.steps.map((entry) => [entry.step, entry.state]));
+    // Before any photos, payouts wait.
+    expect(await startPayout(db, providers, helper, now())).toEqual({ ok: false, code: 'not_allowed' });
+    // The photos with our team: the home address and payouts open meanwhile; the background check would still wait.
+    expect(await acceptIdentityNotice(db, helper, { consent: true }, now())).toEqual({ ok: true, code: 'updated' });
+    expect(await submitIdentityCapture(captureDeps, helper, await idPhotos(), now())).toEqual({ ok: true, code: 'submitted' });
+    expect(await states()).toMatchObject({ identity: 'in_review', address: 'todo', payout: 'todo' });
+    const form = new FormData();
+    form.set('placeId', 'plc_mueller_1234');
+    form.set('documentType', 'utility_bill');
+    form.set('declaration', 'true');
+    form.set('file', await bill());
+    expect(await submitAddressProof({ db, storage, geocoder: createFakeGeocoder(), cipher }, helper, form, now())).toEqual({ ok: true, code: 'submitted' });
+    expect(await startPayout(db, providers, helper, now())).toMatchObject({ ok: true });
+    await recordPayoutStatus(db, helper, 'active', now());
+    // Our team approves the address against the account's name before the ID is confirmed: still not bookable.
+    const [proof] = await db.select({ id: addressVerifications.id }).from(addressVerifications).where(eq(addressVerifications.userId, helper));
+    expect(await decideAddress(db, taylor, { verificationId: proof!.id, decision: 'approve', note: 'Name, address and date match the bill.' }, now())).toEqual({ ok: true, code: 'updated' });
+    expect((await getOnboardingPageData(db, helper, 'done', now()))?.progress.bookable).toBe(false);
+    // The photos approved, the double check confirms an ID with another legal name.
+    const [photos] = await db.select({ id: identityCaptures.id }).from(identityCaptures).where(eq(identityCaptures.userId, helper));
+    expect(await decideIdentityCapture(db, taylor, { captureId: photos!.id, decision: 'approve', note: 'The selfie matches the passport photo.' }, now())).toEqual({ ok: true, code: 'updated' });
+    expect(await states()).toMatchObject({ address: 'done', payout: 'done' });
+    const identity = await startIdentity(db, providers, helper, now());
+    expect(await recordIdentityResult(db, param(identity.ok ? identity.redirectTo! : '', 'session'), { status: 'verified', verifiedName: { firstName: 'Elena', lastName: 'Morales' } }, now())).toBe(helper);
+    // The address went back to our team in that same write, and the helper is told why.
+    const [again] = await db.select().from(addressVerifications).where(eq(addressVerifications.userId, helper));
+    expect(again).toMatchObject({ status: 'in_review', decidedAt: null, decidedByUserId: null });
+    expect((await getOnboardingPageData(db, helper, 'address', now()))?.verification.address).toMatchObject({ status: 'in_review', recheck: 'name_differs' });
+    const events = await db.select({ payload: outboxEvents.payload }).from(outboxEvents).where(and(eq(outboxEvents.type, 'verification.updated'), eq(outboxEvents.aggregateId, helper)));
+    expect(events.map((event) => event.payload)).toContainEqual({ userId: helper, track: 'address', outcome: 'recheck' });
+    expect(await db.select().from(auditLog).where(and(eq(auditLog.action, 'address.recheck'), eq(auditLog.targetId, helper)))).toHaveLength(1);
+    expect((await getOnboardingPageData(db, helper, 'done', now()))?.progress.bookable).toBe(false);
   });
 
   it('takes the services and the area before the headline, starting a draft profile (plan 9.11)', async () => {

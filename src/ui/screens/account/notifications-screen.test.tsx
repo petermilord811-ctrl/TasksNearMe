@@ -91,6 +91,7 @@ const copy: Record<NotificationType, RegExp> = {
   review_reminder: /left to review .* for/,
   saved_searches_digest: /new tasks? for your saved searches, including/,
   payment_refunded: /We refunded/,
+  address_recheck: /checking your home address again/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },

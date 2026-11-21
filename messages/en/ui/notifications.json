@@ -78,7 +78,8 @@
     "review_prompt": "How did it go with {actorName}? Leave a review for {title}",
     "review_reminder": "{days, plural, one {One day left} other {# days left}} to review {actorName} for {title}",
     "saved_searches_digest": "{count, plural, one {# new task} other {# new tasks}} for your saved searches, including {search}",
-    "payment_refunded": "We refunded {hasAmount, select, yes {{amount}} other {a payment}} for {title}"
+    "payment_refunded": "We refunded {hasAmount, select, yes {{amount}} other {a payment}} for {title}",
+    "address_recheck": "We're checking your home address again: the name on your ID differs from your account's"
   },
   "previews": {
     "group": "Notifications",

@@ -78,6 +78,8 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   saved_searches_digest: 'task_alerts',
   // Money back on its own (money review #8): a payment receipt, always by email.
   payment_refunded: 'payments',
+  // A verification step our team checks again (ab, 2026-11-21): account news, nothing to act on.
+  address_recheck: 'account',
 };
 
 /**
@@ -170,7 +172,7 @@ export const pushOn = (topic: NotificationTopic) => topic !== 'tips_and_news';
  * Never by text: nudges and receipts that can wait (texts cost money and feel intrusive). Asking for a review and its
  * reminder ride the bookings topic, whose texts are on by default; an automatic refund's notice is a receipt.
  */
-export const NO_SMS_TYPES: ReadonlySet<NotificationType> = new Set<NotificationType>(['review_prompt', 'review_reminder', 'payment_refunded']);
+export const NO_SMS_TYPES: ReadonlySet<NotificationType> = new Set<NotificationType>(['review_prompt', 'review_reminder', 'payment_refunded', 'address_recheck']);
 
 export const channelsFor = (type: NotificationType): readonly DeliveryChannel[] =>
   EMAIL_ONLY_TYPES.has(type) ? ['email'] : NO_SMS_TYPES.has(type) ? DELIVERY_CHANNELS.filter((channel) => channel !== 'sms') : DELIVERY_CHANNELS;

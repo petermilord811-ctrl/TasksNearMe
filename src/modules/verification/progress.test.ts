@@ -39,12 +39,18 @@ describe('helper onboarding', () => {
     expect(canOpenStep(fresh, 'identity')).toBe(false);
   });
 
-  it('shows the ID step in review while our team compares the photos, and keeps what comes after locked', () => {
+  it('shows the ID step in review while our team compares the photos, and opens the home address and payouts meanwhile (ab, 2026-11-21)', () => {
     const photosSent = { ...basics, phoneVerified: true, identity: { status: 'not_started' as const, cleared: false, captureInReview: true } };
-    expect(states(photosSent)).toMatchObject({ identity: 'in_review', address: 'locked', payout: 'locked' });
+    expect(states(photosSent)).toMatchObject({ identity: 'in_review', address: 'todo', payout: 'todo', background: 'locked', done: 'locked' });
     expect(computeOnboarding(photosSent).firstIncomplete).toBe('identity');
-    // Approved photos are not yet a verified ID: the provider's double check is what verifies.
-    expect(states({ ...photosSent, identity: { status: 'not_started', cleared: false, captureInReview: false } })).toMatchObject({ identity: 'todo', address: 'locked' });
+    expect(canOpenStep(photosSent, 'address')).toBe(true);
+    expect(canOpenStep(photosSent, 'payout')).toBe(true);
+    // Approved photos are not yet a verified ID (the provider's double check verifies), and the steps stay open.
+    expect(states({ ...photosSent, identity: { status: 'not_started', cleared: false, captureApproved: true } })).toMatchObject({ identity: 'todo', address: 'todo', payout: 'todo', background: 'locked' });
+    // Before any photos, they wait.
+    expect(states({ ...photosSent, identity: { status: 'not_started', cleared: false } })).toMatchObject({ identity: 'todo', address: 'locked', payout: 'locked' });
+    // Done ahead, they don't make the helper bookable before the ID is verified.
+    expect(computeOnboarding({ ...photosSent, address: verifiedAddress, payout: 'active' }).progress.bookable).toBe(false);
   });
 
   it('needs the helper agreement for the profile step to count', () => {

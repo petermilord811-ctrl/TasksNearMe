@@ -201,7 +201,8 @@
         "review_prompt": "It takes a minute. Reviews stay hidden until you've both written one, or for 14 days.",
         "review_reminder": "After that, reviews for this booking close. They stay hidden until you've both written one.",
         "saved_searches_digest": "Your saved searches page has each one, with its own filters and alerts.",
-        "payment_refunded": "It's back on the card you paid with in 5 to 10 business days, depending on your bank."
+        "payment_refunded": "It's back on the card you paid with in 5 to 10 business days, depending on your bank.",
+        "address_recheck": "There's nothing you need to do. We'll let you know when it's checked, usually within a day."
       },
       "lockedFooter": "Booking and payment emails are always on: they're your receipts and safety updates.",
       "optionalFooter": "You're getting this because {topic} emails are on.",
@@ -278,6 +279,7 @@
       "review_prompt": "How did it go with {actorName}? Leave a review for {title}.",
       "review_reminder": "{days, plural, one {One day left} other {# days left}} to review {actorName} for {title}.",
       "saved_searches_digest": "{count, plural, one {# new task} other {# new tasks}} for your saved searches, including {search}.",
+      "address_recheck": "We're checking your home address again: the name on your ID differs from the one on your account.",
       "payment_refunded": "We refunded {hasAmount, select, yes {{amount}} other {a payment}} for {title}: {refundFor, select, late {it came through after the booking had ended} second_tip {it was a second tip for the same booking} change {the change was paid after the booking had moved on} other {it wasn't owed}}."
     },
     "pushTitle": "TasksNearMe",

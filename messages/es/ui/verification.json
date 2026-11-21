@@ -197,6 +197,7 @@
     "moving": "¿Te mudaste? Envía un nuevo comprobante",
     "requested": "Nuestro equipo pidió un nuevo comprobante de tu domicilio. Envíalo abajo; tus ofertas están en pausa hasta que se apruebe.",
     "inReview": "Estamos revisando tu documento. Suele tardar uno o dos días, y mientras tanto puedes configurar tus pagos.",
+    "recheckNameDiffers": "La estamos revisando de nuevo porque el nombre de tu identificación es distinto del de tu cuenta. No tienes que hacer nada.",
     "sentAt": "Enviado el {date}.",
     "verified": "Tu domicilio está verificado.",
     "verifiedAt": "Tu domicilio se verificó el {date}.",
@@ -356,7 +357,7 @@
       "sending": "Enviando…",
       "sent": "Enviado. Te avisaremos cuando nuestro equipo haya revisado tus fotos."
     },
-    "inReview": "Estamos comparando tus fotos, normalmente en un día. Te avisaremos y después terminarás con una segunda verificación rápida.",
+    "inReview": "Estamos comparando tus fotos, normalmente en un día. Mientras tanto, puedes agregar tu domicilio y configurar tus pagos. Te avisaremos y después terminarás con una segunda verificación rápida.",
     "sentAt": "Enviado el {date}.",
     "checkStatus": "Ver el estado",
     "rejectionReasons": {
