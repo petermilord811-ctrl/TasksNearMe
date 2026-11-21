@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import sharp from 'sharp';
+import { freshHelper, retireFreshHelper, type FreshHelper } from './support/fresh-helper';
 import { devSignIn, untilShown } from './support/sign-in';
 
 /**
@@ -8,7 +9,8 @@ import { devSignIn, untilShown } from './support/sign-in';
  * Texas notice: the ID's front and back from files and a live selfie from the camera, which trust and
  * safety open with a logged reason and approve; then the provider's double check), the home address with
  * a proof of address, and payouts. Trust and safety then review the proof (opened with a logged reason)
- * and approve it, and Priya can send offers. Changes Priya's data: desktop only.
+ * and approve it, and Priya can send offers. It onboards a fresh copy of Priya each time (support/fresh-helper.ts), so
+ * a retry or a repeat starts over, and seeded Priya stays as the next test reads her. Desktop only.
  */
 
 // A camera for the live selfie: Chromium's fake device, with the permission granted.
@@ -26,21 +28,31 @@ const bill = () => sharp({ create: { width: 800, height: 1000, channels: 3, back
 /** A card-shaped photo, as a photo of an ID would arrive. */
 const card = () => sharp({ create: { width: 1000, height: 630, channels: 3, background: '#eef4fb' } }).png().toBuffer();
 
+/** The copy the onboarding test made: back to a draft nobody sees afterwards, passed or not. */
+let onboarded: FreshHelper | undefined;
+test.afterEach(async () => {
+  if (onboarded) await retireFreshHelper(onboarded);
+  onboarded = undefined;
+});
+
 test('a new helper finishes onboarding, staff verify the ID photos and the home address, and the helper becomes bookable', async ({ page, context, baseURL }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-desktop', 'changes shared data; desktop only');
   // Two staff reviews and two provider stand-ins: on a dev server that compiles each page on first use, it's long.
   test.setTimeout(600_000);
+  const helper = (onboarded = await freshHelper());
+  // Staff find this copy in their queues by its page (other runs' copies share the name).
+  const helperLink = () => page.getByRole('link', { name: /Priya S\./ }).and(page.locator(`[href*="/admin/users/${helper.id}"]`));
   // Address search uses the sample addresses, never Mapbox.
   await context.addCookies([{ name: 'tnm_geo_stand_in', value: '1', url: baseURL! }]);
   // The dev server compiles routes on first use; warm up the provider stand-ins before the flow needs them.
   for (const provider of ['identity', 'payout', 'background']) await page.request.get(`/dev/providers/${provider}`);
-  for (const path of ['/admin/verifications', '/admin/users/usr_priya', '/app/helper/onboarding/identity', '/app/helper/onboarding/address']) await page.request.get(path);
+  for (const path of ['/admin/verifications', `/admin/users/${helper.id}`, '/app/helper/onboarding/identity', '/app/helper/onboarding/address']) await page.request.get(path);
   // A draft profile isn't public yet.
-  expect((await page.goto('/helpers/priya-s'))?.status()).toBe(404);
-  await devSignIn(page, 'priya@example.test');
+  expect((await page.goto(`/helpers/${helper.handle}`))?.status()).toBe(404);
+  await devSignIn(page, helper.email);
 
-  // The profile in one flow (plan 9.11): What you do, Where you help, Introduce yourself. Priya's seeded profile has its
-  // area but no services, so the flow opens at What you do. Yard cleanup needs no background check.
+  // The profile in one flow (plan 9.11): What you do, Where you help, Introduce yourself. The copy, like seeded Priya, has
+  // her area but no services, so the flow opens at What you do. Yard cleanup needs no background check.
   await page.goto('/app/helper/onboarding/profile');
   await expect(page.getByRole('heading', { level: 2, name: 'What you do' })).toBeVisible();
   // Pressed again if the first press came before the page hydrated.
@@ -60,6 +72,9 @@ test('a new helper finishes onboarding, staff verify the ID photos and the home 
 
   // Introduce yourself, with the helper agreement
   await expect(page).toHaveURL(/\/onboarding\/profile#about$/);
+  // A part that opens takes focus to its heading a frame after the address changes (and scrolls up to it): typing waits
+  // for that, so the focus can't move off a field while it's filled.
+  await expect(page.getByRole('heading', { level: 2, name: 'Introduce yourself' })).toBeFocused();
   await page.getByLabel('Headline').fill('Careful yard help in North Loop');
   await page.getByLabel('About you', { exact: true }).fill('I rake, weed, and tidy yards carefully, and I bag everything for curbside pickup.');
   await page.getByRole('button', { name: 'Save and continue' }).click();
@@ -96,8 +111,8 @@ test('a new helper finishes onboarding, staff verify the ID photos and the home 
   await page.context().clearCookies();
   await staffSignIn(page, 'taylor@example.test');
   await page.goto('/admin/verifications?queue=identity');
-  await page.getByRole('link', { name: /Priya S\./ }).click();
-  await expect(page).toHaveURL(/\/admin\/users\/usr_priya$/, { timeout: 60_000 });
+  await helperLink().click();
+  await expect(page).toHaveURL(new RegExp(`/admin/users/${helper.id}$`), { timeout: 60_000 });
   const staffSection = page.getByRole('region', { name: 'Verification' });
   await staffSection.getByRole('button', { name: 'Open the photos' }).click();
   const openPhotos = page.getByRole('dialog', { name: 'Open the ID photos' });
@@ -118,7 +133,7 @@ test('a new helper finishes onboarding, staff verify the ID photos and the home 
 
   // ID check, stage 2: the double check through the provider stand-in
   await page.context().clearCookies();
-  await devSignIn(page, 'priya@example.test');
+  await devSignIn(page, helper.email);
   // Signing out dropped every cookie: address search keeps to the sample addresses.
   await context.addCookies([{ name: 'tnm_geo_stand_in', value: '1', url: baseURL! }]);
   await page.goto('/app/helper/onboarding/identity');
@@ -159,8 +174,8 @@ test('a new helper finishes onboarding, staff verify the ID photos and the home 
   await page.context().clearCookies();
   await staffSignIn(page, 'taylor@example.test');
   await page.goto('/admin/verifications?queue=address');
-  await page.getByRole('link', { name: /Priya S\./ }).click();
-  await expect(page).toHaveURL(/\/admin\/users\/usr_priya$/, { timeout: 60_000 });
+  await helperLink().click();
+  await expect(page).toHaveURL(new RegExp(`/admin/users/${helper.id}$`), { timeout: 60_000 });
   const section = page.getByRole('region', { name: 'Verification' });
   await section.getByRole('button', { name: 'Open the proof' }).click();
   const reveal = page.getByRole('dialog', { name: 'Open the proof of address' });
@@ -178,12 +193,12 @@ test('a new helper finishes onboarding, staff verify the ID photos and the home 
 
   // Priya: bookable, and the public profile is live with the address badge (never the address)
   await page.context().clearCookies();
-  await devSignIn(page, 'priya@example.test');
+  await devSignIn(page, helper.email);
   await page.goto('/app/helper/onboarding/done');
   await expect(page.getByText('You can make offers now')).toBeVisible();
-  const response = await page.goto('/helpers/priya-s');
+  const response = await page.goto(`/helpers/${helper.handle}`);
   expect(response?.status()).toBe(200);
-  await expect(page.getByRole('heading', { level: 1, name: 'Priya S.' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: helper.displayName })).toBeVisible();
   await expect(page.getByRole('button', { name: /Address verified/ })).toBeVisible();
   await expect(page.getByText('1234 Example Lane')).toHaveCount(0);
 });

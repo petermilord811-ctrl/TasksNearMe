@@ -1,12 +1,11 @@
 import type { APIRequestContext } from '@playwright/test';
-import { and, eq, inArray, like } from 'drizzle-orm';
+import { eq, inArray, like } from 'drizzle-orm';
 import { seedDatabase } from '../../../db/seeds/seed';
 import { offers } from '../../../src/modules/offers/schema';
-import { files, taskLocations, tasks } from '../../../src/modules/tasks/schema';
-import { helperServices, helperWorkSamples } from '../../../src/modules/profiles/schema';
-import { addressVerifications, backgroundChecks, identityCaptures, identityVerifications, payoutAccounts } from '../../../src/modules/verification/schema';
-import { agreements, passkeys } from '../../../src/modules/accounts/schema';
+import { taskLocations, tasks } from '../../../src/modules/tasks/schema';
+import { passkeys } from '../../../src/modules/accounts/schema';
 import { createDb } from '../../../src/platform/db/connect';
+import { clearHelperOnboarding } from './fresh-helper';
 
 /**
  * Before and after the app e2e projects run (setup and teardown), so the dev server they share never keeps
@@ -14,8 +13,8 @@ import { createDb } from '../../../src/platform/db/connect';
  * - removes tasks that earlier posting runs created (their titles start with "Assemble a bookshelf (app-"),
  *   so lists of recent tasks don't fill up with test data;
  * - removes offers on the shelves task, where the helper e2e sends one each run;
- * - resets Priya's onboarding (services, work samples, verification, our own ID check's photos), since e2e
- *   onboards her;
+ * - resets seeded Priya's onboarding (services, work samples, verification, our own ID check's photos), in case a
+ *   run left any (the onboarding e2e onboards a fresh copy of her: support/fresh-helper.ts);
  * - resets the seeded data (open tasks, offers, people), so tests that decline offers or cancel tasks
  *   can run again. The seed is idempotent; new accounts created by tests are left alone;
  * - clears the app's cached public pages (`POST /dev/cache`), which would still show the old data.
@@ -49,16 +48,7 @@ export async function resetE2eData(request: APIRequestContext): Promise<void> {
     // Priya (a draft helper in the seed) goes through onboarding in e2e: start her from scratch.
     const priya = 'usr_priya';
     await db.transaction(async (tx) => {
-      await tx.delete(helperServices).where(eq(helperServices.userId, priya));
-      await tx.delete(helperWorkSamples).where(eq(helperWorkSamples.userId, priya));
-      await tx.delete(identityVerifications).where(eq(identityVerifications.userId, priya));
-      // Our own ID check's photos and their file records (the encrypted files stay on the dev disk).
-      await tx.delete(identityCaptures).where(eq(identityCaptures.userId, priya));
-      await tx.delete(files).where(and(eq(files.ownerUserId, priya), inArray(files.kind, ['id_document', 'id_selfie'])));
-      await tx.delete(payoutAccounts).where(eq(payoutAccounts.userId, priya));
-      await tx.delete(backgroundChecks).where(eq(backgroundChecks.userId, priya));
-      await tx.delete(addressVerifications).where(eq(addressVerifications.userId, priya));
-      await tx.delete(agreements).where(eq(agreements.userId, priya));
+      await clearHelperOnboarding(tx, priya);
       // The passkey e2e adds one to Priya and removes it at the end; a run that failed between left it behind.
       await tx.delete(passkeys).where(eq(passkeys.userId, priya));
     });
