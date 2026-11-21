@@ -27,7 +27,7 @@ Rehearsed end to end on 2026-11-21, on the e2e build with its own database (swee
 
 1. **Sign in** at `/admin` with the two-step code.
 2. **Open `/admin/config` → Markets → "Gainesville, FL"** and check the card as in step 7 above.
-3. **Click "Take Gainesville live".** The dialog says what will happen. For example, in the rehearsal: "Gainesville opens to everyone. 254 people on its waitlist get one email that it's open, in their language."
+3. **Click "Take Gainesville live".** The dialog says what will happen. For example, in the rehearsal: "Gainesville opens to everyone. 252 people on its waitlist get one email that it's open, in their language. 6 people with an account there get one message that it's live: by email (unless they turned those off), in the bell and by push."
 4. **Write the reason** (at least 10 characters, kept in the audit log), for example "Launch day: Gainesville opens to everyone.", and **confirm** with "Take Gainesville live".
 5. **The card turns Live** at once: "Live since <time>, by <your name>", and "“We're open” email: Sent to 0, 254 still going out".
 6. **Watch the card** (reload it): about 100 emails a minute, one batch each minute from the job runner. The rehearsal sent 248 in 2 minutes 40 seconds and skipped 6, then the card read "Sent to 248 people". Who's skipped, and why:
@@ -49,7 +49,7 @@ Rehearsed end to end on 2026-11-21, on the e2e build with its own database (swee
 ### Who hears it
 
 - **The waitlist, by email only.** One email each, in the language of the page they joined from, with links to post a task or become a helper, the city's page and an unsubscribe link. The waitlist has no phone numbers, so nobody gets a text from it.
-- **Nobody with an account hears that Gainesville is live** (sweep J-L2, waiting on ab's decision): clients who signed up during pre-launch, and helpers who haven't finished their setup. Someone who joined the waitlist and later made an account is skipped by the waitlist email too. Until a launch message exists, tell them some other way (social, the community page).
+- **Accounts in Gainesville, once each, in their language** (J-L2): clients get "TasksNearMe is live in Gainesville. Post your first task, and helpers near you send offers.", and helpers not bookable yet get "…Finish setting up to start getting booked.", linked to their next setup step. It goes by email (the "News about your city" topic: on unless they turned it off, with its own unsubscribe), in the bell, and by push (held through quiet hours), never by text. Bookable helpers and staff hear nothing new. Someone on the waitlist who has an account here gets this message instead of the waitlist email. Going live again, after a pause or a pre-launch round trip, never repeats it. In the rehearsal, 6 accounts heard it, in English and Spanish.
 - **Helpers waiting for Gainesville** were already brought in and told when it moved to pre-launch. Going live tells them nothing new.
 
 ## If something goes wrong
@@ -88,6 +88,6 @@ where told_market_id = 'mkt_gainesville' and tell_status = 'failed';
 
 ## Copy for support
 
-- **"I was on the waitlist and didn't get an email."** "Thanks for waiting for us! TasksNearMe is now open in Gainesville. You can post a task at tasksnearme.com, or set up a helper profile. If you made an account before today, you won't get the waitlist email: everything is ready in your account."
+- **"I was on the waitlist and didn't get an email."** "Thanks for waiting for us! TasksNearMe is now open in Gainesville. You can post a task at tasksnearme.com, or set up a helper profile. If you made an account before today, the news came to your account instead (the bell, and by email unless you turned city news off): everything is ready there."
 - **"I signed up before today. Do I need to do anything?"** "No. Your account is ready: post a task, or finish your helper setup to start sending offers."
 - **Spanish:** "¡Gracias por esperarnos! TasksNearMe ya está abierto en Gainesville. Puedes publicar una tarea en tasksnearme.com o crear tu perfil de ayudante."
