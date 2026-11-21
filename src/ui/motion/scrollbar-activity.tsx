@@ -157,12 +157,14 @@ export function ScrollbarActivity() {
     const onScroll = (event: Event) => {
       const area = event.target === document ? root : event.target;
       if (!(area instanceof Element)) return;
-      if (!area.hasAttribute('data-scrolling')) area.setAttribute('data-scrolling', '');
+      // The page itself isn't marked: it has no native scrollbar (the floating thumb stands in), and a mark on <html> ran
+      // the thumb color's transition on the root, restyling every element on each frame of a scroll (speed on a phone).
+      if (area !== root && !area.hasAttribute('data-scrolling')) area.setAttribute('data-scrolling', '');
       window.clearTimeout(timers.get(area));
       timers.set(
         area,
         window.setTimeout(() => {
-          area.removeAttribute('data-scrolling');
+          if (area !== root) area.removeAttribute('data-scrolling');
           timers.delete(area);
           if (area === root) {
             pageScrolling = false;

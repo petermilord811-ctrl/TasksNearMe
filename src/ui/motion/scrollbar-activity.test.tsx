@@ -46,7 +46,8 @@ describe('ScrollbarActivity: the page scrollbar', () => {
       vi.advanceTimersByTime(1);
     });
     expect(bar.hasAttribute('data-active')).toBe(true);
-    expect(document.documentElement.hasAttribute('data-scrolling')).toBe(true);
+    // The page isn't marked (no native scrollbar there; a mark restyled every element as the root's transition ran).
+    expect(document.documentElement.hasAttribute('data-scrolling')).toBe(false);
     const track = 800 - 8;
     const size = track / 5;
     expect(parseFloat(thumb.style.height)).toBeCloseTo(size, 1);
