@@ -5,7 +5,10 @@
   "sideEffects": [
     "**/*.css",
     "./src/app/**",
-    "./src/ui/**",
+    "./src/ui/**/*.tsx",
+    "./src/ui/landing/**",
+    "./src/ui/previews/**",
+    "./src/ui/theme/**",
     "./src/modules/**",
     "./src/platform/**",
     "./src/integrations/**",
