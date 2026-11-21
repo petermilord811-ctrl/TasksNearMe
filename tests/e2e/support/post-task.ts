@@ -23,7 +23,6 @@ export async function postFurnitureTask(page: Page, title: string, options: { in
   await page.getByLabel('What needs assembling?').selectOption('bookshelf');
   await page.getByLabel('Number of items', { exact: true }).fill('1');
   await next();
-  await next(); // photos are optional
   await page.getByRole('radio', { name: 'In person' }).check();
   await page.getByRole('combobox', { name: 'Search your address' }).fill('1240 example');
   await page.getByRole('option', { name: /1240 Example Lane/ }).click();
@@ -37,7 +36,7 @@ export async function postFurnitureTask(page: Page, title: string, options: { in
   await page.getByRole('radio', { name: 'Fixed price' }).check();
   await page.getByLabel('Task price ($)').fill(String(options.priceDollars ?? 60));
   await next();
-  await expect(page.getByText('Step 8 of 8', { exact: false })).toBeVisible();
+  await expect(page.getByText('Step 7 of 7', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Post task' }).click();
   await expect(page).toHaveURL(/\/app\/tasks\/tsk_[0-9a-f]+$/);
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();

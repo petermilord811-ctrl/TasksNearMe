@@ -66,7 +66,7 @@ test('the posting wizard: Back and Next never cover the field being typed in, or
   await expect(page.getByRole('heading', { level: 1, name: 'Post a task' })).toBeVisible();
   await page.getByRole('radio', { name: /Furniture assembly/ }).check();
   await page.getByRole('button', { name: 'Next', exact: true }).click();
-  await expect(page.getByText('Step 2 of 8', { exact: false })).toBeVisible();
+  await expect(page.getByText('Step 2 of 7', { exact: false })).toBeVisible();
   const title = page.getByLabel('Task title');
   await title.fill('Assemble a bookshelf for the hallway');
   const description = page.getByRole('textbox', { name: 'What do you need help with?' });

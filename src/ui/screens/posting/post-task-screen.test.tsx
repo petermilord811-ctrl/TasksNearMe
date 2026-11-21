@@ -23,10 +23,10 @@ describe('posting wizard', () => {
   it('takes the complete desk draft through every step without posting until Post task is pressed', async () => {
     const user = userEvent.setup();
     const { handlers } = mount({ initialStep: 'category' });
-    const steps = ['Describe', 'Details', 'Photos', 'Where', 'When', 'Budget', 'Review and post'];
+    const steps = ['Describe', 'Details', 'Where', 'When', 'Budget', 'Review and post'];
     for (const [index, step] of steps.entries()) {
       await user.click(screen.getByRole('button', { name: 'Next' }));
-      expect(await screen.findByText(`Step ${index + 2} of 8 · ${step}`)).toBeInTheDocument();
+      expect(await screen.findByText(`Step ${index + 2} of 7 · ${step}`)).toBeInTheDocument();
       expect(handlers.onPost).not.toHaveBeenCalled();
     }
     await user.click(screen.getByRole('button', { name: 'Post task' }));
@@ -40,7 +40,7 @@ describe('posting wizard', () => {
     await user.keyboard('{Enter}');
     // user-event counts the radio/checkbox inputs too, so emulate the browser's implicit submit.
     fireEvent.submit(screen.getByRole('form', { name: messages.postTask.title }));
-    expect(await screen.findByText('Step 8 of 8 · Review and post')).toBeInTheDocument();
+    expect(await screen.findByText('Step 7 of 7 · Review and post')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Post task' })).toBeEnabled();
     expect(handlers.onPost).not.toHaveBeenCalled();
   });
@@ -50,7 +50,7 @@ describe('posting wizard', () => {
     const { handlers } = mount({ initialStep: 'budget' });
     const next = screen.getByRole('button', { name: 'Next' });
     await user.click(next);
-    expect(await screen.findByText('Step 8 of 8 · Review and post')).toBeInTheDocument();
+    expect(await screen.findByText('Step 7 of 7 · Review and post')).toBeInTheDocument();
     const form = screen.getByRole('form', { name: messages.postTask.title });
     await act(async () => {
       fireEvent.submit(form);
@@ -69,27 +69,27 @@ describe('posting wizard', () => {
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(screen.getByText(messages.forms.fieldErrors.required)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('textbox', { name: messages.postTask.describe.title })).toHaveFocus());
-    expect(screen.getByText('Step 2 of 8 · Describe')).toBeInTheDocument();
+    expect(screen.getByText('Step 2 of 7 · Describe')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Back' }));
-    expect(screen.getByText('Step 1 of 8 · Category')).toBeInTheDocument();
+    expect(screen.getByText('Step 1 of 7 · Category')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Next' }));
     await user.type(screen.getByRole('textbox', { name: messages.postTask.describe.title }), deskDraft.title);
     await user.click(screen.getByRole('button', { name: 'Next' }));
-    expect(await screen.findByText('Step 3 of 8 · Details')).toBeInTheDocument();
+    expect(await screen.findByText('Step 3 of 7 · Details')).toBeInTheDocument();
   });
 
   it('starts a supplied category at describe and allows Back to category', async () => {
     const user = userEvent.setup();
     mount({ data: { ...postTaskPageData, initialCategory: 'furniture-assembly' }, initialValues: undefined });
-    expect(screen.getByText('Step 2 of 8 · Describe')).toBeInTheDocument();
+    expect(screen.getByText('Step 2 of 7 · Describe')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Back' }));
-    expect(screen.getByText('Step 1 of 8 · Category')).toBeInTheDocument();
+    expect(screen.getByText('Step 1 of 7 · Category')).toBeInTheDocument();
     expect(screen.queryByText(messages.forms.fieldErrors.required)).not.toBeInTheDocument();
   });
 
   it("carries someone's own words in from the landing page, into the one description field", () => {
     mount({ data: { ...postTaskPageData, initialCategory: 'furniture-assembly', initialDescription: 'Assemble an IKEA desk' }, initialValues: undefined, persistDraft: false });
-    expect(screen.getByText('Step 2 of 8 · Describe')).toBeInTheDocument();
+    expect(screen.getByText('Step 2 of 7 · Describe')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: messages.postTask.describe.description })).toHaveValue('Assemble an IKEA desk');
     expect(screen.getAllByRole('textbox').filter((box) => box.tagName === 'TEXTAREA')).toHaveLength(1);
   });
@@ -115,7 +115,7 @@ describe('posting wizard', () => {
   it('posts a finished task again in two taps: the review with its draft and saved address, then Post task', async () => {
     const user = userEvent.setup();
     const { handlers } = mount({ data: postTaskRepeatData, initialValues: undefined, initialAddress: undefined });
-    expect(screen.getByText('Step 8 of 8 · Review and post')).toBeInTheDocument();
+    expect(screen.getByText('Step 7 of 7 · Review and post')).toBeInTheDocument();
     expect(screen.getByText(/^Posting “Assemble a desk \(flat-pack, 1 item\)” again\. Everything from last time is filled in except photos/)).toBeVisible();
     expect(screen.getAllByText(/1234 Example Lane/).length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: 'Post task' }));
@@ -124,7 +124,7 @@ describe('posting wizard', () => {
 
   it('opens Post again on Where to search again when the old address was deleted', () => {
     mount({ data: postTaskRepeatAddressDeletedData, initialValues: undefined, initialAddress: undefined });
-    expect(screen.getByText('Step 5 of 8 · Where')).toBeInTheDocument();
+    expect(screen.getByText('Step 4 of 7 · Where')).toBeInTheDocument();
     expect(screen.getByText(/The old address was deleted 180 days after your last booking there, so search for it again\./)).toBeVisible();
   });
 
@@ -175,7 +175,7 @@ describe('posting wizard', () => {
     expect(await screen.findByText(/That's under \$25\.00, the usual minimum for this category/)).toBeInTheDocument();
     expect(screen.queryByText(/Typical in/)).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Next' }));
-    expect(await screen.findByText('Step 8 of 8 · Review and post')).toBeInTheDocument();
+    expect(await screen.findByText('Step 7 of 7 · Review and post')).toBeInTheDocument();
   });
 
   it('blocks an invalid money edit and passes parsed cents to the quote', async () => {
@@ -185,7 +185,7 @@ describe('posting wizard', () => {
     await user.clear(input); await user.type(input, '12.345');
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(screen.getByText(messages.forms.fieldErrors.invalid)).toBeInTheDocument();
-    expect(screen.getByText('Step 7 of 8 · Budget')).toBeInTheDocument();
+    expect(screen.getByText('Step 6 of 7 · Budget')).toBeInTheDocument();
     await user.clear(input); await user.type(input, '$60');
     await user.click(screen.getByRole('button', { name: 'Next' }));
     await waitFor(() => expect(handlers.onQuote).toHaveBeenCalledWith({ budget: { type: 'fixed', priceCents: 6000 }, expenseAllowanceCents: 0 }));
@@ -218,7 +218,7 @@ describe('posting wizard', () => {
     await user.selectOptions(screen.getByLabelText('Window ends'), '08:00');
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(await screen.findByText('Pick a start at least 3 hours from now.')).toBeInTheDocument();
-    expect(screen.getByText('Step 6 of 8 · When')).toBeInTheDocument();
+    expect(screen.getByText('Step 5 of 7 · When')).toBeInTheDocument();
   });
 
   it('shows a validation summary for an unrecognized server field', async () => {
@@ -234,7 +234,7 @@ describe('posting wizard', () => {
     const user = userEvent.setup();
     mount({ initialStep: 'review', handlers: { ...fakePostTaskHandlers, onPost: fakeHandler(postTaskResults.tooSoon, 0) } });
     await user.click(screen.getByRole('button', { name: 'Post task' }));
-    expect(await screen.findByText('Step 6 of 8 · When')).toBeInTheDocument();
+    expect(await screen.findByText('Step 5 of 7 · When')).toBeInTheDocument();
     expect(await screen.findByText('Pick a start at least 3 hours from now.')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByLabelText('Window starts')).toHaveFocus());
     expect(navigation.push).not.toHaveBeenCalled();
@@ -257,7 +257,7 @@ describe('posting wizard', () => {
     await user.click(screen.getByRole('button', { name: 'Next' }));
     first.unmount();
     const second = mount({ persistDraft: true });
-    expect(await screen.findByText('Step 3 of 8 · Details')).toBeInTheDocument();
+    expect(await screen.findByText('Step 3 of 7 · Details')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Back' }));
     expect(screen.getByRole('textbox', { name: messages.postTask.describe.title })).toHaveValue('Assemble my flat-pack desk');
     const raw = sessionStorage.getItem(draftStorageKey('austin'))!;
@@ -290,7 +290,15 @@ describe('posting wizard', () => {
     sessionStorage.setItem(draftStorageKey('austin'), JSON.stringify({ values: { ...deskDraft, categorySlug: undefined }, step: 'review' }));
     mount({ persistDraft: true });
     expect(await screen.findByText('We kept your draft from earlier.')).toBeInTheDocument();
-    expect(screen.getByText('Step 1 of 8 · Category')).toBeInTheDocument();
+    expect(screen.getByText('Step 1 of 7 · Category')).toBeInTheDocument();
+  });
+
+  it('asks for photos on the words step, under the description, in seven steps (J-V5)', () => {
+    mount({ initialStep: 'describe' });
+    expect(screen.getByText('Step 2 of 7 · Describe')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: messages.postTask.describe.title })).toBeInTheDocument();
+    expect(screen.getByText(messages.postTask.photos.label)).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: messages.postTask.navigation }).querySelectorAll('li')).toHaveLength(7);
   });
 
   it('makes each step a history entry, so the phone’s Back and Forward and the page’s Back move between steps (J-C9)', async () => {
@@ -298,21 +306,21 @@ describe('posting wizard', () => {
     mount({ initialStep: 'describe' });
     await waitFor(() => expect(new URL(window.location.href).searchParams.get('step')).toBe('describe'));
     await user.click(screen.getByRole('button', { name: 'Next' }));
-    expect(await screen.findByText('Step 3 of 8 · Details')).toBeInTheDocument();
+    expect(await screen.findByText('Step 3 of 7 · Details')).toBeInTheDocument();
     expect(new URL(window.location.href).searchParams.get('step')).toBe('details');
     await user.click(screen.getByRole('button', { name: 'Next' }));
-    expect(await screen.findByText('Step 4 of 8 · Photos')).toBeInTheDocument();
+    expect(await screen.findByText('Step 4 of 7 · Where')).toBeInTheDocument();
 
     act(() => window.history.back());
-    expect(await screen.findByText('Step 3 of 8 · Details')).toBeInTheDocument();
+    expect(await screen.findByText('Step 3 of 7 · Details')).toBeInTheDocument();
     act(() => window.history.forward());
-    expect(await screen.findByText('Step 4 of 8 · Photos')).toBeInTheDocument();
+    expect(await screen.findByText('Step 4 of 7 · Where')).toBeInTheDocument();
     // The page's own Back goes back through those entries too, keeping what was typed.
     await user.click(screen.getByRole('button', { name: 'Back' }));
-    expect(await screen.findByText('Step 3 of 8 · Details')).toBeInTheDocument();
+    expect(await screen.findByText('Step 3 of 7 · Details')).toBeInTheDocument();
     await waitFor(() => expect(new URL(window.location.href).searchParams.get('step')).toBe('details'));
     await user.click(screen.getByRole('button', { name: 'Back' }));
-    expect(await screen.findByText('Step 2 of 8 · Describe')).toBeInTheDocument();
+    expect(await screen.findByText('Step 2 of 7 · Describe')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: messages.postTask.describe.title })).toHaveValue(deskDraft.title);
   });
 
@@ -321,9 +329,9 @@ describe('posting wizard', () => {
     sessionStorage.setItem(draftStorageKey('austin'), JSON.stringify({ values: deskDraft, step: 'photos' }));
     mount({ persistDraft: true, initialValues: undefined });
     expect(await screen.findByText('We kept your draft from earlier.')).toBeInTheDocument();
-    expect(screen.getByText('Step 4 of 8 · Photos')).toBeInTheDocument();
+    expect(screen.getByText('Step 2 of 7 · Describe')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Start over' }));
-    expect(await screen.findByText('Step 1 of 8 · Category')).toBeInTheDocument();
+    expect(await screen.findByText('Step 1 of 7 · Category')).toBeInTheDocument();
     expect(screen.queryByText('We kept your draft from earlier.')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1 })).toHaveFocus();
     await waitFor(() => expect(JSON.parse(sessionStorage.getItem(draftStorageKey('austin')) ?? '{"values":{"title":""}}').values.title).toBe(''));

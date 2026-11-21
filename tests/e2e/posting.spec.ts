@@ -40,9 +40,6 @@ test('a poster posts a task with the wizard and finds it on the board', async ({
   await page.getByLabel('Number of items', { exact: true }).fill('1');
   await next();
 
-  // Photos: optional
-  await next();
-
   // Where: an in-area address shows its neighborhood only
   await page.getByRole('radio', { name: 'In person' }).check();
   await page.getByRole('combobox', { name: 'Search your address' }).fill('1240 example');
@@ -63,7 +60,7 @@ test('a poster posts a task with the wizard and finds it on the board', async ({
   await next();
 
   // Review: nothing is posted until "Post task" (UI-024); the quote comes from the fee engine ($60 + $6 fee)
-  await expect(page.getByText('Step 8 of 8', { exact: false })).toBeVisible();
+  await expect(page.getByText('Step 7 of 7', { exact: false })).toBeVisible();
   await expect(page).toHaveURL(/\/app\/tasks\/new(\?step=[a-z]+)?$/);
   await expect(page.getByText('$66.00').first()).toBeVisible();
   await page.getByRole('button', { name: 'Post task' }).click();
@@ -106,7 +103,6 @@ test('a formatted description, an address outside our cities and a price under t
   await page.getByLabel('What needs assembling?').selectOption('bookshelf');
   await page.getByLabel('Number of items', { exact: true }).fill('1');
   await next();
-  await next();
 
   // Where: Waco is outside Austin's service area, and can be posted; helpers see the city.
   await page.getByRole('radio', { name: 'In person' }).check();
@@ -130,7 +126,7 @@ test('a formatted description, an address outside our cities and a price under t
   await page.getByLabel('Task price ($)').fill('15');
   await expect(page.getByText(/That's under \$25\.00, the usual minimum for this category/)).toBeVisible();
   await next();
-  await expect(page.getByText('Step 8 of 8', { exact: false })).toBeVisible();
+  await expect(page.getByText('Step 7 of 7', { exact: false })).toBeVisible();
   await expect(page.getByRole('listitem').filter({ hasText: 'Unpack the box' })).toBeVisible();
   await page.getByRole('button', { name: 'Post task' }).click();
   await expect(page).toHaveURL(/\/app\/tasks\/tsk_[0-9a-f]+$/, { timeout: 30_000 });
@@ -150,7 +146,7 @@ test('a poster starts from an example: its words, its questions and its details,
   await devSignIn(page, 'maya@example.test');
   await expect(page).toHaveURL(/\/app$/);
   await page.goto('/app/tasks/new?template=yard-leaves');
-  await expect(page.getByText('Step 2 of 8', { exact: false })).toBeVisible();
+  await expect(page.getByText('Step 2 of 7', { exact: false })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Rake leaves' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('Task title')).toHaveValue('Rake and bag leaves');
   await expect(page.getByRole('textbox', { name: 'What do you need help with?' })).toHaveValue(/^Rake the yard and bag the leaves for curbside pickup\.\n- Front yard, back yard or both:/);
@@ -160,7 +156,7 @@ test('a poster starts from an example: its words, its questions and its details,
 
   // An example the market doesn't offer is ignored: the wizard starts at the category step as usual.
   await page.goto('/app/tasks/new?template=tv-mounting');
-  await expect(page.getByText('Step 1 of 8', { exact: false })).toBeVisible();
+  await expect(page.getByText('Step 1 of 7', { exact: false })).toBeVisible();
 });
 
 test('posting without a verified phone goes through phone verification first', async ({ page }) => {
@@ -181,30 +177,30 @@ test("the phone's Back and Forward move between the wizard's steps, and a kept d
 
   await page.getByRole('radio', { name: /Furniture assembly/ }).check();
   await next();
-  await step('Step 2 of 8');
+  await step('Step 2 of 7');
   await page.getByLabel('Task title').fill('Assemble a bookshelf for the hallway');
   await page.getByRole('textbox', { name: 'What do you need help with?' }).fill('Flat-pack bookshelf, about 30 parts. The box is in the hallway.');
   await next();
-  await step('Step 3 of 8');
+  await step('Step 3 of 7');
   await expect(page).toHaveURL(/[?&]step=details/);
 
   // The phone's Back: the step before, with what was typed; Forward: back on Details. No reload either way.
   await page.goBack();
-  await step('Step 2 of 8');
+  await step('Step 2 of 7');
   await expect(page.getByLabel('Task title')).toHaveValue('Assemble a bookshelf for the hallway');
   await page.goForward();
-  await step('Step 3 of 8');
+  await step('Step 3 of 7');
   // A reload keeps the step.
   await page.reload();
-  await step('Step 3 of 8');
+  await step('Step 3 of 7');
 
   // Leaving and coming back: the draft is kept, and says so; Start over begins again.
   await page.goto('/app');
   await page.goto('/app/tasks/new');
-  await step('Step 3 of 8');
+  await step('Step 3 of 7');
   await expect(page.getByText('We kept your draft from earlier.')).toBeVisible();
   await page.getByRole('button', { name: 'Start over' }).click();
-  await step('Step 1 of 8');
+  await step('Step 1 of 7');
   await expect(page.getByText('We kept your draft from earlier.')).toHaveCount(0);
   await expect(page.getByRole('radio', { name: /Furniture assembly/ })).not.toBeChecked();
 });

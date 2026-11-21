@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { FormProvider, useForm, useWatch, type FieldErrors, type FieldPath, type DefaultValues } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArrowLeft, ArrowRight, Check, Lock, MessagesSquare, Repeat } from 'lucide-react';
-import { createTaskDraftSchema, findTaskTemplate, POST_TASK_STEPS, routes, type ActionResult, type AddressSuggestion, type AiTaskDraft, type Photo, type PostTaskHandlers, type PostTaskPageData, type PostTaskStep, type TaskDraftInput } from '@/contracts';
+import { createTaskDraftSchema, currentPostTaskStep, findTaskTemplate, POST_TASK_STEPS, routes, type ActionResult, type AddressSuggestion, type AiTaskDraft, type Photo, type PostTaskHandlers, type PostTaskPageData, type PostTaskStep, type TaskDraftInput } from '@/contracts';
 import { BotCheckField, useBotCheck } from '@/ui/components/forms/bot-check';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Button } from '@/ui/primitives/button';
@@ -41,8 +41,9 @@ export interface PostTaskScreenProps {
 }
 
 const stepFields: Record<PostTaskStep, FieldPath<TaskDraftInput>[]> = {
-  category: ['categorySlug'], describe: ['title', 'description'], details: ['details'],
-  photos: ['photoIds'], where: ['location'], when: ['schedule'], budget: ['budget', 'expenseAllowance'], review: [],
+  // Photos are optional and sit under the words (J-V5).
+  category: ['categorySlug'], describe: ['title', 'description', 'photoIds'], details: ['details'],
+  where: ['location'], when: ['schedule'], budget: ['budget', 'expenseAllowance'], review: [],
 };
 
 function stepForField(name: string): PostTaskStep | undefined {
@@ -238,9 +239,8 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
     if (!ready) return;
     recordStep(stepRef.current, false);
     const onPopState = () => {
-      const wanted = new URL(window.location.href).searchParams.get('step');
-      if (!wanted || !(POST_TASK_STEPS as readonly string[]).includes(wanted)) return;
-      const target = wanted as PostTaskStep;
+      const target = currentPostTaskStep(new URL(window.location.href).searchParams.get('step'));
+      if (!target) return;
       stepsPushed.current = POST_TASK_STEPS.indexOf(target) < POST_TASK_STEPS.indexOf(stepRef.current) ? Math.max(0, stepsPushed.current - 1) : stepsPushed.current + 1;
       setInvalid(false); setResult(undefined); setFocusField(undefined); setStep(target); heading.current?.focus();
     };
@@ -347,7 +347,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
         <h1 ref={heading} tabIndex={-1} className="font-heading text-2xl font-bold outline-none md:text-3xl">{t('title')}</h1>
         {/* The intro on the first step only: after that, every step's form starts right under the progress. */}
         {index === 0 && <p className="text-muted-foreground">{t('intro')}</p>}
-        <ol aria-label={t('navigation')} className="grid grid-cols-8 gap-1.5">
+        <ol aria-label={t('navigation')} className="grid grid-cols-7 gap-1.5">
           {POST_TASK_STEPS.map((item, itemIndex) => <li key={item} aria-current={item === step ? 'step' : undefined} className="min-w-0">
             <span className={cn('block h-1.5 rounded-full transition-colors duration-500 ease-[var(--ease-out)]', itemIndex < index ? 'bg-primary/70' : itemIndex === index ? 'bg-primary' : 'bg-foreground/[0.08] dark:bg-white/[0.1]')} />
             <span className="sr-only">{t(`steps.${item}`)}</span>
@@ -377,9 +377,12 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
       <fieldset disabled={pending || !!result?.ok} className="min-w-0 flex-1 space-y-6">
         <legend className="sr-only">{t(`steps.${step}`)}</legend>
         {step === 'category' && <CategoryStep data={data} />}
-        {step === 'describe' && <DescribeStep data={data} handlers={handlers} initialSuggestion={initialSuggestion} autoDraft={autoDraft} onAutoDraftStarted={autoDraftStarted} />}
+        {step === 'describe' && <div className="space-y-8">
+          <DescribeStep data={data} handlers={handlers} initialSuggestion={initialSuggestion} autoDraft={autoDraft} onAutoDraftStarted={autoDraftStarted} />
+          {/* Photos under the words, one step fewer (J-V5): optional, and helpers price better with them. */}
+          <div className="border-t border-foreground/[0.07] pt-6 dark:border-white/[0.06]"><PhotosStep data={data} handlers={handlers} photos={photos} onPhotosChange={setPhotos} onBusyChange={setUploading} /></div>
+        </div>}
         {step === 'details' && values.categorySlug && <DetailsStep category={values.categorySlug} />}
-        {step === 'photos' && <PhotosStep data={data} handlers={handlers} photos={photos} onPhotosChange={setPhotos} onBusyChange={setUploading} />}
         {step === 'where' && <LocationStep data={data} handlers={handlers} selectedAddress={address} onAddressChange={setAddress} initialSuggestions={initialSuggestions} />}
         {step === 'when' && <ScheduleStep data={data} />}
         {step === 'budget' && <BudgetStep data={data} />}

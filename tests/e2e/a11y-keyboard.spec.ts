@@ -148,7 +148,6 @@ test('keyboard only: post a task, a helper offers, the client books and pays, th
   await chooseOption(page, page.getByLabel('What needs assembling?'), 'bookshelf');
   await typeInto(page, page.getByLabel('Number of items', { exact: true }), '1');
   await press(page, next);
-  await press(page, next); // Photos are optional.
 
   await chooseRadio(page, page.getByRole('radio', { name: 'In person' }));
   await typeInto(page, page.getByRole('combobox', { name: 'Search your address' }), '1240 example');

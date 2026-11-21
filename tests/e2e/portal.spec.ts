@@ -98,7 +98,6 @@ test('a neighbor asks in the composer, then turns the question into a task that 
     await page.getByLabel('What needs assembling?').selectOption('bookshelf');
     await page.getByLabel('Number of items', { exact: true }).fill('1');
     await next();
-    await next(); // photos are optional
     await page.getByRole('radio', { name: 'In person' }).check();
     await page.getByRole('combobox', { name: 'Search your address' }).fill('1240 example');
     await page.getByRole('option', { name: /1240 Example Lane/ }).click();

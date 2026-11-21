@@ -1,4 +1,4 @@
-import { CATEGORY_SLUGS, POST_TASK_STEPS, type AddressSuggestion, type PostTaskStep, type TaskDraftInput } from '@/contracts';
+import { CATEGORY_SLUGS, currentPostTaskStep, type AddressSuggestion, type PostTaskStep, type TaskDraftInput } from '@/contracts';
 
 export const draftStorageKey = (market: string) => `tasksnearme:post-task:${market}:v1`;
 
@@ -11,7 +11,8 @@ const number = (value: unknown) => typeof value === 'number' && Number.isFinite(
 /** Check storage structure, not task validity: unfinished drafts must survive a refresh. */
 export function readStoredDraft(raw: string): StoredTaskDraft | undefined {
   const saved: unknown = JSON.parse(raw);
-  if (!object(saved) || !POST_TASK_STEPS.includes(saved.step as PostTaskStep) || !object(saved.values)) return;
+  const step = object(saved) ? currentPostTaskStep(saved.step) : undefined;
+  if (!object(saved) || !step || !object(saved.values)) return;
   const value = saved.values;
   if (value.categorySlug !== undefined && !CATEGORY_SLUGS.includes(value.categorySlug as TaskDraftInput['categorySlug'])) return;
   if (typeof value.title !== 'string' || typeof value.description !== 'string' || !object(value.details)) return;
@@ -30,5 +31,5 @@ export function readStoredDraft(raw: string): StoredTaskDraft | undefined {
     address = saved.address as unknown as AddressSuggestion;
   }
   const requestKey = typeof saved.requestKey === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(saved.requestKey) ? saved.requestKey : undefined;
-  return { values: value as TaskDraftInput, step: saved.step as PostTaskStep, address, ...(requestKey ? { requestKey } : {}) };
+  return { values: value as TaskDraftInput, step, address, ...(requestKey ? { requestKey } : {}) };
 }

@@ -12,8 +12,18 @@ import type { PriceBreakdown, PricingInput } from './money';
  * person moves through the steps; the app validates it again and creates the task on "Post".
  */
 
-export const POST_TASK_STEPS = ['category', 'describe', 'details', 'photos', 'where', 'when', 'budget', 'review'] as const;
+/** Photos are part of the words step (visitor-to-first-post walk, J-V5): seven steps, where there were eight. */
+export const POST_TASK_STEPS = ['category', 'describe', 'details', 'where', 'when', 'budget', 'review'] as const;
 export type PostTaskStep = (typeof POST_TASK_STEPS)[number];
+
+/**
+ * A step a saved draft or a link may still name, from before photos joined the words step (J-V5), and where it opens
+ * now. Anything else that isn't a step is ignored.
+ */
+export function currentPostTaskStep(value: unknown): PostTaskStep | undefined {
+  if (value === 'photos') return 'describe';
+  return (POST_TASK_STEPS as readonly unknown[]).includes(value) ? (value as PostTaskStep) : undefined;
+}
 
 // ---- Category details --------------------------------------------------------------------------
 

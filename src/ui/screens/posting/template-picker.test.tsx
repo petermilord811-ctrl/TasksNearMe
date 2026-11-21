@@ -84,7 +84,7 @@ describe('Start from an example', () => {
 
   it('opens from an example (?template=) on the describe step, filled in and saying so', () => {
     mount({ data: postTaskFromTemplateData, initialStep: undefined, initialValues: undefined });
-    expect(screen.getByText(/Step 2 of 8/)).toBeInTheDocument();
+    expect(screen.getByText(/Step 2 of 7/)).toBeInTheDocument();
     expect(title()).toHaveValue(example('furniture-desk').title);
     expect(description()).toHaveValue(example('furniture-desk').description);
     expect(screen.getByRole('button', { name: example('furniture-desk').label })).toHaveAttribute('aria-pressed', 'true');

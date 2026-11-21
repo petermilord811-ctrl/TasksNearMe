@@ -77,26 +77,25 @@ async function wizardToReview(page: Page, title: string) {
     await expect(page.getByText(step, { exact: false })).toBeVisible({ timeout: 30_000 });
   };
   await page.getByRole('radio', { name: /Furniture assembly/ }).check();
-  await next('Step 2 of 8');
+  await next('Step 2 of 7');
   await page.getByLabel('Task title').fill(title);
   await page.getByRole('textbox', { name: 'What do you need help with?' }).fill('Flat-pack bookshelf, about 30 parts. The box is in the hallway.');
-  await next('Step 3 of 8');
+  await next('Step 3 of 7');
   await page.getByLabel('What needs assembling?').selectOption('bookshelf');
   await page.getByLabel('Number of items', { exact: true }).fill('1');
-  await next('Step 4 of 8');
-  await next('Step 5 of 8');
+  await next('Step 4 of 7');
   await page.getByRole('radio', { name: 'In person' }).check();
   await page.getByRole('combobox', { name: 'Search your address' }).fill('1240 example');
   await page.getByRole('option', { name: /1240 Example Lane/ }).click();
-  await next('Step 6 of 8');
+  await next('Step 5 of 7');
   await page.getByLabel('Date').fill(marketDate(5));
   await page.getByRole('radio', { name: 'Choose a time window' }).check();
   await page.getByLabel('Window starts').selectOption('10:00');
   await page.getByLabel('Window ends').selectOption('12:00');
-  await next('Step 7 of 8');
+  await next('Step 6 of 7');
   await page.getByRole('radio', { name: 'Fixed price' }).check();
   await page.getByLabel('Task price ($)').fill('60');
-  await next('Step 8 of 8');
+  await next('Step 7 of 7');
 }
 
 test('a post whose answer never arrived, posted again, is one task (J-N1)', async ({ page, context, baseURL }) => {
