@@ -249,6 +249,37 @@ describe('ThreadScreen', () => {
     expect(screen.queryByRole('link', { name: 'Load earlier messages' })).toBeNull();
   });
 
+  it('keeps the reader in place even when their last scroll hasn’t been heard yet (MN11’s flake under load)', () => {
+    let height = 900;
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(() => height);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(300);
+    const latest = { ...deskBookingThreadPageData, messages: deskBookingThreadPageData.messages.slice(2), earlier: { from: 'msg_1' } };
+    const view = thread(latest);
+    const log = screen.getByRole('log');
+    // Opened at the bottom, and that scroll was heard.
+    log.scrollTop = 600;
+    fireEvent.scroll(log);
+    // The reader goes up to "Load earlier messages", but the earlier ones render before that scroll's event arrives.
+    log.scrollTop = 0;
+    height = 1300;
+    view.rerender(threadView(deskBookingThreadPageData));
+    expect(log.scrollTop).toBe(400);
+  });
+
+  it('doesn’t pull a reader who just scrolled up back down when a message arrives before that scroll is heard', () => {
+    let height = 900;
+    vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(() => height);
+    vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(300);
+    const view = thread(closedThreadPageData);
+    const log = screen.getByRole('log');
+    log.scrollTop = 600;
+    fireEvent.scroll(log);
+    log.scrollTop = 100;
+    height = 1100;
+    view.rerender(threadView({ ...closedThreadPageData, messages: [...closedThreadPageData.messages, { ...closedThreadPageData.messages[1]!, id: 'new-message-unheard' }] }));
+    expect(log.scrollTop).toBe(100);
+  });
+
   it('announces earlier messages loaded above as one line, and new ones from the other person as they come (sweep MN11)', () => {
     // Every live region on the page and what it says (a log or status without aria-live is polite by default).
     const live = () => [...document.querySelectorAll('[aria-live]:not([aria-live="off"]), [role="log"]:not([aria-live]), [role="status"]:not([aria-live]), [role="alert"]:not([aria-live])')].map((region) => region.textContent ?? '');

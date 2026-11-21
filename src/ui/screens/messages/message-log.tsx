@@ -80,8 +80,6 @@ export function MessageLog({ messages, earlierHref, otherParty, now, seenMessage
   const t = useTranslations('thread');
   const router = useRouter();
   const logRef = useRef<HTMLDivElement>(null);
-  const atBottom = useRef(true);
-  const scrollTop = useRef(0);
   // While the live connection is up, new messages arrive at once (completion plan 7.1): the timer only covers
   // the times it's down.
   const live = useRealtimeConnected();
@@ -131,8 +129,14 @@ export function MessageLog({ messages, earlierHref, otherParty, now, seenMessage
     const log = logRef.current;
     if (!log) return;
     const before = shown.current;
+    // Where the reader is now, read from the log itself, not from the last scroll event: those arrive a frame later, and a
+    // render can land first. Under load (both e2e projects, now and then), a scroll to the top wasn't heard yet, so the
+    // old bottom position was used and the reader was thrown 100 messages down.
+    const top = log.scrollTop;
     const earlierCameIn = before.firstId !== undefined && messages[0]?.id !== before.firstId && messages.some((message) => message.id === before.firstId);
-    log.scrollTop = earlierCameIn ? scrollTop.current + log.scrollHeight - before.height : atBottom.current ? log.scrollHeight : scrollTop.current;
+    // At the bottom before this render (or opening: nothing shown yet), so the newest stays in view.
+    const wasAtBottom = before.height - top - log.clientHeight <= 40;
+    log.scrollTop = earlierCameIn ? top + log.scrollHeight - before.height : wasAtBottom ? log.scrollHeight : top;
     shown.current = { firstId: messages[0]?.id, height: log.scrollHeight };
   }, [messages]);
 
@@ -151,11 +155,8 @@ export function MessageLog({ messages, earlierHref, otherParty, now, seenMessage
   {/* Not a live region (aria-live off; a log is polite by default): the line above announces what's new. */}
   <div ref={logRef} role="log" aria-label={t('log')} aria-live="off" tabIndex={0}
     onScroll={(event) => {
-      const log = event.currentTarget;
-      atBottom.current = log.scrollHeight - log.scrollTop - log.clientHeight <= 40;
-      scrollTop.current = log.scrollTop;
       // Photos and reactions change the height between renders too.
-      shown.current.height = log.scrollHeight;
+      shown.current.height = event.currentTarget.scrollHeight;
     }}
     className={cn('space-y-6 overflow-y-auto overscroll-contain px-3 py-4 [overflow-anchor:none] sm:px-5 sm:py-5', className)}>
     {earlierHref && <p className="flex justify-center">
