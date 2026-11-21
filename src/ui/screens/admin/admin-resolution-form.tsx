@@ -86,7 +86,9 @@ export function AdminResolutionForm({ data, handlers, onSuccess, onBusy, onCance
   const summaryError = summaryCode === 'too_short' ? t('resolve.summaryTooShort') : summaryCode === 'too_long' ? t('resolve.summaryTooLong') : fieldCopy(summaryCode);
   const amountError = amountCode && resolution === 'settle' && (amountCode === 'invalid' || amountCode === 'out_of_range') && data.money ? t('resolve.settleInvalid', { price: formatMoney(data.money.priceCents) }) : fieldCopy(amountCode);
   const amountOutOfRange = amountName !== undefined && (!Number.isSafeInteger(amount) || (amount ?? 0) <= 0 || (resolution === 'settle' && data.money !== undefined && amount! >= data.money.priceCents));
-  const blocked = pending || (isMoney && (previewPending || !preview?.withinLimit || amountOutOfRange));
+  // Over the viewer's limit, saving sends it for approval (blueprint 08's dual approval): only a missing preview blocks it.
+  const overLimit = isMoney && preview !== undefined && !preview.withinLimit;
+  const blocked = pending || (isMoney && (previewPending || !preview || amountOutOfRange));
 
   return <form noValidate aria-label={t('resolve.title')} aria-busy={pending} className="space-y-4" onSubmit={(event) => {
     if (blocked) { event.preventDefault(); return; }
@@ -130,6 +132,6 @@ export function AdminResolutionForm({ data, handlers, onSuccess, onBusy, onCance
       {previewError && previewError.code !== 'validation_failed' && <Button type="button" variant="outline" disabled={pending} onClick={() => setAttempt((value) => value + 1)}>{t('resolve.retryPreview')}</Button>}
     </section>}
     <AdminCaseFeedback result={action.result} />
-    <div className="flex flex-wrap justify-end gap-2"><AlertDialogCancel type="button" disabled={pending} onClick={onCancel}>{t('cancel')}</AlertDialogCancel><Button type="submit" disabled={blocked} aria-busy={pending || previewPending}>{(pending || previewPending) && <Spinner aria-hidden="true" />}{t(pending ? 'working' : 'resolve.save')}</Button></div>
+    <div className="flex flex-wrap justify-end gap-2"><AlertDialogCancel type="button" disabled={pending} onClick={onCancel}>{t('cancel')}</AlertDialogCancel><Button type="submit" disabled={blocked} aria-busy={pending || previewPending}>{(pending || previewPending) && <Spinner aria-hidden="true" />}{t(pending ? 'working' : overLimit ? 'resolve.sendForApproval' : 'resolve.save')}</Button></div>
   </form>;
 }

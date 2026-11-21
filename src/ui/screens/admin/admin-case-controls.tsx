@@ -77,7 +77,7 @@ export function AdminCaseControls({ data, handlers, children, initialDialog, rep
           {action.pending && activeAction === actionId && <Spinner aria-hidden="true" />}{t(`actions.${actionId}`)}
         </Button>)}
       </div>}
-      <AdminCaseFeedback result={lastResult} successMessage={lastResult?.ok && lastResult.code === 'saved' ? t('resolve.saved') : t('updated')} />
+      <AdminCaseFeedback result={lastResult} successMessage={lastResult?.ok && lastResult.code === 'saved' ? t('resolve.saved') : lastResult?.ok && lastResult.code === 'sent' ? t('resolve.sentForApproval') : t('updated')} />
     </div>
     {children}
     {(data.actions.includes('reply') || data.actions.includes('add_note')) && <div className="grid min-w-0 gap-5 xl:grid-cols-2">

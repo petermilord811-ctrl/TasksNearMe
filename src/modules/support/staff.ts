@@ -543,6 +543,8 @@ export async function moderateReportedReview(
   const changed = await db.transaction(async (tx) => {
     const [review] = await tx.select().from(reviews).where(eq(reviews.id, reviewId)).for('update');
     if (!review) return { result: { ok: false, code: 'not_found' } as const };
+    // Never a review they wrote or one about them (security review): hiding a review about yourself is the obvious abuse.
+    if (review.authorUserId === staff.id || review.subjectUserId === staff.id) return { result: { ok: false, code: 'not_allowed' } as const };
     const hidden = review.status === 'hidden';
     if (visible !== hidden) return { result: { ok: true, code: 'updated' } as const };
     await tx

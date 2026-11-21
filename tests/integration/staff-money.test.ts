@@ -91,8 +91,8 @@ describe('the staff booking page', () => {
     expect(page?.cases[0]).toMatchObject({ type: 'dispute', status: 'resolved' });
     expect(page?.refund).toEqual({ maxCents: 4950, limitCents: 10_000, leftCents: 4950 });
     expect(page?.actions).toEqual(['refund', 'reveal_address', 'reveal_conversation']);
-    // Finance reads the page but doesn't work cases here.
-    expect(await getAdminBooking(db, casey, settled!.id, now())).toMatchObject({ actions: [] });
+    // Finance refunds (blueprint 08: up to $500 at once, then a second finance or admin approves) but doesn't work cases here.
+    expect(await getAdminBooking(db, casey, settled!.id, now())).toMatchObject({ actions: ['refund'], refund: { maxCents: 4950, limitCents: 50_000, leftCents: 4950 } });
 
     expect(await staffRefund(db, pay, alex, settled!.id, { amountCents: 5000, reason: 'goodwill', note: 'More than is left on this booking.' }, now())).toEqual({ ok: false, code: 'not_allowed' });
     expect(await staffRefund(db, pay, alex, settled!.id, { amountCents: 500, reason: 'goodwill', note: 'A scratch found after the visit.' }, now())).toEqual({ ok: true, code: 'submitted' });

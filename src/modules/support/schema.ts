@@ -83,7 +83,7 @@ export const supportCaseEvents = pgTable(
     status: text('status'),
     /** Assignment and resolution changes: the new assignee (null when unassigned) or the resolution. */
     /** `emailed`: staff's answer went to a public request's address. `fromContact`: that address wrote again (5.22). */
-    meta: jsonb('meta').$type<{ assigneeUserId?: string | null; resolution?: string; reviewAction?: 'hidden' | 'shown'; questionAction?: 'hidden' | 'removed' | 'restored'; emailed?: boolean; fromContact?: boolean }>(),
+    meta: jsonb('meta').$type<{ assigneeUserId?: string | null; resolution?: string; reviewAction?: 'hidden' | 'shown'; questionAction?: 'hidden' | 'removed' | 'restored'; emailed?: boolean; fromContact?: boolean; refundRequestId?: string }>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('support_case_events_case_idx').on(t.caseId, t.createdAt)],
@@ -114,7 +114,7 @@ export const refundRequests = pgTable(
     id: text('id').primaryKey(),
     bookingId: text('booking_id').notNull(),
     amountCents: integer('amount_cents').notNull(),
-    reason: text('reason').notNull(), // goodwill | fraud
+    reason: text('reason').notNull(), // goodwill | fraud | case_resolution
     note: text('note').notNull(),
     requestedByUserId: text('requested_by_user_id')
       .notNull()
@@ -124,6 +124,13 @@ export const refundRequests = pgTable(
     decisionNote: text('decision_note'),
     decidedAt: timestamp('decided_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * A case resolution over the resolver's limit (blueprint 08's dual approval): the case it resolves once a different
+     * finance or admin approves, and the resolution as asked, applied then with its money worked out again.
+     */
+    caseId: text('case_id').references(() => supportCases.id),
+    resolution: text('resolution'),
+    resolutionInput: jsonb('resolution_input').$type<{ summary: string; settlePriceCents?: number; goodwillCents?: number }>(),
   },
   (t) => [index('refund_requests_booking_idx').on(t.bookingId, t.status)],
 );

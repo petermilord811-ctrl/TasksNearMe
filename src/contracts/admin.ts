@@ -243,7 +243,8 @@ export type ReviewModerationInput = z.input<typeof reviewModerationInputSchema>;
 
 /**
  * What a resolution would do with the money (computed on the server; the UI only shows it):
- * `withinLimit` is false when the refund is above the viewer's limit, so a lead or finance must record it.
+ * `withinLimit` is false when the refund is above the viewer's limit: saving sends it for approval by a different finance
+ * or admin (blueprint 08's dual approval).
  */
 export interface ResolutionPreview {
   posterRefundCents: Cents;
@@ -315,7 +316,8 @@ export type RevealConversationResult =
 
 /**
  * - `onAssign`: `{ assign: true }` assigns the viewer, `false` unassigns. ok `updated`.
- * - `onSetStatus`, `onClose`, `onReopen`: ok `updated`. `onResolve`: ok `saved`.
+ * - `onSetStatus`, `onClose`, `onReopen`: ok `updated`. `onResolve`: ok `saved`, or ok `sent` (a money resolution above
+ *   your limit, sent for approval: the case stays open until a different finance or admin approves it).
  * - `onReply`, `onAddNote`: ok `sent` / `saved` (refresh, clear the box).
  * - `onRevealConversation`: the conversation, or `validation_failed` (reason too short), `not_allowed`.
  * Errors on all: `validation_failed`, `not_allowed`, `version_conflict` (someone else changed the case;
@@ -349,6 +351,9 @@ export interface AdminCaseHandlers {
 /** Refunds staff can give from a booking's page (cancellations, settlements and unused amounts come from their flows). */
 export const STAFF_REFUND_REASONS = ['goodwill', 'fraud'] as const;
 export type StaffRefundReason = (typeof STAFF_REFUND_REASONS)[number];
+/** Why a refund request was made: a staff refund's reason, or a case resolution over the resolver's limit (blueprint 08). */
+export const REFUND_REQUEST_REASONS = [...STAFF_REFUND_REASONS, 'case_resolution'] as const;
+export type RefundRequestReason = (typeof REFUND_REQUEST_REASONS)[number];
 
 export interface AdminBookingMoney {
   /** The agreed numbers (current terms). */
@@ -399,7 +404,9 @@ export interface AdminBookingPageData {
 export interface AdminRefundRequestRow {
   id: string;
   amountCents: Cents;
-  reason: (typeof STAFF_REFUND_REASONS)[number];
+  reason: RefundRequestReason;
+  /** A case resolution's case: approving the request resolves it as asked. */
+  caseId?: string;
   note: string;
   requestedBy: string;
   requestedAt: ISODateTime;
@@ -431,7 +438,8 @@ export type RevealAddressResult = { ok: true; address: ExactAddress } | Extract<
  * - `onRefund`: ok `submitted` (refunded; refresh), or ok `sent` (above your limit: sent for approval). Errors:
  *   `validation_failed`, `not_allowed` (more than is left), `rate_limited`, `unknown`.
  * - `onDecideRefund`: ok `updated` (refresh). Errors: `validation_failed`, `not_allowed` (your role, your own
- *   request, or already decided), `unknown`.
+ *   request, a case you're on, more than is left, or already decided), `version_conflict` (a case resolution whose money
+ *   changed since it was asked: decline it, and the case is resolved again), `unknown`.
  * - `onRevealAddress`, `onRevealConversation`: need a reason (logged); `validation_failed`, `not_allowed`.
  */
 export interface AdminBookingHandlers {

@@ -1,7 +1,8 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, or } from 'drizzle-orm';
 import { transferReversalInputSchema, type ActionResult, type AdminBookingReversals, type AdminTransferRow, type TransferReversalInput } from '@/contracts';
 import type { StripeConnect } from '@/integrations/payments/stripe-connect';
 import { users } from '@/modules/accounts/schema';
+import { bookings } from '@/modules/bookings/schema';
 import { earnings, transferReversals } from '@/modules/earnings/schema';
 import { supportCases } from '@/modules/support/schema';
 import type { StaffActor } from '@/modules/support/staff';
@@ -33,11 +34,17 @@ async function reversedByEarnings(db: Db, earningsIds: string[]): Promise<Map<st
   return out;
 }
 
+/** Whether the staff member is the booking's client or helper: they never reverse its transfers (security review). */
+async function isPartyTo(db: Db, staffId: string, bookingId: string): Promise<boolean> {
+  const [row] = await db.select({ id: bookings.id }).from(bookings).where(and(eq(bookings.id, bookingId), or(eq(bookings.posterUserId, staffId), eq(bookings.helperUserId, staffId)))).limit(1);
+  return Boolean(row);
+}
+
 export async function getBookingReversals(db: Db, staff: StaffActor, bookingId: string): Promise<AdminBookingReversals> {
   const rows = await db.select().from(earnings).where(eq(earnings.bookingId, bookingId));
   const transferred = rows.filter((row) => row.transferRef && (TRANSFERRED.includes(row.status) || row.status === 'reversed'));
   const reversed = await reversedByEarnings(db, transferred.map((row) => row.id));
-  const [history, cases] = await Promise.all([
+  const [history, cases, party] = await Promise.all([
     db
       .select({ reversal: transferReversals, by: users.name })
       .from(transferReversals)
@@ -45,6 +52,7 @@ export async function getBookingReversals(db: Db, staff: StaffActor, bookingId: 
       .where(eq(transferReversals.bookingId, bookingId))
       .orderBy(desc(transferReversals.createdAt)),
     db.select({ id: supportCases.id, type: supportCases.type, createdAt: supportCases.createdAt }).from(supportCases).where(eq(supportCases.bookingId, bookingId)).orderBy(desc(supportCases.createdAt)),
+    isPartyTo(db, staff.id, bookingId),
   ]);
   return {
     transfers: transferred.map((row): AdminTransferRow => {
@@ -68,7 +76,7 @@ export async function getBookingReversals(db: Db, staff: StaffActor, bookingId: 
       at: reversal.createdAt.toISOString(),
       byDisplayName: by,
     })),
-    canReverse: isFinance(staff),
+    canReverse: isFinance(staff) && !party,
     cases: cases.map((row) => ({ id: row.id, label: `${row.type.replaceAll('_', ' ')} · ${row.id}` })),
   };
 }
@@ -77,6 +85,8 @@ export async function reverseTransfer(db: Db, connect: StripeConnect | null, sta
   const parsed = transferReversalInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   if (!isFinance(staff)) return { ok: false, code: 'not_allowed' };
+  // Never on a booking of their own (security review): taking a helper's pay back is someone else's call.
+  if (await isPartyTo(db, staff.id, bookingId)) return { ok: false, code: 'not_allowed' };
   const { earningsId, amountCents, caseId, reason } = parsed.data;
   const [row] = await db.select().from(earnings).where(and(eq(earnings.id, earningsId), eq(earnings.bookingId, bookingId))).limit(1);
   if (!row?.transferRef || !TRANSFERRED.includes(row.status)) return { ok: false, code: 'not_allowed' };

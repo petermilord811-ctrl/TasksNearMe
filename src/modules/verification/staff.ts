@@ -734,6 +734,8 @@ export async function revealAddressProof(
   }
   const [row] = await db.select().from(addressVerifications).where(eq(addressVerifications.id, parsed.data.verificationId)).limit(1);
   if (!row || !row.addressCiphertext) return { ok: false, code: 'not_found' };
+  // Never their own documents (security review): staff verification is somebody else's job.
+  if (row.userId === staff.id) return { ok: false, code: 'not_allowed' };
   const [file] = row.documentFileId ? await db.select().from(files).where(eq(files.id, row.documentFileId)).limit(1) : [];
   const expiresAt = new Date(now.getTime() + DOCUMENT_LINK_MINUTES * 60_000);
   await audit(db, staff, 'address_proof.viewed', row.userId, parsed.data.reason, { verificationId: row.id, document: Boolean(file) });
@@ -757,6 +759,7 @@ export async function revealIdentityCapture(db: Db, deps: { secret: string }, st
   }
   const [row] = await db.select().from(identityCaptures).where(eq(identityCaptures.id, parsed.data.captureId)).limit(1);
   if (!row) return { ok: false, code: 'not_found' };
+  if (row.userId === staff.id) return { ok: false, code: 'not_allowed' };
   const expiresAt = new Date(now.getTime() + DOCUMENT_LINK_MINUTES * 60_000);
   const photos = photosOf(row).map((kind) => ({ kind, url: `/api/verification-documents/${documentToken({ fileId: row[PHOTO_COLUMN[kind]]!, staffUserId: staff.id, expiresAt }, deps.secret)}` }));
   await audit(db, staff, 'identity_capture.viewed', row.userId, parsed.data.reason, { captureId: row.id, photos: photos.length });
@@ -771,7 +774,8 @@ export async function documentForToken(db: Db, storage: FileStorage, token: stri
   const read = readDocumentToken(token, secret, now);
   if (!read || !viewer || viewer.id !== read.staffUserId || !canDecideVerification(viewer)) return null;
   const [file] = await db.select().from(files).where(and(eq(files.id, read.fileId), inArray(files.kind, ['address_proof', ...IDENTITY_FILE_KINDS]))).limit(1);
-  if (!file) return null;
+  // A link is only ever made for someone else's documents; a staff member's own never open, whatever the link says.
+  if (!file || file.ownerUserId === viewer.id) return null;
   if (file.kind === 'address_proof') {
     const [still] = await db.select({ id: addressVerifications.id }).from(addressVerifications).where(and(eq(addressVerifications.documentFileId, file.id), isNotNull(addressVerifications.documentFileId))).limit(1);
     if (!still) return null;

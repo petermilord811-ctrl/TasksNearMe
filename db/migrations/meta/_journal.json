@@ -526,6 +526,13 @@
       "when": 1795273777288,
       "tag": "0074_direct_chat_sparks",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1795293791494,
+      "tag": "0075_mature_rockslide",
+      "breakpoints": true
     }
   ]
 }

@@ -687,8 +687,10 @@ export async function moderateCommunityItem(db: Db, staff: StaffActor, target: '
   if (!parsed.success) return validationFailed(parsed.error);
   const status = parsed.data.action === 'restore' ? 'visible' : parsed.data.action === 'hide' ? 'hidden' : 'removed';
   const table = target === 'post' ? communityPosts : communityReplies;
-  const [row] = await db.select({ id: table.id, status: table.status }).from(table).where(eq(table.id, String(id))).limit(1);
+  const [row] = await db.select({ id: table.id, status: table.status, authorUserId: table.authorUserId }).from(table).where(eq(table.id, String(id))).limit(1);
   if (!row) return { ok: false, code: 'not_found' };
+  // Never a post or reply of their own (security review).
+  if (row.authorUserId === staff.id) return { ok: false, code: 'not_allowed' };
   if (row.status === status) return { ok: true, code: 'updated' };
   await db.transaction(async (tx) => {
     await tx

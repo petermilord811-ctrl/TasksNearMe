@@ -60,15 +60,16 @@ describe('Money resolution form', () => {
     expect(handlers.onResolve).not.toHaveBeenCalled();
   });
 
-  it('explains the staff limit and prevents recording an over-limit preview', async () => {
+  it('explains the staff limit and sends an over-limit resolution for approval (blueprint 08)', async () => {
     const user = userEvent.setup();
     const handlers = mount({ onPreviewResolution: vi.fn<AdminCaseHandlers['onPreviewResolution']>().mockResolvedValue({ ok: true, preview: overLimitPreview }) });
     await user.click(screen.getByRole('radio', { name: copy.resolutions.refund_full }));
     editSummary();
     expect(await screen.findByText(copy.resolve.overLimit)).toBeVisible();
-    expect(screen.getByRole('button', { name: copy.resolve.save })).toBeDisabled();
-    fireEvent.submit(screen.getByRole('form', { name: copy.resolve.title }));
-    expect(handlers.onResolve).not.toHaveBeenCalled();
+    const send = screen.getByRole('button', { name: copy.resolve.sendForApproval });
+    expect(send).toBeEnabled();
+    await user.click(send);
+    await waitFor(() => expect(handlers.onResolve).toHaveBeenCalledOnce());
   });
 
   it('invalidates previous money immediately and ignores an obsolete preview response', async () => {

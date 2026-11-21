@@ -14,10 +14,11 @@ import type {
   RevealConversationResult,
   RefundDecisionInput,
   StaffRefundInput,
+  StaffRole,
 } from '@/contracts';
 import { caseResolutionInputSchema, refundDecisionInputSchema, restrictedAccessInputSchema, staffRefundInputSchema } from '@/contracts';
 import type { PaymentProvider } from '@/integrations/payments';
-import { users } from '@/modules/accounts/schema';
+import { staffRoles, users } from '@/modules/accounts/schema';
 import { checklistView } from '@/modules/bookings/checklist';
 import { bookingCompletions, bookingTerms, bookings } from '@/modules/bookings/schema';
 import { earnings } from '@/modules/earnings/schema';
@@ -35,7 +36,7 @@ import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
-import { refundRequests, supportCases } from './schema';
+import { refundRequests, supportCaseEvents, supportCases } from './schema';
 import { bookingMoneyFacts, caseRowsFor, conversationView, discretionaryRefundedCents, isBookingParty, personSummaryOf, previewResolution, resolveCase, type StaffActor } from './staff';
 import { MONEY_RESOLUTIONS, canApproveRefund, canWorkCases, refundLimitOf, type ResolutionMoney } from './staff-domain';
 import { refundAcross, refundableCharges, refundMade } from '@/modules/payments/refund-across';
@@ -210,7 +211,8 @@ export async function resolveCaseWithMoney(
   return serialized(db, `staff-refund:${bookingId}`, async (): Promise<ActionResult> => {
     const preview = await previewResolution(db, staff, caseId, parsed.data);
     if (!preview.ok) return preview;
-    if (!preview.preview.withinLimit) return { ok: false, code: 'not_allowed' };
+    // Over the resolver's limit: a request a different finance or admin approves, carrying the resolution (blueprint 08).
+    if (!preview.preview.withinLimit) return requestResolutionApproval(db, staff, String(caseId), bookingId, parsed.data, preview.preview.posterRefundCents, now);
     const { posterRefundCents, helperReceivesCents, platformKeepsCents } = preview.preview;
     const applied = await applyResolutionMoney(db, payments_, {
       caseId: String(caseId),
@@ -223,6 +225,100 @@ export async function resolveCaseWithMoney(
     if (!applied) return { ok: false, code: 'unknown' };
     return resolveCase(db, staff, caseId, version, parsed.data, now, { moneyApplied: true });
   });
+}
+
+/**
+ * A money resolution above the resolver's limit (blueprint 08's dual approval): a refund request for the client's refund,
+ * carrying the whole resolution, which a different finance or admin approves on the booking (decideCaseResolution). The
+ * case stays open meanwhile, with an internal note. One request per case waits at a time.
+ */
+async function requestResolutionApproval(db: Db, staff: StaffActor, caseId: string, bookingId: string, input: CaseResolutionInput, amountCents: number, now: Date): Promise<ActionResult> {
+  const [waiting] = await db.select({ id: refundRequests.id }).from(refundRequests).where(and(eq(refundRequests.caseId, caseId), eq(refundRequests.status, 'pending'))).limit(1);
+  if (waiting) return { ok: true, code: 'sent' };
+  const requestId = newId('rrq');
+  const resolutionInput = {
+    summary: input.summary,
+    ...(input.settlePriceCents !== undefined ? { settlePriceCents: input.settlePriceCents } : {}),
+    ...(input.goodwillCents !== undefined ? { goodwillCents: input.goodwillCents } : {}),
+  };
+  await db.transaction(async (tx) => {
+    await tx.insert(refundRequests).values({ id: requestId, bookingId, amountCents, reason: 'case_resolution', note: input.summary, requestedByUserId: staff.id, status: 'pending', caseId, resolution: input.resolution, resolutionInput, createdAt: now });
+    await tx.insert(supportCaseEvents).values({
+      id: newId('cev'),
+      caseId,
+      kind: 'note',
+      authorUserId: staff.id,
+      visibility: 'internal',
+      body: "Sent for approval: the client's refund is over my limit, so a different finance or admin approves it on the booking.",
+      meta: { refundRequestId: requestId },
+      createdAt: now,
+    });
+  });
+  await audit(db, staff, 'booking.refund_requested', 'booking', bookingId, now, { metadata: { requestId, caseId, amountCents, reason: 'case_resolution', resolution: input.resolution } });
+  return { ok: true, code: 'sent' };
+}
+
+/**
+ * A case resolution someone asked approval for (requestResolutionApproval), decided by a different finance or admin under
+ * the booking's money lock (decideRefundRequest). Approving applies it as asked: its money is worked out again from the
+ * booking as it is now and refused as changed when the client's refund isn't what was asked; then the money moves, and
+ * the case is resolved in the requester's name with a note of who approved. Declining moves nothing and keeps the case
+ * open, with a note.
+ */
+async function decideCaseResolution(
+  db: Db,
+  payments_: PaymentProvider,
+  staff: StaffActor,
+  bookingId: string,
+  request: typeof refundRequests.$inferSelect,
+  input: z.output<typeof refundDecisionInputSchema>,
+  now: Date,
+): Promise<ActionResult> {
+  const caseId = request.caseId!;
+  const [caseRow] = await db.select({ openedByUserId: supportCases.openedByUserId, subjectUserId: supportCases.subjectUserId }).from(supportCases).where(eq(supportCases.id, caseId)).limit(1);
+  // Never on a case of their own (security review): one they opened, or one about them.
+  if (!caseRow || caseRow.openedByUserId === staff.id || caseRow.subjectUserId === staff.id) return { ok: false, code: 'not_allowed' };
+  const note = (body: string) =>
+    db.insert(supportCaseEvents).values({ id: newId('cev'), caseId, kind: 'note', authorUserId: staff.id, visibility: 'internal', body, meta: { refundRequestId: request.id }, createdAt: now });
+  const decided = (status: 'approved' | 'declined') =>
+    db
+      .update(refundRequests)
+      .set({ status, decidedByUserId: staff.id, decisionNote: input.note, decidedAt: now })
+      .where(and(eq(refundRequests.id, request.id), eq(refundRequests.status, 'pending')))
+      .returning({ id: refundRequests.id });
+  const metadata = { requestId: request.id, caseId, amountCents: request.amountCents, requestedBy: request.requestedByUserId };
+  if (input.decision !== 'approve') {
+    const [claimed] = await decided('declined');
+    if (!claimed) return { ok: false, code: 'not_allowed' };
+    await note(`Approval declined: ${input.note} Nothing moved, and the case stays open.`);
+    await audit(db, staff, 'booking.refund_declined', 'booking', bookingId, now, { reason: input.note, metadata });
+    return { ok: true, code: 'updated' };
+  }
+  const resolution = { resolution: request.resolution, ...request.resolutionInput } as CaseResolutionInput;
+  // The requester resolves it, as they asked, so they must still be able to: their roles now, the case as it is now.
+  const roles = (await db.select({ role: staffRoles.role }).from(staffRoles).where(eq(staffRoles.userId, request.requestedByUserId))).map((row) => row.role as StaffRole);
+  const requester: StaffActor = { id: request.requestedByUserId, roles };
+  // Off staff since, or no longer working cases: nobody resolves it in their name (it can still be declined).
+  if (!canWorkCases(roles)) return { ok: false, code: 'not_allowed' };
+  const preview = await previewResolution(db, requester, caseId, resolution);
+  if (!preview.ok || preview.preview.posterRefundCents !== request.amountCents) return { ok: false, code: 'version_conflict' };
+  const { posterRefundCents, helperReceivesCents, platformKeepsCents } = preview.preview;
+  // The money first: if it fails, the request stays pending and can be approved again (the refund's key is the case's).
+  const applied = await applyResolutionMoney(db, payments_, {
+    caseId,
+    bookingId,
+    resolution: resolution.resolution,
+    moved: { posterRefundCents, helperReceivesCents, platformKeepsCents },
+    ...(resolution.settlePriceCents !== undefined ? { settlePriceCents: resolution.settlePriceCents } : {}),
+    now,
+  });
+  if (!applied) return { ok: false, code: 'unknown' };
+  await decided('approved');
+  await note(`Approved: ${input.note}`);
+  await audit(db, staff, 'booking.refund_approved', 'booking', bookingId, now, { reason: input.note, metadata: { ...metadata, ok: true } });
+  const [fresh] = await db.select({ version: supportCases.version }).from(supportCases).where(eq(supportCases.id, caseId)).limit(1);
+  const resolved = await resolveCase(db, requester, caseId, fresh?.version ?? 1, resolution, now, { moneyApplied: true });
+  return resolved.ok ? { ok: true, code: 'updated' } : resolved;
 }
 
 // ---- The staff booking page ---------------------------------------------------------------------------
@@ -255,10 +351,12 @@ export async function getAdminBooking(db: Db, staff: StaffActor, bookingId: stri
   const left = money ? money.chargedCents - money.refundedCents : 0;
   // Never on a booking of their own (security review): no refunds, no approvals.
   const party = booking.posterUserId === staff.id || booking.helperUserId === staff.id;
-  const canRefund = canWorkCases(staff.roles) && limit > 0 && left > 0 && !party;
+  // Whoever has a refund limit: support, finance and admins (blueprint 08); trust & safety have none.
+  const canRefund = limit > 0 && left > 0 && !party;
   const actions: AdminBookingPageData['actions'] = [];
   if (canRefund) actions.push('refund');
-  if (canWorkCases(staff.roles)) actions.push('reveal_address');
+  // Not on a booking of their own: the address is restricted data they'd read about themselves (revealBookingAddress refuses).
+  if (canWorkCases(staff.roles) && !party) actions.push('reveal_address');
   // The conversation only while handling a case about this booking (blueprint 08; checked again on reading).
   if (canWorkCases(staff.roles) && caseRows.some((row) => row.status !== 'closed')) actions.push('reveal_conversation');
   // A client's bank disputed a charge on it (T-18): finance downloads the evidence pack for Stripe.
@@ -300,17 +398,22 @@ async function refundRequestRows(db: Db, staff: StaffActor, rows: (typeof refund
   if (rows.length === 0) return [];
   const ids = [...new Set(rows.flatMap((row) => [row.requestedByUserId, ...(row.decidedByUserId ? [row.decidedByUserId] : [])]))];
   const names = new Map((await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, ids))).map((row) => [row.id, row.name]));
+  // A case resolution's approver must not be on its case (security review): who opened it, or whom it's about.
+  const caseIds = [...new Set(rows.flatMap((row) => (row.caseId ? [row.caseId] : [])))];
+  const cases = caseIds.length === 0 ? [] : await db.select({ id: supportCases.id, openedByUserId: supportCases.openedByUserId, subjectUserId: supportCases.subjectUserId }).from(supportCases).where(inArray(supportCases.id, caseIds));
+  const involved = new Set(cases.filter((row) => row.openedByUserId === staff.id || row.subjectUserId === staff.id).map((row) => row.id));
   return rows.map((row) => ({
     id: row.id,
     amountCents: row.amountCents,
     reason: row.reason as AdminBookingPageData['refundRequests'][number]['reason'],
+    ...(row.caseId ? { caseId: row.caseId } : {}),
     note: row.note,
     requestedBy: names.get(row.requestedByUserId) ?? 'Staff',
     requestedAt: row.createdAt.toISOString(),
     status: row.status as 'pending' | 'approved' | 'declined',
     ...(row.decidedByUserId ? { decidedBy: names.get(row.decidedByUserId) ?? 'Staff' } : {}),
     ...(row.decidedAt ? { decidedAt: row.decidedAt.toISOString() } : {}),
-    canDecide: !party && row.status === 'pending' && row.requestedByUserId !== staff.id && canApproveRefund(staff.roles, row.amountCents),
+    canDecide: !party && row.status === 'pending' && row.requestedByUserId !== staff.id && canApproveRefund(staff.roles, row.amountCents) && !(row.caseId && involved.has(row.caseId)),
   }));
 }
 
@@ -318,7 +421,8 @@ async function refundRequestRows(db: Db, staff: StaffActor, rows: (typeof refund
 export async function staffRefund(db: Db, payments_: PaymentProvider | null, staff: StaffActor, bookingId: string, input: StaffRefundInput, now: Date): Promise<ActionResult> {
   const parsed = staffRefundInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
-  if (!payments_ || !canWorkCases(staff.roles)) return { ok: false, code: 'not_allowed' };
+  // Support, finance and admins refund (each up to their limit, then a request); trust & safety don't (blueprint 08).
+  if (!payments_ || refundLimitOf(staff.roles) <= 0) return { ok: false, code: 'not_allowed' };
   const id = String(bookingId);
   // Never on a booking of their own (security review).
   if (await isBookingParty(db, staff.id, id)) return { ok: false, code: 'not_allowed' };
@@ -363,6 +467,8 @@ export async function revealBookingAddress(db: Db, cipher: FieldCipher, staff: S
   // validationFailed always returns the failure shape.
   if (!parsed.success) return validationFailed(parsed.error) as Extract<ActionResult, { ok: false }>;
   if (!canWorkCases(staff.roles)) return { ok: false, code: 'not_allowed' };
+  // Never on a booking of their own (security review): the address is restricted data they'd read about themselves.
+  if (await isBookingParty(db, staff.id, String(bookingId))) return { ok: false, code: 'not_allowed' };
   const [row] = await db
     .select({ addressEnc: taskLocations.addressEnc })
     .from(bookings)
@@ -423,6 +529,8 @@ async function decideRefundRequestNow(db: Db, payments_: PaymentProvider, staff:
   if (!request || request.status !== 'pending' || request.requestedByUserId === staff.id) return { ok: false, code: 'not_allowed' };
   // An approver's limit is per booking too: what was already refunded counts.
   if (!canApproveRefund(staff.roles, (await discretionaryRefundedCents(db, String(bookingId))) + request.amountCents)) return { ok: false, code: 'not_allowed' };
+  // A case resolution over someone's limit: applied as asked, or declined.
+  if (request.caseId) return decideCaseResolution(db, payments_, staff, bookingId, request, input, now);
   const approve = input.decision === 'approve';
   if (approve) {
     const money = await bookingMoneyFacts(db, String(bookingId));

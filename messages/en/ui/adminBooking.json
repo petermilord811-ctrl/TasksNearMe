@@ -84,7 +84,8 @@
     "reasonRequired": "Choose a refund reason.",
     "reasons": {
       "goodwill": "Goodwill",
-      "fraud": "Fraud"
+      "fraud": "Fraud",
+      "case_resolution": "Case resolution"
     },
     "note": "Refund note",
     "noteHint": "Explain the refund in 10–1,000 characters. This note is kept in the audit log.",

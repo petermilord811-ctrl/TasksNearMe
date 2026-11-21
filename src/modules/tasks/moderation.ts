@@ -146,6 +146,8 @@ export async function moderateTask(db: Db, staff: StaffActor, taskId: string, in
   if (!parsed.success) return { result: validationFailed(parsed.error) };
   const loaded = await loadTask(db, taskId);
   if (!loaded || loaded.task.status === 'draft') return { result: { ok: false, code: 'not_found' } };
+  // Never a task of their own (security review): another moderator decides about it.
+  if (loaded.task.posterUserId === staff.id) return { result: { ok: false, code: 'not_allowed' } };
   const action = parsed.data;
   if (!taskModerationActions(staff.roles, loaded.facts).includes(action.action)) return { result: { ok: false, code: 'not_allowed' } };
   const { task } = loaded;
