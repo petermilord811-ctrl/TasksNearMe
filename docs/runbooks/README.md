@@ -9,6 +9,7 @@ What staff and the on-call engineer do when something goes wrong in production (
 | [Dispute handling](dispute-handling.md) | A client reports a problem with a booking, or a bank opens a chargeback. |
 | [Reward fraud review](reward-review.md) | Gift-card rewards are under review, show risk signals, or fail to deliver. |
 | [Safety escalation](safety-escalation.md) | Someone reports a safety problem, or an exact address or message may have reached the wrong person. |
+| [Gainesville launch day](gainesville-launch.md) | Taking Gainesville (or the next city) live, watching its waitlist emails, and rolling a launch back. Rehearsed 2026-11-21. |
 
 ## Who is on call
 
