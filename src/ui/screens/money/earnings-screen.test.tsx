@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, EARNINGS_KINDS, EARNINGS_STATUSES, PAYOUT_ACCOUNT_STATUSES, PAYOUT_STATUSES, routes, type ActionResult, type EarningsHandlers, type EarningsPageData } from '@/contracts';
-import { earningsEmptyData, earningsFirstPayoutData, fakeEarningsHandlers, fakeHandler, jordanEarningsActionNeededData, jordanEarningsPageData } from '@/fixtures';
+import { earningsEmptyData, earningsFirstPayoutData, fakeEarningsHandlers, fakeHandler, jordanEarningsActionNeededData, jordanEarningsPageData, jordanEarningsPaidOutData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import earnings from '../../../../messages/en/ui/earnings.json';
 import { EarningsScreen } from './earnings-screen';
@@ -19,6 +19,18 @@ function mount(data: EarningsPageData = jordanEarningsPageData, handlers: Earnin
 }
 
 describe('EarningsScreen', () => {
+  it('lists each payout as the bank or card shows it: an instant one with its fee and what reached the card (J-H19)', () => {
+    mount(jordanEarningsPaidOutData);
+    const list = within(screen.getByRole('region', { name: 'Payouts' }));
+    const rows = list.getAllByRole('listitem');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent('Instant payout to your debit card');
+    expect(rows[0]).toHaveTextContent('$113.00 · instant fee $1.70 · $111.30 to your debit card');
+    // A standard payout shows no fee line.
+    expect(rows[1]).toHaveTextContent('To your bank •••• 6789');
+    expect(rows[1]).not.toHaveTextContent(/instant fee/);
+  });
+
   it('names the first total for what it is, and says what part of it is on hold (audit L12)', () => {
     mount();
     const totals = screen.getByLabelText(earnings.totals.label);

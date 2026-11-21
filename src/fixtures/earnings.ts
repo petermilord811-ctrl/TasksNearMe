@@ -193,6 +193,15 @@ export const jordanEarningsWithTipData: EarningsPageData = {
   rows: [...jordanEarningsPageData.rows.slice(0, 3), { ...deskEarnings, id: 'ern_desk_tip', kind: 'tip', amountCents: 900 }, ...jordanEarningsPageData.rows.slice(3)],
 };
 
+/** After an instant cash-out ($113.00, $1.70 fee, $111.30 to the card) and a standard payout before it (J-H19). */
+export const jordanEarningsPaidOutData: EarningsPageData = {
+  ...jordanEarningsPageData,
+  payouts: [
+    { id: 'po_instant', arrivalDate: '2026-11-20', status: 'paid', method: 'instant', amountCents: 11300, feeCents: 170, netCents: 11130 },
+    { id: 'po_standard', arrivalDate: '2026-11-19', status: 'paid', method: 'standard', amountCents: 5400, bankLast4: '6789' },
+  ],
+};
+
 /** $60 transferred and not yet paid out: Jordan can cash it out now for $0.90 (1.5%, at least 50 cents). */
 export const jordanEarningsInstantData: EarningsPageData = {
   ...jordanEarningsPageData,

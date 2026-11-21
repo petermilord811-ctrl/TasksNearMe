@@ -298,6 +298,16 @@ export async function getEarningsPage(db: Db, helperUserId: string, now: Date): 
       actionNeeded: status === 'requirements_due' || status === 'restricted' || (latestPayout?.status === 'failed' && !bankFixed),
     },
     firstPayoutNotice: !payoutRows.some((p) => p.status === 'paid'),
+    // Each payout once, as the bank or the card shows it: an instant one with its fee and what reached the card (J-H19).
+    payouts: [...payoutRows].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).map((payout) => ({
+      id: payout.id,
+      arrivalDate: payout.arrivalDate,
+      status: payout.status as PayoutStatus,
+      method: payout.method === 'instant' ? 'instant' as const : 'standard' as const,
+      amountCents: payout.amountCents,
+      ...(payout.method === 'instant' ? { feeCents: payout.feeCents, netCents: payout.amountCents - payout.feeCents } : {}),
+      ...(payout.bankLast4 ? { bankLast4: payout.bankLast4 } : {}),
+    })),
     ...(instant ? { instantPayout: instant } : {}),
   };
 }

@@ -53,6 +53,15 @@
     "bank": "Cuenta bancaria •••• {last4}",
     "instant": "Pago instantáneo"
   },
+  "payouts": {
+    "title": "Pagos",
+    "instant": "Pago instantáneo a tu tarjeta de débito",
+    "bank": "A tu banco •••• {last4}",
+    "bankUnknown": "A tu banco",
+    "arrives": "Llega el {date}",
+    "arrived": "Llegó el {date}",
+    "instantLine": "{amount} · tarifa del pago instantáneo {fee} · {net} a tu tarjeta de débito"
+  },
   "empty": {
     "title": "Aún no hay ganancias",
     "body": "Tus pagos por tareas y los gastos reembolsados aparecerán aquí después de que completes una reserva.",

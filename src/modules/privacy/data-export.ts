@@ -240,7 +240,8 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
     refunds: refundRows.map((row) => ({ booking: row.bookingId, amountCents: row.amountCents, reason: row.reason, status: row.status, at: iso(row.createdAt) })),
     paymentMethods: methodRows.map((row) => ({ brand: row.brand, last4: row.last4, expires: row.expMonth && row.expYear ? `${String(row.expMonth).padStart(2, '0')}/${row.expYear}` : null, default: row.isDefault, removedAt: iso(row.detachedAt), addedAt: iso(row.createdAt) })),
     earnings: earningRows.map((row) => ({ booking: row.bookingId, kind: row.kind, amountCents: row.amountCents, status: row.status, transferredAt: iso(row.transferredAt), at: iso(row.createdAt) })),
-    payouts: payoutRows.map((row) => ({ amountCents: row.amountCents, status: row.status, arrivalDate: row.arrivalDate, bankLast4: row.bankLast4, at: iso(row.createdAt) })),
+    // As the earnings page lists them (J-H19): an instant payout's fee and what reached the card.
+    payouts: payoutRows.map((row) => ({ amountCents: row.amountCents, method: row.method, feeCents: row.feeCents, netCents: row.amountCents - row.feeCents, status: row.status, arrivalDate: row.arrivalDate, bankLast4: row.bankLast4, at: iso(row.createdAt) })),
     rewards: rewardRows.map((row) => ({ program: row.program, amountCents: row.amountCents, status: row.status, earnedAt: iso(row.createdAt), deliveredAt: iso(row.deliveredAt) })),
     reviewsWritten: reviewsWritten.map((row) => ({ about: who(row.subjectUserId), booking: row.bookingId, rating: row.rating, tags: row.tags, text: row.body, status: row.status, publishedAt: iso(row.publishedAt), writtenAt: iso(row.createdAt) })),
     reviewsAboutYou: reviewsAbout.map((row) => ({ from: who(row.authorUserId), booking: row.bookingId, rating: row.rating, tags: row.tags, text: masked(row.body), publishedAt: iso(row.publishedAt) })),

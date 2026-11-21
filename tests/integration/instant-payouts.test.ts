@@ -51,6 +51,12 @@ describe('instant payouts', () => {
     expect(rows.every((row) => row.status === 'paid_out' && row.payoutId === payout!.id)).toBe(true);
     expect(await instantPayoutOffer(db, null, HELPER)).toBeNull();
     expect((await getEarningsPage(db, HELPER, now)).instantPayout).toBeUndefined();
+    // The payout as the card shows it: the amount, the fee and what reached the card (J-H19).
+    expect((await getEarningsPage(db, HELPER, now)).payouts).toEqual([expect.objectContaining({ id: payout!.id, method: 'instant', status: 'paid', amountCents: 6000, feeCents: 90, netCents: 5910 })]);
+    // A standard payout carries no fee.
+    await db.insert(payouts).values({ id: 'po_tmp_instant_standard', helperUserId: HELPER, amountCents: 2500, status: 'paid', arrivalDate: '2026-11-01', bankLast4: '6789', method: 'standard', createdAt: new Date(now.getTime() - 86_400_000) });
+    const standard = (await getEarningsPage(db, HELPER, now)).payouts?.find((row) => row.id === 'po_tmp_instant_standard');
+    expect(standard).toEqual({ id: 'po_tmp_instant_standard', arrivalDate: '2026-11-01', status: 'paid', method: 'standard', amountCents: 2500, bankLast4: '6789' });
   });
 
   it('refuses when there’s nothing to cash out, and three times a day at most', async () => {

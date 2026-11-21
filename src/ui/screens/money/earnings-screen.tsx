@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { CircleDollarSign, Info, Landmark } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type BadgeTone, type EarningsHandlers, type EarningsPageData, type EarningsRowView, type ISODateTime, type PayoutAccountStatus, type PayoutStatus } from '@/contracts';
+import { routes, type BadgeTone, type EarningsHandlers, type EarningsPageData, type EarningsPayoutView, type EarningsRowView, type ISODateTime, type PayoutAccountStatus, type PayoutStatus } from '@/contracts';
 import { formatMoney, marketLocalToUtc } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
@@ -20,6 +20,26 @@ export interface EarningsScreenProps {
   data: EarningsPageData;
   handlers: EarningsHandlers;
   now: ISODateTime;
+}
+
+/** One payout as the bank or card shows it: an instant one with its fee and what reached the card (J-H19). */
+function PayoutRow({ payout }: { payout: EarningsPayoutView }) {
+  const { formatDate, timeZone } = useFormat();
+  const t = useTranslations('earnings');
+  // The provider supplies a calendar day, not a midnight UTC instant.
+  const date = formatDate(marketLocalToUtc(payout.arrivalDate, '12:00', timeZone));
+  const where = payout.method === 'instant' ? t('payouts.instant') : payout.bankLast4 ? t('payouts.bank', { last4: payout.bankLast4 }) : t('payouts.bankUnknown');
+  return <div className="flex flex-wrap items-start justify-between gap-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card dark:border-white/[0.06]">
+    <div className="min-w-0 space-y-1">
+      <p className="font-medium">{where}</p>
+      <p className="text-sm tabular-nums text-muted-foreground"><time dateTime={payout.arrivalDate}>{t(payout.status === 'paid' ? 'payouts.arrived' : 'payouts.arrives', { date })}</time></p>
+      {payout.feeCents !== undefined && payout.netCents !== undefined && <p className="text-sm tabular-nums">{t('payouts.instantLine', { amount: formatMoney(payout.amountCents), fee: formatMoney(payout.feeCents), net: formatMoney(payout.netCents) })}</p>}
+    </div>
+    <div className="flex flex-col items-end gap-2">
+      <span className="font-semibold tabular-nums"><Money cents={payout.amountCents} size="lg" /></span>
+      <StatusBadge label={t(`payout.${payout.status}`)} tone={payoutTones[payout.status]} />
+    </div>
+  </div>;
 }
 
 function EarningsRow({ row, now }: { row: EarningsRowView; now: ISODateTime }) {
@@ -93,5 +113,9 @@ export function EarningsScreen({ data, handlers, now }: EarningsScreenProps) {
       <h2 id="earnings-transfers" className="font-display text-xl/7 font-semibold tracking-[-0.015em] md:text-[22px]/7.5">{t('transfers')}</h2>
       <ul className="space-y-4">{data.rows.map((row) => <li key={row.id}><EarningsRow row={row} now={now} /></li>)}</ul>
     </section> : <EmptyState title={t('empty.title')} body={t('empty.body')} icon={<CircleDollarSign className="size-6" />} action={{ label: t('empty.action'), href: routes.app.findWork() }} />}
+    {data.payouts && data.payouts.length > 0 && <section aria-labelledby="earnings-payouts" className="space-y-4">
+      <h2 id="earnings-payouts" className="font-display text-xl/7 font-semibold tracking-[-0.015em] md:text-[22px]/7.5">{t('payouts.title')}</h2>
+      <ul className="space-y-4">{data.payouts.map((payout) => <li key={payout.id}><PayoutRow payout={payout} /></li>)}</ul>
+    </section>}
   </div>;
 }

@@ -127,6 +127,23 @@ export interface InstantPayoutOffer {
 }
 
 /** `/app/earnings`. */
+/**
+ * One payout from the helper's balance, as their bank or card shows it (journeys on a phone, J-H19). Instant payouts go to
+ * the debit card in minutes for a fee: `feeCents` and `netCents` (what reached the card) are set only for them.
+ */
+export interface EarningsPayoutView {
+  id: string;
+  /** Market calendar day it arrives or arrived, "2026-11-20". */
+  arrivalDate: string;
+  status: PayoutStatus;
+  method: 'standard' | 'instant';
+  /** What left the helper's balance. */
+  amountCents: Cents;
+  feeCents?: Cents;
+  netCents?: Cents;
+  bankLast4?: string;
+}
+
 export interface EarningsPageData {
   totals: {
     /** Earned, not paid out yet: approved work not yet transferred, plus amounts on hold (audit L12: not "upcoming bookings"). */
@@ -150,6 +167,8 @@ export interface EarningsPageData {
   firstPayoutNotice: boolean;
   /** Present when an instant payout is possible now (an active account, enough money, an eligible card). */
   instantPayout?: InstantPayoutOffer;
+  /** Each payout once, newest first (J-H19). */
+  payouts?: EarningsPayoutView[];
 }
 
 /**

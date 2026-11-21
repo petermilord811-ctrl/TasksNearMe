@@ -53,6 +53,15 @@
     "bank": "Bank account •••• {last4}",
     "instant": "Instant payout"
   },
+  "payouts": {
+    "title": "Payouts",
+    "instant": "Instant payout to your debit card",
+    "bank": "To your bank •••• {last4}",
+    "bankUnknown": "To your bank",
+    "arrives": "Arrives {date}",
+    "arrived": "Arrived {date}",
+    "instantLine": "{amount} · instant fee {fee} · {net} to your debit card"
+  },
   "empty": {
     "title": "No earnings yet",
     "body": "Your task payments and reimbursed expenses will appear here after you complete a booking.",
