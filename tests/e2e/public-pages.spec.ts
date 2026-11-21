@@ -14,8 +14,17 @@ import { waitlistEntries } from '../../src/modules/marketing/schema';
  */
 async function landOnMap(page: Page) {
   const landed = page.locator('[data-map-landed]');
-  await landed.evaluate((anchor) => anchor.scrollIntoView({ block: 'start' }));
-  await expect.poll(() => page.locator('#tasks-near-you [data-task-map]').evaluate((frame) => frame.getBoundingClientRect().top < window.innerHeight * 0.9)).toBe(true);
+  // Scroll to where the map has landed, and again on each try: the hero above can still change the page's height as
+  // it loads (slowly under load, as on CI's phones), which moves the map away from a single scroll (Ship 44897520559).
+  await expect
+    .poll(
+      async () => {
+        await landed.evaluate((anchor) => anchor.scrollIntoView({ block: 'start' }));
+        return page.locator('#tasks-near-you [data-task-map]').evaluate((frame) => frame.getBoundingClientRect().top < window.innerHeight * 0.9);
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(true);
   // The explorer takes clicks once the arrival has come far enough (wide screens), right away on phones.
   await expect.poll(() => page.locator('[data-map-explorer]').evaluate((panel) => getComputedStyle(panel).pointerEvents)).not.toBe('none');
   if (!(await page.evaluate(() => window.matchMedia('(min-width: 1024px)').matches))) return;
