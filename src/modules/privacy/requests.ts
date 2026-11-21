@@ -24,6 +24,7 @@ import { cancelTask } from '@/modules/offers/owner';
 import type { PaymentProvider } from '@/integrations/payments';
 import { paymentCustomers, paymentMethods } from '@/modules/payments/schema';
 import { helperProfiles, helperServices, helperWorkSamples } from '@/modules/profiles/schema';
+import { userBadges } from '@/modules/badges/schema';
 import { savedHelpers } from '@/modules/reviews/schema';
 import { deleteAddressDocument } from '@/modules/verification/address';
 import { deleteIdentityCapturePhotos } from '@/modules/verification/capture';
@@ -397,7 +398,10 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     await tx.update(threadParticipants).set({ muted: true }).where(eq(threadParticipants.userId, userId));
     await tx.update(paymentMethods).set({ detachedAt: now, isDefault: false }).where(and(eq(paymentMethods.userId, userId), isNull(paymentMethods.detachedAt)));
     await tx.update(availabilityPosts).set({ status: 'canceled', canceledAt: now, updatedAt: now }).where(and(eq(availabilityPosts.helperUserId, userId), ne(availabilityPosts.status, 'canceled')));
-    await tx.update(helperProfiles).set({ handle: `deleted-${userId}`, headline: '', bio: '', tools: [], homeZip: null, status: 'paused', updatedAt: now.toISOString() }).where(eq(helperProfiles.userId, userId));
+    // No trust badges on a deleted account's card where others still see it (a past booking, privacy rehearsal J-PR16):
+    // the verification rows keep their statuses and dates as records.
+    await tx.update(helperProfiles).set({ handle: `deleted-${userId}`, headline: '', bio: '', tools: [], homeZip: null, idVerifiedAt: null, backgroundCheckedAt: null, addressVerifiedAt: null, status: 'paused', updatedAt: now.toISOString() }).where(eq(helperProfiles.userId, userId));
+    await tx.delete(userBadges).where(eq(userBadges.userId, userId));
     await tx.update(helperServices).set({ status: 'paused', description: '' }).where(eq(helperServices.userId, userId));
     await tx.delete(helperWorkSamples).where(eq(helperWorkSamples.userId, userId));
     // Part 7: what they kept goes; what they wrote in the community and on tasks comes down (rows stay for

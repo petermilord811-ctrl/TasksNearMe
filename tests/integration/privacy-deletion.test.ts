@@ -15,6 +15,7 @@ import { prepareDueExports, processDueDeletions, readReadyExport, requestAccount
 import { readZip } from '@/modules/privacy/zip';
 import { rebookProposals } from '@/modules/rebook/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
+import { userBadges } from '@/modules/badges/schema';
 import { savedSearches } from '@/modules/searches/schema';
 import { waitlistEntries } from '@/modules/marketing/schema';
 import { addressVerifications, backgroundChecks } from '@/modules/verification/schema';
@@ -90,7 +91,8 @@ beforeAll(async () => {
     person(maya, OTHER, 'Omar', 'Ortiz'),
     person(maya, FAILER, 'Fay', 'Lin'),
   ]);
-  await db.insert(helperProfiles).values({ ...profile!, userId: HELPER, handle: 'pr-helper', foundingNumber: null, completedCount: 1 });
+  await db.insert(helperProfiles).values({ ...profile!, userId: HELPER, handle: 'pr-helper', foundingNumber: null, completedCount: 1, idVerifiedAt: asked.toISOString(), backgroundCheckedAt: asked.toISOString(), addressVerifiedAt: asked.toISOString() });
+  await db.insert(userBadges).values({ id: 'ubg_pr_helper', userId: HELPER, code: 'tasks_completed', tier: 1, tierEarnedAt: asked });
 
   // Paula: signed in on a laptop, a passkey, a phone that gets her notifications, a saved search with alerts.
   await db.insert(sessions).values({ id: 'ses_pr_client', token: 'tok_pr_client_secret', userId: CLIENT, ipAddress: '203.0.113.7', userAgent: 'Firefox on Linux', expiresAt: new Date('2099-01-01T00:00:00.000Z') });
@@ -166,6 +168,7 @@ afterAll(async () => {
   await db.delete(privacyRequests).where(inArray(privacyRequests.userId, ids));
   await db.delete(outboxEvents).where(inArray(outboxEvents.aggregateId, [...ids, 'tsk_pr_open', 'ofr_pr_helper', 'inv_pr_sent', 'inv_pr_countered', 'rbp_pr_tv']));
   await db.delete(auditLog).where(inArray(auditLog.targetId, ids));
+  await db.delete(userBadges).where(inArray(userBadges.userId, ids));
   await db.delete(helperProfiles).where(inArray(helperProfiles.userId, ids));
   await db.delete(users).where(inArray(users.id, ids));
   await pool.end();
@@ -262,8 +265,13 @@ describe('the privacy rehearsal: a copy of the data, then deleting the account (
     expect((await db.select({ status: rebookProposals.status }).from(rebookProposals).where(eq(rebookProposals.id, 'rbp_pr_tv')))[0]?.status).toBe('declined');
     // The drafts the requests made are closed too.
     expect((await db.select({ status: tasks.status }).from(tasks).where(eq(tasks.id, 'tsk_pr_other')))[0]?.status).toBe('canceled');
-    const [pat] = await db.select({ handle: helperProfiles.handle, status: helperProfiles.status, bio: helperProfiles.bio, homeZip: helperProfiles.homeZip }).from(helperProfiles).where(eq(helperProfiles.userId, HELPER));
-    expect(pat).toEqual({ handle: `deleted-${HELPER}`, status: 'paused', bio: '', homeZip: null });
+    const [pat] = await db
+      .select({ handle: helperProfiles.handle, status: helperProfiles.status, bio: helperProfiles.bio, homeZip: helperProfiles.homeZip, idVerifiedAt: helperProfiles.idVerifiedAt, backgroundCheckedAt: helperProfiles.backgroundCheckedAt, addressVerifiedAt: helperProfiles.addressVerifiedAt })
+      .from(helperProfiles)
+      .where(eq(helperProfiles.userId, HELPER));
+    expect(pat).toEqual({ handle: `deleted-${HELPER}`, status: 'paused', bio: '', homeZip: null, idVerifiedAt: null, backgroundCheckedAt: null, addressVerifiedAt: null });
+    // No trust or achievement badges on his card where others still see it (J-PR16).
+    expect(await db.select().from(userBadges).where(eq(userBadges.userId, HELPER))).toEqual([]);
     // Omar's copy names Pat as a deleted account, in Omar's language.
     expect(await requestDataExport(db, OTHER, due)).toEqual({ ok: true, code: 'submitted' });
     expect(await prepareDueExports(db, { storage, cipher }, due, { userIds: [OTHER] })).toBe(1);
