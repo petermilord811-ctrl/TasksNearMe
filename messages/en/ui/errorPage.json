@@ -1,0 +1,7 @@
+{
+  "title": "Something went wrong on our side",
+  "body": "This page didn't load. It's usually brief: try again in a minute.",
+  "retry": "Try again",
+  "home": "Go to the home page",
+  "reference": "Reference: {digest}"
+}
