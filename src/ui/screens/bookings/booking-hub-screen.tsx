@@ -223,6 +223,7 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
       {data.addressVisibility === 'visible' && data.exactAddress && <>
         <ExactAddressPanel
           address={data.exactAddress}
+          headingLevel={3}
           mapsHref={routes.external.googleMapsSearch(data.exactAddress)}
           {...(data.viewerRole === 'helper' ? { directions: { google: routes.external.googleMapsDirections(data.exactAddress), apple: routes.external.appleMapsDirections(data.exactAddress) } } : {})}
         />

@@ -83,3 +83,16 @@ describe('ExactAddressPanel', () => {
     expect(screen.getByRole('menuitem', { name: /Open in maps/ })).toHaveAttribute('href', 'https://maps.example/search');
   });
 });
+
+describe('ExactAddressPanel headings (accessibility pass, J-A3)', () => {
+  it('takes the level of where it sits, the access notes one below', () => {
+    const address = { ...deskExactAddress, accessNotes: 'Side gate is unlocked.' };
+    renderLocation(<ExactAddressPanel address={address} headingLevel={3} />);
+    expect(screen.getByRole('heading', { level: 3, name: location.exactAddress })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 4, name: location.accessNotes })).toBeVisible();
+    cleanup();
+    renderLocation(<ExactAddressPanel address={address} />);
+    expect(screen.getByRole('heading', { level: 2, name: location.exactAddress })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 3, name: location.accessNotes })).toBeVisible();
+  });
+});

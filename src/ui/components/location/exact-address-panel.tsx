@@ -10,6 +10,8 @@ import { Button } from '@/ui/primitives/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/primitives/dropdown-menu';
 
 export interface ExactAddressPanelProps {
+  /** Its heading's level where it sits: 3 inside a section that has an h2 (the booking's "When and where"). */
+  headingLevel?: 2 | 3;
   address: ExactAddress;
   visibleUntil?: ISODateTime;
   /** Supply a URL built by the routes contract once its external Maps builder is available. */
@@ -20,7 +22,7 @@ export interface ExactAddressPanelProps {
 }
 
 /** The sole renderer of ExactAddress. Access decisions belong to the app, before these props arrive. */
-export function ExactAddressPanel({ address, visibleUntil, mapsHref, directions, className }: ExactAddressPanelProps) {
+export function ExactAddressPanel({ address, visibleUntil, mapsHref, directions, className, headingLevel = 2 }: ExactAddressPanelProps) {
   const { formatDateTime } = useFormat();
   const t = useTranslations('location');
   const titleId = useId();
@@ -44,13 +46,16 @@ export function ExactAddressPanel({ address, visibleUntil, mapsHref, directions,
     }
   }
 
+  // The panel's own heading, and the access notes' one level below it (accessibility pass, J-A3).
+  const Heading = headingLevel === 3 ? 'h3' : 'h2';
+  const NotesHeading = headingLevel === 3 ? 'h4' : 'h3';
   return (
     <section aria-labelledby={titleId} className={cn('space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 text-card-foreground shadow-sm sm:p-6 dark:border-white/[0.06]', className)}>
       <div className="space-y-3">
-        <h2 id={titleId} className="flex items-center gap-2 text-lg font-semibold">
+        <Heading id={titleId} className="flex items-center gap-2 text-lg font-semibold">
           <Lock aria-hidden="true" className="size-5 shrink-0 text-primary" />
           {t('exactAddress')}
-        </h2>
+        </Heading>
         <address className="break-words text-base leading-6 not-italic">
           <span className="block">{address.line1}</span>
           {address.line2 && <span className="block">{address.line2}</span>}
@@ -60,7 +65,7 @@ export function ExactAddressPanel({ address, visibleUntil, mapsHref, directions,
 
       {address.accessNotes && (
         <div className="space-y-1 rounded-lg bg-muted p-3">
-          <h3 className="text-sm font-semibold">{t('accessNotes')}</h3>
+          <NotesHeading className="text-sm font-semibold">{t('accessNotes')}</NotesHeading>
           <p className="whitespace-pre-wrap break-words text-sm leading-6">{address.accessNotes}</p>
         </div>
       )}
