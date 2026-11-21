@@ -22,6 +22,7 @@ import { Button } from '@/ui/primitives/button';
 import { Checkbox } from '@/ui/primitives/checkbox';
 import { Spinner } from '@/ui/primitives/spinner';
 import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
+import { useRouteDialog } from '@/ui/lib/route-dialog';
 import type { BookingConfirmScreenProps } from './booking-confirm-screen';
 
 export function BookingConfirmForm({ data, handlers, now, initialResult, initialPending = false, children }: BookingConfirmScreenProps & {
@@ -33,6 +34,7 @@ export function BookingConfirmForm({ data, handlers, now, initialResult, initial
   const t = useTranslations('bookingConfirm');
   const fieldCopy = useTranslations('forms.fieldErrors');
   const router = useRouter();
+  const dialog = useRouteDialog();
   const id = useId();
   const paymentId = `${id}-payment`;
   const paymentSection = useRef<HTMLElement>(null);
@@ -45,6 +47,12 @@ export function BookingConfirmForm({ data, handlers, now, initialResult, initial
   const [result, setResult] = useState<ActionResult | undefined>(() => initialResult && !needsBankVerification(initialResult) ? initialResult : undefined);
   const [verification, setVerification] = useState<PaymentVerification | undefined>(() => initialResult && needsBankVerification(initialResult) ? initialResult.verification : undefined);
   const [pending, setPending] = useState(initialPending);
+  // A route dialog stays open while the payment is on its way or the bank's step is open (RouteDialogControls.setBusy).
+  useEffect(() => {
+    if (!dialog) return;
+    dialog.setBusy(pending || Boolean(verification));
+    return () => dialog.setBusy(false);
+  }, [dialog, pending, verification]);
   const locked = useRef(initialPending);
   const form = useForm<ConfirmBookingInput>({
     resolver: zodResolver(confirmBookingInputSchema),
@@ -100,7 +108,9 @@ export function BookingConfirmForm({ data, handlers, now, initialResult, initial
     setVerification(undefined);
     setResult(next);
     if (next.ok) locked.current = true;
-    if (next.ok && next.redirectTo) router.push(next.redirectTo);
+    // In a route dialog it closes and the new booking opens, as the full page goes to it ("Booked!").
+    if (next.ok && dialog) dialog.finish(next, undefined, { follow: true });
+    else if (next.ok && next.redirectTo) router.push(next.redirectTo);
   }
 
   const paymentError = form.getFieldState('payment.methodId', form.formState).error?.message
@@ -142,8 +152,8 @@ export function BookingConfirmForm({ data, handlers, now, initialResult, initial
           )}>
             <Checkbox id={`${id}-terms`} ref={field.ref} name={field.name} checked={field.value} onCheckedChange={(checked) => field.onChange(checked === true)} onBlur={field.onBlur} disabled={disabled} aria-required="true" aria-invalid={fieldState.invalid} aria-describedby={fieldState.error ? `${id}-terms-error` : undefined} className="mt-0.5 size-5" />
             <span className="min-w-0 flex-1 text-pretty">{t.rich('terms', {
-              terms: (chunks) => <Link href={routes.legal('terms')} className="rounded-sm font-medium text-primary underline decoration-primary/40 underline-offset-4 transition-colors duration-200 hover:decoration-primary">{chunks}</Link>,
-              cancellation: (chunks) => <Link href={routes.legal('cancellation-policy')} className="rounded-sm font-medium text-primary underline decoration-primary/40 underline-offset-4 transition-colors duration-200 hover:decoration-primary">{chunks}</Link>,
+              terms: (chunks) => <Link href={routes.legal('terms')} target="_blank" className="rounded-sm font-medium text-primary underline decoration-primary/40 underline-offset-4 transition-colors duration-200 hover:decoration-primary">{chunks}</Link>,
+              cancellation: (chunks) => <Link href={routes.legal('cancellation-policy')} target="_blank" className="rounded-sm font-medium text-primary underline decoration-primary/40 underline-offset-4 transition-colors duration-200 hover:decoration-primary">{chunks}</Link>,
             })}</span>
           </label>} />
           <div aria-live="polite">{form.formState.errors.acceptTerms?.message && <p id={`${id}-terms-error`} className="text-sm text-destructive">{errorText(form.formState.errors.acceptTerms.message)}</p>}</div>

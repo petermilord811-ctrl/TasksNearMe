@@ -76,6 +76,45 @@ describe('RouteDialogFrame', () => {
     expect(navigation.refresh).toHaveBeenCalledTimes(1);
   });
 
+  it('can\'t be closed while busy (a payment on its way), and closes again once it isn\'t', () => {
+    function Paying({ busy }: { busy: boolean }) {
+      const dialog = useRouteDialog();
+      useEffect(() => { dialog?.setBusy(busy); }, [dialog, busy]);
+      return null;
+    }
+    const view = mount(<Paying busy />);
+    expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+    expect(navigation.back).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-busy', 'true');
+    view.rerender(<NextIntlClientProvider locale="en" messages={messages}>
+      <RouteDialogFrame>
+        <RouteDialogHeader title="Review Jordan T." description="Assemble a desk" />
+        <RouteDialogBody><Paying busy={false} /></RouteDialogBody>
+      </RouteDialogFrame>
+    </NextIntlClientProvider>);
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(navigation.back).toHaveBeenCalledTimes(1);
+  });
+
+  it('follows a result that is a page of its own (a new booking): back, then that page in place of the dialog', () => {
+    const grabbed: RouteDialogControls[] = [];
+    function Grab() {
+      const dialog = useRouteDialog();
+      useEffect(() => { if (dialog) grabbed.push(dialog); }, [dialog]);
+      return null;
+    }
+    mount(<Grab />);
+    const controls = grabbed[0];
+    expect(controls).toBeDefined();
+    act(() => { controls?.finish({ ok: true, code: 'booked', redirectTo: '/app/bookings/bkg_new' }, undefined, { follow: true }); });
+    expect(toasts.success).toHaveBeenCalledWith('Booked!');
+    expect(navigation.back).toHaveBeenCalledTimes(1);
+    act(() => { window.dispatchEvent(new PopStateEvent('popstate')); });
+    expect(navigation.push).toHaveBeenCalledWith('/app/bookings/bkg_new');
+    expect(navigation.refresh).not.toHaveBeenCalled();
+  });
+
   it('after it was closed, a late result only refreshes (it never goes back a second time)', () => {
     const grabbed: RouteDialogControls[] = [];
     function Grab() {

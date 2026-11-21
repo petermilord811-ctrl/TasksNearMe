@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type PaymentAttemptResult, type PriceBreakdown, type RequestHelperHandlers, type RequestHelperPageData } from '@/contracts';
 import { AvailabilitySlotSummary } from '@/ui/components/availability/availability-slot-summary';
+import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
 import { RequestHelperForm } from './request-helper-form';
 
 export interface RequestHelperScreenProps {
@@ -15,21 +16,40 @@ export function RequestHelperScreen(props: RequestHelperScreenProps) {
   return <RequestHelperContent {...props} />;
 }
 
+type RequestHelperState = { initialResult?: PaymentAttemptResult; initialPending?: boolean; initialBreakdown?: PriceBreakdown };
+
 /** Initial results are for previews; app pages use RequestHelperScreen. */
-export function RequestHelperContent({ data, handlers, initialResult, initialPending, initialBreakdown }: RequestHelperScreenProps & {
-  initialResult?: PaymentAttemptResult;
-  initialPending?: boolean;
-  initialBreakdown?: PriceBreakdown;
-}) {
+export function RequestHelperContent(props: RequestHelperScreenProps & RequestHelperState) {
   const t = useTranslations('invites');
+  const { helper } = props.data;
   return <div className="mx-auto max-w-reading space-y-6">
-    <Link href={routes.helperProfile(data.helper.handle)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline">
-      <ArrowLeft aria-hidden="true" className="size-4" />{t('back', { helper: data.helper.displayName })}
+    <Link href={routes.helperProfile(helper.handle)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline">
+      <ArrowLeft aria-hidden="true" className="size-4" />{t('back', { helper: helper.displayName })}
     </Link>
     <header className="space-y-2">
-      <h1 className="font-heading text-2xl/8 font-bold md:text-3xl/9.5">{t('title', { helper: data.helper.displayName })}</h1>
+      <h1 className="font-heading text-2xl/8 font-bold md:text-3xl/9.5">{t('title', { helper: helper.displayName })}</h1>
       <p className="text-muted-foreground">{t('intro')}</p>
     </header>
+    <RequestHelperBody {...props} />
+  </div>;
+}
+
+/**
+ * The same as a dialog over the profile, the list or the booking it was opened from (src/app/[locale]/@modal). Sending
+ * closes it and opens the task the request went to.
+ */
+export function RequestHelperDialogScreen(props: RequestHelperScreenProps & RequestHelperState) {
+  const t = useTranslations('invites');
+  return <>
+    <RouteDialogHeader title={t('title', { helper: props.data.helper.displayName })} description={t('intro')} />
+    <RouteDialogBody><RequestHelperBody {...props} /></RouteDialogBody>
+  </>;
+}
+
+/** The open time asked for, then the form (or the way to post a task first): on the page and in the dialog. */
+function RequestHelperBody({ data, handlers, initialResult, initialPending, initialBreakdown }: RequestHelperScreenProps & RequestHelperState) {
+  const t = useTranslations('invites');
+  return <>
     {data.slotUnavailable ? <p role="status" className="rounded-2xl border border-info/30 bg-info/[0.05] p-4">{t('slotUnavailable')}</p> : data.slot && <section className="space-y-3 rounded-[1.375rem] border border-primary/15 bg-primary/[0.04] p-4 sm:p-6 dark:border-primary/25 dark:bg-primary/[0.08]">
       <h2 className="font-heading text-xl/7 font-semibold">{t('slotTitle')}</h2>
       <AvailabilitySlotSummary slot={data.slot} />
@@ -39,5 +59,5 @@ export function RequestHelperContent({ data, handlers, initialResult, initialPen
       <p className="text-muted-foreground">{t(data.slot && !data.slotUnavailable ? 'noSlotTasksDescription' : 'noTasksDescription')}</p>
       <Link href={routes.app.newTask()} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('postTask')}</Link>
     </section> : <RequestHelperForm key={`${data.helper.id}-${data.slotUnavailable ? 'regular' : data.slot?.id ?? 'regular'}`} data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} initialBreakdown={initialBreakdown} />}
-  </div>;
+  </>;
 }

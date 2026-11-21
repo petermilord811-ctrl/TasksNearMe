@@ -29,6 +29,8 @@ export function RouteDialogFrame({ children }: { children: ReactNode }) {
   const visible = useRef(false);
   const finished = useRef(false);
   const [generation, setGeneration] = useState(0);
+  // A payment on its way: no closing but the browser's Back (RouteDialogControls.setBusy).
+  const [busy, setBusy] = useState(false);
   const content = useRef<HTMLDivElement>(null);
   // What opened the dialog (the link or button that navigated here), for focus to go back to: Radix's own return
   // goes to a Dialog.Trigger, and a route dialog has none.
@@ -54,17 +56,25 @@ export function RouteDialogFrame({ children }: { children: ReactNode }) {
       if (options?.done) finished.current = true;
       router.back();
     },
-    finish: (result, message) => {
+    finish: (result, message, options) => {
       if (result.ok) toast.success(message ?? feedback(`success.${result.code}`));
+      const next = options?.follow && result.ok ? result.redirectTo : undefined;
       if (!visible.current) {
-        router.refresh();
+        if (next) router.push(next);
+        else router.refresh();
         return;
       }
       finished.current = true;
-      // The page underneath is the one the router had before the dialog opened: refresh it once it's back.
-      window.addEventListener('popstate', () => router.refresh(), { once: true });
+      // Once the page underneath is back (the one the router had before the dialog opened): open the result's own page
+      // in place of the dialog's history entry, or refresh the page underneath when that is the result's page (paying
+      // a booking from the booking itself, "Finish paying").
+      window.addEventListener('popstate', () => {
+        if (next && next !== `${window.location.pathname}${window.location.search}`) router.push(next);
+        else router.refresh();
+      }, { once: true });
       router.back();
     },
+    setBusy,
   }), [router, feedback]);
 
   // A link inside the dialog (Get help, Manage your saved searches, View change) closes the dialog first, then opens its
@@ -78,16 +88,20 @@ export function RouteDialogFrame({ children }: { children: ReactNode }) {
     if (url.origin !== window.location.origin) return;
     if (url.pathname === window.location.pathname && url.search === window.location.search && url.hash) return;
     event.preventDefault();
-    if (!visible.current) return;
+    if (!visible.current || busy) return;
     window.addEventListener('popstate', () => router.push(`${url.pathname}${url.search}${url.hash}`), { once: true });
     router.back();
   };
 
   return <RouteDialogContext.Provider value={controls}>
-    <Dialog open onOpenChange={(open) => { if (!open) controls.close(); }}>
+    <Dialog open onOpenChange={(open) => { if (!open && !busy) controls.close(); }}>
       <DialogContent
         ref={content}
         data-route-dialog=""
+        aria-busy={busy || undefined}
+        showCloseButton={!busy}
+        onEscapeKeyDown={(event) => { if (busy) event.preventDefault(); }}
+        onInteractOutside={(event) => { if (busy) event.preventDefault(); }}
         onClickCapture={followLink}
         // The primitive's zoom (95%) is set to none here: it fades, and slides up from the bottom on phones.
         style={{ '--tw-enter-scale': 1, '--tw-exit-scale': 1 } as CSSProperties}

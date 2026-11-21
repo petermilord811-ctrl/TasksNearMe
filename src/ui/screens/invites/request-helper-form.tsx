@@ -17,6 +17,7 @@ import { Checkbox } from '@/ui/primitives/checkbox';
 import { Spinner } from '@/ui/primitives/spinner';
 import { usePriceQuote } from '@/ui/lib/use-price-quote';
 import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
+import { useRouteDialog } from '@/ui/lib/route-dialog';
 import { isBookAgain, RequestHelperFields, requestOptions, requestStartWindow, suggestedPricing } from './request-helper-fields';
 import type { RequestHelperScreenProps } from './request-helper-screen';
 
@@ -28,6 +29,7 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
   const t = useTranslations('invites');
   const fields = useTranslations('forms.fieldErrors');
   const router = useRouter();
+  const dialog = useRouteDialog();
   const id = useId();
   const submitBar = useRef<HTMLDivElement>(null);
   // A field that focus reaches behind the sticky bar, or whose hint or count is, comes clear of it, also when a
@@ -38,6 +40,12 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
   const [result, setResult] = useState<ActionResult | undefined>(() => initialResult && !needsBankVerification(initialResult) ? initialResult : undefined);
   const [verification, setVerification] = useState<PaymentVerification | undefined>(() => initialResult && needsBankVerification(initialResult) ? initialResult.verification : undefined);
   const [pending, setPending] = useState(initialPending);
+  // A route dialog stays open while the payment is on its way or the bank's step is open (RouteDialogControls.setBusy).
+  useEffect(() => {
+    if (!dialog) return;
+    dialog.setBusy(pending || Boolean(verification));
+    return () => dialog.setBusy(false);
+  }, [dialog, pending, verification]);
   const locked = useRef(initialPending || Boolean(initialResult?.ok));
   const options = useMemo(() => requestOptions(data), [data]);
   const schema = useMemo(() => requestHelperInputSchema.superRefine((input, context) => {
@@ -103,7 +111,9 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
     if (needsBankVerification(next)) { setVerification(next.verification); return; }
     setVerification(undefined); setResult(next);
     if (next.ok) locked.current = true;
-    if (next.ok && next.redirectTo) router.push(next.redirectTo);
+    // In a route dialog it closes and the task the request went to opens, as the full page goes to it.
+    if (next.ok && dialog) dialog.finish(next, next.code === 'sent' ? t('sent') : undefined, { follow: true });
+    else if (next.ok && next.redirectTo) router.push(next.redirectTo);
   }
 
   const feedback = result && !result.ok ? { ...result, fieldErrors: undefined } : result;
@@ -141,8 +151,8 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
           <div className="flex items-start gap-3">
             <Checkbox ref={field.ref} name={field.name} id={`${id}-terms`} checked={field.value} disabled={disabled} onBlur={field.onBlur} onCheckedChange={(checked) => field.onChange(checked === true)} aria-required="true" aria-invalid={fieldState.invalid} aria-describedby={fieldState.error ? `${id}-terms-error` : undefined} className="size-11 shrink-0 scroll-mb-40" />
             <label htmlFor={`${id}-terms`} className="min-h-11 text-sm leading-6">{t.rich('terms', {
-              terms: (chunks) => <Link href={routes.legal('terms')} className="inline-flex min-h-11 items-center rounded-sm text-primary underline underline-offset-4">{chunks}</Link>,
-              cancellation: (chunks) => <Link href={routes.legal('cancellation-policy')} className="inline-flex min-h-11 items-center rounded-sm text-primary underline underline-offset-4">{chunks}</Link>,
+              terms: (chunks) => <Link href={routes.legal('terms')} target="_blank" className="inline-flex min-h-11 items-center rounded-sm text-primary underline underline-offset-4">{chunks}</Link>,
+              cancellation: (chunks) => <Link href={routes.legal('cancellation-policy')} target="_blank" className="inline-flex min-h-11 items-center rounded-sm text-primary underline underline-offset-4">{chunks}</Link>,
             })}</label>
           </div>
           <div id={`${id}-terms-error`} aria-live="polite">{fieldState.error?.message && <p className="text-sm text-destructive">{fieldError(fieldState.error.message)}</p>}</div>

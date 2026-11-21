@@ -14,7 +14,8 @@ test('a poster books an hourly offer after a declined card and a bank check', as
   await page.goto('/app/tasks/tsk_moving/offers/off_moving_jordan');
   await page.getByRole('button', { name: 'Book helper' }).click();
   await expect(page).toHaveURL(/\/app\/tasks\/tsk_moving\/offers\/off_moving_jordan\/confirm$/, { timeout: 30_000 });
-  await expect(page.getByRole('heading', { level: 1, name: 'Confirm and pay' })).toBeVisible();
+  // A dialog over the offer (src/app/[locale]/@modal); paying in it opens the new booking.
+  await expect(page.getByRole('dialog', { name: 'Confirm and pay' }).getByRole('heading', { level: 1, name: 'Confirm and pay' })).toBeVisible();
   // $35/h with a 4-hour cap: $140 + $14.00 today.
   const pay = page.getByRole('button', { name: 'Book and pay $154.00' });
   await expect(pay).toBeVisible();

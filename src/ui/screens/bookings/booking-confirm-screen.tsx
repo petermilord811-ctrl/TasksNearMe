@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, CalendarDays, CircleAlert, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -6,6 +7,7 @@ import { formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { backArrow, backLink, cardTitle, note, sectionTitle, surface, surfacePad } from '@/ui/components/bookings/surface';
 import { PageHeader } from '@/ui/components/layout/page-header';
+import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
 import { GeneralArea } from '@/ui/components/location/general-area';
 import { MaskedText } from '@/ui/components/messaging/masked-text';
 import { CancellationSummary } from '@/ui/components/money/cancellation-summary';
@@ -24,11 +26,36 @@ export function BookingConfirmScreen(props: BookingConfirmScreenProps) {
   return <BookingConfirmContent {...props} />;
 }
 
+type BookingConfirmState = { initialResult?: PaymentAttemptResult; initialPending?: boolean };
+
 /** Initial states are for the preview gallery; app pages use BookingConfirmScreen. */
-export function BookingConfirmContent({ data, handlers, now, initialResult, initialPending }: BookingConfirmScreenProps & {
-  initialResult?: PaymentAttemptResult;
-  initialPending?: boolean;
-}) {
+export function BookingConfirmContent(props: BookingConfirmScreenProps & BookingConfirmState) {
+  const t = useTranslations('bookingConfirm');
+  const { task, offer } = props.data;
+  return <div className="mx-auto max-w-reading space-y-6">
+    <BookingConfirmBody {...props} lead={<>
+      <Link href={routes.app.offer(task.id, offer.id)} className={backLink}>
+        <ArrowLeft aria-hidden="true" className={backArrow} />{t('backToOffer')}
+      </Link>
+      <PageHeader title={t('title')} description={t('intro')} />
+    </>} />
+  </div>;
+}
+
+/**
+ * The same as a dialog over the task, the offer or the booking it was opened from (src/app/[locale]/@modal). Paying
+ * closes it and opens the new booking.
+ */
+export function BookingConfirmDialogScreen(props: BookingConfirmScreenProps & BookingConfirmState) {
+  const t = useTranslations('bookingConfirm');
+  return <>
+    <RouteDialogHeader title={t('title')} description={t('intro')} />
+    <RouteDialogBody><BookingConfirmBody {...props} /></RouteDialogBody>
+  </>;
+}
+
+/** What is being booked, with whom and for how much, then payment: on the page (after its `lead`) and in the dialog. */
+function BookingConfirmBody({ data, handlers, now, initialResult, initialPending, lead }: BookingConfirmScreenProps & BookingConfirmState & { lead?: ReactNode }) {
   const { formatDate, formatDateTime, zoneName } = useFormat();
   const t = useTranslations('bookingConfirm');
   const categories = useTranslations('helperCard.categories');
@@ -36,10 +63,7 @@ export function BookingConfirmContent({ data, handlers, now, initialResult, init
   const helper = offer.helper.displayName;
 
   const summary = <>
-    <Link href={routes.app.offer(task.id, offer.id)} className={backLink}>
-      <ArrowLeft aria-hidden="true" className={backArrow} />{t('backToOffer')}
-    </Link>
-    <PageHeader title={t('title')} description={t('intro')} />
+    {lead}
     <section aria-label={t('summary')} className={cn(surface, surfacePad, 'space-y-5')}>
       <div className="space-y-2">
         <p className="text-sm font-medium text-muted-foreground">{categories(task.categorySlug)}</p>
@@ -75,11 +99,11 @@ export function BookingConfirmContent({ data, handlers, now, initialResult, init
     <CancellationSummary policy={data.cancellation} helperName={helper} />
   </>;
 
-  return <div className="mx-auto max-w-reading space-y-6">
+  return <>
     {data.unavailable ? <>{summary}<section aria-label={t('unavailable.title')} className={cn(surface, surfacePad, 'space-y-3 border-warning/40 dark:border-warning/40')}>
       <h2 className={cn(sectionTitle, 'flex items-start gap-2')}><CircleAlert aria-hidden="true" className="mt-1 size-5 shrink-0 text-warning" />{t('unavailable.title')}</h2>
       <p>{t(`unavailable.${data.unavailable}`, { helper })}</p>
       <Link href={routes.app.task(task.id)} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('backToTask')}</Link>
     </section></> : <BookingConfirmForm key={`${offer.id}-${offer.revision}`} data={data} handlers={handlers} now={now} initialResult={initialResult} initialPending={initialPending}>{summary}</BookingConfirmForm>}
-  </div>;
+  </>;
 }

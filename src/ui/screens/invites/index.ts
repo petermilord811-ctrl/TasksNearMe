@@ -1,1 +1,1 @@
-export { RequestHelperScreen, type RequestHelperScreenProps } from './request-helper-screen';
+export { RequestHelperScreen, RequestHelperDialogScreen, type RequestHelperScreenProps } from './request-helper-screen';

@@ -9,6 +9,7 @@ import { createCompletionInputSchema, type ActionResult, type CompletionHandlers
 import { actionTray, note, surface, surfacePad } from '@/ui/components/bookings/surface';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
+import { useRouteDialog } from '@/ui/lib/route-dialog';
 import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -21,6 +22,7 @@ export function CompletionForm({ data, handlers, initialResult, initialPending =
   const t = useTranslations('bookingComplete');
   const id = useId();
   const router = useRouter();
+  const dialog = useRouteDialog();
   const schema = useMemo(() => createCompletionInputSchema(data.rules), [data.rules]);
   const form = useForm<CompletionInput>({ resolver: zodResolver(schema), shouldFocusError: false, defaultValues: {
     photoIds: [], note: '', expenses: [], ...(data.rules.hours ? { hoursWorked: data.rules.hours.estimated } : {}),
@@ -75,7 +77,9 @@ export function CompletionForm({ data, handlers, initialResult, initialPending =
     let next: ActionResult;
     try { next = await handlers.onSubmit(input); } catch { next = { ok: false, code: 'unknown' }; }
     locked.current = next.ok; setPending(false); setResult(next);
-    if (next.ok && next.redirectTo) router.push(next.redirectTo);
+    // A route dialog closes over the booking, which then waits for the client; the full page goes to the booking.
+    if (next.ok && dialog) dialog.finish(next, t('submitted'));
+    else if (next.ok && next.redirectTo) router.push(next.redirectTo);
   }
   const feedback = result && !result.ok ? { ...result, fieldErrors: undefined } : result;
   return <FormProvider {...form}><form ref={formRef} noValidate aria-label={t('form')} aria-busy={pending || uploading} className={cn(surface, surfacePad, 'space-y-6')} onSubmit={(event) => { if (disabled) { event.preventDefault(); return; } void form.handleSubmit(submit, () => { focusInvalid.current = true; })(event); }}>

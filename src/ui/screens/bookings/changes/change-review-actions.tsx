@@ -7,6 +7,7 @@ import { acceptChangeInputSchema, needsBankVerification, type ActionResult, type
 import { formatMoney } from '@/shared/format';
 import { actionTray, sectionTitle, surface, surfacePad, warningPanel } from '@/ui/components/bookings/surface';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
+import { useRouteDialog } from '@/ui/lib/route-dialog';
 import { cn } from '@/ui/lib/utils';
 import { BankVerificationDialog, getDefaultPaymentChoice, PaymentMethodPicker } from '@/ui/components/payments';
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
@@ -22,6 +23,7 @@ export function ChangeReviewActions({ data, handlers, initialResult, initialPend
   const t = useTranslations('changes.review');
   const fields = useTranslations('forms.fieldErrors');
   const router = useRouter();
+  const dialog = useRouteDialog();
   const id = useId();
   const paymentSection = useRef<HTMLElement>(null);
   const paymentControl = useRef<HTMLElement | null>(null);
@@ -32,6 +34,12 @@ export function ChangeReviewActions({ data, handlers, initialResult, initialPend
   const [result, setResult] = useState<ActionResult | undefined>(() => initialResult && !needsBankVerification(initialResult) ? initialResult : undefined);
   const [verification, setVerification] = useState<PaymentVerification | undefined>(() => initialResult && needsBankVerification(initialResult) ? initialResult.verification : undefined);
   const [pending, setPending] = useState(initialPending);
+  // A route dialog stays open while the payment is on its way or the bank's step is open (RouteDialogControls.setBusy).
+  useEffect(() => {
+    if (!dialog) return;
+    dialog.setBusy(pending || Boolean(verification));
+    return () => dialog.setBusy(false);
+  }, [dialog, pending, verification]);
   const [active, setActive] = useState<ChangeActionId | undefined>(() => initialPending ? data.change.actions[0] : undefined);
   const [confirm, setConfirm] = useState<ChangeActionId>();
   const disabled = pending || Boolean(verification) || Boolean(result?.ok);
@@ -72,7 +80,9 @@ export function ChangeReviewActions({ data, handlers, initialResult, initialPend
     setResult(next);
     if (next.ok) {
       locked.current = true;
-      if (next.redirectTo) router.push(next.redirectTo);
+      // A route dialog closes over the booking, which shows the outcome; the full page goes to the booking.
+      if (dialog) dialog.finish(next);
+      else if (next.redirectTo) router.push(next.redirectTo);
     }
   }
 

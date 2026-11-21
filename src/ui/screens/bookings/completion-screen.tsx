@@ -6,6 +6,7 @@ import { formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { backArrow, backLink, sectionTitle, surface, surfacePad } from '@/ui/components/bookings/surface';
 import { PageHeader } from '@/ui/components/layout/page-header';
+import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
 import { cn } from '@/ui/lib/utils';
 import { CompletionForm } from './completion-form';
 
@@ -19,18 +20,36 @@ export function CompletionScreen(props: CompletionScreenProps) {
   return <CompletionContent {...props} />;
 }
 
+type CompletionState = { initialResult?: ActionResult; initialPending?: boolean; initialQuoteError?: boolean };
+
 /** Initial states are only used by the preview gallery. */
-export function CompletionContent({ data, handlers, initialResult, initialPending, initialQuoteError }: CompletionScreenProps & {
-  initialResult?: ActionResult;
-  initialPending?: boolean;
-  initialQuoteError?: boolean;
-}) {
+export function CompletionContent(props: CompletionScreenProps & CompletionState) {
+  const t = useTranslations('bookingComplete');
+  return <div className="mx-auto max-w-reading space-y-6">
+    <Link href={routes.app.booking(props.data.booking.id)} className={backLink}><ArrowLeft aria-hidden="true" className={backArrow} />{t('back')}</Link>
+    <PageHeader title={t('title')} description={t('intro')} />
+    <CompletionBody {...props} />
+  </div>;
+}
+
+/**
+ * The same as a dialog over the booking (src/app/[locale]/@modal). Sending closes it, and the booking shows the work
+ * waiting for the client's approval.
+ */
+export function CompletionDialogScreen(props: CompletionScreenProps & CompletionState) {
+  const t = useTranslations('bookingComplete');
+  return <>
+    <RouteDialogHeader title={t('title')} description={t('intro')} />
+    <RouteDialogBody><CompletionBody {...props} /></RouteDialogBody>
+  </>;
+}
+
+/** What was agreed, then the form (or why it can't be sent): on the page and in the dialog. */
+function CompletionBody({ data, handlers, initialResult, initialPending, initialQuoteError }: CompletionScreenProps & CompletionState) {
   const { formatDateTime } = useFormat();
   const t = useTranslations('bookingComplete');
   const { booking } = data;
-  return <div className="mx-auto max-w-reading space-y-6">
-    <Link href={routes.app.booking(booking.id)} className={backLink}><ArrowLeft aria-hidden="true" className={backArrow} />{t('back')}</Link>
-    <PageHeader title={t('title')} description={t('intro')} />
+  return <>
     <section aria-label={t('summary')} className={cn(surface, surfacePad, 'space-y-4')}>
       <h2 className={cn(sectionTitle, 'break-words')}>{booking.task.title}</h2>
       <p>{t('client', { name: booking.poster.displayName })}</p>
@@ -41,5 +60,5 @@ export function CompletionContent({ data, handlers, initialResult, initialPendin
       <h2 className={cn(sectionTitle, 'flex items-center gap-2')}><CircleAlert aria-hidden="true" className="size-5 shrink-0 text-warning" />{t('unavailable.title')}</h2><p>{t(`unavailable.${data.unavailable}`)}</p>
       <Link href={routes.app.booking(booking.id)} className="inline-flex min-h-11 items-center text-primary underline underline-offset-4">{t('back')}</Link>
     </section> : <CompletionForm key={booking.id} data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} initialQuoteError={initialQuoteError} />}
-  </div>;
+  </>;
 }

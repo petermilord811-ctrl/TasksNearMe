@@ -5,6 +5,7 @@ import { routes, type BadgeTone, type ChangeReviewHandlers, type ChangeReviewPag
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { backArrow, backLink, cardTitle, pageTitle, sectionTitle, surface, surfacePad } from '@/ui/components/bookings/surface';
+import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { Deadline } from '@/ui/components/time/deadline';
 import { cn } from '@/ui/lib/utils';
@@ -26,14 +27,11 @@ export function ChangeReviewScreen(props: ChangeReviewScreenProps) {
   return <ChangeReviewContent {...props} />;
 }
 
-/** Initial async states are for the preview gallery; app pages use ChangeReviewScreen. */
-export function ChangeReviewContent({ data, handlers, now, initialResult, initialPending }: ChangeReviewScreenProps & {
-  initialResult?: PaymentAttemptResult;
-  initialPending?: boolean;
-}) {
-  const { formatDateTime } = useFormat();
+type ChangeReviewState = { initialResult?: PaymentAttemptResult; initialPending?: boolean };
+
+/** Where the change stands: its status, whose turn it is and until when, and which terms apply meanwhile. */
+function useChangeStatus({ booking, change }: ChangeReviewPageData) {
   const t = useTranslations('changes.review');
-  const { booking, change } = data;
   const otherName = booking.viewerRole === 'poster' ? booking.helperDisplayName : booking.posterDisplayName;
   const statusLabel = change.status === 'proposed'
     ? change.fromMe ? t('waiting.person', { name: otherName }) : t('waiting.you')
@@ -45,7 +43,15 @@ export function ChangeReviewContent({ data, handlers, now, initialResult, initia
   const deadlineLabel = change.status === 'accepted_pending_funding'
     ? booking.viewerRole === 'poster' ? t('expiresPay') : t('expiresPersonPay', { name: otherName })
     : change.fromMe ? t('expiresPerson', { name: otherName }) : t('expiresYou');
+  const terms = t(change.status === 'applied' ? 'newTermsApply' : change.status === 'proposed' || change.status === 'accepted_pending_funding' ? 'currentTermsApply' : 'termsUnchanged');
+  return { statusLabel, deadlineLabel, terms };
+}
 
+/** Initial async states are for the preview gallery; app pages use ChangeReviewScreen. */
+export function ChangeReviewContent({ data, handlers, now, initialResult, initialPending }: ChangeReviewScreenProps & ChangeReviewState) {
+  const t = useTranslations('changes.review');
+  const { booking, change } = data;
+  const { statusLabel, deadlineLabel, terms } = useChangeStatus(data);
   return <div className="mx-auto max-w-reading space-y-6">
     <Link href={routes.app.booking(booking.id)} className={backLink}>
       <ArrowLeft aria-hidden="true" className={backArrow} />{t('back')}
@@ -53,9 +59,39 @@ export function ChangeReviewContent({ data, handlers, now, initialResult, initia
     <header className="space-y-3">
       <h1 className={cn(pageTitle, 'break-words')}>{t('title', { title: booking.title })}</h1>
       <StatusBadge tone={statusTones[change.status]} label={statusLabel} />
-      <p className="text-sm text-muted-foreground">{t(change.status === 'applied' ? 'newTermsApply' : change.status === 'proposed' || change.status === 'accepted_pending_funding' ? 'currentTermsApply' : 'termsUnchanged')}</p>
+      <p className="text-sm text-muted-foreground">{terms}</p>
       {change.expiresAt && <Deadline at={change.expiresAt} now={now} label={deadlineLabel} tone="warning" />}
     </header>
+    <ChangeReviewBody data={data} handlers={handlers} now={now} initialResult={initialResult} initialPending={initialPending} />
+  </div>;
+}
+
+/**
+ * The same as a dialog over the booking (src/app/[locale]/@modal). Accepting, declining, withdrawing or paying closes
+ * it, and the booking shows the outcome.
+ */
+export function ChangeReviewDialogScreen({ data, handlers, now, initialResult, initialPending }: ChangeReviewScreenProps & ChangeReviewState) {
+  const t = useTranslations('changes.review');
+  const { booking, change } = data;
+  const { statusLabel, deadlineLabel, terms } = useChangeStatus(data);
+  return <>
+    <RouteDialogHeader title={t('title', { title: booking.title })} description={terms}>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 pt-1">
+        <StatusBadge tone={statusTones[change.status]} label={statusLabel} />
+        {change.expiresAt && <Deadline at={change.expiresAt} now={now} label={deadlineLabel} tone="warning" />}
+      </div>
+    </RouteDialogHeader>
+    <RouteDialogBody><ChangeReviewBody data={data} handlers={handlers} now={now} initialResult={initialResult} initialPending={initialPending} /></RouteDialogBody>
+  </>;
+}
+
+/** Who proposed what, the terms side by side, the money, and the actions: on the page and in the dialog. */
+function ChangeReviewBody({ data, handlers, initialResult, initialPending }: ChangeReviewScreenProps & ChangeReviewState) {
+  const { formatDateTime } = useFormat();
+  const t = useTranslations('changes.review');
+  const { booking, change } = data;
+  const otherName = booking.viewerRole === 'poster' ? booking.helperDisplayName : booking.posterDisplayName;
+  return <>
     <section aria-label={t('proposal')} className={cn(surface, surfacePad, 'space-y-3')}>
       <h2 className={sectionTitle}>{change.fromMe ? t('proposedBy.you') : t('proposedBy.person', { name: otherName })}</h2>
       <time dateTime={change.createdAt} className="block text-sm tabular-nums text-muted-foreground">{formatDateTime(change.createdAt)}</time>
@@ -70,7 +106,7 @@ export function ChangeReviewContent({ data, handlers, now, initialResult, initia
     </section>
     <ChangeMoneyComparison before={change.before} after={change.after} viewerRole={booking.viewerRole} differenceCents={change.differenceCents} />
     <ChangeReviewActions key={`${change.id}-${change.status}`} data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} />
-  </div>;
+  </>;
 }
 
 function Terms({ terms, types, proposed }: { terms: ChangeTermsView; types: ProposableChangeType[]; proposed: boolean }) {
