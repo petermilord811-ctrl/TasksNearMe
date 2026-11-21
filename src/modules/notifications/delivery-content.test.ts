@@ -25,7 +25,7 @@ describe('email and text message content', () => {
     expect(deliveryContent({ ...base, type: 'offer_received', params: null }).subject).toBe('Jordan T. sent an offer for Assemble a desk.');
     expect(deliveryContent({ ...base, type: 'helper_running_late', params: { minutes: 20 } }).subject).toBe('Jordan T. is running 20 minutes late for Assemble a desk.');
     expect(deliveryContent({ ...base, type: 'approval_reminder', params: { hours: 1 } }).subject).toBe("Approve Assemble a desk or report a problem. It's approved automatically in 1 hour.");
-    expect(deliveryContent({ ...base, type: 'booking_confirmed', title: null, params: null }).subject).toBe('Your booking for your task is confirmed.');
+    expect(deliveryContent({ ...base, type: 'booking_confirmed', title: null, params: null }).subject).toBe('Jordan T. booked you for your task.');
     // Money back on its own says how much and why (money review #8), in the reader's language.
     expect(deliveryContent({ ...base, type: 'payment_refunded', params: { amountCents: 6600, refundFor: 'late' } }).subject).toBe('We refunded $66.00 for Assemble a desk: it came through after the booking had ended.');
     expect(deliveryContent({ ...base, type: 'payment_refunded', params: { amountCents: 500, refundFor: 'second_tip' } }, 'es').subject).toMatch(/^Te devolvimos .*5[.,]00.* de Assemble a desk: era una segunda propina para la misma reserva\.$/);
@@ -137,6 +137,29 @@ describe('sentences that read right (messages pass J-M2, J-M3)', () => {
     expect(deliveryContent(visit).subject).toBe('Jordan T. skipped the visit on Tue, Nov 24 at 9:00 am for Weekly cleaning.');
     // "del mar, 24 de nov" read as "of the sea".
     expect(deliveryContent(visit, 'es').subject).toBe('Jordan T. omitió la visita del martes 24 de noviembre a las 9:00 a.m. para Weekly cleaning.');
+  });
+
+  it("tells a helper who booked them and when, and a reminder says the clock time (messages pass J-M5, J-M6)", () => {
+    const at = { at: '2026-11-24T14:00:00.000Z', timeZone: 'America/New_York' as const };
+    const booking = { actorName: 'Ruth A.', title: 'Assemble a bookshelf', target: { kind: 'booking' as const, bookingId: 'bkg_1' }, userId: 'usr_jordan' };
+    expect(deliveryContent({ ...booking, type: 'booking_confirmed', params: at }).subject).toBe('Ruth A. booked you for Assemble a bookshelf on Tue, Nov 24 at 9:00 am.');
+    expect(deliveryContent({ ...booking, type: 'booking_confirmed', params: at }, 'es').subject).toBe('Ruth A. te reservó para Assemble a bookshelf el martes 24 de noviembre a las 9:00 a.m.');
+    const reminder = deliveryContent({ ...booking, type: 'booking_reminder', params: { ...at, hours: 2 } });
+    expect(reminder.subject).toBe('Assemble a bookshelf starts in 2 hours, on Tue, Nov 24 at 9:00 am.');
+    // Still one text message with a 20-character title.
+    expect(reminder.sms.length).toBeLessThanOrEqual(160);
+    expect(deliveryContent({ ...booking, type: 'booking_reminder', params: { ...at, hours: 2 } }, 'es').subject).toBe('Assemble a bookshelf empieza en 2 horas, el martes 24 de noviembre a las 9:00 a.m.');
+  });
+
+  it('names TasksNearMe once in the city-open text, and an email\'s next step doesn\'t repeat its sentence', () => {
+    const city = deliveryContent({ type: 'city_open', title: 'Gainesville', actorName: null, params: null, target: { kind: 'onboarding', step: 'area' }, userId: 'usr_jordan' } as never);
+    expect(city.sms).toMatch(/^TasksNearMe: We're open in Gainesville\. /);
+    expect(city.push.body).not.toMatch(/TasksNearMe/);
+    const accepted = deliveryContent({ type: 'invite_accepted', title: 'Assemble a bookshelf', actorName: 'Jordan T.', params: null, target: { kind: 'booking', bookingId: 'bkg_1' }, userId: 'usr_ruth' });
+    expect(accepted.text).toContain("You're booked.");
+    expect(accepted.text).not.toContain("It's booked.");
+    const reopened = deliveryContent({ type: 'task_reopened', title: 'Assemble a bookshelf', actorName: null, params: null, target: { kind: 'find_work_task', taskId: 'tsk_1' }, userId: 'usr_jordan' });
+    expect(reopened.text.match(/looking for a new helper/g)).toHaveLength(1);
   });
 
   it('keeps an English text with a date in the 160-character alphabet, so it isn\'t sent as 70-character parts', () => {

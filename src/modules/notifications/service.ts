@@ -281,7 +281,8 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
       const forPoster = (type: NotificationType, extra: Partial<Planned> = {}): Planned => ({ userId: booking.posterUserId, type, target, title: booking.title, actorName: helperName, ...extra });
       switch (event.type) {
         case 'booking.confirmed':
-          return [forHelper('booking_confirmed')];
+          // Who booked them and when, on the booking's clock (messages pass J-M5).
+          return [forHelper('booking_confirmed', { params: { at: booking.startAt.toISOString(), timeZone: await marketTimeZone(db, booking.marketId) } })];
         case 'booking.on_my_way':
           return [forPoster('helper_on_the_way')];
         case 'booking.running_late':
@@ -297,7 +298,8 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
         case 'booking.disputed':
           return [forHelper('problem_reported')];
         case 'booking.start_reminder': {
-          const extra: Partial<Planned> = typeof p.hours === 'number' ? { params: { hours: p.hours } } : {};
+          // The clock time too, so an email or a bell row read later still says when (messages pass J-M6).
+          const extra: Partial<Planned> = { params: { ...(typeof p.hours === 'number' ? { hours: p.hours } : {}), at: booking.startAt.toISOString(), timeZone: await marketTimeZone(db, booking.marketId) } };
           return [forPoster('booking_reminder', extra), forHelper('booking_reminder', extra)];
         }
         case 'booking.approval_reminder': {

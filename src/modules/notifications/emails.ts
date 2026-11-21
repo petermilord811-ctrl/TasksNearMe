@@ -18,7 +18,7 @@ const tFor = perLocale((locale) => createTranslator({ locale, messages: messages
 export interface NotificationEmailInput {
   type: NotificationType;
   topic: NotificationTopic;
-  /** What happened, already worded ("Your booking for … is confirmed."). */
+  /** What happened, already worded ("Ruth A. booked you for … on Tue, Nov 24 at 9:00 am."). */
   sentence: string;
   /** More about it, a paragraph each, under the sentence (a receipt's refund). */
   details?: readonly string[];

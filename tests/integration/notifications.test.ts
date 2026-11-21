@@ -48,6 +48,8 @@ describe('notifications', () => {
     const confirmed = page.notifications.filter((n) => n.type === 'booking_confirmed' && n.target.kind === 'booking' && n.target.bookingId === bookingId);
     expect(confirmed).toHaveLength(1);
     expect(confirmed[0]).toMatchObject({ title: 'Assemble a desk (flat-pack, 1 item)', actorName: 'Chris D.' });
+    // When it starts, on the booking's market clock, so the email and the bell can say it (messages pass J-M5).
+    expect(confirmed[0]?.params).toMatchObject({ at: expect.stringMatching(/^\d{4}-\d\d-\d\dT/), timeZone: expect.stringMatching(/^America\//) });
     expect(page.unreadCount).toBeGreaterThan(0);
     await markAllNotificationsRead(db, 'usr_lee', new Date());
     expect((await getNotificationsPage(db, 'usr_lee', new Date())).unreadCount).toBe(0);

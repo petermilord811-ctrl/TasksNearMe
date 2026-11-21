@@ -93,7 +93,7 @@ describe('notification delivery', () => {
     expect(await deliveriesOf(offer)).toMatchObject({ email: { status: 'sent', attempts: 1 }, sms: { status: 'skipped', reason: 'preference_off' } });
     expect(await deliveriesOf(confirmed)).toMatchObject({ email: { status: 'sent' }, sms: { status: 'sent' } });
     const texts = mineSent().filter((item) => item.channel === 'sms');
-    expect(texts).toEqual([{ channel: 'sms', to: '+15125550284', text: expect.stringMatching(/^TasksNearMe: Your booking for Assemble a desk is confirmed\. http.*\/app\/bookings\/bkg_tv$/) }]);
+    expect(texts).toEqual([{ channel: 'sms', to: '+15125550284', text: expect.stringMatching(/^TasksNearMe: Jordan T\. booked you for Assemble a desk\. http.*\/app\/bookings\/bkg_tv$/) }]);
     const email = mineSent().find((item) => item.channel === 'email' && item.subject?.startsWith('Jordan T. sent an offer'));
     expect(email?.text).toContain('/app/account');
 
