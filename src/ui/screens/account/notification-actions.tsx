@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation';
 import { AlarmClock, ArrowLeftRight, PenLine, Timer, Award, BadgeCheck, Gift, CalendarClock, CalendarOff, CirclePause, CirclePlay, CreditCard, LifeBuoy, MessagesSquare, CircleHelp, BellRing, Repeat, ThumbsUp, Pin, SkipForward, UserSearch, ShieldAlert, ShieldCheck, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, ClipboardX, Clock, DoorOpen, Download, HandCoins, Headset, Hourglass, MapPin, MapPinned, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType, NotificationView } from '@/contracts';
-import { formatMoney } from '@/shared/format';
+import { formatDatePhrase, formatMoney } from '@/shared/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { attentionHref } from '@/ui/lib/attention-href';
-import { formattersFor, useFormat, type Formatters } from '@/ui/lib/format';
+import { useFormat, type Formatters } from '@/ui/lib/format';
 import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -81,12 +81,15 @@ const icons: Record<NotificationType, LucideIcon> = {
   replacement_search_started: UserSearch,
 };
 
-/** A notification's moment ("Tue, Dec 1, 9:00 am") or day ("Dec 8"), for its words. */
-function notificationDate(params: NotificationView['params'], { formatDate, formatDateTime, locale }: Formatters): string {
+/**
+ * A notification's moment ("Tue, Dec 1 at 9:00 am", "martes 1 de diciembre a las 9:00 a.m.") or day ("Tue, Dec 8"),
+ * worded to sit in its sentence, as its email and text say it (messages pass J-M3).
+ */
+function notificationDate(params: NotificationView['params'], { locale, timeZone }: Formatters): string {
   // On the clock of the booking or series it's about, when it says (completion plan 8.1).
-  if (params?.at) return params.timeZone ? formattersFor(locale, params.timeZone).formatDateTime(params.at) : formatDateTime(params.at);
+  if (params?.at) return formatDatePhrase(params.at, { locale, timeZone: params.timeZone ?? timeZone });
   // Noon UTC: the same calendar day in every US market.
-  return params?.day ? formatDate(`${params.day}T18:00:00.000Z`) : '';
+  return params?.day ? formatDatePhrase(`${params.day}T18:00:00.000Z`, { locale, timeZone, withTime: false }) : '';
 }
 
 function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {

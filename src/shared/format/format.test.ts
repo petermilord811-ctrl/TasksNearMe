@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatDate,
+  formatDatePhrase,
   formatDateTime,
   formatHours,
   formatMoney,
@@ -202,5 +203,24 @@ describe('formatMoneyShort (marketing prices, audit L20)', () => {
     expect(formatMoneyShort(5250)).toBe('$52.50');
     expect(formatMoneyShort(120000)).toBe('$1,200');
     expect(() => formatMoneyShort(-100)).toThrow(TypeError);
+  });
+});
+
+describe('formatDatePhrase: a date to read inside a sentence (messages pass J-M3)', () => {
+  const EASTERN = 'America/New_York';
+  // 9:00 am on Tue, Nov 24, 2026 in Gainesville.
+  const visit = '2026-11-24T14:00:00.000Z';
+
+  it('says "at" in English and has no middle dot', () => {
+    expect(formatDatePhrase(visit, { timeZone: EASTERN })).toBe('Tue, Nov 24 at 9:00 am');
+    expect(formatDatePhrase(visit, { timeZone: 'America/Chicago' })).toBe('Tue, Nov 24 at 8:00 am');
+    expect(formatDatePhrase(visit, { timeZone: EASTERN, withTime: false })).toBe('Tue, Nov 24');
+  });
+
+  it('names the whole weekday and month in Spanish, with "a la" for one o\'clock', () => {
+    expect(formatDatePhrase(visit, { locale: 'es', timeZone: EASTERN })).toBe('martes 24 de noviembre a las 9:00 a.m.');
+    expect(formatDatePhrase('2026-11-24T18:00:00.000Z', { locale: 'es', timeZone: EASTERN })).toBe('martes 24 de noviembre a la 1:00 p.m.');
+    expect(formatDatePhrase('2026-11-24T15:00:00.000Z', { locale: 'es', timeZone: EASTERN })).toBe('martes 24 de noviembre a las 10:00 a.m.');
+    expect(formatDatePhrase('2026-12-08T18:00:00.000Z', { locale: 'es', withTime: false })).toBe('martes 8 de diciembre');
   });
 });

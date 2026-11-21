@@ -11,7 +11,7 @@ import { threadParticipants } from '@/modules/messaging/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
-import { formatDate, formatDateTime, formatMoney } from '@/shared/format';
+import { formatDatePhrase, formatMoney } from '@/shared/format';
 import { localizedPath } from '@/shared/locale';
 import { pushSenderFromEnv, type PushMessage, type PushSender } from '@/integrations/push/web-push';
 import { channelsFor, missingAddressReason, NOTIFICATION_TOPIC, planDelivery, preferenceOn, pushOn, RETRY_MINUTES, URGENT_TYPES, type DeliveryChannel } from './delivery-domain';
@@ -97,6 +97,12 @@ function pathOf(target: AttentionTarget): string {
 const appUrl = () => (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '');
 
 /**
+ * A sentence ends with one mark: a title's own "?" or "!", a masked name's "T." and Spanish "a.m." don't get a
+ * second one ("Jordan T..", "mirror?."; messages pass J-M2).
+ */
+export const endOnce = (line: string) => line.replace(/([.?!…])\.$/u, '$1');
+
+/**
  * One notification as an email (subject, text, designed version, unsubscribe headers), a text message and a
  * push, in the recipient's language. Their links are too (/es/... for Spanish, sweep MN12): opened signed out, or in
  * a browser set to another language, the page, sign-in and unsubscribe still come in the reader's language.
@@ -104,7 +110,7 @@ const appUrl = () => (process.env.APP_URL ?? 'http://localhost:3000').replace(/\
 export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'actorName' | 'params' | 'target' | 'userId'> & { id?: string }, locale: AppLocale = DEFAULT_LOCALE, timeZone?: TimeZone) {
   const t = tFor(locale);
   const params: NonNullable<NotificationView['params']> = row.params ?? {};
-  const sentence = t(`types.${row.type as NotificationType}`, {
+  const sentence = endOnce(t(`types.${row.type as NotificationType}`, {
     title: row.title ?? t('taskFallback'),
     actorName: row.actorName ?? t('actorFallback'),
     hasAmount: params.amountCents === undefined ? 'no' : 'yes',
@@ -117,7 +123,8 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
     track: params.track ?? 'other',
     hasDate: params.at === undefined && params.day === undefined ? 'no' : 'yes',
     // On the clock of the booking or series it's about (its params' zone), else the recipient's (completion plan 8.1).
-    date: params.at ? formatDateTime(params.at, locale, params.timeZone ?? timeZone) : params.day ? formatDate(`${params.day}T18:00:00.000Z`, { locale }) : '',
+    // Worded to sit in the sentence: "Tue, Nov 24 at 9:00 am", "martes 24 de noviembre a las 9:00 a.m." (messages pass J-M3).
+    date: params.at ? formatDatePhrase(params.at, { locale, timeZone: params.timeZone ?? timeZone }) : params.day ? formatDatePhrase(`${params.day}T18:00:00.000Z`, { locale, withTime: false }) : '',
     by: params.by ?? 'other',
     badge: params.badge ?? 'other',
     tier: params.tier ?? 1,
@@ -125,14 +132,14 @@ export function deliveryContent(row: Pick<NotificationRow, 'type' | 'title' | 'a
     on: params.on ?? 'post',
     search: params.search ?? '',
     refundFor: params.refundFor ?? 'other',
-  });
+  }));
   const url = `${appUrl()}${localizedPath(pathOf(row.target), locale)}`;
   const type = row.type as NotificationType;
   // A cancellation receipt also says what happens to the money, and that the other person was told.
   const actorName = row.actorName ?? t('actorFallback');
   const details =
     type === 'booking_canceled_receipt'
-      ? [t('receipt.money', { money: params.money ?? 'other', amount: params.amountCents === undefined ? '' : formatMoney(params.amountCents), actorName }), t('receipt.told', { actorName })].filter((line) => line !== '')
+      ? [t('receipt.money', { money: params.money ?? 'other', amount: params.amountCents === undefined ? '' : formatMoney(params.amountCents), actorName }), t('receipt.told', { actorName })].filter((line) => line !== '').map(endOnce)
       : [];
   const email = renderNotificationEmail({ type, topic: NOTIFICATION_TOPIC[type], sentence, details, target: row.target, url, userId: row.userId, appUrl: appUrl(), locale });
   return { ...email, sms: t('sms', { sentence, url }), push: { title: t('pushTitle'), body: sentence, url, ...(row.id ? { tag: row.id } : {}) } };

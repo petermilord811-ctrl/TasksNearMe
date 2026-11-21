@@ -4,6 +4,7 @@ export {
   formatMonthYear,
   formatTime,
   formatDateTime,
+  formatDatePhrase,
   formatTimeRange,
   formatRelative,
   formatHours,

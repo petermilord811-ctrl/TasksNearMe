@@ -106,6 +106,36 @@ export function formatDateTime(value: ISODateTime | Date, locale: AppLocale = DE
   return `${formatDate(value, { locale, ...(timeZone ? { timeZone } : {}) })} · ${formatTime(value, locale, timeZone)}`;
 }
 
+const PHRASE_DATES = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * A date, and its time, to read inside a sentence (emails, texts, pushes and the bell): "Tue, Nov 24 at 9:00 am";
+ * es: "martes 24 de noviembre a las 9:00 a.m.". The whole weekday in Spanish, so "del mar, 24 de nov" never reads as
+ * "of the sea", and no middle dot, which also keeps an English text message in the 160-character alphabet (messages
+ * pass J-M3). `withTime: false` gives the day alone ("Tue, Dec 8", "martes 8 de diciembre").
+ */
+export function formatDatePhrase(value: ISODateTime | Date, { locale = DEFAULT_LOCALE, timeZone, withTime = true }: { locale?: AppLocale; timeZone?: TimeZone; withTime?: boolean } = {}): string {
+  const date = toDate(value);
+  if (locale !== 'es') {
+    const day = formatDate(date, { locale, ...(timeZone ? { timeZone } : {}) });
+    return withTime ? `${day} at ${formatTime(date, locale, timeZone)}` : day;
+  }
+  const zone = timeZone ?? MARKET_TIME_ZONE;
+  const key = `${locale}|${zone}`;
+  let formatter = PHRASE_DATES.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(INTL_LOCALES[locale], { timeZone: zone, weekday: 'long', day: 'numeric', month: 'long' });
+    PHRASE_DATES.set(key, formatter);
+  }
+  const parts = formatter.formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? '';
+  const day = `${part('weekday')} ${part('day')} de ${part('month')}`;
+  if (!withTime) return day;
+  const time = formatTime(date, locale, timeZone);
+  // "a la una", "a las dos" and so on.
+  return `${day} ${time.startsWith('1:') ? 'a la' : 'a las'} ${time}`;
+}
+
 const clockFormatter = perZone((timeZone) => new Intl.DateTimeFormat('en-GB', { timeZone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }));
 
 /** Wall-clock time in the market's time zone, 24-hour, e.g. "10:30" (the inverse of `marketLocalToUtc`). */
