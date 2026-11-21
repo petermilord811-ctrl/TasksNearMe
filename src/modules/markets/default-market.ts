@@ -5,7 +5,7 @@ import { isLocalRequest } from '@/shared/local-request';
  * The market the home page shows. Configurable so another city can launch without code changes. Its own module (no
  * database) so the admin Markets section can name it too: pausing it leaves the home page without a city (launch rehearsal J-L1).
  */
-export const DEFAULT_MARKET_SLUG = process.env.DEFAULT_MARKET_SLUG ?? 'gainesville';
+export const DEFAULT_MARKET_SLUG = process.env.DEFAULT_MARKET_SLUG?.trim() || 'gainesville';
 
 /**
  * A browser's override of the home page's market, for tests only: with the development helpers on (`next dev` and the
