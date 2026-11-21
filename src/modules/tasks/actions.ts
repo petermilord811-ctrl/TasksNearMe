@@ -35,6 +35,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { fileStorage, homeMarketIdOf, sampleAddressTaskPosting, taskDrafter, taskPosting } from './server';
+import { clientInviteMarket } from '@/modules/beta/server';
 
 /** Server Actions behind PostTaskScreen (src/contracts/posting.ts, PostTaskHandlers). */
 
@@ -144,6 +145,8 @@ export async function postTaskAction(input: TaskDraftInput & BotCheckInput & { f
     const [posted] = await db.select({ id: tasks.id }).from(tasks).where(and(eq(tasks.posterUserId, userId), eq(tasks.requestKey, requestKey.data))).limit(1);
     if (posted) return { ok: true, code: 'submitted', redirectTo: routes.app.task(posted.id) };
   }
+  // A market opening soon takes clients by invitation (J-V8): the page shows that step instead of the form.
+  if (await clientInviteMarket(db, userId)) return { ok: false, code: 'not_allowed' };
   // Turnstile before anything is saved (blueprint 06 §4: posting).
   const refused = await checkBot('post_task', input?.botCheck);
   if (refused) return refused;

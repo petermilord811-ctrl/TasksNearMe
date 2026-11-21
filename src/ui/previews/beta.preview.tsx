@@ -6,13 +6,18 @@ import {
   adminBetaPage,
   adminBetaReadOnly,
   alexStaff,
+  clientInvite,
+  clientInvitePrefilled,
+  clientInviteResults,
   fakeAdminBetaHandlers,
+  fakeClientInviteHandlers,
   fakeHandler,
   fakeHelperInviteHandlers,
   fakeSignInHandlers,
   helperInvite,
   helperInvitePrefilled,
   helperInviteResults,
+  mayaShell,
   morganStaff,
   priyaShell,
   publicViewer,
@@ -23,7 +28,7 @@ import {
 import { AdminBetaScreen } from '@/ui/screens/admin';
 import { InviteCodeStep, SignInScreen } from '@/ui/screens/auth';
 import { SignInFrame } from '@/ui/screens/auth/sign-in-screen';
-import { HelperInviteScreen } from '@/ui/screens/beta';
+import { ClientInviteScreen, HelperInviteScreen } from '@/ui/screens/beta';
 import { AdminShell } from '@/ui/shells/admin-shell';
 import { AppShell } from '@/ui/shells/app-shell';
 import { PublicShell } from '@/ui/shells/public-shell';
@@ -49,6 +54,9 @@ const helper = (data = helperInvite, initialResult?: ActionResult) => <AppShell 
   <HelperInviteScreen data={data} handlers={fakeHelperInviteHandlers} {...(initialResult ? { initialResult } : {})} />
 </AppShell>;
 
+const client = (data = clientInvite, initialResult?: ActionResult) => <AppShell viewer={mayaShell} handlers={appShellHandlers} currentPath={routes.app.newTask()} layout="flow">
+  <ClientInviteScreen data={data} handlers={fakeClientInviteHandlers} {...(initialResult ? { initialResult } : {})} />
+</AppShell>;
 const admin = (data = adminBetaPage, lead = true) => <AdminShell viewer={lead ? morganStaff : alexStaff} handlers={adminShellHandlers} currentPath={routes.admin.beta()}>
   <AdminBetaScreen data={data} handlers={fakeAdminBetaHandlers} />
 </AdminShell>;
@@ -63,6 +71,9 @@ export const betaPreviews: PreviewEntry[] = [
   entry('screen-helper-invite/incorrect', p['helper-incorrect'], p.group, () => helper(helperInvite, helperInviteResults.incorrect)),
   entry('screen-helper-invite/expired', p['helper-expired'], p.group, () => helper(helperInvitePrefilled, helperInviteResults.expired)),
   entry('screen-helper-invite/client-code', p['helper-client-code'], p.group, () => helper(helperInvite, helperInviteResults.forClients)),
+  entry('screen-client-invite/default', p.client, p.group, () => client()),
+  entry('screen-client-invite/prefilled', p['client-prefilled'], p.group, () => client(clientInvitePrefilled)),
+  entry('screen-client-invite/helper-code', p['client-helper-code'], p.group, () => client(clientInvite, clientInviteResults.forHelpers)),
   entry('screen-admin-beta/lead', a.lead, a.group, () => admin()),
   entry('screen-admin-beta/read-only', a.agent, a.group, () => admin(adminBetaReadOnly, false)),
   entry('screen-admin-beta/invite-only', a['invite-only'], a.group, () => admin(adminBetaInviteOnly)),

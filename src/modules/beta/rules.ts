@@ -44,11 +44,24 @@ export function inviteCodeStatus(code: InviteCodeFacts, now: Date): InviteCodeSt
   return 'active';
 }
 
-/** Where a code may be used: any code finishes sign-up; only a helper code starts helper setup. */
-export type InviteUse = 'sign_up' | 'helper_setup';
+/**
+ * Where a code may be used: any code finishes sign-up; only a helper code starts helper setup; only a client
+ * (`poster`) code opens booking help in a market that's opening soon.
+ */
+export type InviteUse = 'sign_up' | 'helper_setup' | 'client';
 
 export function codeFitsUse(role: BetaRole, use: InviteUse): boolean {
-  return use === 'sign_up' || role === 'helper';
+  if (use === 'sign_up') return true;
+  return use === 'helper_setup' ? role === 'helper' : role === 'poster';
+}
+
+/**
+ * Posting a task, requesting a helper and Book again wait for a client invite while the person's market is opening
+ * soon (`prelaunch`: helpers join, the first clients come in by invitation, src/modules/markets/coverage.ts). Staff
+ * are let through. A live market is open to everyone, so going live needs no other change (J-V8).
+ */
+export function clientNeedsInvite(marketStatus: string, grants: readonly BetaRole[], staff: boolean): boolean {
+  return marketStatus === 'prelaunch' && !staff && !grants.includes('poster');
 }
 
 /** Letters and digits people can't mix up when reading a code aloud (no 0/O, 1/I/L). */

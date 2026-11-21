@@ -46,6 +46,13 @@ export async function redeemSignUpInvite(_next: string, input: InviteCodeInput):
   return result;
 }
 
+/** The "opens soon" step (J-V8): the page it held back (the post form, a request) shows once the code works. */
+export async function redeemClientInvite(input: InviteCodeInput): Promise<ActionResult> {
+  const result = await redeem(input, 'client');
+  if (result.ok) refresh();
+  return result;
+}
+
 /** The helper invite screen: on to the first setup step. */
 export async function redeemHelperInvite(input: InviteCodeInput): Promise<ActionResult> {
   const result = await redeem(input, 'helper_setup');

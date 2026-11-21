@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { agreements, users } from '../../../src/modules/accounts/schema';
+import { betaAccess } from '../../../src/modules/beta/schema';
 import { identityVerifications } from '../../../src/modules/verification/schema';
 import { createDb } from '../../../src/platform/db/connect';
 
@@ -27,6 +28,8 @@ export async function askClientForId(): Promise<void> {
       .insert(users)
       .values({ ...ana, id: CLIENT_ASKED_FOR_ID.id, email: CLIENT_ASKED_FOR_ID.email, name: 'Ivy I.', firstName: 'Ivy', lastName: 'Irwin', phone: '+15125550698' })
       .onConflictDoNothing();
+    // A client invite in her market, like the seeded clients': Austin is opening soon in the test world (J-V8).
+    await db.insert(betaAccess).values({ userId: CLIENT_ASKED_FOR_ID.id, marketId: ana.homeMarketId, role: 'poster' }).onConflictDoNothing();
     await db.delete(identityVerifications).where(eq(identityVerifications.userId, CLIENT_ASKED_FOR_ID.id));
     await db.delete(agreements).where(and(eq(agreements.userId, CLIENT_ASKED_FOR_ID.id), eq(agreements.doc, 'biometric_consent')));
     const now = new Date();

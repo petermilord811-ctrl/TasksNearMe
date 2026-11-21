@@ -21,6 +21,13 @@
     "body": "We're opening helper spots a few at a time. Your code is in the email or message your invite came in.",
     "submit": "Start helper setup"
   },
+  "client": {
+    "title": "{market} opens soon",
+    "description": "Helpers in {market} are joining now. Until we open to everyone, booking help is by invitation.",
+    "heading": "Have an invite?",
+    "body": "Enter your code to post a task or book a helper now. It's in the email or message your invite came in.",
+    "submit": "Continue"
+  },
   "previews": {
     "group": "Private beta",
     "helper": "Helper invite",
@@ -28,6 +35,9 @@
     "helper-incorrect": "Helper invite: unknown code",
     "helper-expired": "Helper invite: can't be used anymore",
     "helper-client-code": "Helper invite: a client code",
+    "client": "Client invite: a market opening soon",
+    "client-prefilled": "Client invite from a link",
+    "client-helper-code": "Client invite: a helper code",
     "sign-up": "Sign-up invite step",
     "sign-up-prefilled": "Sign-up invite step from a link",
     "sign-up-rate-limited": "Sign-up invite step: too many tries",

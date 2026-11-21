@@ -5,6 +5,8 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { CATEGORY_SLUGS, findTaskTemplate, isTaskTemplateId, routes, TASK_DESCRIPTION_MAX, TASK_TITLE_MAX, type CategorySlug } from '@/contracts';
+import { redeemClientInvite } from '@/modules/beta/actions';
+import { clientInviteFor } from '@/modules/beta/server';
 import { communityPostForTask } from '@/modules/community/service';
 import { getFlags } from '@/modules/markets/queries';
 import {
@@ -21,6 +23,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
+import { ClientInviteScreen } from '@/ui/screens/beta';
 import { PostTaskScreen } from '@/ui/screens/posting';
 import { appPageMetadata } from '@/i18n/metadata';
 
@@ -69,6 +72,9 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
   });
   if (viewer.kind !== 'user') redirect(routes.signIn(here));
   const userId = viewer.user.id;
+  // A market opening soon takes clients by invitation (J-V8): that step first, before the phone and the form.
+  const clientInvite = await clientInviteFor(db, userId);
+  if (clientInvite) return <ClientInviteScreen data={clientInvite} handlers={{ onRedeem: redeemClientInvite }} />;
   // A phone first (only where texts work, plan 9.2): sign-in's phone steps, inside the app (journeys on a phone, J-C2).
   if (!(await phoneGateOpen(userId))) redirect(routes.app.verifyPhone(here));
   // Risk may ask for an ID check before posting (blueprint 01 P2); it comes back here once it passes.
