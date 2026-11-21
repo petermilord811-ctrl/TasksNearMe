@@ -26,6 +26,12 @@ test("a client's dashboard: attention, their tasks first, and the filters and vi
   await expect(page).toHaveURL(/tab=bookings&status=done/);
   await page.reload();
   await expect(page.getByRole('combobox', { name: 'Status' })).toHaveValue('done');
+  // The whole chip opens the picker: the select covers its name, its chosen words and its chevron, 44 px tall
+  // (journeys on a phone: only the chosen words, about 47×20 px, did).
+  const status = page.getByRole('combobox', { name: 'Status' });
+  const [select, chip] = await Promise.all([status.boundingBox(), status.locator('..').boundingBox()]);
+  expect(select!.height).toBeGreaterThanOrEqual(44);
+  expect(Math.abs(select!.width - chip!.width)).toBeLessThanOrEqual(2);
   await expect(page.getByRole('combobox', { name: 'Date' }).locator('option').nth(2)).toHaveText('Last 7 days');
   await page.getByRole('link', { name: 'Clear filters' }).first().click();
   await expect(page).toHaveURL(/\/app\?tab=bookings$/);

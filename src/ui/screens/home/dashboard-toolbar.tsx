@@ -1,6 +1,6 @@
 'use client';
 
-import { startTransition, useId, useOptimistic, type ReactNode } from 'react';
+import { Children, isValidElement, startTransition, useId, useOptimistic, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, LayoutGrid, List, Map as MapIcon, X } from 'lucide-react';
@@ -9,21 +9,28 @@ import { DASHBOARD_DATES, DASHBOARD_STATUSES, routes, type DashboardData, type D
 import { cn } from '@/ui/lib/utils';
 import { dashboardBase } from './links';
 
-const CHIP = 'relative inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border pr-8 pl-3.5 text-sm whitespace-nowrap transition-[background-color,border-color,box-shadow] duration-200 ease-[var(--ease-out)] has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-offset-2 has-[select:focus-visible]:outline-ring';
+const CHIP = 'relative inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border pr-8 pl-3.5 text-sm whitespace-nowrap transition-[background-color,border-color,box-shadow] duration-200 ease-[var(--ease-out)] has-[select:focus-visible]:outline-2 has-[select:focus-visible]:outline-offset-2 has-[select:focus-visible]:outline-ring';
 const CHIP_ON = 'border-primary/40 bg-brand-soft shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--primary)_22%,transparent)]';
 const CHIP_OFF = 'border-border bg-card hover:border-input/60';
 
-/** A filter as a chip: its name, then a native select (phones get their own picker), changed in the URL. */
+/**
+ * A filter as a chip: its name, the chosen option and a chevron, changed in the URL. The whole chip is one target: a
+ * native select (phones get their own picker) lies over all of it, transparent, and the chip shows the chosen option's
+ * words (journeys on a phone: only the chosen words, about 47×20 px, opened the picker; the name and chevron didn't).
+ */
 function FilterSelect({ label, value, active, onChange, children }: { label: string; value: string; active: boolean; onChange: (value: string) => void; children: ReactNode }) {
   const id = useId();
-  // Named by the visible word alone ("Status"), not the word and the chosen option together.
-  return <label className={cn(CHIP, active ? CHIP_ON : CHIP_OFF)}>
+  const chosen = Children.toArray(children).find((child) => isValidElement<{ value?: string; children?: ReactNode }>(child) && child.props.value === value);
+  // Named by the visible word alone ("Status"), not the word and the chosen option together; the select says the option.
+  return <div className={cn(CHIP, active ? CHIP_ON : CHIP_OFF)}>
     <span id={id} className="text-muted-foreground">{label}</span>
-    <select aria-labelledby={id} value={value} onChange={(event) => onChange(event.target.value)} className="min-w-0 cursor-pointer appearance-none bg-transparent font-semibold text-foreground outline-none [field-sizing:content]">
+    <span aria-hidden="true" className="font-semibold text-foreground">{isValidElement<{ children?: ReactNode }>(chosen) ? chosen.props.children : null}</span>
+    <ChevronDown aria-hidden="true" className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
+    {/* 16 px text, so iOS doesn't zoom in when it takes focus. */}
+    <select aria-labelledby={id} value={value} onChange={(event) => onChange(event.target.value)} className="absolute -inset-px cursor-pointer appearance-none rounded-full text-base opacity-0">
       {children}
     </select>
-    <ChevronDown aria-hidden="true" className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
-  </label>;
+  </div>;
 }
 
 const VIEW_ICONS: Record<DashboardView, typeof List> = { list: List, cards: LayoutGrid, map: MapIcon };

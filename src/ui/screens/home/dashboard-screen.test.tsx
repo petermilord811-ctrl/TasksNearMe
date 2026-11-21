@@ -248,6 +248,14 @@ describe('the lists', () => {
     expect(screen.getByText(/Exact addresses are never shown on the map/)).toBeVisible();
   });
 
+  it('makes each filter chip one target that shows the chosen option’s words (journeys on a phone)', () => {
+    renderDashboard(mayaDashboardFilteredData);
+    const date = screen.getByLabelText('Date');
+    // The select lies over the whole chip, border, name and chevron included, transparent; the chip shows what it holds.
+    expect(date).toHaveClass('absolute', '-inset-px', 'opacity-0');
+    expect(date.parentElement!.querySelector('span[aria-hidden="true"]')).toHaveTextContent('Last 7 days');
+  });
+
   it('changes a filter in the URL, keeping the rest, and clears them', () => {
     renderDashboard(mayaDashboardSearchData);
     fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'done' } });
