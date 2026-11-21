@@ -14,7 +14,7 @@ Stripe answers with errors (5xx, rate limits), doesn't answer (our client gives 
 
 | Flow | What happens |
 |---|---|
-| Booking and paying | The confirm page's error: "We couldn't complete that action. Try again, or contact support if it keeps happening." Nothing is booked. If the money did move before the error, the webhook settles the payment when it arrives, and a payment that comes in for a booking that no longer goes ahead is refunded by itself. **Trying again is refused** ("This action isn't available to you…") until that first attempt is settled or its 30-minute hold ends: an attempt whose charge never answered still counts as in flight. Support can tell the client to wait half an hour. The fix is a decision (sweep, "When things break"). |
+| Booking and paying | The confirm page's error: "We couldn't complete that action. Try again, or contact support if it keeps happening." Nothing is booked. If the money did move before the error, the webhook settles the payment when it arrives, and a payment that comes in for a booking that no longer goes ahead is refunded by itself. Paying again within 5 minutes says "We're still checking your payment. Try again in a few minutes." After 5 minutes the attempt whose charge never answered is given up, and paying again works. If that first charge went through after all, its webhook books the booking if it can still take it; otherwise the money goes back in full and the client is told. |
 | Scheduled charges (bookings more than 14 days out) | A charge with no answer is asked again 10 minutes later with the same idempotency key, never twice. A decline is retried at 48 h; still unpaid 24 h before, the booking is canceled and the task opens again. |
 | Transfers to helpers | Retried each run with `transfer:<id>`. A booking without one after 2 days shows on the exceptions tab. |
 | Late or out-of-order webhooks | Each event is recorded once by its id, a repeat is acknowledged, and handlers act only from the state they expect. A late "succeeded" for a canceled payment refunds it. |
@@ -33,4 +33,4 @@ Stripe answers with errors (5xx, rate limits), doesn't answer (our client gives 
 
 2026-11-21 on the e2e build, with the payment stand-in failing on purpose (`/dev/faults`; sweep, "When things break"):
 - paying showed the error above and kept the attempt as `processing`;
-- paying again once the provider was back was refused, as described.
+- paying again once the provider was back was refused. Since J-O12, that lasts 5 minutes at most, with the message above.

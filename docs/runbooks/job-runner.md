@@ -16,6 +16,7 @@ One Postgres advisory lock lets one server run them at a time. Severity: **SEV2*
 - **A page: "A background job keeps failing".** One job failed 3 runs in a row. It names the job; at most one page a day per job.
 - **A page: "The background jobs are stuck".** A run started more than 10 minutes ago and hasn't finished, so no job runs. Usually a provider call or a query that hangs. At most one a day.
 - `/api/health` says `"jobs":"stalled"` (for an outside monitor).
+- `/admin/jobs` (admins and finance) shows each job's last runs with duration and result, its failures in a row, whether the runner is stuck, and the next run. It's kept in memory for this server since it started, so a deploy or restart starts it over.
 - The server log: `[jobs] <name> failed` with the error. Logs carry no personal details: a failed query shows its statement without its values, and emails, phones and secrets are masked.
 
 Pages need the database. If it's down, see [The database is unreachable](database-unreachable.md).
@@ -45,4 +46,4 @@ Pages need the database. If it's down, see [The database is unreachable](databas
 
 ## Gaps
 
-There's no jobs dashboard or run history (README, "Built-in gaps"), only the pages and the log. A job that keeps failing pages once a day, so check the log for whether it's still failing.
+`/admin/jobs` shows the last 5 runs per job since the server started, not a lasting history: after a restart, look in the log. A job that keeps failing pages once a day, so check the page or the log for whether it's still failing.

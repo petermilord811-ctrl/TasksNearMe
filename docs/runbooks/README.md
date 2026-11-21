@@ -47,7 +47,7 @@ Blueprint 10 §5 asks for these before launch. Fill in the names before the beta
 | Who did what | `/admin/audit` (admins and support leads only) |
 | Market health | `/admin/metrics` (the launch targets, the funnel, liquidity, reward spend) |
 | Feature flags and policies | `/admin/config` (admins only) |
-| Background jobs | The on-call pages for a job that keeps failing or a stuck run; otherwise server logs: lines starting `[jobs] <name> failed` ([src/modules/jobs/runner.ts](../../src/modules/jobs/runner.ts)). Logs carry no personal details: a failed query shows its statement without its values, and emails, phones and secrets are masked ([src/platform/redact.ts](../../src/platform/redact.ts)) |
+| Background jobs | `/admin/jobs` (admins and finance): each job's last runs on this server since it started. The on-call pages for a job that keeps failing or a stuck run; otherwise server logs: lines starting `[jobs] <name> failed` ([src/modules/jobs/runner.ts](../../src/modules/jobs/runner.ts)). Logs carry no personal details: a failed query shows its statement without its values, and emails, phones and secrets are masked ([src/platform/redact.ts](../../src/platform/redact.ts)) |
 | Is it up? | `/api/health`: 200, or 503 with the part that's down (the database, the job runner), for an outside monitor |
 | Provider events | `/admin/webhooks` (admins and finance): the webhook inbox's failing and dead events, with replay and dismiss. Older history and events that never reached us: each provider's dashboard |
 
@@ -55,7 +55,7 @@ Blueprint 10 §5 asks for these before launch. Fill in the names before the beta
 
 These aren't built yet, so the runbooks handle them by hand. Close them before the gaps cost more than the manual steps.
 
-- **Jobs have no dashboard.** The runner logs failures and retries every minute, and pages for a job that keeps failing or a stuck run; there's no jobs table to inspect.
+- **Jobs have no lasting history.** `/admin/jobs` shows the last runs since the server started, the runner pages for a job that keeps failing or a stuck run, and the log has the rest; nothing is kept across restarts.
 - **Nothing outside watches the site.** The pager needs the database, so a database that's down, or a server that's gone, pages no one until an outside monitor calls `/api/health` (decisions, 2026-11-21).
 
 ## After every SEV1 or SEV2

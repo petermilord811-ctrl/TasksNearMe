@@ -14,7 +14,7 @@ Postmark or Resend (email, one of them per server: `POSTMARK_SERVER_TOKEN` or `R
 
 | Flow | What happens |
 |---|---|
-| Asking for a sign-in code by email | "We couldn't send your code just now. Nothing's wrong on your side: try again in a few minutes." The form stays on the email step. Before 2026-11-21 it said "We sent a 6-digit code" and nothing came. Each try counts toward the limit of 3 codes per address in 10 minutes, so someone who tried 3 times waits up to 10 minutes after the provider is back. |
+| Asking for a sign-in code by email | "We couldn't send your code just now. Nothing's wrong on your side: try again in a few minutes." The form stays on the email step. Before 2026-11-21 it said "We sent a 6-digit code" and nothing came. A code that couldn't go out doesn't count toward the limit of 3 codes per address in 10 minutes, so people can ask again as soon as the provider is back. |
 | Changing the account's email | "We couldn't reach a service we rely on just now, so nothing was done. Try again in a few minutes." |
 | Phone codes by text | The form's error; they can sign in by email instead. |
 | Notifications (email, text) | Each failed send is retried after 5, 30 and 120 minutes, then left failed. The bell and the app's pages still show everything. |
