@@ -14,7 +14,8 @@ function BookingExample({ viewer }: { viewer: ViewerRole }) { return <StatusBadg
 function TaskExample({ status }: { status: TaskStatus }) { return <StatusBadge {...useTaskStatus(status)} />; }
 
 describe('status labels', () => {
-  it.each([['draft', 'Draft', 'neutral'], ['open', 'Open', 'brand'], ['assigned', 'Booked', 'info'], ['completed', 'Done', 'success'], ['canceled', 'Canceled', 'neutral'], ['expired', 'Expired', 'neutral']] as const)('shows the %s task label and tone', (status, label, tone) => {
+  // A draft that people meet is Book again's private request, waiting on the helper (J-C7).
+  it.each([['draft', 'Request sent', 'neutral'], ['open', 'Open', 'brand'], ['assigned', 'Booked', 'info'], ['completed', 'Done', 'success'], ['canceled', 'Canceled', 'neutral'], ['expired', 'Expired', 'neutral']] as const)('shows the %s task label and tone', (status, label, tone) => {
     render(<NextIntlClientProvider locale="en" messages={uiMessages}><TaskExample status={status} /></NextIntlClientProvider>);
     expect(screen.getByText(label).parentElement).toHaveClass(`bg-badge-${tone}`);
   });
