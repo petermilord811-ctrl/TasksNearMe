@@ -31,6 +31,12 @@ import { waitlistOneClickUrl, waitlistUnsubscribePageUrl } from './waitlist-unsu
 
 /** Entries emailed per run of the job runner (every minute): about 6,000 an hour. */
 export const CITY_OPEN_BATCH = 100;
+/**
+ * How long one run may spend sending. The job runner's lock is held meanwhile, and every other job (notifications,
+ * charges, payouts) waits on it: with a provider answering slowly (each send may take its 15 s timeout, sweep MN7),
+ * 100 sends could hold it for 25 minutes. The rest wait for the next run (launch rehearsal J-L3, as deliveries do).
+ */
+export const CITY_OPEN_BUDGET_MS = 30_000;
 /** A send that never finished (the process stopped mid-send) is tried again after this. */
 const LEASE_MS = 10 * 60_000;
 const DUE_STATUSES = ['queued', 'sending'];
@@ -152,11 +158,11 @@ async function marketsToTell(db: Db, now: Date) {
 }
 
 /**
- * The job (src/modules/jobs/runner.ts): sends up to `limit` due emails, oldest first. Each entry is claimed by moving
+ * The job (src/modules/jobs/runner.ts): sends up to `limit` due emails, oldest first, for up to `budgetMs`. Each entry is claimed by moving
  * it to `sending` (only if nobody moved it meanwhile), so two runs never send the same email; the provider also gets
  * an idempotency key per entry.
  */
-export async function sendCityOpenEmails(db: Db, mailer: CityOpenMailer, now: Date, limit = CITY_OPEN_BATCH): Promise<{ sent: number; skipped: number; failed: number }> {
+export async function sendCityOpenEmails(db: Db, mailer: CityOpenMailer, now: Date, limit = CITY_OPEN_BATCH, budgetMs = CITY_OPEN_BUDGET_MS): Promise<{ sent: number; skipped: number; failed: number }> {
   const counts = { sent: 0, skipped: 0, failed: 0 };
   const open = await marketsToTell(db, now);
   if (open.length === 0) return counts;
@@ -180,7 +186,11 @@ export async function sendCityOpenEmails(db: Db, mailer: CityOpenMailer, now: Da
   const suppressed = new Set(suppressedRows.map((row) => row.email));
   const inMarket = new Set(accounts.map((row) => `${row.email}|${row.marketId}`));
 
+  const started = performance.now();
+  let handled = 0;
   for (const row of rows) {
+    // Between entries, after at least one so every run moves on: the rest stay queued for the next run.
+    if (handled > 0 && performance.now() - started > budgetMs) break;
     const market = marketOf.get(row.toldMarketId ?? '');
     if (!market) continue;
     const [claimed] = await db
@@ -189,6 +199,7 @@ export async function sendCityOpenEmails(db: Db, mailer: CityOpenMailer, now: Da
       .where(and(eq(waitlistEntries.id, row.id), eq(waitlistEntries.tellStatus, row.tellStatus ?? ''), lte(waitlistEntries.tellAfter, now)))
       .returning();
     if (!claimed) continue;
+    handled += 1;
     const address = claimed.email.trim().toLowerCase();
     const skip = cityOpenSkipReason(claimed, { suppressed: suppressed.has(address), accountInMarket: inMarket.has(`${address}|${market.id}`) });
     if (skip) {

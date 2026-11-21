@@ -188,6 +188,16 @@ describe('a market going live tells its waitlist, once', () => {
     expect(await sendCityOpenEmails(db, { email: box, appUrl: APP }, at(700))).toEqual({ sent: 1, skipped: 0, failed: 0 });
     expect(box.sent[0]).toMatchObject({ to: 'co-late@example.test', subject: 'TasksNearMe ya está en Tulsa' });
   });
+  it('stops a run when its time is up and sends the rest in the next, so a slow provider never holds the job runner (launch rehearsal J-L3)', async () => {
+    const queued = ['co-slow-1@example.test', 'co-slow-2@example.test', 'co-slow-3@example.test'];
+    await db.insert(waitlistEntries).values(queued.map((email, index) => ({ id: `wle_co_slow_${index}`, email, zip: '74120', interest: 'need_help', locale: 'en', toldMarketId: TULSA, tellStatus: 'queued', tellAfter: at(800), createdAt: at(800 + index) })));
+    const box = mailbox();
+    // No time left after the first: it goes, and the other two wait, still queued.
+    expect(await sendCityOpenEmails(db, { email: box, appUrl: APP }, at(801), 100, 0)).toEqual({ sent: 1, skipped: 0, failed: 0 });
+    expect((await Promise.all(queued.map(entry))).map((row) => row.tellStatus)).toEqual(['sent', 'queued', 'queued']);
+    expect(await sendCityOpenEmails(db, { email: box, appUrl: APP }, at(802))).toEqual({ sent: 2, skipped: 0, failed: 0 });
+    expect(box.sent.map((message) => message.to)).toEqual(queued);
+  });
 });
 
 describe('the unsubscribe link in the email', () => {
