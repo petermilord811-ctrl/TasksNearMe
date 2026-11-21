@@ -1,16 +1,18 @@
 import { z } from 'zod';
 import type { AiTaskDraft, AppLocale, CategorySlug, DetailFieldDef, TaskDetailsValue } from '@/contracts';
 import { CATEGORY_DETAIL_FIELDS, compactTaskDetails, TASK_DESCRIPTION_MAX, TASK_TITLE_MAX, validateTaskDetails } from '@/contracts';
+import { tidyRichText } from '@/shared/rich-text';
 import { CATEGORY_GUIDE } from './category-guide';
 import { aiWriterFromEnv } from './balancer';
 import { asPromptText, oneLine, type AiWriter } from './writer';
 import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
- * "Help me describe this" (blueprint 02 J1 step 2). With a model's key, a free model drafts it (the load balancer:
- * `balancer.ts`, Gemini, then Kimi, then Groq); without one, development and tests use the
- * rule-based drafter below, which turns plain words into the same structured draft, and production doesn't offer
- * it. Nothing is posted.
+ * "Rewrite with AI" in the description field (blueprint 02 J1 step 2). With a model's key, a free model drafts it (the
+ * load balancer: `balancer.ts`, Gemini, then Kimi, then Groq); without one, development and tests use the rule-based
+ * drafter below, which turns plain words into the same structured draft, and production doesn't offer it. The
+ * description comes back as a short formatted post (src/shared/rich-text.ts: a heading or two with lists; owner,
+ * 2026-11-21: "AI can help write this html post style"). Nothing is posted.
  */
 export interface TaskDrafter {
   readonly name: string;
@@ -194,13 +196,10 @@ export function createFakeTaskDrafter(): TaskDrafter {
         .sort((a, b) => Number(b.required) - Number(a.required))
         .slice(0, 4)
         .map((field) => QUESTION_FOR[field.key]!);
-      const description = sentence(text).slice(0, TASK_DESCRIPTION_MAX);
-      return {
-        title: titleFor(categorySlug, details, text).slice(0, TASK_TITLE_MAX),
-        description: description.length >= 20 ? description : `${description} More details to follow.`.trim(),
-        details,
-        openQuestions,
-      };
+      const title = titleFor(categorySlug, details, text).slice(0, TASK_TITLE_MAX);
+      // The same shape a model writes: their words, then what needs doing as a list.
+      const description = `${sentence(text)}\n\n## What needs doing\n- ${sentence(title)}`.slice(0, TASK_DESCRIPTION_MAX);
+      return { title, description, details, openQuestions };
     },
   };
 }
@@ -212,7 +211,11 @@ const DRAFT_SYSTEM = `You help people post a task on TasksNearMe, a US marketpla
 How to write the draft:
 - Use only what the person wrote. Never invent facts such as counts, sizes, brands, floors, dates, times, or prices. When a detail isn't stated, set it to null.
 - title: short and specific, under 70 characters, in plain words a helper scans quickly ("Assemble an IKEA desk and a bookshelf"). No names, places, or prices.
-- description: 1 to 4 short sentences in the person's voice ("I need..."), saying what needs doing and anything that makes it easier or harder (stairs, pets, tools on hand). Under 600 characters.
+- description: a short, easy-to-scan post in the person's voice, in this light Markdown and nothing else:
+  - First, one or two sentences saying what they need ("I need...").
+  - Then up to three short sections, each a line starting with "## " and then lines starting with "- ": what needs doing (the work, step by step), good to know (anything that makes it easier or harder: stairs, pets, parking, what's already there or ready), and what to bring (tools or supplies the helper should bring). Write the headings in the prompt's language, and include a section only when the request gives something to put in it.
+  - **Bold** only for one or two key facts. No other formatting: no links, tables, code, HTML or emoji.
+  - Under 900 characters. A short request gets a short post: never pad it with facts they didn't give.
 - Leave out personal details even if they were typed: street addresses, phone numbers, email addresses, links, last names, door or gate codes. The exact address goes to the booked helper later, inside the app.
 - No prices, budgets, or payment terms (the person sets the budget in a later step), and nothing about paying outside TasksNearMe.
 - Stay within the category. If the request includes work the category never covers, leave that part out of the title and description and add an open question that points it out.
@@ -266,7 +269,8 @@ export function tidyDraft(
   const errors = validateTaskDetails(category, given);
   const details = compactTaskDetails(Object.fromEntries(Object.entries(given).filter(([key]) => !errors[key])));
   const title = oneLine(answer.title).slice(0, TASK_TITLE_MAX);
-  const description = answer.description.trim().slice(0, TASK_DESCRIPTION_MAX);
+  // The editor's format, whatever came back (some models answer in HTML or fuller Markdown).
+  const description = tidyRichText(answer.description).slice(0, TASK_DESCRIPTION_MAX).trim();
   return {
     title: title.length >= 8 ? title : CATEGORY_GUIDE[category].name,
     description: description.length >= 20 ? description : `${description} More details to follow.`.trim(),
@@ -307,7 +311,7 @@ export function createAiTaskDrafter(writer: AiWriter): TaskDrafter {
 
 /**
  * The drafter for this environment: a model with a key (Kimi, then Claude); the rule-based one without a key
- * outside production; null when "Help me describe this" is unavailable.
+ * outside production; null when "Rewrite with AI" is unavailable.
  */
 export function createTaskDrafter(env: Record<string, string | undefined> = process.env): TaskDrafter | null {
   const writer = aiWriterFromEnv(env);

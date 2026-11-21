@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { Controller, useFormContext, useWatch } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { LoaderCircle, Lock, MapPin } from 'lucide-react';
-import { routes, type AddressSuggestion, type PostTaskHandlers, type PostTaskPageData, type TaskDraftInput } from '@/contracts';
+import type { AddressSuggestion, PostTaskHandlers, PostTaskPageData, TaskDraftInput } from '@/contracts';
 import { TextFormField } from '@/ui/components/forms/text-form-field';
 import { GeneralAreaMap } from '@/ui/components/map/general-area-map';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
@@ -36,9 +36,6 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
   const [active, setActive] = useState(-1);
   const [searchEnabled, setSearchEnabled] = useState(false);
   const [status, setStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
-  const [outOfArea, setOutOfArea] = useState(!!initialSuggestions?.some((suggestion) => !suggestion.inServiceArea));
-  // An address picked outside the cities we're open in: the panel names its city (owner, 2026-11-14).
-  const [outsidePick, setOutsidePick] = useState<AddressSuggestion['outside']>();
   const request = useRef(0);
   const modeError = getFieldState('location.mode', formState).error?.message;
   const placeError = getFieldState('location.placeId', formState).error?.message;
@@ -56,7 +53,6 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
         setSuggestions(results);
         setActive(-1);
         setOpen(true);
-        setOutOfArea(results.some((suggestion) => !suggestion.inServiceArea));
         setStatus('loaded');
       } catch {
         if (canceled || current !== request.current) return;
@@ -74,23 +70,19 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
     setSuggestions([]);
     setOpen(false);
     setActive(-1);
-    setOutOfArea(false);
-    setOutsidePick(undefined);
     setStatus('idle');
     onAddressChange(undefined);
     setValue('location.placeId', '', { shouldDirty: true });
   }
 
+  /** Any address the search finds can be posted (owner, 2026-11-21: no area limit); outside our cities it says so. */
   function chooseAddress(address: AddressSuggestion) {
-    if (!address.inServiceArea) { setOutOfArea(true); setOutsidePick(address.outside); setOpen(false); return; }
     request.current++;
     setValue('location.placeId', address.placeId, { shouldDirty: true, shouldValidate: true });
     onAddressChange(address);
     setQuery(address.line1);
     setSearchEnabled(false);
     setOpen(false);
-    setOutOfArea(false);
-    setOutsidePick(undefined);
     setStatus('idle');
     setActive(-1);
   }
@@ -104,8 +96,6 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
     setSuggestions([]);
     setSearchEnabled(false);
     setOpen(false);
-    setOutOfArea(false);
-    setOutsidePick(undefined);
     setStatus('idle');
   }
 
@@ -132,34 +122,27 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
             if (event.key === 'Enter') { event.preventDefault(); if (open && active >= 0 && suggestions[active]) chooseAddress(suggestions[active]); }
           }} />} />
           {open && !!suggestions.length && <ul id={`${id}-results`} role="listbox" aria-label={t('location.results')} className="motion-safe:animate-in fade-in-0 zoom-in-95 absolute z-20 mt-2 max-h-72 w-full overflow-y-auto rounded-2xl border border-foreground/[0.08] bg-popover p-1.5 text-popover-foreground shadow-overlay dark:border-white/[0.08]">
-            {suggestions.map((address, index) => <li key={address.placeId} id={`${id}-result-${index}`} role="option" aria-selected={active === index} aria-disabled={!address.inServiceArea} className={cn('min-h-14 cursor-pointer rounded-lg p-3 text-sm', active === index && 'bg-accent', !address.inServiceArea && 'text-muted-foreground')} onMouseDown={(event) => event.preventDefault()} onClick={() => chooseAddress(address)}>
+            {suggestions.map((address, index) => <li key={address.placeId} id={`${id}-result-${index}`} role="option" aria-selected={active === index} className={cn('min-h-14 cursor-pointer rounded-lg p-3 text-sm', active === index && 'bg-accent')} onMouseDown={(event) => event.preventDefault()} onClick={() => chooseAddress(address)}>
               <span className="block break-words font-medium">{address.line1}</span>
               <span className="block break-words">{address.line2}</span>
-              {!address.inServiceArea && <span className="mt-1 block font-medium">{address.outside ? t('location.notYetIn', { city: address.outside.city }) : t('location.outOfArea')}</span>}
+              {!address.inServiceArea && <span className="mt-1 block text-muted-foreground">{t('location.outsideOption')}</span>}
             </li>)}
           </ul>}
         </div>
         <FieldDescription id={`${id}-hint`}>{t('location.searchHint')}</FieldDescription>
-        {/* An address outside the area (`not_supported`) says so: the shared message for that code is about phone numbers (sweep PT12). */}
-        {placeError && <FieldError id={`${id}-error`}>{placeError === 'not_supported' ? t('location.outOfArea') : errors(`fieldErrors.${errors.has(`fieldErrors.${placeError}`) ? placeError : 'invalid'}`)}</FieldError>}
+        {/* An address the app can't place (`not_supported`) says so: the shared message for that code is about phone numbers (sweep PT12). */}
+        {placeError && <FieldError id={`${id}-error`}>{placeError === 'not_supported' ? t('location.unplaceable') : errors(`fieldErrors.${errors.has(`fieldErrors.${placeError}`) ? placeError : 'invalid'}`)}</FieldError>}
       </Field>
       <div role="status" aria-live="polite" className="text-sm text-muted-foreground">
         {status === 'loading' && <p className="flex items-center gap-2"><LoaderCircle aria-hidden="true" className="size-4 animate-spin motion-reduce:animate-none" />{t('location.loading')}</p>}
         {status === 'error' && <p>{t('location.failed')}</p>}
         {status === 'loaded' && suggestions.length === 0 && <p>{t('location.empty')}</p>}
-        {selectedAddress?.inServiceArea && <span className="sr-only">{t('location.selected')}</span>}
+        {selectedAddress && <span className="sr-only">{t('location.selected')}</span>}
       </div>
-      {outOfArea && (outsidePick ? <div className="space-y-1 rounded-2xl border border-warning/50 bg-warning/[0.06] p-4 text-sm">
-        <p className="font-medium">{t('location.outsideTitle', { city: outsidePick.city })}</p>
-        <p className="text-muted-foreground">{t('location.outsideBody', { city: outsidePick.city })}</p>
-        <div className="flex flex-wrap gap-x-4">
-          <a href={routes.waitlist({ zip: outsidePick.zip })} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">{t('location.outsideWaitlist', { city: outsidePick.city })}</a>
-          <a href={routes.becomeAHelper()} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">{t('location.outsideHelper')}</a>
-        </div>
-      </div> : <div className="rounded-2xl border border-warning/50 bg-warning/[0.06] p-4 text-sm"><p className="font-medium">{t('location.outOfArea')}</p><a href={routes.waitlist()} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">{t('location.waitlist')}</a></div>)}
-      {selectedAddress?.inServiceArea ? <div className="space-y-3 rounded-2xl bg-secondary/70 p-4 text-foreground dark:bg-secondary/40">
-        {selectedAddress.areaName && <p className="flex items-start gap-2 font-medium"><MapPin aria-hidden="true" className="mt-0.5 size-5 shrink-0" />{t('location.publicPreview', { area: selectedAddress.areaName, market: data.market.name })}</p>}
-        {selectedAddress.areaName && selectedAddress.areaPoint && <GeneralAreaMap location={{ kind: 'local', marketSlug: data.market.slug, marketName: data.market.name, areaName: selectedAddress.areaName, publicPoint: selectedAddress.areaPoint, radiusMeters: 1609 }} live={liveMap} className="h-44" />}
+      {selectedAddress ? <div className="space-y-3 rounded-2xl bg-secondary/70 p-4 text-foreground dark:bg-secondary/40">
+        {selectedAddress.areaName && <p className="flex items-start gap-2 font-medium"><MapPin aria-hidden="true" className="mt-0.5 size-5 shrink-0" />{selectedAddress.inServiceArea ? t('location.publicPreview', { area: selectedAddress.areaName, market: data.market.name }) : t('location.publicPreviewOutside', { area: selectedAddress.areaName })}</p>}
+        {!selectedAddress.inServiceArea && <p className="rounded-xl border border-warning/50 bg-warning/[0.06] p-3 text-sm">{t('location.outsideNotice', { city: selectedAddress.outside?.city ?? selectedAddress.areaName ?? '' })}</p>}
+        {selectedAddress.areaName && selectedAddress.areaPoint && <GeneralAreaMap location={{ kind: 'local', marketSlug: data.market.slug, marketName: data.market.name, areaName: selectedAddress.areaName, ...(selectedAddress.inServiceArea ? {} : { outsideMarket: true as const }), publicPoint: selectedAddress.areaPoint, radiusMeters: 1609 }} live={liveMap} className="h-44" />}
         <p className="flex items-start gap-2 text-sm"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('location.privateHint')}</p>
       </div> : location.placeId && <p className="rounded-2xl bg-secondary/70 p-4 text-sm text-foreground dark:bg-secondary/40">{t('location.restoreHint')}</p>}
       <TextFormField control={control} name="location.unit" label={t('location.unit')} hint={t('location.unitHint')} maxLength={20} />

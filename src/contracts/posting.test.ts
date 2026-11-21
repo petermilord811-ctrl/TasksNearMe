@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { deskDraft, movingDraft, postTaskPageData, remoteHelpDraft } from '@/fixtures';
 import { CATEGORY_SLUGS } from './common';
-import { CATEGORY_DETAIL_FIELDS, createTaskDraftSchema, findTaskTemplate, isTaskTemplateId, TASK_TEMPLATE_IDS, TASK_TEMPLATES, validateTaskDetails } from './posting';
+import { belowCategoryMinimum, CATEGORY_DETAIL_FIELDS, createTaskDraftSchema, findTaskTemplate, isTaskTemplateId, TASK_TEMPLATE_IDS, TASK_TEMPLATES, validateTaskDetails } from './posting';
 
 const schema = createTaskDraftSchema(postTaskPageData);
 
@@ -71,10 +71,10 @@ describe('task draft schema', () => {
     expect(gainesville.safeParse({ ...noon, schedule: { ...noon.schedule, startTime: '13:00', endTime: '15:00' } }).success).toBe(true);
   });
 
-  it('enforces category minimums and sensible hourly caps', () => {
-    expect(errorsOf({ ...deskDraft, budget: { type: 'fixed', priceCents: 2000 } })).toMatchObject({
-      'budget.priceCents': 'out_of_range',
-    });
+  it('takes a price under the category minimum (only noted on screen), and keeps hourly caps sensible', () => {
+    // The owner (2026-11-21): "remove minimum budget price: just notify it to user".
+    expect(errorsOf({ ...deskDraft, budget: { type: 'fixed', priceCents: 2000 } })).toEqual({});
+    expect(errorsOf({ ...movingDraft, budget: { type: 'hourly', rateCents: 500, estimatedHours: 2, hoursCap: 2 } })).toEqual({});
     expect(
       errorsOf({ ...movingDraft, budget: { type: 'hourly', rateCents: 3500, estimatedHours: 1.5, hoursCap: 1 } }),
     ).toMatchObject({ 'budget.estimatedHours': 'out_of_range', 'budget.hoursCap': 'out_of_range' });
@@ -89,6 +89,17 @@ describe('task draft schema', () => {
     // No more than an offer can carry: $100,000, or $1,000 an hour.
     expect(errorsOf({ ...movingDraft, budget: { type: 'fixed', priceCents: 10_000_001 } })).toMatchObject({ 'budget.priceCents': 'out_of_range' });
     expect(errorsOf({ ...movingDraft, budget: { type: 'hourly', rateCents: 100_001, estimatedHours: 2, hoursCap: 3 } })).toMatchObject({ 'budget.rateCents': 'out_of_range' });
+  });
+
+  it('tells when a price is under the category minimum, ignoring amounts still being typed', () => {
+    const desk = { minPriceCents: 2500 };
+    expect(belowCategoryMinimum(desk, { type: 'fixed', priceCents: 2000 })).toBe(true);
+    expect(belowCategoryMinimum(desk, { type: 'fixed', priceCents: 2500 })).toBe(false);
+    expect(belowCategoryMinimum(desk, { type: 'fixed', priceCents: -1 })).toBe(false);
+    expect(belowCategoryMinimum(desk, { type: 'fixed', priceCents: 0 })).toBe(false);
+    expect(belowCategoryMinimum(desk, { type: 'hourly', rateCents: 1000, estimatedHours: 2 })).toBe(true);
+    expect(belowCategoryMinimum(desk, { type: 'hourly', rateCents: 1500, estimatedHours: 2 })).toBe(false);
+    expect(belowCategoryMinimum(desk, { type: 'hourly', rateCents: 1000, estimatedHours: Number.NaN })).toBe(false);
   });
 
   it('caps the expense allowance', () => {

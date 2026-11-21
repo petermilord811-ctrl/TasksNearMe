@@ -10,6 +10,7 @@ import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
 import { buttonVariants } from '@/ui/primitives/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/ui/primitives/dialog';
+import { RichText } from '@/ui/components/rich-text/rich-text';
 import { HelperOffer } from './helper-offer';
 
 export interface HelperTaskScreenProps {
@@ -51,7 +52,7 @@ export function HelperTaskScreen({ data, handlers, now, initialRevising, initial
       <div className="border-t pt-4 sm:order-first sm:border-t-0 sm:pt-0"><GeneralArea location={task.location} showMap liveMap={liveMap} /></div>
       {task.location.kind === 'local' && <p className="flex items-start gap-2 text-sm text-muted-foreground sm:order-2"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('privacy')}</p>}
     </div>
-    <section aria-labelledby="helper-task-about" className="space-y-3"><h2 id="helper-task-about" className="font-heading text-xl font-semibold md:text-[22px]/7.5">{t('about')}</h2><p className="whitespace-pre-wrap break-words leading-7">{data.description}</p></section>
+    <section aria-labelledby="helper-task-about" className="space-y-3"><h2 id="helper-task-about" className="font-heading text-xl font-semibold md:text-[22px]/7.5">{t('about')}</h2><RichText text={data.description} headingLevel={3} /></section>
     <section aria-labelledby="helper-task-details" className="space-y-4 rounded-xl border bg-card p-card shadow-card">
       <h2 id="helper-task-details" className="font-heading text-xl font-semibold md:text-[22px]/7.5">{t('details')}</h2>
       <dl className="grid gap-4 sm:grid-cols-2">{CATEGORY_DETAIL_FIELDS[task.categorySlug].map((field) => {

@@ -102,6 +102,13 @@ export const movingDraft: TaskDraftInput = {
   expenseAllowance: { amountCents: 2000, description: 'Up to $20 for moving blankets or tape' },
 };
 
+/** Maya's desk again, its description formatted with headings and lists (the editor's toolbar or Rewrite with AI). */
+export const formattedDeskDraft: TaskDraftInput = {
+  ...deskDraft,
+  description:
+    'Flat-pack desk, still in the box in my living room.\n\n## What needs doing\n1. Unpack and sort the parts\n2. Assemble the desk by the window\n3. Take the cardboard down to recycling\n\n## Good to know\n- **2nd floor** with an elevator\n- Street parking is free after 9 am',
+};
+
 /** Ruth's remote computer help, any time that day. */
 export const remoteHelpDraft: TaskDraftInput = {
   categorySlug: 'computer-help',
@@ -120,19 +127,25 @@ export const addressSuggestions: AddressSuggestion[] = [
   { placeId: 'plc_crestview_88', line1: '88 Sample Street', line2: 'Austin, TX 78757', areaName: 'Crestview', inServiceArea: true },
 ];
 
-/** Outside the service area: offer the waitlist instead (for Waco, with its ZIP), and helper sign-up. */
+/**
+ * Outside the service area: it can still be posted (owner, 2026-11-21). Helpers see the city around its ZIP's center
+ * (the Census center of 76701), and the screen says helpers there may be few for now.
+ */
 export const outOfAreaSuggestion: AddressSuggestion = {
   placeId: 'plc_waco_100',
   line1: '100 Example Road',
   line2: 'Waco, TX 76701',
+  areaName: 'Waco, TX',
+  areaPoint: { lat: 31.55, lng: -97.14 },
   inServiceArea: false,
   outside: { city: 'Waco', state: 'TX', zip: '76701' },
 };
 
+/** "Rewrite with AI": a formatted post (src/shared/rich-text.ts), as the drafter writes it. */
 export const aiDeskDraft: AiTaskDraft = {
   title: 'Assemble a flat-pack desk',
   description:
-    'Assemble one flat-pack desk (about 40 parts). The box is in the living room, and the desk stays in the same room. Please bring a drill.',
+    'I need one flat-pack desk put together in my living room.\n\n## What needs doing\n- Unpack the box (about **40 parts**)\n- Assemble the desk where it will stay\n\n## Please bring\n- A drill and a screwdriver',
   details: { itemType: 'desk', itemCount: 1, toolsOnSite: false },
   openQuestions: [
     'Which floor is it on, and is there an elevator?',

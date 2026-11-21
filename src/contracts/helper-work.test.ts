@@ -17,15 +17,14 @@ describe('offer form schema', () => {
     }
   });
 
-  it('keeps the pricing type, the start inside the window, and the minimum price', () => {
+  it('keeps the pricing type and the start inside the window, and takes a price under the category minimum', () => {
     const rules = helperDeskWithOffer.offerRules;
     expect(errorsOf(rules, { ...helperDeskWithOffer.offerDefaults, pricing: { type: 'hourly', rateCents: 3000, estimatedHours: 2, hoursCap: 2 } })).toEqual({
       'pricing.type': 'invalid',
     });
     expect(errorsOf(rules, { ...helperDeskWithOffer.offerDefaults, startTime: '13:00' })).toEqual({ startTime: 'out_of_range' });
-    expect(errorsOf(rules, { ...helperDeskWithOffer.offerDefaults, pricing: { type: 'fixed', priceCents: 2000 } })).toEqual({
-      'pricing.priceCents': 'out_of_range',
-    });
+    // As on the task (owner, 2026-11-21): the form notes a low price, the schema takes it.
+    expect(errorsOf(rules, { ...helperDeskWithOffer.offerDefaults, pricing: { type: 'fixed', priceCents: 2000 } })).toEqual({});
     expect(errorsOf(rules, { ...helperDeskWithOffer.offerDefaults, message: 'x'.repeat(501) })).toEqual({ message: 'too_long' });
   });
 

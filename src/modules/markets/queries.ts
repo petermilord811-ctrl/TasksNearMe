@@ -5,6 +5,7 @@ import { CATEGORY_SLUGS } from '@/contracts';
 import { db } from '@/platform/db/client';
 import type { Db } from '@/platform/db/connect';
 import { areas, categories, featureFlags, marketCategories, marketPolicies, markets } from './schema';
+import { neighborhoodsOnly } from './city-areas';
 
 export { DEFAULT_MARKET_SLUG } from './default-market';
 
@@ -35,7 +36,8 @@ export async function getMarketView(market: MarketRow, database: Db = db): Promi
   const areaRows = await database
     .select({ name: areas.name })
     .from(areas)
-    .where(eq(areas.marketId, market.id))
+    // Its neighborhoods: not the cities of tasks posted outside it (city-areas.ts).
+    .where(and(eq(areas.marketId, market.id), neighborhoodsOnly()))
     .orderBy(asc(areas.name));
   return {
     slug: market.slug,

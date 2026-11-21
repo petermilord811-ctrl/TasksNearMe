@@ -202,6 +202,7 @@ export interface OfferRules {
   startTimes: string[];
   /** The offer must match the task's pricing type. */
   pricingType: 'fixed' | 'hourly';
+  /** The category's usual minimum: a price under it is allowed and only noted (`belowCategoryMinimum`; owner, 2026-11-21). */
   minPriceCents: Cents;
   /** Hourly tasks: the cap may not be below the poster's estimate. */
   minHoursCap?: number;
@@ -233,13 +234,11 @@ export function createOfferInputSchema(rules: OfferRules) {
       const issue = (path: (string | number)[], message: FieldErrorCode) => ctx.addIssue({ code: 'custom', path, message });
       if (offer.pricing.type !== rules.pricingType) return issue(['pricing', 'type'], 'invalid');
       if (!rules.startTimes.includes(offer.startTime)) issue(['startTime'], 'out_of_range');
-      if (offer.pricing.type === 'fixed') {
-        if (offer.pricing.priceCents < rules.minPriceCents) issue(['pricing', 'priceCents'], 'out_of_range');
-      } else {
-        const { rateCents, estimatedHours, hoursCap } = offer.pricing;
+      // A price under the category's usual minimum is allowed, as on the task itself (owner, 2026-11-21).
+      if (offer.pricing.type === 'hourly') {
+        const { estimatedHours, hoursCap } = offer.pricing;
         if (hoursCap < estimatedHours) issue(['pricing', 'hoursCap'], 'out_of_range');
         if (rules.minHoursCap && hoursCap < rules.minHoursCap) issue(['pricing', 'hoursCap'], 'out_of_range');
-        if (rateCents * estimatedHours < rules.minPriceCents) issue(['pricing', 'rateCents'], 'out_of_range');
       }
     });
 }

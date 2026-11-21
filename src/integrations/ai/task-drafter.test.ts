@@ -12,7 +12,7 @@ describe('rule-based task drafter', () => {
       text: 'need my desk built, box is in the living room on the 2nd floor, no elevator',
     });
     expect(draft.title).toBe('Assemble a flat-pack desk');
-    expect(draft.description).toBe('Need my desk built, box is in the living room on the 2nd floor, no elevator.');
+    expect(draft.description).toBe('Need my desk built, box is in the living room on the 2nd floor, no elevator.\n\n## What needs doing\n- Assemble a flat-pack desk.');
     expect(draft.details).toEqual({ itemType: 'desk', itemCount: 1, floor: 2, elevator: false });
     expect(draft.openQuestions).toContain('Should it be anchored to the wall?');
     expect(draft.openQuestions).not.toContain('What are you having assembled?');
@@ -39,6 +39,15 @@ describe('rule-based task drafter', () => {
 });
 
 describe('AI task drafter', () => {
+  it('brings a description into the editor’s format, whatever the model sent (HTML, fuller Markdown)', async () => {
+    const writer: AiWriter = {
+      name: 'stub',
+      write: async () => ({ title: 'Fix a noisy CPU fan', description: '<p>I need my <b>desktop</b> looked at.</p><h3>What needs doing</h3><ul><li>Check the fan</li><li>Replace it</li></ul>', details: {}, openQuestions: [] }) as never,
+    };
+    const draft = await createAiTaskDrafter(writer).draft({ categorySlug: 'computer-help', text: 'pc fan very loud', locale: 'en' });
+    expect(draft.description).toBe('I need my **desktop** looked at.\n\n## What needs doing\n\n- Check the fan\n- Replace it');
+  });
+
   it("writes in the page's language: Spanish for a Spanish page, English otherwise (sweep 2026-11-20, PT14)", async () => {
     const prompts: string[] = [];
     const writer: AiWriter = {

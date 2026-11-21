@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 import { routes, type AppShellHandlers, type PreviewEntry, type TaskDraftInput } from '@/contracts';
 import {
-  addressSuggestions, aiDeskDraft, deskDraft, fakeHandler, fakePostTaskHandlers, mayaShell,
+  addressSuggestions, aiDeskDraft, deskDraft, fakeHandler, fakePostTaskHandlers, formattedDeskDraft, mayaShell,
   movingDraft, outOfAreaSuggestion, postTaskComputerHelpNoAiData, postTaskFromTemplateData, postTaskPageData, postTaskRepeatAddressDeletedData, postTaskRepeatData,
   botCheckResults, postTaskResults, remoteHelpDraft, standInBotCheck, uploadedTaskPhotos,
 } from '@/fixtures';
@@ -31,6 +31,7 @@ const moving = { initialValues: movingDraft, initialAddress: addressSuggestions[
 export const postingPreviews: PreviewEntry[] = [
   preview('category', { initialStep: 'category' }),
   preview('describe-ai', { initialStep: 'describe', ...desk }),
+  preview('describe-formatted', { initialStep: 'describe', ...desk, initialValues: formattedDeskDraft }),
   preview('describe-no-ai', { data: postTaskComputerHelpNoAiData, initialStep: 'describe', initialValues: remoteHelpDraft }),
   preview('ai-suggestion', { initialStep: 'describe', ...desk, initialSuggestion: aiDeskDraft }),
   preview('details-furniture', { initialStep: 'details', ...desk }),
@@ -43,13 +44,16 @@ export const postingPreviews: PreviewEntry[] = [
   preview('where-local', { initialStep: 'where', ...desk }),
   preview('where-remote', { initialStep: 'where', initialValues: remoteHelpDraft }),
   preview('where-out-of-area', { initialStep: 'where', initialValues: { ...deskDraft, location: { mode: 'local', placeId: '' } }, initialSuggestions: [outOfAreaSuggestion] }),
+  preview('where-outside', { initialStep: 'where', initialValues: { ...deskDraft, location: { mode: 'local', placeId: outOfAreaSuggestion.placeId } }, initialAddress: outOfAreaSuggestion }),
   preview('when-window', { initialStep: 'when', ...desk }),
   preview('when-flexible', { initialStep: 'when', initialValues: remoteHelpDraft }),
   preview('budget-fixed', { initialStep: 'budget', ...desk }),
   preview('budget-hourly', { initialStep: 'budget', ...moving }),
+  preview('budget-below-minimum', { initialStep: 'budget', ...desk, initialValues: { ...deskDraft, budget: { type: 'fixed', priceCents: 1500 } } }),
   preview('review-desk', { initialStep: 'review', ...desk }),
   preview('review-moving', { initialStep: 'review', ...moving }),
   preview('review-remote', { initialStep: 'review', initialValues: remoteHelpDraft }),
+  preview('review-outside', { initialStep: 'review', initialValues: { ...formattedDeskDraft, location: { mode: 'local', placeId: outOfAreaSuggestion.placeId } }, initialAddress: outOfAreaSuggestion, initialPhotos: uploadedTaskPhotos }),
   preview('review-loading', { initialStep: 'review', ...desk, handlers: { ...handlers, onQuote: () => new Promise(() => {}) } }),
   preview('review-error', { initialStep: 'review', ...desk, handlers: { ...handlers, onQuote: async () => { throw new Error('Preview: unavailable'); } } }),
   preview('error-prohibited', { initialStep: 'describe', ...desk, initialResult: postTaskResults.prohibited, handlers: { ...handlers, onPost: fakeHandler(postTaskResults.prohibited) } }),

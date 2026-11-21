@@ -4,7 +4,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { Controller, useFormContext, useWatch, type FieldPath } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
-import type { OfferInput, OfferMessageDraftInput, OfferMessageDraftResult, OfferRules, QueryHandler } from '@/contracts';
+import { belowCategoryMinimum, type OfferInput, type OfferMessageDraftInput, type OfferMessageDraftResult, type OfferRules, type QueryHandler } from '@/contracts';
 import { AiDraftButton, AiDraftStatus, type AiDraftOutcome } from '@/ui/components/forms/ai-draft';
 import { formatHours, formatMoney, marketLocalToUtc } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
@@ -91,6 +91,17 @@ function MessageDraft({ onDraft }: { onDraft: QueryHandler<OfferMessageDraftInpu
   </div>;
 }
 
+/**
+ * Under the category's usual minimum: allowed (owner, 2026-11-21: the minimum is a note, not a limit) and said where
+ * the price is entered. Its own subscription, so typing a price doesn't re-render the whole form.
+ */
+function BelowMinimumNote({ rules }: { rules: OfferRules }) {
+  const t = useTranslations('helperTask.form');
+  const pricing = useWatch<OfferInput, 'pricing'>({ name: 'pricing' });
+  const below = pricing ? belowCategoryMinimum({ minPriceCents: rules.minPriceCents }, pricing) : false;
+  return <div aria-live="polite">{below && <p className="mt-3 rounded-xl border border-warning/50 bg-warning/[0.06] p-3 text-sm">{t('belowMinimum', { minimum: formatMoney(rules.minPriceCents) })}</p>}</div>;
+}
+
 export function OfferFields({ rules, onDraftMessage }: {
   rules: OfferRules;
   /** "Write it for me" on the message, when drafting is on for this helper. */
@@ -117,13 +128,14 @@ export function OfferFields({ rules, onDraftMessage }: {
 
   return <div className="space-y-6">
     {rules.pricingType === 'fixed'
-      ? <OfferMoneyField name="pricing.priceCents" label={t('price')} hint={t('priceHint', { minimum: formatMoney(rules.minPriceCents) })} />
+      ? <div><OfferMoneyField name="pricing.priceCents" label={t('price')} hint={t('priceHint')} /><BelowMinimumNote rules={rules} /></div>
       : <>
         <OfferMoneyField name="pricing.rateCents" label={t('rate')} hint={t('rateHint')} />
-        <div className="grid gap-5 sm:grid-cols-2">{(['estimatedHours', 'hoursCap'] as const).map((key) => <OfferField key={key} name={`pricing.${key}`} label={t(key)} hint={key === 'hoursCap' && rules.minHoursCap !== undefined ? t('hoursCapMinimumHint', { minimum: formatHours(rules.minHoursCap) }) : t(`${key}Hint`)}>{(id, invalid) => <Input
+        <div><div className="grid gap-5 sm:grid-cols-2">{(['estimatedHours', 'hoursCap'] as const).map((key) => <OfferField key={key} name={`pricing.${key}`} label={t(key)} hint={key === 'hoursCap' && rules.minHoursCap !== undefined ? t('hoursCapMinimumHint', { minimum: formatHours(rules.minHoursCap) }) : t(`${key}Hint`)}>{(id, invalid) => <Input
           {...register(`pricing.${key}`, { setValueAs: (value: string) => value === '' ? -1 : Number(value) })} id={id} type="number" inputMode="decimal" min={0.5} step={0.5}
           aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="scroll-mb-40 tabular-nums"
         />}</OfferField>)}</div>
+        <BelowMinimumNote rules={rules} /></div>
       </>}
     <OfferField name="startTime" label={t('startTime')} hint={t('startTimeHint', { zone: zoneName })}>{(id, invalid) => <select {...register('startTime')} id={id} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="min-h-11 w-full scroll-mb-40 rounded-[10px] border border-input bg-background px-3 text-base tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
       <option value="" disabled>{t('chooseStart')}</option>

@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { CATEGORY_DETAIL_FIELDS, routes, type TaskOwnerView } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { ExactAddressPanel } from '@/ui/components/location/exact-address-panel';
+import { RichText } from '@/ui/components/rich-text/rich-text';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/ui/primitives/dialog';
 
 export function TaskDetails({ data }: { data: TaskOwnerView }) {
@@ -13,7 +14,7 @@ export function TaskDetails({ data }: { data: TaskOwnerView }) {
     <details open className="group overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06]">
       <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 p-4 transition-colors duration-200 hover:bg-foreground/[0.025] sm:p-6 [&::-webkit-details-marker]:hidden"><h2 id="your-task-title" className="font-heading text-xl font-semibold md:text-[22px]/7.5">{t('yourTask')}</h2><ChevronDown aria-hidden="true" className="size-5 shrink-0 text-muted-foreground transition-transform duration-300 ease-[var(--ease-out)] group-open:rotate-180" /></summary>
       <div className="space-y-6 border-t border-foreground/[0.07] p-4 sm:p-6 dark:border-white/[0.06]">
-        <div className="space-y-2"><h3 className="font-semibold">{t('description')}</h3><p className="whitespace-pre-wrap break-words leading-6">{data.description}</p></div>
+        <div className="space-y-2"><h3 className="font-semibold">{t('description')}</h3><RichText text={data.description} headingLevel={4} /></div>
         <div className="space-y-3"><h3 className="font-semibold">{t('details')}</h3><dl className="grid sm:grid-cols-2 sm:gap-4">
           {CATEGORY_DETAIL_FIELDS[data.task.categorySlug].map((field) => {
             const value = data.details[field.key];

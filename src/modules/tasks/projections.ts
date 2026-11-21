@@ -8,6 +8,7 @@ import type {
 import { CATEGORY_SLUGS, TASK_BOARD_GROUPS, TASK_BOARD_POSTED, TASK_BOARD_Q_MAX, TASK_BOARD_SORTS, TASK_BOARD_TIMES, TASK_BOARD_VIEWS, TASK_BOARD_WHEN } from '@/contracts';
 import { isTaskType, taskTypeOf } from '@/shared/task-types';
 import { maskContactDetails, publicExcerpt } from '@/modules/trust/contact-masking';
+import { isCityAreaSlug } from '@/modules/markets/city-areas';
 
 /** Pure projections from task rows to public contract types, and board query parsing. */
 
@@ -33,6 +34,8 @@ export interface PublicTaskRow {
   publishedAt: Date | null;
   createdAt: Date;
   areaName: string | null;
+  /** Tells a city outside the market (`city-…`, src/modules/markets/city-areas.ts) from a neighborhood. */
+  areaSlug?: string | null;
   marketSlug: string;
   marketName: string;
   poster: { name: string; firstName: string; lastName: string; createdAt: Date; phoneVerifiedAt: Date | null };
@@ -73,6 +76,7 @@ export function toTaskPublicView(row: PublicTaskRow): TaskPublicView {
             marketSlug: row.marketSlug,
             marketName: row.marketName,
             areaName: row.areaName,
+            ...(isCityAreaSlug(row.areaSlug) ? { outsideMarket: true as const } : {}),
             publicPoint: { lat: row.publicLat, lng: row.publicLng },
             radiusMeters: PUBLIC_AREA_RADIUS_METERS,
           },

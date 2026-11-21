@@ -25,7 +25,8 @@ export function readStoredDraft(raw: string): StoredTaskDraft | undefined {
   if (value.budget.type === 'fixed' ? !number(value.budget.priceCents) : value.budget.type !== 'hourly' || ![value.budget.rateCents, value.budget.estimatedHours, value.budget.hoursCap].every(number)) return;
   if (value.expenseAllowance !== undefined && (!object(value.expenseAllowance) || !number(value.expenseAllowance.amountCents) || typeof value.expenseAllowance.description !== 'string')) return;
   let address: AddressSuggestion | undefined;
-  if (object(saved.address) && typeof saved.address.placeId === 'string' && typeof saved.address.line1 === 'string' && typeof saved.address.line2 === 'string' && saved.address.inServiceArea === true && (saved.address.areaName === undefined || typeof saved.address.areaName === 'string')) {
+  if (object(saved.address) && typeof saved.address.placeId === 'string' && typeof saved.address.line1 === 'string' && typeof saved.address.line2 === 'string' && typeof saved.address.inServiceArea === 'boolean' && (saved.address.areaName === undefined || typeof saved.address.areaName === 'string')) {
+    // An address outside the market is kept too: it can be posted (owner, 2026-11-21).
     address = saved.address as unknown as AddressSuggestion;
   }
   const requestKey = typeof saved.requestKey === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(saved.requestKey) ? saved.requestKey : undefined;

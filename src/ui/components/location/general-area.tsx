@@ -34,7 +34,7 @@ export function GeneralArea({ location, showMap = false, liveMap = true, privacy
       <div className="space-y-1">
         <p className="flex items-start gap-2 font-medium">
           <MapPin aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />
-          <span>{t('areaName', { area: location.areaName, market: location.marketName })}</span>
+          <span>{t('areaName', { area: location.areaName, market: location.marketName, outside: location.outsideMarket ? 'yes' : 'no' })}</span>
         </p>
         {location.distanceBand && (
           <p className="text-sm text-muted-foreground">{t(`distance.${location.distanceBand}`)}</p>

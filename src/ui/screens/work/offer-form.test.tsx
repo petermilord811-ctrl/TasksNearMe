@@ -48,11 +48,22 @@ describe('helper offer form', () => {
     expect(await screen.findByText(messages.forms.fieldErrors.required)).toBeInTheDocument();
   });
 
-  it('validates the desk minimum and focuses the price', async () => {
+  it('takes a price under the category minimum and says it is low (owner, 2026-11-21: a note, not a limit)', async () => {
     const user = userEvent.setup();
     const { handlers } = mount();
     const price = screen.getByRole('textbox', { name: 'Task price ($)' });
     await user.clear(price); await user.type(price, '$20');
+    expect(await screen.findByText(/That's under \$25\.00, the usual minimum for this category/)).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Proposed start' }), '10:30');
+    await user.click(screen.getByRole('button', { name: 'Send offer' }));
+    await waitFor(() => expect(handlers.onSubmitOffer).toHaveBeenCalledWith(expect.objectContaining({ pricing: { type: 'fixed', priceCents: 2000 } })));
+  });
+
+  it('refuses a price over the cap and focuses it', async () => {
+    const user = userEvent.setup();
+    const { handlers } = mount();
+    const price = screen.getByRole('textbox', { name: 'Task price ($)' });
+    await user.clear(price); await user.type(price, '$100001');
     await user.click(screen.getByRole('button', { name: 'Send offer' }));
     expect(await screen.findByText(messages.forms.fieldErrors.out_of_range)).toBeInTheDocument();
     await waitFor(() => expect(price).toHaveFocus());
@@ -63,7 +74,7 @@ describe('helper offer form', () => {
     const user = userEvent.setup();
     mount();
     const price = screen.getByRole('textbox', { name: 'Task price ($)' });
-    await user.clear(price); await user.type(price, '$20');
+    await user.clear(price); await user.type(price, '$100001');
     await user.click(screen.getByRole('button', { name: 'Send offer' }));
     const error = (await screen.findAllByRole('alert')).find((node) => node.textContent === messages.forms.fieldErrors.out_of_range)!;
     expect(error).toBeDefined();

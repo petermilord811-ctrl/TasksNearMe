@@ -60,7 +60,7 @@ ledger_journals ─1:N─ ledger_entries ─N:1─ ledger_accounts   (journals r
 | Table | Key fields | Constraints and notes |
 |---|---|---|
 | `markets` | slug (`austin`), name, state, timezone (`America/Chicago`), currency, boundary (multipolygon), center, status (`prelaunch`/`live`/`paused`) | A new city = a new row plus seeds |
-| `areas` | market_id, slug, name (`Mueller`), boundary, centroid | Source of "general area" names |
+| `areas` | market_id, slug, name (`Mueller`), boundary, centroid | Source of "general area" names. City areas (`city-waco-tx`, "Waco, TX", centered on a ZIP's Census center) hold tasks posted outside the market's service area (2026-11-21); neighborhood lists leave them out |
 | `categories` | slug, name, in_home, remote_allowed, requires_background_check, default_pricing_type, min_price_cents, required_evidence (photos_min, hours, receipts), prohibited_keywords[] | — |
 | `market_categories` | market_id, category_id, enabled, price_guidance (p25/p50/p75 and unit) | PK pair |
 | `market_policies` | market_id, version, status (`draft`/`published`/`retired`), effective_from, fee_schedule, cancellation, timers, published_by | Unique (market, version). **Immutable once published.** Bookings reference the version they were confirmed under |

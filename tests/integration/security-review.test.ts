@@ -152,13 +152,13 @@ describe('a booking on a task canceled under it', () => {
 });
 
 describe('invite prices', () => {
-  it('take the category’s minimum, a ceiling, and no more hours estimated than the cap', async () => {
+  it('take a ceiling, and no more hours estimated than the cap', async () => {
     const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
     const windowStart = new Date(now.getTime() + 3 * DAY);
     await db.insert(tasks).values({ ...desk!, id: 'tsk_sec_price', slug: 'tsk-sec-price-slug', posterUserId: 'usr_chris', status: 'open', offerCount: 0, version: 1, windowStart, windowEnd: new Date(windowStart.getTime() + 6 * HOUR) });
     const ask = (pricing: Parameters<typeof requestHelper>[3]['pricing']) =>
       requestHelper(deps, 'usr_chris', 'jordan-t', { taskId: 'tsk_sec_price', start: new Date(windowStart.getTime() + HOUR).toISOString(), pricing, message: 'Same kind of flat-pack as last time.', payment: { kind: 'dev_card', card: 'success', save: false }, acceptTerms: true }, now);
-    expect(await ask({ type: 'fixed', priceCents: 100 })).toMatchObject({ ok: false, code: 'validation_failed', fieldErrors: { pricing: ['out_of_range'] } });
+    // A price under the category's minimum is allowed, as on tasks and offers (owner, 2026-11-21: a note, not a limit).
     expect(await ask({ type: 'hourly', rateCents: 4000, estimatedHours: 6, hoursCap: 4 })).toMatchObject({ ok: false, code: 'validation_failed' });
     expect(await ask({ type: 'fixed', priceCents: 20_000_000 })).toMatchObject({ ok: false, code: 'validation_failed' });
   });

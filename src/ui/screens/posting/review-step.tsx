@@ -16,6 +16,7 @@ import {
 import { formatHours, formatMoney, marketLocalToUtc } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
+import { RichText } from '@/ui/components/rich-text/rich-text';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 
@@ -75,7 +76,7 @@ export function ReviewStep({ data, handlers, values, photos, selectedAddress }: 
       <p className="break-words font-heading text-lg font-semibold">{values.title}</p>
       <dl className="grid sm:grid-cols-2 sm:gap-4">
         <ReviewLine label={t('review.category')}>{category ? categoryName(category.slug) : t('review.notSet')}</ReviewLine>
-        <ReviewLine label={t('review.area')}>{local ? address?.areaName ? t('review.areaValue', { area: address.areaName, market: data.market.name }) : t('review.areaUnavailable') : t('review.remote')}</ReviewLine>
+        <ReviewLine label={t('review.area')}>{local ? address?.areaName ? address.inServiceArea ? t('review.areaValue', { area: address.areaName, market: data.market.name }) : address.areaName : t('review.areaUnavailable') : t('review.remote')}</ReviewLine>
         <ReviewLine label={t('review.when')}><span className="block">{date}</span><span className="block tabular-nums">{time}</span></ReviewLine>
         <ReviewLine label={t('review.budget')}>
           {values.budget.type === 'fixed' ? t('review.fixedPrice', { price: formatMoney(values.budget.priceCents) }) : <>
@@ -88,7 +89,7 @@ export function ReviewStep({ data, handlers, values, photos, selectedAddress }: 
 
     <section aria-labelledby={`${id}-helpers`} className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]">
       <h2 id={`${id}-helpers`} className="flex items-center gap-2 font-heading text-xl font-semibold"><Users aria-hidden="true" className="size-5 shrink-0 text-primary" />{t('review.helpers')}</h2>
-      <p className="whitespace-pre-wrap break-words leading-6">{values.description}</p>
+      <RichText text={values.description} headingLevel={3} />
       <dl className="grid sm:grid-cols-2 sm:gap-4">
         {CATEGORY_DETAIL_FIELDS[values.categorySlug].map((field) => {
           const value = values.details[field.key];

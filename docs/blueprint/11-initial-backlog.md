@@ -39,7 +39,7 @@
 | ID | Item | Size | Pri | Depends | Acceptance criteria |
 |---|---|---|---|---|---|
 | B-021 | Locations: autocomplete, geocode, field encryption with key versions, deterministic public point, area naming | M | P0 | B-009 | Property tests: public point is 300–800 m from exact and inside the area; the same location always gives the same point; key rotation re-encrypts |
-| B-022 | Posting wizard with category schemas and rules (lead time ≥ 3 h, ≤ 14 days, minimum price, prohibited keywords) | L | P0 | B-021, B-015 | Invalid tasks are rejected by both client and server; preview shows public vs private columns |
+| B-022 | Posting wizard with category schemas and rules (lead time ≥ 3 h, ≤ 14 days, prohibited keywords; a price under the category minimum is noted, not refused, since 2026-11-21) | L | P0 | B-021, B-015 | Invalid tasks are rejected by both client and server; preview shows public vs private columns |
 | B-023 | Public task pages, market and category SEO pages, public board, robots and sitemap | M | P0 | B-022 | Public pages contain no photos, addresses, or contact details; Lighthouse SEO ≥ 95 |
 | B-024 | Helper feed: list and map, filters, distance bands from the public point, PostGIS queries with indexes | M | P0 | B-022 | p95 < 300 ms with 5k open tasks; distance shown only as a band |
 | B-025 | Task alerts to matching helpers (category, area, preferences), rate-limited | S | P0 | B-028 | A helper gets at most N alerts per hour; no alerts outside their area |

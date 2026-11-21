@@ -88,14 +88,12 @@ const pricingColumns = (pricing: PricingInput) => ({
 });
 
 /**
- * An invite's or a counter's price as offers take it (security review): at least the category's minimum (a fixed price,
- * or the rate times the estimated hours), and never more hours estimated than the cap.
+ * An invite's or a counter's price as offers take it (security review): never more hours estimated than the cap. A price
+ * under the category's usual minimum is allowed, as on tasks and offers (owner, 2026-11-21: "remove minimum budget
+ * price: just notify it to user").
  */
-async function pricingRefused(db: Db, categorySlug: string, pricing: PricingInput): Promise<boolean> {
-  const [category] = await db.select({ minPriceCents: categories.minPriceCents }).from(categories).where(eq(categories.slug, categorySlug)).limit(1);
-  const minimum = category?.minPriceCents ?? 0;
-  if (pricing.type === 'fixed') return pricing.priceCents < minimum;
-  return pricing.estimatedHours > pricing.hoursCap || pricing.rateCents * pricing.estimatedHours < minimum;
+function pricingRefused(pricing: PricingInput): boolean {
+  return pricing.type === 'hourly' && pricing.estimatedHours > pricing.hoursCap;
 }
 
 /** Only helpers whose public profile is live can be requested (not paused, suspended, or closed accounts). */
@@ -279,7 +277,7 @@ export async function requestHelper(deps: BookingDeps, posterId: string, handle:
   if (parsed.data.fromBookingId) return requestAgain(deps, posterId, helperId, { ...parsed.data, fromBookingId: parsed.data.fromBookingId, description: parsed.data.description ?? '' }, now);
   const task = (await invitableTasks(db, posterId, helperId, now)).find((item) => item.id === parsed.data.taskId);
   if (!task) return { ok: false, code: 'validation_failed', fieldErrors: { taskId: ['invalid'] } };
-  if (await pricingRefused(db, task.categorySlug, parsed.data.pricing)) return { ok: false, code: 'validation_failed', fieldErrors: { pricing: ['out_of_range'] } };
+  if (pricingRefused(parsed.data.pricing)) return { ok: false, code: 'validation_failed', fieldErrors: { pricing: ['out_of_range'] } };
   const start = new Date(parsed.data.start);
   if (start < new Date(task.windowStart) || start > new Date(task.windowEnd) || start.getTime() - now.getTime() < 2 * HOUR) {
     return { ok: false, code: 'validation_failed', fieldErrors: { start: ['invalid'] } };
@@ -407,7 +405,7 @@ async function requestAgain(
   if (!source) return { ok: false, code: 'not_allowed' };
   const helper = await loadHelperState(db, helperId, now);
   if (!helper.facts.bookableCategories.includes(source.categorySlug)) return { ok: false, code: 'not_allowed' };
-  if (await pricingRefused(db, source.categorySlug, input.pricing)) return { ok: false, code: 'validation_failed', fieldErrors: { pricing: ['out_of_range'] } };
+  if (pricingRefused(input.pricing)) return { ok: false, code: 'validation_failed', fieldErrors: { pricing: ['out_of_range'] } };
   const start = new Date(input.start);
   const window = bookAgainWindow(now);
   if (!(start >= window.start && start <= window.end)) return { ok: false, code: 'validation_failed', fieldErrors: { start: ['out_of_range'] } };
@@ -796,7 +794,7 @@ export async function counterInvite(db: Db, payments_: PaymentProvider | null, h
   const helper = await loadHelperState(db, helperId, now);
   if (!helper.facts.bookableCategories.includes(task.categorySlug as CategorySlug)) return { ok: false, code: 'not_allowed' };
   const pricing = parsed.data.pricing ?? pricingFrom(invite.pricingType, invite.priceCents, invite.hourlyRateCents, invite.estimatedHours, invite.hoursCap);
-  if (await pricingRefused(db, task.categorySlug, pricing)) return { ok: false, code: 'validation_failed', fieldErrors: { pricing: ['out_of_range'] } };
+  if (pricingRefused(pricing)) return { ok: false, code: 'validation_failed', fieldErrors: { pricing: ['out_of_range'] } };
   const start = parsed.data.start ? new Date(parsed.data.start) : invite.startAt;
   if (start < task.windowStart || start > task.windowEnd || start.getTime() - now.getTime() < 2 * HOUR) return { ok: false, code: 'validation_failed', fieldErrors: { start: ['invalid'] } };
   // The task's expense allowance stays in the total, as in the first hold.

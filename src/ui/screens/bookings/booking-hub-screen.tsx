@@ -28,6 +28,7 @@ import { BookingDisputeCard } from './booking-dispute-card';
 import { BookingTipCard, type TipCardPreviewState } from './booking-tip-card';
 import { ScheduledPaymentCard, type ScheduledPaymentPreviewState } from './scheduled-payment-card';
 import { BookingHubWithoutSheetHandlers } from './booking-hub-with-sheets';
+import { RichText } from '@/ui/components/rich-text/rich-text';
 
 export interface BookingHubScreenProps {
   data: BookingView;
@@ -247,7 +248,7 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
     <section aria-label={t('terms')} className="space-y-4">
       <h2 className={sectionTitle}>{t('terms')}</h2>
       <div className={cn(surface, surfacePad, 'space-y-5')}>
-        <div className="space-y-2"><h3 className="font-semibold">{t('scope')}</h3><p className="whitespace-pre-wrap break-words">{terms.scopeText}</p></div>
+        <div className="space-y-2"><h3 className="font-semibold">{t('scope')}</h3><RichText text={terms.scopeText} headingLevel={4} /></div>
         <div className="space-y-2"><h3 className="font-semibold">{t('allowance')}</h3>{terms.expenseAllowance ? <>
           <p className="font-medium tabular-nums">{formatMoney(terms.expenseAllowance.amountCents)}</p>
           <p className="break-words text-sm text-muted-foreground">{terms.expenseAllowance.description}</p>

@@ -42,37 +42,68 @@ function PhotosHarness({ handlers, onBusyChange }: { handlers: PostTaskHandlers;
   return <PhotosStep data={postTaskPageData} handlers={handlers} photos={photos} onPhotosChange={setPhotos} onBusyChange={onBusyChange} />;
 }
 
-describe('posting AI suggestion', () => {
-  it('uses the suggested title, description, and details without posting anything', async () => {
+describe('posting: Rewrite with AI in the description field', () => {
+  const field = () => screen.getByRole('textbox', { name: 'What do you need help with?' });
+
+  it('rewrites the description in place, suggests a title beside the person’s own, and Undo puts everything back, posting nothing', async () => {
     const user = userEvent.setup();
     const onPost = vi.fn(fakePostTaskHandlers.onPost);
     render(<Harness><DescribeStep data={postTaskPageData} handlers={{ ...fakePostTaskHandlers, onPost }} initialSuggestion={aiDeskDraft} /></Harness>);
+    await waitFor(() => expect(field()).toHaveValue(aiDeskDraft.description));
+    // Maya's own title stays; the AI's is offered beside it.
+    expect(draft()).toMatchObject({ title: deskDraft.title, description: aiDeskDraft.description, details: { ...deskDraft.details, ...aiDeskDraft.details } });
+    expect(screen.getByText(`Suggested title: ${aiDeskDraft.title}`)).toBeInTheDocument();
     expect(screen.getAllByRole('checkbox')).toHaveLength(aiDeskDraft.openQuestions.length);
-    await user.click(screen.getByRole('button', { name: 'Use this' }));
-    expect(draft()).toMatchObject({ title: aiDeskDraft.title, description: aiDeskDraft.description, details: aiDeskDraft.details });
+    await user.click(screen.getByRole('button', { name: 'Use this title' }));
     expect(screen.getByRole('textbox', { name: 'Task title' })).toHaveValue(aiDeskDraft.title);
-    expect(screen.getByRole('textbox', { name: 'What do you need help with?' })).toHaveValue(aiDeskDraft.description);
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+    expect(draft()).toMatchObject({ title: deskDraft.title, description: deskDraft.description, details: deskDraft.details });
+    expect(screen.getByText(messages.postTask.describe.undone)).toHaveAttribute('role', 'status');
     expect(onPost).not.toHaveBeenCalled();
   });
 
-  it('keeps existing values when a suggestion is dismissed', async () => {
+  it('sends what the person wrote, fills an empty title, and drops Undo once they edit the new text', async () => {
     const user = userEvent.setup();
-    render(<Harness><DescribeStep data={postTaskPageData} handlers={fakePostTaskHandlers} initialSuggestion={aiDeskDraft} /></Harness>);
-    await user.click(screen.getByRole('button', { name: 'Keep mine' }));
-    expect(draft().title).toBe(deskDraft.title);
-    expect(screen.queryByText(aiDeskDraft.title)).not.toBeInTheDocument();
+    const onDraftWithAi = vi.fn(async () => ({ ok: true as const, draft: aiDeskDraft }));
+    render(<Harness initialValues={{ ...deskDraft, title: '', description: '' }}><DescribeStep data={postTaskPageData} handlers={{ ...fakePostTaskHandlers, onDraftWithAi }} /></Harness>);
+    const rewrite = screen.getByRole('button', { name: 'Rewrite with AI' });
+    await user.type(field(), 'de');
+    expect(rewrite).toBeDisabled();
+    await user.type(field(), 'sk to build');
+    await user.click(rewrite);
+    expect(onDraftWithAi).toHaveBeenCalledWith({ categorySlug: deskDraft.categorySlug, text: 'desk to build' });
+    await waitFor(() => expect(field()).toHaveValue(aiDeskDraft.description));
+    expect(screen.getByRole('textbox', { name: 'Task title' })).toHaveValue(aiDeskDraft.title);
+    expect(screen.queryByText(/Suggested title/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument();
+    await user.type(field(), ' Thanks!');
+    expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
   });
 
-  it.each(['unavailable', 'rate_limited', 'prohibited'] as const)('shows the %s AI response and never treats it as a suggestion', async (code) => {
+  it.each(['unavailable', 'rate_limited', 'prohibited'] as const)('shows the %s answer and leaves the words as they were', async (code) => {
     const user = userEvent.setup();
     const handler = vi.fn(async () => ({ ok: false as const, code }));
     render(<Harness><DescribeStep data={postTaskPageData} handlers={{ ...fakePostTaskHandlers, onDraftWithAi: handler }} /></Harness>);
-    await user.type(screen.getByRole('textbox', { name: 'Say it your way' }), 'Put together my desk');
-    await user.click(screen.getByRole('button', { name: 'Help me describe this' }));
+    await user.clear(field());
+    await user.type(field(), 'Put together my desk');
+    await user.click(screen.getByRole('button', { name: 'Rewrite with AI' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(messages.postTask.describe.errors[code]);
     expect(handler).toHaveBeenCalledWith({ categorySlug: deskDraft.categorySlug, text: 'Put together my desk' });
-    expect(screen.queryByRole('button', { name: 'Use this' })).not.toBeInTheDocument();
+    expect(field()).toHaveValue('Put together my desk');
+    expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument();
     if (code === 'prohibited') expect(screen.getByRole('link', { name: 'See tasks we cannot help with' })).toHaveAttribute('href', routes.legal('prohibited-tasks'));
+  });
+
+  it('formats from the toolbar and previews how it will read', async () => {
+    const user = userEvent.setup();
+    render(<Harness initialValues={{ ...deskDraft, description: 'Things to do' }}><DescribeStep data={postTaskPageData} handlers={fakePostTaskHandlers} /></Harness>);
+    await user.click(field());
+    await user.click(screen.getByRole('button', { name: 'Heading' }));
+    expect(field()).toHaveValue('## Things to do');
+    await user.click(screen.getByRole('button', { name: 'Preview' }));
+    expect(screen.getByRole('button', { name: 'Preview' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('heading', { level: 3, name: 'Things to do' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Bold' })).toBeDisabled();
   });
 });
 
@@ -88,11 +119,11 @@ describe('posting address combobox', () => {
     await waitFor(() => expect(screen.getByRole('radio', { name: 'In person' })).toHaveFocus());
   });
 
-  it("says an address the server refuses as outside the area is outside the area, not a phone message (sweep PT12)", async () => {
+  it("says an address the server can't place is one it can't place, not a phone message (sweep PT12)", async () => {
     const user = userEvent.setup();
     render(<Harness initialValues={deskDraft}><LocationHarness handlers={fakePostTaskHandlers} /><PlaceErrorControl /></Harness>);
     await user.click(screen.getByRole('button', { name: 'Reject the address' }));
-    expect(await screen.findByText(messages.postTask.location.outOfArea)).toBeInTheDocument();
+    expect(await screen.findByText(messages.postTask.location.unplaceable)).toBeInTheDocument();
     expect(screen.queryByText(messages.forms.fieldErrors.not_supported)).toBeNull();
   });
 
@@ -106,7 +137,7 @@ describe('posting address combobox', () => {
     expect(onAddressChange).not.toHaveBeenCalled();
   });
 
-  it('waits for three characters and 300 ms, selects a result with the keyboard, and refuses out-of-area results', async () => {
+  it('waits for three characters and 300 ms, takes an address outside our cities, and selects a result with the keyboard', async () => {
     vi.useFakeTimers();
     const onSearchAddresses = vi.fn(async () => [addressSuggestions[0]!, outOfAreaSuggestion]);
     render(<Harness><LocationHarness handlers={{ ...fakePostTaskHandlers, onSearchAddresses }} /></Harness>);
@@ -120,14 +151,13 @@ describe('posting address combobox', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(onSearchAddresses).toHaveBeenCalledWith({ query: '123' });
     const outside = screen.getByRole('option', { name: /100 Example Road/ });
-    expect(outside).toHaveAttribute('aria-disabled', 'true');
+    // Any address can be posted (owner, 2026-11-21): outside our cities it says so, and helpers see the city.
+    expect(outside).not.toHaveAttribute('aria-disabled');
+    expect(outside).toHaveTextContent(messages.postTask.location.outsideOption);
     fireEvent.click(outside);
-    expect(draft().location).toMatchObject({ mode: 'local', placeId: '' });
-    // National (owner, 2026-11-14): the panel names the city, and offers its waitlist and helper sign-up.
-    expect(outside).toHaveTextContent('Not open in Waco yet');
-    expect(screen.getByText("We're not in Waco yet.")).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Join the list for Waco' })).toHaveAttribute('href', routes.waitlist({ zip: '76701' }));
-    expect(screen.getByRole('link', { name: 'Live there and can help? Get verified now' })).toHaveAttribute('href', routes.becomeAHelper());
+    expect(draft().location).toMatchObject({ mode: 'local', placeId: outOfAreaSuggestion.placeId });
+    expect(screen.getByText('Helpers see: Waco, TX.')).toBeInTheDocument();
+    expect(screen.getByText(/We're not open in Waco yet/)).toBeInTheDocument();
     fireEvent.keyDown(search, { key: 'ArrowDown' });
     fireEvent.keyDown(search, { key: 'Enter' });
     expect(draft().location).toMatchObject({ mode: 'local', placeId: addressSuggestions[0]!.placeId });

@@ -29,7 +29,7 @@ export function AreaMapPlaceholder({ location, className }: AreaMapPlaceholderPr
       <svg
         viewBox="0 0 400 220"
         role="img"
-        aria-label={t('mapDescription', { area: location.areaName, market: location.marketName })}
+        aria-label={t('mapDescription', { area: location.areaName, market: location.marketName, outside: location.outsideMarket ? 'yes' : 'no' })}
         className="block h-auto w-full"
       >
         <rect width="400" height="220" className="fill-muted" />

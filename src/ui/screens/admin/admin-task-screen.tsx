@@ -10,6 +10,7 @@ import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useTaskStatus } from '@/ui/components/status/use-status';
 import { AdminCaseRows } from './admin-case-rows';
 import { AdminTaskControls, type AdminTaskPreviewState } from './admin-task-controls';
+import { RichText } from '@/ui/components/rich-text/rich-text';
 import { AdminBackLink, adminH2, adminNote, adminSection } from './admin-ui';
 import { cn } from '@/ui/lib/utils';
 
@@ -84,7 +85,7 @@ export function AdminTaskContent({ data, handlers, now, ...preview }: AdminTaskS
       </section>}
     </div>
     <section aria-labelledby="task-description" className={cn(adminSection, 'space-y-6')}>
-      <div className="space-y-2"><h2 id="task-description" className={adminH2}>{t('description')}</h2><p className="whitespace-pre-wrap break-words leading-6">{task.description}</p></div>
+      <div className="space-y-2"><h2 id="task-description" className={adminH2}>{t('description')}</h2><RichText text={task.description} headingLevel={3} /></div>
       <div className="space-y-3"><h3 className="font-semibold">{t('details')}</h3><Details data={data} /></div>
       <div className="space-y-3"><h3 className="font-semibold">{t('photos')}</h3>
         {data.photos.length > 0 ? <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">{data.photos.map((photo, index) => <li key={photo.id}><Image unoptimized src={photo.src} alt={photo.alt || t('photoAlt', { number: index + 1, total: data.photos.length, name: data.poster.displayName })} width={photo.width ?? 800} height={photo.height ?? 600} className="aspect-4/3 w-full rounded-xl border border-foreground/[0.07] object-cover dark:border-white/[0.07]" /></li>)}</ul> : <p className="text-sm text-muted-foreground">{t('noPhotos')}</p>}

@@ -217,6 +217,22 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
     return subscribe({ formState: { values: true }, callback: () => saveDraft() });
   }, [ready, subscribe, saveDraft]);
 
+  // A field showing an error is checked again as it changes: the form only checks on Next, so a field filled after a
+  // refused Next kept "Fill in this field" (the owner's screenshot, 2026-11-21). Money inputs clear their own errors.
+  useEffect(() => subscribe({
+    formState: { values: true },
+    callback: ({ name }) => {
+      if (!name) return;
+      const field = name as FieldPath<TaskDraftInput>;
+      const error = form.getFieldState(field).error;
+      if (!error || error.type === 'money-input') return;
+      void trigger(field).then(() => {
+        // Emptied again: say so plainly, as Next does (the contract reports an empty text as too short).
+        if ((field === 'title' || field === 'description') && !String(getValues(field) ?? '').trim()) setError(field, { type: 'required', message: 'required' });
+      });
+    },
+  }), [form, subscribe, trigger, getValues, setError]);
+
   // Once the saved draft is back: this entry records its step, and Back and Forward show theirs.
   useEffect(() => {
     if (!ready) return;

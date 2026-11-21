@@ -210,10 +210,9 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
   }
   const [categoryViews, categoryRows] = await Promise.all([
     listCategoryViews(state.marketId, db),
-    db.select({ slug: categories.slug, requiresBackgroundCheck: categories.requiresBackgroundCheck, minPriceCents: categories.minPriceCents }).from(categories),
+    db.select({ slug: categories.slug, requiresBackgroundCheck: categories.requiresBackgroundCheck }).from(categories),
   ]);
   const needsCheck = new Map(categoryRows.map((row) => [row.slug, row.requiresBackgroundCheck]));
-  const minPrice = new Map(categoryRows.map((row) => [row.slug, row.minPriceCents]));
   const blocked = await blockedPeopleOf(db, userId);
   const { tasks: found, totalCount } = await listFeedTasks(db, {
     marketId: state.marketId,
@@ -269,7 +268,7 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
       const earnings = earningsFor(fees, view.budget);
       // One tap (completion plan 4.3): a fixed-price task the helper can offer on, at the poster's price.
       const quickOffer =
-        canOffer && !blockedReason && view.budget.type === 'fixed' && earnings.type === 'fixed' && view.budget.priceCents >= (minPrice.get(view.categorySlug) ?? 0)
+        canOffer && !blockedReason && view.budget.type === 'fixed' && earnings.type === 'fixed' && view.budget.priceCents > 0
           ? { priceCents: view.budget.priceCents, earningsCents: earnings.amountCents, proposedStart: view.schedule.windowStart }
           : undefined;
       return {

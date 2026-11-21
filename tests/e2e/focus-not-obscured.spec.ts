@@ -84,7 +84,8 @@ test('the posting wizard: Back and Next never cover the field being typed in, or
   await description.focus();
   await keyboardOpen(page);
   await expect(description).toBeFocused();
-  await expectAboveBar(description, next);
+  // The resize reaches the page a frame after the viewport changes, and the form scrolls then: measure once it has.
+  await expect(async () => expectAboveBar(description, next)).toPass({ timeout: 5_000 });
 });
 
 test('the review form: Send review never covers the review being typed, or its count', async ({ page }) => {

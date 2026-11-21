@@ -9,7 +9,7 @@ import { useMapTiles } from './map-tiles';
 export function GeneralAreaMap({ location, live = true, className = 'h-56' }: { location: PublicLocation; live?: boolean; className?: string }) {
   const t = useTranslations('location');
   const tiles = useMapTiles();
-  const label = t('mapDescription', { area: location.areaName, market: location.marketName });
+  const label = t('mapDescription', { area: location.areaName, market: location.marketName, outside: location.outsideMarket ? 'yes' : 'no' });
   return <AreaMap
     styleUrl={tiles.styleUrl}
     attribution={tiles.attribution}

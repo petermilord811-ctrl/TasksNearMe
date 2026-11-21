@@ -14,7 +14,9 @@ import { outboxEvents } from '@/platform/outbox/schema';
 import { marketClockTime, marketDayKey, marketLocalToUtc } from '@/shared/format';
 import { loadPhoneCheck, phoneGatePasses } from '../accounts/phone-check';
 import { users } from '../accounts/schema';
+import { cityAreaName, ensureCityArea, isCityAreaSlug, neighborhoodsOnly } from '../markets/city-areas';
 import { fuzzedPublicPoint, inServiceArea, nearestArea } from '../markets/geo';
+import { zipPoint } from '../markets/zip-points';
 import { getMarketView, getPublishedPolicy, listCategoryViews } from '../markets/queries';
 import { areas, categories, markets } from '../markets/schema';
 import { findProhibitedPhrase, maskContactDetails } from '../trust/contact-masking';
@@ -125,30 +127,34 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
   }
 
   /**
-   * Address search for the "where" step: only the place and its public area, never stored. The whole US is
-   * searched (owner, 2026-11-14: national, cities open in turn), places near the market first. An address outside
-   * it can't be posted, and says where it is (`outside`), so the screen can say "We're not in Dallas yet" and
-   * offer the waitlist for that ZIP and helper sign-up.
+   * Address search for the "where" step: only the place and its public area, never stored. The whole US is searched
+   * (owner, 2026-11-14: national, cities open in turn), places near the market first, and any address can be posted
+   * (owner, 2026-11-21: "remove the limit of area totally"). Inside the market's service area helpers see its
+   * neighborhood; outside it, its city ("Waco, TX") around its ZIP's center, and `outside` lets the screen say helpers
+   * there may be few for now.
    */
   async function searchAddresses(userId: string, query: string): Promise<AddressSuggestion[]> {
     if (query.trim().length < 3) return [];
     const poster = await loadPoster(userId);
     const market = poster ? await marketFor(poster.homeMarketId) : null;
     if (!market) return [];
-    const marketAreas = await db.select().from(areas).where(eq(areas.marketId, market.id));
+    const marketAreas = await db.select().from(areas).where(and(eq(areas.marketId, market.id), neighborhoodsOnly()));
     const places = await geocoder.search(query, { near: { lat: market.centerLat, lng: market.centerLng } });
-    return places.map((place) => {
-      const inside = inServiceArea(market, place);
-      const area = inside ? nearestArea(marketAreas, place) : null;
+    return Promise.all(places.map(async (place): Promise<AddressSuggestion> => {
+      const line2 = `${place.city}, ${place.state} ${place.zip}`;
+      const area = inServiceArea(market, place) ? nearestArea(marketAreas, place) : null;
+      if (area) return { placeId: place.placeId, line1: place.line1, line2, areaName: area.name, areaPoint: { lat: area.centerLat, lng: area.centerLng }, inServiceArea: true };
+      const point = await zipPoint(place.zip);
       return {
         placeId: place.placeId,
         line1: place.line1,
-        line2: `${place.city}, ${place.state} ${place.zip}`,
-        ...(area ? { areaName: area.name, areaPoint: { lat: area.centerLat, lng: area.centerLng } } : {}),
-        inServiceArea: inside && area !== null,
-        ...(inside && area ? {} : { outside: { city: place.city, state: place.state, zip: place.zip } }),
+        line2,
+        areaName: cityAreaName(place),
+        ...(point ? { areaPoint: point } : {}),
+        inServiceArea: false,
+        outside: { city: place.city, state: place.state, zip: place.zip },
       };
-    });
+    }));
   }
 
   /** A saved address reused by "Post again": the poster's own task's address, while it's still kept. */
@@ -197,13 +203,16 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
           ...(saved.address.line2 ? { unit: saved.address.line2 } : {}),
           ...(saved.address.accessNotes ? { accessNotes: saved.address.accessNotes } : {}),
         };
+        // A saved address outside the market reads as it did when it was posted: its city.
+        const outside = isCityAreaSlug(saved.area.slug);
         address = {
           placeId,
           line1: saved.address.line1,
           line2: `${saved.address.city}, ${saved.address.state} ${saved.address.zip}`,
           areaName: saved.area.name,
           areaPoint: { lat: saved.area.centerLat, lng: saved.area.centerLng },
-          inServiceArea: true,
+          inServiceArea: !outside,
+          ...(outside ? { outside: { city: saved.address.city, state: saved.address.state, zip: saved.address.zip } } : {}),
         };
       } else {
         location = { mode: 'local', placeId: '' };
@@ -303,9 +312,19 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
         return fail({ ok: false, code: 'unknown' });
       }
       if (!place) return fail(fieldError('location.placeId', 'invalid'));
-      const marketAreas = await db.select().from(areas).where(eq(areas.marketId, market.id));
-      const area = inServiceArea(market, place) ? nearestArea(marketAreas, place) : null;
-      if (!area) return fail(fieldError('location.placeId', 'not_supported'));
+      const marketAreas = await db.select().from(areas).where(and(eq(areas.marketId, market.id), neighborhoodsOnly()));
+      const neighborhood = inServiceArea(market, place) ? nearestArea(marketAreas, place) : null;
+      // Outside the service area (owner, 2026-11-21: post anywhere): the city's area, and the ZIP's center for the
+      // public point (US Census data: the provider's coordinates are never kept). `not_supported` only when the ZIP
+      // can't be placed at all.
+      let area = neighborhood;
+      let center = neighborhood ? { lat: neighborhood.centerLat, lng: neighborhood.centerLng } : null;
+      if (!neighborhood) {
+        center = await zipPoint(place.zip);
+        if (!center) return fail(fieldError('location.placeId', 'not_supported'));
+        area = await ensureCityArea(db, market.id, place, center);
+      }
+      if (!area || !center) return fail(fieldError('location.placeId', 'not_supported'));
       location = {
         addressEnc: cipher.encrypt(
           JSON.stringify({
@@ -320,7 +339,7 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
         zip: place.zip,
         areaId: area.id,
         areaSlug: area.slug,
-        center: { lat: area.centerLat, lng: area.centerLng },
+        center,
       };
     }
 

@@ -87,11 +87,23 @@ describe('posting wizard', () => {
     expect(screen.queryByText(messages.forms.fieldErrors.required)).not.toBeInTheDocument();
   });
 
-  it("carries someone's own words in from the landing page: the description and the AI helper's box", () => {
+  it("carries someone's own words in from the landing page, into the one description field", () => {
     mount({ data: { ...postTaskPageData, initialCategory: 'furniture-assembly', initialDescription: 'Assemble an IKEA desk' }, initialValues: undefined, persistDraft: false });
     expect(screen.getByText('Step 2 of 8 · Describe')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: messages.postTask.describe.description })).toHaveValue('Assemble an IKEA desk');
-    expect(screen.getByRole('textbox', { name: messages.postTask.describe.aiInput })).toHaveValue('Assemble an IKEA desk');
+    expect(screen.getAllByRole('textbox').filter((box) => box.tagName === 'TEXTAREA')).toHaveLength(1);
+  });
+
+  it('clears an error as soon as the field is filled, without another Next (the owner’s screenshot, 2026-11-21)', async () => {
+    const user = userEvent.setup();
+    mount({ initialStep: 'describe', initialValues: { ...deskDraft, description: '' } });
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    const description = screen.getByRole('textbox', { name: messages.postTask.describe.description });
+    expect(screen.getByText(messages.forms.fieldErrors.required)).toBeInTheDocument();
+    expect(description).toHaveAttribute('aria-invalid', 'true');
+    await user.type(description, 'Computer will not start because the CPU fan is very noisy.');
+    await waitFor(() => expect(screen.queryByText(messages.forms.fieldErrors.required)).not.toBeInTheDocument());
+    expect(description).toHaveAttribute('aria-invalid', 'false');
   });
 
   it('carries in an AI draft chosen on the landing page: its title and its description', () => {
@@ -126,7 +138,8 @@ describe('posting wizard', () => {
       initialValues: undefined,
     });
     await waitFor(() => expect(onDraftWithAi).toHaveBeenCalledWith({ categorySlug: 'furniture-assembly', text: words }));
-    expect(await screen.findByText(aiDeskDraft.title)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('textbox', { name: messages.postTask.describe.description })).toHaveValue(aiDeskDraft.description));
+    expect(screen.getByRole('textbox', { name: messages.postTask.describe.title })).toHaveValue(aiDeskDraft.title);
     // Going back and forth doesn't draft again.
     await user.click(screen.getByRole('button', { name: 'Back' }));
     await user.click(screen.getByRole('button', { name: 'Next' }));
@@ -143,16 +156,26 @@ describe('posting wizard', () => {
     expect(notAllowed).not.toHaveBeenCalled();
   });
 
-  it('applies the AI suggestion to editable fields and details without posting', async () => {
+  it('applies a rewrite to the editable fields and details without posting', async () => {
     const user = userEvent.setup();
     const { handlers } = mount({ initialStep: 'describe', initialSuggestion: aiDeskDraft });
-    await user.click(screen.getByRole('button', { name: 'Use this' }));
-    expect(screen.getByRole('textbox', { name: messages.postTask.describe.title })).toHaveValue(aiDeskDraft.title);
-    expect(screen.getByRole('textbox', { name: messages.postTask.describe.description })).toHaveValue(aiDeskDraft.description);
+    await waitFor(() => expect(screen.getByRole('textbox', { name: messages.postTask.describe.description })).toHaveValue(aiDeskDraft.description));
+    expect(screen.getByRole('textbox', { name: messages.postTask.describe.title })).toHaveValue(deskDraft.title);
     await user.click(screen.getByRole('button', { name: 'Next' }));
     expect(screen.getByRole('combobox', { name: 'What needs assembling?' })).toHaveValue('desk');
     expect(screen.getByRole('spinbutton', { name: 'Number of items' })).toHaveValue(1);
     expect(handlers.onPost).not.toHaveBeenCalled();
+  });
+
+  it('takes a price under the category minimum and says it is low (the owner: notify, don’t block)', async () => {
+    const user = userEvent.setup();
+    mount({ initialStep: 'budget' });
+    const input = screen.getByRole('textbox', { name: 'Task price ($)' });
+    await user.clear(input); await user.type(input, '15');
+    expect(await screen.findByText(/That's under \$25\.00, the usual minimum for this category/)).toBeInTheDocument();
+    expect(screen.queryByText(/Typical in/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByText('Step 8 of 8 · Review and post')).toBeInTheDocument();
   });
 
   it('blocks an invalid money edit and passes parsed cents to the quote', async () => {

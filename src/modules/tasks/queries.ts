@@ -36,6 +36,7 @@ const columns = {
   publishedAt: tasks.publishedAt,
   createdAt: tasks.createdAt,
   areaName: areas.name,
+  areaSlug: areas.slug,
   marketSlug: markets.slug,
   marketName: markets.name,
   marketId: tasks.marketId,

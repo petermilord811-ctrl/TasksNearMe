@@ -11,8 +11,13 @@ export interface PublicLocation {
   kind: 'local';
   marketSlug: string;
   marketName: string;
-  /** Neighborhood name, e.g. "Mueller". */
+  /** Neighborhood name, e.g. "Mueller"; outside the market, the city ("Waco, TX"). */
   areaName: string;
+  /**
+   * Outside the market's service area (owner, 2026-11-21: tasks can be posted anywhere): `areaName` is the city, shown
+   * without the market's name ("Waco, TX", not "Waco, TX, Austin").
+   */
+  outsideMarket?: true;
   /** Deterministically fuzzed point (never the real address). */
   publicPoint: { lat: number; lng: number };
   /** Radius of the general-area circle, about one mile. */

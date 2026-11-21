@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { closeTask } from './support/scenarios';
 import { devSignIn } from './support/sign-in';
 
 /**
@@ -73,6 +74,76 @@ test('a poster posts a task with the wizard and finds it on the board', async ({
 
   await page.goto('/austin/tasks?sort=newest');
   await expect(page.getByRole('link', { name: title })).toBeVisible();
+});
+
+test('a formatted description, an address outside our cities and a price under the minimum all post (owner, 2026-11-21)', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'app-desktop', 'one project is enough');
+  test.setTimeout(180_000);
+  await devSignIn(page, 'maya@example.test');
+  await expect(page).toHaveURL(/\/app$/);
+  await page.goto('/app/tasks/new');
+  const next = () => page.getByRole('button', { name: 'Next', exact: true }).click();
+  await page.getByRole('radio', { name: /Furniture assembly/ }).check();
+  await next();
+
+  // One field, formatted with the toolbar: a heading and a list.
+  const title = `Bookshelf in Waco (${Date.now()})`;
+  await page.getByLabel('Task title').fill(title);
+  const description = page.getByRole('textbox', { name: 'What do you need help with?' });
+  await description.fill('Flat-pack bookshelf in the hallway.\n\nWhat needs doing');
+  await page.getByRole('button', { name: 'Heading' }).click();
+  await description.press('End');
+  await description.press('Enter');
+  await page.getByRole('button', { name: 'Bulleted list' }).click();
+  await description.pressSequentially('Unpack the box');
+  await description.press('Enter');
+  await description.pressSequentially('Assemble it by the stairs');
+  await expect(description).toHaveValue('Flat-pack bookshelf in the hallway.\n\n## What needs doing\n- Unpack the box\n- Assemble it by the stairs');
+  await page.getByRole('button', { name: 'Preview' }).click();
+  await expect(page.getByRole('heading', { name: 'What needs doing' })).toBeVisible();
+  await page.getByRole('button', { name: 'Preview' }).click();
+  await next();
+  await page.getByLabel('What needs assembling?').selectOption('bookshelf');
+  await page.getByLabel('Number of items', { exact: true }).fill('1');
+  await next();
+  await next();
+
+  // Where: Waco is outside Austin's service area, and can be posted; helpers see the city.
+  await page.getByRole('radio', { name: 'In person' }).check();
+  await page.getByRole('combobox', { name: 'Search your address' }).fill('100 example road');
+  const waco = page.getByRole('option', { name: /100 Example Road/ });
+  await expect(waco).toContainText('Outside our cities for now');
+  await waco.click();
+  await expect(page.getByText('Helpers see: Waco, TX.')).toBeVisible();
+  await expect(page.getByText(/We're not open in Waco yet/)).toBeVisible();
+  await next();
+
+  await page.getByLabel('Date').fill(marketDate(5));
+  await page.getByRole('radio', { name: 'Choose a time window' }).check();
+  await page.getByLabel('Window starts').selectOption('10:00');
+  await page.getByLabel('Window ends').selectOption('12:00');
+  await next();
+
+  // Budget: no "Typical in" box; $15 is under the $25 minimum, which is noted, not refused.
+  await expect(page.getByText(/Typical in/)).toHaveCount(0);
+  await page.getByRole('radio', { name: 'Fixed price' }).check();
+  await page.getByLabel('Task price ($)').fill('15');
+  await expect(page.getByText(/That's under \$25\.00, the usual minimum for this category/)).toBeVisible();
+  await next();
+  await expect(page.getByText('Step 8 of 8', { exact: false })).toBeVisible();
+  await expect(page.getByRole('listitem').filter({ hasText: 'Unpack the box' })).toBeVisible();
+  await page.getByRole('button', { name: 'Post task' }).click();
+  await expect(page).toHaveURL(/\/app\/tasks\/tsk_[0-9a-f]+$/, { timeout: 30_000 });
+  const taskId = new URL(page.url()).pathname.split('/').pop()!;
+  try {
+    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'What needs doing' })).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: 'Assemble it by the stairs' })).toBeVisible();
+    await expect(page.getByText('Waco, TX').first()).toBeVisible();
+    await expect(page.getByText('Waco, TX, Austin')).toHaveCount(0);
+  } finally {
+    await closeTask(taskId);
+  }
 });
 
 test('a poster starts from an example: its words, its questions and its details, ready to change', async ({ page }) => {

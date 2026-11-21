@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { devSignIn } from './support/sign-in';
 
 /**
- * Writing help (UI-048): "Help me describe this" when posting, and "Write it for me" on a helper's profile
+ * Writing help (UI-048): "Rewrite with AI" in the posting description field, and "Write it for me" on a helper's profile
  * and offer message. The `tnm_ai_stand_in` cookie gets the rule-based stand-ins, so these tests never call
  * a model even where model keys (GEMINI_API_KEY, GROQ_API_KEY, KIMI_API_KEY) are set. Nothing here saves anything.
  */
@@ -11,7 +11,7 @@ test.beforeEach(async ({ context, baseURL }) => {
   await context.addCookies([{ name: 'tnm_ai_stand_in', value: '1', url: baseURL! }]);
 });
 
-test('posting: "Help me describe this" suggests a title, description and details to use', async ({ page }, testInfo) => {
+test('posting: "Rewrite with AI" rewrites the description in place as a formatted post, and Undo brings the words back', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-mobile', 'read-only; one project is enough');
   await devSignIn(page, 'maya@example.test');
   await page.goto('/app/tasks/new');
@@ -19,14 +19,17 @@ test('posting: "Help me describe this" suggests a title, description and details
   await page.getByRole('radio', { name: /Furniture assembly/ }).check();
   await page.getByRole('button', { name: 'Next', exact: true }).click();
 
-  await page.getByLabel('Say it your way').fill('two ikea bookshelves on the 3rd floor, no elevator. call 512-555-0199');
-  await page.getByRole('button', { name: 'Help me describe this' }).click();
-  // The phone number never makes it into a public description.
-  const suggestion = page.getByRole('region', { name: 'Your suggested description' });
-  await expect(suggestion).toContainText('[hidden]');
-  await expect(suggestion).not.toContainText('512-555-0199');
-  await page.getByRole('button', { name: 'Use this' }).click();
+  const words = 'two ikea bookshelves on the 3rd floor, no elevator. call 512-555-0199';
+  const description = page.getByRole('textbox', { name: 'What do you need help with?' });
+  await description.fill(words);
+  await page.getByRole('button', { name: 'Rewrite with AI' }).click();
+  // The phone number never makes it into a public description; the rewrite is a formatted post.
+  await expect(description).toHaveValue(/\[hidden\]/);
+  await expect(description).not.toHaveValue(/512-555-0199/);
+  await expect(description).toHaveValue(/\n## What needs doing\n- /);
   await expect(page.getByLabel('Task title')).toHaveValue(/^Assemble 2 flat-pack /);
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(description).toHaveValue(words);
 });
 
 test("a helper drafts their profile from a few words; Undo and leaving the page keep what's saved", async ({ page }, testInfo) => {

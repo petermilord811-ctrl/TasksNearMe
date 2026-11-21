@@ -17,7 +17,7 @@ import type {
   PricingInput,
   TaskDraftInput,
 } from '@/contracts';
-import { CATEGORY_SLUGS, localeOrDefault, requestKeyField, routes } from '@/contracts';
+import { CATEGORY_SLUGS, localeOrDefault, requestKeyField, routes, TASK_DESCRIPTION_MAX } from '@/contracts';
 import { photoFromFile, storePhoto } from '@/modules/files/uploads';
 import { files, tasks } from '@/modules/tasks/schema';
 import { marketTag } from '@/modules/marketing/queries';
@@ -51,7 +51,8 @@ export async function draftTaskWithAi(input: { categorySlug: CategorySlug; text:
   if (!userId || !marketId || !taskDrafter) return { ok: false, code: 'unavailable' };
   if (!(await getFlags(marketId)).ai_drafting) return { ok: false, code: 'unavailable' };
   if (!(CATEGORY_SLUGS as readonly string[]).includes(input.categorySlug)) return { ok: false, code: 'unavailable' };
-  const text = String(input.text ?? '').trim().slice(0, 1000);
+  // The whole description field: the rewrite works on what the person has written so far.
+  const text = String(input.text ?? '').trim().slice(0, TASK_DESCRIPTION_MAX);
   if (text.length < 3) return { ok: false, code: 'unavailable' };
 
   const limited = await consumeRateLimit(db, `ai-draft:user:${userId}`, AI_DRAFT_RULE);

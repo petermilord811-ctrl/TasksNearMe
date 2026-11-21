@@ -44,6 +44,7 @@ import { taskMapPinOf } from '@/shared/map-pins';
 import { buildBecomeHelperPageData, buildPricingPageData, landingFeeExamples } from './page-data';
 import { quoteBreakdown } from '@/modules/payments/fees';
 import { citiesComingNext, WAITLIST_TAG, waitlistDemand } from './waitlist';
+import { neighborhoodsOnly } from '@/modules/markets/city-areas';
 
 /**
  * Public marketing page data. Cached (Cache Components) so the pages prerender and stay fast;
@@ -149,7 +150,8 @@ async function landingMap(market: { id: string; centerLat: number; centerLng: nu
     db
       .select({ id: areaTable.id, name: areaTable.name, slug: areaTable.slug, lat: areaTable.centerLat, lng: areaTable.centerLng })
       .from(areaTable)
-      .where(eq(areaTable.marketId, market.id))
+      // The map's neighborhoods: not the cities of tasks posted outside the market (city-areas.ts).
+      .where(and(eq(areaTable.marketId, market.id), neighborhoodsOnly()))
       .orderBy(asc(areaTable.name)),
     // Helpers per neighborhood for its card on the map: active, ID verified, active accounts (counts only), of `rows`.
     db

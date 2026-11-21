@@ -167,16 +167,19 @@ export interface AddressSuggestion {
   line1: string;
   /** "Austin, TX 78723" */
   line2: string;
-  /** The neighborhood helpers will see ("Mueller"). Absent outside the market. */
+  /** The area helpers will see: the neighborhood in the market ("Mueller"), or the city outside it ("Waco, TX"). */
   areaName?: string;
-  /** That neighborhood's center (public; never the address's own point), for the preview map. */
-  areaPoint?: { lat: number; lng: number };
-  /** False: outside the service area. Posting isn't possible there; offer `routes.waitlist()`. */
-  inServiceArea: boolean;
   /**
-   * Outside the cities we're open in (owner, 2026-11-14: national, cities open in turn): where the address is, so
-   * the UI can say "We're not in Dallas yet" and link the waitlist with the ZIP (`routes.waitlist({ zip })`).
+   * That area's public point for the preview map, never the address's own: the neighborhood's center, or outside the
+   * market the ZIP code's center (US Census, public data).
    */
+  areaPoint?: { lat: number; lng: number };
+  /**
+   * False: outside the market's service area. It can still be posted (owner, 2026-11-21: "remove the limit of area
+   * totally"); the screen says helpers there may be few for now. Helpers see the city, not a neighborhood.
+   */
+  inServiceArea: boolean;
+  /** Outside the service area: where the address is, so the screen can name its city. */
   outside?: { city: string; state: string; zip: string };
 }
 
@@ -184,7 +187,10 @@ export type PhotoUploadResult =
   | { ok: true; photo: Photo }
   | { ok: false; code: 'too_large' | 'unsupported_type' | 'too_many' | 'rate_limited' | 'unknown' };
 
-/** "Help me describe this" (blueprint 02 J1 step 2). Nothing is posted automatically. */
+/**
+ * "Rewrite with AI" in the description field (blueprint 02 J1 step 2): the description is a formatted post
+ * (src/shared/rich-text.ts). The screen applies it in place, with Undo. Nothing is posted automatically.
+ */
 export interface AiTaskDraft {
   title: string;
   description: string;
@@ -223,12 +229,12 @@ export interface PostTaskPageData {
   /**
    * From `?describe=`: the person's own words from the landing page's assistant, or the AI draft's description
    * they chose to use (spaces tidied, line breaks kept, at most `TASK_DESCRIPTION_MAX` characters). Prefills the
-   * description and the "Help me describe this" box; nothing more is assumed.
+   * description field; nothing more is assumed.
    */
   initialDescription?: string;
   /**
-   * From `?ai=1` (the landing page's "Draft it with AI"): once the describe step shows, run "Help me describe
-   * this" on `initialDescription` by itself, once. Only set when `aiDraftingEnabled` and there are words.
+   * From `?ai=1` (the landing page's "Draft it with AI"): once the describe step shows, run "Rewrite with AI" on
+   * `initialDescription` by itself, once. Only set when `aiDraftingEnabled` and there are words.
    */
   autoDraft?: boolean;
   /** Examples to start from ("Start from an example"), for the market's categories; none when absent. */
@@ -252,7 +258,7 @@ export interface PostTaskPageData {
    */
   fromPost?: { id: string; title: string };
   rules: TaskPostingRules;
-  /** The `ai_drafting` flag: show "Help me describe this". */
+  /** The `ai_drafting` flag: show "Rewrite with AI" in the description field. */
   aiDraftingEnabled: boolean;
   /** The bot check before "Post" (contracts/bot-check.ts; action `post_task`). Absent: none is set up. */
   botCheck?: BotCheckConfig;
@@ -372,19 +378,31 @@ export function createTaskDraftSchema(context: Pick<PostTaskPageData, 'rules' | 
         if (!flexible && startTime && endTime && endTime <= startTime) issue(['schedule', 'endTime'], 'out_of_range');
       }
 
-      // Budget: at least the category minimum; hourly caps cover the estimate and the minimum hours.
-      if (draft.budget.type === 'fixed') {
-        if (draft.budget.priceCents < category.minPriceCents) issue(['budget', 'priceCents'], 'out_of_range');
-      } else {
-        const { rateCents, estimatedHours, hoursCap } = draft.budget;
+      // Budget: hourly caps cover the estimate and the minimum hours. A price under the category's usual minimum is
+      // allowed and only noted on the screen (`belowCategoryMinimum`; owner, 2026-11-21).
+      if (draft.budget.type === 'hourly') {
+        const { estimatedHours, hoursCap } = draft.budget;
         if (category.minHours && estimatedHours < category.minHours) issue(['budget', 'estimatedHours'], 'out_of_range');
         if (hoursCap < estimatedHours) issue(['budget', 'hoursCap'], 'out_of_range');
-        if (rateCents * estimatedHours < category.minPriceCents) issue(['budget', 'rateCents'], 'out_of_range');
       }
     });
 }
 
 export type TaskDraftSchema = ReturnType<typeof createTaskDraftSchema>;
+
+/**
+ * A price under the category's usual minimum (`minPriceCents`): a fixed price, or an hourly rate times the estimated
+ * hours. The owner (2026-11-21): "remove minimum budget price: just notify it to user", so posting, offers and
+ * requests take such a price and the screens say it's low. False while the amount isn't a usable number yet.
+ */
+export function belowCategoryMinimum(
+  category: Pick<CategoryView, 'minPriceCents'>,
+  pricing: { type: 'fixed'; priceCents?: number } | { type: 'hourly'; rateCents?: number; estimatedHours?: number },
+): boolean {
+  const usable = (value: number | undefined): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0;
+  if (pricing.type === 'fixed') return usable(pricing.priceCents) && pricing.priceCents < category.minPriceCents;
+  return usable(pricing.rateCents) && usable(pricing.estimatedHours) && pricing.rateCents * pricing.estimatedHours < category.minPriceCents;
+}
 export type TaskDraftInput = z.input<TaskDraftSchema>;
 
 /**

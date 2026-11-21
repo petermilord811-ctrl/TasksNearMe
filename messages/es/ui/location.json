@@ -1,8 +1,8 @@
 {
   "generalArea": "Zona general",
-  "areaName": "{area}, {market}",
+  "areaName": "{outside, select, yes {{area}} other {{area}, {market}}}",
   "areaDescription": "Un área de aproximadamente 1 milla. La dirección exacta es privada.",
-  "mapDescription": "Zona general alrededor de {area}, {market}, en un radio de aproximadamente 1 milla. No es una dirección exacta.",
+  "mapDescription": "Zona general alrededor de {outside, select, yes {{area}} other {{area}, {market}}}, en un radio de aproximadamente 1 milla. No es una dirección exacta.",
   "mapAreaLabel": "Zona general",
   "demo": "Demo",
   "remote": "Remoto: no se necesita dirección",

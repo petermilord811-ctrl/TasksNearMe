@@ -1,3 +1,5 @@
+import { richTextToPlain } from '@/shared/rich-text';
+
 /**
  * Contact details are hidden before a booking is confirmed (blueprint 01 §5, 06 §2): in public
  * task text and in pre-booking messages. Masking is best-effort; it removes the common ways to
@@ -116,7 +118,8 @@ export function maskContactDetails(text: string): { text: string; masked: boolea
 
 /** The public excerpt of a task description: contact details hidden, about two lines long. */
 export function publicExcerpt(description: string, maxLength = 160): string {
-  const { text } = maskContactDetails(description.replace(/\s+/g, ' ').trim());
+  // A formatted description (src/shared/rich-text.ts) reads as plain words here: no "##" or "**" in a summary.
+  const { text } = maskContactDetails(richTextToPlain(description).replace(/\s+/g, ' ').trim());
   if (text.length <= maxLength) return text;
   const cut = text.slice(0, maxLength);
   const lastSpace = cut.lastIndexOf(' ');

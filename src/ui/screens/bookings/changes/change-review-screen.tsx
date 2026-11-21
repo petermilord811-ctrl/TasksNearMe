@@ -10,6 +10,7 @@ import { Deadline } from '@/ui/components/time/deadline';
 import { cn } from '@/ui/lib/utils';
 import { ChangeMoneyComparison } from './change-money-comparison';
 import { ChangeReviewActions } from './change-review-actions';
+import { RichText } from '@/ui/components/rich-text/rich-text';
 
 export interface ChangeReviewScreenProps {
   data: ChangeReviewPageData;
@@ -90,7 +91,7 @@ function Terms({ terms, types, proposed }: { terms: ChangeTermsView; types: Prop
           {t(`types.${type}`, { zone: zoneName })}
           {types.includes(type) && <span className="rounded-full bg-badge-brand px-2 py-0.5 text-xs font-medium text-badge-brand-foreground">{t('changed')}</span>}
         </dt>
-        <dd className={cn('whitespace-pre-wrap break-words text-sm leading-6', type !== 'scope' && 'tabular-nums')}>{value}</dd>
+        {type === 'scope' ? <dd><RichText text={value} size="sm" headingLevel={4} /></dd> : <dd className="whitespace-pre-wrap break-words text-sm leading-6 tabular-nums">{value}</dd>}
       </div>)}
     </dl>
   </div>;

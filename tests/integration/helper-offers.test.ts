@@ -81,10 +81,11 @@ describe("the helper's side of offers", () => {
   });
 
   it('checks offers against the rules', async () => {
+    // A price under the category's minimum is allowed and only noted (owner, 2026-11-21); the start must fit the window.
     expect(await submitOffer(db, 'usr_jordan', TASK, offer({ pricing: { type: 'fixed', priceCents: 100 }, startTime: '03:00' }), now())).toEqual({
       ok: false,
       code: 'validation_failed',
-      fieldErrors: { 'pricing.priceCents': ['out_of_range'], startTime: ['out_of_range'] },
+      fieldErrors: { startTime: ['out_of_range'] },
     });
     expect(await submitOffer(db, 'usr_chris', TASK, offer(), now())).toEqual({ ok: false, code: 'not_allowed' }); // own task
     expect(await submitOffer(db, 'usr_priya', TASK, offer(), now())).toEqual({ ok: false, code: 'not_allowed' }); // not bookable

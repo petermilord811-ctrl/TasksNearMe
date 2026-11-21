@@ -172,7 +172,7 @@ describe('posting a task', () => {
     expect(recent.every((t) => t.categorySlug === 'furniture-assembly')).toBe(true);
   });
 
-  it('refuses prohibited tasks, places outside the area, and windows that are too soon', async () => {
+  it('refuses prohibited tasks and windows that are too soon', async () => {
     const prohibited = await posting.post('usr_maya', { ...noPhotos, description: 'Assemble the desk and also rewire the light fixture above it.' });
     expect(prohibited).toEqual({ ok: false, result: { ok: false, code: 'validation_failed', fieldErrors: { description: ['prohibited'] } } });
 
@@ -180,14 +180,48 @@ describe('posting a task', () => {
     const titled = await posting.post('usr_maya', { ...noPhotos, title: 'Desk build, call 512-555-0101' });
     expect(titled).toEqual({ ok: false, result: { ok: false, code: 'validation_failed', fieldErrors: { title: ['contact_details'] } } });
 
-    const waco = await posting.post('usr_maya', { ...noPhotos, location: { mode: 'local', placeId: 'plc_waco_100' } });
-    expect(waco).toEqual({ ok: false, result: { ok: false, code: 'validation_failed', fieldErrors: { 'location.placeId': ['not_supported'] } } });
-
     const soon = await posting.post('usr_maya', {
       ...noPhotos,
       schedule: { date: '2026-11-17', flexible: false, startTime: '10:00', endTime: '11:00' },
     });
     expect(soon.ok === false && soon.result.ok === false && soon.result.fieldErrors).toEqual({ 'schedule.startTime': ['out_of_range'] });
+  });
+
+  it('posts a place outside the service area under its city, around its ZIP’s center (owner, 2026-11-21: no area limit)', async () => {
+    const posted: string[] = [];
+    try {
+      const waco = await posting.post('usr_maya', { ...noPhotos, location: { mode: 'local', placeId: 'plc_waco_100' } });
+      expect(waco.ok).toBe(true);
+      if (!waco.ok) return;
+      posted.push(waco.taskId);
+      const [task] = await db.select().from(tasks).where(eq(tasks.id, waco.taskId));
+      const [city] = await db.select().from(areas).where(eq(areas.id, task!.publicAreaId!));
+      // Still Maya's market (its board, prices and clock); the city instead of a neighborhood.
+      expect(task!.marketId).toBe(city!.marketId);
+      expect(city).toMatchObject({ slug: 'city-waco-tx', name: 'Waco, TX', centerLat: 31.55, centerLng: -97.14 });
+      // The public point is near the ZIP's center (public Census data), never the address's own point.
+      expect(Math.abs(task!.publicLat! - 31.55)).toBeLessThan(0.01);
+      expect(Math.abs(task!.publicLng! - -97.14)).toBeLessThan(0.01);
+      const found = await findPublicTask(db, waco.slug, NOW);
+      expect(found?.task.location).toMatchObject({ kind: 'local', areaName: 'Waco, TX', outsideMarket: true });
+      expect(JSON.stringify(found)).not.toContain('100 Example Road');
+
+      // The next task there joins the same city.
+      const again = await posting.post('usr_maya', { ...noPhotos, location: { mode: 'local', placeId: 'plc_waco_100' } });
+      expect(again.ok).toBe(true);
+      if (again.ok) posted.push(again.taskId);
+      expect(await db.select().from(areas).where(eq(areas.slug, 'city-waco-tx'))).toHaveLength(1);
+    } finally {
+      // Nothing left open on Maya for other files ("newest" lists, counts).
+      for (const id of posted) {
+        const [row] = await db.select({ locationId: tasks.locationId }).from(tasks).where(eq(tasks.id, id));
+        await db.delete(outboxEvents).where(eq(outboxEvents.aggregateId, id));
+        await db.delete(auditLog).where(eq(auditLog.targetId, id));
+        await db.delete(tasks).where(eq(tasks.id, id));
+        if (row?.locationId) await db.delete(taskLocations).where(eq(taskLocations.id, row.locationId));
+      }
+      await db.delete(areas).where(eq(areas.slug, 'city-waco-tx'));
+    }
   });
 
   it('needs a verified phone, and limits new accounts to 3 open tasks', async () => {
@@ -206,7 +240,7 @@ describe('posting a task', () => {
 });
 
 describe('address search', () => {
-  it('suggests places with their public area, and flags places outside the market', async () => {
+  it('suggests places with their public area, and places outside the market with their city', async () => {
     const lane = await posting.searchAddresses('usr_maya', 'example lane');
     expect(lane.find((s) => s.placeId === 'plc_mueller_1234')).toEqual({
       placeId: 'plc_mueller_1234',
@@ -218,8 +252,17 @@ describe('address search', () => {
       inServiceArea: true,
     });
     expect(await posting.searchAddresses('usr_maya', '44 sample way')).toEqual([
-      // Outside our cities: where it is, for "We're not in Round Rock yet" and the city list (national, cities in turn).
-      { placeId: 'plc_roundrock_44', line1: '44 Sample Way', line2: 'Round Rock, TX 78664', inServiceArea: false, outside: { city: 'Round Rock', state: 'TX', zip: '78664' } },
+      // Outside the service area it can still be posted (owner, 2026-11-21): helpers see the city, around its ZIP's
+      // center (public Census data), never the address's point.
+      {
+        placeId: 'plc_roundrock_44',
+        line1: '44 Sample Way',
+        line2: 'Round Rock, TX 78664',
+        areaName: 'Round Rock, TX',
+        areaPoint: { lat: 30.51, lng: -97.65 },
+        inServiceArea: false,
+        outside: { city: 'Round Rock', state: 'TX', zip: '78664' },
+      },
     ]);
     expect(await posting.searchAddresses('usr_maya', 'ex')).toEqual([]);
   });

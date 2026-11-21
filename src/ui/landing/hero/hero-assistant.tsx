@@ -39,6 +39,7 @@ import { ConfidenceBars, confidenceLevel, moveWithArrows, TypewriterHint, useRev
 import { RewardBadge } from './reward-badge';
 import { useSeason } from '../season';
 import { seasonAt } from './seasons';
+import { richTextToPlain } from '@/shared/rich-text';
 
 /** Who the assistant serves: someone posting a task ("I need help to…") or a helper ("I can…"). */
 export type AssistantMode = 'poster' | 'helper';
@@ -805,7 +806,9 @@ function AiBlock({ a }: { a: HeroAssistantModel }) {
 function AiDraftCard({ a, draft }: { a: HeroAssistantModel; draft: LandingAiDraft }) {
   const t = useTranslations('landing.assistant');
   const title = useReveal(draft.title, a.reduced);
-  const description = useReveal(draft.description, a.reduced);
+  // The draft is a formatted post (src/shared/rich-text.ts); this small card shows its words, a line per heading or item.
+  const words = richTextToPlain(draft.description).replace(/\n{2,}/g, '\n');
+  const description = useReveal(words, a.reduced);
   return (
     <div>
       <p className="inline-flex items-center gap-1.5 text-xs font-medium text-violet">
@@ -817,7 +820,7 @@ function AiDraftCard({ a, draft }: { a: HeroAssistantModel; draft: LandingAiDraf
       <p aria-hidden="true" className="mt-1 line-clamp-4 text-sm whitespace-pre-line text-muted-foreground">{description}</p>
       <div className="sr-only">
         <p>{draft.title}</p>
-        <p>{draft.description}</p>
+        <p>{words}</p>
       </div>
       {/* "Use this draft" is the panel's main action, pinned at its foot (always in view). */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
