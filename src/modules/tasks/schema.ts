@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { boolean, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
+import { boolean, doublePrecision, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { users } from '../accounts/schema';
 import { areas, categories, markets } from '../markets/schema';
 import { maskContactDetailsSql } from '../trust/contact-masking-sql';
@@ -102,12 +102,19 @@ export const tasks = pgTable(
     hiddenAt: timestamp('hidden_at', { withTimezone: true }),
     hiddenByUserId: text('hidden_by_user_id').references(() => users.id),
     hiddenReason: text('hidden_reason'),
+    /**
+     * The wizard's key for this post (a client UUID kept in its stored draft; bad connections pass, J-N1): a repeat
+     * of the same post, after an answer that never arrived, returns this task instead of making another. Unique per
+     * poster, so nobody can probe another person's keys.
+     */
+    requestKey: text('request_key'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index('tasks_market_status_window_idx').on(t.marketId, t.status, t.windowStart),
     index('tasks_poster_idx').on(t.posterUserId, t.createdAt),
+    uniqueIndex('tasks_poster_request_key_idx').on(t.posterUserId, t.requestKey).where(sql`request_key is not null`),
   ],
 );
 

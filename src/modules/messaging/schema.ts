@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { boolean, index, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import type { TimelineEvent } from '@/contracts';
 import { users } from '../accounts/schema';
@@ -53,9 +54,17 @@ export const messages = pgTable(
     flaggedAt: timestamp('flagged_at', { withTimezone: true }),
     /** A reply to an earlier message in the same thread (completion plan 7.3): shown quoted above it. */
     replyToMessageId: text('reply_to_message_id'),
+    /**
+     * The composer's key for this message (a client UUID per message; bad connections pass, J-N1): a repeat after an
+     * answer that never arrived is the same message, not a second one. Unique per sender.
+     */
+    requestKey: text('request_key'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('messages_thread_idx').on(t.threadId, t.createdAt)],
+  (t) => [
+    index('messages_thread_idx').on(t.threadId, t.createdAt),
+    uniqueIndex('messages_sender_request_key_idx').on(t.senderUserId, t.requestKey).where(sql`request_key is not null`),
+  ],
 );
 
 /** Reactions on a message (completion plan 7.3): one of a few emoji, once each per person; the thread's people only. */
