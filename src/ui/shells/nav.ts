@@ -28,6 +28,7 @@ export type NavId =
   | 'savedReplies'
   | 'metrics'
   | 'webhooks'
+  | 'jobs'
   | 'beta'
   | 'config'
   | 'audit'
@@ -118,6 +119,8 @@ export function getAdminNav(roles: readonly StaffRole[]): NavItem[] {
     // Every staff role sees the private beta; leads and admins manage it (others read).
     { id: 'beta', href: routes.admin.beta() },
     ...(readsWebhooks ? [{ id: 'webhooks' as const, href: routes.admin.webhooks() }] : []),
+    // What the job runner did on this server, for the same staff (when things break, 2026-11-21).
+    ...(readsWebhooks ? [{ id: 'jobs' as const, href: routes.admin.jobs() }] : []),
     // Every staff role reads where we're open (the config page's Markets section, plan 8.2); the rest of it is admins'.
     { id: 'config', href: routes.admin.config() },
     ...(readsAudit ? [{ id: 'audit' as const, href: routes.admin.audit() }] : []),

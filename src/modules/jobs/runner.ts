@@ -36,7 +36,8 @@ import { announceChangedPages } from '@/modules/seo/indexnow-job';
 import { pageDeadWebhooks, retryDueWebhooks } from '@/modules/webhooks/inbox';
 import { createSmsSender } from '@/integrations/sms';
 import { pageOnCall, retryFailedPages, type Page } from '@/modules/oncall/pager';
-import { failingJobPage, noteJobRun, publishRunnerState, STALLED_AFTER_MS, stalledRunPage, type RunnerState } from './watch';
+import { failingJobPage, noteJobRun, publishRunnerState, recordJobRun, STALLED_AFTER_MS, stalledRunPage, type RunnerState } from './watch';
+import { safeErrorText } from '@/platform/redact';
 import { noteDeliveryRun, providerOutagePage, type OutageState } from '@/modules/notifications/provider-watch';
 
 /**
@@ -135,10 +136,15 @@ export async function runDueJobs(db: Db, now: Date, jobs: Job[] = JOBS): Promise
     if (!locked) return { ran: false, failed: [] };
     const failed: string[] = [];
     for (const job of jobs) {
+      // Each run kept for the jobs page (watch.ts): when, how long, and the redacted error.
+      const at = Date.now();
+      const started = performance.now();
       try {
         await job.run(db, now);
+        recordJobRun(job.name, { at, durationMs: Math.round(performance.now() - started), ok: true });
       } catch (error) {
         failed.push(job.name);
+        recordJobRun(job.name, { at, durationMs: Math.round(performance.now() - started), ok: false, error: safeErrorText(error, 300, { frames: false }) });
         console.error(`[jobs] ${job.name} failed`, error);
       }
     }
@@ -168,10 +174,11 @@ export function startJobRunner(db: Db, intervalMs = 60_000): void {
   const failing = new Map<string, number>();
   let runningSince: Date | null = null;
   // What /api/health reads (watch.ts): when this runner started, the run in progress, the last one that finished.
-  const state: RunnerState = { startedAt: Date.now(), runningSince: null, lastFinishedAt: null };
+  const state: RunnerState = { startedAt: Date.now(), runningSince: null, lastFinishedAt: null, intervalMs, lastTickAt: null, failing };
   publishRunnerState(state);
   const tick = async () => {
     const now = new Date();
+    state.lastTickAt = now.getTime();
     if (runningSince) {
       if (now.getTime() - runningSince.getTime() >= STALLED_AFTER_MS) await pageAboutJobs(db, stalledRunPage(runningSince, now), now);
       return;

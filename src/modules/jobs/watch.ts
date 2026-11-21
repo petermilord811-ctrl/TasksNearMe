@@ -13,6 +13,31 @@ export interface RunnerState {
   startedAt: number;
   runningSince: number | null;
   lastFinishedAt: number | null;
+  /** For the jobs page: how often it runs, when the last run started, and each job's failed runs in a row. */
+  intervalMs?: number;
+  lastTickAt?: number | null;
+  failing?: ReadonlyMap<string, number>;
+}
+
+/** One run of one job, kept for the jobs page: the last `RUNS_KEPT` per job, in this server process, since it started. */
+export interface JobRunRecord {
+  at: number;
+  durationMs: number;
+  ok: boolean;
+  /** Redacted (src/platform/redact.ts), without the stack. */
+  error?: string;
+}
+export const RUNS_KEPT = 5;
+const RUNS = Symbol.for('tasksnearme.jobRuns');
+function runsTable(): Map<string, JobRunRecord[]> {
+  const holder = globalThis as unknown as Record<symbol, Map<string, JobRunRecord[]> | undefined>;
+  return (holder[RUNS] ??= new Map());
+}
+export function recordJobRun(name: string, run: JobRunRecord): void {
+  runsTable().set(name, [run, ...(runsTable().get(name) ?? [])].slice(0, RUNS_KEPT));
+}
+export function jobRuns(): ReadonlyMap<string, readonly JobRunRecord[]> {
+  return runsTable();
 }
 const STATE = Symbol.for('tasksnearme.jobRunnerState');
 export function runnerState(): RunnerState | undefined {

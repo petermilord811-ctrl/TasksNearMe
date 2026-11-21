@@ -1,0 +1,38 @@
+{
+  "title": "Background jobs",
+  "intro": "What the job runner did on this server: each job's last runs, how long they took, and whether they failed. Read-only.",
+  "since": "Since {time}, when this server started. A deploy or a restart starts this history over.",
+  "notRunning": "The job runner isn't running on this server: JOBS_DISABLED is set, or it hasn't started.",
+  "health": {
+    "label": "Runner",
+    "ok": "Running",
+    "starting": "Starting",
+    "stalled": "Stuck",
+    "off": "Not running"
+  },
+  "stalled": "A run started at {time} and hasn't finished, so no job runs: expiries, charges and notifications wait. See docs/runbooks/job-runner.md.",
+  "lastFinished": "Last run finished",
+  "nextRun": "Next run",
+  "every": "every {seconds} s",
+  "notYet": "Not yet",
+  "jobsTitle": "Jobs",
+  "lastRun": "Last run",
+  "took": "Took",
+  "durationMs": "{ms} ms",
+  "durationS": "{seconds} s",
+  "result": {
+    "ok": "OK",
+    "failed": "Failed",
+    "none": "No run yet"
+  },
+  "failuresInARow": "{count, plural, one {# failure in a row} other {# failures in a row}}",
+  "pagesAt": "3 in a row pages the staff on call.",
+  "lastError": "Last error",
+  "earlier": "Earlier runs",
+  "previews": {
+    "group": "Admin jobs",
+    "running": "Running, one job failing",
+    "stalled": "Stuck",
+    "off": "Not running here"
+  }
+}
