@@ -7,7 +7,7 @@ import { routes } from '@/contracts';
 import { getMarketPageData, getTaskBoardPageData } from '@/modules/marketing/queries';
 import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/queries';
 import { JsonLd } from '@/modules/seo/json-ld';
-import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexable';
+import { KEEP_OUT_OF_SEARCH, marketPagesIndexable, taskListIndexable } from '@/modules/seo/indexable';
 import { breadcrumbNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { parseTaskBoardQuery } from '@/modules/tasks/projections';
 import { requestRows } from '@/platform/auth/audience';
@@ -27,10 +27,11 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
   const [page, t] = await Promise.all([getMarketPageData(market, searchEngineRows()), getTranslations('server.meta.taskBoard')]);
   if (!page) return {};
   const values = { market: page.data.market.name };
-  // Filtered and paged URLs all point search engines at the plain board.
+  // Filtered and paged URLs all point search engines at the plain board, which joins search with its first open task.
+  const indexable = marketPagesIndexable(page.data.market, DEFAULT_MARKET_SLUG) && taskListIndexable(page.data.recentTasks.length);
   return {
     ...(await publicPageMetadata({ path: routes.taskBoard(market), title: t('title', values), description: t('description', values) })),
-    ...(marketPagesIndexable(page.data.market, DEFAULT_MARKET_SLUG) ? {} : KEEP_OUT_OF_SEARCH),
+    ...(indexable ? {} : KEEP_OUT_OF_SEARCH),
   };
 }
 

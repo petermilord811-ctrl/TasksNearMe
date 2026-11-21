@@ -31,7 +31,10 @@ test.describe('search engines', () => {
       '/es',
       '/pricing',
       '/es/pricing',
+      '/about',
+      '/es/about',
       '/help/who-sees-my-address',
+      '/help/contact',
       // The first city's pages (Gainesville since 2026-11-17).
       '/gainesville',
       '/gainesville/tasks',
@@ -39,8 +42,10 @@ test.describe('search engines', () => {
       '/es/gainesville/furniture-assembly',
       '/gainesville/furniture-assembly/cost',
       '/es/gainesville/furniture-assembly/cost',
-      '/gainesville/tasks/furniture-assembly',
-      '/es/gainesville/tasks/furniture-assembly',
+      // A job hub is listed once it has an open task: the seed's Gainesville yard task (no other e2e test posts or
+      // cancels yard tasks, so it stays open whatever the order).
+      '/gainesville/tasks/yard-cleanup',
+      '/es/gainesville/tasks/yard-cleanup',
       '/cities',
       '/es/cities',
       '/cities/florida',
@@ -65,11 +70,63 @@ test.describe('search engines', () => {
     await expect(head.locator('meta[property="og:image"]')).toHaveAttribute('content', /\/og\/tasksnearme-en\.png$/);
     await expect(head.locator('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image');
     const nodes = await structuredData(page);
-    expect(nodes.map((node) => node['@type'])).toEqual(['Organization', 'WebSite']);
+    expect(nodes.map((node) => node['@type'])).toEqual(['OnlineBusiness', 'WebSite']);
     expect(nodes[0]).toMatchObject({ name: 'TasksNearMe', areaServed: { '@type': 'Country', name: 'United States' } });
     const card = await request.get('/og/tasksnearme-en.png');
     expect(card.ok()).toBe(true);
     expect(card.headers()['content-type']).toBe('image/png');
+  });
+
+  test('one address per page and language: /en/… moves for good, a browser in Spanish goes to /es/…', async ({ request }) => {
+    const at = (response: { headers(): Record<string, string> }) => {
+      const url = new URL(response.headers()['location']!, 'http://localhost');
+      return url.pathname + url.search;
+    };
+    // A first visit from a browser in Spanish (no choice made on this device yet) is sent to the Spanish address; the
+    // plain one never shows Spanish.
+    const spanish = await request.get('/pricing', { maxRedirects: 0, headers: { 'accept-language': 'es-MX,es;q=0.9' } });
+    expect(spanish.status()).toBe(307);
+    expect(at(spanish)).toBe('/es/pricing');
+    const plain = await request.get('/pricing', { maxRedirects: 0, headers: { 'accept-language': 'en-US,en;q=0.9' } });
+    expect(plain.status()).toBe(200);
+    expect(await plain.text()).toMatch(/<html[^>]* lang="en"/);
+    // English has no prefix: permanent, so search engines keep the plain address; never stored by browsers, since it
+    // also makes English this device's choice (last here: from then on the cookie decides, not the browser).
+    const english = await request.get('/en/pricing?ref=footer', { maxRedirects: 0 });
+    expect(english.status()).toBe(308);
+    expect(at(english)).toBe('/pricing?ref=footer');
+    expect(english.headers()['cache-control']).toContain('no-store');
+  });
+
+  test('the about page says who runs the site, in both languages, and the footer leads to it', async ({ page, request }) => {
+    // Every public page's footer links to it (folded into a row that opens on phones, so the address is what's checked).
+    await page.goto('/how-it-works');
+    await expect(page.getByRole('contentinfo').getByRole('link', { name: 'About us', includeHidden: true }).first()).toHaveAttribute('href', '/about');
+    await page.goto('/about');
+    await expect(page).toHaveTitle('About TasksNearMe: everyday help from verified people nearby');
+    await expect(page.getByRole('heading', { level: 1, name: 'About TasksNearMe' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'What we stand for' })).toBeVisible();
+    await expect(page.getByRole('main').getByRole('link', { name: 'Contact support' })).toHaveAttribute('href', '/help/contact');
+    // The site's address in words, on every page.
+    await expect(page.getByRole('contentinfo').getByText(/tasksnearme\.com/).first()).toBeVisible();
+
+    // What crawlers read: the page as served. (Once it hydrates, this build adds a second canonical with the server's
+    // own address: it's built for :3000 and served on :3300. On the live site both are the same address, and the page
+    // has one.)
+    const html = await (await request.get('/about')).text();
+    expect(html.match(/<link rel="canonical" href="[^"]*\/about"\/>/g)).toHaveLength(1);
+    expect(html).toMatch(/<link rel="alternate" hreflang="es-US" href="[^"]*\/es\/about"\/>/i);
+    // The page about the organization, and the organization itself (the same node as the home page's).
+    const nodes = [...html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].flatMap(
+      (match) => (JSON.parse(match[1]!) as { '@graph': Array<Record<string, unknown>> })['@graph'],
+    );
+    expect(nodes.map((node) => node['@type'])).toEqual(['AboutPage', 'OnlineBusiness']);
+    expect(nodes[0]).toMatchObject({ mainEntity: { '@id': nodes[1]!['@id'] } });
+    expect(nodes[1]).toMatchObject({ name: 'TasksNearMe', contactPoint: { contactType: 'customer support' } });
+
+    await page.goto('/es/about');
+    await expect(page.getByRole('heading', { level: 1, name: 'Sobre TasksNearMe' })).toBeVisible();
+    await expect(page.getByRole('main').getByRole('link', { name: 'Contactar a soporte' })).toHaveAttribute('href', '/es/help/contact');
   });
 
   test('a category page in Spanish: its name in Spanish, its own canonical, a Spanish card, breadcrumbs and service', async ({ page }) => {

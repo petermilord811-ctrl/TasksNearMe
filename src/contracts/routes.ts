@@ -96,6 +96,8 @@ export const routes = {
   becomeAHelper: () => '/become-a-helper',
   pricing: () => '/pricing',
   trustAndSafety: () => '/trust-and-safety',
+  /** Who runs TasksNearMe and what it stands for (docs/seo/PLAN.md §11): the organization's page for people and search. */
+  about: () => '/about',
   help: (slug?: string) => (slug ? `/help/${slug.split('/').map(enc).join('/')}` : '/help'),
   /** The help center's contact form for people who aren't signed in (5.22). */
   helpContact: () => '/help/contact',
@@ -165,6 +167,8 @@ export const routes = {
     newSavedSearch: (from: string) => withQuery('/app/saved-searches/new', { from }),
     /** A client's ID check, when risk asks for one; `next` is where to go once verified (an app path). */
     verifyIdentity: (next?: string) => withQuery('/app/verify-identity', { next }),
+    /** The phone check that posting asks for, inside the app (journeys on a phone, J-C2); `next` is where it goes after. */
+    verifyPhone: (next?: string) => withQuery('/app/verify-phone', { next }),
     /** The helper feed. Same parameters as the task board, plus `distance` (default `any`, left out). */
     /** Defaults (`when: any`, `sort: soonest`, `distance: any`, the list, page 1) are left out of the URL. */
     findWork: (query: FindWorkQuery = {}) =>

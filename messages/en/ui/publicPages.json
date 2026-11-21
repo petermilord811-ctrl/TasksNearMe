@@ -401,6 +401,62 @@
     "prohibitedBody": "TasksNearMe covers everyday help. Licensed trades, childcare, personal care, and driving people are outside the service. Check the full list before you post.",
     "prohibitedLink": "Read the prohibited tasks policy"
   },
+  "about": {
+    "title": "About TasksNearMe",
+    "description": "TasksNearMe (tasksnearme.com) is where you book a verified local helper for an everyday task, with the price agreed before anyone commits. We're opening city by city across the US, starting with Gainesville, Florida.",
+    "whatTitle": "What we do",
+    "whatBody1": "TasksNearMe connects people who need a hand with neighbors who can help: furniture assembly, moving help, yard cleanup, light cleaning, and computer and phone help.",
+    "whatBody2": "You post a task or book a helper's open time, agree on a price up front, and pay through TasksNearMe. Your helper is paid after the task is done.",
+    "whatBody3": "Helpers are independent: they choose their tasks, set their own prices and hours, and do the work themselves. TasksNearMe arranges the booking and the payment, and our support team helps when something goes wrong.",
+    "pricingLink": "See how fees work",
+    "principlesTitle": "What we stand for",
+    "principles": {
+      "task": {
+        "title": "Clear before anyone commits",
+        "body": "Every booking has a scope, a time window and a price before anyone commits."
+      },
+      "money": {
+        "title": "No surprises on money",
+        "body": "Before confirming, the person posting sees the total and the helper sees what they'll earn, fees included."
+      },
+      "funded": {
+        "title": "Paid for before work starts",
+        "body": "A helper is never asked to start a task that isn't paid for yet."
+      },
+      "privacy": {
+        "title": "Private by default",
+        "body": "Public pages show only the general area. The exact address goes only to the booked helper, and only for as long as they need it."
+      },
+      "platform": {
+        "title": "Everything in one place",
+        "body": "Messages, changes and payments stay in the app, so support can see what happened and resolve a problem fairly."
+      },
+      "reviews": {
+        "title": "Rewards never buy reviews",
+        "body": "Reviews are optional, and no reward depends on leaving one or on a rating."
+      },
+      "account": {
+        "title": "One account, both sides",
+        "body": "Anyone can post a task and help others with the same account."
+      }
+    },
+    "whereTitle": "Where we are",
+    "whereBody": "Gainesville, Florida is our first city. We open cities one at a time, in the order people ask for us, so wherever you are, you can join the waitlist and we'll tell you when we open near you.",
+    "whereCities": "See where we are",
+    "whereWaitlist": "Join the waitlist",
+    "trustTitle": "Trust and safety",
+    "trustBody": "Every helper's profile shows what was checked and when: their phone, their ID and, for tasks inside your home, a current background check. Phone numbers and email addresses stay hidden until a booking is confirmed.",
+    "trustLink": "How we keep you safe",
+    "helpersTitle": "For helpers",
+    "helpersBody": "Helpers choose the tasks they want and set their own prices and hours. Sending offers is free, and every booked task is paid for before the work starts.",
+    "helpersLink": "Become a helper",
+    "languagesTitle": "In English and Spanish",
+    "languagesBody": "TasksNearMe works in English and Spanish, from the site to the emails and texts we send.",
+    "contactTitle": "Talk to us",
+    "contactBody": "Questions about TasksNearMe, a booking or your account? Write to our support team and we'll answer by email, usually within 24 hours.",
+    "contactLink": "Contact support",
+    "helpLink": "Visit the help center"
+  },
   "previews": {
     "group": "Public marketing pages",
     "market": "Austin market",
@@ -423,6 +479,7 @@
     "cities": "Cities: where we are and where we go next",
     "citiesState": "Cities: one state, with demand and no open city",
     "categoryLoading": "Category page · loading",
-    "boardLoading": "Task board · loading"
+    "boardLoading": "Task board · loading",
+    "about": "About"
   }
 }

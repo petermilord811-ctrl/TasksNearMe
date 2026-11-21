@@ -33,6 +33,10 @@
       "title": "Trust and safety",
       "description": "What our badges mean, how we protect your address and payment, and how to report a problem."
     },
+    "about": {
+      "title": "About TasksNearMe: everyday help from verified people nearby",
+      "description": "TasksNearMe (tasksnearme.com) is where you book a verified local helper for everyday tasks, at a price agreed up front. Opening city by city across the US, starting with Gainesville, FL."
+    },
     "signIn": {
       "title": "Sign in or create an account",
       "description": "Sign in to TasksNearMe with a code we email you. No password needed."

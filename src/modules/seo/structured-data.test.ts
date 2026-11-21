@@ -8,6 +8,7 @@ import {
   helpArticleNode,
   helperProfileNode,
   marketServiceNode,
+  aboutPageNode,
   organizationNode,
   servicePhotoNode,
   SITE_NAME,
@@ -20,17 +21,30 @@ const es: StructuredDataContext = { baseUrl: 'https://tasksnearme.com', locale: 
 const names: Record<string, string> = { 'furniture-assembly': 'Furniture assembly', 'moving-help': 'Moving help', 'yard-cleanup': 'Yard cleanup' };
 
 describe('the site', () => {
-  it('names the organization with its logo, serving the whole country', () => {
-    expect(organizationNode(en, 'Local help.')).toEqual({
-      '@type': 'Organization',
+  it('names the organization with its logo, serving the whole country, with support in both languages', () => {
+    expect(organizationNode(en, 'Local help.', [])).toEqual({
+      '@type': 'OnlineBusiness',
       '@id': 'https://tasksnearme.com/#organization',
       name: SITE_NAME,
       url: 'https://tasksnearme.com',
-      alternateName: 'Tasks Near Me',
       logo: { '@type': 'ImageObject', url: 'https://tasksnearme.com/icons/icon-512.png', width: 512, height: 512 },
       description: 'Local help.',
       areaServed: { '@type': 'Country', name: 'United States' },
+      contactPoint: {
+        '@type': 'ContactPoint',
+        contactType: 'customer support',
+        url: 'https://tasksnearme.com/help/contact',
+        availableLanguage: ['English', 'Spanish'],
+      },
     });
+    // The Spanish page points at the Spanish contact form.
+    expect(organizationNode(es, 'Ayuda local.', []).contactPoint).toMatchObject({ url: 'https://tasksnearme.com/es/help/contact' });
+  });
+
+  it('links the brand’s own profiles elsewhere once there are any', () => {
+    const profiles = ['https://www.linkedin.com/company/tasksnearme', 'https://www.instagram.com/tasksnearme'];
+    expect(organizationNode(en, 'Local help.', profiles).sameAs).toEqual(profiles);
+    expect(organizationNode(en, 'Local help.', [])).not.toHaveProperty('sameAs');
   });
 
   it('names the website in both languages, published by the organization', () => {
@@ -38,10 +52,27 @@ describe('the site', () => {
       '@type': 'WebSite',
       '@id': 'https://tasksnearme.com/#website',
       name: 'TasksNearMe',
-      alternateName: ['Tasks Near Me', 'tasksnearme.com'],
+      // Not the generic phrase: only the domain, Google's fallback.
+      alternateName: ['tasksnearme.com'],
       url: 'https://tasksnearme.com',
       inLanguage: ['en-US', 'es-US'],
       publisher: { '@id': 'https://tasksnearme.com/#organization' },
+    });
+  });
+});
+
+describe('aboutPageNode', () => {
+  it('is a page about the organization, in the page’s language, part of the site', () => {
+    expect(aboutPageNode(es, { name: 'Sobre TasksNearMe', description: 'Quiénes somos.' })).toEqual({
+      '@type': 'AboutPage',
+      '@id': 'https://tasksnearme.com/es/about#webpage',
+      url: 'https://tasksnearme.com/es/about',
+      name: 'Sobre TasksNearMe',
+      description: 'Quiénes somos.',
+      inLanguage: 'es-US',
+      isPartOf: { '@id': 'https://tasksnearme.com/#website' },
+      about: { '@id': 'https://tasksnearme.com/#organization' },
+      mainEntity: { '@id': 'https://tasksnearme.com/#organization' },
     });
   });
 });

@@ -7,7 +7,7 @@ import { CATEGORY_SLUGS, routes, type CategorySlug } from '@/contracts';
 import { getCategoryPageData, listCategorySlugs } from '@/modules/marketing/queries';
 import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/queries';
 import { JsonLd } from '@/modules/seo/json-ld';
-import { KEEP_OUT_OF_SEARCH, marketPagesIndexable } from '@/modules/seo/indexable';
+import { KEEP_OUT_OF_SEARCH, marketPagesIndexable, taskListIndexable } from '@/modules/seo/indexable';
 import { breadcrumbNode, SITE_NAME } from '@/modules/seo/structured-data';
 import { loadTaskBoard } from '@/modules/tasks/board';
 import { parseTaskBoardQuery } from '@/modules/tasks/projections';
@@ -48,9 +48,11 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/[market]
   if (!page) return {};
   const { market: view, category: shown } = page.data;
   const copy = await hubCopy(shown.slug, view.name);
+  // In search once it lists an open task (src/modules/seo/indexable.ts).
+  const indexable = marketPagesIndexable(view, DEFAULT_MARKET_SLUG) && taskListIndexable(page.data.recentTasks.length);
   return {
     ...(await publicPageMetadata({ path: routes.taskBoard(view.slug, { category: shown.slug }), title: copy.title, description: copy.description })),
-    ...(marketPagesIndexable(view, DEFAULT_MARKET_SLUG) ? {} : KEEP_OUT_OF_SEARCH),
+    ...(indexable ? {} : KEEP_OUT_OF_SEARCH),
   };
 }
 

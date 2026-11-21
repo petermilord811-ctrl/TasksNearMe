@@ -32,16 +32,18 @@ describe('sitemapPages', () => {
   const pages = sitemapPages(data, ALL);
   const byPath = new Map(pages.map((page) => [page.path, page]));
 
-  it('lists the public pages, markets and their categories (page, cost guide, job hub), helpers, then tasks', () => {
+  it('lists the public pages, markets and their categories (page, cost guide, job hub with open tasks), helpers, then tasks', () => {
     expect(pages.map((page) => page.path)).toEqual([
       '/',
       '/how-it-works',
       '/pricing',
       '/become-a-helper',
       '/trust-and-safety',
+      '/about',
       '/help',
       '/help/post-your-first-task',
       '/help/who-sees-my-address',
+      '/help/contact',
       '/legal/terms',
       '/cities',
       '/cities/texas',
@@ -55,7 +57,6 @@ describe('sitemapPages', () => {
       '/austin/tasks/moving-help',
       '/austin/computer-help',
       '/austin/computer-help/cost',
-      '/austin/tasks/computer-help',
       '/helpers/jordan-t',
       '/tasks/assemble-a-desk-mueller-7f3k',
       '/tasks/help-loading-a-moving-truck-crestview-9d2a',
@@ -72,13 +73,12 @@ describe('sitemapPages', () => {
     expect(byPath.get('/austin/computer-help')?.lastModified).toBeUndefined();
     // A job hub changes when its category's tasks do.
     expect(byPath.get('/austin/tasks/moving-help')?.lastModified).toBe('2026-11-13T18:30:00.000Z');
-    expect(byPath.get('/austin/tasks/computer-help')?.lastModified).toBeUndefined();
     expect(byPath.get('/help')?.lastModified).toBe('2026-11-12T17:00:00.000Z');
     expect(byPath.get('/help/post-your-first-task')?.lastModified).toBe('2026-11-11T17:00:00.000Z');
     expect(byPath.get('/legal/terms')?.lastModified).toBe('2026-11-01T17:00:00.000Z');
     expect(byPath.get('/helpers/jordan-t')?.lastModified).toBe('2026-11-10T12:00:00.000Z');
     expect(byPath.get('/tasks/assemble-two-nightstands-mueller-8n2v')?.lastModified).toBe('2026-11-12T15:00:00.000Z');
-    for (const path of ['/how-it-works', '/pricing', '/become-a-helper', '/trust-and-safety', '/austin/furniture-assembly/cost']) {
+    for (const path of ['/how-it-works', '/pricing', '/become-a-helper', '/trust-and-safety', '/about', '/help/contact', '/austin/furniture-assembly/cost']) {
       expect(byPath.get(path)?.lastModified, path).toBeUndefined();
     }
   });
@@ -104,9 +104,28 @@ describe('sitemapPages', () => {
     expect(paths).toContain('/austin/moving-help');
   });
 
+  it('lists a market with no open tasks by its city, category pages and cost guides, not its empty board and job hubs', () => {
+    const quiet = { slug: 'gainesville', indexable: true, categorySlugs: ['moving-help' as const, 'yard-cleanup' as const], tasks: [] };
+    const paths = sitemapPages({ ...data, homeMarketSlug: 'gainesville', markets: [quiet] }, ALL).map((page) => page.path);
+    expect(paths.filter((path) => path.startsWith('/gainesville'))).toEqual([
+      '/gainesville',
+      '/gainesville/moving-help',
+      '/gainesville/moving-help/cost',
+      '/gainesville/yard-cleanup',
+      '/gainesville/yard-cleanup/cost',
+    ]);
+    // Its first open task brings in the board and that category's hub, dated by the task.
+    const first = { slug: 'rake-oak-leaves-duckpond-a1b2', categorySlug: 'yard-cleanup', updatedAt: '2026-11-21T08:00:00.000Z' };
+    const busy = sitemapPages({ ...data, homeMarketSlug: 'gainesville', markets: [{ ...quiet, tasks: [first] }] }, { listings: false });
+    expect(busy.filter((page) => page.path.startsWith('/gainesville/tasks'))).toEqual([
+      { path: '/gainesville/tasks', lastModified: '2026-11-21T08:00:00.000Z' },
+      { path: '/gainesville/tasks/yard-cleanup', lastModified: '2026-11-21T08:00:00.000Z' },
+    ]);
+  });
+
   it('works with no markets, tasks, helpers or published legal texts', () => {
     const empty = sitemapPages({ homeMarketSlug: 'austin', markets: [], helpers: [], helpArticles: [], legalDocs: [] }, ALL);
-    expect(empty.map((page) => page.path)).toEqual(['/', '/how-it-works', '/pricing', '/become-a-helper', '/trust-and-safety', '/help', '/cities']);
+    expect(empty.map((page) => page.path)).toEqual(['/', '/how-it-works', '/pricing', '/become-a-helper', '/trust-and-safety', '/about', '/help', '/help/contact', '/cities']);
     expect(empty.every((page) => page.lastModified === undefined)).toBe(true);
   });
 });

@@ -401,6 +401,62 @@
     "prohibitedBody": "TasksNearMe cubre ayuda de todos los días. Los oficios con licencia, el cuidado de niños, el cuidado personal y el transporte de personas quedan fuera del servicio. Revisa la lista completa antes de publicar.",
     "prohibitedLink": "Lee la política de tareas prohibidas"
   },
+  "about": {
+    "title": "Sobre TasksNearMe",
+    "description": "TasksNearMe (tasksnearme.com) es donde reservas a un ayudante verificado de tu zona para una tarea de todos los días, con el precio acordado antes de que nadie se comprometa. Estamos abriendo ciudad por ciudad en todo EE. UU., empezando por Gainesville, Florida.",
+    "whatTitle": "Lo que hacemos",
+    "whatBody1": "TasksNearMe conecta a quienes necesitan una mano con vecinos que pueden ayudar: armado de muebles, ayuda con mudanzas, limpieza de jardín, limpieza ligera y ayuda con computadoras y teléfonos.",
+    "whatBody2": "Publicas una tarea o reservas el tiempo disponible de un ayudante, acuerdan el precio desde el principio y pagas a través de TasksNearMe. Tu ayudante recibe su pago cuando la tarea está terminada.",
+    "whatBody3": "Los ayudantes son independientes: eligen sus tareas, fijan sus propios precios y horarios, y hacen el trabajo en persona. TasksNearMe se encarga de la reserva y del pago, y nuestro equipo de soporte te ayuda si algo sale mal.",
+    "pricingLink": "Mira cómo funcionan las tarifas",
+    "principlesTitle": "En qué creemos",
+    "principles": {
+      "task": {
+        "title": "Todo claro antes de comprometerse",
+        "body": "Cada reserva tiene un alcance, un horario y un precio antes de que nadie se comprometa."
+      },
+      "money": {
+        "title": "Sin sorpresas con el dinero",
+        "body": "Antes de confirmar, quien publica ve el total y el ayudante ve lo que va a ganar, con las tarifas incluidas."
+      },
+      "funded": {
+        "title": "Pagado antes de empezar",
+        "body": "A ningún ayudante se le pide empezar una tarea que todavía no está pagada."
+      },
+      "privacy": {
+        "title": "Privado desde el principio",
+        "body": "Las páginas públicas solo muestran la zona general. La dirección exacta va solo al ayudante reservado, y solo mientras la necesita."
+      },
+      "platform": {
+        "title": "Todo en un solo lugar",
+        "body": "Los mensajes, los cambios y los pagos se quedan en la app, para que soporte pueda ver lo que pasó y resolver un problema con justicia."
+      },
+      "reviews": {
+        "title": "Las recompensas nunca compran reseñas",
+        "body": "Las reseñas son opcionales, y ninguna recompensa depende de dejar una ni de una calificación."
+      },
+      "account": {
+        "title": "Una cuenta para ambos lados",
+        "body": "Con la misma cuenta puedes publicar tareas y ayudar a otros."
+      }
+    },
+    "whereTitle": "Dónde estamos",
+    "whereBody": "Gainesville, Florida es nuestra primera ciudad. Abrimos ciudades una por una, en el orden en que la gente nos pide, así que estés donde estés, puedes unirte a la lista de espera y te avisaremos cuando abramos cerca de ti.",
+    "whereCities": "Mira dónde estamos",
+    "whereWaitlist": "Únete a la lista de espera",
+    "trustTitle": "Confianza y seguridad",
+    "trustBody": "El perfil de cada ayudante muestra qué se verificó y cuándo: su teléfono, su identidad y, para tareas dentro de tu casa, una verificación de antecedentes vigente. Los números de teléfono y los correos se ocultan hasta que la reserva esté confirmada.",
+    "trustLink": "Cómo te protegemos",
+    "helpersTitle": "Para ayudantes",
+    "helpersBody": "Los ayudantes eligen las tareas que quieren y fijan sus propios precios y horarios. Enviar ofertas es gratis, y cada tarea reservada está pagada antes de empezar el trabajo.",
+    "helpersLink": "Hazte ayudante",
+    "languagesTitle": "En inglés y en español",
+    "languagesBody": "TasksNearMe funciona en inglés y en español, desde el sitio hasta los correos y los mensajes de texto que enviamos.",
+    "contactTitle": "Habla con nosotros",
+    "contactBody": "¿Tienes preguntas sobre TasksNearMe, una reserva o tu cuenta? Escribe a nuestro equipo de soporte y te responderemos por correo, normalmente en menos de 24 horas.",
+    "contactLink": "Contactar a soporte",
+    "helpLink": "Ir al centro de ayuda"
+  },
   "previews": {
     "group": "Páginas públicas de presentación",
     "market": "Mercado de Austin",
@@ -423,6 +479,7 @@
     "cities": "Ciudades: dónde estamos y adónde vamos",
     "citiesState": "Ciudades: un estado con demanda y sin ciudad abierta",
     "categoryLoading": "Página de categoría · cargando",
-    "boardLoading": "Trabajos disponibles · cargando"
+    "boardLoading": "Trabajos disponibles · cargando",
+    "about": "Sobre nosotros"
   }
 }

@@ -62,6 +62,7 @@ export function PublicFooter({ variant, onSwitchLanguage }: { variant: 'default'
         { href: routes.becomeAHelper(), label: t('footer.becomeHelper'), only: 'landing' },
         { href: routes.trustAndSafety(), label: t('footer.trust') },
         { href: routes.help(), label: t('footer.help') },
+        { href: routes.about(), label: t('footer.about') },
       ],
     },
   ];

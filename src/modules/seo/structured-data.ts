@@ -1,5 +1,6 @@
 import type { CategorySlug, HelperProfilePageData, HelperServiceDetail, ISODateTime, MarketView, PriceGuidance } from '@/contracts';
 import { APP_LOCALES, INTL_LOCALES, type AppLocale } from '@/contracts/locale';
+import { routes } from '@/contracts/routes';
 import { localizedPath } from '@/shared/locale';
 import { servicePhotoSize, servicePhotoSrc, type ServicePhoto, type ServicePhotoCrop } from '@/shared/service-photos';
 import { absoluteUrl } from './sitemap-entries';
@@ -15,6 +16,13 @@ import { absoluteUrl } from './sitemap-entries';
 export const SITE_NAME = 'TasksNearMe';
 /** The square brand tile (the PWA icon): at least 112 px and crawlable, as Google wants a logo. */
 const LOGO = { path: '/icons/icon-512.png', size: 512 };
+
+/**
+ * The brand's own profiles elsewhere (LinkedIn, Facebook, Instagram, X, Crunchbase, a Nextdoor business page…), each
+ * named exactly "TasksNearMe" and linking back to the site: the Organization's `sameAs`, which helps search engines
+ * tell the brand from the phrase "tasks near me" (docs/seo/PLAN.md §8.5). Add each address as the owner creates it.
+ */
+export const BRAND_PROFILES: readonly string[] = [];
 
 export type JsonLdNode = { '@type': string } & Record<string, unknown>;
 
@@ -75,16 +83,28 @@ function priceRange(guidance: PriceGuidance) {
   };
 }
 
-/** The organization, on the home page: its name and logo are what search results show beside the site. */
-export function organizationNode(context: StructuredDataContext, description: string): JsonLdNode {
+/**
+ * The organization, on the home page and the about page: its name and logo are what search results show beside the
+ * site. Support is the help center's contact form, in both languages (no phone or email is published).
+ */
+export function organizationNode(context: StructuredDataContext, description: string, profiles: readonly string[] = BRAND_PROFILES): JsonLdNode {
   return {
     ...organizationRef(context),
-    // The name as people type it: the brand is the phrase "tasks near me".
-    alternateName: 'Tasks Near Me',
+    // The most specific type that fits (Google's organization guide): a business that serves people online; its
+    // references elsewhere (broker, author, publisher) say Organization, which this is. No alternate name: the
+    // generic phrase "tasks near me" would only blur the brand with the search it can't yet own (§11).
+    '@type': 'OnlineBusiness',
     logo: { '@type': 'ImageObject', url: absoluteUrl(context.baseUrl, LOGO.path), width: LOGO.size, height: LOGO.size },
     description,
     // The brand is national; each city opens in turn (its market pages name it).
     areaServed: { '@type': 'Country', name: 'United States' },
+    contactPoint: {
+      '@type': 'ContactPoint',
+      contactType: 'customer support',
+      url: pageUrl(context, routes.helpContact()),
+      availableLanguage: ['English', 'Spanish'],
+    },
+    ...(profiles.length > 0 ? { sameAs: [...profiles] } : {}),
   };
 }
 
@@ -94,12 +114,32 @@ export function websiteNode(context: StructuredDataContext, description: string)
     '@type': 'WebSite',
     '@id': `${homeUrl(context)}/#website`,
     name: SITE_NAME,
-    // Google rarely shows a generic phrase as a site name; the domain, listed last, is its fallback (site names guide).
-    alternateName: ['Tasks Near Me', 'tasksnearme.com'],
+    // Google avoids generic site names; the domain is its fallback when it won't show the name (site names guide). The
+    // phrase "Tasks Near Me" is left out on purpose: it is the generic search, not another name for the site.
+    alternateName: ['tasksnearme.com'],
     url: homeUrl(context),
     description,
     inLanguage: APP_LOCALES.map((locale) => INTL_LOCALES[locale]),
     publisher: { '@id': `${homeUrl(context)}/#organization` },
+  };
+}
+
+/**
+ * The about page: a page about the organization, whose main subject is the organization node on the same page (and on
+ * the home page, by the same @id).
+ */
+export function aboutPageNode(context: StructuredDataContext, input: { name: string; description: string }): JsonLdNode {
+  const url = pageUrl(context, routes.about());
+  return {
+    '@type': 'AboutPage',
+    '@id': `${url}#webpage`,
+    url,
+    name: input.name,
+    description: input.description,
+    inLanguage: INTL_LOCALES[context.locale],
+    isPartOf: { '@id': `${homeUrl(context)}/#website` },
+    about: { '@id': `${homeUrl(context)}/#organization` },
+    mainEntity: { '@id': `${homeUrl(context)}/#organization` },
   };
 }
 

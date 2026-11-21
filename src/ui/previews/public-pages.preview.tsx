@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { CategoryPageData, PreviewEntry } from '@/contracts';
 import { routes } from '@/contracts';
 import { citiesPageData, floridaCitiesPageData } from '@/fixtures';
+import { AboutScreen } from '@/ui/screens/public/about-screen';
 import { CitiesScreen, StateCitiesScreen } from '@/ui/screens/public/cities-screen';
 import { becomeHelperNoRewardsData, becomeHelperPageData, categoryNoListingsData, categoryViews, cleaningPublicTask, furnitureCategoryPageData, furnitureCategoryWithSeoData, furnitureCostGuideData, movingCostGuideData, homePageData, lee, marketNoListingsData, movingCategoryPageData, movingCategoryWithSeoEmptyData, pricingPageData, publicViewer, remoteComputerPublicTask, sam, yardPublicTask } from '@/fixtures';
 import { PublicShell } from '@/ui/shells/public-shell';
@@ -38,4 +39,5 @@ export const publicPagePreviews: PreviewEntry[] = [
   page('screen-become-helper/no-rewards', copy.previews.noRewards, routes.becomeAHelper(), () => <BecomeHelperScreen data={becomeHelperNoRewardsData} />),
   page('screen-pricing/default', copy.previews.pricing, routes.pricing(), () => <PricingScreen data={pricingPageData} />),
   page('screen-trust-safety/default', copy.previews.trust, routes.trustAndSafety(), () => <TrustSafetyScreen />),
+  page('screen-about/default', copy.previews.about, routes.about(), () => <AboutScreen />),
 ];

@@ -78,7 +78,7 @@
   "footer": {
     "tagline": "Buenos vecinos. Listas de pendientes más ligeras.",
     "introduction": "Ayuda local para lo que hace un hogar, y un poco más de tiempo para ti.",
-    "signature": "TasksNearMe · Vecinos que ayudan a vecinos, abriendo ciudad por ciudad en todo EE. UU.",
+    "signature": "TasksNearMe · tasksnearme.com · Vecinos que ayudan a vecinos, abriendo ciudad por ciudad en todo EE. UU.",
     "payment": "Acuerden un precio. Reserva y paga a través de TasksNearMe.",
     "localHelp": "Ayuda de todos los días de personas verificadas cerca de ti.",
     "cities": "Ciudades",
@@ -100,6 +100,7 @@
     "resources": "Bueno saber",
     "legal": "Políticas y términos",
     "trust": "Confianza y seguridad",
+    "about": "Sobre nosotros",
     "help": "Ayuda",
     "language": "Idioma",
     "openTasks": "Tareas abiertas",

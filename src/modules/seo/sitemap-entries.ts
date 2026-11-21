@@ -3,6 +3,7 @@ import type { CategorySlug, ISODateTime, LegalDoc } from '@/contracts';
 import { routes } from '@/contracts';
 import { APP_LOCALES } from '@/contracts/locale';
 import { languageAlternatePaths, localizedPath, type Hreflang } from '@/shared/locale';
+import { taskListIndexable } from './indexable';
 
 /**
  * What /sitemap.xml lists (blueprint 02 §1.1, backlog B-023): every indexable public page, once per language, each
@@ -56,7 +57,7 @@ export function latestDate(dates: Iterable<ISODateTime | undefined>): ISODateTim
 
 /**
  * The pages, in the order the file lists them: the site's own pages, each market with its board and categories (each
- * category's page, cost guide and job hub),
+ * category's page, cost guide and job hub; the board and the hubs once they list an open task),
  * then, with `listings` (the `on` mode), helper profiles and tasks (newest first), so that a sitemap over the
  * URL limit drops the oldest tasks first. A market's pages (and the home page) change when its tasks do, so they
  * carry its newest task's date either way.
@@ -69,8 +70,10 @@ export function sitemapPages(data: SitemapData, options: { listings: boolean }):
     { path: routes.pricing() },
     { path: routes.becomeAHelper() },
     { path: routes.trustAndSafety() },
+    { path: routes.about() },
     { path: routes.help(), lastModified: latestDate(data.helpArticles.map((article) => article.updatedAt)) },
     ...data.helpArticles.map((article) => ({ path: routes.help(article.slug), lastModified: article.updatedAt })),
+    { path: routes.helpContact() },
     ...data.legalDocs.map((legal) => ({ path: routes.legal(legal.doc), lastModified: legal.updatedAt })),
     // Where we're open and going next (plan 8.7); empty state pages stay out (doorway rule).
     { path: routes.cities() },
@@ -79,17 +82,16 @@ export function sitemapPages(data: SitemapData, options: { listings: boolean }):
   const markets = data.markets.filter((market) => market.indexable);
   for (const market of markets) {
     const lastModified = newestTask.get(market.slug);
-    pages.push({ path: routes.market(market.slug), lastModified }, { path: routes.taskBoard(market.slug), lastModified });
+    pages.push({ path: routes.market(market.slug), lastModified });
+    // The board and each job hub only once they list an open task (src/modules/seo/indexable.ts).
+    if (taskListIndexable(market.tasks.length)) pages.push({ path: routes.taskBoard(market.slug), lastModified });
     for (const category of market.categorySlugs) {
       const inCategory = market.tasks.filter((task) => task.categorySlug === category).map((task) => task.updatedAt);
       const newest = latestDate(inCategory);
       // The category page, its cost guide (no date of its own: it follows the market's published policy), and its job
       // hub, the board on that category.
-      pages.push(
-        { path: routes.category(category, market.slug), lastModified: newest },
-        { path: routes.costGuide(category, market.slug) },
-        { path: routes.taskBoard(market.slug, { category }), lastModified: newest },
-      );
+      pages.push({ path: routes.category(category, market.slug), lastModified: newest }, { path: routes.costGuide(category, market.slug) });
+      if (taskListIndexable(inCategory.length)) pages.push({ path: routes.taskBoard(market.slug, { category }), lastModified: newest });
     }
   }
   if (!options.listings) return pages;

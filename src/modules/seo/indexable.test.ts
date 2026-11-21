@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { helperProfileIndexable, marketPagesIndexable } from './indexable';
+import { helperProfileIndexable, marketPagesIndexable, taskListIndexable } from './indexable';
 
 describe('marketPagesIndexable', () => {
   it('indexes the launch market from the start and any market once it is live', () => {
@@ -22,5 +22,13 @@ describe('helperProfileIndexable', () => {
   it('keeps an empty profile out', () => {
     expect(helperProfileIndexable({ completedCount: 0 })).toBe(false);
     expect(helperProfileIndexable({ completedCount: 0, rating: { count: 0 } })).toBe(false);
+  });
+});
+
+describe('taskListIndexable', () => {
+  it('indexes a board or job hub once it lists an open task, and keeps an empty one out', () => {
+    expect(taskListIndexable(0)).toBe(false);
+    expect(taskListIndexable(1)).toBe(true);
+    expect(taskListIndexable(4)).toBe(true);
   });
 });

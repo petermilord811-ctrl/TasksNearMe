@@ -33,6 +33,10 @@
       "title": "Confianza y seguridad",
       "description": "Qué significan nuestras insignias, cómo protegemos tu dirección y tu pago, y cómo reportar un problema."
     },
+    "about": {
+      "title": "Sobre TasksNearMe: ayuda de confianza para las tareas de todos los días",
+      "description": "TasksNearMe (tasksnearme.com) es donde reservas a un ayudante verificado de tu zona para las tareas de todos los días, con el precio acordado desde el principio. Abrimos ciudad por ciudad en EE. UU., empezando por Gainesville, FL."
+    },
     "signIn": {
       "title": "Inicia sesión o crea una cuenta",
       "description": "Inicia sesión en TasksNearMe con un código que te enviamos por correo. Sin contraseña."

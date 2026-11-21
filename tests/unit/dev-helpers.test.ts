@@ -49,12 +49,12 @@ describe('devHelpersOn', () => {
 describe('the e2e build serves this machine only', () => {
   it('answers not found to a page request from elsewhere, and serves this machine', async () => {
     const { page } = await load(true);
-    expect(page(outside).status).toBe(404);
-    expect(page(local).status).not.toBe(404);
+    expect((await page(outside)).status).toBe(404);
+    expect((await page(local)).status).not.toBe(404);
   });
 
   it('leaves the public pages of any other build open to everyone', async () => {
     const { page } = await load(false);
-    expect(page(outside).status).not.toBe(404);
+    expect((await page(outside)).status).not.toBe(404);
   });
 });
