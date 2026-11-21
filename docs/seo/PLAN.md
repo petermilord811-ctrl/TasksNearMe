@@ -483,6 +483,11 @@ loads 233 kB of gzipped JavaScript (445 before). Search Console still answers 40
 
 ## 11. Restart, 2026-11-20 (tasksnearme-7e)
 
+**Live since 2026-11-21:** Ship 44894587105 put e19dbdc, b071df3 and 72b0b16 on tasksnearme.com (bbb2978). Checked live:
+/dallas and the sample task pages answer 404; /about, /es/about and the move-out guide answer 200; /en/… is a 308; a Spanish
+browser gets a 307 to /es/…; the sitemap lists 68 pages; IndexNow accepted them. Waiting on the owner: the brand's
+profiles (§8.5) and Bing Webmaster Tools (§8.3), "later" (2026-11-21); Request indexing and Validate fix (§8.2).
+
 The owner's view that day: Search Console's "Why pages aren't indexed" read Not found (404) 2, Alternate page with
 proper canonical tag 1, Discovered – currently not indexed 31, Excluded by 'noindex' tag 830 (rising), Page with
 redirect 3, Blocked by robots.txt 1, Crawled – currently not indexed 11. And the bare brand search "tasksnearme" didn't
