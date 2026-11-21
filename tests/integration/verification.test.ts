@@ -166,12 +166,19 @@ describe('helper onboarding', () => {
   it('takes the services and the area before the headline, starting a draft profile (plan 9.11)', async () => {
     const first = 'usr_setup_first';
     await db.insert(users).values({ id: first, email: 'setup-first@example.test', name: 'Robin L.', firstName: 'Robin', lastName: 'Lane', homeMarketId: 'mkt_austin' });
+    const modeOf = async () => (await db.select({ mode: users.mode }).from(users).where(eq(users.id, first)))[0]?.mode;
+    expect(await modeOf()).toBe('poster');
     // No profile yet: the first part saved starts a draft one, invisible to clients.
     expect(await saveHelperServices(db, first, { services: [{ categorySlug: 'yard-cleanup', pricingType: 'fixed', fromPriceCents: 6000, description: '' }] }, now())).toEqual({ ok: true, code: 'saved' });
     const [draft] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, first));
     expect(draft).toMatchObject({ handle: 'robin-l', status: 'draft', headline: '', bio: '' });
+    // Starting setup is choosing to help (journeys on a phone, J-H3): helper mode, so Home leads with the setup. Switched
+    // back to getting help, the next part saved leaves it there.
+    expect(await modeOf()).toBe('helper');
+    await db.update(users).set({ mode: 'poster' }).where(eq(users.id, first));
     expect(await saveHelperArea(db, first, { areaId: 'area_mueller', serviceRadiusMiles: 5, remoteOk: false }, now())).toEqual({ ok: true, code: 'saved' });
 
+    expect(await modeOf()).toBe('poster');
     const page = await getOnboardingPageData(db, first, 'profile', now());
     const state = (step: string) => page?.progress.steps.find((entry) => entry.step === step)?.state;
     expect([state('services'), state('area'), state('profile')]).toEqual(['done', 'done', 'current']);

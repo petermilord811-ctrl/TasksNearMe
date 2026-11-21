@@ -2,7 +2,7 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ACTION_ERROR_CODES, BACKGROUND_CHECK_STATUSES, IDENTITY_FAILURE_REASONS, IDENTITY_STATUSES, PAYOUT_ACCOUNT_STATUSES, routes, type ActionResult, type HelperOnboardingHandlers, type VerificationSummary } from '@/contracts';
 import { fakeOnboardingHandlers, onboardingBackgroundNotStarted, onboardingDone, onboardingIdentityCaptureApproved, onboardingIdentityDoubleCheckReview, onboardingIdentityDuplicateHold, onboardingIdentityStep, onboardingPayoutStep } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
@@ -11,6 +11,7 @@ import { backgroundStatusTones, identityStatusTones, payoutStatusTones, Verifica
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
+beforeEach(() => { window.HTMLElement.prototype.scrollIntoView = vi.fn(); });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 /** The provider's check on its own (no capture of ours before it), with the Texas notice still to accept. */
@@ -46,14 +47,18 @@ describe('helper verification', () => {
   });
 
   it.each([
-    ['identity', 'Start ID check', providerOnly, verificationCopy.setup.biometric.required],
-    ['background', 'Start background check', onboardingBackgroundNotStarted.verification, verificationCopy.setup.disclosure.required],
-  ] as const)('asks for the %s consent before opening the provider', async (track, label, verification, required) => {
+    ['identity', 'Start ID check', providerOnly, verificationCopy.setup.biometric.required, verificationCopy.setup.biometric.checkbox],
+    ['background', 'Start background check', onboardingBackgroundNotStarted.verification, verificationCopy.setup.disclosure.required, verificationCopy.setup.disclosure.checkbox],
+  ] as const)('asks for the %s consent before opening the provider, focusing and showing its box', async (track, label, verification, required, box) => {
     const onStartIdentity = vi.fn(fakeOnboardingHandlers.onStartIdentity);
     const onStartBackgroundCheck = vi.fn(fakeOnboardingHandlers.onStartBackgroundCheck);
     show({ track, verification, handlers: { ...fakeOnboardingHandlers, onStartIdentity, onStartBackgroundCheck } });
     await userEvent.click(screen.getByRole('button', { name: label }));
     expect(screen.getByText(required)).toBeVisible();
+    // On a phone the button floats over the notice and the box is below the first screen (journeys on a phone, J-H5).
+    const checkbox = screen.getByRole('checkbox', { name: box });
+    expect(checkbox).toHaveFocus();
+    expect(vi.mocked(window.HTMLElement.prototype.scrollIntoView).mock.contexts).toContain(checkbox);
     expect(onStartIdentity).not.toHaveBeenCalled();
     expect(onStartBackgroundCheck).not.toHaveBeenCalled();
   });

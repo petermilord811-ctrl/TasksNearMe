@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState, type ReactNode } from 'react';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { BadgeCheck, CircleDollarSign, Clock, Lock, ShieldCheck, TriangleAlert } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -63,6 +63,7 @@ export function VerificationPanel({ track, verification, bookableCategories, fir
   const action = useFormAction(form, { initialResult });
   const [agreed, setAgreed] = useState(false);
   const [agreeError, setAgreeError] = useState(false);
+  const agreeBox = useRef<HTMLInputElement>(null);
   const Heading = headingLevel === 3 ? 'h3' : 'h2';
   const { identity, payout, background } = verification;
   const backgroundApproved = background.status === 'clear' || (background.status === 'consider' && background.adjudication === 'engaged');
@@ -117,8 +118,24 @@ export function VerificationPanel({ track, verification, bookableCategories, fir
   if (track === 'background' && background.requiredFor.length === 0) return null;
   const startsProvider = providerAction && (track === 'identity' ? identity.status !== 'processing' && !identity.nameCheck : track === 'background' ? background.canStart : false);
 
+  /**
+   * The box the start needs, focused and shown (journeys on a phone, J-H5): on a phone the start button floats over the
+   * notice and the box sits below the first screen, so its error appeared out of sight while focus stayed on the button.
+   */
+  function revealAgreement() {
+    const box = agreeBox.current;
+    if (!box) return;
+    box.focus({ preventScroll: true });
+    const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    box.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
+  }
+
   async function press(next: NonNullable<typeof providerAction>, starts: boolean) {
-    if (starts && needsAgreement && !agreed) { setAgreeError(true); return; }
+    if (starts && needsAgreement && !agreed) {
+      setAgreeError(true);
+      revealAgreement();
+      return;
+    }
     setAgreeError(false);
     await next.run();
   }
@@ -190,7 +207,7 @@ export function VerificationPanel({ track, verification, bookableCategories, fir
         <p className="font-medium">{t(track === 'identity' ? 'setup.biometric.title' : 'setup.disclosure.title')}</p>
         <p className="text-muted-foreground">{t(`${notice}.body`)}</p>
         <label className="flex min-h-11 cursor-pointer items-start gap-3">
-          <input type="checkbox" checked={agreed} onChange={(event) => { setAgreed(event.target.checked); setAgreeError(false); }} aria-invalid={agreeError || undefined} aria-describedby={agreeError ? `${id}-agree-error` : undefined} className={checkboxClass} />
+          <input ref={agreeBox} type="checkbox" checked={agreed} onChange={(event) => { setAgreed(event.target.checked); setAgreeError(false); }} aria-invalid={agreeError || undefined} aria-describedby={agreeError ? `${id}-agree-error` : undefined} className={checkboxClass} />
           <span>{t(`${notice}.checkbox`)}</span>
         </label>
       </div>

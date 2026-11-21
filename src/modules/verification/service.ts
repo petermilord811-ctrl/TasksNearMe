@@ -148,6 +148,10 @@ async function ensureDraftProfile(db: Db, userId: string): Promise<boolean> {
   const [user] = await db.select({ firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return false;
   await db.insert(helperProfiles).values({ userId, handle: await uniqueHandle(db, user.firstName, user.lastName), status: 'draft' }).onConflictDoNothing();
+  // Starting helper setup is choosing to help (journeys on a phone, J-H3): Home then leads with setup's next step and every
+  // page links back to it. Someone who came from Become a helper through sign-in stayed in client mode, so Home said
+  // "You're all caught up" halfway through their checks. Once, as the draft starts: the mode switch turns it back.
+  await db.update(users).set({ mode: 'helper' }).where(eq(users.id, userId));
   return true;
 }
 

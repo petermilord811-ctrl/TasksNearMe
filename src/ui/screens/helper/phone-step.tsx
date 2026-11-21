@@ -9,6 +9,7 @@ import { oneTimeCodeInputSchema, phoneInputSchema, type HelperOnboardingHandlers
 import { CodeFormField } from '@/ui/components/forms/code-input';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { TextFormField } from '@/ui/components/forms/text-form-field';
+import { formatUsPhone, normalizeUsPhone } from '@/shared/phone';
 import { useFormAction } from '@/ui/lib/use-form-action';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -80,7 +81,8 @@ function CodeForm({ sentTo, onVerify, onResend, onBack }: {
     await action.run(onVerify, { code: input.code });
   });
   return <form noValidate onSubmit={submit} aria-busy={pending} className="space-y-5">
-    <p className="leading-6">{t.rich('codeSent', { phone: sentTo, strong: (chunks) => <strong className="font-medium whitespace-nowrap tabular-nums">{chunks}</strong> })}</p>
+    {/* The number as people write it, however it was typed (journeys on a phone, J-H4: "3526131119"). */}
+    <p className="leading-6">{t.rich('codeSent', { phone: formatUsPhone(normalizeUsPhone(sentTo) ?? sentTo), strong: (chunks) => <strong className="font-medium whitespace-nowrap tabular-nums">{chunks}</strong> })}</p>
     <CodeFormField control={form.control} name="code" label={t('codeLabel')} hint={t('codeHint')} disabled={pending} autoFocus onComplete={() => { if (!pending) void submit(); }} />
     <FormFeedback result={action.result} successMessage={action.result?.ok && last === 'resend' ? t('newCodeSent') : action.result?.ok ? t('verifiedNow') : undefined} />
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
