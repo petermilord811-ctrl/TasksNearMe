@@ -39,6 +39,11 @@ export function ChangeReviewContent({ data, handlers, now, initialResult, initia
     : change.status === 'accepted_pending_funding' && booking.viewerRole === 'poster' && change.differenceCents !== undefined
       ? t('payToApply', { amount: formatMoney(change.differenceCents) })
       : t(`statuses.${change.status}`);
+  // Who has until the deadline, and to do what (journeys on a phone: the proposer read "Respond or finish payment by"
+  // as if it were theirs to do). The poster pays a change's difference.
+  const deadlineLabel = change.status === 'accepted_pending_funding'
+    ? booking.viewerRole === 'poster' ? t('expiresPay') : t('expiresPersonPay', { name: otherName })
+    : change.fromMe ? t('expiresPerson', { name: otherName }) : t('expiresYou');
 
   return <div className="mx-auto max-w-reading space-y-6">
     <Link href={routes.app.booking(booking.id)} className={backLink}>
@@ -48,7 +53,7 @@ export function ChangeReviewContent({ data, handlers, now, initialResult, initia
       <h1 className={cn(pageTitle, 'break-words')}>{t('title', { title: booking.title })}</h1>
       <StatusBadge tone={statusTones[change.status]} label={statusLabel} />
       <p className="text-sm text-muted-foreground">{t(change.status === 'applied' ? 'newTermsApply' : change.status === 'proposed' || change.status === 'accepted_pending_funding' ? 'currentTermsApply' : 'termsUnchanged')}</p>
-      {change.expiresAt && <Deadline at={change.expiresAt} now={now} label={t('expires')} tone="warning" />}
+      {change.expiresAt && <Deadline at={change.expiresAt} now={now} label={deadlineLabel} tone="warning" />}
     </header>
     <section aria-label={t('proposal')} className={cn(surface, surfacePad, 'space-y-3')}>
       <h2 className={sectionTitle}>{change.fromMe ? t('proposedBy.you') : t('proposedBy.person', { name: otherName })}</h2>

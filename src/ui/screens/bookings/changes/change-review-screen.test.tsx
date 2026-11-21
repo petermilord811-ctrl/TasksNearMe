@@ -44,6 +44,24 @@ describe('ChangeReviewScreen', () => {
     expect(screen.getByText(`Waiting for ${deskChairChangeProposerData.booking.helperDisplayName}`)).toBeVisible();
   });
 
+  it('says who has until the deadline, and to do what (journeys on a phone)', () => {
+    // The proposer waits on the other person.
+    mount(deskChairChangeProposerData);
+    expect(screen.getByText(`${deskChairChangeProposerData.booking.helperDisplayName} can respond until`)).toBeVisible();
+    expect(screen.queryByText('Respond by')).not.toBeInTheDocument();
+    cleanup();
+    // The person asked responds.
+    mount(movingCapChangeData);
+    expect(screen.getByText('Respond by')).toBeVisible();
+    cleanup();
+    // Accepted: the poster pays the difference, and the helper waits on them.
+    mount(deskChairChangePayData);
+    expect(screen.getByText('Finish payment by')).toBeVisible();
+    cleanup();
+    mount({ ...deskChairChangePayData, booking: { ...deskChairChangePayData.booking, viewerRole: 'helper' } });
+    expect(screen.getByText(`${deskChairChangePayData.booking.posterDisplayName} can finish payment until`)).toBeVisible();
+  });
+
   it('shows the supplied terms, marks changed lines, and renders only the received actions in order', () => {
     mount(deskChairChangeCounterpartyData);
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
