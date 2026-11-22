@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Check, ChevronRight, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useShownPerson } from '@/ui/lib/shown-person';
 import type { ISODateTime, ThreadSummary } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { formatHours, formatMoney } from '@/shared/format';
@@ -51,6 +52,8 @@ function LastMessage({ message }: { message: NonNullable<ThreadSummary['lastMess
 export function InboxList({ threads, now, currentId, variant = 'full' }: { threads: ThreadSummary[]; now: ISODateTime; currentId?: string; variant?: 'full' | 'pane' | 'split' }) {
   const t = useTranslations('inbox');
   const { formatDateTime, formatRelative } = useFormat();
+  // Someone whose account was deleted, in the page's own words (J-PR15).
+  const person = useShownPerson();
   const [filter, setFilter] = useState<InboxFilter>('all');
   const [query, setQuery] = useState('');
   const shown = useMemo(() => threads.filter((thread) => keepThread(thread, filter, query)), [threads, filter, query]);
@@ -83,6 +86,7 @@ export function InboxList({ threads, now, currentId, variant = 'full' }: { threa
         {shown.map((thread) => {
           const unread = thread.unreadCount > 0;
           const current = thread.id === currentId;
+          const other = person(thread.otherParty);
           return <li key={thread.id}>
             <Link href={routes.app.thread(thread.id)} aria-current={current ? 'page' : undefined} className={cn(
               'group flex min-w-0 gap-3 transition-colors duration-200 hover:bg-foreground/[0.03] focus-visible:relative focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring dark:hover:bg-white/[0.03]',
@@ -90,12 +94,12 @@ export function InboxList({ threads, now, currentId, variant = 'full' }: { threa
               current && 'bg-brand-soft/60 hover:bg-brand-soft/70',
             )}>
               <span className="relative shrink-0">
-                <InitialsAvatar initials={thread.otherParty.initials} photo={thread.otherParty.photo} size={variant === 'full' ? 'md' : 'sm'} />
+                <InitialsAvatar initials={other.initials} photo={other.photo} size={variant === 'full' ? 'md' : 'sm'} />
                 {unread && <span aria-hidden="true" className="absolute -top-0.5 -right-0.5 size-3 rounded-full bg-primary ring-2 ring-card" />}
               </span>
               <div className="min-w-0 flex-1 space-y-0.5">
                 <div className="flex min-w-0 items-center gap-2">
-                  <h2 className={cn('min-w-0 flex-1 truncate group-hover:text-primary', as({ full: 'text-base/6 sm:text-[17px]/6', pane: 'text-sm', split: 'text-base/6 sm:text-[17px]/6 lg:text-sm' }), unread ? 'font-bold' : 'font-semibold')}>{thread.otherParty.displayName}</h2>
+                  <h2 className={cn('min-w-0 flex-1 truncate group-hover:text-primary', as({ full: 'text-base/6 sm:text-[17px]/6', pane: 'text-sm', split: 'text-base/6 sm:text-[17px]/6 lg:text-sm' }), unread ? 'font-bold' : 'font-semibold')}>{other.displayName}</h2>
                   {unread && <span className="shrink-0 rounded-full bg-primary px-1.5 py-px text-xs font-semibold text-primary-foreground tabular-nums">{t('unread', { count: thread.unreadCount })}</span>}
                   {thread.lastMessage && <time dateTime={thread.lastMessage.createdAt} title={formatDateTime(thread.lastMessage.createdAt)} className="shrink-0 text-xs text-muted-foreground tabular-nums">
                     <span className="sr-only">{formatDateTime(thread.lastMessage.createdAt)} · </span>{formatRelative(thread.lastMessage.createdAt, now)}

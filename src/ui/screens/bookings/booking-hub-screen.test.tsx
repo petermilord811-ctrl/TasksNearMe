@@ -18,10 +18,11 @@ import {
   deskBookingPosterDisputed, deskBookingPosterSettled,
   deskBookingPosterWithOpenChange, deskBookingHelperWithOpenChange,
   deskBookingPosterTipAvailable, deskBookingPosterTipped, fakeBookingTipHandlers,
-  yardVisitScheduledHelper, yardVisitScheduledPoster,
+  yardVisitScheduledHelper, yardVisitScheduledPoster, deletedAccountShown,
 } from '@/fixtures';
 import { formatDate, formatDateTime, formatMoney, formatMonthYear, formatTime, formatTimeRange } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
+import esMessages from '../../../../messages/es/ui';
 import { BookingHubScreen } from './booking-hub-screen';
 import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 
@@ -463,4 +464,31 @@ it.each(PAYMENT_STATUSES)('labels payment status %s without raw codes', (status)
   const payments = screen.getByRole('region', { name: 'Payments' });
   expect(within(payments).getByText(messages.status.payment[status])).toBeVisible();
   expect(onError).not.toHaveBeenCalled();
+});
+
+describe('BookingHubScreen with a deleted account (J-PR15)', () => {
+  const inSpanish = (data: BookingView) => render(<NextIntlClientProvider locale="es" messages={esMessages}><TimeZoneProvider timeZone="America/Chicago">
+    <BookingHubScreen data={data} handlers={{ onAction: vi.fn() }} sheets={fakeBookingSheetHandlers} now="2026-11-17T15:02:00.000Z" />
+  </TimeZoneProvider></NextIntlClientProvider>);
+
+  it("names the client in the page's language, in the helper's view", () => {
+    const data: BookingView = { ...deskBookingHelperConfirmed, poster: { ...deskBookingHelperConfirmed.poster, ...deletedAccountShown } };
+    mount(data);
+    expect(screen.getByRole('heading', { level: 3, name: 'Deleted account' })).toBeInTheDocument();
+    cleanup();
+    inSpanish(data);
+    expect(screen.getByRole('heading', { level: 3, name: 'Cuenta eliminada' })).toBeInTheDocument();
+    expect(screen.getByText('CE')).toBeInTheDocument();
+    expect(screen.queryByText(/Deleted account/)).toBeNull();
+  });
+
+  it("names the helper in the page's language, in the client's view", () => {
+    const data: BookingView = { ...deskBookingPosterConfirmed, helper: { ...deskBookingPosterConfirmed.helper, ...deletedAccountShown } };
+    mount(data);
+    expect(screen.getByRole('heading', { level: 3, name: 'Deleted account' })).toBeInTheDocument();
+    cleanup();
+    inSpanish(data);
+    expect(screen.getByRole('heading', { level: 3, name: 'Cuenta eliminada' })).toBeInTheDocument();
+    expect(screen.queryByText(/Deleted account/)).toBeNull();
+  });
 });

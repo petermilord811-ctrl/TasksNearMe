@@ -277,7 +277,7 @@ export async function getHelperProfile(handle: string, database: Db = db, rows: 
       tags: review.tags.filter((tag): tag is HelperReviewTag => tagSet.has(tag)),
       // Public and indexed: contact details are masked, as in tasks, questions and posts (sweep RV5). Staff read it as written.
       ...(review.body ? { body: maskContactDetails(review.body).text } : {}),
-      author: (({ displayName, initials }) => ({ displayName, initials }))(shownPerson(author, reviewerDeletedLabel)),
+      author: shownPerson(author, reviewerDeletedLabel),
       categorySlug: categorySlug as CategorySlug,
       publishedAt: (review.publishedAt ?? review.createdAt).toISOString(),
     })),

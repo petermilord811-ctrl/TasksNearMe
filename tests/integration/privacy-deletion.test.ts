@@ -15,7 +15,8 @@ import { offers } from '@/modules/offers/schema';
 import { prepareDueExports, processDueDeletions, readReadyExport, requestAccountDeletion, requestDataExport } from '@/modules/privacy/requests';
 import { readZip } from '@/modules/privacy/zip';
 import { rebookProposals } from '@/modules/rebook/schema';
-import { getHelperSummaries } from '@/modules/profiles/queries';
+import { getHelperProfile, getHelperSummaries } from '@/modules/profiles/queries';
+import { reviews } from '@/modules/reviews/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { userBadges } from '@/modules/badges/schema';
 import { savedSearches } from '@/modules/searches/schema';
@@ -295,6 +296,15 @@ describe('the privacy rehearsal: a copy of the data, then deleting the account (
     expect((await getHelperSummaries([HELPER], db)).get(HELPER)).toMatchObject({ displayName: 'Deleted account', initials: 'DA', deleted: true });
     // Everyone else is as they were.
     expect((await clientSummary(db, 'usr_maya'))?.deleted).toBeUndefined();
+    // A review she wrote stays on the helper's profile, flagged, so the page names her in its own language (J-PR15 b):
+    // Chris's seeded review of Sam, lent to her for the check.
+    await db.update(reviews).set({ authorUserId: CLIENT }).where(eq(reviews.id, 'rev_seed_2'));
+    try {
+      const review = (await getHelperProfile('sam-k', db))?.reviews.find((row) => row.id === 'rev_seed_2');
+      expect(review?.author).toEqual({ displayName: 'Deleted account', initials: 'DA', deleted: true });
+    } finally {
+      await db.update(reviews).set({ authorUserId: 'usr_chris' }).where(eq(reviews.id, 'rev_seed_2'));
+    }
   });
 
   it('leaves her audit rows ids and what happened, not her contact details, and takes her waitlist entry (J-PR13)', async () => {

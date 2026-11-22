@@ -27,8 +27,8 @@ export interface PublicReviewView {
   rating: 1 | 2 | 3 | 4 | 5;
   tags: HelperReviewTag[];
   body?: string;
-  /** First name + last initial. */
-  author: { displayName: string; initials: string };
+  /** First name + last initial; `deleted`: the account is gone, and the page names it in its own words (J-PR15). */
+  author: { displayName: string; initials: string; deleted?: true };
   categorySlug: CategorySlug;
   publishedAt: ISODateTime;
 }

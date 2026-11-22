@@ -3,8 +3,9 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it } from 'vitest';
 import { routes, type HelperSummary } from '@/contracts';
-import { jordan, lee, sam } from '@/fixtures';
+import { deletedAccountShown, jordan, lee, sam } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
+import esMessages from '../../../../messages/es/ui';
 import helperCard from '../../../../messages/en/ui/helperCard.json';
 import { HelperCard } from './helper-card';
 
@@ -72,10 +73,17 @@ describe('HelperCard', () => {
     expect(screen.getByRole('button', { name: 'Ask Jordan T.' }).closest('article')).toBeInTheDocument();
   });
 
-  it("shows a deleted account's name without a link, since its profile is gone (J-PR15)", () => {
-    renderHelper({ ...jordan, displayName: 'Deleted account', initials: 'DA', deleted: true });
+  it("names a deleted account in the page's language, without a link, since its profile is gone (J-PR15)", () => {
+    renderHelper({ ...jordan, ...deletedAccountShown });
     expect(screen.getByRole('heading', { name: 'Deleted account' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Deleted account' })).toBeNull();
+    expect(screen.getByText('DA')).toBeInTheDocument();
+    cleanup();
+    render(<NextIntlClientProvider locale="es" messages={esMessages}><HelperCard helper={{ ...jordan, ...deletedAccountShown }} /></NextIntlClientProvider>);
+    expect(screen.getByRole('heading', { name: 'Cuenta eliminada' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Cuenta eliminada' })).toBeNull();
+    expect(screen.getByText('CE')).toBeInTheDocument();
+    expect(screen.queryByText('Deleted account')).toBeNull();
   });
 
   it('does not invent a response time or amount when optional data is absent', () => {

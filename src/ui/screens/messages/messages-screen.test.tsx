@@ -7,9 +7,11 @@ import { routes, type InboxPageData, type MessageView, type ThreadPageData, type
 import {
   blockedThreadPageData, closedThreadPageData, deskBookingThreadPageData, deskOfferThreadPageData, expiredOfferThreadPageData,
   fakeThreadHandlers, inboxEmptyData, maskedEmailMessage, mayaInboxPageData, taskCanceledOfferThreadPageData, taskCanceledThreadForHelperPageData,
+  deletedAccountShown,
 } from '@/fixtures';
 import { formatDate, formatRelative, formatTime } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
+import esMessages from '../../../../messages/es/ui';
 import { InboxScreen, ThreadScreen } from './index';
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
@@ -322,5 +324,19 @@ describe('ThreadScreen', () => {
     height = 1300;
     view.rerender(threadView({ ...next, messages: [...next.messages, { ...first, id: 'new-message-two' }] }));
     expect(log.scrollTop).toBeGreaterThanOrEqual(1000);
+  });
+});
+
+describe('a conversation with a deleted account (J-PR15)', () => {
+  it("names them in the header and on their messages in the page's language", () => {
+    const data: ThreadPageData = { ...deskOfferThreadPageData, thread: { ...deskOfferThreadPageData.thread, otherParty: { ...deskOfferThreadPageData.thread.otherParty, ...deletedAccountShown } } };
+    render(threadView(data));
+    expect(screen.getAllByText('Deleted account').length).toBeGreaterThan(0);
+    expect(screen.getByText('Messages with Deleted account')).toBeInTheDocument();
+    cleanup();
+    render(<NextIntlClientProvider locale="es" messages={esMessages}><ThreadScreen data={data} handlers={fakeThreadHandlers} now={now} /></NextIntlClientProvider>);
+    expect(screen.getByText('Mensajes con Cuenta eliminada')).toBeInTheDocument();
+    expect(screen.getByText('CE')).toBeInTheDocument();
+    expect(screen.queryByText(/Deleted account/)).toBeNull();
   });
 });

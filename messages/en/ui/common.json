@@ -13,6 +13,7 @@
   "pagination": "Pagination",
   "breadcrumb": "Breadcrumb",
   "loading": "Loading",
+  "deletedAccount": "Deleted account",
   "searchCommands": "Search commands",
   "commandTitle": "Command menu",
   "commandDescription": "Search for a command to run.",

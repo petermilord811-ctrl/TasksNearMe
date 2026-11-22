@@ -3,8 +3,9 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it } from 'vitest';
 import { HELPER_REVIEW_TAGS, routes, type PublicReviewView } from '@/contracts';
-import { samProfilePageData } from '@/fixtures';
+import { deletedAccountShown, samProfilePageData } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
+import esMessages from '../../../../messages/es/ui';
 import reviews from '../../../../messages/en/ui/reviews.json';
 import { ReviewCard } from './review-card';
 
@@ -50,5 +51,20 @@ describe('ReviewCard', () => {
     cleanup();
     renderReview(review, routes.app.report('review', review.id));
     expect(screen.getByRole('link', { name: `Report this review by ${review.author.displayName}` })).toHaveAttribute('href', routes.app.report('review', review.id));
+  });
+});
+
+describe('a reviewer whose account was deleted (J-PR15)', () => {
+  it("is named in the page's language, with its initials", () => {
+    const review: PublicReviewView = { ...samProfilePageData.reviews[0]!, author: deletedAccountShown };
+    renderReview(review);
+    expect(screen.getByRole('article', { name: 'Review by Deleted account' })).toBeInTheDocument();
+    expect(screen.getByText('DA')).toBeInTheDocument();
+    cleanup();
+    render(<NextIntlClientProvider locale="es" messages={esMessages}><ReviewCard review={review} reportHref={routes.app.report('review', review.id)} /></NextIntlClientProvider>);
+    expect(screen.getByRole('article', { name: 'Reseña de Cuenta eliminada' })).toBeInTheDocument();
+    expect(screen.getByText('Cuenta eliminada')).toBeInTheDocument();
+    expect(screen.getByText('CE')).toBeInTheDocument();
+    expect(screen.queryByText(/Deleted account/)).toBeNull();
   });
 });

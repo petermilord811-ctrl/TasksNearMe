@@ -16,6 +16,7 @@ import { GeneralArea } from '@/ui/components/location/general-area';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { PaymentMethodLabel } from '@/ui/components/payments';
 import { HelperCard } from '@/ui/components/people/helper-card';
+import { useShownPerson } from '@/ui/lib/shown-person';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { RatingStars } from '@/ui/components/people/rating-stars';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
@@ -60,14 +61,15 @@ const stateTones: Record<BadgeTone, string> = {
 function BookingState({ data, now, tone }: { data: BookingView; now: ISODateTime; tone: BadgeTone }) {
   const { formatDate, formatDateTime, formatRelative, formatTime, dayKey } = useFormat();
   const t = useTranslations('bookingHub');
+  const shown = useShownPerson();
   const role = data.viewerRole;
   const fundingDeadline = data.deadlines.pendingFundingExpiresAt;
   const approvalDeadline = data.deadlines.approvalDueAt;
   const stateTime = data.status === 'pending_funding' ? fundingDeadline
     : data.status === 'in_progress' ? data.checkIn?.arrivedAt : data.terms.start;
   const params = {
-    name: data.poster.displayName,
-    helper: data.helper.displayName,
+    name: shown(data.poster).displayName,
+    helper: shown(data.helper).displayName,
     date: formatDate(data.terms.start),
     time: stateTime ? formatTime(stateTime) : '',
     // "Started at 1:55 am" today; with the day when it was another day (audit L32).
@@ -126,6 +128,9 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
 }) {
   const { formatDate, formatDateTime, formatMonthYear, formatTime, formatTimeRange } = useFormat();
   const t = useTranslations('bookingHub');
+  // The other person in the page's own words when their account was deleted (J-PR15).
+  const shown = useShownPerson();
+  const [poster, helper] = [shown(data.poster), shown(data.helper)];
   const sheetCopy = useTranslations('bookingSheets');
   const completionCopy = useTranslations('completion');
   const categories = useTranslations('helperCard.categories');
@@ -149,9 +154,9 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
     {openChange && <section aria-label={t('change.title')} className={cn(surface, surfacePad, 'space-y-2 border-info/30 dark:border-info/35')}>
       <h2 className={sectionTitle}>{t('change.title')}</h2>
       <p className="tabular-nums">{openChange.status === 'proposed'
-        ? t(openChange.fromMe ? 'change.proposedByYou' : 'change.proposedByOther', { name: data.viewerRole === 'poster' ? data.helper.displayName : data.poster.displayName })
+        ? t(openChange.fromMe ? 'change.proposedByYou' : 'change.proposedByOther', { name: data.viewerRole === 'poster' ? helper.displayName : poster.displayName })
         : data.viewerRole === 'helper'
-          ? t('change.waitingForPayment', { name: data.poster.displayName })
+          ? t('change.waitingForPayment', { name: poster.displayName })
           : openChange.differenceCents !== undefined
             ? t('change.payDifference', { amount: formatMoney(openChange.differenceCents) })
             : t('change.finishPayment')}</p>
@@ -175,9 +180,9 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
         : t('review.hidden')}</p>
     </section>}
 
-    {data.theirReview && <section aria-label={t('review.theirsTitle', { name: (data.viewerRole === 'poster' ? data.helper : data.poster).displayName })} className={cn(surface, surfacePad, 'space-y-3')}>
-      <h2 className={sectionTitle}>{t('review.theirsTitle', { name: (data.viewerRole === 'poster' ? data.helper : data.poster).displayName })}</h2>
-      <p className="font-medium tabular-nums">{t('review.theirsRating', { name: (data.viewerRole === 'poster' ? data.helper : data.poster).displayName, rating: data.theirReview.rating })}</p>
+    {data.theirReview && <section aria-label={t('review.theirsTitle', { name: (data.viewerRole === 'poster' ? helper : poster).displayName })} className={cn(surface, surfacePad, 'space-y-3')}>
+      <h2 className={sectionTitle}>{t('review.theirsTitle', { name: (data.viewerRole === 'poster' ? helper : poster).displayName })}</h2>
+      <p className="font-medium tabular-nums">{t('review.theirsRating', { name: (data.viewerRole === 'poster' ? helper : poster).displayName, rating: data.theirReview.rating })}</p>
       <RatingStars rating={{ average: data.theirReview.rating, count: 1 }} single />
       <Link href={routes.app.bookingReview(data.id)} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('review.read')}</Link>
     </section>}
@@ -191,9 +196,9 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
       <h2 className={sectionTitle}>{t(data.viewerRole === 'poster' ? 'helper' : 'client')}</h2>
       {data.viewerRole === 'poster' ? <HelperCard helper={data.helper} variant="compact" /> : <div className={cn(surface, surfacePad, 'space-y-4')}>
         <div className="flex items-center gap-3">
-          <InitialsAvatar initials={data.poster.initials} photo={data.poster.photo} />
+          <InitialsAvatar initials={poster.initials} photo={data.poster.photo} />
           <div className="min-w-0 space-y-1">
-            <h3 className="break-words font-heading text-[17px]/6 font-semibold">{data.poster.displayName}</h3>
+            <h3 className="break-words font-heading text-[17px]/6 font-semibold">{poster.displayName}</h3>
             <p className="text-sm text-muted-foreground">{t('memberSince', { date: formatMonthYear(data.poster.memberSince) })}</p>
           </div>
         </div>

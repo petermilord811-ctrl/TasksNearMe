@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { ComponentProps, ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUpRight, LockKeyhole } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useShownPerson } from '@/ui/lib/shown-person';
 import { routes, type ISODateTime, type ReportHandlers, type ReportSubject, type ThreadHandlers, type ThreadPageData, type ThreadSubject, type ThreadSummary } from '@/contracts';
 import { InboxList } from '@/ui/components/messaging/inbox-list';
 import { cn } from '@/ui/lib/utils';
@@ -65,9 +66,11 @@ export function ThreadContent({ data, handlers, now, safety, composerState, wide
 }) {
   const t = useTranslations('thread');
   const { thread, messages, composer } = data;
+  // The other person in the page's own words when their account was deleted (J-PR15).
+  const other = useShownPerson()(thread.otherParty);
   const closedReason = composer.disabledReason === 'closed' ? composer.closedReason : undefined;
   const subjectLink = subjectHref(thread.subject);
-  const firstName = thread.otherParty.displayName.split(' ')[0] ?? thread.otherParty.displayName;
+  const firstName = other.deleted ? other.displayName : (other.displayName.split(' ')[0] ?? other.displayName);
   // A direct conversation with a bookable helper: "Send a task request" (a funded direct invite) beside the chat.
   const requestHandle = thread.subject.kind === 'person' && thread.subject.canRequest ? thread.subject.helperHandle : undefined;
 
@@ -76,12 +79,12 @@ export function ThreadContent({ data, handlers, now, safety, composerState, wide
   return <div className={cn('mx-auto flex w-full flex-col gap-3', wide ? 'max-w-reading lg:max-w-none' : 'max-w-reading')}>
     <header className="flex min-w-0 items-center gap-2 sm:gap-3">
       <Link href={routes.app.messages()} aria-label={t('back')} title={t('back')} className={buttonVariants({ variant: 'ghost', size: 'icon', className: cn('-ml-2 size-11 shrink-0 rounded-full', wide && 'lg:hidden') })}><ArrowLeft aria-hidden="true" className="size-5" /></Link>
-      <InitialsAvatar initials={thread.otherParty.initials} photo={thread.otherParty.photo} />
+      <InitialsAvatar initials={other.initials} photo={other.photo} />
       <div className="min-w-0 flex-1">
         {/* The name alone on phones, so it fits; "Messages with …" for screen readers and from 640 px. */}
         <h1 className="truncate font-display text-lg leading-tight font-semibold tracking-[-0.02em] sm:text-2xl">
-          <span aria-hidden="true" className="sm:hidden">{thread.otherParty.displayName}</span>
-          <span className="max-sm:sr-only">{t('title', { name: thread.otherParty.displayName })}</span>
+          <span aria-hidden="true" className="sm:hidden">{other.displayName}</span>
+          <span className="max-sm:sr-only">{t('title', { name: other.displayName })}</span>
         </h1>
         <div className="flex min-w-0 items-center gap-x-2 text-xs text-muted-foreground sm:text-sm">
           <ThreadPresence threadId={thread.id} presence={data.presence} className="shrink-0 text-xs sm:text-sm" />
@@ -100,13 +103,13 @@ export function ThreadContent({ data, handlers, now, safety, composerState, wide
     </p>}
     <div className={cn('flex flex-col overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06]', thread.contactMasking ? 'h-[max(24rem,calc(100dvh-var(--app-header-offset,4.25rem)-13rem))]' : 'h-[max(24rem,calc(100dvh-var(--app-header-offset,4.25rem)-9rem))]', 'lg:h-[max(32rem,calc(100dvh-var(--app-header-offset,4.25rem)-10rem))]')}>
       <ReplyProvider>
-      <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier) } : {})} otherParty={thread.otherParty} now={now} seenMessageId={data.seenMessageId} firstUnreadId={data.firstUnreadId} canReply={composer.canSend} {...(composer.canSend && handlers.onReact ? { onReact: handlers.onReact } : {})} className="min-h-0 flex-1" />
+      <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier) } : {})} otherParty={other} now={now} seenMessageId={data.seenMessageId} firstUnreadId={data.firstUnreadId} canReply={composer.canSend} {...(composer.canSend && handlers.onReact ? { onReact: handlers.onReact } : {})} className="min-h-0 flex-1" />
       {composer.canSend && composer.firstMessagesLeft !== undefined && <p role="note" className="border-t border-foreground/[0.07] bg-muted/40 px-4 py-2 text-xs text-muted-foreground dark:border-white/[0.06]">{t('direct.firstMessagesLeft', { count: composer.firstMessagesLeft, name: firstName })}</p>}
       {composer.canSend
-        ? <MessageComposerContent key={`composer-${thread.id}`} rules={composer} handlers={handlers} savedReplies={data.savedReplies} template={{ firstName: thread.otherParty.displayName.split(' ')[0] ?? '', task: thread.title }} {...composerState} />
+        ? <MessageComposerContent key={`composer-${thread.id}`} rules={composer} handlers={handlers} savedReplies={data.savedReplies} template={{ firstName, task: thread.title }} {...composerState} />
         : <div role="status" className="border-t border-foreground/[0.07] bg-muted/60 px-4 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] text-center text-sm dark:border-white/[0.06]">
           {/* Why it closed and the way on (audit L13): the offer, the task, the booking or the visits it was about. */}
-          <p className="font-medium">{closedReason ? t(`closed.${thread.subject.kind}.${closedReason}`, { name: thread.otherParty.displayName }) : t(`disabled.${composer.disabledReason ?? 'unavailable'}`, { name: firstName })}</p>
+          <p className="font-medium">{closedReason ? t(`closed.${thread.subject.kind}.${closedReason}`, { name: other.displayName }) : t(`disabled.${composer.disabledReason ?? 'unavailable'}`, { name: firstName })}</p>
           {closedReason && subjectLink && <Link href={subjectLink} className="group/way mt-1 inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary underline-offset-4 hover:underline">{t(`wayOn.${thread.subject.kind}`)}<ArrowRight aria-hidden="true" className="size-4 transition-transform duration-200 group-hover/way:translate-x-0.5 motion-reduce:transition-none" /></Link>}
         </div>}
       </ReplyProvider>

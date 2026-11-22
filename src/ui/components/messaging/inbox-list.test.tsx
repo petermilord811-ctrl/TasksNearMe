@@ -5,8 +5,9 @@ import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ThreadSummary } from '@/contracts';
 import { routes } from '@/contracts/routes';
-import { deskOfferThreadPageData, mayaInboxPageData } from '@/fixtures';
+import { deletedAccountShown, deskOfferThreadPageData, mayaInboxPageData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
+import esMessages from '../../../../messages/es/ui';
 import { MessageLog } from '@/ui/screens/messages/message-log';
 import { InboxList, keepThread } from './inbox-list';
 
@@ -57,5 +58,17 @@ describe('MessageLog', () => {
     // Two messages from the same person a minute apart: the second one's name is for screen readers only.
     const names = screen.getAllByText(data.thread.otherParty.displayName, { selector: 'p' });
     expect(names.filter((name) => name.className.includes('sr-only')).length).toBeGreaterThan(0);
+  });
+});
+
+describe('a conversation with a deleted account (J-PR15)', () => {
+  it("names them in the page's language", () => {
+    const gone: ThreadSummary = { ...booking, otherParty: { ...booking.otherParty, ...deletedAccountShown } };
+    wrap(<InboxList threads={[gone]} now={now} />);
+    expect(screen.getByRole('heading', { name: 'Deleted account' })).toBeInTheDocument();
+    cleanup();
+    render(<NextIntlClientProvider locale="es" timeZone="America/Chicago" messages={esMessages}><InboxList threads={[gone]} now={now} /></NextIntlClientProvider>);
+    expect(screen.getByRole('heading', { name: 'Cuenta eliminada' })).toBeInTheDocument();
+    expect(screen.queryByText('Deleted account')).toBeNull();
   });
 });

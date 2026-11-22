@@ -116,3 +116,6 @@ export const priya: HelperSummary = {
   completedCount: 0,
   services: [],
 };
+
+/** How the server sends an account that was deleted (privacy rehearsal J-PR15): English words, and `deleted`. */
+export const deletedAccountShown = { displayName: 'Deleted account', initials: 'DA', deleted: true } as const;

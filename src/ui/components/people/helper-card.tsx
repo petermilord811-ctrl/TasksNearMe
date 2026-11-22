@@ -6,6 +6,7 @@ import type { HelperSummary } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { formatHours, formatMoney } from '@/shared/format';
 import { cn } from '@/ui/lib/utils';
+import { useShownPerson } from '@/ui/lib/shown-person';
 import { InitialsAvatar } from './initials-avatar';
 import { RatingStars } from './rating-stars';
 import { ReliableBadge } from './reliable-badge';
@@ -20,8 +21,10 @@ export interface HelperCardProps {
   footer?: ReactNode;
 }
 
-export function HelperCard({ helper, variant = 'full', footer }: HelperCardProps) {
+export function HelperCard({ helper: given, variant = 'full', footer }: HelperCardProps) {
   const t = useTranslations('helperCard');
+  // A deleted account in the page's own words (J-PR15).
+  const helper = useShownPerson()(given);
   // The numbered "Founding helper #63" line says it already; the same badge among the top three would repeat it (audit L14).
   const topBadges = helper.foundingHelperNumber !== undefined ? helper.topBadges?.filter((badge) => badge.code !== 'founding_helper') : helper.topBadges;
 
