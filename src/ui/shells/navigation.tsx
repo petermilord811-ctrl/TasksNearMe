@@ -55,7 +55,7 @@ export function Navigation({ items, label, currentPath, variant = 'sidebar', nei
               <Icon aria-hidden="true" className={cn('shrink-0 text-muted-foreground transition-[color,translate] duration-300 ease-[var(--ease-out)] group-hover/item:text-foreground group-aria-[current=page]/item:text-primary', bottom ? 'size-[1.375rem] group-aria-[current=page]/item:-translate-y-px' : 'size-5')} />
               <span className={cn('break-words', bottom && 'max-w-full text-center')}>{name}</span>
               {item.id === 'community' && neighborsNews && <NeighborsDot latestAt={neighborsNews.latestAt} visitKey={neighborsNews.visitKey} bottom={bottom} />}
-              {count > 0 && <span aria-hidden="true" className={cn('rounded-full bg-primary text-center font-semibold text-primary-foreground tabular-nums', bottom ? 'absolute top-1 left-[calc(50%+0.3rem)] min-w-4 px-1 text-[10px] leading-4 ring-2 ring-background' : 'ml-auto min-w-6 px-1.5 text-xs leading-5')}>{count}</span>}
+              {count > 0 && <span aria-hidden="true" className={cn('rounded-full bg-primary text-center font-semibold text-primary-foreground tabular-nums', bottom ? 'absolute top-1 left-[calc(50%+0.3rem)] min-w-4 px-1 text-[10px] leading-4 ring-2 ring-secondary' : 'ml-auto min-w-6 px-1.5 text-xs leading-5')}>{count}</span>}
               {/* The count as words for screen readers ("Live chat, 2 waiting"), part of the link's own text. */}
               {count > 0 && <span className="sr-only">{t('navCount', { count })}</span>}
             </NavLink>

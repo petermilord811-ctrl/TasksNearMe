@@ -11,7 +11,7 @@ const RAIL_ROWS = ['w-20', 'w-24', 'w-16', 'w-20', null, 'w-24', 'w-24', 'w-28']
 /** The phone's tab dock as MobileBottomNav draws it (shapes, no links). */
 const dock = (
         <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-2.5 pb-[max(.625rem,env(safe-area-inset-bottom))] lg:hidden">
-          <div className="app-glass mx-auto grid max-w-md grid-cols-4 gap-1 rounded-[1.75rem] border border-foreground/[0.07] p-1.5 shadow-[0_1px_2px_rgb(23_18_14/0.05),0_18px_40px_-18px_rgb(40_20_5/0.45)] dark:border-white/[0.08] dark:shadow-[0_18px_40px_-16px_rgb(0_0_0/0.8)]">
+          <div className="mx-auto grid max-w-md grid-cols-4 gap-1 rounded-[1.75rem] border border-primary/[0.16] bg-secondary p-1.5 shadow-[0_1px_2px_rgb(23_18_14/0.05),0_18px_40px_-18px_rgb(40_20_5/0.45)] dark:border-white/[0.08] dark:shadow-[0_18px_40px_-16px_rgb(0_0_0/0.8)]">
             {Array.from({ length: 4 }, (_, index) => (
               <div key={index} className="flex min-h-14 flex-col items-center justify-center gap-1.5"><Skeleton className="size-5 rounded-md" /><Skeleton className="h-2.5 w-10" /></div>
             ))}
