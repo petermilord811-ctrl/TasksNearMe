@@ -56,9 +56,10 @@ export function getPublicNav(): NavItem[] {
 /**
  * The signed-in navigation (completion plan 9.14; before and after in docs/ui/dashboard-9.9.md §7). Presentation of
  * the supplied mode, not an access check.
- * - `primary`: five places for every day, on the rail and the phone dock. A client's: Home, Neighbors (plan 9.10's
- *   portal, where neighbors' asks and open tasks meet; one name everywhere, audit L15), Tasks, Bookings, Messages. A
- *   helper's: Home, Find work, Neighbors, Bookings, Messages (docs/ui/portal-9.10.md §10).
+ * - `primary`: four places for every day, on the rail and the phone dock. A client's: Home, Neighbors (plan 9.10's
+ *   portal, where neighbors' asks and open tasks meet; one name everywhere, audit L15), Tasks, Bookings. A helper's:
+ *   Home, Find work, Neighbors, Bookings (docs/ui/portal-9.10.md §10). Messages left them on 2026-11-22: it's the
+ *   round chat button at the bottom right of every page (the owner: "Reddit similar chat"), its one place on screen.
  * - `secondary`: the mode's tools, on the rail under the line (wide screens) and in the avatar menu below that width.
  * - `account`: the account's pages, in the avatar menu at every width.
  * Each destination has one place on a screen.
@@ -66,7 +67,7 @@ export function getPublicNav(): NavItem[] {
 export function getAppNav(mode: Mode): { primary: NavItem[]; secondary: NavItem[]; account: NavItem[] } {
   const home: NavItem = { id: 'home', href: routes.app.home(), exact: true };
   const neighbors: NavItem = { id: 'community', href: routes.app.community() };
-  const last: NavItem[] = [{ id: 'bookings', href: routes.app.bookings() }, { id: 'messages', href: routes.app.messages() }];
+  const last: NavItem[] = [{ id: 'bookings', href: routes.app.bookings() }];
   // The plans and Sparks sit with the account's pages (2026-11-21: "make plan subscription feature asap").
   const account: NavItem[] = [
     { id: 'account', href: routes.app.account() },

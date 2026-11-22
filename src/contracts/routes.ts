@@ -214,6 +214,8 @@ export const routes = {
     newMessage: (to: { userId: string } | { helper: string }) => withQuery('/app/messages/new', 'helper' in to ? { helper: to.helper } : { to: to.userId }),
     /** A conversation; `from` (its `earlier`): from that message on, after "Load earlier messages" (sweep MN11). */
     thread: (threadId: string, page: { from?: string } = {}) => withQuery(`/app/messages/${enc(threadId)}`, { from: page.from }),
+    /** The Help conversation (2026-11-22): the AI assistant, and support's replies once the person asks for a person. */
+    helpChat: () => '/app/messages/help',
     /**
      * The neighborhood portal (plan 9.10): posts and tasks near you, as a Feed or a List, over one set of filters.
      * Defaults (near you, everything, any time, `hot`, the Feed, by neighborhood, page 1) are left out, in a fixed

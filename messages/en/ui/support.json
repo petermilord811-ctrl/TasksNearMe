@@ -1,6 +1,9 @@
 {
   "title": "Support",
   "intro": "Follow your cases or send a new request to support.",
+  "assistantTitle": "Get an answer now",
+  "assistantBody": "TasksNearMe Help answers right away from the help center, and gets you a person from our team when you need one.",
+  "assistantLink": "Ask TasksNearMe Help",
   "cases": "Your cases",
   "kinds": { "dispute": "Problem report", "safety": "Safety report", "report": "Report", "request": "Request" },
   "updated": "Updated {relative}",

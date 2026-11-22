@@ -7,12 +7,16 @@ import { getAdminNav, getAppNav, getPublicNav, isNavItemActive, type NavItem } f
 const ids = (items: NavItem[]) => items.map((item) => item.id);
 
 describe('app navigation (completion plan 9.14)', () => {
-  it('keeps five everyday places, the Neighborhood among them (docs/ui/portal-9.10.md §10)', () => {
+  it('keeps four everyday places, the Neighborhood among them (docs/ui/portal-9.10.md §10); Messages is the chat button (2026-11-22)', () => {
     const poster = getAppNav(mayaShell.mode);
     const helper = getAppNav(jordanShell.mode);
-    expect(ids(poster.primary)).toEqual(['home', 'community', 'tasks', 'bookings', 'messages']);
-    expect(ids(helper.primary)).toEqual(['home', 'findWork', 'community', 'bookings', 'messages']);
-    expect(poster.primary.map((item) => item.href)).toEqual([routes.app.home(), routes.app.community(), routes.app.tasks(), routes.app.bookings(), routes.app.messages()]);
+    expect(ids(poster.primary)).toEqual(['home', 'community', 'tasks', 'bookings']);
+    expect(ids(helper.primary)).toEqual(['home', 'findWork', 'community', 'bookings']);
+    expect(poster.primary.map((item) => item.href)).toEqual([routes.app.home(), routes.app.community(), routes.app.tasks(), routes.app.bookings()]);
+    for (const mode of ['poster', 'helper'] as const) {
+      const { primary, secondary, account } = getAppNav(mode);
+      expect([...primary, ...secondary, ...account].some((item) => item.id === 'messages')).toBe(false);
+    }
     expect(helper.primary[1]!.href).toBe(routes.app.findWork());
   });
 

@@ -26,6 +26,7 @@ export * from './home';
 export * from './reviews';
 export * from './account';
 export * from './support';
+export * from './assistant';
 export * from './community';
 export * from './portal';
 export * from './questions';

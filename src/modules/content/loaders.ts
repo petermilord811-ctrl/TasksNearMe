@@ -125,6 +125,40 @@ export function listHelpArticleDates(): { slug: string; updatedAt: ISODateTime }
   return readHelpArticles().map(({ slug, updatedAt }) => ({ slug, updatedAt }));
 }
 
+/** A help article as plain text, for the support assistant's prompt (2026-11-22). */
+export interface HelpArticleText {
+  slug: string;
+  title: string;
+  summary: string;
+  topic: string;
+  text: string;
+}
+
+/** Markdown to plain lines: headings, emphasis, callout markers and link targets out; list items stay "- …". */
+export function helpMarkdownToText(markdown: string): string {
+  return markdown
+    .split('\n')
+    .map((line) =>
+      line
+        .replace(/^>\s*\[![a-z]+\]\s*/i, '')
+        .replace(/^>\s?/, '')
+        .replace(/^#{1,6}\s+/, '')
+        .replace(/^\s*\d+\.\s+/, '- ')
+        .replace(/^\s*[*+]\s+/, '- ')
+        .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+        .replace(/(\*\*|__|\*|_|`)/g, '')
+        .trimEnd(),
+    )
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/** Every help article in `locale` (English where a translation is missing), as plain text, in the help center's order. */
+export function listHelpArticleTexts(locale: AppLocale = DEFAULT_LOCALE): HelpArticleText[] {
+  return readHelpArticles(locale).map(({ slug, title, summary, topic, body }) => ({ slug, title, summary, topic, text: helpMarkdownToText(body) }));
+}
+
 export function getHelpArticle(slug: string, locale: AppLocale = DEFAULT_LOCALE): HelpArticleData | null {
   if (!SLUG.test(slug)) return null;
   const articles = readHelpArticles(locale);

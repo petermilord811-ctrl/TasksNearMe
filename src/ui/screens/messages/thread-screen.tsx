@@ -3,7 +3,8 @@ import type { ComponentProps, ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, ArrowUpRight, LockKeyhole } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useShownPerson } from '@/ui/lib/shown-person';
-import { routes, type ISODateTime, type ReportHandlers, type ReportSubject, type ThreadHandlers, type ThreadPageData, type ThreadSubject, type ThreadSummary } from '@/contracts';
+import { routes, type HelpSummary, type ISODateTime, type ReportHandlers, type ReportSubject, type ThreadHandlers, type ThreadPageData, type ThreadSubject, type ThreadSummary } from '@/contracts';
+import { HelpRow } from '@/ui/components/messaging/help-row';
 import { InboxList } from '@/ui/components/messaging/inbox-list';
 import { cn } from '@/ui/lib/utils';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
@@ -24,7 +25,7 @@ export interface ThreadScreenProps {
 }
 
 /** Where the conversation's subject lives; a direct conversation with someone who isn't a helper has none. */
-function subjectHref(subject: ThreadSubject): string | undefined {
+export function subjectHref(subject: ThreadSubject): string | undefined {
   switch (subject.kind) {
     case 'offer_for_client': return routes.app.offer(subject.taskId, subject.offerId);
     case 'task_for_helper': return routes.app.findWorkTask(subject.taskId);
@@ -43,11 +44,11 @@ export function ThreadScreen({ data, handlers, now, safety, inbox }: ThreadScree
  * Wide screens: the conversations beside the open one, like a mail or chat app; phones keep one pane at a time. The
  * page renders the list apart from the conversation, so opening one keeps the list on screen while it loads.
  */
-export function ThreadPanes({ inbox, currentId, now, children }: { inbox: ThreadSummary[]; currentId: string; now: ISODateTime; children: ReactNode }) {
+export function ThreadPanes({ inbox, currentId, now, help, children }: { inbox: ThreadSummary[]; currentId: string; now: ISODateTime; /** TasksNearMe Help, pinned on top (2026-11-22). */ help?: HelpSummary; children: ReactNode }) {
   const inboxCopy = useTranslations('inbox');
   return <div className="lg:grid lg:grid-cols-[21rem_minmax(0,1fr)] lg:items-start lg:gap-5">
     <aside aria-label={inboxCopy('title')} className="hidden overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card lg:sticky lg:top-24 lg:flex lg:h-[calc(100dvh-8rem)] lg:flex-col dark:border-white/[0.06]">
-      <InboxList threads={inbox} now={now} currentId={currentId} variant="pane" />
+      <InboxList threads={inbox} now={now} currentId={currentId} variant="pane" pinned={<HelpRow summary={help} now={now} variant="pane" />} />
     </aside>
     {children}
   </div>;

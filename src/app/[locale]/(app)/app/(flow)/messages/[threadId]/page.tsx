@@ -4,6 +4,8 @@ import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { deleteReplyAction, reactToMessageAction, saveReplyAction, sendMessageAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
+import { supportAssistantForRequest } from '@/modules/assist/assistant-choice';
+import { getHelpSummary } from '@/modules/assist/support-chat';
 import { getInbox, getThreadPage } from '@/modules/messaging/service';
 import { blockUserAction, reportUserAction } from '@/modules/support/actions';
 import { getReportSubject } from '@/modules/support/service';
@@ -34,14 +36,15 @@ async function Conversations({ params, searchParams }: Pick<PageProps<'/[locale]
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.thread(threadId)));
   const now = await requestNow();
   // The open conversation reads as read here: it's marked read as it opens, beside this list.
-  const threads = (await getInbox(db, viewer.user.id, now)).threads.map((thread) => (thread.id === threadId ? { ...thread, unreadCount: 0 } : thread));
+  const [inbox, help] = await Promise.all([getInbox(db, viewer.user.id, now), getHelpSummary(db, viewer.user.id, await supportAssistantForRequest())]);
+  const threads = inbox.threads.map((thread) => (thread.id === threadId ? { ...thread, unreadCount: 0 } : thread));
   const beside = threads.length > 0;
   const conversation = (
     <Suspense fallback={<ThreadSkeleton pane={beside} />}>
       <Thread params={params} searchParams={searchParams} wide={beside} />
     </Suspense>
   );
-  return beside ? <ThreadPanes inbox={threads} currentId={threadId} now={now.toISOString()}>{conversation}</ThreadPanes> : conversation;
+  return beside ? <ThreadPanes inbox={threads} currentId={threadId} now={now.toISOString()} help={help}>{conversation}</ThreadPanes> : conversation;
 }
 
 async function Thread({ params, searchParams, wide }: Pick<PageProps<'/[locale]/app/messages/[threadId]'>, 'params' | 'searchParams'> & { wide: boolean }) {

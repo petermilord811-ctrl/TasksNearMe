@@ -199,13 +199,14 @@ describe('AppShell', () => {
     expect(nav.getByRole('link', { name: 'Home' })).not.toHaveAttribute('aria-current');
   });
 
-  it('announces the unread message and notification counts', () => {
-    show(<AppShell viewer={mayaShell} handlers={handlers}><h1>Home</h1></AppShell>);
+  it('announces the notification count; Messages is the chat button, not a tab (2026-11-22)', () => {
+    show(<AppShell viewer={mayaShell} handlers={handlers} chat={<button type="button">Messages, 2 unread</button>}><h1>Home</h1></AppShell>);
     expect(screen.getByRole('link', { name: 'Notifications, 3 unread notifications' })).toHaveAttribute('href', routes.app.notifications());
     for (const label of ['Main navigation', 'App navigation']) {
       const nav = within(screen.getByRole('navigation', { name: label }));
-      expect(nav.getByRole('link', { name: 'Messages 2 unread messages' })).toHaveAttribute('href', routes.app.messages());
+      expect(nav.queryByRole('link', { name: /^Messages/ })).toBeNull();
     }
+    expect(screen.getByRole('button', { name: 'Messages, 2 unread' })).toBeInTheDocument();
   });
 
   it('shows helper setup only for an unfinished helper and omits zero-count badges from names', () => {
@@ -213,7 +214,7 @@ describe('AppShell', () => {
     show(<AppShell viewer={priyaShell} handlers={handlers}><h1>Find work</h1></AppShell>);
     expect(screen.getByRole('link', { name: 'Finish setting up to start helping' })).toHaveAttribute('href', routes.app.helperOnboarding());
     expect(screen.getByRole('link', { name: 'Notifications' })).toHaveAttribute('href', routes.app.notifications());
-    expect(within(screen.getByRole('navigation', { name: 'App navigation' })).getByRole('link', { name: 'Messages' })).toBeInTheDocument();
+    expect(within(screen.getByRole('navigation', { name: 'App navigation' })).getByRole('link', { name: 'Bookings' })).toBeInTheDocument();
   });
 
   it('omits helper setup on the setup steps themselves (it would lead to the page it sits on)', () => {

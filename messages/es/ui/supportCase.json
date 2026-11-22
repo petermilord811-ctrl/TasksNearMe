@@ -8,7 +8,8 @@
   "sender": {
     "me": "Tú",
     "support": "Soporte",
-    "system": "Actualización del caso"
+    "system": "Actualización del caso",
+    "assistant": "Asistente (IA)"
   },
   "photos": "Fotos adjuntas",
   "photoAlt": "Foto {number} de {count} de {name}",

@@ -18,14 +18,13 @@ const SLIDING_PILL = {
 
 /**
  * A list of app links. `sidebar`: rows with an icon, the current one raised on a pill that glides between pages.
- * `bottom`: the phone dock's five tabs, icon over label, with the same gliding pill. Unread messages show a count
- * (in the link's name too).
+ * `bottom`: the phone dock's tabs (one column each), icon over label, with the same gliding pill. Messages isn't one of
+ * them since 2026-11-22: the chat button carries its unread count (src/ui/components/messaging/chat-launcher.tsx).
  */
-export function Navigation({ items, label, currentPath, unreadMessages = 0, variant = 'sidebar' }: {
+export function Navigation({ items, label, currentPath, variant = 'sidebar' }: {
   items: NavItem[];
   label: string;
   currentPath?: string;
-  unreadMessages?: number;
   variant?: 'sidebar' | 'bottom';
 }) {
   const t = useTranslations('shell');
@@ -33,13 +32,12 @@ export function Navigation({ items, label, currentPath, unreadMessages = 0, vari
   return <nav aria-label={label}>
     <div className="group/navbox relative">
       <NavIndicator className={SLIDING_PILL[variant]} />
-      <ul className={cn('relative', bottom ? 'grid grid-cols-5 gap-1' : 'space-y-0.5')}>
+      <ul className={cn('relative', bottom ? 'grid gap-1' : 'space-y-0.5')} style={bottom ? { gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` } : undefined}>
         {items.map((item) => {
           const Icon = NAV_ICONS[item.id];
-          const count = item.id === 'messages' ? unreadMessages : 0;
           const name = t(`nav.${item.id}`);
           return <li key={item.id} className="min-w-0">
-            <NavLink item={item} currentPath={currentPath} aria-label={count > 0 ? `${name} ${t('unreadMessages', { count })}` : undefined}
+            <NavLink item={item} currentPath={currentPath}
               className={cn(
                 'group/item relative z-[1] flex min-w-0 font-medium transition-[color,background-color,box-shadow] duration-300 ease-[var(--ease-out)] aria-[current=page]:text-foreground',
                 bottom
@@ -50,7 +48,6 @@ export function Navigation({ items, label, currentPath, unreadMessages = 0, vari
               )}>
               <Icon aria-hidden="true" className={cn('shrink-0 text-muted-foreground transition-[color,translate] duration-300 ease-[var(--ease-out)] group-hover/item:text-foreground group-aria-[current=page]/item:text-primary', bottom ? 'size-[1.375rem] group-aria-[current=page]/item:-translate-y-px' : 'size-5')} />
               <span className={cn('break-words', bottom && 'max-w-full text-center')}>{name}</span>
-              {count > 0 && <>{' '}<span aria-hidden="true" className={cn('rounded-full bg-primary text-center font-semibold text-primary-foreground tabular-nums', bottom ? 'absolute top-1 left-[calc(50%+0.3rem)] min-w-4 px-1 text-[10px] leading-4 ring-2 ring-background' : 'ml-auto min-w-6 px-1.5 text-xs leading-5')}>{count}</span></>}
             </NavLink>
           </li>;
         })}

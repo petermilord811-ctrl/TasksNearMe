@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Check, ChevronRight, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useShownPerson } from '@/ui/lib/shown-person';
@@ -49,7 +49,16 @@ function LastMessage({ message }: { message: NonNullable<ThreadSummary['lastMess
  * that pane from 1024 px (the inbox page, beside "Choose a conversation": audit M34). On a row the person, anything
  * unread and how long ago come first, then the kind and the task on a line of their own (M39), then the last message.
  */
-export function InboxList({ threads, now, currentId, variant = 'full' }: { threads: ThreadSummary[]; now: ISODateTime; currentId?: string; variant?: 'full' | 'pane' | 'split' }) {
+export function InboxList({ threads, now, currentId, variant = 'full', pinned, onSelect }: {
+  threads: ThreadSummary[];
+  now: ISODateTime;
+  currentId?: string;
+  variant?: 'full' | 'pane' | 'split';
+  /** Above the conversations, whatever the filters: the Help conversation (2026-11-22). */
+  pinned?: ReactNode;
+  /** The chat window opens a conversation in place (a plain click; Ctrl or ⌘ still opens its page in a new tab). */
+  onSelect?: (threadId: string) => void;
+}) {
   const t = useTranslations('inbox');
   const { formatDateTime, formatRelative } = useFormat();
   // Someone whose account was deleted, in the page's own words (J-PR15).
@@ -75,6 +84,7 @@ export function InboxList({ threads, now, currentId, variant = 'full' }: { threa
         </button>)}
       </div>
     </div>
+    {pinned}
     <p role="status" className="sr-only">{t('shown', { count: shown.length })}</p>
     {shown.length === 0
       ? <p className="px-4 py-8 text-center text-sm text-muted-foreground">{t('noMatch')}</p>
@@ -88,7 +98,11 @@ export function InboxList({ threads, now, currentId, variant = 'full' }: { threa
           const current = thread.id === currentId;
           const other = person(thread.otherParty);
           return <li key={thread.id}>
-            <Link href={routes.app.thread(thread.id)} aria-current={current ? 'page' : undefined} className={cn(
+            <Link href={routes.app.thread(thread.id)} aria-current={current ? 'page' : undefined} onClick={onSelect ? (event) => {
+              if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+              event.preventDefault();
+              onSelect(thread.id);
+            } : undefined} className={cn(
               'group flex min-w-0 gap-3 transition-colors duration-200 hover:bg-foreground/[0.03] focus-visible:relative focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring dark:hover:bg-white/[0.03]',
               as({ full: 'px-4 py-3.5 sm:gap-4 sm:px-6 sm:py-4', pane: 'px-3 py-3', split: 'px-4 py-3.5 sm:gap-4 sm:px-6 sm:py-4 lg:gap-3 lg:px-3 lg:py-3' }),
               current && 'bg-brand-soft/60 hover:bg-brand-soft/70',

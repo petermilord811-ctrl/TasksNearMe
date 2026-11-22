@@ -51,7 +51,7 @@ function Booking({ booking }: { booking: AdminCaseBookingSummary }) {
 
 function useActorName(actor: AdminCaseActor) {
   const t = useTranslations('adminCase.details');
-  return actor.kind === 'member' ? actor.person.displayName : actor.kind === 'staff' ? actor.staff.displayName : actor.kind === 'contact' ? t('contactForm') : t('system');
+  return actor.kind === 'member' ? actor.person.displayName : actor.kind === 'staff' ? actor.staff.displayName : actor.kind === 'contact' ? t('contactForm') : actor.kind === 'assistant' ? t('assistant') : t('system');
 }
 
 function useMessageTitle(event: AdminCaseEventView, parties: AdminCasePageData['parties'], contact: AdminCasePageData['contact']) {
@@ -60,6 +60,8 @@ function useMessageTitle(event: AdminCaseEventView, parties: AdminCasePageData['
   if (event.emailed) return t('emailedTo', { email: contact?.email ?? '' });
   const party = parties.find(({ person }) => person.id === event.partyId)?.person;
   const personName = party?.displayName ?? (event.actor.kind === 'member' ? event.actor.person.displayName : t('caseMember'));
+  // The assistant's answers in a chat attached to a case opened from it (2026-11-22).
+  if (event.actor.kind === 'assistant') return t('assistantTo', { name: personName });
   return t(event.actor.kind === 'member' ? 'from' : 'to', { name: personName });
 }
 

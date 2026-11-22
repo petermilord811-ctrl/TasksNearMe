@@ -56,6 +56,18 @@ function EarlierLabel() {
   return pending ? <><Spinner aria-hidden="true" />{t('loadingEarlier')}</> : <><ArrowUp aria-hidden="true" />{t('loadEarlier')}</>;
 }
 
+/** The chat window's "Load earlier messages": a button with its own spinner while the window loads them. */
+function EarlierButton({ onLoad }: { onLoad: () => Promise<void> | void }) {
+  const t = useTranslations('thread');
+  const [pending, setPending] = useState(false);
+  return <button type="button" disabled={pending} aria-busy={pending} onClick={() => {
+    setPending(true);
+    void Promise.resolve(onLoad()).catch(() => undefined).finally(() => setPending(false));
+  }} className={buttonVariants({ variant: 'outline', size: 'sm', className: 'min-h-11 rounded-full sm:min-h-9' })}>
+    {pending ? <><Spinner aria-hidden="true" />{t('loadingEarlier')}</> : <><ArrowUp aria-hidden="true" />{t('loadEarlier')}</>}
+  </button>;
+}
+
 /** A line for screen readers: earlier messages loaded above (how many), or one new message. */
 type Announcement = { key: string; message?: MessageView; earlierCount?: number };
 
@@ -75,7 +87,23 @@ function newAnnouncements(before: MessageView[], now: MessageView[]): Announceme
 /** Messages from the same person within this long read as one group: their name once, tighter spacing. */
 const GROUP_MS = 5 * 60_000;
 
-export function MessageLog({ messages, earlierHref, otherParty, now, seenMessageId, firstUnreadId, onReact, canReply = false, className }: { messages: MessageView[]; /** "Load earlier messages" (sweep MN11): this conversation from 100 messages earlier. */ earlierHref?: string; otherParty: PersonSummary; now: ISODateTime; seenMessageId?: string; firstUnreadId?: string; onReact?: ActionHandler<{ messageId: string; emoji: MessageReaction; on: boolean }>; /** Reply only where one can be sent: not in a closed or blocked conversation. */ canReply?: boolean; className?: string }) {
+export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, otherParty, now, seenMessageId, firstUnreadId, onReact, canReply = false, className }: {
+  messages: MessageView[];
+  /** "Load earlier messages" (sweep MN11): this conversation from 100 messages earlier. */
+  earlierHref?: string;
+  /** In the chat window (2026-11-22): load the earlier messages in place, instead of following `earlierHref`. */
+  onLoadEarlier?: () => Promise<void> | void;
+  /** What reads the conversation again (the chat window's own load); the page refreshes without it. */
+  onRefresh?: () => void;
+  otherParty: PersonSummary;
+  now: ISODateTime;
+  seenMessageId?: string;
+  firstUnreadId?: string;
+  onReact?: ActionHandler<{ messageId: string; emoji: MessageReaction; on: boolean }>;
+  /** Reply only where one can be sent: not in a closed or blocked conversation. */
+  canReply?: boolean;
+  className?: string;
+}) {
   const { formatDate, formatDateTime, formatRelative, formatTime, dayKey } = useFormat();
   const t = useTranslations('thread');
   const router = useRouter();
@@ -100,9 +128,15 @@ export function MessageLog({ messages, earlierHref, otherParty, now, seenMessage
   };
   const liveRef = useRef(live);
   useEffect(() => { liveRef.current = live; }, [live]);
+  const refreshRef = useRef(onRefresh);
+  useEffect(() => { refreshRef.current = onRefresh; }, [onRefresh]);
 
   useEffect(() => {
-    const refresh = () => { if (document.visibilityState === 'visible') router.refresh(); };
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (refreshRef.current) refreshRef.current();
+      else router.refresh();
+    };
     const timer = window.setInterval(() => { if (!liveRef.current) refresh(); }, 15_000);
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
@@ -160,8 +194,11 @@ export function MessageLog({ messages, earlierHref, otherParty, now, seenMessage
     }}
     className={cn('space-y-6 overflow-y-auto overscroll-contain px-3 py-4 [overflow-anchor:none] sm:px-5 sm:py-5', className)}>
     {earlierHref && <p className="flex justify-center">
-      {/* The same page with more above (replace: Back still leaves the conversation); it keeps its place (scroll). */}
-      <Link href={earlierHref} replace scroll={false} prefetch={false} className={buttonVariants({ variant: 'outline', size: 'sm', className: 'min-h-11 rounded-full sm:min-h-9' })}><EarlierLabel /></Link>
+      {/* The same page with more above (replace: Back still leaves the conversation); it keeps its place (scroll). In the
+          chat window, the window loads them in place. */}
+      {onLoadEarlier
+        ? <EarlierButton onLoad={onLoadEarlier} />
+        : <Link href={earlierHref} replace scroll={false} prefetch={false} className={buttonVariants({ variant: 'outline', size: 'sm', className: 'min-h-11 rounded-full sm:min-h-9' })}><EarlierLabel /></Link>}
     </p>}
     {messages.length === 0 && <p className="py-10 text-center text-sm text-muted-foreground">{t('empty')}</p>}
     {Array.from(days, ([day, entries]) => <section key={day} aria-label={formatDate(entries[0]!.createdAt, { withYear: true })} className="space-y-3">

@@ -3,6 +3,8 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
+import { supportAssistantForRequest } from '@/modules/assist/assistant-choice';
+import { getHelpSummary } from '@/modules/assist/support-chat';
 import { getInbox } from '@/modules/messaging/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
@@ -15,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return appPageMetadata('messages');
 }
 
-/** The viewer's conversations, latest activity first. */
+/** The viewer's conversations, latest activity first, under TasksNearMe Help. */
 function MessagesPage() {
   return (
     <Suspense fallback={<InboxSkeleton />}>
@@ -28,8 +30,9 @@ async function Inbox() {
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.messages()));
   const now = await requestNow();
-  const data = await getInbox(db, viewer.user.id, now);
-  return <InboxScreen data={data} now={now.toISOString()} />;
+  // TasksNearMe Help sits pinned on top (2026-11-22).
+  const [data, help] = await Promise.all([getInbox(db, viewer.user.id, now), getHelpSummary(db, viewer.user.id, await supportAssistantForRequest())]);
+  return <InboxScreen data={data} now={now.toISOString()} help={help} />;
 }
 
 // The list's filters and search run in the browser (completion plan 7.3): it needs its copy there.

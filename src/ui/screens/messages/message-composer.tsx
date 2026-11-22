@@ -19,6 +19,7 @@ import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives
 import { Spinner } from '@/ui/primitives/spinner';
 import { Textarea } from '@/ui/primitives/textarea';
 import { newRequestKey } from '@/ui/lib/request-key';
+import { cn } from '@/ui/lib/utils';
 
 export interface MessageComposerProps {
   rules: ComposerRules;
@@ -26,6 +27,10 @@ export interface MessageComposerProps {
   /** The viewer's saved replies, and what fills `{first_name}` and `{task}` in them (completion plan 7.3). */
   savedReplies?: MessageSavedReply[];
   template?: { firstName: string; task: string };
+  /** What reads the conversation again after a message is sent (the chat window's own load); the page refreshes without it. */
+  onRefresh?: () => void;
+  /** The chat window's tighter composer: no hint line under the box. */
+  compact?: boolean;
 }
 
 export function MessageComposer({ rules, handlers }: MessageComposerProps) {
@@ -33,7 +38,7 @@ export function MessageComposer({ rules, handlers }: MessageComposerProps) {
 }
 
 /** Seeds let previews show asynchronous states without starting a request on mount. */
-export function MessageComposerContent({ rules, handlers, savedReplies = [], template, initialResult, initialPending = false, initialBody = '' }: MessageComposerProps & {
+export function MessageComposerContent({ rules, handlers, savedReplies = [], template, onRefresh, compact = false, initialResult, initialPending = false, initialBody = '' }: MessageComposerProps & {
   initialResult?: ActionResult;
   initialPending?: boolean;
   initialBody?: string;
@@ -108,7 +113,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
     if (!mounted.current) return;
     locked.current = false; setPending(false); setResult(next);
     if (next.ok) {
-      if (next.code === 'sent') { requestKey.current = null; form.reset({ body: '', attachmentIds: [] }); setPhotos([]); setReplyTo(null); router.refresh(); }
+      if (next.code === 'sent') { requestKey.current = null; form.reset({ body: '', attachmentIds: [] }); setPhotos([]); setReplyTo(null); if (onRefresh) onRefresh(); else router.refresh(); }
       if (next.redirectTo) router.push(next.redirectTo);
       // By id: reset() has just let go of the field's ref, so setFocus would find nothing.
       else if (keepFocus) document.getElementById(`${id}-body`)?.focus();
@@ -122,7 +127,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
   return <form ref={formRef} noValidate aria-label={t('label')} aria-busy={pending || uploading} onSubmit={(event) => {
     if (locked.current || uploadLocked.current) { event.preventDefault(); return; }
     void form.handleSubmit(submit)(event);
-  }} className="space-y-2.5 border-t border-foreground/[0.07] bg-card px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:pt-4 sm:pb-4 dark:border-white/[0.06]">
+  }} className={cn('space-y-2.5 border-t border-foreground/[0.07] bg-card px-3 pt-3 dark:border-white/[0.06]', compact ? 'pb-3' : 'pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:pt-4 sm:pb-4')}>
     {replyTo && <div className="flex items-start justify-between gap-2 rounded-xl bg-foreground/[0.04] px-3 py-2 text-[13px] dark:bg-white/[0.05]">
       <p className="min-w-0"><span className="font-semibold">{t('replyingTo', { name: replyTo.name })}</span> <span className="line-clamp-1 text-muted-foreground [overflow-wrap:anywhere]">{replyTo.text}</span></p>
       <button type="button" onClick={() => setReplyTo(null)} aria-label={t('cancelReply')} className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><X aria-hidden="true" className="size-4" /></button>
@@ -146,7 +151,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
         <Button type="submit" disabled={pending || uploading || empty || overLimit} aria-busy={pending} onMouseDown={(event) => event.preventDefault()} className="h-12 shrink-0 transition-[transform,box-shadow,background-color,opacity] duration-200 max-sm:w-12 max-sm:px-0 sm:min-w-24">{pending ? <Spinner aria-hidden="true" /> : <Send aria-hidden="true" className="size-4" />}<span className="max-sm:sr-only">{t(pending ? 'sending' : 'send')}</span></Button>
       </div>
       <div className="flex flex-wrap justify-between gap-x-3 gap-y-0.5 px-1">
-        <FieldDescription id={`${id}-hint`} className="text-xs">{t('hint')}</FieldDescription>
+        <FieldDescription id={`${id}-hint`} className={cn('text-xs', compact && 'sr-only')}>{t('hint')}</FieldDescription>
         <p className="flex gap-3 text-xs text-muted-foreground"><span className="hidden lg:inline">{t('keyboardHint')}</span><span id={`${id}-counter`} className="tabular-nums">{t('counter', { count: body.length, maximum: rules.maxLength })}</span></p>
       </div>
       <div id={`${id}-body-error`}>{bodyError && <FieldError>{bodyError}</FieldError>}</div>
@@ -182,7 +187,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
     {specialError ? <div aria-live="polite" aria-atomic="true"><Alert role="status" className="border-destructive/30"><CircleAlert aria-hidden="true" className="text-destructive" /><AlertDescription className="text-foreground">
       <p>{t(result.code === 'not_allowed' ? 'notAllowed' : 'rateLimited')}</p>
       {result.code === 'rate_limited' && result.retryAt && <p className="tabular-nums">{t('retryAt', { at: formatDateTime(result.retryAt), zone: zoneName })}</p>}
-      {result.code === 'not_allowed' && <Button type="button" variant="outline" className="mt-2" onClick={() => router.refresh()}>{t('reload')}</Button>}
+      {result.code === 'not_allowed' && <Button type="button" variant="outline" className="mt-2" onClick={() => (onRefresh ? onRefresh() : router.refresh())}>{t('reload')}</Button>}
     </AlertDescription></Alert></div> : <FormFeedback result={feedback} successMessage={result?.ok && result.code === 'sent' ? t('sent') : undefined} />}
   </form>;
 }

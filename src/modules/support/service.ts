@@ -1,11 +1,13 @@
-import { and, asc, desc, eq, inArray, isNull, ne, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, ne, or, sql } from 'drizzle-orm';
 import type {
   ActionResult,
+  AssistantHandoff,
   BookingDisputeView,
   CaseEventView,
   CaseResolution,
   ProblemReason,
   CaseStatus,
+  HelpCaseView,
   MemberCaseKind,
   NewSupportRequestInput,
   Photo,
@@ -18,7 +20,7 @@ import type {
   SupportReplyInput,
   SupportTopic,
 } from '@/contracts';
-import { CASE_STATUSES, newSupportRequestInputSchema, reportInputSchema, routes, supportReplyInputSchema } from '@/contracts';
+import { CASE_STATUSES, SUPPORT_TOPICS, newSupportRequestInputSchema, reportInputSchema, routes, supportReplyInputSchema } from '@/contracts';
 import { CONTACT_REVERT_CASE_REASON } from '@/modules/accounts/contact-revert';
 import { users } from '@/modules/accounts/schema';
 import { bookings } from '@/modules/bookings/schema';
@@ -34,6 +36,7 @@ import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { supportCaseEvents, supportCaseReads, supportCases } from './schema';
+import { FIRST_RESPONSE_HOURS, queueOf } from './staff-domain';
 
 /**
  * Support for members (blueprint 02 §1.2, 03 §9): their cases (requests, problem and safety reports,
@@ -295,8 +298,11 @@ export async function openReviewFeedbackCase(
   return id;
 }
 
-/** `/app/support/[caseId]` for the people who may see it (anyone else: not found). Opening it reads it. */
-export async function getSupportCasePage(db: Db, userId: string, caseId: string, now: Date): Promise<SupportCasePageData | null> {
+/**
+ * `/app/support/[caseId]` for the people who may see it (anyone else: not found). Opening it reads it (`markRead`: the
+ * Help conversation reads a case only while it's on screen).
+ */
+export async function getSupportCasePage(db: Db, userId: string, caseId: string, now: Date, { markRead = true }: { markRead?: boolean } = {}): Promise<SupportCasePageData | null> {
   const found = await visibleCase(db, userId, caseId);
   if (!found) return null;
   const { row, isOpener } = found;
@@ -324,11 +330,14 @@ export async function getSupportCasePage(db: Db, userId: string, caseId: string,
   const conversation = events.map((event): CaseEventView =>
     event.kind === 'status'
       ? { id: event.id, kind: 'status', from: 'system', status: caseStatusOf(event.status), at: event.createdAt.toISOString() }
-      : { id: event.id, kind: 'message', from: event.authorUserId === userId ? 'me' : 'support', body: event.body ?? '', ...photos(event.fileIds), at: event.createdAt.toISOString() },
+      : { id: event.id, kind: 'message', from: event.meta?.assistant ? 'assistant' : event.authorUserId === userId ? 'me' : 'support', body: event.body ?? '', ...photos(event.fileIds), at: event.createdAt.toISOString() },
   );
-  await markCaseRead(db, row.id, userId, now);
+  if (markRead) await markCaseRead(db, row.id, userId, now);
   const view = rowOf(row, labels.get(row.id) ?? FALLBACK_LABEL);
-  return { case: { ...view, description: isOpener ? row.description : '' }, events: [...opening, ...conversation], canReply: view.status !== 'closed' };
+  // In time order: a case opened from the assistant starts with the chat that came before the request (a stable sort,
+  // so the opening stays first among events at the same moment).
+  const ordered = [...opening, ...conversation].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
+  return { case: { ...view, description: isOpener ? row.description : '' }, events: ordered, canReply: view.status !== 'closed' };
 }
 
 /** The member writes to support. A case waiting on a member goes back to support. */
@@ -354,6 +363,176 @@ export async function replyToSupportCase(db: Db, userId: string, caseId: string,
     await markCaseRead(tx, row.id, userId, now);
   });
   return { ok: true, code: 'sent' };
+}
+
+// ---- Cases from the support assistant (2026-11-22) -----------------------------------------------------------
+
+/** A question to the assistant and its answer, already checked (src/modules/assist/assistant-turns.ts). */
+export interface AssistantCaseTurn {
+  question: string;
+  answer: string;
+  /** The help articles the answer used, by title. */
+  sources: string[];
+  at: Date;
+}
+
+/** Each topic's queue target for a first reply, in hours ("Usually replies within 24 hours"). */
+export const TOPIC_REPLY_HOURS = Object.fromEntries(SUPPORT_TOPICS.map((topic) => [topic, FIRST_RESPONSE_HOURS[queueOf(REQUEST_TYPE[topic])]])) as Record<SupportTopic, number>;
+
+/** The person's recent bookings (newest first), to name one in a request. */
+export async function recentBookingsFor(db: Db, userId: string): Promise<{ id: string; title: string; start: string }[]> {
+  const rows = await db
+    .select({ id: bookings.id, title: tasks.title, start: bookings.startAt })
+    .from(bookings)
+    .innerJoin(tasks, eq(tasks.id, bookings.taskId))
+    .where(and(or(eq(bookings.posterUserId, userId), eq(bookings.helperUserId, userId)), ne(bookings.status, 'pending_funding')))
+    .orderBy(desc(bookings.startAt))
+    .limit(10);
+  return rows.map((row) => ({ id: row.id, title: row.title, start: row.start.toISOString() }));
+}
+
+/**
+ * "Talk to a person" in the Help conversation: a request like one from `/app/support`, with the chat attached. Support
+ * sees a note that it came from the assistant (and what couldn't be checked), then the chat (the person's questions as
+ * their messages, the assistant's answers marked as the assistant's), then what the person asked for. A safety topic, or
+ * an answer that flagged danger, goes in as high priority. Same rate limit as other requests.
+ */
+export async function openCaseFromAssistant(
+  db: Db,
+  userId: string,
+  input: { topic: SupportTopic; details: string; bookingId?: string; turns: AssistantCaseTurn[]; dropped: number; handoff: AssistantHandoff },
+  now: Date,
+): Promise<ActionResult> {
+  if (input.bookingId) {
+    const [mine] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.id, input.bookingId), or(eq(bookings.posterUserId, userId), eq(bookings.helperUserId, userId))))
+      .limit(1);
+    if (!mine) return { ok: false, code: 'validation_failed', fieldErrors: { bookingId: ['invalid'] } };
+  }
+  const limited = await consumeRateLimit(db, `support:${userId}`, CREATE_RULE, now);
+  if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
+
+  const id = newId('case');
+  const type = REQUEST_TYPE[input.topic];
+  const urgent = input.handoff === 'urgent';
+  // Never after the request itself, whatever a browser's clock said.
+  const turns = input.turns.filter((turn) => turn.at.getTime() < now.getTime());
+  const start = turns[0] ? new Date(turns[0].at.getTime() - 1) : now;
+  const note = [
+    `Opened from the support assistant in Messages after ${turns.length === 1 ? '1 question' : `${turns.length} questions`}. The chat comes first; the assistant's answers are marked. They come from an AI and can be wrong: check before acting on one.`,
+    ...(urgent ? ['The assistant flagged that someone may be in danger.'] : []),
+    ...(input.dropped > 0 ? [`${input.dropped === 1 ? '1 earlier turn' : `${input.dropped} earlier turns`} couldn't be verified and ${input.dropped === 1 ? 'was' : 'were'} left out.`] : []),
+  ].join(' ');
+  await db.transaction(async (tx) => {
+    await tx.insert(supportCases).values({
+      id,
+      type,
+      status: 'open',
+      priority: urgent || input.topic === 'safety' ? 'high' : 'normal',
+      bookingId: input.bookingId ?? null,
+      openedByUserId: userId,
+      topic: input.topic,
+      context: { assistant: true },
+      description: input.details,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await tx.insert(supportCaseEvents).values([
+      { id: newId('cev'), caseId: id, kind: 'note', authorUserId: null, visibility: 'internal', body: note, createdAt: start },
+      ...turns.flatMap((turn) => [
+        { id: newId('cev'), caseId: id, kind: 'message', authorUserId: userId, partyUserId: userId, body: turn.question, createdAt: turn.at },
+        {
+          id: newId('cev'),
+          caseId: id,
+          kind: 'message',
+          authorUserId: null,
+          partyUserId: userId,
+          body: turn.sources.length > 0 ? `${turn.answer}\n\n${turn.sources.map((title) => `· ${title}`).join('\n')}` : turn.answer,
+          meta: { assistant: true },
+          createdAt: new Date(turn.at.getTime() + 1),
+        },
+      ]),
+    ]);
+    await markCaseRead(tx, id, userId, now);
+    await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'support.case_opened', aggregateType: 'support_case', aggregateId: id, payload: { caseId: id, type, openedByUserId: userId } });
+  });
+  return { ok: true, code: 'submitted' };
+}
+
+/** The person's newest cases from the assistant, newest first. */
+export async function assistantCasesOf(db: Db, userId: string, limit = 5): Promise<CaseRow[]> {
+  return db
+    .select()
+    .from(supportCases)
+    .where(and(eq(supportCases.openedByUserId, userId), sql`${supportCases.context}->>'assistant' = 'true'`))
+    .orderBy(desc(supportCases.createdAt))
+    .limit(limit);
+}
+
+export const isFinishedCase = (row: Pick<CaseRow, 'status'>) => isFinished(caseStatusOf(row.status));
+
+/** When support last wrote to the person on a case, and when the person last read it. */
+async function supportReplyFacts(db: Db, userId: string, caseId: string): Promise<{ unread: boolean }> {
+  const [[last], [read]] = await Promise.all([
+    db
+      .select({ createdAt: supportCaseEvents.createdAt })
+      .from(supportCaseEvents)
+      .where(and(eq(supportCaseEvents.caseId, caseId), eq(supportCaseEvents.kind, 'message'), eq(supportCaseEvents.visibility, 'participants'), eq(supportCaseEvents.partyUserId, userId), ne(supportCaseEvents.authorUserId, userId)))
+      .orderBy(desc(supportCaseEvents.createdAt))
+      .limit(1),
+    db.select({ readAt: supportCaseReads.readAt }).from(supportCaseReads).where(and(eq(supportCaseReads.caseId, caseId), eq(supportCaseReads.userId, userId))).limit(1),
+  ]);
+  return { unread: Boolean(last && (!read || last.createdAt > read.readAt)) };
+}
+
+/** An open case from the assistant, as the Help conversation shows it. `markRead` reads it (it's on screen). */
+export async function helpCaseView(db: Db, userId: string, row: CaseRow, now: Date, { markRead }: { markRead: boolean }): Promise<{ view: HelpCaseView; wasUnread: boolean } | null> {
+  const { unread } = await supportReplyFacts(db, userId, row.id);
+  const page = await getSupportCasePage(db, userId, row.id, now, { markRead });
+  if (!page) return null;
+  return {
+    wasUnread: unread,
+    view: {
+      id: row.id,
+      status: page.case.status,
+      topic: (SUPPORT_TOPICS as readonly string[]).includes(row.topic ?? '') ? (row.topic as SupportTopic) : 'other',
+      events: page.events,
+      canReply: page.canReply,
+      unread: markRead ? false : unread,
+      openedAt: row.createdAt.toISOString(),
+      replyHours: FIRST_RESPONSE_HOURS[queueOf(row.type)],
+    },
+  };
+}
+
+/** Whether the person's open case from the assistant has a reply they haven't read: 1 or 0 (the chat button's count). */
+export async function helpUnreadCount(db: Db, userId: string): Promise<number> {
+  const open = (await assistantCasesOf(db, userId, 3)).find((row) => !isFinishedCase(row));
+  return open && (await supportReplyFacts(db, userId, open.id)).unread ? 1 : 0;
+}
+
+/** The pinned Help row: the open case's state and its last line (support's, the person's or the assistant's). */
+export async function helpRowFacts(db: Db, userId: string): Promise<{ id: string; status: CaseStatus; unread: boolean; last?: { from: CaseEventView['from']; body: string; at: string } } | undefined> {
+  const open = (await assistantCasesOf(db, userId, 3)).find((row) => !isFinishedCase(row));
+  if (!open) return undefined;
+  const [{ unread }, [last]] = await Promise.all([
+    supportReplyFacts(db, userId, open.id),
+    db
+      .select({ authorUserId: supportCaseEvents.authorUserId, body: supportCaseEvents.body, meta: supportCaseEvents.meta, createdAt: supportCaseEvents.createdAt })
+      .from(supportCaseEvents)
+      .where(and(eq(supportCaseEvents.caseId, open.id), eq(supportCaseEvents.kind, 'message'), visibleTo(userId)))
+      .orderBy(desc(supportCaseEvents.createdAt))
+      .limit(1),
+  ]);
+  // The request itself is newer than the chat before it: until support or the person writes again, it's the last line.
+  const request = { from: 'me' as const, body: open.description.slice(0, 200), at: open.createdAt.toISOString() };
+  const line =
+    !last || last.createdAt < open.createdAt
+      ? request
+      : { from: last.meta?.assistant ? ('assistant' as const) : last.authorUserId === userId ? ('me' as const) : ('support' as const), body: (last.body ?? '').slice(0, 200), at: last.createdAt.toISOString() };
+  return { id: open.id, status: caseStatusOf(open.status), unread, last: line };
 }
 
 // ---- Disputes on the booking page (UI-026) -----------------------------------------------------------

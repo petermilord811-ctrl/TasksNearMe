@@ -55,7 +55,8 @@ export type NewSupportRequestInput = z.input<typeof newSupportRequestInputSchema
 export interface CaseEventView {
   id: string;
   kind: 'message' | 'status';
-  from: 'me' | 'support' | 'system';
+  /** `assistant`: an answer from the AI assistant in a case opened from the Help conversation (2026-11-22). */
+  from: 'me' | 'support' | 'system' | 'assistant';
   body?: string;
   photos?: Photo[];
   /** Status changes. */

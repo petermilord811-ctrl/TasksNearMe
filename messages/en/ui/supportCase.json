@@ -5,7 +5,7 @@
   "description": "Your request",
   "conversation": "Conversation",
   "emptyConversation": "Your request is with support. Replies will appear here.",
-  "sender": { "me": "You", "support": "Support", "system": "Case update" },
+  "sender": { "me": "You", "support": "Support", "system": "Case update", "assistant": "Assistant (AI)" },
   "photos": "Attached photos",
   "photoAlt": "Photo {number} of {count} from {name}",
   "openPhoto": "View photo: {description}",

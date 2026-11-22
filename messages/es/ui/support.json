@@ -1,6 +1,9 @@
 {
   "title": "Soporte",
   "intro": "Sigue tus casos o envía una nueva solicitud a soporte.",
+  "assistantTitle": "Obtén una respuesta ahora",
+  "assistantBody": "Ayuda de TasksNearMe responde al instante con el centro de ayuda y te pasa con una persona de nuestro equipo cuando la necesitas.",
+  "assistantLink": "Preguntar a Ayuda de TasksNearMe",
   "cases": "Tus casos",
   "kinds": { "dispute": "Reporte de problema", "safety": "Reporte de seguridad", "report": "Reporte", "request": "Solicitud" },
   "updated": "Actualizado {relative}",

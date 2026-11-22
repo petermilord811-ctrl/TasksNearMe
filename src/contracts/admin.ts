@@ -115,7 +115,8 @@ export interface AdminCaseParty {
 }
 
 /** `contact`: a public request's address writing again through the contact form (5.22). */
-export type AdminCaseActor = { kind: 'member'; person: PersonSummary } | { kind: 'staff'; staff: StaffSummary } | { kind: 'contact'; email: string } | { kind: 'system' };
+/** `assistant`: the AI assistant's answers in a case opened from the Help conversation in Messages (2026-11-22). */
+export type AdminCaseActor = { kind: 'member'; person: PersonSummary } | { kind: 'staff'; staff: StaffSummary } | { kind: 'contact'; email: string } | { kind: 'system' } | { kind: 'assistant' };
 
 export interface AdminCaseEventView {
   id: string;

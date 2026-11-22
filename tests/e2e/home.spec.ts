@@ -100,13 +100,15 @@ test("a helper's dashboard: jobs first, earnings at a glance, and nearby tasks o
   }
 });
 
-test('the signed-in navigation (9.14): five everyday places, the tools in one place, the account in the menu', async ({ page }, testInfo) => {
+test('the signed-in navigation (9.14): four everyday places, Messages as the chat button, the tools in one place, the account in the menu', async ({ page }, testInfo) => {
   await devSignIn(page, 'jordan@example.test');
   const desktop = testInfo.project.name === 'app-desktop';
-  // The rail on wide screens, the dock on phones: the same five (a helper's: Find work second).
+  // The rail on wide screens, the dock on phones: the same four (a helper's: Find work second). Messages is the round
+  // chat button at the bottom right since 2026-11-22.
   const everyday = page.getByRole('navigation', { name: desktop ? 'Main navigation' : 'App navigation' });
   // The portal (9.10) has one name everywhere: "Neighbors" (audit L15).
-  await expect(everyday.getByRole('link')).toHaveText(['Home', 'Find work', 'Neighbors', 'Bookings', /^Messages/]);
+  await expect(everyday.getByRole('link')).toHaveText(['Home', 'Find work', 'Neighbors', 'Bookings']);
+  await expect(desktop ? page.getByRole('button', { name: /^Messages/ }) : page.getByRole('link', { name: /^Messages/ })).toBeVisible();
   await expect(everyday.getByRole('link', { name: 'Neighbors' })).toHaveAttribute('href', /\/app\/community$/);
   // Checked before the menu opens: an open menu hides the rest of the page from assistive technology.
   const modeSwitch = page.getByRole('group', { name: 'Choose how to use TasksNearMe' });

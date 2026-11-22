@@ -39,6 +39,7 @@ import { bookingConfirmPreviews } from './booking-confirm.preview';
 import { bookingsPreviews } from './bookings.preview';
 import { completionPreviews } from './completion.preview';
 import { messagesScreenPreviews } from './messages-screens.preview';
+import { chatWindowPreviews } from './chat-window.preview';
 import { bookingSheetsPreviews } from './booking-sheets.preview';
 import { moneyPagePreviews } from './money-pages.preview';
 import { homePreviews } from './home.preview';
@@ -127,6 +128,7 @@ export const previews: PreviewEntry[] = [
   ...bookingsPreviews,
   ...completionPreviews,
   ...messagesScreenPreviews,
+  ...chatWindowPreviews,
   ...bookingSheetsPreviews,
   ...moneyPagePreviews,
   ...homePreviews,

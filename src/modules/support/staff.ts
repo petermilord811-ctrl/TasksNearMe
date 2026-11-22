@@ -169,7 +169,8 @@ function awaitingReplyOf(row: CaseRow, events: Pick<EventRow, 'kind' | 'authorUs
   let lastMember = row.createdAt;
   let lastStaff: Date | null = null;
   for (const event of events) {
-    if (event.kind !== 'message') continue;
+    // The assistant's answers in a chat attached to the case are neither the member's nor staff's.
+    if (event.kind !== 'message' || event.meta?.assistant) continue;
     const fromMember = fromCaseMember(event);
     if (fromMember && event.createdAt > lastMember) lastMember = event.createdAt;
     if (!fromMember && (!lastStaff || event.createdAt > lastStaff)) lastStaff = event.createdAt;
@@ -418,7 +419,7 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
           {
             id: event.id,
             kind: 'message',
-            actor: member ? { kind: 'member', person: personSummaryOf(member) } : contact ? { kind: 'contact', email: contact } : actor,
+            actor: member ? { kind: 'member', person: personSummaryOf(member) } : contact ? { kind: 'contact', email: contact } : event.meta?.assistant ? { kind: 'assistant' } : actor,
             ...(event.partyUserId ? { partyId: event.partyUserId } : {}),
             ...(event.meta?.emailed ? { emailed: true } : {}),
             body: event.body ?? '',

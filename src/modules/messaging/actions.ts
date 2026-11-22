@@ -27,6 +27,23 @@ export async function sendMessageAction(threadId: string, input: SendMessageInpu
 }
 
 /**
+ * The chat window's Send (2026-11-22): the same as `sendMessageAction`, without refreshing the page behind the window
+ * (the window reads the conversation again itself). Called with the conversation's id.
+ */
+export async function sendFromWindowAction(threadId: string, input: SendMessageInput): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  return sendMessage(db, userId, String(threadId), input, await requestNow());
+}
+
+/** The chat window's reactions: as `reactToMessageAction`, without refreshing the page behind it. */
+export async function reactFromWindowAction(threadId: string, input: { messageId: string; emoji: MessageReaction; on: boolean }): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  return reactToMessage(db, userId, String(threadId), input, await requestNow());
+}
+
+/**
  * "Typing…" for the thread's other participant (completion plan 7.1). Bound like `sendMessageAction`; fire and
  * forget (the service spaces the notices out and checks the viewer is in the thread).
  */

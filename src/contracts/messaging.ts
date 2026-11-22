@@ -1,9 +1,11 @@
 import { z } from 'zod';
-import type { ActionHandler, QueryHandler } from './actions';
+import type { ActionHandler, ActionResult, QueryHandler } from './actions';
+import type { HelpSummary } from './assistant';
 import { requestKeyField } from './forms';
 import type { ISODateTime, Photo } from './common';
 import type { PersonSummary, PresenceState } from './people';
 import type { PhotoUploadResult } from './posting';
+import type { ReportInput, ReportSubject } from './support';
 import type { TimelineEvent } from './timeline';
 
 /**
@@ -284,3 +286,45 @@ export const messageSavedReplyInputSchema = z.object({
   body: z.string('required').trim().min(1, 'required').max(1000, 'too_long'),
 });
 export type MessageSavedReplyInput = z.input<typeof messageSavedReplyInputSchema>;
+
+// ---- The chat window (2026-11-22, owner: "improve it as Reddit similar chat, right bottom fixed chat icon") ----------
+//
+// Messages is a round button fixed at the bottom right of every signed-in page (no longer one of the five tabs). On wide
+// screens it opens a chat window docked in that corner, over the page; on phones it opens the Messages page. The window
+// stays open from page to page (it lives in the signed-in shell) and loads its data itself, through the app's read routes.
+
+/** The window on wide screens: closed (the button), open, or minimized to a bar in the corner. Kept for the tab. */
+export const CHAT_WINDOW_STATES = ['closed', 'open', 'minimized'] as const;
+export type ChatWindowState = (typeof CHAT_WINDOW_STATES)[number];
+
+/** What the window shows: the conversations, the pinned Help conversation, or one conversation. */
+export type ChatView = { kind: 'list' } | { kind: 'help' } | { kind: 'thread'; threadId: string };
+
+/** `GET /api/messages/inbox`: the conversations, and the pinned Help row. */
+export interface ChatInboxData extends InboxPageData {
+  help: HelpSummary;
+}
+
+/** `GET /api/messages/threads/[threadId]`: a conversation as its page shows it, with what Report and Block need. */
+export interface ChatThreadData {
+  data: ThreadPageData;
+  safety?: ReportSubject;
+}
+
+/** Something the window loads: not asked for yet, loading (with what it had), ready, or failed (with what it had; `notFound`: it isn't the viewer's). */
+export type ChatLoad<T> = { status: 'idle' } | { status: 'loading'; data?: T } | { status: 'ready'; data: T } | { status: 'error'; data?: T; notFound?: boolean };
+
+/**
+ * A conversation's handlers in the window, by conversation: the same rules as the conversation page's
+ * (`ThreadHandlers`), and none of them re-renders the page behind the window.
+ */
+export interface ChatThreadHandlers {
+  onSend(threadId: string, input: SendMessageInput): Promise<ActionResult>;
+  onUploadPhoto: QueryHandler<FormData, PhotoUploadResult>;
+  onTyping(threadId: string): Promise<void>;
+  onReact(threadId: string, input: { messageId: string; emoji: MessageReaction; on: boolean }): Promise<ActionResult>;
+  onSaveReply: ActionHandler<MessageSavedReplyInput>;
+  onDeleteReply: ActionHandler<{ id: string }>;
+  onReport(threadId: string, input: ReportInput): Promise<ActionResult>;
+  onBlock(threadId: string, input: { blocked: boolean }): Promise<ActionResult>;
+}

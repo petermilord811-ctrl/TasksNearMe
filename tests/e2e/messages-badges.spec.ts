@@ -103,11 +103,12 @@ async function removeConversation(made: Made): Promise<void> {
   }
 }
 
-const messagesLink = (page: Page) => page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: /^Messages/ });
+// Messages is the chat button since 2026-11-22: its name carries the unread count.
+const chatButton = (page: Page) => page.getByRole('button', { name: /^Messages(, \d+ unread)?$/ });
 const bell = (page: Page) => page.getByRole('banner').getByRole('link', { name: /^Notifications/ });
 
 test('reading a conversation clears its Messages and bell badges at once, on each of the person’s devices (sweep MN6)', async ({ browser }, testInfo) => {
-  test.skip(testInfo.project.name !== 'app-desktop', 'two devices of one person; the rail shows both badges on wide screens');
+  test.skip(testInfo.project.name !== 'app-desktop', 'two devices of one person; both badges show on wide screens');
   test.setTimeout(150_000);
   const made = await unreadConversation();
   const laptopContext = await browser.newContext();
@@ -118,22 +119,23 @@ test('reading a conversation clears its Messages and bell badges at once, on eac
     await devSignIn(laptop, made.email);
     await devSignIn(phone, made.email);
     for (const page of [laptop, phone]) {
-      await expect(messagesLink(page)).toHaveAccessibleName('Messages 2 unread messages');
+      await expect(chatButton(page)).toHaveAccessibleName('Messages, 2 unread');
       await expect(bell(page)).toHaveAccessibleName('Notifications, 1 unread notification');
     }
 
-    // On the laptop: Messages, then the conversation, page to page (the shell stays mounted between them).
-    await messagesLink(laptop).click();
-    await expect(laptop).toHaveURL(/\/app\/messages$/);
+    // On the laptop: the Messages page, then the conversation, page to page (the shell stays mounted between them).
+    await laptop.goto('/app/messages');
     // By its role: the page before keeps a hidden copy (Next keeps it in an Activity), so a plain href match can pick that.
     await laptop.getByRole('list', { name: 'Conversations' }).getByRole('link', { name: /Is the box still in the hall\?/ }).click();
     await expect(laptop.getByRole('log').getByText('Is the box still in the hall?')).toBeVisible({ timeout: 30_000 });
 
-    // Both badges clear, there and on the phone, without anyone reloading.
-    for (const page of [laptop, phone]) {
-      await expect(messagesLink(page)).toHaveAccessibleName('Messages', { timeout: 15_000 });
-      await expect(bell(page)).toHaveAccessibleName('Notifications', { timeout: 15_000 });
-    }
+    // Both badges clear, on the phone without anyone reloading, and on the laptop once it leaves Messages (the chat
+    // button steps aside on Messages' own pages).
+    await expect(chatButton(phone)).toHaveAccessibleName('Messages', { timeout: 15_000 });
+    await expect(bell(phone)).toHaveAccessibleName('Notifications', { timeout: 15_000 });
+    await expect(bell(laptop)).toHaveAccessibleName('Notifications', { timeout: 15_000 });
+    await laptop.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name: 'Home' }).click();
+    await expect(chatButton(laptop)).toHaveAccessibleName('Messages', { timeout: 15_000 });
   } finally {
     await laptopContext.close();
     await phoneContext.close();

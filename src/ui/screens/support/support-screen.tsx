@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { ChevronRight, CircleAlert, LifeBuoy } from 'lucide-react';
+import { ChevronRight, CircleAlert, LifeBuoy, Sparkles } from 'lucide-react';
 import { routes, type ActionResult, type ISODateTime, type SupportCaseRow, type SupportHandlers, type SupportPageData } from '@/contracts';
 import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
@@ -50,6 +50,16 @@ export function SupportContent({ data, handlers, now, initialResult, initialPend
       <h1 className="font-heading text-2xl/8 font-bold md:text-3xl/9.5">{t('title')}</h1>
       <p className="text-muted-foreground">{t('intro')}</p>
     </header>
+    {/* The support assistant first (2026-11-22): an answer now, and a person when it needs one. */}
+    <Link href={routes.app.helpChat()} className="group flex items-center gap-3 rounded-[1.375rem] border border-primary/20 bg-card px-4 py-3.5 shadow-card transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:px-5">
+      <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full bg-brand-soft text-primary"><Sparkles className="size-5" /></span>
+      <span className="min-w-0 flex-1 space-y-0.5">
+        <span className="block font-semibold group-hover:text-primary">{t('assistantTitle')}</span>
+        <span className="block text-sm text-muted-foreground">{t('assistantBody')}</span>
+      </span>
+      <span className="hidden shrink-0 text-sm font-semibold text-primary sm:inline">{t('assistantLink')}</span>
+      <ChevronRight aria-hidden="true" className="size-5 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none" />
+    </Link>
     <section aria-label={t('cases')} className="space-y-4">
       <h2 className="font-heading text-xl/7 font-semibold md:text-[22px]/7.5">{t('cases')}</h2>
       {data.cases.length > 0

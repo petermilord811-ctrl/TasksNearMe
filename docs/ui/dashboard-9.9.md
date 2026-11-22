@@ -170,3 +170,8 @@ meet (9.10's portal), was a secondary link.
   glance). Community, Saved searches, Payments and Support were each in two places; now one.
 - **Each page one job.** Home is the dashboard (what needs you, your lists); Tasks, Find work, Bookings and Messages
   are the full lists; the tools are the mode's own pages; the avatar menu holds the account's.
+
+**2026-11-22: Messages leaves the dock and the rail** (owner: "Reddit similar chat"; docs/ui/chat-window.md). Four
+everyday places (a client's Home · Neighbors · Tasks · Bookings, a helper's Home · Find work · Neighbors · Bookings);
+Messages is the round chat button at the bottom right of every page, with its unread count: the chat window on wide
+screens, the Messages page on phones. Still one place on screen.

@@ -174,3 +174,5 @@ Rules for each program (amounts, caps, stacking, cancellation) are in [05-reward
 | `closed` | — | Reopen (lead) | Close 7 days after `resolved` |
 
 Case types: `dispute`, `no_show`, `cancellation_review`, `report_user`, `report_content`, `safety`, `payment_issue`, `reward_issue`, `account`.
+
+**From the support assistant (2026-11-22).** Members can ask TasksNearMe Help in Messages first: an AI answers from the help center and says when a person should take over. "Talk to a person" opens an ordinary request (`open`, the topic's type and first-response target; high priority for safety or a flagged danger) with the chat attached: the member's questions as their messages, the assistant's answers marked as the assistant's (never counted as support's reply), and a note for support. Only answers the server signed reach the case. Nothing about the chat is stored before that.

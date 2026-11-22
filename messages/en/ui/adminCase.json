@@ -115,6 +115,8 @@
     "caseMember": "Case member",
     "from": "From {name}",
     "to": "To {name}",
+    "assistant": "Support assistant (AI)",
+    "assistantTo": "Assistant (AI) to {name}",
     "internalNote": "Internal note",
     "events": {
       "status": "Status changed",

@@ -6,6 +6,10 @@ import { setMode, signOut } from '@/modules/accounts/actions';
 import { checkPushSubscriptionAction, removePushSubscriptionAction } from '@/modules/notifications/actions';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { unreadMessageCount } from '@/modules/messaging/service';
+import { deleteReplyAction, reactFromWindowAction, saveReplyAction, sendFromWindowAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
+import { handOffToSupportAction, replyToHelpCaseAction } from '@/modules/assist/support-chat-actions';
+import { blockUserAction, reportUserAction } from '@/modules/support/actions';
+import { helpUnreadCount } from '@/modules/support/service';
 import { shellNoticesFor } from '@/modules/markets/outage';
 import { dispatchNotifications, unreadNotificationCount } from '@/modules/notifications/service';
 import { getViewer, toSignedInViewer } from '@/platform/auth/viewer';
@@ -14,6 +18,7 @@ import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 import { AppShell } from '@/ui/shells';
 import { requestNow } from '@/platform/clock';
 import { AppShellSkeleton } from '@/ui/shells/app-shell-skeleton';
+import { ChatWindowController } from './_chat/chat-window-controller';
 
 /**
  * The signed-in shell: one, in `(app)/app/layout.tsx`, for both route groups, so a hop between (main) and (flow)
@@ -41,12 +46,20 @@ async function ViewerShell({ children }: { children: React.ReactNode }) {
   await remindUpcomingBookings(db, now, { userId: viewer.user.id });
   await dispatchNotifications(db, now, 50);
   // `notices`: the outage switch of the person's market (completion plan 5.15), on every signed-in page.
-  const [unreadMessages, unreadNotifications, notices] = await Promise.all([unreadMessageCount(db, viewer.user.id), unreadNotificationCount(db, viewer.user.id), shellNoticesFor(db, viewer.user.id)]);
+  // The chat button counts unread messages and an unread reply from support in the Help conversation (2026-11-22).
+  const [unreadMessages, unreadNotifications, notices, unreadHelp] = await Promise.all([unreadMessageCount(db, viewer.user.id), unreadNotificationCount(db, viewer.user.id), shellNoticesFor(db, viewer.user.id), helpUnreadCount(db, viewer.user.id)]);
   // The person's own market clock for every client component below (completion plan 8.1); server components get it
   // from the request (getViewer set it), and a page about another market names that market's.
   return (
     <TimeZoneProvider timeZone={viewer.user.timeZone}>
-      <AppShell viewer={{ ...toSignedInViewer(viewer.user), unreadMessages, unreadNotifications }} notices={notices} handlers={{ onModeChange: setMode, onSignOut: signOut, onSwitchLanguage: switchLanguageAction, onCheckPushDevice: checkPushSubscriptionAction, onForgetPushDevice: removePushSubscriptionAction }}>
+      <AppShell
+        viewer={{ ...toSignedInViewer(viewer.user), unreadMessages, unreadNotifications }}
+        notices={notices}
+        handlers={{ onModeChange: setMode, onSignOut: signOut, onSwitchLanguage: switchLanguageAction, onCheckPushDevice: checkPushSubscriptionAction, onForgetPushDevice: removePushSubscriptionAction }}
+        // Messages: the chat button and window (2026-11-22). Server Actions only (unbound, called with the conversation's
+        // or the case's id), never closures.
+        chat={<ChatWindowController viewerId={viewer.user.id} unread={unreadMessages + unreadHelp} actions={{ send: sendFromWindowAction, react: reactFromWindowAction, typing: typingAction, upload: uploadMessagePhoto, saveReply: saveReplyAction, deleteReply: deleteReplyAction, report: reportUserAction, block: blockUserAction, handOff: handOffToSupportAction, reply: replyToHelpCaseAction }} />}
+      >
         {children}
       </AppShell>
     </TimeZoneProvider>

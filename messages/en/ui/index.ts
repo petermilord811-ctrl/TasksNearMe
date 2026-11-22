@@ -51,6 +51,7 @@ import completion from './completion.json';
 import inbox from './inbox.json';
 import thread from './thread.json';
 import directMessage from './directMessage.json';
+import chat from './chat.json';
 import sparks from './sparks.json';
 import sparksBadge from './sparksBadge.json';
 import bookingSheets from './bookingSheets.json';
@@ -105,6 +106,6 @@ import adminBeta from './adminBeta.json';
 import notFound from './notFound.json';
 import errorPage from './errorPage.json';
 
-const uiMessages = { brand, common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, cities, help, helpContact, legal, taskBoard, community, portal, questions, savedSearches, helperProfile, publicTask, reviews, postTask, myTasks, taskManage, offers, helperOnboarding, helperProfileEditor, findWork, helperTask, myOffers, bookingConfirm, payments, bookings, bookingHub, bookingComplete, reportProblem, completion, inbox, thread, directMessage, sparks, sparksBadge, bookingSheets, paymentsPage, receipt, earnings, home, landing, review, savedHelpers, helpersBrowse, account, notifications, support, supportCase, safety, adminHome, adminCases, adminCase, adminBooking, adminBookings, adminTask, adminAudit, adminPayments, adminStaff, adminConfig, adminRewards, adminUsers, adminUser, adminVerification, staffVerify, push, rewards, changes, invites, inviteCard, availability, clients, series, proposal, report, posterIdentity, adminResponseTimes, adminSavedReplies, adminMetrics, helperStanding, badges, adminWebhooks, adminJobs, beta, plan, adminBeta, notFound, errorPage };
+const uiMessages = { brand, common, money, status, actions, actionReasons, feedback, timeline, verification, location, layout, primitives, shell, publicPages, taskCard, helperCard, forms, signIn, waitlist, cities, help, helpContact, legal, taskBoard, community, portal, questions, savedSearches, helperProfile, publicTask, reviews, postTask, myTasks, taskManage, offers, helperOnboarding, helperProfileEditor, findWork, helperTask, myOffers, bookingConfirm, payments, bookings, bookingHub, bookingComplete, reportProblem, completion, inbox, thread, directMessage, chat, sparks, sparksBadge, bookingSheets, paymentsPage, receipt, earnings, home, landing, review, savedHelpers, helpersBrowse, account, notifications, support, supportCase, safety, adminHome, adminCases, adminCase, adminBooking, adminBookings, adminTask, adminAudit, adminPayments, adminStaff, adminConfig, adminRewards, adminUsers, adminUser, adminVerification, staffVerify, push, rewards, changes, invites, inviteCard, availability, clients, series, proposal, report, posterIdentity, adminResponseTimes, adminSavedReplies, adminMetrics, helperStanding, badges, adminWebhooks, adminJobs, beta, plan, adminBeta, notFound, errorPage };
 
 export default uiMessages;
