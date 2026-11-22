@@ -32,6 +32,7 @@ import { DEMO_MARKETS, demoAreaId, demoMarketId, demoPolicyId } from './markets'
 import { buildDemoPlan, DEMO_PREFIX, DEMO_TIME_ZONE, type DemoPlan, type DemoPolicies } from './plan';
 import { buildDemoCommunity, buildDemoQuestions, type DemoCommunity, type DemoTaskQuestion } from './community';
 import { taskQuestions } from '../../../src/modules/questions/schema';
+import { backfillUsernames } from '../../../src/modules/accounts/usernames';
 
 /** `<table prefix>_demo_%` as a LIKE pattern (underscores escaped). */
 const demoIds = (prefix: string) => `${prefix}\\_${DEMO_PREFIX.replace('_', '\\_')}%`;
@@ -276,6 +277,8 @@ export async function seedDemoData(url: string, now = new Date()): Promise<{ mar
       return built;
     });
     for (const person of plan.people) await recomputeBadges(db, person.id, now, { announce: false });
+    // Everyone has an @username (2026-11-22): the demo people get theirs from their first names.
+    await backfillUsernames(db);
     // Cached pages (the board, the market and category pages, profiles, task pages) show the new data at once:
     // the same invalidation `updateTag` shares (cache-handlers/shared-tags.mjs), so it reaches every instance,
     // and on a deploy it also covers what the build prerendered.

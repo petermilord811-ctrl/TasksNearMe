@@ -9,6 +9,7 @@ import { PushDeviceSetting } from '@/ui/components/push/push-device';
 import { Button } from '@/ui/primitives/button';
 import { AccountContact } from './account-contact';
 import { AccountProfileForm } from './account-profile-form';
+import { AccountUsernameForm } from './account-username-form';
 import { AccountPreferences } from './account-preferences';
 import { AccountPrivacy, AccountSignOut } from './account-privacy';
 import { AccountLanguage } from './account-language';
@@ -64,6 +65,10 @@ export function AccountScreen({ data, handlers, initialDialog }: {
               <div className="mt-6 border-t pt-6">
                 <AccountProfileForm key={`${data.profile.firstName}-${data.profile.lastName}-${data.profile.displayName}`} profile={data.profile} onSave={handlers.onSaveProfile} />
               </div>
+              {/* The @username (2026-11-22): people start a chat with it. */}
+              {handlers.onSaveUsername && <div className="mt-6 border-t pt-6">
+                <AccountUsernameForm username={data.profile.username} changeableAt={data.profile.usernameChangeableAt} onSave={handlers.onSaveUsername} />
+              </div>}
             </Section>
           </div>
           <div className={cardClass}><Section headingLevel={3} title={t('contact.title')} description={t('contact.description')}><AccountContact email={data.profile.email} phone={data.phone} held={data.contactChangesHeld === true} texts={data.textsOff !== true} handlers={handlers} initialDialog={initialDialog} /></Section></div>

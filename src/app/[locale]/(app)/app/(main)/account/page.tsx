@@ -20,6 +20,7 @@ import {
   saveActivityAction,
   saveLanguageAction,
   signOut,
+  saveUsernameAction,
 } from '@/modules/accounts/actions';
 import {
   removePushSubscriptionAction,
@@ -39,6 +40,7 @@ import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AccountScreen } from '@/ui/screens/account';
 import { appPageMetadata } from '@/i18n/metadata';
+import { usernameFacts } from '@/modules/accounts/usernames';
 
 export async function generateMetadata(): Promise<Metadata> {
   return appPageMetadata('account');
@@ -62,15 +64,17 @@ async function Account({ searchParams }: Pick<PageProps<'/[locale]/app/account'>
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.account()));
   const { connect, error } = await searchParams;
   const now = await requestNow();
-  const [page, verification, badges, sparks] = await Promise.all([getAccountPage(db, viewer.user.id, { connect, error }, now), accountVerificationFor(db, viewer.user.id, now), ownBadges(db, viewer.user.id), sparksSummaryOf(db, viewer.user.id)]);
+  const [page, verification, badges, sparks, username] = await Promise.all([getAccountPage(db, viewer.user.id, { connect, error }, now), accountVerificationFor(db, viewer.user.id, now), ownBadges(db, viewer.user.id), sparksSummaryOf(db, viewer.user.id), usernameFacts(db, viewer.user.id, now)]);
   if (!page) notFound();
   // A client with nothing to verify (no texts here, plan 9.2, and no ID check asked for) gets no verification section.
-  const data = { ...page, ...(verification.role === 'helper' || verification.steps.length > 0 ? { verification } : {}), badges, ...(sparks ? { sparks } : {}) };
+  // The @username sits with the name (2026-11-22).
+  const data = { ...page, profile: { ...page.profile, ...username }, ...(verification.role === 'helper' || verification.steps.length > 0 ? { verification } : {}), badges, ...(sparks ? { sparks } : {}) };
   return (
     <AccountScreen
       data={data}
       handlers={{
         onSaveProfile: saveAccountProfileAction,
+        onSaveUsername: saveUsernameAction,
         onSavePreference: saveNotificationPreferenceAction,
         onRequestExport: requestDataExportAction,
         onRequestDeletion: requestAccountDeletionAction,

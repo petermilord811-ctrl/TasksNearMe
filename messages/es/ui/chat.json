@@ -22,7 +22,10 @@
     "notFound": "Esta conversación no está disponible.",
     "conversation": "Conversación con {name}",
     "about": "De qué se trata",
-    "searchHint": "Buscar conversaciones"
+    "searchHint": "Buscar conversaciones",
+    "resize": "Cambiar el tamaño de la ventana de mensajes",
+    "resizeHint": "Arrastra para cambiar el tamaño. Con el teclado: flechas, e Inicio para restablecer. Doble clic restablece.",
+    "newMessage": "Nuevo mensaje"
   },
   "help": {
     "title": "Ayuda de TasksNearMe",
@@ -98,7 +101,8 @@
         "invalid": "Elige una de tus reservas, o ninguna.",
         "rate_limited": "Has enviado varias solicitudes. Inténtalo de nuevo a las {time}.",
         "unknown": "No se envió. Inténtalo de nuevo."
-      }
+      },
+      "defaultDetails": "Me gustaría hablar con una persona."
     },
     "case": {
       "waiting": "Estás en la fila. Una persona de nuestro equipo de soporte te responderá aquí.",
@@ -154,7 +158,23 @@
       "handoff": "Ayuda: hablar con una persona",
       "waiting": "Ayuda: esperando a soporte",
       "replied": "Ayuda: soporte respondió",
-      "page": "Página de Ayuda en un teléfono"
+      "page": "Página de Ayuda en un teléfono",
+      "liveWaiting": "Ayuda: esperando turno para una persona",
+      "liveOffline": "Ayuda: pidió una persona, nadie conectado",
+      "liveJoined": "Ayuda: chat en vivo con soporte",
+      "liveEnded": "Ayuda: terminó el chat en vivo"
+    },
+    "live": {
+      "connecting": "Conectándote con una persona…",
+      "waiting": "Conectándote con una persona de soporte. {position, plural, =1 {Eres el siguiente.} other {Tienes el lugar # en la fila.}}",
+      "offline": "Ahora no hay nadie de soporte en línea. Deja tu mensaje aquí: te responderemos en este chat y te avisaremos.",
+      "joined": "{name}, de soporte, se unió al chat.",
+      "endedEvent": "El chat en vivo terminó.",
+      "ended": "El chat en vivo terminó. Aún puedes escribir aquí y soporte te responderá.",
+      "with": "{name} · Soporte",
+      "typing": "{name} está escribiendo…",
+      "typingSupport": "Soporte está escribiendo…",
+      "request": "Chatear en vivo con soporte"
     }
   }
 }

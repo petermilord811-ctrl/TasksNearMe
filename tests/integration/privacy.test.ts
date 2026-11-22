@@ -80,7 +80,7 @@ describe('a copy of the data', () => {
     // A zip: the JSON, and the photos she added (J-PR10).
     const json = readZip(file!.body).get('tasksnearme-data-2026-11-17.json')!;
     const data = JSON.parse(json.toString('utf8'));
-    expect(data).toMatchObject({ format: 'tasksnearme-data-export/1', account: { id: 'usr_maya', email: 'maya@example.test', firstName: 'Maya' } });
+    expect(data).toMatchObject({ format: 'tasksnearme-data-export/1', account: { id: 'usr_maya', email: 'maya@example.test', firstName: 'Maya', username: 'maya' } });
     const desk = data.tasksPosted.find((task: { id: string }) => task.id === 'tsk_desk');
     expect(desk).toMatchObject({ title: expect.stringContaining('desk'), address: { line1: '1234 Example Lane', zip: '78723' } });
     // Lee's offer, as Maya sees it in the app: his number hidden.

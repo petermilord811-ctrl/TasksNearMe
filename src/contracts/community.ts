@@ -36,6 +36,8 @@ export interface CommunityAuthor {
   isYou: boolean;
   /** Their profile photo, when they added one (shown inside the app). */
   photo?: Photo;
+  /** Their @username (2026-11-22), on the card behind their name. */
+  username?: string;
   /** The card behind their name (plan 9.10, LinkedIn-style): earned facts only, never claims. */
   card?: CommunityAuthorCard;
 }

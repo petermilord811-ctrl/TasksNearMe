@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 import type { ActionResult, HandOffInput, HelpChatData, ISODateTime, SupportReplyInput } from '@/contracts';
 import { HelpChatScreen } from '@/ui/screens/messages/help-chat-screen';
 import { useHelpChat } from './use-help-chat';
@@ -14,10 +15,24 @@ export function HelpChatPage({ viewerId, data, now, actions }: {
   viewerId: string;
   data: HelpChatData;
   now: ISODateTime;
-  actions: { handOff(input: HandOffInput): Promise<ActionResult>; reply(caseId: string, input: SupportReplyInput): Promise<ActionResult> };
+  actions: {
+    handOff(input: HandOffInput): Promise<ActionResult>;
+    reply(caseId: string, input: SupportReplyInput): Promise<ActionResult>;
+    requestLive(caseId: string): Promise<ActionResult>;
+    typing(caseId: string): Promise<void>;
+  };
 }) {
   const router = useRouter();
   const helpChat = useHelpChat(viewerId, actions.handOff);
+  const caseId = data.case?.id;
+  const waiting = data.case?.live?.state === 'waiting';
+  // While waiting in line, the place in line moves as support joins others' chats: look again every 10 seconds.
+  useEffect(() => {
+    if (!waiting) return;
+    const timer = setInterval(() => router.refresh(), 10_000);
+    return () => clearInterval(timer);
+  }, [waiting, router]);
+  const lastTyping = useRef(0);
   return <HelpChatScreen data={data} transcript={helpChat.transcript} now={now} handlers={{
     onAsk: (question) => void helpChat.ask(question),
     onRetry: helpChat.retry,
@@ -32,6 +47,17 @@ export function HelpChatPage({ viewerId, data, now, actions }: {
       const result = await actions.reply(data.case.id, input);
       if (result.ok) router.refresh();
       return result;
+    },
+    onRequestLive: async () => {
+      if (!caseId) return { ok: false, code: 'not_allowed' };
+      const result = await actions.requestLive(caseId);
+      if (result.ok) router.refresh();
+      return result;
+    },
+    onTyping: () => {
+      if (!caseId || Date.now() - lastTyping.current < 2500) return;
+      lastTyping.current = Date.now();
+      void actions.typing(caseId).catch(() => undefined);
     },
   }} />;
 }

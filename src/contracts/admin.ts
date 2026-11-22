@@ -125,7 +125,7 @@ export interface AdminCaseEventView {
    * (staff only; `body` is the reason). `question`: the reported question was hidden, removed or restored (staff only;
    * `body` is the reason).
    */
-  kind: 'message' | 'note' | 'status' | 'assignment' | 'resolution' | 'review' | 'question';
+  kind: 'message' | 'note' | 'status' | 'assignment' | 'resolution' | 'review' | 'question' | 'live';
   actor: AdminCaseActor;
   /** Messages: whose conversation with support (an `AdminCaseParty` person id). */
   partyId?: string;
@@ -143,6 +143,8 @@ export interface AdminCaseEventView {
   reviewAction?: 'hidden' | 'shown';
   /** `question` events: what staff did with the reported question (and its answer). */
   questionAction?: 'hidden' | 'removed' | 'restored';
+  /** `live` events (2026-11-22): the live chat joined (by `actor`) or ended. */
+  live?: 'joined' | 'ended';
   at: ISODateTime;
 }
 

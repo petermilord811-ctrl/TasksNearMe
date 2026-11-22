@@ -266,6 +266,19 @@ describe('AdminShell', () => {
     else expect(nav.queryByRole('link', { name: 'Staff' })).not.toBeInTheDocument();
   });
 
+  it('lists Live chat for the roles that answer it, with how many wait said in its name (2026-11-22)', () => {
+    show(<AdminShell viewer={{ ...alexStaff, liveWaiting: 2 }} handlers={handlers} currentPath={routes.admin.liveChat()}><h1>Live chat</h1></AdminShell>);
+    const nav = within(screen.getByRole('navigation', { name: 'Staff navigation' }));
+    const live = nav.getByRole('link', { name: 'Live chat, 2 waiting' });
+    expect(live).toHaveAttribute('href', routes.admin.liveChat());
+    expect(live).toHaveAttribute('aria-current', 'page');
+    // No label that says something other than what shows (axe: label-content-name-mismatch).
+    expect(live).not.toHaveAttribute('aria-label');
+    cleanup();
+    show(<AdminShell viewer={{ ...alexStaff, roles: ['finance'] }} handlers={handlers}><h1>Queues</h1></AdminShell>);
+    expect(within(screen.getByRole('navigation', { name: 'Staff navigation' })).queryByRole('link', { name: /^Live chat/ })).not.toBeInTheDocument();
+  });
+
   it('shows all supplied role badges and preserves breadcrumb destinations', () => {
     const viewer: StaffViewer = { ...morganStaff, roles: ['support_lead', 'finance'] };
     const breadcrumbs: Breadcrumb[] = [

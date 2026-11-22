@@ -14,10 +14,19 @@ vi.mock('@/platform/auth/request-headers', () => ({ authRequestHeaders: async ()
 vi.mock('@/platform/auth/auth', () => ({
   auth: { api: { getSession: async () => ({ session: { id: 'ses_1' }, user: { id: 'usr_x', email: 'x@example.test', name: 'X Y.', firstName: 'X', lastName: 'Y', mode: 'poster', status: state.status } }) } },
 }));
-// Every query finds nothing, but the account's own row.
+// Every query finds nothing, but the account's own row (joined with its @username, 2026-11-22).
 vi.mock('@/platform/db/client', async () => {
   const { getTableName } = await import('drizzle-orm');
-  return { db: { select: () => ({ from: (table: Parameters<typeof getTableName>[0]) => ({ where: async () => (getTableName(table) === 'users' && state.account ? [state.account] : []) }) }) } };
+  return {
+    db: {
+      select: () => ({
+        from: (table: Parameters<typeof getTableName>[0]) => {
+          const where = async () => (getTableName(table) === 'users' && state.account ? [state.account] : []);
+          return { where, leftJoin: () => ({ where }) };
+        },
+      }),
+    },
+  };
 });
 // The person's home-market zone (completion plan 8.1): Austin's.
 vi.mock('@/modules/markets/time-zone', () => ({ userTimeZone: async () => 'America/Chicago' }));

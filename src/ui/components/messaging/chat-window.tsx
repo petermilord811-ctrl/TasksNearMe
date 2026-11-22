@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronUp, LockKeyhole, Maximize2, MessagesSquare, Minus, RotateCcw, X } from 'lucide-react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react';
+import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronUp, LockKeyhole, Maximize2, MessagesSquare, Minus, RotateCcw, SquarePen, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type {
   AssistantTranscript,
@@ -22,6 +22,7 @@ import { useShownPerson } from '@/ui/lib/shown-person';
 import { cn } from '@/ui/lib/utils';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { ReportBlockMenu } from '@/ui/components/safety';
+import { SparksBadge } from '@/ui/components/people/sparks-badge';
 import { buttonVariants } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 import { MessageComposerContent } from '@/ui/screens/messages/message-composer';
@@ -108,6 +109,9 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier }: 
         <h3 className="truncate text-[15px] font-semibold">{other.displayName}</h3>
         <div className="flex min-w-0 items-center gap-x-2 text-xs text-muted-foreground">
           <ThreadPresence threadId={thread.id} presence={data.presence} className="shrink-0 text-xs" />
+          {/* Their @username and Sparks (2026-11-22). */}
+          {other.username && <span className="shrink-0">@{other.username}</span>}
+          {other.sparks && <SparksBadge sparks={other.sparks} compact className="shrink-0 flex-nowrap" />}
           <span className="truncate">{thread.kind === 'direct' ? t('direct.label') : thread.title}</span>
         </div>
       </div>
@@ -168,6 +172,89 @@ function MinimizedBar({ label, avatar, unread, onRestore, onClose }: { label: st
   </div>;
 }
 
+/** The window's size, kept for this browser; null until someone resizes it (then the classes' default applies). */
+type Size = { width: number; height: number };
+const SIZE_KEY = 'tnm.chat.size';
+const MIN = { width: 360, height: 380 };
+const STEP = 32;
+
+function limits(): Size {
+  const header = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--app-header-offset')) || 68;
+  return { width: Math.max(MIN.width, window.innerWidth - 48), height: Math.max(MIN.height, window.innerHeight - header - 24) };
+}
+
+function clamp(size: Size): Size {
+  const max = limits();
+  return { width: Math.round(Math.min(max.width, Math.max(MIN.width, size.width))), height: Math.round(Math.min(max.height, Math.max(MIN.height, size.height))) };
+}
+
+/**
+ * Resizing the window (2026-11-22, owner: "Chat Dialog is not resizable"): it's docked at the bottom right, so it grows
+ * up and to the left. Its size stays for this browser; the window shrinks back inside a smaller screen.
+ */
+function useWindowSize(box: RefObject<HTMLElement | null>) {
+  const [size, setSize] = useState<Size | null>(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(SIZE_KEY) ?? 'null') as Partial<Size> | null;
+      return stored && typeof stored.width === 'number' && typeof stored.height === 'number' ? clamp({ width: stored.width, height: stored.height }) : null;
+    } catch {
+      return null;
+    }
+  });
+  const save = (next: Size | null) => {
+    setSize(next);
+    try {
+      if (next) localStorage.setItem(SIZE_KEY, JSON.stringify(next));
+      else localStorage.removeItem(SIZE_KEY);
+    } catch {
+      // Storage off: the size lasts for this page.
+    }
+  };
+  useEffect(() => {
+    if (!size) return;
+    const onResize = () => setSize((current) => (current ? clamp(current) : current));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [size]);
+  const current = (): Size => {
+    const rect = box.current?.getBoundingClientRect();
+    return size ?? { width: rect?.width ?? 400, height: rect?.height ?? 560 };
+  };
+  /** A drag from one edge or the corner: x grows the width (leftward), y the height (upward). */
+  const drag = (axes: { x: boolean; y: boolean }) => (event: ReactPointerEvent<HTMLElement>) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    const start = { x: event.clientX, y: event.clientY, ...current() };
+    const target = event.currentTarget;
+    target.setPointerCapture(event.pointerId);
+    const sized = (at: PointerEvent): Size => clamp({ width: axes.x ? start.width + (start.x - at.clientX) : start.width, height: axes.y ? start.height + (start.y - at.clientY) : start.height });
+    const move = (moved: PointerEvent) => setSize(sized(moved));
+    const up = (ended: PointerEvent) => {
+      target.removeEventListener('pointermove', move);
+      target.removeEventListener('pointerup', up);
+      target.removeEventListener('pointercancel', up);
+      save(sized(ended));
+    };
+    target.addEventListener('pointermove', move);
+    target.addEventListener('pointerup', up);
+    target.addEventListener('pointercancel', up);
+  };
+  /** The corner handle from the keyboard: Left and Up grow it, Right and Down shrink it, Home puts it back. */
+  const key = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Home') {
+      event.preventDefault();
+      save(null);
+      return;
+    }
+    const now = current();
+    const next = event.key === 'ArrowLeft' ? { ...now, width: now.width + STEP } : event.key === 'ArrowRight' ? { ...now, width: now.width - STEP } : event.key === 'ArrowUp' ? { ...now, height: now.height + STEP } : event.key === 'ArrowDown' ? { ...now, height: now.height - STEP } : null;
+    if (!next) return;
+    event.preventDefault();
+    save(clamp(next));
+  };
+  return { size, drag, key, reset: () => save(null) };
+}
+
 /**
  * The chat window (2026-11-22, owner: "Reddit similar chat"): docked at the bottom right over the page, from 1024 px.
  * From 1280 px two panes, the conversations (TasksNearMe Help pinned on top) beside the open one; below that one pane at
@@ -181,6 +268,7 @@ export function ChatWindow(props: ChatWindowProps) {
   const person = useShownPerson();
   const titleId = useId();
   const box = useRef<HTMLElement>(null);
+  const resize = useWindowSize(box);
 
   useEffect(() => {
     if (focusKey && state === 'open') box.current?.focus({ preventScroll: true });
@@ -201,22 +289,31 @@ export function ChatWindow(props: ChatWindowProps) {
     onMinimize();
   };
   const listShown = view.kind === 'list';
-  return <section ref={box} data-chat-window="open" role="dialog" aria-modal="false" aria-labelledby={titleId} tabIndex={-1} onKeyDown={onKeyDown} className="app-glass fixed right-6 bottom-6 z-40 hidden h-[min(40rem,calc(100dvh-var(--app-header-offset,4.25rem)-3rem))] w-[min(25rem,calc(100vw-3rem))] flex-col overflow-hidden rounded-[1.75rem] border border-foreground/[0.08] shadow-[0_2px_6px_rgb(23_18_14/0.06),0_30px_60px_-24px_rgb(40_20_5/0.55)] outline-none motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:slide-in-from-bottom-2 lg:flex xl:w-[47.5rem] dark:border-white/[0.1] dark:shadow-[0_30px_60px_-20px_rgb(0_0_0/0.85)]" style={{ transformOrigin: 'bottom right' }}>
+  return <section ref={box} data-chat-window="open" role="dialog" aria-modal="false" aria-labelledby={titleId} tabIndex={-1} onKeyDown={onKeyDown} className="@container app-glass fixed right-6 bottom-6 z-40 hidden h-[min(40rem,calc(100dvh-var(--app-header-offset,4.25rem)-3rem))] w-[min(25rem,calc(100vw-3rem))] flex-col overflow-hidden rounded-[1.75rem] border border-foreground/[0.08] shadow-[0_2px_6px_rgb(23_18_14/0.06),0_30px_60px_-24px_rgb(40_20_5/0.55)] outline-none motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:slide-in-from-bottom-2 lg:flex xl:w-[47.5rem] dark:border-white/[0.1] dark:shadow-[0_30px_60px_-20px_rgb(0_0_0/0.85)]" style={{ transformOrigin: 'bottom right', ...(resize.size ? { width: resize.size.width, height: resize.size.height } : {}) }}>
+    {/* Resize (2026-11-22): the top and left edges, and the corner, which the keyboard can move too. */}
+    <div aria-hidden="true" onPointerDown={resize.drag({ x: false, y: true })} onDoubleClick={resize.reset} className="absolute inset-x-6 top-0 z-10 h-1.5 cursor-ns-resize touch-none" />
+    <div aria-hidden="true" onPointerDown={resize.drag({ x: true, y: false })} onDoubleClick={resize.reset} className="absolute inset-y-6 left-0 z-10 w-1.5 cursor-ew-resize touch-none" />
+    <button type="button" aria-label={t('resize')} title={t('resizeHint')} onPointerDown={resize.drag({ x: true, y: true })} onKeyDown={resize.key} onDoubleClick={resize.reset} className="group/resize absolute top-0 left-0 z-20 flex size-5 cursor-nwse-resize touch-none items-start justify-start rounded-tl-[1.75rem] p-1 focus-visible:outline-2 focus-visible:outline-ring">
+      <span aria-hidden="true" className="size-2 rounded-full bg-foreground/15 transition-colors group-hover/resize:bg-primary group-focus-visible/resize:bg-primary" />
+    </button>
     <div className="flex items-center gap-1 border-b border-foreground/[0.07] bg-card/70 px-2 py-1.5 dark:border-white/[0.06]">
-      {!listShown && <button type="button" onClick={() => onShow({ kind: 'list' })} aria-label={t('back')} title={t('back')} className={cn(control, 'xl:hidden')}><ArrowLeft aria-hidden="true" className="size-4" /></button>}
-      <h2 id={titleId} className={cn('font-display text-base font-semibold tracking-[-0.01em]', listShown ? 'pl-2' : 'pl-2 max-xl:pl-0.5')}>{t('title')}</h2>
+      {!listShown && <button type="button" onClick={() => onShow({ kind: 'list' })} aria-label={t('back')} title={t('back')} className={cn(control, '@2xl:hidden')}><ArrowLeft aria-hidden="true" className="size-4" /></button>}
+      <h2 id={titleId} className={cn('font-display text-base font-semibold tracking-[-0.01em]', listShown ? 'pl-2' : 'pl-2 @max-2xl:pl-0.5')}>{t('title')}</h2>
       {unread > 0 && <span className="rounded-full bg-primary px-2 text-xs leading-5 font-semibold text-primary-foreground tabular-nums">{t('unread', { count: unread })}</span>}
       <div className="ml-auto flex items-center gap-0.5">
+        {/* A conversation with anyone, by their @username (2026-11-22): the New message page. */}
+        <Link href={routes.app.newMessage()} onClick={onFullPage} aria-label={t('newMessage')} title={t('newMessage')} className={control}><SquarePen aria-hidden="true" className="size-4" /></Link>
         <Link href={fullPageHref} onClick={onFullPage} aria-label={t('fullPage')} title={t('fullPage')} className={control}><Maximize2 aria-hidden="true" className="size-4" /></Link>
         <button type="button" onClick={onMinimize} aria-label={t('minimize')} title={t('minimize')} className={control}><Minus aria-hidden="true" className="size-4" /></button>
         <button type="button" onClick={onClose} aria-label={t('close')} title={t('close')} className={control}><X aria-hidden="true" className="size-4" /></button>
       </div>
     </div>
-    <div className="grid min-h-0 flex-1 bg-card/85 xl:grid-cols-[18rem_minmax(0,1fr)]">
-      <div className={cn('min-h-0 flex-col border-foreground/[0.07] xl:flex xl:border-r dark:border-white/[0.06]', listShown ? 'flex' : 'hidden')}>
+    {/* Two panes when the window is wide enough (its own width: it can be resized), one at a time below that. */}
+    <div className="grid min-h-0 flex-1 bg-card/85 @2xl:grid-cols-[18rem_minmax(0,1fr)]">
+      <div className={cn('min-h-0 flex-col border-foreground/[0.07] @2xl:flex @2xl:border-r dark:border-white/[0.06]', listShown ? 'flex' : 'hidden')}>
         <ListPane load={inbox} view={view} now={now} onShow={onShow} onRetry={onRetry} />
       </div>
-      <div className={cn('min-h-0 flex-col', listShown ? 'hidden xl:flex' : 'flex')}>
+      <div className={cn('min-h-0 flex-col', listShown ? 'hidden @2xl:flex' : 'flex')}>
         {view.kind === 'thread'
           ? <ThreadPane load={thread} now={now} handlers={threadHandlers} onRetry={onRetry} onRefresh={onRefreshThread} onLoadEarlier={onLoadEarlier} />
           : view.kind === 'help'

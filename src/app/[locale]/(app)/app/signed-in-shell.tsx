@@ -7,9 +7,11 @@ import { checkPushSubscriptionAction, removePushSubscriptionAction } from '@/mod
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { unreadMessageCount } from '@/modules/messaging/service';
 import { deleteReplyAction, reactFromWindowAction, saveReplyAction, sendFromWindowAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
-import { handOffToSupportAction, replyToHelpCaseAction } from '@/modules/assist/support-chat-actions';
+import { handOffToSupportAction, replyToHelpCaseAction, requestLiveChatAction, typingInHelpCaseAction } from '@/modules/assist/support-chat-actions';
 import { blockUserAction, reportUserAction } from '@/modules/support/actions';
 import { helpUnreadCount } from '@/modules/support/service';
+import { assignUsername } from '@/modules/accounts/usernames';
+import { sparksSummaryOf } from '@/modules/sparks/service';
 import { neighborsNewsOf } from '@/modules/community/home';
 import { communityViewerOf } from '@/modules/community/request-viewer';
 import { shellNoticesFor } from '@/modules/markets/outage';
@@ -50,24 +52,27 @@ async function ViewerShell({ children }: { children: React.ReactNode }) {
   // `notices`: the outage switch of the person's market (completion plan 5.15), on every signed-in page.
   // The chat button counts unread messages and an unread reply from support in the Help conversation (2026-11-22).
   // `neighborsNews`: the dot on the Neighbors item (plan 10.19).
-  const [unreadMessages, unreadNotifications, notices, unreadHelp, neighborsNews] = await Promise.all([
+  // `username` and `sparks`: the account menu's @username and score (2026-11-22); someone new gets a username here.
+  const [unreadMessages, unreadNotifications, notices, unreadHelp, neighborsNews, username, sparks] = await Promise.all([
     unreadMessageCount(db, viewer.user.id),
     unreadNotificationCount(db, viewer.user.id),
     shellNoticesFor(db, viewer.user.id),
     helpUnreadCount(db, viewer.user.id),
     communityViewerOf(viewer.user).then((reader) => neighborsNewsOf(db, reader)),
+    viewer.user.username ? Promise.resolve(viewer.user.username) : assignUsername(db, viewer.user.id),
+    sparksSummaryOf(db, viewer.user.id),
   ]);
   // The person's own market clock for every client component below (completion plan 8.1); server components get it
   // from the request (getViewer set it), and a page about another market names that market's.
   return (
     <TimeZoneProvider timeZone={viewer.user.timeZone}>
       <AppShell
-        viewer={{ ...toSignedInViewer(viewer.user), unreadMessages, unreadNotifications, ...(neighborsNews ? { neighborsNews } : {}) }}
+        viewer={{ ...toSignedInViewer(viewer.user), unreadMessages, unreadNotifications, ...(neighborsNews ? { neighborsNews } : {}), ...(username ? { username } : {}), sparks: sparks ?? { total: 0, bought: 0, level: 'newcomer' } }}
         notices={notices}
         handlers={{ onModeChange: setMode, onSignOut: signOut, onSwitchLanguage: switchLanguageAction, onCheckPushDevice: checkPushSubscriptionAction, onForgetPushDevice: removePushSubscriptionAction }}
         // Messages: the chat button and window (2026-11-22). Server Actions only (unbound, called with the conversation's
         // or the case's id), never closures.
-        chat={<ChatWindowController viewerId={viewer.user.id} unread={unreadMessages + unreadHelp} actions={{ send: sendFromWindowAction, react: reactFromWindowAction, typing: typingAction, upload: uploadMessagePhoto, saveReply: saveReplyAction, deleteReply: deleteReplyAction, report: reportUserAction, block: blockUserAction, handOff: handOffToSupportAction, reply: replyToHelpCaseAction }} />}
+        chat={<ChatWindowController viewerId={viewer.user.id} unread={unreadMessages + unreadHelp} actions={{ send: sendFromWindowAction, react: reactFromWindowAction, typing: typingAction, upload: uploadMessagePhoto, saveReply: saveReplyAction, deleteReply: deleteReplyAction, report: reportUserAction, block: blockUserAction, handOff: handOffToSupportAction, reply: replyToHelpCaseAction, requestLive: requestLiveChatAction, typingInCase: typingInHelpCaseAction }} />}
       >
         {children}
       </AppShell>

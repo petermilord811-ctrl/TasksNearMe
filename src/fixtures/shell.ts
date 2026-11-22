@@ -1,4 +1,5 @@
 import type { ShellViewer, SignedInViewer, StaffViewer } from '@/contracts';
+import { jordanSparks, mayaSparks } from './sparks';
 
 export const publicViewer: ShellViewer = { kind: 'public' };
 
@@ -11,6 +12,8 @@ export const mayaShell: SignedInViewer = {
   helperReady: false,
   unreadMessages: 2,
   unreadNotifications: 3,
+  username: 'maya',
+  sparks: mayaSparks,
 };
 
 export const jordanShell: SignedInViewer = {
@@ -22,6 +25,8 @@ export const jordanShell: SignedInViewer = {
   helperReady: true,
   unreadMessages: 1,
   unreadNotifications: 5,
+  username: 'jordan',
+  sparks: jordanSparks,
 };
 
 /** Helper mode chosen but onboarding unfinished. */

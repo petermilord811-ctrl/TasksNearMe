@@ -52,7 +52,7 @@ describe('direct conversations', () => {
     const found = await getNewDirectMessagePage(db, CLIENT, { helper: HANDLE }, now);
     expect(found?.kind).toBe('page');
     if (found?.kind !== 'page') return;
-    expect(found.data).toMatchObject({ recipient: { id: HELPER, displayName: 'Hank D.' }, helperHandle: HANDLE, canRequest: true, allowance: { left: 10, perDay: 10 }, firstMessagesMax: 3, contactMasking: true });
+    expect(found.data).toMatchObject({ recipient: { id: HELPER, displayName: 'Hank D.' }, helperHandle: HANDLE, canRequest: true, allowance: { left: 3, perDay: 3 }, firstMessagesMax: 3, contactMasking: true });
     expect(found.data.refusal).toBeUndefined();
     expect(await getNewDirectMessagePage(db, CLIENT, { helper: 'nobody-by-this-handle' }, now)).toBeNull();
     // Yourself: the page says so.
@@ -121,11 +121,11 @@ describe('direct conversations', () => {
   });
 
   it('stops at the day’s allowance of new conversations, and says when the next one frees up', async () => {
-    // Ten starts in the last day (a newcomer's allowance), the oldest 20 hours ago.
+    // Three starts in the last day (a newcomer's allowance since 2026-11-22), the oldest 20 hours ago.
     const earlier = (hours: number) => new Date(now.getTime() - hours * 3_600_000);
-    await db.insert(threads).values(Array.from({ length: 10 }, (_, index) => ({ id: `thr_tmp_dm_fill_${index}`, kind: 'direct', linkedId: `usr_tmp_dm_fill_${index}:${OTHER}`, taskId: null, startedByUserId: OTHER, createdAt: earlier(20 - index) })));
+    await db.insert(threads).values(Array.from({ length: 3 }, (_, index) => ({ id: `thr_tmp_dm_fill_${index}`, kind: 'direct', linkedId: `usr_tmp_dm_fill_${index}:${OTHER}`, taskId: null, startedByUserId: OTHER, createdAt: earlier(20 - index) })));
     const page = await getNewDirectMessagePage(db, OTHER, { helper: HANDLE }, now);
-    expect(page?.kind === 'page' && page.data).toMatchObject({ refusal: 'limit_reached', allowance: { left: 0, perDay: 10, resetsAt: new Date(earlier(20).getTime() + 86_400_000).toISOString() } });
+    expect(page?.kind === 'page' && page.data).toMatchObject({ refusal: 'limit_reached', allowance: { left: 0, perDay: 3, resetsAt: new Date(earlier(20).getTime() + 86_400_000).toISOString() } });
     expect(await startDirectChat(db, OTHER, { to: HELPER, body: 'Hi Hank!' }, now)).toMatchObject({ ok: false, code: 'limit_reached', retryAt: expect.any(String) });
     // A day later the oldest has dropped out.
     const later = new Date(now.getTime() + 4 * 3_600_000 + 60_000);

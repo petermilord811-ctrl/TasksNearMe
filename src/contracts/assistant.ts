@@ -14,11 +14,12 @@ import { SUPPORT_TOPICS, type CaseEventView, type SupportReplyInput, type Suppor
 // assistant wrote, and nothing is stored until the person asks for a person.
 
 /**
- * What an answer suggests next: `none`; `suggest`, a person from support (the person asked for one, or it needs staff:
- * a refund, a dispute, account access, a failed payment, anything the help center doesn't cover); `urgent`, someone may
- * be in danger: call 911 first, then a person (a safety case, at the front of the line).
+ * What an answer suggests next: `none`; `suggest`, a person from support (it needs staff: a refund, a dispute, account
+ * access, a failed payment, anything the help center doesn't cover); `urgent`, someone may be in danger: call 911
+ * first, then a person (a safety case, at the front of the line); `live`, they asked for a person in so many words ("I
+ * want a live agent"): the conversation connects them at once (2026-11-22).
  */
-export const ASSISTANT_HANDOFFS = ['none', 'suggest', 'urgent'] as const;
+export const ASSISTANT_HANDOFFS = ['none', 'suggest', 'urgent', 'live'] as const;
 export type AssistantHandoff = (typeof ASSISTANT_HANDOFFS)[number];
 
 /** Questions are short: the composer's limit. */
@@ -96,6 +97,19 @@ export const handOffInputSchema = z.object({
 });
 export type HandOffInput = z.input<typeof handOffInputSchema>;
 
+/**
+ * Live chat with support (2026-11-22, owner: "let users wait until support is attending to chatting"): waiting in line
+ * (`position`, 1 = next; `agentsOnline` says whether anyone from support has a staff page open right now), joined by
+ * someone (`agentName`, their first name), or ended (the case goes on as messages).
+ */
+export interface HelpLiveState {
+  state: 'waiting' | 'joined' | 'ended';
+  position?: number;
+  agentsOnline: boolean;
+  agentName?: string;
+  requestedAt: ISODateTime;
+}
+
 /** A support case opened from the assistant, as its member sees it in the Help conversation. */
 export interface HelpCaseView {
   id: string;
@@ -110,6 +124,10 @@ export interface HelpCaseView {
   openedAt: ISODateTime;
   /** The case's queue target for a first reply, in hours ("Usually replies within 24 hours"). */
   replyHours: number;
+  /** The live chat, once they asked for one. */
+  live?: HelpLiveState;
+  /** They may ask for a live chat on this case (it has none yet and isn't finished). */
+  canRequestLive: boolean;
 }
 
 /**
@@ -150,6 +168,10 @@ export interface HelpChatHandlers {
   onStartOver(): void;
   onHandOff(input: Omit<HandOffInput, 'chatId' | 'turns'>): Promise<ActionResult>;
   onReply(input: SupportReplyInput): Promise<ActionResult>;
+  /** A live chat on the open case (it had none): ok `updated`. */
+  onRequestLive?(): Promise<ActionResult>;
+  /** They're typing to support (the app spaces the notices out); the person on the chat sees "typing…". */
+  onTyping?(): void;
 }
 
 /** The assistant's side of the Help conversation, kept by the browser for the tab. */

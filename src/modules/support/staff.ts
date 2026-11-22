@@ -72,6 +72,8 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit, consumeRateLimits } from '@/platform/rate-limit';
+import { STAFF_SUPPORT_CHANNEL, userChannel } from '@/platform/realtime/hub';
+import { publishNotices } from '@/platform/realtime/publish';
 import { renderSupportEmailReply } from './emails';
 import { caseLabelsOf, caseStatusOf } from './service';
 import { supportCaseEvents, supportCases } from './schema';
@@ -301,14 +303,14 @@ export async function getAdminCases(db: Db, staff: StaffActor, filters: AdminCas
 
 // ---- One case -----------------------------------------------------------------------------------------
 
-interface CaseContext {
+export interface CaseContext {
   row: CaseRow;
   parties: AdminCaseParty[];
   facts: StaffCaseFacts;
   booking?: { id: string; taskId: string; title: string; status: string; startAt: Date; termsVersion: number; posterUserId: string; helperUserId: string };
 }
 
-async function loadCase(db: Db, staff: StaffActor, caseId: string): Promise<CaseContext | null> {
+export async function loadCase(db: Db, staff: StaffActor, caseId: string): Promise<CaseContext | null> {
   const [row] = await db.select().from(supportCases).where(eq(supportCases.id, String(caseId))).limit(1);
   if (!row) return null;
   const [booking] = row.bookingId
@@ -441,6 +443,9 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
       }
       case 'resolution':
         return event.meta?.resolution ? [{ id: event.id, kind: 'resolution', actor, resolution: event.meta.resolution as CaseResolution, at }] : [];
+      // Live chat (2026-11-22): someone from support joined it, or it ended.
+      case 'live':
+        return event.meta?.live ? [{ id: event.id, kind: 'live', actor, live: event.meta.live, at }] : [];
       default:
         return [];
     }
@@ -677,7 +682,7 @@ export async function previewResolution(db: Db, staff: StaffActor, caseId: strin
 
 // ---- Commands ---------------------------------------------------------------------------------------
 
-async function audit(db: Pick<Db, 'insert'>, staff: StaffActor, action: string, caseId: string, now: Date, extra: { reason?: string; metadata?: Record<string, unknown>; targetType?: string; targetId?: string } = {}) {
+export async function audit(db: Pick<Db, 'insert'>, staff: StaffActor, action: string, caseId: string, now: Date, extra: { reason?: string; metadata?: Record<string, unknown>; targetType?: string; targetId?: string } = {}) {
   await db.insert(auditLog).values({
     id: newId('aud'),
     at: now.toISOString(),
@@ -758,7 +763,21 @@ export async function staffReply(db: Db, staff: StaffActor, caseId: string, inpu
   // A saved reply's (or a typed) `{first_name}` and `{staff_name}` become the real names.
   const names = await usersById(db, [parsed.data.partyId, staff.id]);
   const body = fillReplyPlaceholders(parsed.data.body, { first_name: names.get(parsed.data.partyId)?.firstName ?? '', staff_name: names.get(staff.id)?.firstName ?? '' });
+  // A reply to someone waiting for a live chat (from the case page too) joins it: they see who's on it, not the queue.
+  const joinsLive = Boolean(ctx.row.liveRequestedAt && !ctx.row.liveAgentUserId && !ctx.row.liveEndedAt && ctx.row.openedByUserId === parsed.data.partyId);
+  let joined = false;
   await db.transaction(async (tx) => {
+    if (joinsLive) {
+      const claimed = await tx
+        .update(supportCases)
+        .set({ liveAgentUserId: staff.id, liveJoinedAt: now })
+        .where(and(eq(supportCases.id, ctx.row.id), isNull(supportCases.liveAgentUserId), isNull(supportCases.liveEndedAt)))
+        .returning({ id: supportCases.id });
+      if (claimed.length > 0) {
+        joined = true;
+        await tx.insert(supportCaseEvents).values({ id: newId('cev'), caseId: ctx.row.id, kind: 'live', authorUserId: staff.id, partyUserId: parsed.data.partyId, meta: { live: 'joined' }, createdAt: new Date(now.getTime() - 1) });
+      }
+    }
     await tx.insert(supportCaseEvents).values({ id: newId('cev'), caseId: ctx.row.id, kind: 'message', authorUserId: staff.id, partyUserId: parsed.data.partyId, body, createdAt: now });
     await tx
       .update(supportCases)
@@ -773,6 +792,12 @@ export async function staffReply(db: Db, staff: StaffActor, caseId: string, inpu
       payload: { caseId: ctx.row.id, partyUserId: parsed.data.partyId, subject },
     });
   });
+  if (joined) {
+    await publishNotices(db, [
+      { channel: STAFF_SUPPORT_CHANNEL, notice: { type: 'update', event: 'support.live_joined', case: ctx.row.id } },
+      { channel: userChannel(parsed.data.partyId), notice: { type: 'update', event: 'support.live_joined', case: ctx.row.id } },
+    ]);
+  }
   return { ok: true, code: 'sent' };
 }
 

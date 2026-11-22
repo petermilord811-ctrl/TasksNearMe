@@ -4,7 +4,8 @@ import { and, eq } from 'drizzle-orm';
 import { cookies, headers } from 'next/headers';
 import { refresh, revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { languageInputSchema, routes, socialSignInInputSchema, type ActionResult, type LanguageInput, type PasskeyOptionsResult, type SocialSignInInput } from '@/contracts';
+import { languageInputSchema, routes, socialSignInInputSchema, type ActionResult, type LanguageInput, type PasskeyOptionsResult, type SocialSignInInput, type UsernameInput } from '@/contracts';
+import { changeUsername } from './usernames';
 import { createEmailProvider } from '@/integrations/email';
 import { appUrl, offeredSocialProviders, STAND_IN_COOKIE, standInParams } from '@/integrations/oauth';
 import { auditLog } from '@/platform/audit/schema';
@@ -190,4 +191,13 @@ export async function confirmStaffAuthenticator(input: { code: string }): Promis
   if (!staff) return { ok: false, code: 'not_allowed' };
   const result = await confirmEnrollment(await staffAuthDeps(), staff, String(input?.code ?? ''), await requestNow());
   return result.ok ? { ...result, redirectTo: routes.admin.home() } : result;
+}
+
+/** A new @username from the account page (2026-11-22; src/modules/accounts/usernames.ts). */
+export async function saveUsernameAction(input: UsernameInput): Promise<ActionResult> {
+  const viewer = await getViewer();
+  if (viewer.kind !== 'user') return { ok: false, code: 'not_allowed' };
+  const result = await changeUsername(db, viewer.user.id, input, await requestNow());
+  if (result.ok) refresh();
+  return result;
 }

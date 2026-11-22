@@ -73,6 +73,7 @@ export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
               </span>
               <div className="min-w-0 space-y-1 sm:pt-14 md:pt-16">
                 <h1 className="font-display text-2xl/8 font-semibold tracking-[-0.025em] break-words md:text-[32px]/10">{helper.displayName}</h1>
+                {data.username && <p className="text-sm text-muted-foreground break-all">@{data.username}</p>}
                 {helper.headline && <p className="text-base leading-6">{helper.headline}</p>}
               </div>
             </div>

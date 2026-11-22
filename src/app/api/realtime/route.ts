@@ -3,12 +3,14 @@ import { users } from '@/modules/accounts/schema';
 import { HEARTBEAT_MS, touchActivity } from '@/modules/realtime/presence';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
-import { marketChannel, userChannel } from '@/platform/realtime/hub';
+import { marketChannel, STAFF_SUPPORT_CHANNEL, userChannel } from '@/platform/realtime/hub';
 import { realtimeHub } from '@/platform/realtime/listener';
 import { sseResponse } from '@/platform/realtime/sse';
 
 /** More tabs than this for one person on one server: the extra ones fall back to refreshing. */
 const MAX_STREAMS_PER_USER = 8;
+/** Staff roles that answer live chats (the ones that work cases). */
+const LIVE_CHAT_ROLES: ReadonlySet<string> = new Set(['support_agent', 'support_lead', 'trust_safety', 'admin']);
 /** Accounts whose streams end (restricted accounts keep using the app). */
 const ENDED = new Set(['suspended', 'banned', 'deleted']);
 
@@ -37,9 +39,15 @@ export async function GET(request: Request) {
     const unsubscribeMarket = account ? hub.subscribe(marketChannel(account.marketId), (notice) => {
       if (notice.type === 'community') out.send(null, notice);
     }) : () => {};
+    // Staff pages (`?staff=1`, the staff layout's stream) of people who work cases and passed the second step also hear
+    // live chat (2026-11-22), in this same stream: one stream per tab either way. They count as support online.
+    const staffPage = new URL(request.url).searchParams.get('staff') === '1';
+    const hearsLiveChat = staffPage && viewer.user.staffTwoStepVerified && viewer.user.staffRoles.some((role) => LIVE_CHAT_ROLES.has(role));
+    const unsubscribeStaff = hearsLiveChat ? hub.subscribe(STAFF_SUPPORT_CHANNEL, (notice) => out.send(null, notice)) : () => {};
     const unsubscribe = () => {
       unsubscribeOwn();
       unsubscribeMarket();
+      unsubscribeStaff();
     };
     let beats = 0;
     const heartbeat = setInterval(() => {

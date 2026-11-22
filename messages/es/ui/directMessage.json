@@ -28,5 +28,19 @@
     "title": "¿Tienes una tarea para {name}?",
     "description": "Envía una solicitud de tarea con los detalles y el precio. Tu tarjeta se autoriza al enviarla y solo se cobra si acepta.",
     "action": "Enviar una solicitud de tarea"
+  },
+  "find": {
+    "back": "Volver a mensajes",
+    "title": "Nuevo mensaje",
+    "description": "Empieza una conversación con cualquier persona de TasksNearMe por su @nombre de usuario.",
+    "label": "Su nombre de usuario",
+    "placeholder": "usuario",
+    "submit": "Buscar",
+    "hint": "Verás quién es antes de escribir.",
+    "notFound": "Nadie a quien podamos escribir tiene el nombre de usuario @{username}. Revisa cómo se escribe.",
+    "allowance": "Puedes empezar {left, plural, one {# conversación más} other {# conversaciones más}} hoy ({perDay} al día en tu nivel, {level}).",
+    "resetsAt": "La siguiente se libera a las {time} ({zone}).",
+    "moreWithSparks": "Gana Chispas para empezar más cada día.",
+    "sparksLink": "Cómo funcionan las Chispas"
   }
 }

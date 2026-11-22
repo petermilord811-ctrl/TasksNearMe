@@ -60,6 +60,7 @@ import { savedSearches } from '../../src/modules/searches/schema';
 import { paymentMethods, payments, refunds } from '../../src/modules/payments/schema';
 import { devCardRef } from '../../src/integrations/payments';
 import { quoteBreakdown } from '../../src/modules/payments/fees';
+import { backfillUsernames } from '../../src/modules/accounts/usernames';
 
 /**
  * `testWorld`: the e2e and integration tests' world (the CLI seed, test:db's reset, the e2e reset, perf scratch
@@ -187,6 +188,8 @@ export async function seedDatabase(url: string, options: { testWorld?: boolean }
     });
     // Badges (completion plan 6.4) from the seeded bookings and reviews, stored without notifications.
     for (const person of PEOPLE) await recomputeBadges(db, person.id, new Date(), { announce: false });
+    // Everyone has an @username (2026-11-22), from their first name.
+    await backfillUsernames(db);
     await db.execute(sql`select 1`);
   } finally {
     await pool.end();

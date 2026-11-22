@@ -13,6 +13,10 @@ import {
   helpChatAssistantData,
   helpChatCaseRepliedData,
   helpChatCaseWaitingData,
+  helpChatLiveEndedData,
+  helpChatLiveJoinedData,
+  helpChatLiveOfflineData,
+  helpChatLiveWaitingData,
   helpChatRecentData,
   helpChatUnavailableData,
   pendingTranscript,
@@ -51,26 +55,83 @@ describe('HelpChat', () => {
     expect(onAsk).toHaveBeenCalledWith('Can I change the time?');
   });
 
-  it('suggests a person when the answer needs staff, and opens the hand-off with the topic and the question filled in', async () => {
-    const onHandOff = vi.fn(async () => ({ ok: true as const, code: 'submitted' as const }));
+  it('suggests a person when the answer needs staff, and one tap connects them with the topic and the question', async () => {
+    let finish: (result: { ok: true; code: 'submitted' }) => void = () => undefined;
+    const onHandOff = vi.fn(() => new Promise<{ ok: true; code: 'submitted' }>((resolve) => { finish = resolve; }));
     wrap(<HelpChat data={helpChatAssistantData} transcript={suggestTranscript} handlers={handlers({ onHandOff })} now={now} />);
     expect(screen.getByText('This needs our support team.')).toBeDefined();
     fireEvent.click(screen.getAllByRole('button', { name: 'Talk to a person' })[0]!);
-    const form = screen.getByRole('form', { name: 'Talk to a person' });
-    expect((within(form).getByRole('combobox', { name: 'What is it about?' }) as HTMLSelectElement).value).toBe('booking');
-    expect((within(form).getByRole('textbox', { name: 'What should our team know?' }) as HTMLTextAreaElement).value).toBe('My helper never showed up. Can I get my money back?');
-    fireEvent.change(within(form).getByRole('combobox', { name: 'Booking' }), { target: { value: 'bkg_desk' } });
-    fireEvent.click(within(form).getByRole('button', { name: 'Send to support' }));
-    await waitFor(() => expect(onHandOff).toHaveBeenCalledWith({ topic: 'booking', details: 'My helper never showed up. Can I get my money back?', bookingId: 'bkg_desk' }));
+    expect(onHandOff).toHaveBeenCalledWith({ topic: 'booking', details: 'My helper never showed up. Can I get my money back?' });
+    // No form in between: it says it's connecting until the app answers.
+    expect(screen.queryByRole('form', { name: 'Talk to a person' })).toBeNull();
+    expect(screen.getAllByText('Connecting you to a person…').length).toBeGreaterThan(0);
+    finish({ ok: true, code: 'submitted' });
+    await waitFor(() => expect(screen.queryAllByText('Connecting you to a person…').length).toBe(0));
   });
 
-  it('puts 911 first when someone may be in danger, and preselects Safety', () => {
-    wrap(<HelpChat data={helpChatAssistantData} transcript={urgentTranscript} handlers={handlers()} now={now} />);
+  it('puts 911 first when someone may be in danger, and connects them as a safety case', () => {
+    const onHandOff = vi.fn(async () => ({ ok: true as const, code: 'submitted' as const }));
+    wrap(<HelpChat data={helpChatAssistantData} transcript={urgentTranscript} handlers={handlers({ onHandOff })} now={now} />);
     const alert = screen.getByRole('alert');
     expect(within(alert).getByText('If anyone is in danger, call 911 now.')).toBeDefined();
     fireEvent.click(within(alert).getByRole('button', { name: 'Talk to a person' }));
-    expect((screen.getByRole('combobox', { name: 'What is it about?' }) as HTMLSelectElement).value).toBe('safety');
-    expect(screen.getByText('Usually replies within 4 hours')).toBeDefined();
+    expect(onHandOff).toHaveBeenCalledWith(expect.objectContaining({ topic: 'safety' }));
+  });
+
+  it('connects at once when they asked for a person in words, once per answer', async () => {
+    const onHandOff = vi.fn(async () => ({ ok: true as const, code: 'submitted' as const }));
+    const liveTurn = { ...suggestTranscript.turns[1]!, id: 'turn_live', question: 'I want to contact a live agent', answer: { text: 'Connecting you to a person from our support team.', sources: [], handoff: 'live' as const, topic: 'other' as const, summary: 'live agent' } };
+    const { rerender } = wrap(<HelpChat data={helpChatAssistantData} transcript={{ turns: [liveTurn] }} handlers={handlers({ onHandOff })} now={now} />);
+    await waitFor(() => expect(onHandOff).toHaveBeenCalledWith({ topic: 'other', details: 'I want to contact a live agent' }));
+    rerender(<NextIntlClientProvider locale="en" timeZone="America/Chicago" messages={messages}><HelpChat data={helpChatAssistantData} transcript={{ turns: [liveTurn] }} handlers={handlers({ onHandOff })} now={now} /></NextIntlClientProvider>);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(onHandOff).toHaveBeenCalledTimes(1);
+  });
+
+  it('says where they are in line while support is online, and that a reply comes here when no one is', () => {
+    const { unmount } = wrap(<HelpChat data={helpChatLiveWaitingData} transcript={emptyTranscript} handlers={handlers()} now={now} />);
+    expect(screen.getByRole('status').textContent).toContain("Connecting you to a person from support. You're number 2 in line.");
+    expect(screen.queryByRole('button', { name: 'Chat live with support' })).toBeNull();
+    expect(screen.queryByText(/You're in line\. A person from our support team will reply here/)).toBeNull();
+    unmount();
+    wrap(<HelpChat data={helpChatLiveOfflineData} transcript={emptyTranscript} handlers={handlers()} now={now} />);
+    expect(screen.getByRole('status').textContent).toContain('No one from support is online right now.');
+  });
+
+  it('shows who joined the live chat in the header and the conversation, then that it ended', () => {
+    const { unmount } = wrap(<HelpChat data={helpChatLiveJoinedData} transcript={emptyTranscript} handlers={handlers()} now={now} />);
+    expect(screen.getByText('Riley · Support')).toBeDefined();
+    expect(screen.getByText('Riley from support joined the chat.')).toBeDefined();
+    expect(screen.getByRole('textbox', { name: 'Message support' })).toBeDefined();
+    unmount();
+    wrap(<HelpChat data={helpChatLiveEndedData} transcript={emptyTranscript} handlers={handlers()} now={now} />);
+    expect(screen.getByText('The live chat ended.')).toBeDefined();
+    expect(screen.getByText(/The live chat ended\. You can still write here/)).toBeDefined();
+    expect(screen.getByRole('textbox', { name: 'Message support' })).toBeDefined();
+  });
+
+  it('asks for a live chat on a case that has none, and tells the app they are typing', async () => {
+    const onRequestLive = vi.fn(async () => ({ ok: true as const, code: 'updated' as const }));
+    const onTyping = vi.fn();
+    const onHandOff = vi.fn(async () => ({ ok: true as const, code: 'submitted' as const }));
+    const { unmount } = wrap(<HelpChat data={helpChatCaseWaitingData} transcript={emptyTranscript} handlers={handlers({ onRequestLive, onTyping, onHandOff })} now={now} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Chat live with support' }));
+    await waitFor(() => expect(onRequestLive).toHaveBeenCalledTimes(1));
+    expect(onHandOff).not.toHaveBeenCalled();
+    // Not live yet: typing isn't sent.
+    fireEvent.change(screen.getByRole('textbox', { name: 'Message support' }), { target: { value: 'Hello' } });
+    expect(onTyping).not.toHaveBeenCalled();
+    unmount();
+    wrap(<HelpChat data={helpChatLiveJoinedData} transcript={emptyTranscript} handlers={handlers({ onRequestLive, onTyping })} now={now} />);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Message support' }), { target: { value: 'Hello' } });
+    expect(onTyping).toHaveBeenCalled();
+  });
+
+  it('says why connecting failed', async () => {
+    const onHandOff = vi.fn(async () => ({ ok: false as const, code: 'rate_limited' as const, retryAt: '2026-11-17T17:00:00.000Z' }));
+    wrap(<HelpChat data={helpChatAssistantData} transcript={suggestTranscript} handlers={handlers({ onHandOff })} now={now} />);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Talk to a person' })[0]!);
+    expect((await screen.findAllByRole('alert')).some((node) => /You've sent several requests\. Try again at/.test(node.textContent ?? ''))).toBe(true);
   });
 
   it('says when it is waiting for an answer, and offers Try again when one failed', () => {

@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { BillingProvider } from '@/integrations/billing';
 import type { EmailMessage, EmailProvider } from '@/integrations/email';
 import type { FileStorage } from '@/integrations/storage';
-import { passkeys, sessions, users } from '@/modules/accounts/schema';
+import { passkeys, sessions, usernames, users } from '@/modules/accounts/schema';
 import { billingCustomers } from '@/modules/billing/schema';
 import { forgetBillingCustomerOf } from '@/modules/billing/service';
 import { clientSummary } from '@/modules/bookings/people';
@@ -102,6 +102,8 @@ beforeAll(async () => {
   await db.insert(passkeys).values({ id: 'pk_pr_client', name: 'Mi teléfono', publicKey: 'pk_pr_public_key_secret', userId: CLIENT, credentialID: 'cred_pr_client', counter: 0, deviceType: 'multiDevice', backedUp: true, createdAt: asked });
   await db.insert(pushSubscriptions).values({ id: 'psh_pr_client', userId: CLIENT, endpoint: 'https://push.example.test/pr-client-endpoint', p256dh: 'p256dh_pr', auth: 'auth_pr_secret', userAgent: 'Chrome on Android' });
   await db.insert(savedSearches).values({ id: 'srch_pr_client', userId: CLIENT, marketId: 'mkt_austin', name: 'Escritorios', source: 'board', params: { q: 'desk' }, alert: 'instant' });
+  // Her @username (2026-11-22): someone else may have it once she's gone.
+  await db.insert(usernames).values({ userId: CLIENT, username: 'paula_pr' });
   // Her customer for a plan (the stand-in's here; Stripe's is checked on its own below).
   await db.insert(billingCustomers).values({ userId: CLIENT, provider: 'dev', providerCustomerId: 'devcus_usr_pr_client' });
   // Her bell, and the email sent for it.
@@ -162,6 +164,7 @@ afterAll(async () => {
   await db.delete(taskLocations).where(inArray(taskLocations.ownerUserId, ids));
   await db.delete(sessions).where(inArray(sessions.userId, ids));
   await db.delete(passkeys).where(inArray(passkeys.userId, ids));
+  await db.delete(usernames).where(inArray(usernames.userId, ids));
   await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.userId, ids));
   await db.delete(savedSearches).where(inArray(savedSearches.userId, ids));
   await db.delete(addressVerifications).where(inArray(addressVerifications.userId, ids));
@@ -239,8 +242,9 @@ describe('the privacy rehearsal: a copy of the data, then deleting the account (
       db.select({ id: savedSearches.id }).from(savedSearches).where(eq(savedSearches.userId, CLIENT)),
       db.select({ id: notifications.id }).from(notifications).where(eq(notifications.userId, CLIENT)),
       db.select({ id: notificationDeliveries.id }).from(notificationDeliveries).where(eq(notificationDeliveries.userId, CLIENT)),
+      db.select({ id: usernames.userId }).from(usernames).where(eq(usernames.userId, CLIENT)),
     ]);
-    expect(left).toEqual([[], [], [], [], [], []]);
+    expect(left).toEqual([[], [], [], [], [], [], []]);
     expect(await db.select().from(billingCustomers).where(eq(billingCustomers.userId, CLIENT))).toEqual([]);
     // The photo of her home: its link to the task, its row and its file.
     expect(await db.select().from(taskPhotos).where(eq(taskPhotos.fileId, 'fil_pr_client_home'))).toEqual([]);

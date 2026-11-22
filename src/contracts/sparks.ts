@@ -20,7 +20,7 @@ export type SparkLevel = (typeof SPARK_LEVELS)[number];
 export const SPARK_LEVEL_THRESHOLDS: Record<SparkLevel, number> = { newcomer: 0, neighbor: 50, good_neighbor: 250, pillar: 1000, local_legend: 5000 };
 
 /** New direct conversations a person can start in any 24 hours, by level. */
-export const DIRECT_CHATS_PER_DAY: Record<SparkLevel, number> = { newcomer: 10, neighbor: 15, good_neighbor: 25, pillar: 40, local_legend: 60 };
+export const DIRECT_CHATS_PER_DAY: Record<SparkLevel, number> = { newcomer: 3, neighbor: 10, good_neighbor: 25, pillar: 40, local_legend: 60 };
 
 /** With Plus or Pro, at least this many (a plan never lowers a level's allowance). */
 export const PLAN_DIRECT_CHATS_PER_DAY = 40;

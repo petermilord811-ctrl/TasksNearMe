@@ -43,5 +43,6 @@
     "title": "Choose a conversation",
     "body": "Pick one on the left to read it and reply. Unread conversations are at the top."
   },
-  "shown": "{count, plural, one {# conversation} other {# conversations}}"
+  "shown": "{count, plural, one {# conversation} other {# conversations}}",
+  "newMessage": "New message"
 }

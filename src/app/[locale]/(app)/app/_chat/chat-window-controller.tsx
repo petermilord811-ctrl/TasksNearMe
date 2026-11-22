@@ -42,6 +42,8 @@ export interface ChatActions {
   block(threadId: string, input: { blocked: boolean }): Promise<ActionResult>;
   handOff(input: HandOffInput): Promise<ActionResult>;
   reply(caseId: string, input: SupportReplyInput): Promise<ActionResult>;
+  requestLive(caseId: string): Promise<ActionResult>;
+  typingInCase(caseId: string): Promise<void>;
 }
 
 const WIDE = '(min-width: 1024px)';
@@ -275,8 +277,9 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
       if (!next) return;
       // The page's own handlers never see this click: some navigate after their work (a notification marks itself read,
       // then opens its page). Opening the conversation here reads it, and its "sent you a message" notifications too.
+      // A menu's item still hears it, so the menu closes (the link itself stands down: the click is prevented).
       event.preventDefault();
-      event.stopPropagation();
+      if (!anchor.closest('[role="menu"], [role="menubar"]')) event.stopPropagation();
       openWith(next);
     };
     document.addEventListener('click', onClick, true);
@@ -334,6 +337,14 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
 
   const helpChat = useHelpChat(viewerId, actions.handOff);
   const helpCaseId = dataOf(help)?.case?.id;
+  const lastCaseTyping = useRef(0);
+  // Waiting in line for a live chat: the place in line moves as support joins others' chats; look again every 10 s.
+  const waitingLive = active && view.kind === 'help' && dataOf(help)?.case?.live?.state === 'waiting';
+  useEffect(() => {
+    if (!waitingLive) return;
+    const timer = setInterval(() => void loadHelp(), 10_000);
+    return () => clearInterval(timer);
+  }, [waitingLive, loadHelp]);
   const helpHandlers: HelpChatHandlers = {
     onAsk: (question) => void helpChat.ask(question),
     onRetry: helpChat.retry,
@@ -351,6 +362,17 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
       const result = await actions.reply(helpCaseId, input);
       if (result.ok) void loadHelp();
       return result;
+    },
+    onRequestLive: async () => {
+      if (!helpCaseId) return { ok: false, code: 'not_allowed' };
+      const result = await actions.requestLive(helpCaseId);
+      if (result.ok) void loadHelp();
+      return result;
+    },
+    onTyping: () => {
+      if (!helpCaseId || Date.now() - lastCaseTyping.current < 2500) return;
+      lastCaseTyping.current = Date.now();
+      void actions.typingInCase(helpCaseId).catch(() => undefined);
     },
   };
 

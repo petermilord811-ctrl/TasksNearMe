@@ -2,7 +2,7 @@ import 'server-only';
 import { eq } from 'drizzle-orm';
 import { cache } from 'react';
 import { STAFF_ROLES, type Mode, type Photo, type ShellViewer, type SignedInViewer, type StaffRole, type StaffViewer, type TimeZone } from '@/contracts';
-import { staffRoles, staffSessionChecks, users } from '@/modules/accounts/schema';
+import { usernames, staffRoles, staffSessionChecks, users } from '@/modules/accounts/schema';
 import { profileComplete } from '@/modules/accounts/sign-in/steps';
 import { avatarPhoto } from '@/modules/files/photos';
 import { userTimeZone } from '@/modules/markets/time-zone';
@@ -29,6 +29,8 @@ export interface ViewerUser {
   helperStatus: 'none' | 'draft' | 'active' | 'paused' | 'suspended';
   /** Their home market's zone: their pages' dates are on its clock (completion plan 8.1). */
   timeZone: TimeZone;
+  /** Their @username (2026-11-22); the signed-in shell gives them one when they have none yet. */
+  username?: string;
 }
 
 export type Viewer = { kind: 'public' } | { kind: 'user'; user: ViewerUser };
@@ -64,8 +66,9 @@ export const getViewer = cache(async (): Promise<Viewer> => {
     userTimeZone(db, u.id),
     // From the row, not the session: a session's cached names could lag the profile step just saved.
     db
-      .select({ firstName: users.firstName, lastName: users.lastName, adultAttestedAt: users.adultAttestedAt, termsAcceptedAt: users.termsAcceptedAt, phoneVerifiedAt: users.phoneVerifiedAt })
+      .select({ firstName: users.firstName, lastName: users.lastName, adultAttestedAt: users.adultAttestedAt, termsAcceptedAt: users.termsAcceptedAt, phoneVerifiedAt: users.phoneVerifiedAt, username: usernames.username })
       .from(users)
+      .leftJoin(usernames, eq(usernames.userId, users.id))
       .where(eq(users.id, u.id)),
   ]);
   // Sign-up unfinished (no name, 18+ or terms yet; a private beta's invite comes before them): signed out to every page
@@ -97,6 +100,7 @@ export const getViewer = cache(async (): Promise<Viewer> => {
       staffTwoStepVerified: staffCheckCurrent(checkRows),
       helperStatus: (profileRows[0]?.status as ViewerUser['helperStatus'] | undefined) ?? 'none',
       timeZone,
+      ...(account.username ? { username: account.username } : {}),
     },
   };
 });
@@ -126,6 +130,7 @@ export function toSignedInViewer(user: ViewerUser): SignedInViewer {
     // The signed-in app shell fills in the real counts (src/app/(app)/app/signed-in-shell.tsx).
     unreadMessages: 0,
     unreadNotifications: 0,
+    ...(user.username ? { username: user.username } : {}),
   };
 }
 

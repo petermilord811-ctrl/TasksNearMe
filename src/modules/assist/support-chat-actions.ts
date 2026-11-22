@@ -1,6 +1,7 @@
 'use server';
 
 import type { ActionResult, HandOffInput, SupportReplyInput } from '@/contracts';
+import { announceMemberReply, requestLiveChat, typingInLiveChat } from '@/modules/support/live-chat';
 import { replyToSupportCase } from '@/modules/support/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
@@ -28,5 +29,22 @@ export async function handOffToSupportAction(input: HandOffInput): Promise<Actio
 export async function replyToHelpCaseAction(caseId: string, input: SupportReplyInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
-  return replyToSupportCase(db, userId, String(caseId), input, await requestNow());
+  const result = await replyToSupportCase(db, userId, String(caseId), input, await requestNow());
+  // In a live chat, support staff on duty hear it at once (2026-11-22).
+  if (result.ok) await announceMemberReply(db, String(caseId));
+  return result;
+}
+
+/** A live chat on the open case (2026-11-22): it waits in line for someone from support. */
+export async function requestLiveChatAction(caseId: string): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  return requestLiveChat(db, userId, String(caseId), await requestNow());
+}
+
+/** The member is typing in a live chat: the one on it sees "typing…" (spaced out; fire and forget). */
+export async function typingInHelpCaseAction(caseId: string): Promise<void> {
+  const userId = await signedInUserId();
+  if (!userId) return;
+  await typingInLiveChat(db, { userId, staff: false }, String(caseId), new Date());
 }

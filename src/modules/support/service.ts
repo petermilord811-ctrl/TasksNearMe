@@ -323,14 +323,22 @@ export async function getSupportCasePage(db: Db, userId: string, caseId: string,
     return list.length > 0 ? { photos: list } : {};
   };
 
-  // Only the person who opened the case sees what they wrote when opening it.
-  const opening: CaseEventView[] = isOpener
+  // Only the person who opened the case sees what they wrote when opening it; not twice when it only repeats their
+  // last question to the assistant (asking for a person in words sends that question, 2026-11-22).
+  const lastAsked = events.filter((event) => event.kind === 'message' && event.authorUserId === userId && !event.meta?.assistant && event.createdAt <= row.createdAt).at(-1);
+  const repeats = row.fileIds.length === 0 && lastAsked?.body?.trim() === row.description.trim();
+  const opening: CaseEventView[] = isOpener && !repeats
     ? [{ id: `${row.id}_opened`, kind: 'message', from: 'me', body: row.description, ...photos(row.fileIds), at: row.createdAt.toISOString() }]
     : [];
+  // Live chat events name who from support joined, by first name (2026-11-22).
+  const agentIds = [...new Set(events.flatMap((event) => (event.kind === 'live' && event.authorUserId ? [event.authorUserId] : [])))];
+  const agentNames = new Map(agentIds.length > 0 ? (await db.select({ id: users.id, firstName: users.firstName }).from(users).where(inArray(users.id, agentIds))).map((row) => [row.id, row.firstName] as const) : []);
   const conversation = events.map((event): CaseEventView =>
     event.kind === 'status'
       ? { id: event.id, kind: 'status', from: 'system', status: caseStatusOf(event.status), at: event.createdAt.toISOString() }
-      : { id: event.id, kind: 'message', from: event.meta?.assistant ? 'assistant' : event.authorUserId === userId ? 'me' : 'support', body: event.body ?? '', ...photos(event.fileIds), at: event.createdAt.toISOString() },
+      : event.kind === 'live'
+        ? { id: event.id, kind: 'live', from: 'system', live: event.meta?.live === 'ended' ? 'ended' : 'joined', ...(event.authorUserId && agentNames.get(event.authorUserId) ? { agentName: agentNames.get(event.authorUserId) } : {}), at: event.createdAt.toISOString() }
+        : { id: event.id, kind: 'message', from: event.meta?.assistant ? 'assistant' : event.authorUserId === userId ? 'me' : 'support', body: event.body ?? '', ...photos(event.fileIds), at: event.createdAt.toISOString() },
   );
   if (markRead) await markCaseRead(db, row.id, userId, now);
   const view = rowOf(row, labels.get(row.id) ?? FALLBACK_LABEL);
@@ -400,9 +408,9 @@ export async function recentBookingsFor(db: Db, userId: string): Promise<{ id: s
 export async function openCaseFromAssistant(
   db: Db,
   userId: string,
-  input: { topic: SupportTopic; details: string; bookingId?: string; turns: AssistantCaseTurn[]; dropped: number; handoff: AssistantHandoff },
+  input: { topic: SupportTopic; details: string; bookingId?: string; turns: AssistantCaseTurn[]; dropped: number; handoff: AssistantHandoff; live?: boolean },
   now: Date,
-): Promise<ActionResult> {
+): Promise<ActionResult & { caseId?: string }> {
   if (input.bookingId) {
     const [mine] = await db
       .select({ id: bookings.id })
@@ -436,6 +444,8 @@ export async function openCaseFromAssistant(
       topic: input.topic,
       context: { assistant: true },
       description: input.details,
+      // A live chat (2026-11-22): it waits in the live queue until someone from support joins.
+      ...(input.live ? { liveRequestedAt: now } : {}),
       createdAt: now,
       updatedAt: now,
     });
@@ -458,7 +468,7 @@ export async function openCaseFromAssistant(
     await markCaseRead(tx, id, userId, now);
     await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'support.case_opened', aggregateType: 'support_case', aggregateId: id, payload: { caseId: id, type, openedByUserId: userId } });
   });
-  return { ok: true, code: 'submitted' };
+  return { ok: true, code: 'submitted', caseId: id };
 }
 
 /** The person's newest cases from the assistant, newest first. */
@@ -488,7 +498,7 @@ async function supportReplyFacts(db: Db, userId: string, caseId: string): Promis
 }
 
 /** An open case from the assistant, as the Help conversation shows it. `markRead` reads it (it's on screen). */
-export async function helpCaseView(db: Db, userId: string, row: CaseRow, now: Date, { markRead }: { markRead: boolean }): Promise<{ view: HelpCaseView; wasUnread: boolean } | null> {
+export async function helpCaseView(db: Db, userId: string, row: CaseRow, now: Date, { markRead }: { markRead: boolean }): Promise<{ view: Omit<HelpCaseView, 'live' | 'canRequestLive'>; wasUnread: boolean } | null> {
   const { unread } = await supportReplyFacts(db, userId, row.id);
   const page = await getSupportCasePage(db, userId, row.id, now, { markRead });
   if (!page) return null;

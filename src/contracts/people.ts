@@ -1,5 +1,6 @@
 import type { CategorySlug, Cents, ISODateTime, Photo } from './common';
 import type { BadgeView } from './badges';
+import type { SparksSummary } from './sparks';
 
 /**
  * Someone's activity as people they talk to see it (completion plan 7.1): `now` within 5 minutes, `today` within
@@ -22,6 +23,10 @@ export interface PersonSummary {
    * and nothing links to them (their profile is gone).
    */
   deleted?: true;
+  /** Their @username (2026-11-22), shown as "@maya" beside the name. Absent for a deleted account. */
+  username?: string;
+  /** Their Sparks (the score earned on TasksNearMe), where the screen shows it: a conversation's header, say. */
+  sparks?: SparksSummary;
 }
 
 export interface VerificationBadges {

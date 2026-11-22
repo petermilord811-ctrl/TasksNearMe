@@ -39,6 +39,8 @@ export function AuthorCardContent({ author }: { author: CommunityAuthor }) {
           <span className="[overflow-wrap:anywhere]">{author.displayName}</span>
           {author.verified && <BadgeCheck aria-label={t('verified')} role="img" className="size-4 shrink-0 text-primary" />}
         </p>
+        {/* Their @username (2026-11-22): what people type to start a chat with them. */}
+        {author.username && <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">@{author.username}</p>}
         <p className="flex flex-wrap items-center gap-1.5 text-xs">
           <span className={cn('rounded-full px-1.5 py-px font-semibold', roleTone[author.role])}>{t(`roles.${author.role}`)}</span>
           <span className="text-muted-foreground">{t(`authorCard.roleHint.${author.role}`)}</span>

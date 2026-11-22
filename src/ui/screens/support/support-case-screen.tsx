@@ -27,7 +27,8 @@ function CaseEvent({ event, now, viewerRole }: { event: CaseEventView; now: ISOD
   const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('supportCase');
   const sender = t(`sender.${event.from}`);
-  const notice = event.kind === 'status';
+  // Status changes and the live chat's joins and ends (2026-11-22) are small notes between the bubbles.
+  const notice = event.kind === 'status' || event.kind === 'live';
   return <li className={cn('flex min-w-0', notice ? 'justify-center' : event.from === 'me' ? 'justify-end' : 'justify-start')}>
     {/* The same bubbles as messages: yours on the right, support's on the left, status changes as small notes. */}
     <article className={cn(
@@ -40,6 +41,7 @@ function CaseEvent({ event, now, viewerRole }: { event: CaseEventView; now: ISOD
     )}>
       {!notice && <p className="text-xs font-semibold">{sender}</p>}
       {notice && event.status && <CaseStatusLine status={event.status} viewerRole={viewerRole} />}
+      {event.kind === 'live' && <p className="font-medium">{event.live === 'ended' ? t('liveEnded') : t('liveJoined', { name: event.agentName ?? t('sender.support') })}</p>}
       {event.body && <p className="whitespace-pre-wrap leading-6">{event.body}</p>}
       {Boolean(event.photos?.length) && <ul aria-label={t('photos')} className="grid max-w-96 grid-cols-1 gap-3 sm:grid-cols-2">
         {event.photos!.map((photo, index) => <li key={photo.id} className="min-w-0"><CasePhoto photo={photo} number={index + 1} count={event.photos!.length} sender={sender} /></li>)}

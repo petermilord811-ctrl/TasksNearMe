@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ActionHandler, ActionResult, QueryHandler } from './actions';
 import type { HelpSummary } from './assistant';
+import type { SparkLevel } from './sparks';
 import { requestKeyField } from './forms';
 import type { ISODateTime, Photo } from './common';
 import type { PersonSummary, PresenceState } from './people';
@@ -278,6 +279,18 @@ export type StartDirectChatInput = z.input<typeof startDirectChatInputSchema>;
  */
 export interface NewDirectMessageHandlers {
   onStart: ActionHandler<StartDirectChatInput>;
+}
+
+/**
+ * `/app/messages/new` with no one named yet (2026-11-22): "New message" asks for an @username (`?u=`). `query` and
+ * `notFound` when the one typed belongs to nobody reachable. `allowance` is the same as on the conversation's first
+ * message: new conversations left in any 24 hours, by Sparks level (`level`) or plan.
+ */
+export interface FindPersonPageData {
+  query?: string;
+  notFound?: boolean;
+  allowance: { left: number; perDay: number; resetsAt?: ISODateTime };
+  level: SparkLevel;
 }
 
 export const MESSAGE_SAVED_REPLY_MAX = 20;

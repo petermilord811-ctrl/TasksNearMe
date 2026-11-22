@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { eq, inArray, or } from 'drizzle-orm';
-import { users } from '../../src/modules/accounts/schema';
+import { usernames, users } from '../../src/modules/accounts/schema';
 import { messages, threadParticipants, threads } from '../../src/modules/messaging/schema';
 import { helperProfiles } from '../../src/modules/profiles/schema';
 import { sparkPurchases } from '../../src/modules/sparks/schema';
@@ -85,7 +85,8 @@ test('a client messages a helper from the profile, the helper reads it masked, a
     await page.getByRole('link', { name: 'Message Hal H.' }).first().click();
     await expect(page).toHaveURL(/\/app\/messages\/new\?helper=/, { timeout: 30_000 });
     await expect(page.getByRole('heading', { level: 1, name: 'Message Hal H.' })).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText('10 new conversations left today (of 10)')).toBeVisible();
+    // A newcomer starts 3 a day (2026-11-22; more with Sparks).
+    await expect(page.getByText('3 new conversations left today (of 3)')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Send a task request' })).toBeVisible();
 
     const box = page.getByLabel('Your message');
@@ -141,3 +142,47 @@ test('a client messages a helper from the profile, the helper reads it masked, a
     await removeCast(cast);
   }
 });
+
+test('a person finds someone by @username from New message, and chooses their own username', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'app-mobile', 'one run is enough; phones first');
+  test.setTimeout(180_000);
+  const cast = await makeCast();
+  const { db, pool } = database();
+  try {
+    const run = cast.handle.replace('e2e-dm-', '').replace(/[^a-z0-9]/g, '');
+    const helperName = `hal_${run}`.slice(0, 20);
+    await db.insert(usernames).values({ userId: cast.helperId, username: helperName });
+    await devSignIn(page, cast.clientEmail);
+    await page.goto('/app/messages');
+    await page.getByRole('link', { name: 'New message' }).first().click();
+    await expect(page).toHaveURL(/\/app\/messages\/new$/, { timeout: 30_000 });
+    await expect(page.getByRole('heading', { level: 1, name: 'New message' })).toBeVisible();
+    await expect(page.getByText('You can start 3 more conversations today (3 a day at your level, Newcomer).')).toBeVisible();
+
+    const field = page.getByRole('textbox', { name: 'Their username' });
+    await field.fill('@nobody_has_this_name');
+    await page.getByRole('button', { name: 'Find' }).click();
+    // Said with one "@", whatever they typed (the box keeps their typing, to fix a typo).
+    await expect(page.locator('#find-person-error')).toHaveText('No one we can reach has the username @nobody_has_this_name. Check the spelling.', { timeout: 30_000 });
+    await field.fill(`@${helperName.toUpperCase()}`);
+    await page.getByRole('button', { name: 'Find' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Message Hal H.' })).toBeVisible({ timeout: 30_000 });
+
+    // Their own: shown on the account page, changed there (once in 30 days).
+    await page.goto('/app/account');
+    await openAccountGroup(page, 'profile');
+    const mine = page.getByRole('textbox', { name: 'Username' });
+    await expect(mine).toHaveValue(/^lia(_\d+)?$/, { timeout: 30_000 });
+    const chosen = `lia_${run}`.slice(0, 20);
+    await mine.fill(chosen);
+    await page.getByRole('button', { name: 'Save username' }).click();
+    await expect(page.getByRole('status').filter({ hasText: `Your username is now @${chosen}.` })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/You can choose another on/)).toBeVisible({ timeout: 30_000 });
+    await expect(mine).toBeDisabled();
+  } finally {
+    await db.delete(usernames).where(inArray(usernames.userId, [cast.clientId, cast.helperId]));
+    await pool.end();
+    await removeCast(cast);
+  }
+});
+

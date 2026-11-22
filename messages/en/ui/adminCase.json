@@ -128,7 +128,9 @@
         "hidden": "Question hidden",
         "removed": "Question removed",
         "restored": "Question restored"
-      }
+      },
+      "liveJoined": "Live chat: {name} joined",
+      "liveEnded": "Live chat ended by {name}"
     },
     "assignedTo": "Assigned to {name}",
     "unassigned": "Unassigned",

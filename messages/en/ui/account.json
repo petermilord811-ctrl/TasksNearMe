@@ -345,5 +345,23 @@
     "title": "Sparks",
     "description": "Your community score: how it’s earned, your level, and the conversations a day it allows.",
     "link": "See your Sparks"
+  },
+  "username": {
+    "title": "Username",
+    "label": "Username",
+    "hint": "3 to 20 lowercase letters, numbers or _, starting with a letter. People can find you by it to start a chat. You can change it once every 30 days.",
+    "changeableAt": "You can choose another on {date}.",
+    "save": "Save username",
+    "saving": "Saving…",
+    "saved": "Your username is now @{username}.",
+    "errors": {
+      "invalid": "Use 3 to 20 lowercase letters, numbers or _, starting with a letter.",
+      "name_reserved": "That username is reserved. Choose another.",
+      "in_use": "Someone already has that username. Try another.",
+      "required": "Write a username.",
+      "too_long": "Use 20 characters or fewer.",
+      "rate_limited": "You changed your username recently. You can choose another on {date}.",
+      "unknown": "That didn't save. Try again."
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { MessagesSquare } from 'lucide-react';
+import { MessagesSquare, SquarePen } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { HelpSummary, InboxPageData, ISODateTime } from '@/contracts';
 import { routes } from '@/contracts/routes';
@@ -27,6 +27,8 @@ export function InboxScreen({ data, now, help }: InboxScreenProps) {
   // From 1024 px the panes start at the top, as on a conversation's page (the title stays for screen readers).
   return <div className="mx-auto w-full max-w-content space-y-6">
     <div className={data.threads.length > 0 ? 'lg:sr-only' : undefined}><PageHeader title={t('title')} description={t('description')} /></div>
+    {/* A conversation with anyone, by their @username (2026-11-22). */}
+    <div className="flex justify-end"><Link href={routes.app.newMessage()} className={buttonVariants({ variant: 'outline', size: 'sm', className: 'min-h-10 rounded-full' })}><SquarePen aria-hidden="true" />{t('newMessage')}</Link></div>
     {data.threads.length === 0 ? <div className="space-y-3">
       <HelpRow summary={help} now={now} />
       <EmptyState title={t('empty.title')} body={t('empty.body')} icon={<MessagesSquare className="size-6" />} action={{ label: t('viewTasks'), href: routes.app.tasks() }} />

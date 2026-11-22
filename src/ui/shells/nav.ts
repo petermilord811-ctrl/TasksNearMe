@@ -35,6 +35,8 @@ export type NavId =
   | 'config'
   | 'audit'
   | 'staff'
+  | 'helpChat'
+  | 'liveChat'
   | 'howItWorks'
   | 'becomeAHelper'
   | 'pricing';
@@ -74,6 +76,8 @@ export function getAppNav(mode: Mode): { primary: NavItem[]; secondary: NavItem[
     { id: 'plan', href: routes.app.plan() },
     { id: 'sparks', href: routes.app.sparks() },
     { id: 'payments', href: routes.app.payments() },
+    // TasksNearMe Help (2026-11-22): the assistant and a person, also findable here, beside the support cases.
+    { id: 'helpChat', href: routes.app.helpChat() },
     { id: 'support', href: routes.app.support() },
   ];
   return mode === 'poster'
@@ -109,6 +113,8 @@ export function getAdminNav(roles: readonly StaffRole[]): NavItem[] {
   const readsWebhooks = isAdmin || roles.includes('finance');
   return [
     { id: 'queues', href: routes.admin.home(), exact: true },
+    // Live chat (2026-11-22): for the roles that work cases.
+    ...(roles.some((role) => role === 'support_agent' || role === 'support_lead' || role === 'trust_safety' || role === 'admin') ? [{ id: 'liveChat' as const, href: routes.admin.liveChat() }] : []),
     { id: 'cases', href: routes.admin.cases() },
     { id: 'reports', href: routes.admin.reports() },
     { id: 'users', href: routes.admin.users() },

@@ -37,6 +37,7 @@ ledger_journals ─1:N─ ledger_entries ─N:1─ ledger_accounts   (journals r
 | `users` | id, email (citext), email_verified_at, phone_e164, phone_verified_at, first_name, last_name (private), avatar_file_id, default_mode (`poster`/`helper`), home_market_id, status (`active`/`restricted`/`suspended`/`banned`/`deleted`), adult_attested_at | Unique email; unique phone when not null. Public display name = first name + last initial |
 | Auth tables (Better Auth) | sessions, accounts, verifications, two-factor | Managed by the library's Drizzle adapter; staff sessions are shorter and require TOTP. `accounts` holds connected Google and Microsoft sign-ins (provider tokens encrypted at rest). An email from a provider creates or joins an account only when the provider confirms it |
 | `staff_roles` | user_id, role (`support_agent`/`support_lead`/`trust_safety`/`finance`/`admin`), granted_by, granted_at | PK (user_id, role); every change is audited |
+| `usernames` | user_id (PK), username (lowercase), changed_at | Unique on lower(username); 3–20 of a–z, 0–9, `_`, starting with a letter; changed at most once in 30 days; deleted with the account (2026-11-22) |
 | `agreements` | user_id, doc (`terms`, `privacy`, `helper_agreement`, `rewards_terms`, `bg_check_disclosure`, `biometric_consent`), version, accepted_at, ip, user_agent | Unique (user_id, doc, version) |
 | `blocks` | blocker_id, blocked_id | Blocked users can't message, offer, or invite each other |
 
@@ -124,7 +125,7 @@ ledger_journals ─1:N─ ledger_entries ─N:1─ ledger_accounts   (journals r
 | `messages` | thread_id, sender_user_id (null = system), kind (`text`/`system`/`status`/`attachment`), body, body_masked, attachment_file_ids[], flagged_at | Contact details masked before confirmation; flagged messages enter the moderation queue |
 | `notifications`, `notification_deliveries`, `notification_preferences`, `push_subscriptions` | Per-user inbox; per-channel delivery with provider message id; endpoint keys | Unique push endpoint |
 | `reviews` | booking_id, author_user_id, subject_user_id, direction, rating (1–5), tags[], body, status (`submitted`/`published`/`hidden`), published_at, hidden_reason | Unique (booking, author). Only for completed bookings |
-| `cases`, `case_events`, `reports`, `strikes`, `moderation_actions` | Case type/status/priority/assignee/SLA/resolution; events with `internal` or `participants` visibility; reports on any target; strikes with expiry; moderation history | — |
+| `cases`, `case_events`, `reports`, `strikes`, `moderation_actions` | Case type/status/priority/assignee/SLA/resolution; live chat (`live_requested_at`, `live_agent_user_id`, `live_joined_at`, `live_ended_at`, 2026-11-22); events with `internal` or `participants` visibility (`live` events: joined, ended); reports on any target; strikes with expiry; moderation history | — |
 | `files` | owner_user_id, purpose, bucket (`private`/`public`), object_key, content_type, byte_size, sha256, status, metadata_stripped | Only `ready` files are served |
 | `outbox_events`, `webhook_events`, `idempotency_keys`, `audit_log` | See [09-apis-events-idempotency.md](09-apis-events-idempotency.md) | `webhook_events` unique (provider, provider_event_id) |
 

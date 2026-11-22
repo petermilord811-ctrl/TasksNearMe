@@ -42,6 +42,32 @@ describe('AccountScreen', () => {
     expect(screen.getByRole('button', { name: 'Change your phone number' })).toBeEnabled();
   });
 
+  it('shows the @username, saves a new one, and says when one changed lately can change again (2026-11-22)', async () => {
+    const onSaveUsername = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'updated' }));
+    const { unmount } = mount(mayaAccountData, { onSaveUsername });
+    const form = screen.getByRole('form', { name: 'Username' });
+    const field = within(form).getByRole('textbox', { name: 'Username' });
+    expect(field).toHaveValue('maya');
+    expect(within(form).getByRole('button', { name: 'Save username' })).toBeDisabled();
+    await userEvent.clear(field);
+    await userEvent.type(field, '@Maya_R');
+    await userEvent.click(within(form).getByRole('button', { name: 'Save username' }));
+    expect(onSaveUsername).toHaveBeenCalledWith({ username: '@Maya_R' });
+    expect(await within(form).findByRole('status')).toHaveTextContent('Your username is now @maya_r.');
+    expect(field).toHaveValue('maya_r');
+    unmount();
+    mount(mayaAccountData, { onSaveUsername: async () => ({ ok: false, code: 'validation_failed', fieldErrors: { username: ['in_use'] } }) });
+    const again = screen.getByRole('form', { name: 'Username' });
+    await userEvent.type(within(again).getByRole('textbox', { name: 'Username' }), 'x');
+    await userEvent.click(within(again).getByRole('button', { name: 'Save username' }));
+    expect(await within(again).findByRole('alert')).toHaveTextContent('Someone already has that username. Try another.');
+    cleanup();
+    mount(jordanAccountData);
+    const locked = screen.getByRole('form', { name: 'Username' });
+    expect(within(locked).getByRole('textbox', { name: 'Username' })).toBeDisabled();
+    expect(within(locked).getByText(/You can choose another on .*Dec 10/)).toBeVisible();
+  });
+
   it('offers to add a phone when there is none', () => {
     mount(newAccountData);
     expect(screen.getByText(account.contact.noPhone)).toBeVisible();

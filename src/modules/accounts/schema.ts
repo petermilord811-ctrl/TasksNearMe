@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { boolean, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 
 /**
@@ -75,6 +76,27 @@ export const users = pgTable(
   },
   // One account per verified phone number (NULLs don't collide).
   (t) => [uniqueIndex('users_phone_idx').on(t.phone)],
+);
+
+/**
+ * @usernames (2026-11-22, owner: "account id as other platforms @pm11"): one per account, lowercase letters, digits and
+ * underscores, starting with a letter, 3 to 20 long (`USERNAME_PATTERN`), unique without regard to case. Their own
+ * table, so a copy of a person's row (tests, tools) never copies their name. Given from the first name (migration 0077
+ * gave the accounts of the day theirs; a new account gets one on its first signed-in page); changed on the account
+ * page, at most once every `USERNAME_CHANGE_DAYS`. A deleted account's is freed.
+ */
+export const usernames = pgTable(
+  'usernames',
+  {
+    userId: text('user_id')
+      .primaryKey()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    username: text('username').notNull(),
+    /** When they last chose it themselves (null for the one they were given): a change waits 30 days. */
+    changedAt: timestamp('changed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('usernames_lower_idx').on(sql`lower(${t.username})`)],
 );
 
 /**

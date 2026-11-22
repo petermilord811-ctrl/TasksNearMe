@@ -7,7 +7,7 @@ import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, ne, notInArray, or
 import { DATA_EXPORT_DAYS, DELETION_GRACE_DAYS, localeOrDefault, type AccountPrivacyView, type ActionResult, type DeletionBlocker } from '@/contracts';
 import { isReservedEmailAddress, type EmailProvider } from '@/integrations/email';
 import type { FileStorage } from '@/integrations/storage';
-import { accounts, contactChangeReverts, passkeys, phoneVerifications, sessions, staffAuthenticators, staffRoles, users, verifications } from '@/modules/accounts/schema';
+import { accounts, contactChangeReverts, passkeys, phoneVerifications, sessions, staffAuthenticators, staffRoles, usernames, users, verifications } from '@/modules/accounts/schema';
 import { availabilityPosts } from '@/modules/availability/schema';
 import { bookingSeries, bookings } from '@/modules/bookings/schema';
 import { earnings, payouts } from '@/modules/earnings/schema';
@@ -386,6 +386,8 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     await tx.delete(contactChangeReverts).where(eq(contactChangeReverts.userId, userId));
     await tx.delete(staffRoles).where(eq(staffRoles.userId, userId));
     await tx.delete(staffAuthenticators).where(eq(staffAuthenticators.userId, userId));
+    // Their @username is free for someone else (2026-11-22); old messages show "Deleted account" without one.
+    await tx.delete(usernames).where(eq(usernames.userId, userId));
     await tx.delete(notificationPreferences).where(eq(notificationPreferences.userId, userId));
     await tx.delete(aiUsage).where(eq(aiUsage.userId, userId));
     // Their notifications' email, text and push rows first: they point at the notifications with no cascade, and every

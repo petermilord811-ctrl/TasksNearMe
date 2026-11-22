@@ -42,5 +42,7 @@
     "not-allowed": "Caso cerrado antes de responder",
     "rate-limited": "Límite de respuestas",
     "unknown": "No se pudo enviar la respuesta"
-  }
+  },
+  "liveJoined": "{name}, de soporte, se unió al chat en vivo.",
+  "liveEnded": "El chat en vivo terminó."
 }

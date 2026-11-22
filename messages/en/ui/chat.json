@@ -22,7 +22,10 @@
     "notFound": "This conversation isn't available.",
     "conversation": "Conversation with {name}",
     "about": "What it's about",
-    "searchHint": "Search conversations"
+    "searchHint": "Search conversations",
+    "resize": "Resize the messages window",
+    "resizeHint": "Drag to resize. With the keyboard: arrow keys, and Home to reset. Double-click resets.",
+    "newMessage": "New message"
   },
   "help": {
     "title": "TasksNearMe Help",
@@ -98,7 +101,8 @@
         "invalid": "Choose one of your bookings, or none.",
         "rate_limited": "You've sent several requests. Try again at {time}.",
         "unknown": "That didn't send. Try again."
-      }
+      },
+      "defaultDetails": "I'd like to talk to a person."
     },
     "case": {
       "waiting": "You're in line. A person from our support team will reply here.",
@@ -154,7 +158,23 @@
       "handoff": "Help: talking to a person",
       "waiting": "Help: waiting for support",
       "replied": "Help: support replied",
-      "page": "Help page on a phone"
+      "page": "Help page on a phone",
+      "liveWaiting": "Help: waiting in line for a person",
+      "liveOffline": "Help: asked for a person, no one online",
+      "liveJoined": "Help: live chat with support",
+      "liveEnded": "Help: the live chat ended"
+    },
+    "live": {
+      "connecting": "Connecting you to a person…",
+      "waiting": "Connecting you to a person from support. {position, plural, =1 {You're next.} other {You're number # in line.}}",
+      "offline": "No one from support is online right now. Leave your message here: we'll reply in this chat and let you know.",
+      "joined": "{name} from support joined the chat.",
+      "endedEvent": "The live chat ended.",
+      "ended": "The live chat ended. You can still write here, and support will reply.",
+      "with": "{name} · Support",
+      "typing": "{name} is typing…",
+      "typingSupport": "Support is typing…",
+      "request": "Chat live with support"
     }
   }
 }

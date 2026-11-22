@@ -20,7 +20,7 @@ export interface AdminShellProps { viewer: StaffViewer; handlers: AdminShellHand
 /** The staff area: the app's paper, glass bar and gliding rail, with the staff badge, roles and search in the bar. */
 export function AdminShell({ viewer, handlers, breadcrumbs = [], children, currentPath }: AdminShellProps) {
   const t = useTranslations('shell');
-  const navigation = <Navigation items={getAdminNav(viewer.roles)} label={t('admin.navigation')} currentPath={currentPath} />;
+  const navigation = <Navigation items={getAdminNav(viewer.roles)} label={t('admin.navigation')} currentPath={currentPath} {...(viewer.liveWaiting ? { counts: { liveChat: viewer.liveWaiting } } : {})} />;
   return <div data-app-surface="" className="paper flex min-h-dvh flex-col">
     <SkipLink />
     <ScrollbarActivity />

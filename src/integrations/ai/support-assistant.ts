@@ -65,7 +65,7 @@ How to answer:
 The fields:
 - answer: your reply.
 - sources: the slugs of the articles you used (only slugs from the lists given), most useful first; empty if none.
-- handoff: "urgent" if anyone may be in danger, hurt or threatened, or it's an emergency. "suggest" if they ask for a person, or it needs staff: a refund or charge on their own booking, a dispute or a problem with a helper or client, account access or a locked account, a payment or payout that failed, a report about someone, or anything the articles don't answer. Otherwise "none".
+- handoff: "urgent" if anyone may be in danger, hurt or threatened, or it's an emergency. "live" if they ask, in so many words, to talk to a person, a human, an agent or someone from support (the app then connects them to a live chat). "suggest" if it needs staff: a refund or charge on their own booking, a dispute or a problem with a helper or client, account access or a locked account, a payment or payout that failed, a report about someone, or anything the articles don't answer. Otherwise "none".
 - topic: the closest of booking, payment, account, safety, other.
 - summary: one line in English, under 160 characters, for the support team: what the person needs.
 
@@ -138,6 +138,7 @@ export function createAiSupportAssistant(writer: AiWriter): SupportAssistant {
 }
 
 const URGENT = /\b(danger|dangerous|emergenc\w*|hurt|injur\w*|bleed\w*|unsafe|threat\w*|attack\w*|assault\w*|911|police|weapon|peligro\w*|emergencia\w*|herid\w*|amenaz\w*|policia)\b/i;
+/** A person, or something only staff can settle: a person is suggested (asking for one outright never reaches here). */
 const PERSON = /\b(person|human|agent|someone|somebody|staff|representative|support team|refund\w*|dispute\w*|chargeback|locked|hacked|persona|humano|agente|reembolso\w*|bloquead\w*)\b/i;
 const TOPICS: [SupportTopic, RegExp][] = [
   ['safety', /\b(safe\w*|danger\w*|unsafe|threat\w*|harass\w*|scam\w*|segur\w*|peligro\w*|acoso)\b/i],

@@ -276,7 +276,11 @@ export interface AccountPageData {
   /** The person's badges and the next ones (completion plan 6.4). */
   badges?: OwnBadgesData;
   /** `photo`: the profile photo, when they added one (a square; helpers' shows on their public profile). */
-  profile: { firstName: string; lastName: string; displayName: string; initials: string; email: string; photo?: Photo };
+  /**
+   * `username`: their @username (2026-11-22); `usernameChangeableAt`: when they may choose another (a change waits
+   * `USERNAME_CHANGE_DAYS` after the one before), absent when they can now.
+   */
+  profile: { firstName: string; lastName: string; displayName: string; initials: string; email: string; photo?: Photo; username?: string; usernameChangeableAt?: ISODateTime };
   /** The largest photo the profile photo upload takes. */
   maxPhotoMegabytes: number;
   /** Never the full number. */
@@ -438,6 +442,11 @@ export type AccountProfileInput = z.input<typeof accountProfileInputSchema>;
  */
 export interface AccountHandlers extends PushHandlers {
   onSaveProfile: ActionHandler<AccountProfileInput>;
+  /**
+   * A new @username (2026-11-22). ok `updated`. Errors: `validation_failed` with `fieldErrors.username` `invalid`
+   * (the pattern), `reserved` or `taken`; `rate_limited` with `retryAt` (the last change was under 30 days ago).
+   */
+  onSaveUsername?: ActionHandler<UsernameInput>;
   /** "Show when I'm active" on or off. ok `updated`. */
   onSaveActivity?: ActionHandler<{ shown: boolean }>;
   /** Who may start a direct conversation with them. ok `updated`. Errors: `validation_failed`. */
@@ -484,4 +493,20 @@ export interface AccountHandlers extends PushHandlers {
   onRemovePasskey?: ActionHandler<{ id: string }>;
   /** The app, emails and texts in this language; this device switches too, so reload after. ok `updated`. Errors: `validation_failed`. */
   onSaveLanguage?: ActionHandler<LanguageInput>;
+}
+
+// ---- Usernames (2026-11-22, owner: "account id as other platforms @pm11") ------------------------------------------
+
+/** An @username: lowercase letters, digits and underscores, starting with a letter, 3 to 20 long. */
+export const USERNAME_PATTERN = /^[a-z][a-z0-9_]{2,19}$/;
+/** Days a username stays before its owner may choose another (so a name can't be swapped to pass for someone). */
+export const USERNAME_CHANGE_DAYS = 30;
+
+/** What the person typed: "@" and capitals allowed, checked against `USERNAME_PATTERN` once lowercased (server side). */
+export const usernameInputSchema = z.object({ username: z.string('required').trim().min(1, 'required').max(21, 'too_long') });
+export type UsernameInput = z.input<typeof usernameInputSchema>;
+
+/** Lowercase, without a leading "@": the form a username is stored and compared in. */
+export function normalizeUsername(value: string): string {
+  return value.trim().replace(/^@+/, '').toLowerCase();
 }

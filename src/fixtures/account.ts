@@ -47,7 +47,7 @@ const preferences: AccountPageData['preferences'] = [
 ];
 
 export const mayaAccountData: AccountPageData = {
-  profile: { firstName: 'Maya', lastName: 'Rivera', displayName: 'Maya R.', initials: 'MR', email: 'maya@example.test' },
+  profile: { firstName: 'Maya', lastName: 'Rivera', displayName: 'Maya R.', initials: 'MR', email: 'maya@example.test', username: 'maya' },
   maxPhotoMegabytes: 10,
   phone: { last4: '0101', verified: true },
   // Maya connected Google; Microsoft is offered too.
@@ -64,7 +64,7 @@ export const jordanProfilePhoto = { id: 'fil_avatar_jordan', src: '/samples/avat
 
 /** Jordan is an active helper with a profile photo; they asked for a copy of their data. */
 export const jordanAccountData: AccountPageData = {
-  profile: { firstName: 'Jordan', lastName: 'Thompson', displayName: 'Jordan T.', initials: 'JT', email: 'jordan@example.test', photo: jordanProfilePhoto },
+  profile: { firstName: 'Jordan', lastName: 'Thompson', displayName: 'Jordan T.', initials: 'JT', email: 'jordan@example.test', photo: jordanProfilePhoto, username: 'jordan', usernameChangeableAt: '2026-12-10T15:00:00.000Z' },
   maxPhotoMegabytes: 10,
   phone: { last4: '0201', verified: true },
   // Back from connecting Microsoft.
@@ -109,6 +109,7 @@ export const fakeNotificationHandlers: NotificationHandlers = {
 
 export const fakeAccountHandlers: AccountHandlers = {
   onSaveProfile: () => wait({ ok: true, code: 'saved' }),
+  onSaveUsername: () => wait({ ok: true, code: 'updated' }),
   onSaveActivity: () => wait({ ok: true, code: 'updated' }),
   onSavePreference: ({ topic, channel }) =>
     wait((topic === 'bookings' || topic === 'payments') && channel === 'email' ? { ok: false, code: 'not_allowed' } : { ok: true, code: 'updated' }),

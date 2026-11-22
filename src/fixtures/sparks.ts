@@ -1,4 +1,4 @@
-import { DIRECT_CHATS_PER_DAY, PLAN_DIRECT_CHATS_PER_DAY, SPARK_LEVEL_THRESHOLDS, SPARK_LEVELS, SPARK_PACK_OFFERS, SPARK_PACKS, SPARK_RULES, SPARK_SOURCES, type NewDirectMessagePageData, type SparksPageData, type SparksSummary } from '@/contracts';
+import { DIRECT_CHATS_PER_DAY, PLAN_DIRECT_CHATS_PER_DAY, SPARK_LEVEL_THRESHOLDS, SPARK_LEVELS, SPARK_PACK_OFFERS, SPARK_PACKS, SPARK_RULES, SPARK_SOURCES, type FindPersonPageData, type NewDirectMessagePageData, type SparksPageData, type SparksSummary } from '@/contracts';
 import { jordan, maya } from './people';
 
 /** Sparks and direct conversations (2026-11-21): the canonical states for the previews and tests. */
@@ -73,7 +73,7 @@ export const newDirectMessageData: NewDirectMessagePageData = {
   recipient: { id: jordan.id, displayName: jordan.displayName, initials: jordan.initials, memberSince: jordan.memberSince, phoneVerified: true },
   helperHandle: jordan.handle,
   canRequest: true,
-  allowance: { left: 9, perDay: 10 },
+  allowance: { left: 2, perDay: 3 },
   firstMessagesMax: 3,
   contactMasking: true,
   maxLength: 2000,
@@ -90,7 +90,14 @@ export const newDirectMessageClientData: NewDirectMessagePageData = {
 };
 
 /** The day's new conversations used up. */
-export const newDirectMessageLimitData: NewDirectMessagePageData = { ...newDirectMessageData, refusal: 'limit_reached', allowance: { left: 0, perDay: 10, resetsAt: '2026-11-22T14:30:00.000Z' } };
+export const newDirectMessageLimitData: NewDirectMessagePageData = { ...newDirectMessageData, refusal: 'limit_reached', allowance: { left: 0, perDay: 3, resetsAt: '2026-11-22T14:30:00.000Z' } };
 
 /** Jordan takes direct messages only from people they've talked to about a task. */
 export const newDirectMessageContactsOnlyData: NewDirectMessagePageData = { ...newDirectMessageData, refusal: 'task_contacts_only' };
+
+/** New message with no one named yet (2026-11-22): find someone by @username; a newcomer with 2 of 3 left today. */
+export const findPersonData: FindPersonPageData = { allowance: { left: 2, perDay: 3 }, level: 'newcomer' };
+/** A username nobody we can reach has. */
+export const findPersonNotFoundData: FindPersonPageData = { ...findPersonData, query: 'jordan_tx', notFound: true };
+/** The day's new conversations used up: when the next frees up. */
+export const findPersonLimitData: FindPersonPageData = { allowance: { left: 0, perDay: 3, resetsAt: '2026-11-22T14:30:00.000Z' }, level: 'newcomer' };

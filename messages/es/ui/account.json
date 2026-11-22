@@ -345,5 +345,23 @@
     "title": "Chispas",
     "description": "Tu puntuación en la comunidad: cómo se gana, tu nivel y las conversaciones al día que permite.",
     "link": "Ver tus Chispas"
+  },
+  "username": {
+    "title": "Nombre de usuario",
+    "label": "Nombre de usuario",
+    "hint": "De 3 a 20 letras minúsculas, números o _, empezando por una letra. La gente puede encontrarte con él para iniciar un chat. Puedes cambiarlo una vez cada 30 días.",
+    "changeableAt": "Podrás elegir otro el {date}.",
+    "save": "Guardar nombre de usuario",
+    "saving": "Guardando…",
+    "saved": "Tu nombre de usuario ahora es @{username}.",
+    "errors": {
+      "invalid": "Usa de 3 a 20 letras minúsculas, números o _, empezando por una letra.",
+      "name_reserved": "Ese nombre de usuario está reservado. Elige otro.",
+      "in_use": "Alguien ya tiene ese nombre de usuario. Prueba otro.",
+      "required": "Escribe un nombre de usuario.",
+      "too_long": "Usa 20 caracteres o menos.",
+      "rate_limited": "Cambiaste tu nombre de usuario hace poco. Podrás elegir otro el {date}.",
+      "unknown": "No se guardó. Inténtalo de nuevo."
+    }
   }
 }

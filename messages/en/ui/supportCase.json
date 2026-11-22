@@ -23,6 +23,8 @@
   "sending": "Sending reply…",
   "sent": "Reply sent. Support will see your message.",
   "notAllowed": "This case can no longer receive replies. Start a new request if you still need help.",
+  "liveJoined": "{name} from support joined the live chat.",
+  "liveEnded": "The live chat ended.",
   "previews": {
     "group": "Support cases",
     "open": "Open case with a conversation",

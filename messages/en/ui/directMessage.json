@@ -28,5 +28,19 @@
     "title": "Have a task for {name}?",
     "description": "Send a task request with the details and the price. Your card is authorized when you send it and charged only if they accept.",
     "action": "Send a task request"
+  },
+  "find": {
+    "back": "Back to messages",
+    "title": "New message",
+    "description": "Start a conversation with anyone on TasksNearMe by their @username.",
+    "label": "Their username",
+    "placeholder": "username",
+    "submit": "Find",
+    "hint": "You'll see who it is before you write.",
+    "notFound": "No one we can reach has the username @{username}. Check the spelling.",
+    "allowance": "You can start {left, plural, one {# more conversation} other {# more conversations}} today ({perDay} a day at your level, {level}).",
+    "resetsAt": "The next one frees up at {time} ({zone}).",
+    "moreWithSparks": "Earn Sparks to start more each day.",
+    "sparksLink": "How Sparks work"
   }
 }

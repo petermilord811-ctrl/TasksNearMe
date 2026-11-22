@@ -54,13 +54,17 @@ export type NewSupportRequestInput = z.input<typeof newSupportRequestInputSchema
 
 export interface CaseEventView {
   id: string;
-  kind: 'message' | 'status';
+  /** `live`: someone from support joined the live chat, or it ended (2026-11-22; `live`, `agentName`). */
+  kind: 'message' | 'status' | 'live';
   /** `assistant`: an answer from the AI assistant in a case opened from the Help conversation (2026-11-22). */
   from: 'me' | 'support' | 'system' | 'assistant';
   body?: string;
   photos?: Photo[];
   /** Status changes. */
   status?: CaseStatus;
+  live?: 'joined' | 'ended';
+  /** Live chat events: the support person's first name. */
+  agentName?: string;
   at: ISODateTime;
 }
 

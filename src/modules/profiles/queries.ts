@@ -28,6 +28,7 @@ import { badgesFor } from '@/modules/badges/service';
 import { marketTimeZone } from '@/modules/markets/time-zone';
 import { rowScopeCondition, type RowScope } from '@/shared/sample-data';
 import { deletedLabelFor, shownPerson } from '@/modules/accounts/shown-name';
+import { usernamesOf } from '@/modules/accounts/usernames';
 
 /**
  * Public helper cards. Only active helpers with active accounts appear. Last names, exact
@@ -253,10 +254,13 @@ export async function getHelperProfile(handle: string, database: Db = db, rows: 
   const timeZone = await marketTimeZone(database, row.marketId);
   // Their Sparks (2026-11-21), with the bought part: a community score shown on the profile, never a booking signal.
   const sparks = await sparksSummaryOf(database, userId);
+  // Their @username (2026-11-22), under the name.
+  const username = (await usernamesOf(database, [userId])).get(userId);
   return {
     timeZone,
     ...(sparks ? { sparks } : {}),
     acceptsMessages: row.user.directMessages !== 'nobody',
+    ...(username ? { username } : {}),
     helper: withRecommended(toHelperSummary(
       row.profile,
       row.user,

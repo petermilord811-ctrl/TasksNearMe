@@ -38,7 +38,7 @@ import {
   type CommunityTaskDiscussion,
 } from '@/contracts';
 import { loadPhoneCheck, phoneGatePasses } from '@/modules/accounts/phone-check';
-import { users } from '@/modules/accounts/schema';
+import { usernames, users } from '@/modules/accounts/schema';
 import { badgesFor } from '@/modules/badges/service';
 import { bookings } from '@/modules/bookings/schema';
 import { avatarPhoto } from '@/modules/files/photos';
@@ -169,7 +169,7 @@ async function authorsOf(db: Db, userIds: string[], viewerId: string, rows: RowS
   const ids = [...new Set(userIds)];
   if (ids.length === 0) return new Map();
   const [people, profiles, verified, posters] = await Promise.all([
-    db.select({ id: users.id, name: users.name, createdAt: users.createdAt, avatarFileId: users.avatarFileId, status: users.status, directMessages: users.directMessages }).from(users).where(inArray(users.id, ids)),
+    db.select({ id: users.id, name: users.name, createdAt: users.createdAt, avatarFileId: users.avatarFileId, status: users.status, directMessages: users.directMessages, username: usernames.username }).from(users).leftJoin(usernames, eq(usernames.userId, users.id)).where(inArray(users.id, ids)),
     db
       .select({
         userId: helperProfiles.userId,
@@ -208,6 +208,8 @@ async function authorsOf(db: Db, userIds: string[], viewerId: string, rows: RowS
         ...(activeHelper && profile ? { helperHandle: profile.handle } : {}),
         isYou: person.id === viewerId,
         ...(person.avatarFileId ? { photo: avatarPhoto(person.avatarFileId, name) } : {}),
+        // Their @username (2026-11-22), never a deleted account's.
+        ...(person.username && person.status !== 'deleted' ? { username: person.username } : {}),
         card: {
           memberSince: person.createdAt.toISOString(),
           ...(activeHelper && profile

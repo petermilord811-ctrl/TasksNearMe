@@ -2,19 +2,21 @@ import { and, eq, gt, isNotNull, ne, or, sql } from 'drizzle-orm';
 import {
   DIRECT_FIRST_MESSAGES_MAX,
   DIRECT_MESSAGE_SETTINGS,
+  normalizeUsername,
   routes,
   startDirectChatInputSchema,
   type ActionResult,
   type DirectMessageSetting,
   type NewDirectMessagePageData,
   type StartDirectChatInput,
+  type FindPersonPageData,
 } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { bookings } from '@/modules/bookings/schema';
 import { profilePhotoOf } from '@/modules/files/photos';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { initialsOf } from '@/modules/profiles/queries';
-import { directChatAllowance } from '@/modules/sparks/service';
+import { directChatAllowance, sparksSummaryOf } from '@/modules/sparks/service';
 import { isBlockedBetween } from '@/modules/trust/blocks';
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
@@ -214,4 +216,21 @@ export async function saveDirectMessageSetting(db: Db, userId: string, input: { 
   if (!isDirectMessageSetting(input?.setting)) return { ok: false, code: 'validation_failed', fieldErrors: { setting: ['invalid'] } };
   await db.update(users).set({ directMessages: input.setting, updatedAt: now }).where(and(eq(users.id, userId), ne(users.status, 'deleted')));
   return { ok: true, code: 'updated' };
+}
+
+/**
+ * "New message" with no one named yet (2026-11-22): the box for an @username, and the person's own allowance of new
+ * conversations (left in any 24 hours, by Sparks level or plan), so they see what their level allows before typing.
+ */
+export async function getFindPersonPage(db: Db, viewerId: string, query: { text?: string; notFound?: boolean }, now: Date): Promise<FindPersonPageData> {
+  const [starts, perDay, summary] = await Promise.all([startsLastDay(db, viewerId, now), directChatAllowance(db, viewerId, now), sparksSummaryOf(db, viewerId)]);
+  const left = Math.max(0, perDay - starts.length);
+  const resetsAt = left === 0 ? allowanceResetsAt(starts, now) : undefined;
+  return {
+    // As usernames read (the "@" they typed goes: the box and the message show their own).
+    ...(query.text && normalizeUsername(query.text) ? { query: normalizeUsername(query.text).slice(0, 40) } : {}),
+    ...(query.notFound ? { notFound: true } : {}),
+    allowance: { left, perDay, ...(resetsAt ? { resetsAt: resetsAt.toISOString() } : {}) },
+    level: summary?.level ?? 'newcomer',
+  };
 }

@@ -10,6 +10,7 @@ import type {
   HelpSummary,
 } from '@/contracts';
 import { deskBookingThreadPageData, inboxEmptyData, mayaInboxWithDirectData } from './messaging';
+import { jordanSparks } from './sparks';
 
 /**
  * The chat window and TasksNearMe Help (2026-11-22): every state the window, the pinned Help row and the Help
@@ -87,6 +88,7 @@ export const helpChatCaseWaitingData: HelpChatData = {
     unread: false,
     openedAt: '2026-11-17T15:56:00.000Z',
     replyHours: 24,
+    canRequestLive: true,
     events: [
       { id: 'cev_q1', kind: 'message', from: 'me', body: refundTurn.question, at: refundTurn.at },
       { id: 'cev_a1', kind: 'message', from: 'assistant', body: `${refundTurn.answer.text}\n\n· Reporting a problem with a task`, at: '2026-11-17T15:55:00.001Z' },
@@ -108,6 +110,52 @@ export const helpChatCaseRepliedData: HelpChatData = {
   },
 };
 
+/** Live chat (2026-11-22): they asked for a person; second in line, and someone from support is online. */
+export const helpChatLiveWaitingData: HelpChatData = {
+  ...helpChatCaseWaitingData,
+  case: {
+    ...helpChatCaseWaitingData.case!,
+    canRequestLive: false,
+    live: { state: 'waiting', position: 2, agentsOnline: true, requestedAt: '2026-11-17T15:56:00.000Z' },
+  },
+};
+
+/** Live chat asked for while no one from support is online: the case waits for a reply as messages. */
+export const helpChatLiveOfflineData: HelpChatData = {
+  ...helpChatLiveWaitingData,
+  case: { ...helpChatLiveWaitingData.case!, live: { state: 'waiting', position: 1, agentsOnline: false, requestedAt: '2026-11-17T15:56:00.000Z' } },
+};
+
+/** Riley from support joined the live chat and wrote first. */
+export const helpChatLiveJoinedData: HelpChatData = {
+  ...helpChatCaseWaitingData,
+  case: {
+    ...helpChatCaseWaitingData.case!,
+    status: 'awaiting_poster',
+    canRequestLive: false,
+    live: { state: 'joined', agentsOnline: true, agentName: 'Riley', requestedAt: '2026-11-17T15:56:00.000Z' },
+    events: [
+      ...helpChatCaseWaitingData.case!.events,
+      { id: 'cev_live1', kind: 'live', from: 'system', live: 'joined', agentName: 'Riley', at: '2026-11-17T15:58:00.000Z' },
+      { id: 'cev_s1', kind: 'message', from: 'support', body: "Hi Maya, I'm Riley from support. I'm sorry Jordan didn't come. I've paused the payment. Did Jordan message you that day?", at: '2026-11-17T15:58:30.000Z' },
+    ],
+  },
+};
+
+/** The live chat ended; the case goes on as messages. */
+export const helpChatLiveEndedData: HelpChatData = {
+  ...helpChatLiveJoinedData,
+  case: {
+    ...helpChatLiveJoinedData.case!,
+    live: { state: 'ended', agentsOnline: true, agentName: 'Riley', requestedAt: '2026-11-17T15:56:00.000Z' },
+    events: [
+      ...helpChatLiveJoinedData.case!.events,
+      { id: 'cev_m2', kind: 'message', from: 'me', body: 'No, nothing since Friday.', at: '2026-11-17T15:59:00.000Z' },
+      { id: 'cev_live2', kind: 'live', from: 'system', live: 'ended', agentName: 'Riley', at: '2026-11-17T15:59:30.000Z' },
+    ],
+  },
+};
+
 export const helpChatRecentData: HelpChatData = { ...helpChatAssistantData, recent: { id: 'case_help_0', status: 'resolved', topic: 'payment' } };
 
 export const helpSummaryAssistant: HelpSummary = { assistantAvailable: true };
@@ -122,7 +170,10 @@ export const helpSummaryReplied: HelpSummary = {
 
 export const chatInboxData: ChatInboxData = { ...mayaInboxWithDirectData, help: helpSummaryReplied };
 export const chatInboxEmptyData: ChatInboxData = { ...inboxEmptyData, help: helpSummaryAssistant };
-export const chatThreadData: ChatThreadData = { data: deskBookingThreadPageData };
+/** The window's conversation: the header shows who it is with, their @username and Sparks (2026-11-22). */
+export const chatThreadData: ChatThreadData = {
+  data: { ...deskBookingThreadPageData, thread: { ...deskBookingThreadPageData.thread, otherParty: { ...deskBookingThreadPageData.thread.otherParty, username: 'jordan', sparks: jordanSparks } } },
+};
 
 const ok = async (): Promise<ActionResult> => ({ ok: true, code: 'sent' });
 
@@ -132,6 +183,8 @@ export const fakeHelpChatHandlers: HelpChatHandlers = {
   onStartOver: () => undefined,
   onHandOff: async () => ({ ok: true, code: 'submitted' }),
   onReply: ok,
+  onRequestLive: async () => ({ ok: true, code: 'updated' }),
+  onTyping: () => undefined,
 };
 
 export const fakeChatThreadHandlers: ChatThreadHandlers = {

@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import { index, integer, jsonb, pgTable, primaryKey, text, timestamp } from 'drizzle-orm/pg-core';
 import { users } from '../accounts/schema';
 
@@ -48,6 +49,15 @@ export const supportCases = pgTable(
     closedAt: timestamp('closed_at', { withTimezone: true }),
     /** Staff changes check it, so two people can't move the same case at once. */
     version: integer('version').notNull().default(1),
+    /**
+     * Live chat (2026-11-22, owner: "let users wait until support is attending, and I will support chatting"): when the
+     * member asked for a person from TasksNearMe Help, who from support joined and when, and when the chat ended. A
+     * request waits in the live queue until someone joins; the case stays a case either way.
+     */
+    liveRequestedAt: timestamp('live_requested_at', { withTimezone: true }),
+    liveAgentUserId: text('live_agent_user_id').references(() => users.id),
+    liveJoinedAt: timestamp('live_joined_at', { withTimezone: true }),
+    liveEndedAt: timestamp('live_ended_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -57,6 +67,8 @@ export const supportCases = pgTable(
     index('support_cases_opener_idx').on(t.openedByUserId, t.updatedAt),
     index('support_cases_assignee_idx').on(t.assigneeUserId, t.status),
     index('support_cases_contact_idx').on(t.contactEmail, t.createdAt),
+    // The live queue and the chats under way.
+    index('support_cases_live_idx').on(t.liveRequestedAt).where(sql`${t.liveEndedAt} is null`),
   ],
 );
 
@@ -72,7 +84,7 @@ export const supportCaseEvents = pgTable(
     caseId: text('case_id')
       .notNull()
       .references(() => supportCases.id),
-    kind: text('kind').notNull(), // message | note | status | assignment | resolution
+    kind: text('kind').notNull(), // message | note | status | assignment | resolution | live
     /** The member or a staff member; null for status changes and a public request's follow-ups (`meta.fromContact`). */
     authorUserId: text('author_user_id').references(() => users.id),
     /** Whose conversation with support this belongs to; null for the whole case (status changes, notes). */
@@ -85,7 +97,7 @@ export const supportCaseEvents = pgTable(
     /** Assignment and resolution changes: the new assignee (null when unassigned) or the resolution. */
     /** `emailed`: staff's answer went to a public request's address. `fromContact`: that address wrote again (5.22). */
     /** `assistant`: an answer from the support assistant, in the chat attached to a case opened from it (no author). */
-    meta: jsonb('meta').$type<{ assigneeUserId?: string | null; resolution?: string; reviewAction?: 'hidden' | 'shown'; questionAction?: 'hidden' | 'removed' | 'restored'; emailed?: boolean; fromContact?: boolean; refundRequestId?: string; assistant?: boolean }>(),
+    meta: jsonb('meta').$type<{ assigneeUserId?: string | null; resolution?: string; reviewAction?: 'hidden' | 'shown'; questionAction?: 'hidden' | 'removed' | 'restored'; emailed?: boolean; fromContact?: boolean; refundRequestId?: string; assistant?: boolean; live?: 'joined' | 'ended' }>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('support_case_events_case_idx').on(t.caseId, t.createdAt)],

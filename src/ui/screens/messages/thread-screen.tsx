@@ -9,6 +9,7 @@ import { InboxList } from '@/ui/components/messaging/inbox-list';
 import { cn } from '@/ui/lib/utils';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { ReportBlockMenu } from '@/ui/components/safety';
+import { SparksBadge } from '@/ui/components/people/sparks-badge';
 import { buttonVariants } from '@/ui/primitives/button';
 import { MessageComposerContent } from './message-composer';
 import { MessageLog } from './message-log';
@@ -89,6 +90,9 @@ export function ThreadContent({ data, handlers, now, safety, composerState, wide
         </h1>
         <div className="flex min-w-0 items-center gap-x-2 text-xs text-muted-foreground sm:text-sm">
           <ThreadPresence threadId={thread.id} presence={data.presence} className="shrink-0 text-xs sm:text-sm" />
+          {/* Their @username and Sparks (2026-11-22). */}
+          {other.username && <span className="shrink-0">@{other.username}</span>}
+          {other.sparks && <SparksBadge sparks={other.sparks} compact className="shrink-0 flex-nowrap" />}
           <span className="truncate">{thread.kind === 'direct' ? t('direct.label') : thread.title}</span>
         </div>
       </div>

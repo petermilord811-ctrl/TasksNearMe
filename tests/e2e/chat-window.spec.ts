@@ -114,13 +114,20 @@ async function removeAll(made: Made): Promise<void> {
   }
 }
 
-/** Support answers the person on their case, as staff's reply does: the message, then the event that tells their pages. */
+/**
+ * Support answers the person on their case, as staff's reply does: a reply to someone waiting for a live chat joins it
+ * (2026-11-22), then the message, then the event that tells their pages.
+ */
 async function supportReplies(made: Made, body: string): Promise<void> {
   const { db, pool } = database();
   try {
     const [row] = await db.select().from(supportCases).where(eq(supportCases.openedByUserId, made.clientId));
     if (!row) throw new Error('No case from the assistant');
     const now = new Date();
+    if (row.liveRequestedAt && !row.liveAgentUserId) {
+      await db.update(supportCases).set({ liveAgentUserId: 'usr_alex', liveJoinedAt: now }).where(eq(supportCases.id, row.id));
+      await db.insert(supportCaseEvents).values({ id: `cev_e2e_join_${Date.now().toString(36)}`, caseId: row.id, kind: 'live', authorUserId: 'usr_alex', partyUserId: made.clientId, meta: { live: 'joined' }, createdAt: new Date(now.getTime() - 1) });
+    }
     await db.insert(supportCaseEvents).values({ id: `cev_e2e_${Date.now().toString(36)}`, caseId: row.id, kind: 'message', authorUserId: 'usr_alex', partyUserId: made.clientId, body, createdAt: now });
     await db.update(supportCases).set({ firstResponseAt: now, updatedAt: now }).where(eq(supportCases.id, row.id));
     await db.insert(outboxEvents).values({ id: `evt_e2e_${Date.now().toString(36)}`, type: 'support.replied', aggregateType: 'support_case', aggregateId: row.id, payload: { caseId: row.id, partyUserId: made.clientId, subject: 'Booking' } });
@@ -203,7 +210,7 @@ test.describe('the chat window (wide screens)', () => {
     }
   });
 
-  test('TasksNearMe Help: the assistant answers from the help center, a person takes over, and their reply arrives live', async ({ page, context, baseURL }) => {
+  test('TasksNearMe Help: the assistant answers from the help center, one tap connects a person, and their reply arrives live', async ({ page, context, baseURL }) => {
     test.setTimeout(180_000);
     await standIn(context, baseURL);
     const made = await unreadConversation();
@@ -223,17 +230,17 @@ test.describe('the chat window (wide screens)', () => {
       await question.fill('My helper never came, I want a refund');
       await question.press('Enter');
       await expect(log.getByText('This needs our support team.')).toBeVisible({ timeout: 30_000 });
+      // One tap, no form: the chat goes to support as a live chat (in line, or a reply here when no one is online).
       await log.getByRole('button', { name: 'Talk to a person' }).click();
-      const form = box.getByRole('form', { name: 'Talk to a person' });
-      await expect(form.getByRole('textbox', { name: 'What should our team know?' })).toHaveValue('My helper never came, I want a refund');
-      await form.getByRole('button', { name: 'Send to support' }).click();
-      await expect(box.getByText(/You're in line\. A person from our support team will reply here\./)).toBeVisible({ timeout: 30_000 });
+      const waiting = box.getByRole('status').filter({ hasText: /Connecting you to a person from support|No one from support is online right now/ });
+      await expect(waiting).toBeVisible({ timeout: 30_000 });
       await expect(log.getByText('My helper never came, I want a refund').first()).toBeVisible();
 
-      // Support replies (as staff's reply does): it shows in the window without a reload.
+      // Support replies (as staff's reply does): it shows in the window without a reload, with who joined.
       await supportReplies(made, 'Hi Cleo, this is Alex from support. I paused the payment while I look.');
       await expect(log.getByText('Hi Cleo, this is Alex from support. I paused the payment while I look.')).toBeVisible({ timeout: 45_000 });
-      await expect(box.getByText(/You're in line/)).toHaveCount(0);
+      await expect(log.getByText('Alex from support joined the chat.')).toBeVisible();
+      await expect(waiting).toHaveCount(0);
     } finally {
       await removeAll(made);
     }

@@ -1,6 +1,7 @@
 import type { ISODateTime, Mode, Photo, StaffRole } from './common';
 import type { ActionHandler } from './actions';
 import type { AppLocale } from './locale';
+import type { SparksSummary } from './sparks';
 
 /** Who is using the app, as far as the page shells need to know. */
 export type ShellViewer =
@@ -17,6 +18,9 @@ export type ShellViewer =
       helperReady: boolean;
       unreadMessages: number;
       unreadNotifications: number;
+      /** Their @username and Sparks, in the account menu (2026-11-22). */
+      username?: string;
+      sparks?: SparksSummary;
       /**
        * The newest post on Neighbors in their market by someone else (plan 10.19), for the dot on the Neighbors item:
        * newer than this device's last look at Neighbors (`visitKey`, src/ui/lib/last-visit.ts) means something new.
@@ -32,6 +36,8 @@ export type ShellViewer =
       roles: StaffRole[];
       /** Staff must pass the two-step check before admin pages render (see /admin/verify). */
       twoStepVerified: boolean;
+      /** Live chats waiting for someone from support (2026-11-22): the count beside Live chat in the staff menu. */
+      liveWaiting?: number;
     };
 
 export type SignedInViewer = Extract<ShellViewer, { kind: 'user' }>;

@@ -67,4 +67,6 @@ export interface HelperProfilePageData {
   sparks?: SparksSummary;
   /** "Message" (`routes.app.newMessage({ helper: handle })`): absent when they take direct messages from nobody. */
   acceptsMessages?: boolean;
+  /** Their @username (2026-11-22), under their name. */
+  username?: string;
 }

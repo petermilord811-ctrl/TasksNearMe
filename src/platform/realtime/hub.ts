@@ -17,13 +17,18 @@ export interface RealtimeEnvelope {
 }
 type Listener = (notice: RealtimeNotice) => void;
 
-const CHANNEL = /^(user|market):[A-Za-z0-9_]{1,80}$/;
+const CHANNEL = /^(user|market|staff):[A-Za-z0-9_]{1,80}$/;
 const KEY = /^[a-z][A-Za-z]{0,30}$/;
 /** pg_notify payloads are limited to 8000 bytes; notices stay far below. */
 export const MAX_ENVELOPE_BYTES = 2000;
 
 export const userChannel = (userId: string) => `user:${userId}`;
 export const marketChannel = (marketId: string) => `market:${marketId}`;
+/**
+ * Support staff on duty (2026-11-22, live chat): every open staff page of someone who works cases hears it, in the same
+ * stream as their own channel (one per tab). A live chat asked for, joined or ended, and a member's message in one.
+ */
+export const STAFF_SUPPORT_CHANNEL = 'staff:support';
 
 /** A well-formed envelope from a NOTIFY payload, or null (anything else is dropped). */
 export function parseEnvelope(payload: string): RealtimeEnvelope | null {

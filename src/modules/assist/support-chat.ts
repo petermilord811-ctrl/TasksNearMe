@@ -33,6 +33,7 @@ import type { Db } from '@/platform/db/connect';
 import { userChannel } from '@/platform/realtime/hub';
 import { publishNotices } from '@/platform/realtime/publish';
 import { consumeRateLimit } from '@/platform/rate-limit';
+import { announceLiveRequest, liveStateOf } from '@/modules/support/live-chat';
 import { aiDraftingFlag } from './availability';
 import { genuineTurns, newTurnId, signTurn } from './assistant-turns';
 import { pickHelpArticles } from './help-retrieval';
@@ -54,6 +55,18 @@ const ASK_RULES = [
 ] as const;
 /** A case from the assistant stays noted at the top of the Help conversation this long after it finished. */
 const RECENT_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * Someone asking for a person in so many words ("I want a live agent", "talk to a real person", "quiero hablar con una
+ * persona"): no model, the conversation connects them (2026-11-22).
+ */
+export const LIVE_REQUEST =
+  /\b(live (agent|chat|person|support)|real (person|human)|(talk|speak|chat) (to|with) (a |an |some )?(person|human|agent|someone|representative|rep|support)|human (agent|being|support)|customer (service|support)|representative|operator|agente( en vivo)?|persona real|(hablar|chatear) con (una |un |alguien|soporte)(persona|humano|agente)?)\b/i;
+
+const CONNECTING: Record<'en' | 'es', string> = {
+  en: "Connecting you with a person from our support team now. You can keep writing while you wait: they'll see everything here.",
+  es: 'Te estoy conectando con una persona de nuestro equipo de soporte. Puedes seguir escribiendo mientras esperas: verán todo aquí.',
+};
 
 const REFUSED: Record<'en' | 'es', string> = {
   en: "I can't help with that here. A person from our support team can.",
@@ -93,6 +106,10 @@ export async function askSupportAssistant(
   for (const { key, rule } of ASK_RULES) {
     const limited = await consumeRateLimit(db, `${key}:${userId}`, rule, now);
     if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
+  }
+  // They asked for a person: connect them, whatever the AI would have said.
+  if (LIVE_REQUEST.test(question)) {
+    return { ok: true, turn: signTurn(userId, chatId, { id: newTurnId(), question, answer: { text: CONNECTING[person.locale], sources: [], handoff: 'live', topic: 'other', summary: question.slice(0, 160) }, at: now.toISOString() }) };
   }
 
   // Only turns this server signed for this person and chat count as context.
@@ -139,8 +156,9 @@ export async function handOffToSupport(db: Db, userId: string, input: HandOffInp
   const parsed = handOffInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   const { turns, dropped } = genuineTurns(userId, parsed.data.chatId, parsed.data.turns, now);
-  const handoff = turns.some((turn) => turn.answer.handoff === 'urgent') ? 'urgent' : turns.some((turn) => turn.answer.handoff === 'suggest') ? 'suggest' : 'none';
-  return openCaseFromAssistant(
+  const handoff = turns.some((turn) => turn.answer.handoff === 'urgent') ? 'urgent' : turns.some((turn) => turn.answer.handoff === 'suggest' || turn.answer.handoff === 'live') ? 'suggest' : 'none';
+  // Live (2026-11-22): the case waits in the live queue, and support staff on duty hear it at once.
+  const opened = await openCaseFromAssistant(
     db,
     userId,
     {
@@ -150,9 +168,13 @@ export async function handOffToSupport(db: Db, userId: string, input: HandOffInp
       turns: turns.map((turn) => ({ question: turn.question, answer: turn.answer.text, sources: turn.answer.sources.map((source) => source.title), at: new Date(turn.at) })),
       dropped,
       handoff,
+      live: true,
     },
     now,
   );
+  if (opened.ok && opened.caseId) await announceLiveRequest(db, opened.caseId);
+  const { caseId: _caseId, ...result } = opened;
+  return result;
 }
 
 /**
@@ -160,7 +182,7 @@ export async function handOffToSupport(db: Db, userId: string, input: HandOffInp
  * is one, else the assistant (with a case that finished in the last week noted). `markRead`: the conversation is on
  * screen, so the case reads as read; the person's other pages hear it when something was unread (their chat button).
  */
-export async function getHelpChat(db: Db, userId: string, now: Date, { assistant, markRead }: { assistant: SupportAssistant | null; markRead: boolean }): Promise<HelpChatData | null> {
+export async function getHelpChat(db: Db, userId: string, now: Date, { assistant, markRead, agentsOnline = 0 }: { assistant: SupportAssistant | null; markRead: boolean; agentsOnline?: number }): Promise<HelpChatData | null> {
   const person = await personOf(db, userId);
   if (!person) return null;
   const [available, rows, bookings] = await Promise.all([assistantAvailableFor(db, userId, assistant), assistantCasesOf(db, userId), recentBookingsFor(db, userId)]);
@@ -168,10 +190,13 @@ export async function getHelpChat(db: Db, userId: string, now: Date, { assistant
   const finished = rows.find((row) => isFinishedCase(row) && now.getTime() - (row.resolvedAt ?? row.closedAt ?? row.updatedAt).getTime() < RECENT_MS);
   const shown = open ? await helpCaseView(db, userId, open, now, { markRead }) : null;
   if (shown?.wasUnread && markRead) await publishNotices(db, [{ channel: userChannel(userId), notice: { type: 'read', case: shown.view.id } }]);
+  // The live chat (2026-11-22): waiting in line, joined, or ended; and whether they may ask for one on this case.
+  const live = open ? await liveStateOf(db, open, agentsOnline) : undefined;
+  const caseView = shown && open ? { ...shown.view, ...(live ? { live } : {}), canRequestLive: !open.liveRequestedAt || open.liveEndedAt !== null } : undefined;
   return {
     viewer: { firstName: person.firstName, mode: person.mode },
     assistantAvailable: available,
-    ...(shown ? { case: shown.view } : {}),
+    ...(caseView ? { case: caseView } : {}),
     ...(!open && finished ? { recent: { id: finished.id, status: caseStatusOf(finished.status), topic: topicOf(finished.topic) } } : {}),
     handoff: { bookings, replyHours: TOPIC_REPLY_HOURS },
   };

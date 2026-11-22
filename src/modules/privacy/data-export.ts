@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, or } from 'drizzle-orm';
 import { createTranslator } from 'next-intl';
 import { localeOrDefault } from '@/contracts';
 import { messagesFor, perLocale } from '@/i18n/catalog';
-import { accounts, agreements, passkeys, sessions, users } from '@/modules/accounts/schema';
+import { accounts, agreements, passkeys, sessions, usernames, users } from '@/modules/accounts/schema';
 import { availabilityPosts } from '@/modules/availability/schema';
 import { bookings } from '@/modules/bookings/schema';
 import { earnings, payouts } from '@/modules/earnings/schema';
@@ -114,6 +114,7 @@ export async function dataExportPhotos(db: Db, storage: FileStorage, userId: str
 export async function buildDataExport(db: Db, cipher: FieldCipher, userId: string, now: Date): Promise<Record<string, unknown> | null> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return null;
+  const [handle] = await db.select({ username: usernames.username }).from(usernames).where(eq(usernames.userId, userId)).limit(1);
   const t = tFor(localeOrDefault(user.locale));
   const hide = (text: string | null) => masked(text, (detail) => t('hidden', { detail }));
   const decrypt = (ciphertext: string | null): unknown => {
@@ -226,6 +227,7 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
       firstName: user.firstName,
       lastName: user.lastName,
       displayName: user.name,
+      username: handle?.username ?? null,
       phone: user.phone,
       phoneVerifiedAt: iso(user.phoneVerifiedAt),
       mode: user.mode,

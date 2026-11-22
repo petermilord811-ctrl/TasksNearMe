@@ -79,7 +79,9 @@
     "becomeAHelper": "Hazte ayudante",
     "pricing": "Precios",
     "community": "Vecinos",
-    "savedSearches": "Búsquedas guardadas"
+    "savedSearches": "Búsquedas guardadas",
+    "helpChat": "Ayuda",
+    "liveChat": "Chat en vivo"
   },
   "footer": {
     "tagline": "Buenos vecinos. Listas de pendientes más ligeras.",
@@ -184,5 +186,6 @@
     "toLight": "Cambiar al modo claro",
     "toDark": "Cambiar al modo oscuro"
   },
-  "neighborsNew": "Publicaciones nuevas"
+  "neighborsNew": "Publicaciones nuevas",
+  "navCount": ", {count} en espera"
 }

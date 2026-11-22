@@ -13,6 +13,10 @@ import {
   helpChatAssistantData,
   helpChatCaseRepliedData,
   helpChatCaseWaitingData,
+  helpChatLiveEndedData,
+  helpChatLiveJoinedData,
+  helpChatLiveOfflineData,
+  helpChatLiveWaitingData,
   helpChatUnavailableData,
   mayaShell,
   pendingTranscript,
@@ -79,14 +83,14 @@ function windowPreview(id: string, title: string, options: { view?: ChatView; th
   };
 }
 
-function helpPagePreview(id: string, title: string, data: HelpChatData, transcript: AssistantTranscript, initialHandoff = false): PreviewEntry {
+function helpPagePreview(id: string, title: string, data: HelpChatData, transcript: AssistantTranscript): PreviewEntry {
   return {
     id: `help-page/${id}`,
     group: copy.group,
     title,
     layout: 'fullscreen',
     render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.helpChat()} layout="flow">
-      <HelpChatScreen data={data} transcript={transcript} handlers={fakeHelpChatHandlers} now={now} initialHandoff={initialHandoff} />
+      <HelpChatScreen data={data} transcript={transcript} handlers={fakeHelpChatHandlers} now={now} />
     </AppShell>,
   };
 }
@@ -109,7 +113,12 @@ export const chatWindowPreviews: PreviewEntry[] = [
   windowPreview('help-unavailable', copy.unavailable, { view: { kind: 'help' }, help: helpChatUnavailableData }),
   windowPreview('help-waiting', copy.waiting, { view: { kind: 'help' }, help: helpChatCaseWaitingData }),
   windowPreview('help-replied', copy.replied, { view: { kind: 'help' }, help: helpChatCaseRepliedData }),
+  windowPreview('help-live-waiting', copy.liveWaiting, { view: { kind: 'help' }, help: helpChatLiveWaitingData }),
+  windowPreview('help-live-offline', copy.liveOffline, { view: { kind: 'help' }, help: helpChatLiveOfflineData }),
+  windowPreview('help-live-joined', copy.liveJoined, { view: { kind: 'help' }, help: helpChatLiveJoinedData }),
+  windowPreview('help-live-ended', copy.liveEnded, { view: { kind: 'help' }, help: helpChatLiveEndedData }),
   helpPagePreview('answer', `${copy.page}: ${copy.answer}`, helpChatAssistantData, suggestTranscript),
-  helpPagePreview('handoff', `${copy.page}: ${copy.handoff}`, helpChatAssistantData, suggestTranscript, true),
+  helpPagePreview('live-waiting', `${copy.page}: ${copy.liveWaiting}`, helpChatLiveWaitingData, emptyTranscript),
+  helpPagePreview('live-joined', `${copy.page}: ${copy.liveJoined}`, helpChatLiveJoinedData, emptyTranscript),
   helpPagePreview('replied', `${copy.page}: ${copy.replied}`, helpChatCaseRepliedData, emptyTranscript),
 ];

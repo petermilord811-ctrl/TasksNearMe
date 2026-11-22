@@ -19,6 +19,7 @@ import { NAV_ICONS } from './nav-icons';
 import { forgetPersonalDrafts } from '@/ui/lib/personal-drafts';
 import { forgetThisPushDevice } from '@/ui/components/push/use-push-device';
 import { switchTheme, useEffectiveTheme } from './theme-toggle';
+import { SparksBadge } from '@/ui/components/people/sparks-badge';
 
 /** The avatar: a soft ring that warms to the brand color while pointed at or open. */
 const AVATAR = 'size-11 shrink-0 rounded-full bg-secondary object-cover shadow-[0_0_0_1px_color-mix(in_oklab,var(--foreground)_10%,transparent),0_4px_12px_-6px_rgb(60_30_10/0.4)] transition-[box-shadow] duration-300 ease-[var(--ease-out)] group-hover/avatar:shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_28%,transparent),0_6px_16px_-6px_rgb(60_30_10/0.45)] group-data-[state=open]/avatar:shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_40%,transparent),0_6px_16px_-6px_rgb(60_30_10/0.45)]';
@@ -121,7 +122,14 @@ export function AccountMenu({ viewer, onSignOut, onSwitchLanguage, onModeChange,
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={8} className="w-64 max-w-[calc(100vw-2rem)]">
-          <DropdownMenuLabel className="px-2.5 pt-2 pb-1.5 font-display text-[0.9375rem] font-semibold break-words">{viewer.displayName}</DropdownMenuLabel>
+          <DropdownMenuLabel className="space-y-1 px-2.5 pt-2 pb-1.5">
+            <span className="block font-display text-[0.9375rem] font-semibold break-words">{viewer.displayName}</span>
+            {/* Their @username and Sparks (2026-11-22). */}
+            {viewer.kind === 'user' && (viewer.username || viewer.sparks) && <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-normal text-muted-foreground">
+              {viewer.username && <span className="break-all">@{viewer.username}</span>}
+              {viewer.sparks && <SparksBadge sparks={viewer.sparks} compact />}
+            </span>}
+          </DropdownMenuLabel>
           <DropdownMenuSeparator />
           {viewer.kind === 'user' && onModeChange && <>
             <DropdownMenuItem className="sm:hidden" onSelect={() => void switchMode()}>

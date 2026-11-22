@@ -540,6 +540,13 @@
       "when": 1795353261364,
       "tag": "0076_neighbors_upgrade",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1795368060912,
+      "tag": "0077_usernames_live_chat",
+      "breakpoints": true
     }
   ]
 }

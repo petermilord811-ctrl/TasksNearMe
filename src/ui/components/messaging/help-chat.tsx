@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
-import { ArrowUpRight, BookOpen, CircleAlert, LifeBuoy, RotateCcw, Send, ShieldAlert, UserRound } from 'lucide-react';
+import { ArrowUpRight, BookOpen, CircleAlert, Headset, LifeBuoy, RotateCcw, Send, ShieldAlert, UserRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
   ASSISTANT_QUESTION_MAX,
-  SUPPORT_TOPICS,
   type ActionResult,
   type AssistantTranscript,
   type AssistantTurn,
@@ -19,6 +18,7 @@ import {
 import { routes } from '@/contracts/routes';
 import { useFormat } from '@/ui/lib/format';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
+import { useRealtime } from '@/ui/lib/realtime';
 import { cn } from '@/ui/lib/utils';
 import { Button, buttonVariants } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -32,8 +32,6 @@ export interface HelpChatProps {
   now: ISODateTime;
   /** In the chat window (tighter), or on its own page. */
   variant?: 'window' | 'page';
-  /** Previews: the hand-off form open from the start. */
-  initialHandoff?: boolean;
 }
 
 const SUGGESTIONS: Record<Mode, readonly string[]> = {
@@ -41,9 +39,13 @@ const SUGGESTIONS: Record<Mode, readonly string[]> = {
   helper: ['paid', 'verified', 'price', 'problem'],
 };
 
+/** How long "typing…" from support stays after the last notice (they ping every 2.5 s while typing). */
+const TYPING_SHOWN_MS = 6000;
+
 const bubble = 'min-w-0 max-w-[88%] space-y-1.5 rounded-[1.25rem] px-3.5 py-2.5 text-[15px] leading-6 [overflow-wrap:anywhere]';
 const theirs = 'rounded-bl-md border border-foreground/[0.07] bg-background shadow-[0_1px_2px_rgb(23_18_14/0.05)] dark:border-white/[0.07]';
 const mine = 'rounded-br-md bg-secondary text-secondary-foreground';
+const notice = 'rounded-full bg-foreground/[0.045] px-3 py-1 text-center text-xs font-medium text-muted-foreground dark:bg-white/[0.06]';
 
 /** An answer's text: paragraphs, and lines that start with "- " as a list. Plain text only (never HTML). */
 function AnswerText({ text }: { text: string }) {
@@ -63,7 +65,7 @@ function Sender({ children }: { children: ReactNode }) {
 }
 
 /** The assistant's turn: the answer, the articles it used, and on the newest answer what it suggests next. */
-function AnswerBubble({ turn, latest, onTalk }: { turn: AssistantTurn; latest: boolean; onTalk(): void }) {
+function AnswerBubble({ turn, latest, connecting, onTalk }: { turn: AssistantTurn; latest: boolean; connecting: boolean; onTalk(): void }) {
   const t = useTranslations('chat.help');
   const { answer } = turn;
   return <li className="flex min-w-0 flex-col items-start gap-2">
@@ -77,24 +79,26 @@ function AnswerBubble({ turn, latest, onTalk }: { turn: AssistantTurn; latest: b
         </ul>
       </div>}
     </article>
-    {latest && answer.handoff !== 'none' && <HandoffCard urgent={answer.handoff === 'urgent'} onTalk={onTalk} />}
+    {latest && (answer.handoff === 'suggest' || answer.handoff === 'urgent') && <HandoffCard urgent={answer.handoff === 'urgent'} connecting={connecting} onTalk={onTalk} />}
   </li>;
 }
 
-function HandoffCard({ urgent, onTalk }: { urgent: boolean; onTalk(): void }) {
+function HandoffCard({ urgent, connecting, onTalk }: { urgent: boolean; connecting: boolean; onTalk(): void }) {
   const t = useTranslations('chat.help');
   return <div role={urgent ? 'alert' : undefined} className={cn('w-full max-w-[88%] space-y-2 rounded-2xl border px-3.5 py-3 text-sm', urgent ? 'border-destructive/40 bg-destructive/[0.06]' : 'border-primary/25 bg-brand-soft/50')}>
     <p className="flex items-start gap-2 font-semibold">{urgent ? <ShieldAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-destructive" /> : <LifeBuoy aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />}{urgent ? t('urgentTitle') : t('suggestPerson')}</p>
     {urgent && <p className="text-muted-foreground">{t('urgentBody')}</p>}
-    <Button type="button" size="sm" variant={urgent ? 'destructive' : 'default'} onClick={onTalk} className="rounded-full"><UserRound aria-hidden="true" />{t('talkToPerson')}</Button>
+    <Button type="button" size="sm" variant={urgent ? 'destructive' : 'default'} onClick={onTalk} disabled={connecting} aria-busy={connecting} className="rounded-full">{connecting ? <Spinner aria-hidden="true" /> : <UserRound aria-hidden="true" />}{connecting ? t('live.connecting') : t('talkToPerson')}</Button>
   </div>;
 }
 
 function CaseEvent({ event, now }: { event: CaseEventView; now: ISODateTime }) {
   const t = useTranslations('chat.help');
   const { formatTime, formatDateTime, formatRelative } = useFormat();
-  if (event.kind === 'status') {
-    return <li className="flex justify-center"><p className="rounded-full bg-foreground/[0.045] px-3 py-1 text-center text-xs font-medium text-muted-foreground dark:bg-white/[0.06]">{t('case.status', { status: t(`statuses.${event.status ?? 'open'}`) })}</p></li>;
+  if (event.kind === 'status') return <li className="flex justify-center"><p className={notice}>{t('case.status', { status: t(`statuses.${event.status ?? 'open'}`) })}</p></li>;
+  // Live chat (2026-11-22): someone from support joined, or the chat ended.
+  if (event.kind === 'live') {
+    return <li className="flex justify-center"><p className={cn(notice, event.live === 'joined' && 'bg-brand-soft/70 text-foreground')}>{event.live === 'ended' ? t('live.endedEvent') : t('live.joined', { name: event.agentName ?? t('support') })}</p></li>;
   }
   const own = event.from === 'me';
   const sender = own ? t('you') : event.from === 'assistant' ? t('assistant') : event.from === 'support' ? t('support') : t('update');
@@ -107,96 +111,14 @@ function CaseEvent({ event, now }: { event: CaseEventView; now: ISODateTime }) {
   </li>;
 }
 
-type FieldErrors = Partial<Record<'topic' | 'details' | 'bookingId', string>>;
-
-function errorsOf(result: ActionResult): FieldErrors {
-  if (result.ok || !result.fieldErrors) return {};
-  const pick = (name: string) => result.fieldErrors?.[name]?.[0];
-  return { ...(pick('topic') ? { topic: 'required' } : {}), ...(pick('details') ? { details: pick('details') } : {}), ...(pick('bookingId') ? { bookingId: 'invalid' } : {}) };
-}
-
-/** "Talk to a person": the topic, what support should know (their last question to start), a booking, then Send. */
-function HandoffForm({ data, transcript, onSubmit, onCancel }: { data: HelpChatData; transcript: AssistantTranscript; onSubmit: HelpChatHandlers['onHandOff']; onCancel(): void }) {
-  const t = useTranslations('chat.help.handoff');
-  const { formatDate, formatDateTime, zoneName } = useFormat();
-  const id = useId();
-  const last = transcript.turns.at(-1);
-  const urgent = transcript.turns.some((turn) => turn.answer.handoff === 'urgent');
-  const [topic, setTopic] = useState<SupportTopic>(urgent ? 'safety' : last?.answer.topic ?? 'other');
-  const [details, setDetails] = useState(last?.question ?? transcript.error?.question ?? '');
-  const [bookingId, setBookingId] = useState('');
-  const [pending, setPending] = useState(false);
-  const [result, setResult] = useState<ActionResult | undefined>();
-  const detailsRef = useRef<HTMLTextAreaElement>(null);
-  const fieldErrors = result ? errorsOf(result) : {};
-  const detailsError = fieldErrors.details === 'too_long' ? t('errors.too_long') : fieldErrors.details ? t('errors.required') : undefined;
-
-  useEffect(() => {
-    detailsRef.current?.focus();
-  }, []);
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (pending) return;
-    if (!details.trim()) {
-      setResult({ ok: false, code: 'validation_failed', fieldErrors: { details: ['required'] } });
-      detailsRef.current?.focus();
-      return;
-    }
-    setPending(true);
-    let next: ActionResult;
-    try {
-      next = await onSubmit({ topic, details: details.trim(), ...(bookingId ? { bookingId } : {}) });
-    } catch {
-      next = { ok: false, code: 'unknown' };
-    }
-    setPending(false);
-    setResult(next);
-    if (!next.ok && next.fieldErrors?.details) detailsRef.current?.focus();
-  }
-
-  const failure = result && !result.ok && !Object.keys(fieldErrors).length
-    ? result.code === 'rate_limited' && result.retryAt ? t('errors.rate_limited', { time: `${formatDateTime(result.retryAt)} ${zoneName}` }) : t('errors.unknown')
-    : undefined;
-  // Never taller than most of the conversation: on a phone it scrolls inside, so Send and Back stay reachable.
-  return <form noValidate onSubmit={submit} aria-labelledby={`${id}-title`} aria-busy={pending} className="max-h-[80%] shrink-0 space-y-3 overflow-y-auto overscroll-contain border-t border-foreground/[0.07] bg-card px-3 py-3 dark:border-white/[0.06]">
-    <div className="space-y-1">
-      <h3 id={`${id}-title`} className="flex items-center gap-2 font-semibold"><UserRound aria-hidden="true" className="size-4 text-primary" />{t('title')}</h3>
-      <p className="text-sm text-muted-foreground">{t('intro')}</p>
-    </div>
-    <div className="grid gap-3 sm:grid-cols-2">
-      <div className="space-y-1">
-        <label className="block text-sm font-medium" htmlFor={`${id}-topic`}>{t('topic')}</label>
-        <select id={`${id}-topic`} value={topic} onChange={(event) => setTopic(event.target.value as SupportTopic)} disabled={pending} className="min-h-11 w-full min-w-0 rounded-xl border border-input bg-background px-3 py-2 text-base font-normal sm:text-sm">
-          {SUPPORT_TOPICS.map((option) => <option key={option} value={option}>{t(`topics.${option}`)}</option>)}
-        </select>
-      </div>
-      {data.handoff.bookings.length > 0 && <div className="space-y-1">
-        <label className="block text-sm font-medium" htmlFor={`${id}-booking`}>{t('booking')}</label>
-        <select id={`${id}-booking`} value={bookingId} onChange={(event) => setBookingId(event.target.value)} disabled={pending} aria-invalid={Boolean(fieldErrors.bookingId)} aria-describedby={fieldErrors.bookingId ? `${id}-booking-error` : undefined} className="min-h-11 w-full min-w-0 rounded-xl border border-input bg-background px-3 py-2 text-base font-normal sm:text-sm">
-          <option value="">{t('noBooking')}</option>
-          {data.handoff.bookings.map((booking) => <option key={booking.id} value={booking.id}>{booking.title} · {formatDate(booking.start)}</option>)}
-        </select>
-        {fieldErrors.bookingId && <span id={`${id}-booking-error`} className="block text-sm text-destructive">{t('errors.invalid')}</span>}
-      </div>}
-    </div>
-    <div className="space-y-1">
-      <label htmlFor={`${id}-details`} className="text-sm font-medium">{t('details')}</label>
-      <Textarea ref={detailsRef} id={`${id}-details`} value={details} onChange={(event) => setDetails(event.target.value)} rows={3} maxLength={2000} readOnly={pending} aria-invalid={Boolean(detailsError)} aria-describedby={`${id}-details-hint${detailsError ? ` ${id}-details-error` : ''}`} className="max-h-48 min-h-20 resize-none field-sizing-content" />
-      <p id={`${id}-details-hint`} className="text-xs text-muted-foreground">{t('detailsHint')}</p>
-      {detailsError && <p id={`${id}-details-error`} className="text-sm text-destructive">{detailsError}</p>}
-    </div>
-    <p className="text-xs text-muted-foreground">{t('replyHours', { hours: data.handoff.replyHours[topic] })}</p>
-    {failure && <p role="alert" className="flex items-start gap-2 rounded-xl bg-destructive/[0.07] px-3 py-2 text-sm"><CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-destructive" />{failure}</p>}
-    <div className="flex flex-wrap items-center gap-2">
-      <Button type="submit" disabled={pending} aria-busy={pending} className="rounded-full">{pending ? <Spinner aria-hidden="true" /> : <Send aria-hidden="true" />}{t(pending ? 'sending' : 'send')}</Button>
-      <Button type="button" variant="ghost" onClick={onCancel} disabled={pending} className="rounded-full">{t('cancel')}</Button>
-    </div>
-  </form>;
+function TypingBubble({ label }: { label: string }) {
+  return <li className="flex min-w-0 flex-col items-start"><p className={cn(bubble, theirs, 'flex items-center gap-2 text-sm text-muted-foreground')}>
+    <span aria-hidden="true" className="inline-flex gap-0.5">{[0, 1, 2].map((dot) => <span key={dot} className="size-1.5 animate-bounce rounded-full bg-current motion-reduce:animate-none" style={{ animationDelay: `${dot * 150}ms` }} />)}</span>{label}
+  </p></li>;
 }
 
 /** The box at the bottom: a question for the assistant, or a message to support. Enter sends on wide screens. */
-function Composer({ label, placeholder, max, sendLabel, sendingLabel, pending, onSend, disabled = false, below }: {
+function Composer({ label, placeholder, max, sendLabel, sendingLabel, pending, onSend, onTyping, disabled = false, below }: {
   label: string;
   placeholder: string;
   max: number;
@@ -204,6 +126,7 @@ function Composer({ label, placeholder, max, sendLabel, sendingLabel, pending, o
   sendingLabel: string;
   pending: boolean;
   onSend(text: string): Promise<boolean> | boolean;
+  onTyping?(): void;
   disabled?: boolean;
   below?: ReactNode;
 }) {
@@ -223,7 +146,10 @@ function Composer({ label, placeholder, max, sendLabel, sendingLabel, pending, o
   return <form noValidate onSubmit={send} className="space-y-1.5 border-t border-foreground/[0.07] bg-card px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] dark:border-white/[0.06]">
     <label htmlFor={`${id}-text`} className="sr-only">{label}</label>
     <div className="flex items-end gap-2">
-      <Textarea ref={ref} id={`${id}-text`} rows={1} maxLength={max} value={text} disabled={disabled} placeholder={placeholder} aria-describedby={`${id}-count`} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => {
+      <Textarea ref={ref} id={`${id}-text`} rows={1} maxLength={max} value={text} disabled={disabled} placeholder={placeholder} aria-describedby={`${id}-count`} onChange={(event) => {
+        setText(event.target.value);
+        onTyping?.();
+      }} onKeyDown={(event) => {
         if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing || !window.matchMedia('(min-width: 1024px)').matches) return;
         event.preventDefault();
         void send();
@@ -239,44 +165,88 @@ function Composer({ label, placeholder, max, sendLabel, sendingLabel, pending, o
 
 /**
  * The Help conversation (2026-11-22), in the chat window and on its own page: the AI assistant answers from the help
- * center (each answer with the articles it used); "Talk to a person" is always one tap away, and the assistant offers it
- * itself when something needs staff, or first thing when someone may be in danger (911). Once the person asks, the chat
- * goes to support as a case, and this shows that case: the chat, their request, then support's replies as they come.
- * Everything comes in through `data` and `transcript`; the app does the asking and the sending.
+ * center (each answer with the articles it used). "Talk to a person" is always one tap away, and asking in words ("I
+ * want a live agent") does the same: the chat goes to support as a live chat, and this shows it: their place in line
+ * (or that no one is online, and they'll get a reply here), the person from support joining, both sides typing, and the
+ * chat ending (the case goes on as messages). Everything comes in through `data` and `transcript`; the app does the
+ * asking and the sending.
  */
-export function HelpChat({ data, transcript, handlers, now, variant = 'window', initialHandoff = false }: HelpChatProps) {
+export function HelpChat({ data, transcript, handlers, now, variant = 'window' }: HelpChatProps) {
   const t = useTranslations('chat.help');
   const { formatDateTime, zoneName } = useFormat();
-  const [handoffOpen, setHandoffOpen] = useState(initialHandoff);
   const [assistantOverCase, setAssistantOverCase] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [connectError, setConnectError] = useState<string | undefined>();
   const [replyPending, setReplyPending] = useState(false);
   const [replyResult, setReplyResult] = useState<ActionResult | undefined>();
+  const [supportTyping, setSupportTyping] = useState(false);
+  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const open = data.case;
+  const live = open?.live;
   const mode = open && !assistantOverCase ? 'case' : 'assistant';
   const turns = transcript.turns;
   const name = data.viewer.firstName;
+  const lastTurn = turns.at(-1);
 
-  // The newest line stays in view: a question, its answer, the form, support's reply.
+  // The newest line stays in view: a question, its answer, support's reply, the line about the queue.
   useLayoutEffect(() => {
     const log = logRef.current;
     if (log) log.scrollTop = log.scrollHeight;
-  }, [mode, turns.length, transcript.pending, transcript.error, open?.events.length, handoffOpen]);
+  }, [mode, turns.length, transcript.pending, transcript.error, open?.events.length, live?.state, supportTyping, connecting]);
 
-  // A case came in (the hand-off went through): the form's job is done (adjusted while rendering).
-  const openId = open?.id;
-  const [caseBefore, setCaseBefore] = useState(openId);
-  if (openId !== caseBefore) {
-    setCaseBefore(openId);
-    if (openId) setHandoffOpen(false);
+  // "Typing…" from the person on the chat (a live notice for this case), for a few seconds after each.
+  useRealtime('typing', (incoming) => {
+    if (!open || incoming.case !== open.id) return false;
+    setSupportTyping(true);
+    if (typingTimer.current) clearTimeout(typingTimer.current);
+    typingTimer.current = setTimeout(() => setSupportTyping(false), TYPING_SHOWN_MS);
+    return true;
+  });
+  useEffect(() => () => {
+    if (typingTimer.current) clearTimeout(typingTimer.current);
+  }, []);
+  // Their message arrived: they stopped typing (adjusted while rendering).
+  const supportCount = open?.events.filter((event) => event.from === 'support').length ?? 0;
+  const [supportCountBefore, setSupportCountBefore] = useState(supportCount);
+  if (supportCount !== supportCountBefore) {
+    setSupportCountBefore(supportCount);
+    if (supportTyping) setSupportTyping(false);
   }
 
-  const lastAnswer = turns.at(-1);
-  const announcement = transcript.pending ? t('thinking') : lastAnswer ? `${t('assistant')}: ${lastAnswer.answer.text}` : '';
-  const talk = () => {
+  async function connect() {
+    if (connecting) return;
+    setConnectError(undefined);
     setAssistantOverCase(false);
-    setHandoffOpen(true);
-  };
+    // A case is open: ask for a live chat on it, or (it has one already) just go back to it.
+    if (open && (!open.canRequestLive || !handlers.onRequestLive)) return;
+    setConnecting(true);
+    const urgent = turns.some((turn) => turn.answer.handoff === 'urgent');
+    const topic: SupportTopic = urgent ? 'safety' : lastTurn?.answer.topic ?? 'other';
+    const details = lastTurn?.question ?? transcript.error?.question ?? t('handoff.defaultDetails');
+    let result: ActionResult;
+    try {
+      result = open && handlers.onRequestLive ? await handlers.onRequestLive() : await handlers.onHandOff({ topic, details });
+    } catch {
+      result = { ok: false, code: 'unknown' };
+    }
+    setConnecting(false);
+    if (!result.ok) setConnectError(result.code === 'rate_limited' && result.retryAt ? t('handoff.errors.rate_limited', { time: `${formatDateTime(result.retryAt)} ${zoneName}` }) : t('handoff.errors.unknown'));
+  }
+
+  // They asked for a person in words: the newest answer says "live", and the chat connects them once.
+  const connectRef = useRef(connect);
+  useEffect(() => {
+    connectRef.current = connect;
+  });
+  const autoKey = lastTurn?.answer.handoff === 'live' && !open ? lastTurn.id : undefined;
+  const connected = useRef(new Set<string>());
+  useEffect(() => {
+    if (!autoKey || connected.current.has(autoKey)) return;
+    connected.current.add(autoKey);
+    const timer = setTimeout(() => void connectRef.current(), 0);
+    return () => clearTimeout(timer);
+  }, [autoKey]);
 
   async function reply(body: string): Promise<boolean> {
     setReplyPending(true);
@@ -299,25 +269,27 @@ export function HelpChat({ data, transcript, handlers, now, variant = 'window', 
           : replyResult.code === 'rate_limited' && replyResult.retryAt ? t('case.errors.rate_limited', { time: `${formatDateTime(replyResult.retryAt)} ${zoneName}` })
             : t('case.errors.unknown')
     : undefined;
-
   const askError = transcript.error
     ? transcript.error.code === 'rate_limited'
       ? transcript.error.retryAt ? t('errors.rate_limited', { time: `${formatDateTime(transcript.error.retryAt)} ${zoneName}` }) : t('errors.rate_limited_soon')
       : t(`errors.${transcript.error.code}`)
     : undefined;
   const canRetry = transcript.error && (transcript.error.code === 'unavailable' || transcript.error.code === 'unknown');
-  const supportReplied = open?.events.some((event) => event.from === 'support') ?? false;
+  const supportReplied = supportCount > 0;
+  const agent = live?.state === 'joined' ? live.agentName : undefined;
+  const announcement = connecting ? t('live.connecting') : transcript.pending ? t('thinking') : lastTurn ? `${t('assistant')}: ${lastTurn.answer.text}` : '';
+  const talkButton = (className?: string) => <Button type="button" variant="ghost" size="sm" onClick={() => void connect()} disabled={connecting} aria-busy={connecting} className={cn('rounded-full', className)}>{connecting ? <Spinner aria-hidden="true" /> : <UserRound aria-hidden="true" />}{connecting ? t('live.connecting') : t('talkToPerson')}</Button>;
 
   return <div className="flex min-h-0 flex-1 flex-col">
-    {/* Who this is with, and what it is now: the assistant, or the support team once a case is open. */}
+    {/* Who this is with, and what it is now: the assistant, the support team, or the person on the live chat. */}
     <header className={cn('flex min-w-0 items-center gap-2.5 border-b border-foreground/[0.07] dark:border-white/[0.06]', variant === 'page' ? 'px-4 py-3' : 'px-3 py-2.5')}>
       <HelpAvatar size="sm" />
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-[15px] font-semibold">{t('title')}</h3>
-        <p className="truncate text-xs text-muted-foreground">{mode === 'case' ? t('subtitleSupport') : t('subtitleAssistant')}</p>
+        <p className="truncate text-xs text-muted-foreground">{mode === 'case' ? (agent ? t('live.with', { name: agent }) : t('subtitleSupport')) : t('subtitleAssistant')}</p>
       </div>
       {mode === 'case' && open && <Link href={routes.app.supportCase(open.id)} className={buttonVariants({ variant: 'ghost', size: 'sm', className: 'shrink-0 rounded-full text-primary' })}>{t('case.openCase')}<ArrowUpRight aria-hidden="true" /></Link>}
-      {mode === 'assistant' && turns.length > 0 && !transcript.pending && <Button type="button" variant="ghost" size="sm" onClick={() => { setHandoffOpen(false); handlers.onStartOver(); }} className="shrink-0 rounded-full"><RotateCcw aria-hidden="true" />{t('startOver')}</Button>}
+      {mode === 'assistant' && turns.length > 0 && !transcript.pending && <Button type="button" variant="ghost" size="sm" onClick={handlers.onStartOver} className="shrink-0 rounded-full"><RotateCcw aria-hidden="true" />{t('startOver')}</Button>}
     </header>
 
     <div aria-live="polite" className="sr-only">{announcement}</div>
@@ -334,7 +306,13 @@ export function HelpChat({ data, transcript, handlers, now, variant = 'window', 
       {mode === 'case' && open
         ? <ol className="space-y-3">
           {open.events.map((event) => <CaseEvent key={event.id} event={event} now={now} />)}
-          {!supportReplied && open.canReply && <li className="flex justify-center"><p className="max-w-[92%] rounded-2xl border border-dashed border-foreground/[0.14] px-3.5 py-2.5 text-center text-sm text-muted-foreground dark:border-white/[0.12]">{t('case.waiting')} {t('case.replyHours', { hours: open.replyHours })}</p></li>}
+          {supportTyping && <TypingBubble label={agent ? t('live.typing', { name: agent }) : t('live.typingSupport')} />}
+          {live?.state === 'waiting' && <li className="flex justify-center"><div role="status" className="flex max-w-[92%] items-start gap-2.5 rounded-2xl border border-primary/25 bg-brand-soft/50 px-3.5 py-2.5 text-sm">
+            {live.agentsOnline ? <Spinner aria-hidden="true" className="mt-0.5 shrink-0 text-primary" /> : <Headset aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />}
+            <span>{live.agentsOnline ? t('live.waiting', { position: live.position ?? 1 }) : t('live.offline')}</span>
+          </div></li>}
+          {live?.state === 'ended' && <li className="flex justify-center"><p className="max-w-[92%] text-center text-sm text-muted-foreground">{t('live.ended')}</p></li>}
+          {!live && !supportReplied && open.canReply && <li className="flex justify-center"><p className="max-w-[92%] rounded-2xl border border-dashed border-foreground/[0.14] px-3.5 py-2.5 text-center text-sm text-muted-foreground dark:border-white/[0.12]">{t('case.waiting')} {t('case.replyHours', { hours: open.replyHours })}</p></li>}
         </ol>
         : <ol className="space-y-3">
           <li className="flex min-w-0 flex-col items-start"><article className={cn(bubble, theirs)}>
@@ -353,40 +331,41 @@ export function HelpChat({ data, transcript, handlers, now, variant = 'window', 
           {turns.map((turn, index) => <li key={turn.id} className="space-y-3">
             <ol className="space-y-3">
               <li className="flex min-w-0 flex-col items-end"><p className={cn(bubble, mine, 'whitespace-pre-line')}><span className="sr-only">{t('you')}: </span>{turn.question}</p></li>
-              <AnswerBubble turn={turn} latest={index === turns.length - 1 && !transcript.pending && !handoffOpen} onTalk={talk} />
+              <AnswerBubble turn={turn} latest={index === turns.length - 1 && !transcript.pending} connecting={connecting} onTalk={() => void connect()} />
             </ol>
           </li>)}
           {transcript.pending && <>
             <li className="flex min-w-0 flex-col items-end"><p className={cn(bubble, mine, 'whitespace-pre-line')}><span className="sr-only">{t('you')}: </span>{transcript.pending}</p></li>
-            <li className="flex min-w-0 flex-col items-start"><p className={cn(bubble, theirs, 'flex items-center gap-2 text-sm text-muted-foreground')}>
-              <span aria-hidden="true" className="inline-flex gap-0.5">{[0, 1, 2].map((dot) => <span key={dot} className="size-1.5 animate-bounce rounded-full bg-current motion-reduce:animate-none" style={{ animationDelay: `${dot * 150}ms` }} />)}</span>{t('thinking')}
-            </p></li>
+            <TypingBubble label={t('thinking')} />
           </>}
+          {connecting && <li className="flex justify-center"><p role="status" className={cn(notice, 'flex items-center gap-2')}><Spinner aria-hidden="true" />{t('live.connecting')}</p></li>}
           {askError && <li><div role="alert" className="space-y-2 rounded-2xl bg-destructive/[0.07] px-3.5 py-2.5 text-sm">
             <p className="flex items-start gap-2"><CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-destructive" />{askError}</p>
             {canRetry && <Button type="button" size="sm" variant="outline" onClick={handlers.onRetry} className="rounded-full"><RotateCcw aria-hidden="true" />{t('retry')}</Button>}
           </div></li>}
           {(turns.length > 0 || !data.assistantAvailable) && <li><p className="px-1 text-center text-xs text-muted-foreground">{t('aiNote')}</p></li>}
         </ol>}
+      {connectError && <p role="alert" className="mt-3 flex items-start gap-2 rounded-2xl bg-destructive/[0.07] px-3.5 py-2.5 text-sm"><CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-destructive" />{connectError}</p>}
     </div>
 
-    {handoffOpen
-      ? <HandoffForm data={data} transcript={transcript} onSubmit={handlers.onHandOff} onCancel={() => setHandoffOpen(false)} />
-      : mode === 'case' && open
-        ? open.canReply
-          ? <>
-            {replyError && <p role="alert" className="flex items-start gap-2 border-t border-foreground/[0.07] bg-destructive/[0.06] px-3 py-2 text-sm dark:border-white/[0.06]"><CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-destructive" />{replyError}</p>}
-            <Composer label={t('case.reply')} placeholder={t('case.placeholder')} max={2000} sendLabel={t('case.send')} sendingLabel={t('case.sending')} pending={replyPending} onSend={reply} below={<button type="button" onClick={() => setAssistantOverCase(true)} className="text-xs font-medium text-primary underline-offset-4 hover:underline">{t('case.askAssistant')}</button>} />
-          </>
-          : <div role="status" className="space-y-2 border-t border-foreground/[0.07] bg-muted/60 px-3 py-3 text-center text-sm dark:border-white/[0.06]">
-            <p>{t('case.closed')}</p>
-            <Button type="button" size="sm" variant="outline" onClick={() => setAssistantOverCase(true)} className="rounded-full">{t('case.askAssistant')}</Button>
-          </div>
-        : data.assistantAvailable
-          ? <Composer label={t('question')} placeholder={t('placeholder')} max={ASSISTANT_QUESTION_MAX} sendLabel={t('send')} sendingLabel={t('sending')} pending={Boolean(transcript.pending)} onSend={(text) => {
-            handlers.onAsk(text);
-            return true;
-          }} below={<Button type="button" variant="ghost" size="sm" onClick={talk} className="-ml-2 rounded-full"><UserRound aria-hidden="true" />{t('talkToPerson')}</Button>} />
-          : <div className="border-t border-foreground/[0.07] bg-card px-3 py-3 dark:border-white/[0.06]"><Button type="button" onClick={talk} className="w-full rounded-full"><UserRound aria-hidden="true" />{t('talkToPerson')}</Button></div>}
+    {mode === 'case' && open
+      ? open.canReply
+        ? <>
+          {replyError && <p role="alert" className="flex items-start gap-2 border-t border-foreground/[0.07] bg-destructive/[0.06] px-3 py-2 text-sm dark:border-white/[0.06]"><CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-destructive" />{replyError}</p>}
+          <Composer label={t('case.reply')} placeholder={t('case.placeholder')} max={2000} sendLabel={t('case.send')} sendingLabel={t('case.sending')} pending={replyPending} onSend={reply} {...(live && live.state !== 'ended' && handlers.onTyping ? { onTyping: handlers.onTyping } : {})} below={<span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            {open.canRequestLive && handlers.onRequestLive && <button type="button" onClick={() => void connect()} disabled={connecting} className="inline-flex items-center gap-1 text-xs font-semibold text-primary underline-offset-4 hover:underline disabled:opacity-60"><Headset aria-hidden="true" className="size-3.5" />{connecting ? t('live.connecting') : t('live.request')}</button>}
+            <button type="button" onClick={() => setAssistantOverCase(true)} className="text-xs font-medium text-primary underline-offset-4 hover:underline">{t('case.askAssistant')}</button>
+          </span>} />
+        </>
+        : <div role="status" className="space-y-2 border-t border-foreground/[0.07] bg-muted/60 px-3 py-3 text-center text-sm dark:border-white/[0.06]">
+          <p>{t('case.closed')}</p>
+          <Button type="button" size="sm" variant="outline" onClick={() => setAssistantOverCase(true)} className="rounded-full">{t('case.askAssistant')}</Button>
+        </div>
+      : data.assistantAvailable
+        ? <Composer label={t('question')} placeholder={t('placeholder')} max={ASSISTANT_QUESTION_MAX} sendLabel={t('send')} sendingLabel={t('sending')} pending={Boolean(transcript.pending)} onSend={(text) => {
+          handlers.onAsk(text);
+          return true;
+        }} below={talkButton('-ml-2')} />
+        : <div className="border-t border-foreground/[0.07] bg-card px-3 py-3 dark:border-white/[0.06]"><Button type="button" onClick={() => void connect()} disabled={connecting} aria-busy={connecting} className="w-full rounded-full">{connecting ? <Spinner aria-hidden="true" /> : <UserRound aria-hidden="true" />}{connecting ? t('live.connecting') : t('talkToPerson')}</Button></div>}
   </div>;
 }

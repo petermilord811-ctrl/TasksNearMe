@@ -67,6 +67,40 @@ describe('ChatWindow', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('starts a new message by @username, and closes into the page for it', () => {
+    const onFullPage = vi.fn();
+    wrap(<ChatWindow {...base} onFullPage={onFullPage} />);
+    const link = screen.getByRole('link', { name: 'New message' });
+    expect(link.getAttribute('href')).toBe(routes.app.newMessage());
+    fireEvent.click(link);
+    expect(onFullPage).toHaveBeenCalled();
+  });
+
+  it('resizes from its corner with the keyboard, keeps the size for this browser, and Home puts it back', () => {
+    localStorage.setItem('tnm.chat.size', JSON.stringify({ width: 500, height: 500 }));
+    const { unmount } = wrap(<ChatWindow {...base} />);
+    const dialog = screen.getByRole('dialog', { name: 'Messages' });
+    expect([dialog.style.width, dialog.style.height]).toEqual(['500px', '500px']);
+    const handle = within(dialog).getByRole('button', { name: 'Resize the messages window' });
+    fireEvent.keyDown(handle, { key: 'ArrowLeft' });
+    fireEvent.keyDown(handle, { key: 'ArrowDown' });
+    expect([dialog.style.width, dialog.style.height]).toEqual(['532px', '468px']);
+    expect(JSON.parse(localStorage.getItem('tnm.chat.size') ?? 'null')).toEqual({ width: 532, height: 468 });
+    // Never smaller than its minimum.
+    for (let index = 0; index < 10; index += 1) fireEvent.keyDown(handle, { key: 'ArrowRight' });
+    expect(dialog.style.width).toBe('360px');
+    fireEvent.keyDown(handle, { key: 'Home' });
+    expect(dialog.style.width).toBe('');
+    expect(localStorage.getItem('tnm.chat.size')).toBeNull();
+    unmount();
+    // A size kept from a bigger screen fits inside this one (1024 × 768 in the test browser).
+    localStorage.setItem('tnm.chat.size', JSON.stringify({ width: 5000, height: 5000 }));
+    wrap(<ChatWindow {...base} />);
+    const fitted = screen.getByRole('dialog', { name: 'Messages' });
+    expect([fitted.style.width, fitted.style.height]).toEqual([`${window.innerWidth - 48}px`, `${window.innerHeight - 68 - 24}px`]);
+    localStorage.removeItem('tnm.chat.size');
+  });
+
   it('shows a conversation with its composer, and the way back to the list', () => {
     const onShow = vi.fn();
     wrap(<ChatWindow {...base} view={{ kind: 'thread', threadId: chatThreadData.data.thread.id }} thread={{ status: 'ready', data: chatThreadData }} onShow={onShow} />);

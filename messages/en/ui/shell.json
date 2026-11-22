@@ -79,7 +79,9 @@
     "becomeAHelper": "Become a helper",
     "pricing": "Pricing",
     "community": "Neighbors",
-    "savedSearches": "Saved searches"
+    "savedSearches": "Saved searches",
+    "helpChat": "Help",
+    "liveChat": "Live chat"
   },
   "footer": {
     "tagline": "Good neighbors. Lighter to-do lists.",
@@ -184,5 +186,6 @@
     "toLight": "Switch to light mode",
     "toDark": "Switch to dark mode"
   },
-  "neighborsNew": "New posts"
+  "neighborsNew": "New posts",
+  "navCount": ", {count} waiting"
 }

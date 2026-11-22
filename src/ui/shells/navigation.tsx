@@ -22,13 +22,15 @@ const SLIDING_PILL = {
  * `bottom`: the phone dock's tabs (one column each), icon over label, with the same gliding pill. Messages isn't one of
  * them since 2026-11-22: the chat button carries its unread count (src/ui/components/messaging/chat-launcher.tsx).
  */
-export function Navigation({ items, label, currentPath, variant = 'sidebar', neighborsNews }: {
+export function Navigation({ items, label, currentPath, variant = 'sidebar', neighborsNews, counts }: {
   items: NavItem[];
   label: string;
   currentPath?: string;
   variant?: 'sidebar' | 'bottom';
   /** The newest neighbor post (plan 10.19): a dot on Neighbors when it's newer than this device's last look. */
   neighborsNews?: { latestAt: string; visitKey: string };
+  /** A count beside a destination, in its name too: the live chats waiting, in the staff menu (2026-11-22). */
+  counts?: Partial<Record<NavItem['id'], number>>;
 }) {
   const t = useTranslations('shell');
   const bottom = variant === 'bottom';
@@ -39,6 +41,7 @@ export function Navigation({ items, label, currentPath, variant = 'sidebar', nei
         {items.map((item) => {
           const Icon = NAV_ICONS[item.id];
           const name = t(`nav.${item.id}`);
+          const count = counts?.[item.id] ?? 0;
           return <li key={item.id} className="min-w-0">
             <NavLink item={item} currentPath={currentPath}
               className={cn(
@@ -52,6 +55,9 @@ export function Navigation({ items, label, currentPath, variant = 'sidebar', nei
               <Icon aria-hidden="true" className={cn('shrink-0 text-muted-foreground transition-[color,translate] duration-300 ease-[var(--ease-out)] group-hover/item:text-foreground group-aria-[current=page]/item:text-primary', bottom ? 'size-[1.375rem] group-aria-[current=page]/item:-translate-y-px' : 'size-5')} />
               <span className={cn('break-words', bottom && 'max-w-full text-center')}>{name}</span>
               {item.id === 'community' && neighborsNews && <NeighborsDot latestAt={neighborsNews.latestAt} visitKey={neighborsNews.visitKey} bottom={bottom} />}
+              {count > 0 && <span aria-hidden="true" className={cn('rounded-full bg-primary text-center font-semibold text-primary-foreground tabular-nums', bottom ? 'absolute top-1 left-[calc(50%+0.3rem)] min-w-4 px-1 text-[10px] leading-4 ring-2 ring-background' : 'ml-auto min-w-6 px-1.5 text-xs leading-5')}>{count}</span>}
+              {/* The count as words for screen readers ("Live chat, 2 waiting"), part of the link's own text. */}
+              {count > 0 && <span className="sr-only">{t('navCount', { count })}</span>}
             </NavLink>
           </li>;
         })}

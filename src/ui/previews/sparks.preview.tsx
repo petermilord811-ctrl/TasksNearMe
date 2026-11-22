@@ -1,8 +1,9 @@
-import { routes, type AppShellHandlers, type NewDirectMessageHandlers, type NewDirectMessagePageData, type PreviewEntry, type SparksHandlers, type SparksPageData } from '@/contracts';
+import { routes, type AppShellHandlers, type FindPersonPageData, type NewDirectMessageHandlers, type NewDirectMessagePageData, type PreviewEntry, type SparksHandlers, type SparksPageData } from '@/contracts';
 import {
-  fakeHandler, jordanShell, mayaShell, newDirectMessageClientData, newDirectMessageContactsOnlyData, newDirectMessageData, newDirectMessageLimitData,
+  fakeHandler, findPersonData, findPersonLimitData, findPersonNotFoundData, jordanShell, mayaShell, newDirectMessageClientData, newDirectMessageContactsOnlyData, newDirectMessageData, newDirectMessageLimitData,
   sparksActiveData, sparksNewData, sparksPlanPendingData, sparksTopData, sparksUnavailableData,
 } from '@/fixtures';
+import { FindPersonScreen } from '@/ui/screens/messages/find-person-screen';
 import { NewDirectMessageScreen } from '@/ui/screens/messages/new-direct-message-screen';
 import { SparksScreen } from '@/ui/screens/sparks/sparks-screen';
 import { AppShell } from '@/ui/shells/app-shell';
@@ -34,6 +35,13 @@ function directPreview(variant: string, title: string, data: NewDirectMessagePag
   };
 }
 
+function findPreview(variant: string, title: string, data: FindPersonPageData): PreviewEntry {
+  return {
+    id: `screen-new-message/${variant}`, title, group: 'Messages', layout: 'fullscreen',
+    render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.newMessage()} layout="flow"><FindPersonScreen data={data} /></AppShell>,
+  };
+}
+
 export const sparksPreviews: PreviewEntry[] = [
   sparksPreview('new', 'Sparks: a new member with none yet', sparksNewData, false),
   sparksPreview('active', 'Sparks: earned and bought, back from checkout', sparksActiveData),
@@ -45,5 +53,8 @@ export const sparksPreviews: PreviewEntry[] = [
   directPreview('client', 'New message: to a client', newDirectMessageClientData, { helper: true }),
   directPreview('limit', 'New message: the day’s conversations used up', newDirectMessageLimitData),
   directPreview('contacts-only', 'New message: they take messages from task contacts only', newDirectMessageContactsOnlyData),
+  findPreview('find', 'New message: find someone by @username', findPersonData),
+  findPreview('find-not-found', 'New message: no one has that username', findPersonNotFoundData),
+  findPreview('find-limit', 'New message: the day’s conversations used up, by @username', findPersonLimitData),
   directPreview('result-limit', 'New message: the last one taken meanwhile', newDirectMessageData, { body: 'Hi Jordan! Do you assemble standing desks too?', result: { ok: false, code: 'limit_reached', retryAt: '2026-11-22T14:30:00.000Z' } }),
 ];

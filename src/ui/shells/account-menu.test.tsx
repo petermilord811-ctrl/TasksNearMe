@@ -41,10 +41,14 @@ describe('AccountMenu', () => {
     expect(within(menu).getByRole('menuitem', { name: 'Account' })).toHaveAttribute('href', routes.app.account());
     expect(within(menu).getByRole('menuitem', { name: 'Payments' })).toHaveAttribute('href', routes.app.payments());
     expect(within(menu).getByRole('menuitem', { name: 'Support' })).toHaveAttribute('href', routes.app.support());
+    // TasksNearMe Help, findable from the menu too (2026-11-22).
+    expect(within(menu).getByRole('menuitem', { name: 'Help' })).toHaveAttribute('href', routes.app.helpChat());
+    // Who they are to others: their @username and Sparks.
+    expect(within(menu).getByText(`@${viewer.kind === 'user' ? viewer.username : ''}`)).toBeInTheDocument();
     expect(within(menu).queryByRole('menuitem', { name: 'Neighborhood' })).not.toBeInTheDocument();
     expect(within(menu).getByRole('menuitem', { name: 'Plans' })).toHaveAttribute('href', routes.app.plan());
     expect(within(menu).getByRole('menuitem', { name: 'Sparks' })).toHaveAttribute('href', routes.app.sparks());
-    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([...tools.map(([name]) => name), 'Account', 'Plans', 'Sparks', 'Payments', 'Support', 'Switch to dark mode', 'Español', 'Sign out']);
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([...tools.map(([name]) => name), 'Account', 'Plans', 'Sparks', 'Payments', 'Help', 'Support', 'Switch to dark mode', 'Español', 'Sign out']);
     await userEvent.keyboard('{Escape}');
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: `${viewer.initials}, account menu for ${viewer.displayName}` })).toHaveFocus();

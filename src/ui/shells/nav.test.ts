@@ -27,7 +27,8 @@ describe('app navigation (completion plan 9.14)', () => {
       routes.app.offers(), routes.app.availability(), routes.app.earnings(), routes.app.clients(), routes.app.rewards(), routes.app.savedSearches(),
     ]);
     for (const mode of ['poster', 'helper'] as const) {
-      expect(getAppNav(mode).account.map((item) => item.href)).toEqual([routes.app.account(), routes.app.plan(), routes.app.sparks(), routes.app.payments(), routes.app.support()]);
+      // TasksNearMe Help sits beside the support cases (2026-11-22, owner: "I can't find the help page in other tabs or settings").
+      expect(getAppNav(mode).account.map((item) => item.href)).toEqual([routes.app.account(), routes.app.plan(), routes.app.sparks(), routes.app.payments(), routes.app.helpChat(), routes.app.support()]);
     }
   });
 
@@ -41,7 +42,10 @@ describe('app navigation (completion plan 9.14)', () => {
 });
 
 describe('admin navigation', () => {
-  const base = ['queues', 'cases', 'reports', 'users', 'verifications', 'responseTimes', 'savedReplies', 'bookings', 'payments', 'rewards', 'metrics', 'beta'];
+  const shared = ['cases', 'reports', 'users', 'verifications', 'responseTimes', 'savedReplies', 'bookings', 'payments', 'rewards', 'metrics', 'beta'];
+  // Live chat is for the roles that work cases (2026-11-22); finance doesn't.
+  const base = ['queues', 'liveChat', ...shared];
+  const financeBase = ['queues', ...shared];
   // Every staff role reads the markets on the config page (plan 8.2).
   const standard = [...base, 'config'];
   // The audit log is for admins and support leads (UI-033).
@@ -53,15 +57,15 @@ describe('admin navigation', () => {
   });
 
   it.each(STAFF_ROLES.filter((role) => role !== 'admin'))('omits Staff for %s, and shows Config (read-only markets)', (role) => {
-    expect(ids(getAdminNav([role]))).toEqual(role === 'support_lead' ? withAudit : role === 'finance' ? [...base, 'webhooks', 'jobs', 'config'] : standard);
+    expect(ids(getAdminNav([role]))).toEqual(role === 'support_lead' ? withAudit : role === 'finance' ? [...financeBase, 'webhooks', 'jobs', 'config'] : standard);
   });
 
   it('shows Config and Staff in their specified positions for an admin', () => {
     expect(ids(getAdminNav(rileyStaff.roles))).toEqual([
-      'queues', 'cases', 'reports', 'users', 'verifications', 'responseTimes', 'savedReplies', 'bookings', 'payments', 'rewards', 'metrics', 'beta', 'webhooks', 'jobs', 'config', 'audit', 'staff',
+      'queues', 'liveChat', 'cases', 'reports', 'users', 'verifications', 'responseTimes', 'savedReplies', 'bookings', 'payments', 'rewards', 'metrics', 'beta', 'webhooks', 'jobs', 'config', 'audit', 'staff',
     ]);
     expect(getAdminNav(rileyStaff.roles).map((item) => item.href)).toEqual([
-      routes.admin.home(), routes.admin.cases(), routes.admin.reports(), routes.admin.users(), routes.admin.verifications(),
+      routes.admin.home(), routes.admin.liveChat(), routes.admin.cases(), routes.admin.reports(), routes.admin.users(), routes.admin.verifications(),
       routes.admin.responseTimes(), routes.admin.savedReplies(), routes.admin.bookings(), routes.admin.payments(), routes.admin.rewards(), routes.admin.metrics(), routes.admin.beta(), routes.admin.webhooks(), routes.admin.jobs(), routes.admin.config(),
       routes.admin.audit(), routes.admin.staff(),
     ]);

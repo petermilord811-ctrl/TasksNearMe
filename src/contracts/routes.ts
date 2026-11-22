@@ -208,10 +208,12 @@ export const routes = {
     bookingCalendar: (bookingId: string) => `/app/bookings/${enc(bookingId)}/calendar.ics`,
     messages: () => '/app/messages',
     /**
-     * Start a direct conversation (2026-11-21): with a person by their user id, or with a helper by their handle (a
-     * public profile's Message). Goes straight to the conversation when the two already have one.
+     * Start a direct conversation (2026-11-21): with a person by their user id, a helper by their handle (a public
+     * profile's Message), or anyone by their @username (2026-11-22; with nothing, the page asks for one). Goes straight
+     * to the conversation when the two already have one.
      */
-    newMessage: (to: { userId: string } | { helper: string }) => withQuery('/app/messages/new', 'helper' in to ? { helper: to.helper } : { to: to.userId }),
+    newMessage: (to?: { userId: string } | { helper: string } | { username: string }) =>
+      !to ? '/app/messages/new' : withQuery('/app/messages/new', 'helper' in to ? { helper: to.helper } : 'username' in to ? { u: to.username } : { to: to.userId }),
     /** A conversation; `from` (its `earlier`): from that message on, after "Load earlier messages" (sweep MN11). */
     thread: (threadId: string, page: { from?: string } = {}) => withQuery(`/app/messages/${enc(threadId)}`, { from: page.from }),
     /** The Help conversation (2026-11-22): the AI assistant, and support's replies once the person asks for a person. */
@@ -290,6 +292,8 @@ export const routes = {
     cases: (filters: { queue?: AdminQueue; status?: AdminCaseStatusFilter; mine?: boolean } = {}) =>
       withQuery('/admin/cases', { queue: filters.queue, status: filters.status, mine: filters.mine ? '1' : undefined }),
     case: (caseId: string) => `/admin/cases/${enc(caseId)}`,
+    /** Live chat (2026-11-22): the queue and the chats under way; `caseId` opens one. */
+    liveChat: (caseId?: string) => withQuery('/admin/live', { case: caseId }),
     /** Money in and out (UI-034): a tab and a search (a booking id, a name or an email). */
     payments: (query: { tab?: AdminMoneyTab; q?: string } = {}) => withQuery('/admin/payments', { tab: query.tab, q: query.q }),
     rewards: (filter?: AdminRewardFilter) => withQuery('/admin/rewards', { status: filter }),

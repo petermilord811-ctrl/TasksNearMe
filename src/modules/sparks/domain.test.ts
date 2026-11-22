@@ -18,8 +18,8 @@ describe('Sparks (2026-11-21)', () => {
   });
 
   it('allows more direct conversations a day by level, and at least 40 with a plan', () => {
-    expect(directChatsPerDay(0, false)).toBe(10);
-    expect(directChatsPerDay(60, false)).toBe(15);
+    expect(directChatsPerDay(0, false)).toBe(3);
+    expect(directChatsPerDay(60, false)).toBe(10);
     expect(directChatsPerDay(300, false)).toBe(25);
     expect(directChatsPerDay(0, true)).toBe(40);
     expect(directChatsPerDay(6000, true)).toBe(60);

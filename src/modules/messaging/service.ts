@@ -16,7 +16,7 @@ import type {
   TimelineEvent,
 } from '@/contracts';
 import { MESSAGE_REACTIONS, MESSAGE_SAVED_REPLY_MAX, messageSavedReplyInputSchema, sendMessageInputSchema, type MessageReaction, type MessageSavedReplyInput } from '@/contracts';
-import { users } from '@/modules/accounts/schema';
+import { usernames, users } from '@/modules/accounts/schema';
 import { bookingSeries, bookings } from '@/modules/bookings/schema';
 import { MAX_PHOTO_BYTES, photoFromFile } from '@/modules/files/uploads';
 import { profilePhotoOf } from '@/modules/files/photos';
@@ -38,6 +38,7 @@ import { presenceOf } from '@/modules/realtime/presence';
 import { firstMessagesLeft } from './direct-rules';
 import { messageReactions, messages, savedReplies, threadParticipants, threads } from './schema';
 import { deletedLabelFor, shownPerson } from '@/modules/accounts/shown-name';
+import { sparksSummaryOf } from '@/modules/sparks/service';
 
 /**
  * Threads between the two people on an offer or a booking (blueprint 02 J2 step 6, 06, 08). Bodies are
@@ -262,13 +263,15 @@ export async function directFirstMessagesLeft(db: Db, thread: ThreadRow, viewerI
 }
 
 /** `deletedLabel`: the reader's "Deleted account" (shown-name.ts), for someone whose account was deleted (J-PR15). */
-function personOf(user: typeof users.$inferSelect, deletedLabel?: string): PersonSummary {
+function personOf(user: typeof users.$inferSelect, deletedLabel?: string, username?: string | null): PersonSummary {
   return {
     id: user.id,
     ...shownPerson(user, deletedLabel),
     ...profilePhotoOf(user),
     memberSince: user.createdAt.toISOString(),
     phoneVerified: user.phoneVerifiedAt !== null,
+    // Their @username (2026-11-22), never a deleted account's.
+    ...(username && user.status !== 'deleted' ? { username } : {}),
   };
 }
 
@@ -304,9 +307,10 @@ async function summariesOf(db: Db, list: ThreadRow[], viewerId: string, now: Dat
   const [contexts, people, latestRows, unreadRows] = await Promise.all([
     contextsOf(db, list, viewerId, now),
     db
-      .select({ threadId: threadParticipants.threadId, lastReadAt: threadParticipants.lastReadAt, user: users })
+      .select({ threadId: threadParticipants.threadId, lastReadAt: threadParticipants.lastReadAt, user: users, username: usernames.username })
       .from(threadParticipants)
       .innerJoin(users, eq(users.id, threadParticipants.userId))
+      .leftJoin(usernames, eq(usernames.userId, users.id))
       .where(inArray(threadParticipants.threadId, threadIds)),
     db.selectDistinctOn([messages.threadId]).from(messages).where(inArray(messages.threadId, threadIds)).orderBy(messages.threadId, desc(messages.createdAt)),
     // Messages from anyone else (or the system) since the viewer last read the thread.
@@ -330,7 +334,8 @@ async function summariesOf(db: Db, list: ThreadRow[], viewerId: string, now: Dat
     const context = contexts.get(thread.id);
     const here = people.filter((person) => person.threadId === thread.id);
     const viewer = here.find((person) => person.user.id === viewerId);
-    const other = here.find((person) => person.user.id !== viewerId)?.user;
+    const otherRow = here.find((person) => person.user.id !== viewerId);
+    const other = otherRow?.user;
     if (!context || !other || !viewer) continue;
     const latest = latestByThread.get(thread.id);
     const latestView = latest ? toView(latest, viewerId, context.masking, new Map()) : null;
@@ -339,7 +344,7 @@ async function summariesOf(db: Db, list: ThreadRow[], viewerId: string, now: Dat
         id: thread.id,
         kind: thread.kind as ThreadKind,
         title: context.title,
-        otherParty: personOf(other, deletedLabel),
+        otherParty: personOf(other, deletedLabel, otherRow?.username),
         subject: context.subject,
         ...(latestView
           ? {
@@ -459,7 +464,7 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   await db.update(threadParticipants).set({ lastReadAt: now }).where(and(eq(threadParticipants.threadId, thread.id), eq(threadParticipants.userId, userId)));
   await noticeReadByReader(db, userId, thread.id, found.summary.unreadCount, await readMessageNotifications(db, userId, thread.id, now));
 
-  const blocked = await isBlocked(db, userId, found.other.id);
+  const [blocked, otherSparks] = await Promise.all([isBlocked(db, userId, found.other.id), sparksSummaryOf(db, found.other.id)]);
   // Mutual (WhatsApp's rule, completion plan 7.1): someone who hides their own activity doesn't see anyone
   // else's or "Seen", and reading their messages sends no "Seen" either.
   const [viewer] = await db.select({ showActivity: users.showActivity }).from(users).where(eq(users.id, userId)).limit(1);
@@ -509,7 +514,8 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
     };
   };
   return {
-    thread: { ...found.summary, unreadCount: 0 },
+    // The other person's Sparks in the header (2026-11-22), never a deleted account's.
+    thread: { ...found.summary, unreadCount: 0, otherParty: { ...found.summary.otherParty, ...(otherSparks && !otherGone ? { sparks: otherSparks } : {}) } },
     messages: rows.map(withExtras),
     ...(earlier ? { earlier: { from: earlier.id } } : {}),
     ...(replies.length ? { savedReplies: replies } : {}),

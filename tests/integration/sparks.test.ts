@@ -63,14 +63,15 @@ describe('Sparks', () => {
       { source: 'helpful', count: 2, points: 6 },
       { source: 'thanks', count: 1, points: 2 },
     ]);
-    expect(page).toMatchObject({ earned: 30, nextLevel: { level: 'neighbor', at: 50 }, directChatsPerDay: 10, unavailable: true });
+    expect(page).toMatchObject({ earned: 30, nextLevel: { level: 'neighbor', at: 50 }, directChatsPerDay: 3, unavailable: true });
   });
 
   it('buys a pack with the stand-in: counted at once, shown with the bought part, and raising the level and allowance', async () => {
     const bought = await buySparks(db, createDevBilling(), AUTHOR, { pack: 'small' }, now);
     expect(bought).toMatchObject({ ok: true, code: 'opened', redirectTo: expect.stringMatching(/^\/app\/sparks\?purchase=spk_/) });
     expect((await sparksSummariesOf(db, [AUTHOR])).get(AUTHOR)).toEqual({ total: 130, bought: 100, level: 'neighbor' });
-    expect(await directChatAllowance(db, AUTHOR, now)).toBe(15);
+    // A Neighbor starts 10 new direct conversations a day (2026-11-22; a Newcomer 3).
+    expect(await directChatAllowance(db, AUTHOR, now)).toBe(10);
     const purchase = bought.ok ? new URL(bought.redirectTo!, 'http://x').searchParams.get('purchase')! : '';
     const page = await sparksPageData(db, createDevBilling(), AUTHOR, now, { purchase });
     expect(page).toMatchObject({ notice: 'purchased', summary: { total: 130, bought: 100 }, purchases: [{ id: purchase, points: 100, priceCents: 99, status: 'paid' }] });
