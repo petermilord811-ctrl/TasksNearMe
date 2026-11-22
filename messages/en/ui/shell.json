@@ -132,8 +132,8 @@
     "navigation": "Staff navigation",
     "menuTitle": "Staff navigation",
     "menuDescription": "Open a queue or find a record.",
-    "search": "Search users and bookings",
-    "searchHint": "Search by name or reference.",
+    "search": "Search people",
+    "searchHint": "Search by name or email.",
     "submitSearch": "Search",
     "breadcrumbs": "Breadcrumbs",
     "roles": "Staff roles"

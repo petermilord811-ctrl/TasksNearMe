@@ -132,8 +132,8 @@
     "navigation": "Navegación del personal",
     "menuTitle": "Navegación del personal",
     "menuDescription": "Abre una cola o busca un registro.",
-    "search": "Buscar usuarios y reservas",
-    "searchHint": "Busca por nombre o referencia.",
+    "search": "Buscar personas",
+    "searchHint": "Busca por nombre o correo.",
     "submitSearch": "Buscar",
     "breadcrumbs": "Ruta de navegación",
     "roles": "Roles del personal"

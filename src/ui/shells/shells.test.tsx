@@ -285,11 +285,13 @@ describe('AdminShell', () => {
 
   it('uses a labelled native GET search form with the query field name', async () => {
     show(<AdminShell viewer={alexStaff} handlers={handlers}><h1>Queues</h1></AdminShell>);
-    const form = screen.getByRole('search', { name: 'Search users and bookings' });
+    const form = screen.getByRole('search', { name: 'Search people' });
     expect(form).toHaveAttribute('method', 'get');
     expect(form).toHaveAttribute('action', routes.admin.search(''));
-    const input = within(form).getByRole('searchbox', { name: 'Search users and bookings' });
-    expect(input).toHaveAccessibleDescription('Search by name or reference.');
+    // The People page's search, which exists (the old /admin/search had no page).
+    expect(routes.admin.search('')).toBe('/admin/users');
+    const input = within(form).getByRole('searchbox', { name: 'Search people' });
+    expect(input).toHaveAccessibleDescription('Search by name or email.');
     expect(input).toHaveAttribute('name', 'q');
     await userEvent.type(input, 'Maya R.');
     expect(new FormData(form as HTMLFormElement).get('q')).toBe('Maya R.');

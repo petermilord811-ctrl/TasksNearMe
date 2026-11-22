@@ -272,7 +272,8 @@ export const routes = {
   admin: {
     home: () => '/admin',
     verify: (next?: string) => withQuery('/admin/verify', { next }),
-    search: (q: string) => withQuery('/admin/search', { q }),
+    /** The header's search: people by name or email (the People page; there's no search across everything). */
+    search: (q: string) => withQuery('/admin/users', { q }),
     users: (query?: string) => withQuery('/admin/users', { q: query }),
     user: (userId: string) => `/admin/users/${enc(userId)}`,
     task: (taskId: string) => `/admin/tasks/${enc(taskId)}`,

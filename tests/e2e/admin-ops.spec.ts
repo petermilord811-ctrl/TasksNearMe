@@ -7,7 +7,7 @@ import { devSignIn } from './support/sign-in';
 /**
  * Staff tools (UI-033) on the seeded data: the bookings list finds Ana's disputed dresser; trust and safety
  * hide the seeded patio task (it leaves the public pages) and restore it; the audit log shows both, for a
- * lead, and not for an agent.
+ * lead, and not for an agent. The header's search opens the People page.
  */
 
 async function staffSignIn(page: Page, email: string) {
@@ -43,6 +43,19 @@ test('staff find a booking that needs attention and open its task', async ({ pag
   await expect(page.getByText('You can view this task.')).toBeVisible();
   await page.goto('/admin/audit');
   await expect(page.getByRole('heading', { name: /could not be found/i })).toBeVisible();
+});
+
+test('the header search finds a person on the People page', async ({ page }) => {
+  test.setTimeout(120_000);
+  await staffSignIn(page, 'morgan@example.test');
+  // It searches people by name or email: it used to send staff to /admin/search, which has no page.
+  const search = page.getByRole('search', { name: 'Search people' });
+  await expect(search.getByRole('searchbox')).toHaveAccessibleDescription('Search by name or email.');
+  await search.getByRole('searchbox').fill('maya');
+  await search.getByRole('button', { name: 'Search' }).click();
+  await expect(page).toHaveURL(/\/admin\/users\?q=maya$/, { timeout: 30_000 });
+  await expect(page.getByRole('heading', { level: 1, name: 'People' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Maya R\./ }).first()).toBeVisible();
 });
 
 /**
