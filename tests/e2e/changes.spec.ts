@@ -17,7 +17,8 @@ test('the client proposes a change with a quote, and the helper declines it', as
   // A dialog over the booking (src/app/[locale]/@modal).
   await expect(page.getByRole('dialog', { name: 'Propose a change' }).getByRole('heading', { level: 1, name: 'Propose a change' })).toBeVisible();
   await page.getByLabel('Task price (USD)').fill('100');
-  await page.getByLabel('Message').fill('Could you also hang the soundbar under the TV?');
+  // Exact: the chat button's "Messages" (2026-11-22) contains the word too.
+  await page.getByLabel('Message', { exact: true }).fill('Could you also hang the soundbar under the TV?');
   // $80 → $100: the client's total goes from $88.00 to $110.00.
   await expect(page.getByText('$22.00').first()).toBeVisible({ timeout: 20_000 });
   await page.getByRole('button', { name: 'Send change' }).click();
