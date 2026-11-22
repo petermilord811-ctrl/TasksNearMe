@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDevGiftCardProvider } from '@/integrations/gift-cards';
 import { users } from '@/modules/accounts/schema';
-import { getAdminUser, getAdminUsers, setHelperSuspension } from '@/modules/accounts/staff';
+import { getAdminUser, getAdminUsers, PEOPLE_VIEW_AUDIT_WINDOW_MS, setHelperSuspension } from '@/modules/accounts/staff';
 import { offers } from '@/modules/offers/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { rewardGrants } from '@/modules/rewards/schema';
@@ -63,6 +63,30 @@ describe('reward reviews', () => {
 });
 
 describe('people', () => {
+  it("logs each staff look at a person's page (people.viewed), once per half hour, with no case needed", async () => {
+    const viewsBy = (actorId: string) => db.select().from(auditLog).where(and(eq(auditLog.action, 'people.viewed'), eq(auditLog.targetId, 'usr_tmp_helper'), eq(auditLog.actorId, actorId)));
+    const clear = () => db.delete(auditLog).where(and(eq(auditLog.action, 'people.viewed'), eq(auditLog.targetId, 'usr_tmp_helper')));
+    await clear();
+    try {
+      const at = new Date();
+      await getAdminUser(db, alex, 'usr_tmp_helper', at);
+      expect(await viewsBy('usr_alex')).toEqual([expect.objectContaining({ actorRole: 'support_agent', targetType: 'user', reason: null })]);
+      // The page refreshes after each action: still the same look.
+      await getAdminUser(db, alex, 'usr_tmp_helper', new Date(at.getTime() + 60_000));
+      expect(await viewsBy('usr_alex')).toHaveLength(1);
+      // Someone else's look is their own line, and so is Alex's after the half hour.
+      await getAdminUser(db, taylor, 'usr_tmp_helper', new Date(at.getTime() + 60_000));
+      await getAdminUser(db, alex, 'usr_tmp_helper', new Date(at.getTime() + PEOPLE_VIEW_AUDIT_WINDOW_MS + 60_000));
+      expect(await viewsBy('usr_taylor')).toHaveLength(1);
+      expect(await viewsBy('usr_alex')).toHaveLength(2);
+      // Nobody is looked up who doesn't exist, and nothing is logged for it.
+      expect(await getAdminUser(db, alex, 'usr_nobody_here', at)).toBeNull();
+      expect(await db.select().from(auditLog).where(and(eq(auditLog.action, 'people.viewed'), eq(auditLog.targetId, 'usr_nobody_here')))).toEqual([]);
+    } finally {
+      await clear();
+    }
+  });
+
   it('finds people by name or email, and shows a helper to trust and safety with the suspend action', async () => {
     expect((await getAdminUsers(db, 'tess')).rows.map((row) => row.id)).toEqual(['usr_tmp_helper']);
     expect((await getAdminUsers(db, 'tmp-helper@')).rows[0]).toMatchObject({ helperStatus: 'active', email: 'tmp-helper@example.test' });

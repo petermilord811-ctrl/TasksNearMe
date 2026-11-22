@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, inArray, isNull, notInArray, or } from 'drizzle-orm';
+import { and, desc, eq, gte, ilike, inArray, isNull, notInArray, or } from 'drizzle-orm';
 import type { ActionResult, StrikeReversalInput, AdminDeliveryRow, AdminHelperStatus, AdminUserPageData, AdminUserRow, AdminUsersPageData, BookingStatus, DeliveryStatus, HelperSuspensionInput, NotificationChannel, NotificationType, StaffRole } from '@/contracts';
 import { helperSuspensionInputSchema, strikeReversalInputSchema } from '@/contracts';
 import { bookingTerms, bookings, helperStrikes } from '@/modules/bookings/schema';
@@ -72,10 +72,30 @@ async function suspensionOf(db: Db, userId: string) {
   return { reason: latest.reason ?? '', at: new Date(latest.at).toISOString(), byDisplayName: by?.name ?? 'Staff' };
 }
 
-/** `routes.admin.user(userId)`. */
+/** Opening the same person's page again within this long (it refreshes after each action) is the same look. */
+export const PEOPLE_VIEW_AUDIT_WINDOW_MS = 30 * 60_000;
+
+/**
+ * Every staff look at a person's page leaves a line in the audit log (`people.viewed`: who and when). Opening one
+ * needs no case, so the log is what keeps lookups accountable (the staff handbook: never without a case or a task in
+ * front of you). The same staff member on the same page within `PEOPLE_VIEW_AUDIT_WINDOW_MS` adds nothing.
+ */
+async function auditPersonView(db: Db, staff: StaffActor, userId: string, now: Date): Promise<void> {
+  const since = new Date(now.getTime() - PEOPLE_VIEW_AUDIT_WINDOW_MS).toISOString();
+  const [recent] = await db
+    .select({ id: auditLog.id })
+    .from(auditLog)
+    .where(and(eq(auditLog.targetType, 'user'), eq(auditLog.targetId, userId), eq(auditLog.actorId, staff.id), eq(auditLog.action, 'people.viewed'), gte(auditLog.at, since)))
+    .limit(1);
+  if (recent) return;
+  await db.insert(auditLog).values({ id: newId('aud'), at: now.toISOString(), actorId: staff.id, actorRole: staff.roles[0] ?? 'staff', action: 'people.viewed', targetType: 'user', targetId: userId, metadata: {} });
+}
+
+/** `routes.admin.user(userId)`. The look is audited (`auditPersonView`). */
 export async function getAdminUser(db: Db, staff: StaffActor, userId: string, now: Date): Promise<AdminUserPageData | null> {
   const [user] = await db.select().from(users).where(eq(users.id, String(userId))).limit(1);
   if (!user) return null;
+  await auditPersonView(db, staff, user.id, now);
   const [[row], bookingRows, caseRows, grants, strikeRows, suspension, deliveryRows] = await Promise.all([
     rowsOf(db, [user]),
     db
