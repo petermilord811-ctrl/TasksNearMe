@@ -3,14 +3,15 @@ import type { AppLocale, AttentionTarget, NotificationTopic, NotificationType } 
 import { DEFAULT_LOCALE, routes } from '@/contracts';
 import { messagesFor, perLocale } from '@/i18n/catalog';
 import { localizedPath } from '@/shared/locale';
-import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
+import { emailButton, emailFooter, emailFooterLink, emailFooterLinks, emailLayout, emailOpening, emailParagraph, emailSection, esc } from '@/platform/email/layout';
 import { isLockedPreference } from './delivery-domain';
 import { oneClickUnsubscribeUrl, unsubscribePageUrl } from './unsubscribe';
 
 /**
  * The email for one notification (T-29): the topic, what happened, one next step, and a button to the page
- * it's about. The footer says why it came: receipts and safety emails (bookings, payments) are always on;
- * every other topic carries an unsubscribe link and the one-click `List-Unsubscribe` headers.
+ * it's about. The footer says why it came: receipts and safety emails (bookings, payments) are always on and
+ * carry no unsubscribe link or headers; every other topic carries an unsubscribe link and the one-click
+ * `List-Unsubscribe` headers (RFC 8058).
  */
 
 const tFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.notifications.email' }));
@@ -53,16 +54,17 @@ export function renderNotificationEmail(input: NotificationEmailInput): Notifica
   const settingsUrl = `${appUrl}${localizedPath(routes.app.account(), locale)}`;
   const unsubscribeUrl = locked ? undefined : unsubscribePageUrl(appUrl, userId, topic, locale);
 
-  const body = `<tr><td class="card-pad" style="padding:36px 40px 32px;">
-<p style="margin:0 0 10px;font-family:${EMAIL_FONT};font-size:12px;line-height:16px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:${EMAIL_COLORS.primary};">${esc(topicName)}</p>
-<h1 class="h1 ink" style="margin:0;font-family:${EMAIL_DISPLAY_FONT};font-size:26px;line-height:33px;font-weight:800;letter-spacing:-0.5px;color:${EMAIL_COLORS.ink};">${esc(sentence)}</h1>
-${details.map((line) => `<p class="ink" style="margin:12px 0 0;font-family:${EMAIL_FONT};font-size:16px;line-height:24px;color:${EMAIL_COLORS.ink};">${esc(line)}</p>`).join('\n')}
-${next ? `<p class="muted" style="margin:12px 0 0;font-family:${EMAIL_FONT};font-size:16px;line-height:24px;color:${EMAIL_COLORS.muted};">${esc(next)}</p>` : ''}
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:24px;"><tr><td>${emailButton({ href: url, label: cta })}</td></tr></table>
-</td></tr>`;
-  const link = (href: string, label: string) => `<a class="link" href="${esc(href)}" target="_blank" style="color:${EMAIL_COLORS.muted};text-decoration:underline;">${esc(label)}</a>`;
-  const footer = `<p style="margin:0;">${esc(locked ? t('lockedFooter') : t('optionalFooter', { topic: t(`topicEmails.${topic}`) }))}</p>
-<p style="margin:8px 0 0;">${link(settingsUrl, t('manage'))}${unsubscribeUrl ? ` &nbsp;·&nbsp; ${link(unsubscribeUrl, t('unsubscribe'))}` : ''}</p>`;
+  const body = emailSection(
+    emailOpening(sentence, { eyebrow: topicName, size: 'sentence' })
+      + details.map((line) => emailParagraph(line, { tone: 'ink', top: 14 })).join('')
+      + (next ? emailParagraph(next, { tone: 'body', top: 14 }) : '')
+      + emailButton({ href: url, label: cta, top: 26 }),
+    { top: 40, bottom: 36 },
+  );
+  const footer = emailFooter([
+    esc(locked ? t('lockedFooter') : t('optionalFooter', { topic: t(`topicEmails.${topic}`) })),
+    emailFooterLinks([emailFooterLink(settingsUrl, t('manage')), unsubscribeUrl ? emailFooterLink(unsubscribeUrl, t('unsubscribe')) : '']),
+  ]);
 
   const text = [
     sentence,

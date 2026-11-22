@@ -91,7 +91,8 @@
     "bot-check-refused": "Paso del correo: verificación rechazada",
     "bot-check-expired": "Paso del nombre: se acabó el tiempo de la verificación",
     "sign-up": "Crear una cuenta",
-    "sign-up-with-providers": "Crear una cuenta, con Google y Microsoft"
+    "sign-up-with-providers": "Crear una cuenta, con Google y Microsoft",
+    "bot-check-states": "Verificación de seguridad: cada estado de su línea"
   },
   "passkey": {
     "action": "Iniciar sesión con una llave de acceso",

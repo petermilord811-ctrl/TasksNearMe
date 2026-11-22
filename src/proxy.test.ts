@@ -37,6 +37,7 @@ const target = (response: Response) => {
   return rewrite ? `rewrite ${new URL(rewrite).pathname}${new URL(rewrite).search}` : null;
 };
 const localeCookie = (response: Response) => response.headers.getSetCookie().find((cookie) => cookie.startsWith('NEXT_LOCALE='))?.split(';')[0];
+const seasonCookie = (response: Response) => response.headers.getSetCookie().find((cookie) => cookie.startsWith('tnm_season='));
 
 beforeEach(() => {
   state.hidden = false;
@@ -91,6 +92,28 @@ describe('proxy: language addresses', () => {
     const hub = await get('/gainesville/tasks?category=moving-help&sort=newest');
     expect(hub.status).toBe(308);
     expect(target(hub)).toBe('/gainesville/tasks/moving-help?sort=newest');
+  });
+});
+
+describe('proxy: the season a landing link names (owner, 2026-11-22)', () => {
+  it('keeps it for the browser session, in either language, so the landing has it after a page switch', async () => {
+    const kept = seasonCookie(await get('/?season=winter'));
+    expect(kept?.split(';')[0]).toBe('tnm_season=winter');
+    // A session cookie: no expiry of its own, so it ends with the visit.
+    expect(kept).not.toMatch(/expires|max-age/i);
+    expect(kept).toMatch(/httponly/i);
+    expect(seasonCookie(await get('/es?season=autumn'))?.split(';')[0]).toBe('tnm_season=fall');
+  });
+
+  it('forgets it on ?season=auto or a name it doesn’t know, and leaves it alone otherwise', async () => {
+    expect(seasonCookie(await get('/?season=auto', { ...navigate, cookie: 'tnm_season=winter' }))).toMatch(/^tnm_season=;.*max-age=0/i);
+    expect(seasonCookie(await get('/?season=monsoon', { ...navigate, cookie: 'tnm_season=winter' }))).toMatch(/^tnm_season=;.*max-age=0/i);
+    // Nothing kept, nothing to forget; the same season again, nothing to set.
+    expect(seasonCookie(await get('/?season=auto'))).toBeUndefined();
+    expect(seasonCookie(await get('/?season=winter', { ...navigate, cookie: 'tnm_season=winter' }))).toBeUndefined();
+    expect(seasonCookie(await get('/', { ...navigate, cookie: 'tnm_season=winter' }))).toBeUndefined();
+    // Only the landing reads it: another page's ?season= is that page's business.
+    expect(seasonCookie(await get('/pricing?season=winter'))).toBeUndefined();
   });
 });
 

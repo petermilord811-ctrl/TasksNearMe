@@ -349,68 +349,43 @@
   "emails": {
     "footer": {
       "why": "Recibes esto porque tienes una cuenta de TasksNearMe con {email}.",
-      "preferences": "Preferencias de correo",
       "help": "Centro de ayuda",
       "rewardsTerms": "Términos de las recompensas",
       "place": "TasksNearMe · Empezamos cerca de casa, en {market}."
     },
     "welcome": {
-      "subjectOffer": "¡Te damos la bienvenida, {firstName}! Verifícate y recibe una tarjeta de regalo de {amount}",
       "subject": "Te damos la bienvenida a TasksNearMe, {firstName}",
-      "preheaderOffer": "Cada ayudante que pasa nuestras verificaciones rápidas recibe una tarjeta de regalo de {amount}. Sin lugares limitados.",
-      "preheader": "Tu cuenta está lista: reserva ayuda local o gana dinero a tu propio ritmo.",
+      "preheader": "{side, select, helper {Tu cuenta está lista. Ahora, configura tu perfil de ayudante.} poster {Tu cuenta está lista. Publica una tarea cuando necesites una mano.} other {Tu cuenta está lista. Así puedes empezar.}}",
       "title": "Te damos la bienvenida a TasksNearMe",
       "greeting": "¡Te damos la bienvenida, {firstName}!",
-      "intro": "Tu cuenta está lista. Reserva ayuda local de confianza en {market} o gana dinero a tu propio ritmo como ayudante.",
-      "gift": {
-        "eyebrow": "Tarjeta de regalo de bienvenida",
-        "label": "tarjeta de regalo",
-        "checks": {
-          "phone": "Teléfono",
-          "identity": "Identidad",
-          "background": "Antecedentes"
-        },
-        "for": "Para cada ayudante que pasa nuestras verificaciones. Sin lugares limitados y sin necesidad de una primera tarea.",
-        "cta": "Verifícate",
-        "learn": "Cómo se gana dinero"
-      },
-      "steps": {
-        "title": "Tu camino hacia {amount}",
-        "done": "Listo",
-        "account": {
-          "title": "Crea tu cuenta",
-          "body": "Todo listo. Te damos la bienvenida a bordo."
-        },
-        "profile": {
-          "title": "Configura tu perfil de ayudante",
-          "body": "Tus servicios, tus tarifas y la zona que cubres."
-        },
-        "phone": {
-          "title": "Verifica tu teléfono",
-          "body": "Un código de seis dígitos por mensaje de texto."
-        },
-        "identity": {
-          "title": "Verifica tu identidad",
-          "body": "Fotos de tu identificación y una selfie, revisadas por nuestro equipo y nuestro socio de verificación."
-        },
-        "background": {
-          "title": "Pasa una verificación de antecedentes",
-          "body": "La hace Checkr, con tu consentimiento."
-        },
-        "reward": {
-          "title": "Tu tarjeta de regalo de {amount} es tuya",
-          "body": "Después de una revisión rápida de nuestro equipo, elige tu tarjeta en la página de Recompensas. Canjéala dentro de {redeemDays, plural, one {# día} other {# días}}. Una tarjeta de regalo de bienvenida por persona."
-        }
-      },
-      "client": {
-        "title": "¿Prefieres que te echen una mano?",
-        "body": "Publica lo que necesitas, acuerda un precio desde el inicio y paga solo cuando reserves. Elige un tipo de tarea para empezar:",
-        "cta": "Publicar una tarea"
-      },
+      "ready": "Tu cuenta de TasksNearMe está lista.",
       "helper": {
-        "title": "Gana dinero a tu propio ritmo",
-        "body": "Elige las tareas que quieras, fija tus tarifas y recibe tu pago cuando el cliente apruebe el trabajo.",
-        "cta": "Conviértete en ayudante"
+        "body": "Ahora, configura tu perfil de ayudante. La configuración te guía paso a paso:",
+        "steps": {
+          "profile": {
+            "title": "Tu perfil",
+            "body": "Los servicios que ofreces, tus tarifas y la zona que cubres."
+          },
+          "checks": {
+            "title": "Tus verificaciones",
+            "body": "{withPhone, select, yes {Tu teléfono, tu identificación y tu dirección, y luego una verificación de antecedentes de Checkr, con tu consentimiento.} other {Tu identificación y tu dirección, y luego una verificación de antecedentes de Checkr, con tu consentimiento.}}"
+          },
+          "offers": {
+            "title": "Tus primeras ofertas",
+            "body": "Elige tareas cerca de ti y envía ofertas con tu propio precio."
+          }
+        },
+        "gift": "Cuando pases las verificaciones de {withPhone, select, yes {teléfono, identidad y antecedentes} other {identidad y antecedentes}}, recibirás una tarjeta de regalo de {amount} como agradecimiento.",
+        "cta": "Configura tu perfil de ayudante"
+      },
+      "poster": {
+        "body": "Cuando necesites una mano, publica una tarea: cuenta qué hay que hacer y cuándo, y ayudantes cerca de ti te envían ofertas. Acuerdas el precio desde el inicio y pagas solo cuando reservas.",
+        "cta": "Publicar una tarea",
+        "alsoHelp": "¿También quieres ganar dinero? Puedes cambiar a ayudar en la app cuando quieras."
+      },
+      "neutral": {
+        "body": "Reserva ayuda local de confianza para tareas cotidianas o gana dinero a tu propio ritmo como ayudante. Todo empieza en la app.",
+        "cta": "Abrir TasksNearMe"
       },
       "signoff": "Nos vemos por el vecindario,",
       "team": "El equipo de TasksNearMe"
@@ -432,6 +407,7 @@
       "text": "Tu código para iniciar sesión en TasksNearMe:\n\n{code}\n\nFunciona durante {minutes} minutos, una sola vez. No lo compartas: TasksNearMe nunca te lo pedirá por teléfono, mensaje de texto ni chat.\n\nSi no lo pediste, ignora este correo."
     },
     "emailChangeCode": {
+      "eyebrow": "Cambio de correo",
       "subject": "Confirma tu nuevo correo para TasksNearMe: {code}",
       "preheader": "Ingresa este código en la página de tu cuenta. Funciona durante {minutes} minutos.",
       "title": "Confirma tu nuevo correo",
@@ -483,6 +459,7 @@
       }
     },
     "staffRoleGranted": {
+      "eyebrow": "Acceso del personal",
       "subject": "{person} ahora tiene el rol de {role}",
       "preheader": "{person} ({email}) ahora tiene el rol de {role} en TasksNearMe.",
       "title": "Se otorgó un rol del equipo",
@@ -560,7 +537,8 @@
       "secondary": "{interest, select, both {Hazte ayudante} other {Ver TasksNearMe en {city}}}",
       "why": "Recibes esto porque {email} se unió a la lista de espera de TasksNearMe para {zip}. Es el único correo que enviamos sobre esto.",
       "unsubscribe": "Cancelar la suscripción"
-    }
+    },
+    "securityNotice": "Aviso de seguridad"
   },
   "sms": {
     "phoneCode": "{code} es tu código de TasksNearMe. Funciona durante {minutes} minutos. Nunca te llamaremos para pedírtelo.",

@@ -84,7 +84,7 @@ export function InviteActions({ invite, handlers, headingLevel, initialCounterOp
         else setConfirm(action);
       }}>{pending && active === action && <Spinner aria-hidden="true" />}{t(`actions.${action}`)}</Button>)}
     </div>}
-    {counterOpen && invite.actions.includes('counter_invite') && <CounterInviteForm invite={invite} headingLevel={headingLevel} pending={pending} result={result} onSubmit={async (counter) => { setActive('counter_invite'); await run(() => handlers.onCounter({ inviteId: invite.id, counter, ...(check.token ? { botCheck: check.token } : {}) })); check.reset(); }} onClose={() => { setCounterOpen(false); opener.current?.focus(); }} />}
+    {counterOpen && invite.actions.includes('counter_invite') && <CounterInviteForm invite={invite} headingLevel={headingLevel} pending={pending} result={result} onSubmit={async (counter) => { setActive('counter_invite'); const answer = await check.ready(); if (!answer) return; await run(() => handlers.onCounter({ inviteId: invite.id, counter, ...answer })); check.reset(); }} onClose={() => { setCounterOpen(false); opener.current?.focus(); }} />}
     {counterOpen && invite.botCheck && invite.actions.includes('counter_invite') && <BotCheckField check={check} result={result} />}
     <AlertDialog open={Boolean(confirm)} onOpenChange={(open) => { if (!open) setConfirm(undefined); }}>
       <AlertDialogContent onCloseAutoFocus={(event) => { event.preventDefault(); if (opener.current?.isConnected && !opener.current.disabled) opener.current.focus(); }}>

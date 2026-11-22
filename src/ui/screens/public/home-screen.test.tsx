@@ -52,13 +52,18 @@ const section = (title: string) => {
   if (!heading) throw new Error(`No section titled "${title}"`);
   return heading.closest('section') as HTMLElement;
 };
+const hero = () => document.querySelector<HTMLElement>('section[aria-labelledby="hero-title"]')!;
+/** The landing opens on "Can help" (owner, 2026-11-22); "Need help" is one tap away. */
+const needHelp = () => fireEvent.click(within(hero()).getByRole('button', { name: new RegExp(`^${t('hero.audience.poster')}`) }));
+const helperHeadline = () => `${t('hero.helperMode.line1')} ${t('hero.helperMode.line2')} ${t('hero.helperMode.line3Vivid')}${t('hero.helperMode.line3Rest')}`;
+const posterHeadline = () => `${t('hero.line1')} ${t('hero.line2')} ${t('hero.line3Vivid')}${t('hero.line3Rest')}`;
 
 describe('HomeScreen (the landing page)', () => {
   it('has one h1 that reads as words, and a titled section for each part of the page', () => {
     show();
     const h1 = screen.getAllByRole('heading', { level: 1 });
     expect(h1).toHaveLength(1);
-    expect(text(h1[0]!)).toBe(`${t('hero.line1')} ${t('hero.line2')} ${t('hero.line3Vivid')}${t('hero.line3Rest')}`);
+    expect(text(h1[0]!)).toBe(helperHeadline());
     const titles = screen.getAllByRole('heading', { level: 2 }).map(text);
     for (const title of [
       `${t('map.title')} ${t('map.titleAccent')}`,
@@ -134,17 +139,18 @@ describe('HomeScreen (the landing page)', () => {
     }
   });
 
-  it("explains how it works for both sides; picking a side here is the hero's pick too", () => {
+  it("explains how it works for both sides, helpers' first; picking a side here is the hero's pick too", () => {
     show();
     const steps = within(section(`${t('steps.title')} ${t('steps.titleAccent')}`));
-    expect(steps.getByRole('heading', { level: 3, name: t('steps.post.title') })).toBeInTheDocument();
-    expect(steps.getByRole('link', { name: t('steps.link') })).toHaveAttribute('href', routes.howItWorks());
-
-    fireEvent.click(steps.getByRole('button', { name: t('hero.audience.helper') }));
     expect(steps.getByRole('button', { name: t('hero.audience.helper') })).toHaveAttribute('aria-pressed', 'true');
     for (const key of ['verify', 'offer', 'paid'] as const) expect(steps.getByRole('heading', { level: 3, name: t(`steps.helper.${key}.title`) })).toBeInTheDocument();
     expect(steps.getByRole('link', { name: t('steps.helperLink') })).toHaveAttribute('href', routes.becomeAHelper());
-    expect(text(screen.getByRole('heading', { level: 1 }))).toBe(`${t('hero.helperMode.line1')} ${t('hero.helperMode.line2')} ${t('hero.helperMode.line3Vivid')}${t('hero.helperMode.line3Rest')}`);
+
+    fireEvent.click(steps.getByRole('button', { name: t('hero.audience.poster') }));
+    expect(steps.getByRole('button', { name: t('hero.audience.poster') })).toHaveAttribute('aria-pressed', 'true');
+    expect(steps.getByRole('heading', { level: 3, name: t('steps.post.title') })).toBeInTheDocument();
+    expect(steps.getByRole('link', { name: t('steps.link') })).toHaveAttribute('href', routes.howItWorks());
+    expect(text(screen.getByRole('heading', { level: 1 }))).toBe(posterHeadline());
   });
 
   it('takes a neighborhood from "where we work" to the map: the same pick as the hero\'s market line', () => {
@@ -223,6 +229,7 @@ describe('HomeScreen (the landing page)', () => {
 
   it('reads a request in the assistant: the kind of help, a title, the typical price, then on to posting with those words', () => {
     show();
+    needHelp();
     const input = screen.getByRole('textbox', { name: t('hero.askPrompt') });
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'I need help to assemble an IKEA desk' } });
@@ -236,6 +243,7 @@ describe('HomeScreen (the landing page)', () => {
 
   it('lets the visitor pick another kind of help when the assistant guesses wrong, or when nothing matches', () => {
     show();
+    needHelp();
     const input = screen.getByRole('textbox', { name: t('hero.askPrompt') });
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'something for my grandmother' } });
@@ -256,6 +264,7 @@ describe('HomeScreen (the landing page)', () => {
 
   it('builds every call to action with the route builders', () => {
     show();
+    needHelp();
     for (const link of screen.getAllByRole('link', { name: t('hero.primary') })) expect(link).toHaveAttribute('href', routes.app.newTask());
     // The hero's main call to action is the assistant's own button: it posts with whatever's typed.
     const assistant = screen.getByRole('search', { name: t('assistant.label') });
@@ -265,8 +274,6 @@ describe('HomeScreen (the landing page)', () => {
     expect(screen.getByRole('link', { name: t('map.browseAll') })).toHaveAttribute('href', routes.taskBoard(homePageData.market.slug));
     expect(screen.getByRole('link', { name: t('pricing.link') })).toHaveAttribute('href', routes.pricing());
   });
-
-  const hero = () => document.querySelector<HTMLElement>('section[aria-labelledby="hero-title"]')!;
 
   it('shows the newest open task in the hero, linking to its page, and narrows it to a picked neighborhood', async () => {
     show();
@@ -285,10 +292,10 @@ describe('HomeScreen (the landing page)', () => {
     expect(austinMapAreas.some((area) => area.name === 'Hyde Park')).toBe(true);
   });
 
-  it('switches to helpers: their headline, "I can…", matching open tasks, the reward, and See these tasks', () => {
+  it('opens on helpers: their headline, "I can…", matching open tasks, the reward, and See these tasks', () => {
     show();
-    fireEvent.click(within(hero()).getByRole('button', { name: new RegExp(`^${t('hero.audience.helper')}`) }));
-    expect(text(screen.getByRole('heading', { level: 1 }))).toBe(`${t('hero.helperMode.line1')} ${t('hero.helperMode.line2')} ${t('hero.helperMode.line3Vivid')}${t('hero.helperMode.line3Rest')}`);
+    expect(within(hero()).getByRole('button', { name: new RegExp(`^${t('hero.audience.helper')}`) })).toHaveAttribute('aria-pressed', 'true');
+    expect(text(screen.getByRole('heading', { level: 1 }))).toBe(helperHeadline());
     const input = within(hero()).getByRole('textbox', { name: new RegExp(t('assistant.helperPrompt')) });
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'I have a truck' } });
@@ -323,6 +330,7 @@ describe('HomeScreen (the landing page)', () => {
 
   it('offers "Draft it with AI" only when the market allows it, carrying the words and the kind of help', () => {
     show();
+    needHelp();
     const ask = () => {
       const input = screen.getByRole('textbox', { name: t('hero.askPrompt') });
       fireEvent.focus(input);
@@ -336,11 +344,13 @@ describe('HomeScreen (the landing page)', () => {
     cleanup();
 
     show(homePrelaunchData);
+    needHelp();
     expect(within(ask()).queryByRole('link', { name: t('assistant.aiDraft') })).not.toBeInTheDocument();
   });
 
   it("suggests examples for the season (it's fall in the fixture)", () => {
     show();
+    needHelp();
     const input = screen.getByRole('textbox', { name: t('hero.askPrompt') });
     expect(input).toHaveAttribute('placeholder', expect.stringMatching(new RegExp(Object.values(messages.landing.hero.seasons.fall).join('|'))));
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseSeason, seasonAt } from './seasons';
+import { chosenSeason, parseSeason, seasonAt, seasonCookieUpdate } from './seasons';
 
 describe('seasonAt', () => {
   it('turns with the month on the market’s own calendar', () => {
@@ -20,12 +20,38 @@ describe('seasonAt', () => {
 });
 
 describe('parseSeason', () => {
-  it('takes a season by name and nothing else', () => {
+  it('takes a season by name, autumn for fall, in any case, and nothing else', () => {
     expect(parseSeason('winter')).toBe('winter');
     expect(parseSeason('fall')).toBe('fall');
-    expect(parseSeason('autumn')).toBeNull();
-    expect(parseSeason('WINTER')).toBeNull();
+    expect(parseSeason('autumn')).toBe('fall');
+    expect(parseSeason('WINTER')).toBe('winter');
+    expect(parseSeason(' Spring ')).toBe('spring');
+    expect(parseSeason('monsoon')).toBeNull();
+    expect(parseSeason('auto')).toBeNull();
     expect(parseSeason(['winter'])).toBeNull();
     expect(parseSeason(undefined)).toBeNull();
+  });
+});
+
+describe('the season kept between pages', () => {
+  it('lets the link decide, and otherwise keeps the season an earlier link chose', () => {
+    expect(chosenSeason('winter', undefined)).toBe('winter');
+    expect(chosenSeason('winter', 'summer')).toBe('winter');
+    expect(chosenSeason(['autumn', 'winter'], undefined)).toBe('fall');
+    // `auto` (or a name it doesn't know) in the link is the calendar's season, whatever was kept.
+    expect(chosenSeason('auto', 'summer')).toBeNull();
+    expect(chosenSeason('monsoon', 'summer')).toBeNull();
+    // No season in the link: the kept one, if it's a season.
+    expect(chosenSeason(undefined, 'summer')).toBe('summer');
+    expect(chosenSeason(undefined, 'tampered')).toBeNull();
+    expect(chosenSeason(undefined, undefined)).toBeNull();
+  });
+
+  it('keeps a season a link names, forgets it on any other value, and leaves it alone without one', () => {
+    expect(seasonCookieUpdate('winter')).toEqual({ keep: 'winter' });
+    expect(seasonCookieUpdate('autumn')).toEqual({ keep: 'fall' });
+    expect(seasonCookieUpdate('auto')).toBe('forget');
+    expect(seasonCookieUpdate('')).toBe('forget');
+    expect(seasonCookieUpdate(null)).toBeNull();
   });
 });

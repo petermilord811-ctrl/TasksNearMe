@@ -233,41 +233,42 @@ describe('creating an account (/sign-up)', () => {
     const onStartSignUp = vi.fn(async (): Promise<ActionResult> => signInResults.codeSent);
     show(<SignInScreen data={signInSignUpStep} handlers={handlers({ onStartSignUp })} />);
     expect(screen.getByRole('heading', { level: 1, name: 'Create your account' })).toBeVisible();
-    expect(screen.getByRole('radio', { name: /I need help with tasks/ })).toBeChecked();
+    // Helping out is the default (owner, 2026-11-22).
+    expect(screen.getByRole('radio', { name: /I want to help and earn/ })).toBeChecked();
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
     expect(onStartSignUp).not.toHaveBeenCalled();
     expect((await screen.findAllByText(forms.fieldErrors.required)).length).toBeGreaterThan(0);
 
-    await userEvent.click(screen.getByRole('radio', { name: /I want to help and earn/ }));
+    await userEvent.click(screen.getByRole('radio', { name: /I need help with tasks/ }));
     await userEvent.type(screen.getByLabelText('First name'), 'Bea');
     await userEvent.type(screen.getByLabelText('Last name'), 'Tester');
     await userEvent.type(screen.getByLabelText('Email'), 'bea@example.test');
     await userEvent.click(screen.getByRole('checkbox', { name: "I'm 18 or older" }));
     await userEvent.click(screen.getByRole('checkbox', { name: /I agree to the Terms of service/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
-    await waitFor(() => expect(onStartSignUp).toHaveBeenCalledWith({ firstName: 'Bea', lastName: 'Tester', email: 'bea@example.test', intent: 'help_out', adultAttested: true, termsAccepted: true }));
+    await waitFor(() => expect(onStartSignUp).toHaveBeenCalledWith({ firstName: 'Bea', lastName: 'Tester', email: 'bea@example.test', intent: 'get_help', adultAttested: true, termsAccepted: true }));
     expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', routes.signIn(signInSignUpStep.next));
   });
 
-  it('starts on helping out when the person was headed to an offer, and sends that unless they change it (J-V)', async () => {
+  it('starts on getting help when the person was headed to post a task, and sends that unless they change it (J-V)', async () => {
     const onStartSignUp = vi.fn(async (): Promise<ActionResult> => signInResults.codeSent);
-    show(<SignInScreen data={{ ...signInSignUpStep, next: routes.app.findWorkTask('tsk_desk'), suggestedIntent: 'help_out' }} handlers={handlers({ onStartSignUp })} />);
-    expect(screen.getByRole('radio', { name: /I want to help and earn/ })).toBeChecked();
+    show(<SignInScreen data={{ ...signInSignUpStep, next: routes.app.newTask(), suggestedIntent: 'get_help' }} handlers={handlers({ onStartSignUp })} />);
+    expect(screen.getByRole('radio', { name: /I need help with tasks/ })).toBeChecked();
     await userEvent.type(screen.getByLabelText('First name'), 'Bea');
     await userEvent.type(screen.getByLabelText('Last name'), 'Tester');
     await userEvent.type(screen.getByLabelText('Email'), 'bea@example.test');
     await userEvent.click(screen.getByRole('checkbox', { name: "I'm 18 or older" }));
     await userEvent.click(screen.getByRole('checkbox', { name: /I agree to the Terms of service/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
-    await waitFor(() => expect(onStartSignUp).toHaveBeenCalledWith(expect.objectContaining({ intent: 'help_out' })));
+    await waitFor(() => expect(onStartSignUp).toHaveBeenCalledWith(expect.objectContaining({ intent: 'get_help' })));
   });
 
   it('carries the choice to Google and Microsoft', async () => {
     const onSignUpWith = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'sent', redirectTo: '#provider' }));
     show(<SignInScreen data={signInSignUpStepWithProviders} handlers={handlers({ onSignUpWith })} />);
-    await userEvent.click(screen.getByRole('radio', { name: /I want to help and earn/ }));
+    await userEvent.click(screen.getByRole('radio', { name: /I need help with tasks/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Continue with Google' }));
-    await waitFor(() => expect(onSignUpWith).toHaveBeenCalledWith({ provider: 'google', intent: 'help_out' }));
+    await waitFor(() => expect(onSignUpWith).toHaveBeenCalledWith({ provider: 'google', intent: 'get_help' }));
   });
 
   it('links from sign-in to creating an account, keeping where the person was going', () => {

@@ -26,7 +26,8 @@ export function SignUpStep({ data, handlers, initialResult, onResult }: SignInSt
   const forms = useTranslations('forms');
   const form = useForm<SignUpInput>({
     resolver: zodResolver(signUpInputSchema),
-    defaultValues: { firstName: '', lastName: '', email: '', intent: data.suggestedIntent ?? 'get_help', adultAttested: false, termsAccepted: false },
+    // Helping out unless the page suggests otherwise (owner, 2026-11-22: "Make I can help as default").
+    defaultValues: { firstName: '', lastName: '', email: '', intent: data.suggestedIntent ?? 'help_out', adultAttested: false, termsAccepted: false },
   });
   const action = useFormAction(form, { initialResult, onResult, navigation: 'replace' });
   const check = useBotCheck(data.botCheck, 'sign_up');
@@ -54,7 +55,10 @@ export function SignUpStep({ data, handlers, initialResult, onResult }: SignInSt
       <OrDivider label={t('social.or')} />
     </>}
     <form noValidate onSubmit={form.handleSubmit(async (input) => {
-      await action.run(onStartSignUp, { ...input, ...(check.token ? { botCheck: check.token } : {}) });
+      // A check still running is waited for (its line says so); null: it can't pass right now, and the form stays put.
+      const answer = await check.ready();
+      if (!answer) return;
+      await action.run(onStartSignUp, { ...input, ...answer });
       check.reset();
     })} aria-busy={action.pending} className="space-y-6">
       <div className="grid gap-6 sm:grid-cols-2 sm:gap-4">

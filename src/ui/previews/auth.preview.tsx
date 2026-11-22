@@ -5,12 +5,15 @@ import { botCheckResults, fakeSignInHandlers, publicViewer, standInBotCheck, sig
 import { PublicShell } from '@/ui/shells/public-shell';
 import { SignInScreen, EmailCodeStep, PhoneStep, ProfileStep, EmailStep } from '@/ui/screens/auth';
 import { SignInFrame } from '@/ui/screens/auth/sign-in-screen';
+import { BotCheckStatusLine, type BotCheckStatus } from '@/ui/components/forms/bot-check';
 import { CountdownPreview } from './auth-countdown';
 import copy from '../../../messages/en/ui/signIn.json';
 
 function page(id: string, variant: keyof typeof copy.previews, render: () => ReactNode): PreviewEntry {
   return { id, group: copy.previews.group, title: copy.previews[variant], layout: 'fullscreen', render: () => <PublicShell viewer={publicViewer} currentPath={routes.signIn()}>{render()}</PublicShell> };
 }
+
+const BOT_CHECK_STATES: BotCheckStatus[] = ['checking', 'passed', 'interactive', 'retrying', 'slow', 'failed', 'unsupported'];
 
 const screens: [keyof typeof copy.previews, SignInPageData][] = [
   ['email', signInEmailStep], ['email-with-providers', signInEmailStepWithProviders],
@@ -35,4 +38,9 @@ export const authPreviews: PreviewEntry[] = [
     return <SignInFrame><Step data={data} handlers={fakeSignInHandlers} initialResult={initialResult} /></SignInFrame>;
   })),
   page('sign-in-step/resend-countdown', 'resend-countdown', () => <CountdownPreview />),
+  // Every state of the security check's line (Turnstile can't run in previews): a submit waiting on it, then each status.
+  page('sign-in-step/bot-check-states', 'bot-check-states', () => <SignInFrame><div className="space-y-3">
+    <BotCheckStatusLine status="checking" waiting onRetry={() => {}} />
+    {BOT_CHECK_STATES.map((status) => <BotCheckStatusLine key={status} status={status} onRetry={() => {}} />)}
+  </div></SignInFrame>),
 ];

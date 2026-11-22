@@ -349,68 +349,43 @@
   "emails": {
     "footer": {
       "why": "You're getting this because you have a TasksNearMe account with {email}.",
-      "preferences": "Email preferences",
       "help": "Help center",
       "rewardsTerms": "Rewards terms",
       "place": "TasksNearMe · Starting close to home in {market}."
     },
     "welcome": {
-      "subjectOffer": "Welcome, {firstName}! Get verified and get a {amount} gift card",
       "subject": "Welcome to TasksNearMe, {firstName}",
-      "preheaderOffer": "Every helper who passes our quick checks gets a {amount} gift card. No spots to race for.",
-      "preheader": "Your account is ready: book local help, or earn on your own schedule.",
+      "preheader": "{side, select, helper {Your account is ready. Next, set up your helper profile.} poster {Your account is ready. Post a task whenever you need a hand.} other {Your account is ready. Here's where to start.}}",
       "title": "Welcome to TasksNearMe",
       "greeting": "Welcome, {firstName}!",
-      "intro": "Your account is ready. Book trusted local help in {market}, or earn on your own schedule as a helper.",
-      "gift": {
-        "eyebrow": "Welcome gift card",
-        "label": "gift card",
-        "checks": {
-          "phone": "Phone",
-          "identity": "ID",
-          "background": "Background check"
-        },
-        "for": "For every helper who passes our checks. No spots to race for, and no first task needed.",
-        "cta": "Get verified",
-        "learn": "How earning works"
-      },
-      "steps": {
-        "title": "Your path to {amount}",
-        "done": "Done",
-        "account": {
-          "title": "Create your account",
-          "body": "All set. Welcome aboard."
-        },
-        "profile": {
-          "title": "Set up your helper profile",
-          "body": "Your services, your rates, and the area you cover."
-        },
-        "phone": {
-          "title": "Verify your phone",
-          "body": "A six-digit code by text."
-        },
-        "identity": {
-          "title": "Verify your ID",
-          "body": "Photos of your ID and a selfie, checked by our team and our ID partner."
-        },
-        "background": {
-          "title": "Pass a background check",
-          "body": "Run by Checkr, with your consent."
-        },
-        "reward": {
-          "title": "Your {amount} gift card is yours",
-          "body": "After a quick check by our team, pick your card on the Rewards page. Redeem within {redeemDays, plural, one {# day} other {# days}}. One welcome gift card per person."
-        }
-      },
-      "client": {
-        "title": "Need a hand instead?",
-        "body": "Post what you need, agree on a price up front, and pay only when you book. Pick a kind of task to start:",
-        "cta": "Post a task"
-      },
+      "ready": "Your TasksNearMe account is ready.",
       "helper": {
-        "title": "Earn on your schedule",
-        "body": "Choose the tasks you want, set your rates, and get paid after the client approves the work.",
-        "cta": "Become a helper"
+        "body": "Next, set up your helper profile. Setup walks you through it one step at a time:",
+        "steps": {
+          "profile": {
+            "title": "Your profile",
+            "body": "The services you offer, your rates and the area you cover."
+          },
+          "checks": {
+            "title": "Your checks",
+            "body": "{withPhone, select, yes {Your phone, your ID and your address, then a background check by Checkr, with your consent.} other {Your ID and your address, then a background check by Checkr, with your consent.}}"
+          },
+          "offers": {
+            "title": "Your first offers",
+            "body": "Choose tasks near you and send offers at your own price."
+          }
+        },
+        "gift": "When your {withPhone, select, yes {phone, ID and background checks} other {ID and background checks}} pass, you'll get a {amount} gift card as a thank-you.",
+        "cta": "Set up your helper profile"
+      },
+      "poster": {
+        "body": "Whenever you need a hand, post a task: say what needs doing and when, and helpers near you send offers. You agree on the price up front and pay only when you book.",
+        "cta": "Post a task",
+        "alsoHelp": "Want to earn as well? You can switch to helping in the app at any time."
+      },
+      "neutral": {
+        "body": "Book trusted local help for everyday tasks, or earn on your own schedule as a helper. Both start in the app.",
+        "cta": "Open TasksNearMe"
       },
       "signoff": "See you around the neighborhood,",
       "team": "The TasksNearMe team"
@@ -432,6 +407,7 @@
       "text": "Your TasksNearMe sign-in code:\n\n{code}\n\nIt works for {minutes} minutes, once. Keep it to yourself: TasksNearMe will never ask for it by phone, text or chat.\n\nIf you didn't ask for it, ignore this email."
     },
     "emailChangeCode": {
+      "eyebrow": "Email change",
       "subject": "Confirm your new email for TasksNearMe: {code}",
       "preheader": "Enter this code on your account page. It works for {minutes} minutes.",
       "title": "Confirm your new email",
@@ -483,6 +459,7 @@
       }
     },
     "staffRoleGranted": {
+      "eyebrow": "Staff access",
       "subject": "{person} now has the {role} role",
       "preheader": "{person} ({email}) now has the {role} role on TasksNearMe.",
       "title": "A staff role was granted",
@@ -560,7 +537,8 @@
       "secondary": "{interest, select, both {Become a helper} other {See TasksNearMe in {city}}}",
       "why": "You're getting this because {email} joined the TasksNearMe waitlist for {zip}. It's the only email we send about it.",
       "unsubscribe": "Unsubscribe"
-    }
+    },
+    "securityNotice": "Security notice"
   },
   "sms": {
     "phoneCode": "{code} is your TasksNearMe code. It works for {minutes} minutes. We'll never call to ask for it.",

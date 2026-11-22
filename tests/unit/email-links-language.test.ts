@@ -24,7 +24,8 @@ const notMe = (locale: AppLocale) => `${APP}${locale === 'es' ? '/es' : ''}/acco
 function emails(locale: AppLocale) {
   return {
     signInCode: renderSignInCodeEmail({ code: '482913', minutes: 10, appUrl: APP, locale, now: new Date('2026-11-21T12:00:00.000Z') }),
-    welcome: renderWelcomeEmail({ firstName: 'Maya', email: 'maya@example.test', appUrl: APP, market: 'Gainesville, FL', categories: [{ slug: 'furniture-assembly', name: 'Furniture assembly' }], locale } as never),
+    welcome: renderWelcomeEmail({ firstName: 'Maya', email: 'maya@example.test', appUrl: APP, market: 'Gainesville, FL', offer: { amountCents: 5000, redeemWithinDays: 90 }, side: 'helper', locale }),
+    welcomePoster: renderWelcomeEmail({ firstName: 'Maya', email: 'maya@example.test', appUrl: APP, market: 'Gainesville, FL', side: 'poster', locale }),
     emailChangeCode: renderEmailChangeCodeEmail({ code: '482913', minutes: 10, email: 'maya.new@example.test', appUrl: APP, locale }),
     emailChanged: renderEmailChangedNotice({ newEmail: 'maya.new@example.test', revertUrl: notMe(locale), appUrl: APP, locale }),
     phoneChanged: renderPhoneChangedNotice({ last4: '4417', revertUrl: notMe(locale), appUrl: APP, locale }),
@@ -37,11 +38,17 @@ function emails(locale: AppLocale) {
 }
 
 const ownLinks = (html: string) => [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1]!.replaceAll('&amp;', '&')).filter((href) => href.startsWith(APP));
+/**
+ * Emails with nothing to open (the brand at the top stopped being a link in the 2026-11-22 email upgrade): the
+ * email-change code goes into the account page that asked for it.
+ */
+const NO_LINKS = new Set(['emailChangeCode']);
 
 describe('links in the emails people get (messages pass J-M1)', () => {
   it.each(Object.keys(emails('es')))('%s: every link of ours opens in Spanish for a Spanish reader', (name) => {
     const links = ownLinks(emails('es')[name as keyof ReturnType<typeof emails>].html);
-    expect(links.length).toBeGreaterThan(0);
+    if (NO_LINKS.has(name)) expect(links).toEqual([]);
+    else expect(links.length).toBeGreaterThan(0);
     for (const href of links) expect(href, href).toMatch(new RegExp(`^${APP}/es(/|$|#|\\?)`));
   });
 

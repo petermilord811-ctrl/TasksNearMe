@@ -30,7 +30,10 @@ export function EmailStep({ data, handlers, initialResult, onResult }: SignInSte
     <ProviderHint providers={providers} />
     {(providers.length > 0 || (handlers.onPasskeyOptions && handlers.onPasskeySignIn)) && <OrDivider label={t('social.or')} />}
     <form noValidate onSubmit={form.handleSubmit(async (input) => {
-      await action.run(handlers.onRequestEmailCode, { ...input, ...(check.token ? { botCheck: check.token } : {}) });
+      // A check still running is waited for (its line says so); null: it can't pass right now, and the form stays put.
+      const answer = await check.ready();
+      if (!answer) return;
+      await action.run(handlers.onRequestEmailCode, { ...input, ...answer });
       check.reset();
     })} aria-busy={action.pending} className="space-y-6">
       <TextFormField control={form.control} name="email" label={fields('email.label')} hint={fields('email.hint')} type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} />

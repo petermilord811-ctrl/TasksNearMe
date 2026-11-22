@@ -186,7 +186,14 @@ function FindWorkList({ data, now, handlers, liveMap = true }: FindWorkScreenPro
     setOfferStates((current) => ({ ...current, [card.task.id]: 'sending' }));
     setOfferError(null);
     setOffered(null);
-    const result: ActionResult = await handlers.onQuickOffer({ taskId: card.task.id, ...(check.token ? { botCheck: check.token } : {}) }).catch(() => ({ ok: false as const, code: 'unknown' as const }));
+    // A bot check still running is waited for (its line says so); one that can't pass now leaves the offer unsent.
+    const answer = await check.ready();
+    if (!answer) {
+      setOfferStates(({ [card.task.id]: _gone, ...rest }) => rest);
+      setOfferError('bot_check');
+      return;
+    }
+    const result: ActionResult = await handlers.onQuickOffer({ taskId: card.task.id, ...answer }).catch(() => ({ ok: false as const, code: 'unknown' as const }));
     // Each answer works once: the next tap gets a fresh one.
     check.reset();
     if (!result.ok && result.fieldErrors?.botCheck) {

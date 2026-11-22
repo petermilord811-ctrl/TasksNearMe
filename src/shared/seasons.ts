@@ -17,7 +17,39 @@ export function seasonAt(now: ISODateTime, timeZone: TimeZone): Season {
   return 'fall';
 }
 
-/** A season named in a link (`?season=winter`, to preview another season's look), or null for anything else. */
+/** Other names a link may use for a season. */
+const SEASON_ALIASES: Readonly<Record<string, Season>> = { autumn: 'fall' };
+
+/**
+ * A season named in a link (`?season=winter`, or `autumn` for fall, to see another season's look; any letter case), or
+ * null for anything else.
+ */
 export function parseSeason(value: unknown): Season | null {
-  return typeof value === 'string' && (SEASONS as readonly string[]).includes(value) ? (value as Season) : null;
+  if (typeof value !== 'string') return null;
+  const name = value.trim().toLowerCase();
+  return (SEASONS as readonly string[]).includes(name) ? (name as Season) : (SEASON_ALIASES[name] ?? null);
+}
+
+/**
+ * The season a link asked for stays for the rest of the browser session (src/proxy.ts sets it on `/?season=…`), so the
+ * landing keeps it after a switch to another page and back (owner, 2026-11-22). A session cookie, so a preview never
+ * outlives the visit and the calendar's season comes back on its own.
+ */
+export const SEASON_COOKIE = 'tnm_season';
+export const SEASON_COOKIE_OPTIONS = { path: '/', sameSite: 'lax', httpOnly: true } as const;
+
+/**
+ * The season the landing dresses for, null meaning the market's own on its calendar. A `season` in the link decides
+ * (a name it doesn't know, or `auto`, means the calendar's); without one, the season kept from an earlier link.
+ */
+export function chosenSeason(linkValue: string | string[] | undefined, keptValue: string | undefined): Season | null {
+  if (linkValue !== undefined) return parseSeason(Array.isArray(linkValue) ? linkValue[0] : linkValue);
+  return parseSeason(keptValue);
+}
+
+/** What a page load of the landing does with the kept season: keep the one its link names, forget it, or nothing. */
+export function seasonCookieUpdate(linkValue: string | null): { keep: Season } | 'forget' | null {
+  if (linkValue === null) return null;
+  const season = parseSeason(linkValue);
+  return season ? { keep: season } : 'forget';
 }

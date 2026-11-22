@@ -3,7 +3,7 @@ import { DEFAULT_LOCALE, routes, type AppLocale } from '@/contracts';
 import { messagesFor, perLocale } from '@/i18n/catalog';
 import { localizedPath } from '@/shared/locale';
 import type { RenderedEmail } from '@/modules/accounts/emails/welcome';
-import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
+import { emailButton, emailCallout, emailLayout, emailOpening, emailParagraph, emailSection, esc } from '@/platform/email/layout';
 
 /**
  * Emails to a public request's address (completion plan 5.22, ./public-requests.ts): the confirmation, and
@@ -13,25 +13,19 @@ import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout,
 
 const tFor = perLocale((locale) => createTranslator({ locale, messages: messagesFor(locale), namespace: 'server.emails' }));
 
-const heading = (text: string) =>
-  `<h1 class="h1 ink" style="margin:0;font-family:${EMAIL_DISPLAY_FONT};font-size:30px;line-height:36px;font-weight:800;letter-spacing:-0.8px;color:${EMAIL_COLORS.ink};">${esc(text)}</h1>`;
-const paragraph = (text: string, muted = true) =>
-  `<p class="${muted ? 'muted' : 'ink'}" style="margin:10px 0 0;font-family:${EMAIL_FONT};font-size:16px;line-height:24px;color:${muted ? EMAIL_COLORS.muted : EMAIL_COLORS.ink};">${esc(text)}</p>`;
-const button = (href: string, label: string) =>
-  `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:22px;"><tr><td>${emailButton({ href, label, variant: 'dark' })}</td></tr></table>`;
-
 /** Right after the form is sent. It doesn't repeat the message. */
 export function renderPublicSupportReceived({ appUrl, locale = DEFAULT_LOCALE }: { appUrl: string; locale?: AppLocale }): RenderedEmail {
   const t = tFor(locale);
   const contactUrl = `${appUrl}${localizedPath(routes.helpContact(), locale)}`;
   const preheader = t('supportReceived.preheader');
-  const body = `<tr><td class="card-pad" style="padding:40px 40px 36px;">
-${heading(t('supportReceived.heading'))}
-${paragraph(t('supportReceived.body'))}
-${paragraph(t('supportReceived.more'))}
-${paragraph(t('supportReceived.notYou'), false)}
-${button(contactUrl, t('supportReceived.contact'))}
-</td></tr>`;
+  const body = emailSection(
+    emailOpening(t('supportReceived.heading'))
+      + emailParagraph(t('supportReceived.body'), { top: 12 })
+      + emailParagraph(t('supportReceived.more'), { top: 14 })
+      + emailButton({ href: contactUrl, label: t('supportReceived.contact'), variant: 'dark', top: 26 })
+      + emailParagraph(t('supportReceived.notYou'), { tone: 'muted', size: 14, top: 22 }),
+    { top: 40, bottom: 36 },
+  );
   return {
     subject: t('supportReceived.subject'),
     preheader,
@@ -49,15 +43,15 @@ export function renderSupportEmailReply({ body: reply, staffName, appUrl, locale
     .split(/\n{2,}/)
     .map((block) => block.trim())
     .filter(Boolean)
-    .map((block) => `<p class="ink" style="margin:14px 0 0;font-family:${EMAIL_FONT};font-size:16px;line-height:24px;color:${EMAIL_COLORS.ink};">${esc(block).replace(/\n/g, '<br>')}</p>`)
-    .join('\n');
-  const body = `<tr><td class="card-pad" style="padding:40px 40px 36px;">
-${heading(t('supportReply.heading'))}
-${paragraphs}
-${paragraph(t('supportReply.signature', { name: staffName }))}
-${paragraph(t('supportReply.replyHow'))}
-${button(contactUrl, t('supportReply.contact'))}
-</td></tr>`;
+    .map((block, index) => `<p style="margin:${index === 0 ? 0 : 12}px 0 0;">${esc(block).replace(/\n/g, '<br>')}</p>`)
+    .join('');
+  const body = emailSection(
+    emailOpening(t('supportReply.heading'))
+      + emailCallout(`${paragraphs}<p style="margin:14px 0 0;font-weight:700;">${esc(t('supportReply.signature', { name: staffName }))}</p>`, { tone: 'quote', top: 22 })
+      + emailButton({ href: contactUrl, label: t('supportReply.contact'), variant: 'dark', top: 26 })
+      + emailParagraph(t('supportReply.replyHow'), { tone: 'muted', size: 14, top: 18 }),
+    { top: 40, bottom: 36 },
+  );
   return {
     subject: t('supportReply.subject'),
     preheader,

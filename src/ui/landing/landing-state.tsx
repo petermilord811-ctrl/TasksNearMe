@@ -164,7 +164,8 @@ export function LandingProvider({ children, initialLocation, initialCategory = n
   const [location, setLocation] = useState<VisitorLocation>(initialLocation ? { status: 'granted', point: initialLocation, source: 'device' } : (homeLocation ?? { status: 'idle' }));
   const [locating, setLocating] = useState(false);
   const [locateIssue, setLocateIssue] = useState<'denied' | 'unavailable' | null>(null);
-  const [audience, setAudience] = useState<Audience>('poster');
+  // "Can help" first (owner, 2026-11-22: "Make I can help as default"); "Need help" is one tap away.
+  const [audience, setAudience] = useState<Audience>('helper');
   const [area, setArea] = useState<{ value: MapArea | null; picks: number }>({ value: null, picks: 0 });
   const pointer = useRef<PointerSample>({ x: 0.5, y: 0.35, active: false });
 

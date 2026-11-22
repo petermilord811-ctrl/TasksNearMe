@@ -1,9 +1,9 @@
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { localeOrDefault } from '@/contracts';
 import type { EmailProvider } from '@/integrations/email';
 import { appUrl } from '@/integrations/oauth';
 import { getFlags } from '@/modules/markets/queries';
-import { categories, markets } from '@/modules/markets/schema';
+import { markets } from '@/modules/markets/schema';
 import { smsAvailable } from '@/integrations/sms';
 import { welcomeChecksFor } from '@/modules/rewards/domain';
 import { WELCOME_PROGRAM } from '@/modules/rewards/programs';
@@ -22,7 +22,8 @@ export async function welcomeOfferFor(db: Db, marketId: string): Promise<Welcome
  * The welcome email, once per account, when sign-up finishes (names, age and terms saved), whether the
  * person used an email code, Google or Microsoft. The first caller marks the account (`welcomed_at`) and
  * sends; a later or concurrent call finds it marked and does nothing. A failed send is tried again after
- * `retryDelaysMs`, then logged (sign-up never fails because of it).
+ * `retryDelaysMs`, then logged (sign-up never fails because of it). It's written for the side of the app the person
+ * chose at sign-up (`users.mode`, set before this runs): helper setup, or posting a task.
  */
 export async function sendWelcomeEmail(
   db: Db,
@@ -35,12 +36,11 @@ export async function sendWelcomeEmail(
     .update(users)
     .set({ welcomedAt: now })
     .where(and(eq(users.id, userId), isNull(users.welcomedAt)))
-    .returning({ email: users.email, firstName: users.firstName, marketId: users.homeMarketId, locale: users.locale });
+    .returning({ email: users.email, firstName: users.firstName, marketId: users.homeMarketId, locale: users.locale, mode: users.mode });
   if (!user) return 'already_sent';
 
-  const [[market], categoryRows, offer] = await Promise.all([
+  const [[market], offer] = await Promise.all([
     db.select({ name: markets.name, state: markets.state }).from(markets).where(eq(markets.id, user.marketId)).limit(1),
-    db.select({ slug: categories.slug, name: categories.name }).from(categories).where(eq(categories.status, 'active')).orderBy(asc(categories.sortOrder)),
     welcomeOfferFor(db, user.marketId),
   ]);
   const content = renderWelcomeEmail({
@@ -49,7 +49,7 @@ export async function sendWelcomeEmail(
     appUrl: appUrl(),
     market: market ? `${market.name}, ${market.state}` : '',
     ...(offer ? { offer } : {}),
-    categories: categoryRows,
+    side: user.mode === 'helper' ? 'helper' : 'poster',
     locale: localeOrDefault(user.locale),
   });
 

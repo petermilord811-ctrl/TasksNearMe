@@ -121,6 +121,9 @@ test.describe('public pages', () => {
   test('home: the landing page from the database', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle('TasksNearMe: tasks near me, done by trusted local helpers');
+    // The hero opens on "Can help" (owner, 2026-11-22); "Need help" brings the posting side's headline.
+    await expect(page.getByRole('heading', { level: 1, name: 'Lend a hand, get paid by neighbors.' })).toBeVisible();
+    await page.locator('#hero-title').locator('xpath=ancestor::section[1]').getByRole('button', { name: /^Need help/ }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Everyday tasks, done by people nearby.' })).toBeVisible();
     await expect(page.getByRole('link', { name: /Furniture assembly/ }).first()).toBeVisible();
     // The fee example comes from the fee engine and the published policy (the spoken values are final at once).

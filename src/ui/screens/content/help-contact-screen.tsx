@@ -77,7 +77,10 @@ function ContactForm({ data, handlers, initialResult, onSent }: HelpContactScree
   const errorText = (code: string) => fieldCopy(fieldCopy.has(code) ? code : 'invalid');
   const messageError = form.formState.errors.message?.message;
   return <form noValidate aria-label={t('form')} aria-busy={pending} className={`${card} space-y-6`} onSubmit={form.handleSubmit(async (input) => {
-    await action.run(handlers.onSubmit, { ...input, ...(check.token ? { botCheck: check.token } : {}) });
+    // A check still running is waited for (its line says so); null: it can't pass right now, and the form stays put.
+    const answer = await check.ready();
+    if (!answer) return;
+    await action.run(handlers.onSubmit, { ...input, ...answer });
     check.reset();
   })}>
     <h2 className="font-display text-xl leading-7 font-semibold tracking-[-0.015em]">{t('form')}</h2>

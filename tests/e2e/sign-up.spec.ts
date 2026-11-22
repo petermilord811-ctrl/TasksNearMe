@@ -52,8 +52,9 @@ test('a new person creates an account on its own page and lands where their choi
   await page.goto('/signup');
   await expect(page).toHaveURL(/\/sign-up$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Create your account' })).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole('radio', { name: /I need help with tasks/ })).toBeChecked();
-  if (helping) await page.getByRole('radio', { name: /I want to help and earn/ }).click();
+  // Helping out is the default (owner, 2026-11-22); the phone changes it.
+  await expect(page.getByRole('radio', { name: /I want to help and earn/ })).toBeChecked();
+  if (!helping) await page.getByRole('radio', { name: /I need help with tasks/ }).click();
   await page.getByLabel('First name').fill('Dana');
   await page.getByLabel('Last name').fill('Rivers');
   await page.getByLabel('Email').fill(email);
@@ -79,7 +80,9 @@ test('a new person creates an account on its own page and lands where their choi
     await outbox.goto(`/dev/outbox?to=${encodeURIComponent(email)}`);
     await expect(welcome).toHaveCount(1, { timeout: 1_000 });
   }).toPass({ timeout: 20_000 });
-  await expect(welcome).toContainText('Welcome, Dana!');
+  // Written for the side chosen on the form: helper setup or posting a task is its one button.
+  await expect(welcome).toContainText('Welcome to TasksNearMe, Dana');
+  await expect(outbox.frameLocator('iframe').first().getByRole('link', { name: helping ? 'Set up your helper profile' : 'Post a task' })).toBeAttached();
   await outbox.close();
 });
 

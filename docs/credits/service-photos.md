@@ -18,13 +18,13 @@ Neither license includes a model release, and we have none. So we follow the con
 
 ## What we changed
 
-Each photo was cropped to 16:9, 4:3 and 1:1, resized (640, 1024 and 1600 px wide; squares stop at 1024), converted to WebP, and stripped of its metadata (`scripts/service-photos.mjs`). Nothing else was edited. The full-size originals aren't kept in the repo.
+Each photo was cropped to 16:9, 4:3 and 1:1, resized (640, 1024 and 1600 px wide; squares stop at 1024), converted to WebP, and stripped of its metadata (`scripts/service-photos.mjs`). One was also brightened: the furniture-assembly primary, shot in grey window light, gets an exposure curve and a little warmth (its `exposure` in the script; the owner's ask on 2026-11-22). Nothing else was edited. The full-size originals aren't kept in the repo.
 
 ## Photos
 
 | File (`public/ui/services/…`) | Category, use | What it shows | Photographer | Source | License |
 |---|---|---|---|---|---|
-| `furniture-assembly-coffee-table-*` | Furniture assembly, primary | A man tightens a coffee table's frame while a woman sorts the hardware, moving boxes behind them | [cottonbro studio](https://www.pexels.com/@cottonbro/) | [Pexels 4554425](https://www.pexels.com/photo/woman-in-white-long-sleeve-shirt-and-black-pants-sitting-on-floor-4554425/) | Pexels License |
+| `furniture-assembly-coffee-table-*` | Furniture assembly, primary (brightened) | A man tightens a coffee table's frame while a woman sorts the hardware, moving boxes behind them | [cottonbro studio](https://www.pexels.com/@cottonbro/) | [Pexels 4554425](https://www.pexels.com/photo/woman-in-white-long-sleeve-shirt-and-black-pants-sitting-on-floor-4554425/) | Pexels License |
 | `furniture-assembly-crib-*` | Furniture assembly, alternate | A man kneels beside a half-built white crib, reaching into a toolbox | [MART PRODUCTION](https://www.pexels.com/@mart-production/) | [Pexels 7491337](https://www.pexels.com/photo/a-man-in-a-white-shirt-building-a-crib-7491337/) | Pexels License |
 | `moving-help-carrying-boxes-*` | Moving help, primary | Two men carry moving boxes across a bright, empty room | [RDNE Stock project](https://www.pexels.com/@rdne/) | [Pexels 7464232](https://www.pexels.com/photo/men-carrying-boxes-inside-the-house-7464232/) | Pexels License |
 | `moving-help-boxes-out-the-door-*` | Moving help, alternate | A man and a woman carry boxes out the front door of a house | [Ketut Subiyanto](https://www.pexels.com/@ketut-subiyanto/) | [Pexels 4246267](https://www.pexels.com/photo/couple-carrying-carton-boxes-while-moving-out-of-old-home-4246267/) | Pexels License |
@@ -39,5 +39,5 @@ Each photo was cropped to 16:9, 4:3 and 1:1, resized (640, 1024 and 1600 px wide
 
 1. Pick a photo under one of the two licenses above (on Unsplash, not an Unsplash+ one). Check it at full size for logos, and check that it shows the category's actual scope: yard cleanup is ground-level hand work, not mowing or power tools.
 2. Download it at 3200 px wide into its own new, empty folder named after the photo (`<dir>/<name>/image.jpg`).
-3. Add it to `PHOTOS` in `scripts/service-photos.mjs` with a focus for each crop, then run `node scripts/service-photos.mjs --sources <dir>`. It rewrites the files and `src/shared/service-photo-placeholders.ts`. To compare crops first, add `--only <name> --out <scratch dir> --sheet <file.jpg>`.
+3. Add it to `PHOTOS` in `scripts/service-photos.mjs` with a focus for each crop (and an `exposure` only if it's too dark), then run `node scripts/service-photos.mjs --sources <dir> --only <name>`. It rewrites that photo's files and its entry in `src/shared/service-photo-placeholders.ts`, leaving the others alone. To compare crops first, add `--out <scratch dir> --sheet <file.jpg>`.
 4. Add the entry, its alt text in both languages and its credit to `src/shared/service-photos.ts`, and a row here. Run `npx vitest run src/shared/service-photos.test.ts`.

@@ -37,7 +37,7 @@ export function StepsSection() {
   const landing = useOptionalLanding();
   const reduced = usePrefersReducedMotion();
   const pillId = useId();
-  const [ownSide, setOwnSide] = useState<Audience>('poster');
+  const [ownSide, setOwnSide] = useState<Audience>('helper');
   const side = landing?.audience ?? ownSide;
   const setSide = landing?.setAudience ?? setOwnSide;
   const steps = STEPS[side];

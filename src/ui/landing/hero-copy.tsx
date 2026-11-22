@@ -40,7 +40,7 @@ export function HeroCopy({ data, now }: { data: HomePageData; now: ISODateTime }
   const t = useTranslations('landing.hero');
   const landing = useOptionalLanding();
   // Outside the landing page's provider (a lone preview), the switch and the pick are local.
-  const [ownAudience, setOwnAudience] = useState<Audience>('poster');
+  const [ownAudience, setOwnAudience] = useState<Audience>('helper');
   const [ownArea, setOwnArea] = useState<MapArea | null>(null);
   const [switched, setSwitched] = useState(false);
   const audience = landing?.audience ?? ownAudience;

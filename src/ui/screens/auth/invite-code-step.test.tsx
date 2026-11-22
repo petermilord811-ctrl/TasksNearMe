@@ -76,9 +76,9 @@ describe('the bot check on sign-in and sign-up', () => {
 
   it('says so when the check is turned down or timed out', () => {
     renderUi(<EmailStep data={{ ...signInEmailStep, botCheck: standInBotCheck }} handlers={handlers()} initialResult={botCheckResults.refused} />);
-    expect(screen.getByText("We couldn't confirm you're a person. Try again.")).toBeTruthy();
+    expect(screen.getByText("We couldn't confirm you're a person. The check is running again: continue once it passes.")).toBeTruthy();
     cleanup();
     renderUi(<ProfileStep data={{ ...signInProfileStep, botCheck: standInBotCheck }} handlers={handlers()} initialResult={botCheckResults.expired} />);
-    expect(screen.getByText('The check timed out. Try again.')).toBeTruthy();
+    expect(screen.getByText("The security check timed out. It's running again: continue once it passes.")).toBeTruthy();
   });
 });

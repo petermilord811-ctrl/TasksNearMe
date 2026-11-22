@@ -91,7 +91,8 @@
     "bot-check-refused": "Email step: bot check turned down",
     "bot-check-expired": "Name step: bot check timed out",
     "sign-up": "Create an account",
-    "sign-up-with-providers": "Create an account, with Google and Microsoft"
+    "sign-up-with-providers": "Create an account, with Google and Microsoft",
+    "bot-check-states": "Security check: every state of its line"
   },
   "passkey": {
     "action": "Sign in with a passkey",

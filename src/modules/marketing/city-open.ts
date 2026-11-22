@@ -10,7 +10,7 @@ import { featureFlags, markets } from '@/modules/markets/schema';
 import { RETRY_MINUTES } from '@/modules/notifications/delivery-domain';
 import { emailSuppressions } from '@/modules/notifications/schema';
 import type { Db } from '@/platform/db/connect';
-import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
+import { emailButton, emailFooter, emailFooterLink, emailFooterLinks, emailLayout, emailOpening, emailParagraph, emailParagraphHtml, emailSection, emailTextLink, esc } from '@/platform/email/layout';
 import { localizedPath } from '@/shared/locale';
 import { waitlistEntries } from './schema';
 import { waitlistOneClickUrl, waitlistUnsubscribePageUrl } from './waitlist-unsubscribe';
@@ -92,16 +92,16 @@ export function renderCityOpenEmail(input: CityOpenEmailInput): CityOpenEmail {
   const body = t('cityOpen.body', { interest });
   const why = t('cityOpen.why', { email: input.email, zip });
 
-  const html = `<tr><td class="card-pad" style="padding:40px 40px 36px;">
-<h1 class="h1 ink" style="margin:0;font-family:${EMAIL_DISPLAY_FONT};font-size:30px;line-height:36px;font-weight:800;letter-spacing:-0.8px;color:${EMAIL_COLORS.ink};">${esc(heading)}</h1>
-<p class="ink" style="margin:12px 0 0;font-family:${EMAIL_FONT};font-size:17px;line-height:26px;font-weight:600;color:${EMAIL_COLORS.ink};">${esc(intro)}</p>
-<p class="muted" style="margin:10px 0 0;font-family:${EMAIL_FONT};font-size:16px;line-height:24px;color:${EMAIL_COLORS.muted};">${esc(body)}</p>
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:24px;"><tr><td>${emailButton({ href: primary.href, label: primary.label })}</td></tr></table>
-<p style="margin:16px 0 0;font-family:${EMAIL_FONT};font-size:15px;line-height:22px;"><a class="link" href="${esc(secondary.href)}" target="_blank" style="color:${EMAIL_COLORS.primary};font-weight:600;text-decoration:none;">${esc(secondary.label)}&nbsp;&rarr;</a></p>
-</td></tr>`;
-  const link = (href: string, label: string) => `<a class="link" href="${esc(href)}" target="_blank" style="color:${EMAIL_COLORS.muted};text-decoration:underline;">${esc(label)}</a>`;
-  const footer = `<p style="margin:0;">${esc(why)}</p>
-<p style="margin:8px 0 0;">${link(input.unsubscribeUrl, t('cityOpen.unsubscribe'))} &nbsp;·&nbsp; ${link(url(routes.help()), t('footer.help'))}</p>`;
+  // A one-off to a list they joined: one button, one quieter link, and the unsubscribe link with its one-click headers.
+  const html = emailSection(
+    emailOpening(heading)
+      + emailParagraph(intro, { tone: 'ink', size: 17, top: 12, weight: 600 })
+      + emailParagraph(body, { top: 12 })
+      + emailButton({ href: primary.href, label: primary.label, top: 26 })
+      + emailParagraphHtml(emailTextLink(secondary.href, secondary.label), { size: 15, top: 18, weight: 600 }),
+    { top: 40, bottom: 36 },
+  );
+  const footer = emailFooter([esc(why), emailFooterLinks([emailFooterLink(input.unsubscribeUrl, t('cityOpen.unsubscribe')), emailFooterLink(url(routes.help()), t('footer.help'))])]);
 
   const text = [
     heading,

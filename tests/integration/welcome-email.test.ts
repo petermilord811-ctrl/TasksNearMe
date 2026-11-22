@@ -20,7 +20,7 @@ const outbox = createDevOutboxEmailProvider(db);
 const welcomes = async (email: string) => db.select().from(devOutboxMessages).where(and(eq(devOutboxMessages.to, email), eq(devOutboxMessages.tag, 'welcome')));
 
 describe('the welcome email', () => {
-  it('goes out once, with the welcome gift card and its three checks', async () => {
+  it('goes out once, written for the side the person chose: posting a task, with no gift card for a poster', async () => {
     const id = await throwawayClient(db, 'usr_welcome_once');
     const email = `${id}@example.test`;
     const offer = await welcomeOfferFor(db, 'mkt_austin');
@@ -30,10 +30,23 @@ describe('the welcome email', () => {
     expect(await sendWelcomeEmail(db, outbox, id, new Date())).toBe('already_sent');
     const [sent, ...more] = await welcomes(email);
     expect(more).toHaveLength(0);
-    expect(sent?.subject).toBe('Welcome, Ruth! Get verified and get a $50 gift card');
-    expect(sent?.html).toContain('Pass a background check');
-    expect(sent?.body).toContain('Get verified: http');
+    // No money or offer in the subject (the owner's report, 2026-11-22: the old one landed in Gmail's Promotions tab).
+    expect(sent?.subject).toBe('Welcome to TasksNearMe, Ruth');
+    expect(sent?.html).toContain('>Post a task</a>');
+    expect(sent?.html).not.toContain('gift card');
+    expect(sent?.body).toContain('Post a task: http');
     expect((await db.select({ at: users.welcomedAt }).from(users).where(eq(users.id, id)))[0]?.at).toBeInstanceOf(Date);
+  });
+
+  it('gives a helper helper setup as its one button, and the welcome gift card as one sentence', async () => {
+    const id = await throwawayClient(db, 'usr_welcome_helper');
+    await db.update(users).set({ mode: 'helper' }).where(eq(users.id, id));
+    expect(await sendWelcomeEmail(db, outbox, id, new Date())).toBe('sent');
+    const [sent] = await welcomes(`${id}@example.test`);
+    expect(sent?.subject).toBe('Welcome to TasksNearMe, Ruth');
+    expect(sent?.html).toContain('>Set up your helper profile</a>');
+    expect(sent?.html).toContain('a $50 gift card as a thank-you');
+    expect(sent?.body).toContain('Set up your helper profile: http');
   });
 
   it('tries again after a failed send, and gives up quietly after the last try', async () => {

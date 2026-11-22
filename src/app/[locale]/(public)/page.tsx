@@ -17,7 +17,7 @@ import { requestRows } from '@/platform/auth/audience';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { searchEngineRows } from '@/shared/sample-data';
-import { parseSeason } from '@/shared/seasons';
+import { chosenSeason, SEASON_COOKIE } from '@/shared/seasons';
 import { LandingHandlersProvider } from '@/ui/landing/landing-handlers';
 import { CitylessHomeScreen, HomeScreen, HomeScreenSkeleton } from '@/ui/screens/public';
 import { LandingPageMarker } from '@/ui/shells/landing-page-marker';
@@ -36,8 +36,9 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
  * Home for the default market (and, while that city isn't public, the home without a city: CitylessHomeScreen). The
  * site's name and logo prerender with the shell; the landing itself is drawn for
  * the visitor (src/shared/sample-data.ts: sample people and tasks for signed-in testers only), per request inside
- * Suspense, from cached data. It dresses for the market's season; `?season=winter` (or spring, summer, fall) shows
- * another season's look, for a preview (the canonical address stays `/`). It lives in the public pages' layout, so
+ * Suspense, from cached data. It dresses for the market's season; `?season=winter` (or spring, summer, fall, autumn)
+ * shows another season's look, for a preview (the canonical address stays `/`), and keeps it for the rest of the
+ * browser session (src/proxy.ts; `?season=auto` goes back). It lives in the public pages' layout, so
  * their shell (the top bar and its state) stays put between it and them (plan 9.5); its mark tells that shell to lay
  * it out as the landing, in the static shell before anything streams.
  */
@@ -56,7 +57,7 @@ async function HomePage({ searchParams }: { searchParams: SearchParams }) {
 }
 
 async function Landing({ searchParams }: { searchParams: SearchParams }) {
-  const [rows, query, home, slug] = await Promise.all([requestRows(), searchParams, viewerHome(), requestHomeMarket()]);
+  const [rows, query, home, slug, store] = await Promise.all([requestRows(), searchParams, viewerHome(), requestHomeMarket(), cookies()]);
   const page = await getHomePageData(rows, slug);
   if (!page) {
     // The home city isn't public (paused, or none open yet; launch rehearsal J-L1): the site's home without a city (200),
@@ -67,7 +68,7 @@ async function Landing({ searchParams }: { searchParams: SearchParams }) {
   return (
     // The hero's assistant can write a task with AI for visitors (rate-limited, never stored).
     <LandingHandlersProvider handlers={{ onSuggestWithAi: suggestTaskWithAi }}>
-      <HomeScreen data={page.data} now={page.now} season={parseSeason(query.season) ?? undefined} home={home ?? undefined} />
+      <HomeScreen data={page.data} now={page.now} season={chosenSeason(query.season, store.get(SEASON_COOKIE)?.value) ?? undefined} home={home ?? undefined} />
     </LandingHandlersProvider>
   );
 }

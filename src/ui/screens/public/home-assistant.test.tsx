@@ -26,14 +26,17 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/** The landing opens on "Can help"; these tests are about the "Need help" side's assistant, so they pick it first. */
 function show(handlers: LandingHandlers = {}) {
-  return render(
+  const view = render(
     <NextIntlClientProvider locale="en" messages={messages}>
       <LandingHandlersProvider handlers={handlers}>
         <HomeScreen data={homePageData} now={now} mapMode="static" />
       </LandingHandlersProvider>
     </NextIntlClientProvider>,
   );
+  fireEvent.click(within(hero()).getByRole('button', { name: new RegExp(`^${t('hero.audience.poster')}`) }));
+  return view;
 }
 const hero = () => document.querySelector<HTMLElement>('section[aria-labelledby="hero-title"]')!;
 const field = () => screen.getByRole('textbox', { name: t('hero.askPrompt') });

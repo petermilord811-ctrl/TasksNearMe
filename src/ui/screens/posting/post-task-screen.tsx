@@ -331,12 +331,15 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
     if (lock.current || posted.current) return;
     if (data.guest) { handOver(valuesToPost); return; }
     lock.current = true; setPending(true); setResult(undefined); setInvalid(false); clearErrors();
+    // A bot check still running is waited for (its line says so); nothing to send yet: the review step stays put.
+    const answer = await check.ready();
+    if (!answer) { setPending(false); lock.current = false; return; }
     let next: ActionResult;
     // The key goes into the stored draft before the post leaves, so even a reload after a lost answer repeats it.
     requestKey.current ??= newRequestKey();
     saveDraft();
     // "Ask for help" (plan 9.10): the post it started from, so the post and the new task link to each other.
-    try { next = await handlers.onPost({ ...valuesToPost, requestKey: requestKey.current, ...(check.token ? { botCheck: check.token } : {}), ...(data.fromPost ? { fromPostId: data.fromPost.id } : {}) }); }
+    try { next = await handlers.onPost({ ...valuesToPost, requestKey: requestKey.current, ...answer, ...(data.fromPost ? { fromPostId: data.fromPost.id } : {}) }); }
     catch { next = { ok: false, code: 'unknown' }; }
     if (next.ok) {
       posted.current = true;

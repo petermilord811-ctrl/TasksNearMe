@@ -48,17 +48,20 @@ describe("the city's page", () => {
 });
 
 describe('public screen interactions', () => {
-  it('supports switching the journey tabs with the keyboard', async () => {
+  it('opens on "I can help" and switches the journey tabs with the keyboard', async () => {
     const user = userEvent.setup();
     renderScreen(<HowItWorksScreen />);
-    const posterTab = screen.getByRole('tab', { name: 'I need help' });
-    posterTab.focus();
-    await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'I can help' }).getAttribute('aria-selected')).toBe('true');
+    // "I can help" is open first (owner, 2026-11-22).
+    const helperTab = screen.getByRole('tab', { name: 'I can help' });
+    expect(helperTab.getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('heading', { name: 'Complete your setup' })).toBeDefined();
     expect(screen.getByRole('link', { name: 'Set up your helper profile' }).getAttribute('href')).toBe(routes.signIn(routes.app.helperOnboarding()));
+    helperTab.focus();
     await user.keyboard('{ArrowLeft}');
+    expect(screen.getByRole('tab', { name: 'I need help' }).getAttribute('aria-selected')).toBe('true');
     expect(screen.getByRole('heading', { name: 'Describe your task' })).toBeDefined();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('heading', { name: 'Complete your setup' })).toBeDefined();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
 

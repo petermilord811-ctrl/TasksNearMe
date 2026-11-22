@@ -7,7 +7,7 @@ import type { EmailProvider } from '@/integrations/email';
 import { users } from '@/modules/accounts/schema';
 import type { RenderedEmail } from '@/modules/accounts/emails/welcome';
 import type { Db } from '@/platform/db/connect';
-import { EMAIL_COLORS, EMAIL_DISPLAY_FONT, EMAIL_FONT, emailButton, emailLayout, esc } from '@/platform/email/layout';
+import { emailButton, emailCallout, emailFooter, emailFooterLink, emailFooterLinks, emailLayout, emailOpening, emailParagraph, emailSection, esc } from '@/platform/email/layout';
 import { formatMoney } from '@/shared/format';
 
 /**
@@ -31,14 +31,14 @@ export function renderGiftCardEmail(input: { firstName: string; amountCents: num
   const greeting = { greeting: programKey === 'welcome' ? 'welcome' : 'other', hasName: input.firstName ? 'yes' : 'no', firstName: input.firstName };
   const rewardsUrl = `${input.appUrl}${localizedPath(routes.app.rewards(), locale)}`;
   const preheader = t('preheader');
-  const body = `<tr><td class="card-pad" style="padding:40px 40px 36px;">
-<h1 class="h1 ink" style="margin:0;font-family:${EMAIL_DISPLAY_FONT};font-size:30px;line-height:36px;font-weight:800;letter-spacing:-0.8px;color:${EMAIL_COLORS.ink};">${esc(t('heading', { amount }))}</h1>
-<p class="muted" style="margin:10px 0 0;font-family:${EMAIL_FONT};font-size:16px;line-height:24px;color:${EMAIL_COLORS.muted};">${esc(t('body', { ...greeting, program }))}</p>
-<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:24px;"><tr><td>${emailButton({ href: input.url, label: t('cta') })}</td></tr></table>
-<p class="ink" style="margin:22px 0 0;padding:14px 16px;border-radius:14px;background:${EMAIL_COLORS.softOrange};font-family:${EMAIL_FONT};font-size:14px;line-height:21px;color:${EMAIL_COLORS.ink};">${esc(t('safety'))}</p>
-</td></tr>`;
-  const link = (href: string, label: string) => `<a class="link" href="${esc(href)}" target="_blank" style="color:${EMAIL_COLORS.muted};text-decoration:underline;">${esc(label)}</a>`;
-  const footer = `<p style="margin:0;">${link(rewardsUrl, t('rewards'))} &nbsp;·&nbsp; ${link(`${input.appUrl}${localizedPath(routes.app.support(), locale)}`, t('help'))}</p>`;
+  const body = emailSection(
+    emailOpening(t('heading', { amount }))
+      + emailParagraph(t('body', { ...greeting, program }), { top: 12 })
+      + emailButton({ href: input.url, label: t('cta'), top: 26 })
+      + emailCallout(esc(t('safety')), { tone: 'warm', top: 26 }),
+    { top: 40, bottom: 36 },
+  );
+  const footer = emailFooter([emailFooterLinks([emailFooterLink(rewardsUrl, t('rewards')), emailFooterLink(`${input.appUrl}${localizedPath(routes.app.support(), locale)}`, t('help'))])]);
   return {
     subject: t('subject', { amount }),
     preheader,

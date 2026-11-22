@@ -8,6 +8,7 @@ import { MapTilesProvider } from '@/ui/components/map/map-tiles';
 import { mapTiles } from '@/modules/markets/map-tiles';
 import { fontVariables } from '@/ui/theme/fonts';
 import { themeInitScript } from '@/ui/theme/theme-script';
+import { DocumentMarks } from '@/ui/theme/document-marks';
 import '@/ui/theme/globals.css';
 // Page switches and pending links (plan 9.5).
 import '@/ui/theme/transitions.css';
@@ -79,6 +80,8 @@ export default async function RootLayout({ children, modal }: LayoutProps<'/[loc
       <body>
         {/* In the initial HTML before any app code (Next places it in <head>): the saved theme, before paint. */}
         <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        {/* A language switch makes <html> again without the script's marks: this puts the saved theme back. */}
+        <DocumentMarks />
         {/* Only the root's own copy (the toaster): each layout and page below gives its client components theirs. */}
         <ClientMessages route="[locale]/layout.tsx">
           <MapTilesProvider tiles={{ ...mapTiles(), live: true }}>{children}</MapTilesProvider>

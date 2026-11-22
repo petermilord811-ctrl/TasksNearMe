@@ -54,15 +54,16 @@ test.describe('sign-in and sign-up', () => {
     await expect(page).toHaveURL(/\/app$/);
     await expect(page.getByText('RL', { exact: true }).first()).toBeVisible();
 
-    // Sign-up done: the welcome email arrives (once), leading with the welcome gift card for verified helpers.
+    // Sign-up done: the welcome email arrives (once), written for the side of the app the account is on. /sign-in asks
+    // no side, so a poster's: posting a task is its one button.
     const outbox = await context.newPage();
     const welcome = outbox.locator(`[data-testid="outbox-message"][data-to="${email}"][data-tag="welcome"]`);
     await expect(async () => {
       await outbox.goto(`/dev/outbox?to=${encodeURIComponent(email)}`);
       await expect(welcome).toHaveCount(1, { timeout: 1_000 });
     }).toPass({ timeout: 20_000 });
-    await expect(welcome).toContainText('Welcome, Robin! Get verified and get a $50 gift card');
-    await expect(outbox.frameLocator('iframe').first().getByRole('link', { name: /Get verified/ }).first()).toHaveAttribute('href', /\/app\/helper\/onboarding\/profile$/);
+    await expect(welcome).toContainText('Welcome to TasksNearMe, Robin');
+    await expect(outbox.frameLocator('iframe').first().getByRole('link', { name: 'Post a task' })).toHaveAttribute('href', /\/app\/tasks\/new$/);
     await outbox.close();
   });
 

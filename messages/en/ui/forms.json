@@ -135,9 +135,19 @@
   },
   "verifyIdentity": "Verify your ID",
   "botCheck": {
-    "required": "Finish the check above, then try again.",
-    "failed": "We couldn't confirm you're a person. Try again.",
-    "expired": "The check timed out. Try again.",
-    "unavailable": "The security check didn't load. Check your connection or turn off content blockers for this site, then reload the page."
+    "required": "The security check hasn't finished yet. Continue once it passes.",
+    "failed": "We couldn't confirm you're a person. The check is running again: continue once it passes.",
+    "expired": "The security check timed out. It's running again: continue once it passes.",
+    "status": {
+      "checking": "Running a quick security check with Cloudflare…",
+      "waiting": "Finishing the security check. You'll continue as soon as it passes…",
+      "retrying": "The security check hit a snag. Cloudflare is trying again…",
+      "interactive": "Cloudflare needs one click: tick the box to confirm you're a person.",
+      "passed": "Security check passed.",
+      "slow": "The security check is taking longer than usual.",
+      "failed": "The security check couldn't run. Check your connection or turn off content blockers for this site, then try again.",
+      "unsupported": "This browser can't run the security check. Update it, or try another browser.",
+      "retry": "Try again"
+    }
   }
 }

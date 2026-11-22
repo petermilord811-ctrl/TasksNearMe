@@ -8,6 +8,7 @@ import { isLocalRequest } from '@/shared/local-request';
 import { contentSecurityPolicy, cspHeaderName } from '@/shared/csp';
 import { E2E_BUILD } from '@/shared/dev-helpers';
 import { samplesHiddenInThisBuild } from '@/shared/sample-data';
+import { SEASON_COOKIE, SEASON_COOKIE_OPTIONS, seasonCookieUpdate } from '@/shared/seasons';
 import { robotsHeaderFor } from '@/shared/search-indexing';
 import { signedOutAppDestination } from '@/shared/signed-out-app';
 import { taskHubRedirect } from '@/shared/task-hub';
@@ -97,6 +98,16 @@ export async function proxy(request: NextRequest) {
   // prefetch their /es links (LocaleLink), and a late prefetch would undo a switch to English made a moment before.
   if (explicit && pageLoad && chosen !== explicit.locale) {
     response.cookies.set(LOCALE_COOKIE, explicit.locale, LOCALE_COOKIE_OPTIONS);
+  }
+  // A season the landing's link names (`/?season=winter`) stays for this browser session, so the landing keeps it after
+  // a switch to another page and back; `?season=auto` (or any other value) goes back to the calendar's (src/shared/seasons.ts).
+  if (path === '/') {
+    const season = seasonCookieUpdate(request.nextUrl.searchParams.get('season'));
+    if (season === 'forget') {
+      if (request.cookies.has(SEASON_COOKIE)) response.cookies.set(SEASON_COOKIE, '', { ...SEASON_COOKIE_OPTIONS, maxAge: 0 });
+    } else if (season && request.cookies.get(SEASON_COOKIE)?.value !== season.keep) {
+      response.cookies.set(SEASON_COOKIE, season.keep, SEASON_COOKIE_OPTIONS);
+    }
   }
   // The Content Security Policy for every page (src/shared/csp.ts): enforced in production, reported in development.
   const development = process.env.NODE_ENV !== 'production';

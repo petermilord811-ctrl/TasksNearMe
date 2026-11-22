@@ -19,14 +19,21 @@ describe('where a new account starts', () => {
     expect(destinationAfterSignUp('get_help', '/app/find-work/tsk_desk')).toBe('/app/find-work/tsk_desk');
   });
 
-  it('starts the form on helping out for someone headed to an offer or helper setup, and on getting help otherwise (J-V)', () => {
+  it('starts the form on getting help for someone headed to post or book, and on helping out otherwise (J-V; owner, 2026-11-22)', () => {
+    expect(intentForNext(routes.app.newTask({ category: 'furniture-assembly' }))).toBe('get_help');
+    expect(intentForNext(routes.postTask({ category: 'moving-help' }))).toBe('get_help');
+    expect(intentForNext(routes.app.tasks())).toBe('get_help');
+    expect(intentForNext(routes.app.helpers())).toBe('get_help');
+    expect(intentForNext(routes.app.requestHelper('priya-s'))).toBe('get_help');
+    expect(intentForNext(routes.app.saved())).toBe('get_help');
     expect(intentForNext(routes.app.findWorkTask('tsk_desk'))).toBe('help_out');
     expect(intentForNext(routes.app.findWork())).toBe('help_out');
     expect(intentForNext(routes.app.helperOnboarding())).toBe('help_out');
-    expect(intentForNext(routes.app.newTask({ category: 'furniture-assembly' }))).toBe('get_help');
-    expect(intentForNext(routes.app.home())).toBe('get_help');
+    // No destination of its own (the top bar's Sign up): helping out, the default.
+    expect(intentForNext(routes.app.home())).toBe('help_out');
     // Words that merely start the same don't count.
-    expect(intentForNext('/app/helpers/priya-s/request')).toBe('get_help');
+    expect(intentForNext('/app/tasksy')).toBe('help_out');
+    expect(intentForNext('/posts')).toBe('help_out');
   });
 
   it('never sends the flow back to sign-in or sign-up', () => {

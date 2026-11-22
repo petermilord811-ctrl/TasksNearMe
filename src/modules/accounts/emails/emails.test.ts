@@ -8,71 +8,102 @@ const base: WelcomeEmailInput = {
   email: 'robin@example.test',
   appUrl: 'https://tasksnearme.example',
   market: 'Austin, TX',
-  categories: [
-    { slug: 'furniture-assembly', name: 'Furniture assembly' },
-    { slug: 'yard-cleanup', name: 'Yard cleanup' },
-  ],
 };
 const offer = { amountCents: 5000, redeemWithinDays: 90 };
+/** The buttons in an email (emailButton's table). */
+const buttons = (html: string) => html.match(/class="btn-table"/g)?.length ?? 0;
+/** Every link in an email. */
+const links = (html: string) => [...html.matchAll(/<a [^>]*href="([^"]+)"/g)].map((match) => match[1]!.replaceAll('&amp;', '&'));
 
-describe('the welcome email', () => {
-  it('leads with the welcome gift card for every verified helper, with its three checks and no spots (2026-11-14)', () => {
-    const email = renderWelcomeEmail({ ...base, offer });
-    expect(email.subject).toBe('Welcome, Robin! Get verified and get a $50 gift card');
-    expect(email.preheader).toBe('Every helper who passes our quick checks gets a $50 gift card. No spots to race for.');
-    expect(email.html).toContain('>$50<');
-    for (const check of ['Phone', 'ID', 'Background check']) expect(email.html).toContain(`&#10003; ${check}`);
-    expect(email.html).toContain('Verify your phone');
-    expect(email.html).toContain('Pass a background check');
-    expect(email.html).toContain('Redeem within 90 days. One welcome gift card per person.');
-    expect(email.html).not.toMatch(/spots? (left|claimed)/);
-    expect(email.html).not.toContain('first task of');
+describe('the welcome email (written to stay out of Gmail Promotions, 2026-11-22)', () => {
+  it('has a subject and preview line without money, offers or a gift card, in both languages', () => {
+    for (const side of ['helper', 'poster', undefined] as const) {
+      for (const locale of ['en', 'es'] as const) {
+        const email = renderWelcomeEmail({ ...base, offer, ...(side ? { side } : {}), locale });
+        for (const line of [email.subject, email.preheader]) {
+          expect(line).not.toMatch(/\$|gift|regalo|free|gratis|earn|gana/i);
+        }
+      }
+    }
+    expect(renderWelcomeEmail({ ...base, offer, side: 'helper' }).subject).toBe('Welcome to TasksNearMe, Robin');
+    expect(renderWelcomeEmail({ ...base, offer, side: 'helper', locale: 'es' }).subject).toBe('Te damos la bienvenida a TasksNearMe, Robin');
   });
 
-  it('leaves the phone out where texts don’t go out (plan 9.2): two checks, and the steps renumbered', () => {
-    const email = renderWelcomeEmail({ ...base, offer: { ...offer, checks: ['identity', 'background'] } });
-    expect(email.html).not.toContain('&#10003; Phone');
-    expect(email.html).not.toContain('Verify your phone');
-    expect(email.text).not.toContain('Verify your phone');
-    for (const check of ['ID', 'Background check']) expect(email.html).toContain(`&#10003; ${check}`);
-    expect(email.html).toContain('Pass a background check');
+  it('gives a helper one button, to helper setup, and the welcome gift card as one plain sentence', () => {
+    const email = renderWelcomeEmail({ ...base, offer, side: 'helper' });
+    expect(email.preheader).toBe('Your account is ready. Next, set up your helper profile.');
+    expect(buttons(email.html)).toBe(1);
+    expect(email.html).toContain('href="https://tasksnearme.example/app/helper/onboarding/profile"');
+    expect(email.html).toContain('>Set up your helper profile</a>');
+    expect(email.html.match(/gift card/g)).toHaveLength(1);
+    expect(email.html).toContain('When your phone, ID and background checks pass, you&#39;ll get a $50 gift card as a thank-you.');
+    expect(email.text).toContain('Set up your helper profile: https://tasksnearme.example/app/helper/onboarding/profile');
+    expect(email.text).toContain("When your phone, ID and background checks pass, you'll get a $50 gift card as a thank-you.");
+    // Few links: the button, the help center and the gift card's terms. No task kinds, no second button.
+    expect(links(email.html)).toEqual([
+      'https://tasksnearme.example/app/helper/onboarding/profile',
+      'https://tasksnearme.example/help',
+      'https://tasksnearme.example/legal/rewards-terms',
+    ]);
+    expect(email.html).not.toMatch(/linear-gradient|@keyframes|animation:/);
   });
 
-  it('reads the same in Spanish', () => {
-    const email = renderWelcomeEmail({ ...base, offer, locale: 'es' });
-    expect(email.subject).toBe('¡Te damos la bienvenida, Robin! Verifícate y recibe una tarjeta de regalo de $50');
-    expect(email.html).toContain('&#10003; Antecedentes');
-  });
-
-  it('links every button and task kind to the app, absolutely', () => {
-    const { html, text } = renderWelcomeEmail({ ...base, offer });
-    expect(html).toContain('href="https://tasksnearme.example/app/helper/onboarding/profile"');
-    expect(html).toContain('href="https://tasksnearme.example/app/tasks/new?category=yard-cleanup"');
-    expect(html).toContain('href="https://tasksnearme.example/legal/rewards-terms"');
-    expect(html).not.toMatch(/href="\//);
-    expect(text).toContain('Get verified: https://tasksnearme.example/app/helper/onboarding/profile');
-    expect(text).toContain('- Yard cleanup: https://tasksnearme.example/app/tasks/new?category=yard-cleanup');
+  it('leaves the phone out where texts don’t go out (plan 9.2)', () => {
+    const email = renderWelcomeEmail({ ...base, offer: { ...offer, checks: ['identity', 'background'] }, side: 'helper' });
+    expect(email.html).toContain('When your ID and background checks pass');
+    expect(email.html).toContain('Your ID and your address, then a background check by Checkr');
+    expect(email.text).not.toMatch(/phone/i);
   });
 
   it('says nothing about a gift card when the program is off', () => {
-    const email = renderWelcomeEmail(base);
-    expect(email.subject).toBe('Welcome to TasksNearMe, Robin');
+    const email = renderWelcomeEmail({ ...base, side: 'helper' });
     expect(email.html).not.toContain('gift card');
     expect(email.text).not.toContain('gift card');
-    expect(email.html).toContain('Become a helper');
     expect(email.html).not.toContain('rewards-terms');
+    expect(buttons(email.html)).toBe(1);
+  });
+
+  it('gives a poster one button, to posting a task, and doesn’t sell them the helpers’ gift card', () => {
+    const email = renderWelcomeEmail({ ...base, offer, side: 'poster' });
+    expect(email.preheader).toBe('Your account is ready. Post a task whenever you need a hand.');
+    expect(buttons(email.html)).toBe(1);
+    expect(email.html).toContain('href="https://tasksnearme.example/app/tasks/new"');
+    expect(email.html).not.toMatch(/gift card|rewards-terms|onboarding/);
+    expect(email.text).toContain('Post a task: https://tasksnearme.example/app/tasks/new');
+    expect(links(email.html)).toEqual(['https://tasksnearme.example/app/tasks/new', 'https://tasksnearme.example/help']);
+  });
+
+  it('without a side, opens the app', () => {
+    const email = renderWelcomeEmail(base);
+    expect(buttons(email.html)).toBe(1);
+    expect(email.html).toContain('href="https://tasksnearme.example/app"');
+    expect(email.html).toContain('>Open TasksNearMe</a>');
+  });
+
+  it('reads the same in Spanish, links included', () => {
+    const email = renderWelcomeEmail({ ...base, offer, side: 'helper', locale: 'es' });
+    expect(email.html).toContain('<html lang="es"');
+    expect(email.html).toContain('¡Te damos la bienvenida, Robin!');
+    expect(email.html).toContain('href="https://tasksnearme.example/es/app/helper/onboarding/profile"');
+    expect(email.text).toContain('recibirás una tarjeta de regalo de $50 como agradecimiento.');
+  });
+
+  it('greets by name and says where it was sent, with the market when there is one', () => {
+    const email = renderWelcomeEmail({ ...base, side: 'poster' });
+    expect(email.text.startsWith('Welcome, Robin!\n')).toBe(true);
+    expect(email.html).toContain('TasksNearMe · Starting close to home in Austin, TX.');
+    expect(renderWelcomeEmail({ ...base, market: '', side: 'poster' }).html).not.toContain('Starting close to home');
   });
 
   it('escapes what people typed', () => {
-    const email = renderWelcomeEmail({ ...base, firstName: '<script>alert(1)</script>', email: 'a"b@example.test' });
+    const email = renderWelcomeEmail({ ...base, firstName: '<script>alert(1)</script>', email: 'a"b@example.test', side: 'helper' });
     expect(email.html).not.toContain('<script>');
     expect(email.html).toContain('&lt;script&gt;');
     expect(email.html).toContain('a&quot;b@example.test');
   });
 
   it('carries no six-digit number a code reader could mistake for a sign-in code', () => {
-    const { text } = renderWelcomeEmail({ ...base, offer });
-    expect(text).not.toMatch(/\b\d{6}\b/);
+    for (const side of ['helper', 'poster'] as const) expect(renderWelcomeEmail({ ...base, offer, side }).text).not.toMatch(/\b\d{6}\b/);
   });
 });
 
@@ -91,16 +122,20 @@ describe('the sign-in code email', () => {
     expect(email.html).toContain('TasksNearMe will never ask for this code');
   });
 
-  it('copies through /code, with the code and its expiry in the fragment only', () => {
+  it('copies through /code, with the code and its expiry in the fragment only, as its one button', () => {
     const { html } = render();
     const expires = Date.parse('2026-11-14T05:10:00Z') / 1000;
     expect(html).toContain(`href="https://tasksnearme.example/code#c=482915&amp;e=${expires}"`);
     expect(html).not.toMatch(/\/code\?/);
     expect(html).toContain('>Copy code</a>');
+    expect(buttons(html)).toBe(1);
+    expect(links(html)).toHaveLength(1);
   });
 
-  it('shows the app icon from the site, with alt text', () => {
-    expect(render().html).toContain('<img src="https://tasksnearme.example/icons/icon-192.png?v=2" width="34" height="34" alt="TasksNearMe"');
+  it('shows the app icon from the site, with alt text, beside the wordmark in text (it reads with images off)', () => {
+    const { html } = render();
+    expect(html).toContain('<img src="https://tasksnearme.example/icons/icon-192.png?v=2" width="32" height="32" alt="TasksNearMe"');
+    expect(html).toContain('>tasks</span><span style="color:#e5508a;">near</span>');
   });
 });
 
@@ -122,8 +157,10 @@ describe('the email and phone change notices (completion plan 5.23)', () => {
     const email = renderEmailChangedNotice({ newEmail: 'new@example.test', revertUrl, appUrl: 'https://tasksnearme.example' });
     expect(email.html).toContain(`href="${revertUrl}"`);
     expect(email.html).toContain('This wasn&#39;t me');
+    expect(email.html).toContain('Security notice');
     expect(email.html).toContain('href="https://tasksnearme.example/help/contact"');
     expect(email.html).not.toContain('/app/support');
+    expect(buttons(email.html)).toBe(1);
     expect(email.text).toContain(`Secure your account within 7 days (the link works once): ${revertUrl}`);
     expect(email.text).toContain('new@example.test');
   });
@@ -133,6 +170,7 @@ describe('the email and phone change notices (completion plan 5.23)', () => {
     expect(email.subject).toBe('Se cambió tu número de teléfono de TasksNearMe');
     expect(email.html).toContain(`href="${revertUrl}"`);
     expect(email.html).toContain('No fui yo');
+    expect(email.html).toContain('Aviso de seguridad');
     expect(email.text).toContain(revertUrl);
     expect(renderPhoneChangedText({ revertUrl })).toBe(`TasksNearMe: the phone number on your account was changed. Not you? Secure your account within 7 days: ${revertUrl}`);
     expect(renderPhoneChangedText({ revertUrl, locale: 'es' })).toContain('¿No fuiste tú?');

@@ -20,15 +20,16 @@ const PROMISES = [
 ] as const;
 
 /**
- * How it works: the five steps for each side in tabs, and beside them (below them on phones) what holds for
- * everyone: when you pay, your address, and ID-checked helpers. On wide screens that column stays in view.
+ * How it works: the five steps for each side in tabs, "I can help" open first (owner, 2026-11-22), and beside them
+ * (below them on phones) what holds for everyone: when you pay, your address, and ID-checked helpers. On wide screens
+ * that column stays in view.
  */
 export function HowItWorksScreen() {
   const t = useTranslations('publicPages');
   return <div className="space-y-section">
     <PageHeader title={t('howItWorks.title')} description={t('howItWorks.description')} />
     <div className="grid gap-section lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-14">
-      <Tabs defaultValue="poster" className="min-w-0 gap-6">
+      <Tabs defaultValue="helper" className="min-w-0 gap-6">
         <TabsList aria-label={t('howItWorks.tabLabel')} className="w-full"><TabsTrigger value="poster">{t('howItWorks.posterTab')}</TabsTrigger><TabsTrigger value="helper">{t('howItWorks.helperTab')}</TabsTrigger></TabsList>
         {(['poster', 'helper'] as const).map((role) => <TabsContent key={role} value={role} className="space-y-7">
           <h2 className="font-display text-xl font-semibold tracking-[-0.015em]">{t(`howItWorks.${role}.title`)}</h2>

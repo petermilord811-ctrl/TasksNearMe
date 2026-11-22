@@ -117,8 +117,11 @@ export function OfferForm({ data, handlers, revising = false, onCancel, onSent, 
   async function submit(input: OfferInput) {
     if (locked.current) return;
     locked.current = true; setPending(true); setResult(undefined);
+    // A new offer waits for a bot check still running (its line says so); nothing to send yet: the form stays put.
+    const answer = revising ? {} : await check.ready();
+    if (!answer) { locked.current = false; setPending(false); return; }
     let next: ActionResult;
-    try { next = await (revising ? handlers.onReviseOffer(input) : handlers.onSubmitOffer({ ...input, ...(check.token ? { botCheck: check.token } : {}) })); }
+    try { next = await (revising ? handlers.onReviseOffer(input) : handlers.onSubmitOffer({ ...input, ...answer })); }
     catch { next = { ok: false, code: 'unknown' }; }
     if (!next.ok) check.reset();
     locked.current = false; setPending(false); setResult(next);

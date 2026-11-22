@@ -13,13 +13,17 @@ export function destinationAfterSignUp(intent: SignUpIntent, next: string): stri
   return intent === 'help_out' ? routes.app.helperOnboarding() : next;
 }
 
+/** Where someone headed is here to get help: posting or their tasks, browsing, requesting or saving helpers. */
+const GETTING_HELP = [routes.postTask(), '/app/tasks', '/app/helpers', routes.app.saved()];
+
 /**
- * What someone signing up is likely here for, from where they were headed: an offer or helper setup means helping out
- * (visitor-to-first-post walk, J-V). The form starts on it and they can change it. Anything else: getting help.
+ * What someone signing up is likely here for, from where they were headed: posting a task or booking a helper means
+ * getting help (visitor-to-first-post walk, J-V). Anything else, an offer or helper setup among them, starts on helping
+ * out (owner, 2026-11-22: "Make I can help as default"). The form starts on it and they can change it.
  */
 export function intentForNext(next: string): SignUpIntent {
   const path = next.split(/[?#]/)[0] ?? '';
-  return path.startsWith('/app/find-work') || path.startsWith('/app/helper/') ? 'help_out' : 'get_help';
+  return GETTING_HELP.some((start) => path === start || path.startsWith(`${start}/`)) ? 'get_help' : 'help_out';
 }
 
 /** The side of the app a new account opens on. Either side is one switch away later. */

@@ -135,9 +135,19 @@
   },
   "verifyIdentity": "Verifica tu identidad",
   "botCheck": {
-    "required": "Completa la verificación de arriba y vuelve a intentarlo.",
-    "failed": "No pudimos confirmar que eres una persona. Vuelve a intentarlo.",
-    "expired": "Se acabó el tiempo de la verificación. Vuelve a intentarlo.",
-    "unavailable": "La verificación de seguridad no cargó. Revisa tu conexión o desactiva los bloqueadores de contenido para este sitio y vuelve a cargar la página."
+    "required": "La verificación de seguridad aún no ha terminado. Continúa cuando pase.",
+    "failed": "No pudimos confirmar que eres una persona. La verificación se está haciendo de nuevo: continúa cuando pase.",
+    "expired": "Se acabó el tiempo de la verificación de seguridad. Se está haciendo de nuevo: continúa cuando pase.",
+    "status": {
+      "checking": "Haciendo una verificación de seguridad rápida con Cloudflare…",
+      "waiting": "Terminando la verificación de seguridad. Continuarás en cuanto pase…",
+      "retrying": "La verificación de seguridad tuvo un problema. Cloudflare lo está intentando de nuevo…",
+      "interactive": "Cloudflare necesita un clic: marca la casilla para confirmar que eres una persona.",
+      "passed": "Verificación de seguridad completada.",
+      "slow": "La verificación de seguridad está tardando más de lo normal.",
+      "failed": "La verificación de seguridad no pudo hacerse. Revisa tu conexión o desactiva los bloqueadores de contenido para este sitio y vuelve a intentarlo.",
+      "unsupported": "Este navegador no puede hacer la verificación de seguridad. Actualízalo o prueba con otro navegador.",
+      "retry": "Volver a intentarlo"
+    }
   }
 }
