@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { auditPage, focusIsVisible, noTransitions, press, smallTargets, tabTo, typeInto } from './support/keyboard';
+import { latestCode } from './support/outbox';
 import { submittedBooking } from './support/scenarios';
 import { devSignIn } from './support/sign-in';
 
@@ -65,17 +66,6 @@ function dateKeys(days: number): string {
   return `${part('month')}${part('day')}${part('year')}`;
 }
 
-async function latestCode(page: Page, to: string): Promise<string> {
-  const outbox = await page.context().newPage();
-  try {
-    await outbox.goto(`/dev/outbox?to=${encodeURIComponent(to)}`);
-    const body = await outbox.locator(`[data-testid="outbox-message"][data-to="${to}"]:not([data-tag="welcome"]) pre`).first().textContent();
-    return body!.match(/\b(\d{6})\b/)![1]!;
-  } finally {
-    await outbox.close();
-  }
-}
-
 test('the checks themselves: crowded small targets fail, spaced and labelled ones pass, a hidden focus is caught', async ({ page }) => {
   const small = 'width:16px;height:16px;padding:0;border:1px solid;position:absolute';
   await page.setContent(`
@@ -117,7 +107,7 @@ test('keyboard only: a new person signs up with an emailed code', async ({ page 
   await expect(page.getByRole('heading', { level: 1, name: 'Check your email' })).toBeVisible({ timeout: 30_000 });
   await auditPage(page, testInfo.project.name);
   await tabTo(page, page.getByLabel('6-digit code'));
-  await page.keyboard.type(await latestCode(page, email));
+  await page.keyboard.type(await latestCode(page.context(), email));
 
   await expect(page.getByRole('heading', { level: 1, name: 'Tell us your name' })).toBeVisible({ timeout: 30_000 });
   await auditPage(page, testInfo.project.name);

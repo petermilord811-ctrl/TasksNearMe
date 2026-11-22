@@ -1,24 +1,12 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { submitEmailStep } from './support/sign-in';
+import { latestCode } from './support/outbox';
 
 /**
  * A market opening soon takes clients by invitation (visitor-to-first-post walk, J-V8). A new account, in Gainesville
  * like every new account, meets "Gainesville opens soon" instead of the post form and a request to a helper, with the
  * waitlist on offer. A client code lets it in. The test world's code is SPECCLIENT (db/seeds/seed.ts).
  */
-
-async function latestCode(context: BrowserContext, to: string): Promise<string> {
-  const outbox = await context.newPage();
-  try {
-    await outbox.goto(`/dev/outbox?to=${encodeURIComponent(to)}`);
-    const body = await outbox.locator(`[data-testid="outbox-message"][data-to="${to}"]:not([data-tag="welcome"]) pre`).first().textContent();
-    const code = body?.match(/\b(\d{6})\b/)?.[1];
-    if (!code) throw new Error(`no code sent to ${to}`);
-    return code;
-  } finally {
-    await outbox.close();
-  }
-}
 
 async function signUp(page: Page, context: BrowserContext, email: string) {
   await page.goto('/sign-in');

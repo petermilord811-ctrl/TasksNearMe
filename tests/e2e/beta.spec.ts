@@ -1,4 +1,5 @@
 import { expect, test, type Browser, type BrowserContext, type Page, type TestInfo } from '@playwright/test';
+import { latestCode } from './support/outbox';
 import { devSignIn, submitEmailStep } from './support/sign-in';
 
 /**
@@ -13,19 +14,6 @@ async function staffSignIn(page: Page, email: string) {
   await page.getByLabel('Code').fill('123456');
   await page.getByRole('button', { name: 'Verify' }).click();
   await expect(page).toHaveURL(/\/admin$/, { timeout: 30_000 });
-}
-
-async function latestCode(context: BrowserContext, to: string): Promise<string> {
-  const outbox = await context.newPage();
-  try {
-    await outbox.goto(`/dev/outbox?to=${encodeURIComponent(to)}`);
-    const body = await outbox.locator(`[data-testid="outbox-message"][data-to="${to}"]:not([data-tag="welcome"]) pre`).first().textContent();
-    const code = body?.match(/\b(\d{6})\b/)?.[1];
-    if (!code) throw new Error(`no code sent to ${to}`);
-    return code;
-  } finally {
-    await outbox.close();
-  }
 }
 
 /** A newcomer's browser, on the same device as the project, that sees the beta switches on. */
