@@ -7,7 +7,7 @@ Rehearsed end to end on 2026-11-21, on the e2e build with its own database (swee
 **Who:**
 - **An admin** takes the city live. Only admins can change a market's status or use the outage switch, and every change needs a reason, which is kept in the audit log. Other staff see the Markets section read-only.
 - **The on-call engineer** watches the job runner, the email and text providers, and the logs.
-- **A support lead** watches the queues and answers with the copy at the end of this runbook.
+- **A support lead** watches the queues and answers with the copy at the end of this runbook. The [staff handbook](staff-handbook.md) has every staff screen, the time targets, and what staff never do.
 
 ## The week before
 
@@ -21,7 +21,8 @@ Rehearsed end to end on 2026-11-21, on the e2e build with its own database (swee
    - status **Pre-launch**, ZIP prefixes **326**, time zone **America/New_York**;
    - "Helpers yet to choose a neighborhood": helpers who still have to finish that step;
    - "Waitlist: 260 people", and "“We're open” email: Goes to 254 people when it's live" (the rest unsubscribed).
-8. **Brief support** with the copy at the end of this runbook.
+8. **Brief support** with the copy at the end of this runbook. Every staff member signs in once with their authenticator app (an admin gives them a setup code) and reads the [staff handbook](staff-handbook.md).
+9. **Two admins, both real people.** Once there are two or more admins, every staff role an admin adds waits for another admin to approve it, and an admin role can't be removed while only two remain. An admin account nobody uses (a sample account, say) would leave every new role waiting, so check the admins on `/admin/staff` first. Then add the launch staff's roles early in the week, so the approvals and each person's first sign-in are done before the day.
 
 ## On the day: take Gainesville live
 

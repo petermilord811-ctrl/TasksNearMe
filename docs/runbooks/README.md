@@ -10,6 +10,7 @@ What staff and the on-call engineer do when something goes wrong in production (
 | [Reward fraud review](reward-review.md) | Gift-card rewards are under review, show risk signals, or fail to deliver. |
 | [Safety escalation](safety-escalation.md) | Someone reports a safety problem, or an exact address or message may have reached the wrong person. |
 | [Gainesville launch day](gainesville-launch.md) | Taking Gainesville (or the next city) live, watching its waitlist emails, and rolling a launch back. Rehearsed 2026-11-21. |
+| [Staff handbook](staff-handbook.md) | Working the staff tools from launch day: ID photos and proofs of address, the support queue, refunds and disputes, hiding content, suspensions and bans, and what staff never do. Walked on the e2e build 2026-11-21. |
 | [Email or texts down](email-and-sms-down.md) | Postmark, Resend or Twilio refuse or don't answer: sign-in codes, notifications, pages. |
 | [Stripe errors and late webhooks](stripe-errors.md) | Paying fails, Stripe is slow, or its events arrive late or not at all. |
 | [Background jobs stall or crash](job-runner.md) | A job keeps failing, the runner is stuck, or a server stopped mid-run. |
@@ -24,7 +25,7 @@ Blueprint 10 §5 asks for these before launch. Fill in the names before the beta
 
 | Duty | Hours | Who | Authority |
 |---|---|---|---|
-| Support | Published support hours (for example 8 am–8 pm Central, daily) | Support agents, with a support lead | Refunds up to $100 per booking (agents) or $500 (leads) without approval |
+| Support | Published support hours (for example 8 am–8 pm Eastern, daily: Gainesville's time zone) | Support agents, with a support lead | Refunds up to $100 per booking (agents) or $500 (leads) without approval |
 | Safety escalation | 24/7 | Trust & safety on-call | Suspend helpers, read restricted data with a reason, call emergency services |
 | Money | Business hours, plus paging for a SEV1 | Finance | Any refund; approves refunds above $500 (never their own) |
 | Engineering | 24/7 for SEV1 | On-call engineer | Production logs, the database (read first), provider dashboards, deploys |
