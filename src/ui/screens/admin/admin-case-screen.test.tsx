@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { routes, type ActionResult, type AdminCaseHandlers, type AdminCasePageData } from '@/contracts';
-import { ADMIN_NOW, answerReportAdminCaseData, answerReportAgentCaseData, questionHiddenAdminCaseData, disputeAdminCaseData, fakeAdminCaseHandlers, reportAdminCaseData, reportedConversation, resolvedAdminCaseData, reviewHiddenAdminCaseData, reviewReportAdminCaseData, reviewReportAgentCaseData } from '@/fixtures';
+import { ADMIN_NOW, answerReportAdminCaseData, answerReportAgentCaseData, questionHiddenAdminCaseData, disputeAdminCaseData, fakeAdminCaseHandlers, postReportAdminCaseData, replyReportAdminCaseData, reportAdminCaseData, reportedConversation, resolvedAdminCaseData, reviewHiddenAdminCaseData, reviewReportAdminCaseData, reviewReportAgentCaseData } from '@/fixtures';
 import { formatDateTime, formatMoney } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
 import adminCase from '../../../../messages/en/ui/adminCase.json';
@@ -113,6 +113,20 @@ describe('AdminCaseScreen', () => {
     expect(screen.queryByText(reportedConversation.messages[1]!.body)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: adminCase.conversation.open })).toBeVisible();
     expect(onRevealConversation).toHaveBeenCalledOnce();
+  });
+});
+
+describe('a community report', () => {
+  it('links a reported reply to its place in the thread, and a reported post to the post (they have no staff page)', () => {
+    render(content(replyReportAdminCaseData));
+    expect(screen.getByRole('link', { name: adminCase.details.openReply })).toHaveAttribute('href', '/app/community/cpo_desk#reply-cre_sam_rec');
+    expect(routes.app.communityReply('cpo_desk', 'cre_sam_rec')).toBe('/app/community/cpo_desk#reply-cre_sam_rec');
+    expect(screen.queryByRole('link', { name: adminCase.details.openPost })).toBeNull();
+    expect(screen.queryByRole('link', { name: adminCase.details.openTask })).toBeNull();
+    cleanup();
+    render(content(postReportAdminCaseData));
+    expect(screen.getByRole('link', { name: adminCase.details.openPost })).toHaveAttribute('href', routes.app.communityPost('cpo_desk'));
+    expect(screen.queryByRole('link', { name: adminCase.details.openReply })).toBeNull();
   });
 });
 

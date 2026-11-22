@@ -164,6 +164,7 @@ export function AdminCaseContent({ data, handlers, now, initialDialog, replyStat
           </section>}
           {data.booking && <Booking booking={data.booking} />}
           {data.taskId && <Link href={routes.admin.task(data.taskId)} className="inline-flex min-h-11 items-center rounded-md text-sm font-medium text-primary underline underline-offset-4">{t('details.openTask')}</Link>}
+          {data.post && <Link href={data.post.replyId ? routes.app.communityReply(data.post.id, data.post.replyId) : routes.app.communityPost(data.post.id)} className="inline-flex min-h-11 items-center rounded-md text-sm font-medium text-primary underline underline-offset-4">{t(data.post.replyId ? 'details.openReply' : 'details.openPost')}</Link>}
         </div>
       </div>
     </AdminCaseControls>

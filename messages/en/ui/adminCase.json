@@ -133,6 +133,8 @@
     "opened": "Opened {at}",
     "newReply": "New reply",
     "openTask": "Open the task",
+    "openPost": "Open the post",
+    "openReply": "Open the reply",
     "emailedTo": "Emailed to {email}",
     "contactForm": "Contact form",
     "contact": {

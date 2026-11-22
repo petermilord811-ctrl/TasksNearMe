@@ -169,6 +169,11 @@ export interface AdminCasePageData {
   booking?: AdminCaseBookingSummary;
   /** The task the case is about (its booking's, or a reported conversation's): `routes.admin.task` (UI-033). */
   taskId?: string;
+  /**
+   * A reported community post, or a reply on it (`replyId`): staff read it, and hide, remove or restore it, on the
+   * community page, from its ⋮ menu.
+   */
+  post?: { id: string; title: string; replyId?: string };
   /** Oldest first: messages with each party, notes, and changes. */
   events: AdminCaseEventView[];
   /** Restricted context the viewer can open by giving a reason (the access is logged). */

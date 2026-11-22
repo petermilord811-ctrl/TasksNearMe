@@ -235,6 +235,8 @@ export const routes = {
       });
     },
     communityPost: (postId: string) => `/app/community/${enc(postId)}`,
+    /** A reply in its post's thread (the reply's `reply-<id>` anchor). */
+    communityReply: (postId: string, replyId: string) => `/app/community/${enc(postId)}#reply-${enc(replyId)}`,
     newCommunityPost: (kind?: CommunityPostKind) => withQuery('/app/community/new', { kind }),
     payments: () => '/app/payments',
     /** A receipt for one booking (printable). */

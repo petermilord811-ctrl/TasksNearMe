@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { offerThreadId, sendMessage } from '@/modules/messaging/service';
+import { communityPosts, communityReplies } from '@/modules/community/schema';
 import { offers } from '@/modules/offers/schema';
 import { supportCases } from '@/modules/support/schema';
 import { getSupportCasePage, getSupportPage, replyToSupportCase, reportFromThread } from '@/modules/support/service';
@@ -141,5 +142,23 @@ describe('a reported conversation', () => {
     expect(revealed.ok && revealed.conversation.messages.map((message) => message.body)).toContain('Pay me in cash, text 512-555-0199.');
     const [logged] = await db.select().from(auditLog).where(and(eq(auditLog.action, 'case.view_conversation'), eq(auditLog.targetId, threadId)));
     expect(logged).toMatchObject({ actorId: 'usr_alex', reason: 'Checking the reported cash request.' });
+  });
+});
+
+describe('a reported community post or reply', () => {
+  it('links the case to the reply in its thread, or to the post (they have no staff page)', async () => {
+    const [post, reply, id] = ['cpo_staff_case_test', 'cre_staff_case_test', 'case_staff_reply_report'];
+    await db.insert(communityPosts).values({ id: post, marketId: 'mkt_austin', authorUserId: 'usr_maya', kind: 'question', title: 'Who can fix a squeaky door?', body: 'Our front door squeaks every time it opens.' });
+    await db.insert(communityReplies).values({ id: reply, postId: post, authorUserId: 'usr_ben', body: 'Pay me by Venmo first and I will come.' });
+    await db.insert(supportCases).values({ id, type: 'report_content', status: 'open', priority: 'high', openedByUserId: 'usr_maya', subjectUserId: 'usr_ben', context: { postId: post, replyId: reply }, reason: 'off_platform_payment', description: 'He asks for payment outside the app.' });
+    try {
+      expect((await getAdminCase(db, alex, id, new Date()))?.data.post).toEqual({ id: post, title: 'Who can fix a squeaky door?', replyId: reply });
+      await db.update(supportCases).set({ context: { postId: post } }).where(eq(supportCases.id, id));
+      expect((await getAdminCase(db, alex, id, new Date()))?.data.post).toEqual({ id: post, title: 'Who can fix a squeaky door?' });
+    } finally {
+      await db.delete(supportCases).where(eq(supportCases.id, id));
+      // Its replies go with it.
+      await db.delete(communityPosts).where(eq(communityPosts.id, post));
+    }
   });
 });

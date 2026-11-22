@@ -317,6 +317,43 @@ export const questionHiddenAdminCaseData: AdminCasePageData = {
   ],
 };
 
+/**
+ * Maya reported Priya's reply on her community post (backlog B-059): community posts and replies have no staff page of
+ * their own, so the case links to the reply in its thread, where staff hide, remove or restore it from its ⋮ menu.
+ */
+export const replyReportAdminCaseData: AdminCasePageData = {
+  case: {
+    ...reportRow,
+    id: 'case_reply_report',
+    type: 'report_content',
+    subject: 'Priya S.',
+    openedBy: person(maya),
+    description: 'The reply asks everyone to pay a "booking fee" by Venmo before the helper comes.',
+    photos: [],
+    reason: 'off_platform_payment',
+  },
+  parties: [
+    { person: person(maya), role: 'opener', canMessage: true },
+    { person: person(priya), role: 'reported', canMessage: false },
+  ],
+  post: { id: 'cpo_desk', title: 'Who do you recommend for a flat-pack desk and bookshelf?', replyId: 'cre_sam_rec' },
+  events: [{ id: 'aev_rr1', kind: 'status', actor: { kind: 'system' }, status: 'open', at: '2026-11-23T09:30:00.000Z' }],
+  actions: ['assign_to_me', 'set_status', 'reply', 'add_note', 'resolve'],
+  nextStatuses: ['awaiting_poster', 'awaiting_support', 'escalated'],
+  resolutions: ['no_action', 'account_action'],
+};
+
+/** Priya reported Maya's post itself: the link opens the post. */
+export const postReportAdminCaseData: AdminCasePageData = {
+  ...replyReportAdminCaseData,
+  case: { ...replyReportAdminCaseData.case, id: 'case_post_report', subject: 'Maya R.', openedBy: person(priya), description: 'The post names a helper and their home street.', reason: 'inappropriate_content' },
+  parties: [
+    { person: person(priya), role: 'opener', canMessage: true },
+    { person: person(maya), role: 'reported', canMessage: false },
+  ],
+  post: { id: 'cpo_desk', title: 'Who do you recommend for a flat-pack desk and bookshelf?' },
+};
+
 /** A resolved request: it can be closed or reopened; notes still work. */
 export const resolvedAdminCaseData: AdminCasePageData = {
   case: {

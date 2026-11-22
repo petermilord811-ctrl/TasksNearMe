@@ -53,6 +53,7 @@ import { staffRoles, users } from '@/modules/accounts/schema';
 import { discretionaryRefundedCents } from '@/modules/payments/refund-across';
 import { payments, refunds } from '@/modules/payments/schema';
 import { bookingCompletions, bookingTerms, bookings } from '@/modules/bookings/schema';
+import { communityPosts } from '@/modules/community/schema';
 import { staffPhotoFromFile } from '@/modules/files/staff-file-token';
 import { messages, threadParticipants, threads } from '@/modules/messaging/schema';
 import { initialsOf } from '@/modules/profiles/queries';
@@ -400,6 +401,10 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
   const money = ctx.booking ? await bookingMoneyFacts(db, ctx.booking.id) : null;
   const reportedReview = row.context?.reviewId ? await reportedReviewOf(db, staff, row.context.reviewId) : null;
   const reportedQuestion = row.context?.questionId ? await reportedQuestionOf(db, staff, row.context.questionId, row.context.answer === true) : null;
+  // A reported community post or reply: members' public words, read and moderated on the community page.
+  const [reportedPost] = row.context?.postId
+    ? await db.select({ id: communityPosts.id, title: communityPosts.title }).from(communityPosts).where(eq(communityPosts.id, row.context.postId)).limit(1)
+    : [];
 
   const timeline = events.flatMap((event): AdminCaseEventView[] => {
     const at = event.createdAt.toISOString();
@@ -467,6 +472,7 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
     ...(contextTitle !== undefined ? { context: { kind: 'conversation' as const, title: contextTitle } } : {}),
     ...(reportedReview ? { review: reportedReview } : {}),
     ...(reportedQuestion ? { question: reportedQuestion } : {}),
+    ...(reportedPost ? { post: { id: reportedPost.id, title: reportedPost.title, ...(row.context?.replyId ? { replyId: row.context.replyId } : {}) } } : {}),
     actions: staffCaseActions(facts),
     nextStatuses: nextCaseStatuses(facts),
     resolutions: caseResolutions(facts),
