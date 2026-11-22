@@ -331,6 +331,8 @@ export const deskBookingPosterCompleted: BookingView = {
   completedVia: 'poster',
   deadlines: {},
   timeline: deskTimelineCompleted,
+  // Plan 10.12: the client can thank Jordan on Neighbors.
+  thankOnNeighborsHref: routes.app.newCommunityPost('thanks', 'bkg_desk'),
   actions: [action('review', 'primary'), action('book_again'), action('save_helper'), action('message')],
 };
 

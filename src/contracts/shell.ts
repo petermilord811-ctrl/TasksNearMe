@@ -1,4 +1,4 @@
-import type { Mode, Photo, StaffRole } from './common';
+import type { ISODateTime, Mode, Photo, StaffRole } from './common';
 import type { ActionHandler } from './actions';
 import type { AppLocale } from './locale';
 
@@ -17,6 +17,11 @@ export type ShellViewer =
       helperReady: boolean;
       unreadMessages: number;
       unreadNotifications: number;
+      /**
+       * The newest post on Neighbors in their market by someone else (plan 10.19), for the dot on the Neighbors item:
+       * newer than this device's last look at Neighbors (`visitKey`, src/ui/lib/last-visit.ts) means something new.
+       */
+      neighborsNews?: { latestAt: ISODateTime; visitKey: string };
     }
   | {
       kind: 'staff';

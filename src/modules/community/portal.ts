@@ -9,7 +9,9 @@ import {
   PORTAL_SECTION_SIZE,
   PORTAL_TIMES,
   PORTAL_TYPES,
+  localeOrDefault,
   routes,
+  type CategorySlug,
   type CommunityPostKind,
   type PortalArea,
   type PortalCategory,
@@ -32,7 +34,7 @@ import { areas, categories } from '@/modules/markets/schema';
 import { marketTimeZone } from '@/modules/markets/time-zone';
 import { helperOfferStates, type HelperOfferStanding } from '@/modules/offers/helper';
 import { getHelperSummaries } from '@/modules/profiles/queries';
-import { helperProfiles } from '@/modules/profiles/schema';
+import { helperProfiles, helperServices } from '@/modules/profiles/schema';
 import { taskQuestions } from '@/modules/questions/schema';
 import { toTaskPublicView } from '@/modules/tasks/projections';
 import { keywordCondition, openIn, selectPublic, toRow } from '@/modules/tasks/queries';
@@ -41,9 +43,11 @@ import { blockedPeopleOf } from '@/modules/trust/blocks';
 import type { Db } from '@/platform/db/connect';
 import { avatarPhoto } from '@/modules/files/photos';
 import { marketDayKey } from '@/shared/format';
-import { ENGAGEMENT, HOT_SECONDS, initialsOf, parsePortalQuery, portalSince, searchWords } from './domain';
+import { ENGAGEMENT, HOT_SECONDS, initialsOf, parsePortalQuery, portalSince, searchWords, UNANSWERED_DAYS, UNANSWERED_KINDS } from './domain';
 import { communityPosts, communitySaves } from './schema';
 import { composerData, hydrate, nearbyAreaIds, previewsOf, viewerFacts, type CommunityViewer, type PostRow, type ViewerFacts } from './service';
+import { announcementFor } from './announcements';
+import { isRealRecordId, rowScopeCondition, samplesHiddenInThisBuild } from '@/shared/sample-data';
 
 /**
  * The neighborhood portal (completion plan 9.10, docs/ui/portal-9.10.md): the community's posts and the open tasks
@@ -55,7 +59,7 @@ import { composerData, hydrate, nearbyAreaIds, previewsOf, viewerFacts, type Com
  */
 
 type Params = Record<string, string | string[] | undefined>;
-type FilterKey = 'area' | 'type' | 'category' | 'time' | 'saved';
+type FilterKey = 'area' | 'type' | 'category' | 'time' | 'saved' | 'unanswered';
 
 interface AreaRow {
   id: string;
@@ -112,6 +116,11 @@ function postConditions(scope: Scope, skip?: FilterKey): SQL[] {
   const { query, facts, viewer } = scope;
   const conditions: SQL[] = [eq(communityPosts.marketId, facts.market.id), viewer.staff ? inArray(communityPosts.status, ['visible', 'hidden']) : eq(communityPosts.status, 'visible')];
   if (facts.blocked.length > 0) conditions.push(notInArray(communityPosts.authorUserId, facts.blocked));
+  // A real account in production sees no demo posts here (plan 10, D1).
+  const real = rowScopeCondition(viewer.rows ?? 'all', communityPosts.id);
+  if (real) conditions.push(real);
+  // Asks nobody answered yet (plan 10.17).
+  if (skip !== 'unanswered' && query.unanswered) conditions.push(inArray(communityPosts.kind, [...UNANSWERED_KINDS]), eq(communityPosts.replyCount, 0));
   if (skip !== 'area' && scope.areaIds) {
     const inPlace = scope.areaIds.length > 0 ? inArray(communityPosts.areaId, scope.areaIds) : sql`false`;
     conditions.push(scope.withCitywide ? or(isNull(communityPosts.areaId), inPlace)! : inPlace);
@@ -129,8 +138,10 @@ function postConditions(scope: Scope, skip?: FilterKey): SQL[] {
 
 function taskConditions(scope: Scope, skip?: FilterKey): SQL[] {
   const { query, facts, viewer } = scope;
-  // Signed-in members see the market as it is (sample rows too, as on the board when signed in).
-  const conditions: SQL[] = openIn(facts.market.id, scope.now, 'all');
+  // Signed-in members see the market as it is (sample rows too, as on the board when signed in), except a real account
+  // in production, which sees real tasks only on Neighbors (plan 10, D1).
+  const conditions: SQL[] = openIn(facts.market.id, scope.now, viewer.rows ?? 'all');
+  if (skip !== 'unanswered' && query.unanswered) conditions.push(sql`false`);
   if (facts.blocked.length > 0) conditions.push(notInArray(tasks.posterUserId, facts.blocked));
   // The viewer's own tasks aren't news here: they wait in Your stuff (audit M20), not in the stream and its counts.
   conditions.push(ne(tasks.posterUserId, viewer.id));
@@ -195,7 +206,7 @@ async function itemsOf(db: Db, scope: Scope, rows: ItemRow[]): Promise<PortalIte
     taskViewsOf(db, scope, taskIds),
   ]);
   const previews = await previewsOf(db, postRows, scope.facts.blocked);
-  const { posts } = await hydrate(db, scope.viewer, postRows, [], previews, scope.now);
+  const { posts } = await hydrate(db, scope.viewer, postRows, [], previews, scope.now, { canPost: !scope.facts.postBlocked, blocked: scope.facts.blocked });
   const postsById = new Map(posts.map((post) => [post.id, post]));
   return rows.flatMap((row): PortalItem[] => {
     const at = new Date(row.at).toISOString();
@@ -294,7 +305,7 @@ async function sectionsOf(db: Db, scope: Scope): Promise<PortalSection[]> {
 
 async function facetsOf(db: Db, scope: Scope): Promise<{ facets: PortalFacets; areaCounts: Map<string | null, number> }> {
   const since = (time: (typeof PORTAL_TIMES)[number]) => portalSince(time, scope.now)!;
-  const [byKind, byCategory, byArea, times, saved] = await Promise.all([
+  const [byKind, byCategory, byArea, times, saved, unanswered] = await Promise.all([
     db.execute<{ kind: string; n: number }>(sql`select kind, count(*)::int as n from ${itemsUnion(scope, 'type')} items group by kind`),
     db.execute<{ category: string | null; n: number }>(sql`select category, count(*)::int as n from ${itemsUnion(scope, 'category')} items group by category`),
     db.execute<{ area_id: string | null; n: number }>(sql`select area_id, count(*)::int as n from ${itemsUnion(scope, 'area')} items group by area_id`),
@@ -304,6 +315,7 @@ async function facetsOf(db: Db, scope: Scope): Promise<{ facets: PortalFacets; a
         coalesce(sum(case when at >= ${since('30d')} then 1 else 0 end), 0)::int as "30d"
       from ${itemsUnion(scope, 'time')} items`),
     db.execute<{ n: number }>(sql`select count(*)::int as n from ${itemsUnion({ ...scope, query: { ...scope.query, saved: true } })} items`),
+    db.execute<{ n: number }>(sql`select count(*)::int as n from ${itemsUnion({ ...scope, query: { ...scope.query, unanswered: true } })} items`),
   ]);
   const types = Object.fromEntries([...PORTAL_TYPES, 'all'].map((type) => [type, 0])) as PortalFacets['types'];
   for (const row of byKind.rows) {
@@ -327,6 +339,7 @@ async function facetsOf(db: Db, scope: Scope): Promise<{ facets: PortalFacets; a
       all,
       times: { '24h': Number(row['24h'] ?? 0), '7d': Number(row['7d'] ?? 0), '30d': Number(row['30d'] ?? 0) },
       saved: Number(saved.rows[0]?.n ?? 0),
+      unanswered: Number(unanswered.rows[0]?.n ?? 0),
     },
     areaCounts,
   };
@@ -334,7 +347,7 @@ async function facetsOf(db: Db, scope: Scope): Promise<{ facets: PortalFacets; a
 
 /** Real numbers for the place: open tasks and posts this week (whatever the other filters), and the active helpers who work there besides the viewer. */
 async function statsOf(db: Db, scope: Scope): Promise<PortalPageData['stats']> {
-  const plain: Scope = { ...scope, query: { saved: false, sort: 'new', view: 'feed', group: 'area', page: 1, ...(scope.query.area ? { area: scope.query.area } : {}) } };
+  const plain: Scope = { ...scope, query: { saved: false, unanswered: false, sort: 'new', view: 'feed', group: 'area', page: 1, ...(scope.query.area ? { area: scope.query.area } : {}) } };
   const weekAgo = portalSince('7d', scope.now)!;
   const [counts, helpers] = await Promise.all([
     db.execute<{ tasks: number; posts: number }>(sql`select
@@ -352,6 +365,7 @@ async function statsOf(db: Db, scope: Scope): Promise<PortalPageData['stats']> {
           // Counted as the rail lists them (audit M23): never the viewer, nobody blocked either way.
           ne(helperProfiles.userId, scope.viewer.id),
           scope.facts.blocked.length > 0 ? notInArray(helperProfiles.userId, scope.facts.blocked) : undefined,
+          rowScopeCondition(scope.viewer.rows ?? 'all', helperProfiles.userId),
           // Citywide work is anyone's in the market: there, the market's helpers.
           scope.areaIds && scope.place.kind !== 'citywide' ? (scope.areaIds.length > 0 ? inArray(helperProfiles.areaId, scope.areaIds) : sql`false`) : undefined,
         ),
@@ -365,8 +379,8 @@ async function statsOf(db: Db, scope: Scope): Promise<PortalPageData['stats']> {
 async function railOf(db: Db, scope: Scope): Promise<PortalRail> {
   const { viewer, facts } = scope;
   const weekAgo = portalSince('7d', scope.now)!;
-  const trendingScope: Scope = { ...scope, query: { saved: false, sort: 'top', view: 'feed', group: 'area', page: 1, ...(scope.query.area ? { area: scope.query.area } : {}) } };
-  const [yourTasks, yourPosts, savedCount, helperRows, trending] = await Promise.all([
+  const trendingScope: Scope = { ...scope, query: { saved: false, unanswered: false, sort: 'top', view: 'feed', group: 'area', page: 1, ...(scope.query.area ? { area: scope.query.area } : {}) } };
+  const [yourTasks, yourPosts, savedCount, helperRows, trending, unanswered] = await Promise.all([
     db
       .select({ id: tasks.id, title: tasks.title, offerCount: tasks.offerCount })
       .from(tasks)
@@ -380,7 +394,7 @@ async function railOf(db: Db, scope: Scope): Promise<PortalRail> {
       .orderBy(desc(communityPosts.lastActivityAt))
       .limit(3),
     db
-      .execute<{ n: number }>(sql`select count(*)::int as n from ${itemsUnion({ ...scope, areaIds: null, withCitywide: true, query: { saved: true, sort: 'new', view: 'feed', group: 'area', page: 1 } })} items`)
+      .execute<{ n: number }>(sql`select count(*)::int as n from ${itemsUnion({ ...scope, areaIds: null, withCitywide: true, query: { saved: true, unanswered: false, sort: 'new', view: 'feed', group: 'area', page: 1 } })} items`)
       .then((result) => Number(result.rows[0]?.n ?? 0)),
     // Helpers who work in the place: never the viewer, nobody blocked either way.
     db
@@ -394,6 +408,7 @@ async function railOf(db: Db, scope: Scope): Promise<PortalRail> {
           eq(areas.marketId, facts.market.id),
           ne(helperProfiles.userId, viewer.id),
           facts.blocked.length > 0 ? notInArray(helperProfiles.userId, facts.blocked) : undefined,
+          rowScopeCondition(viewer.rows ?? 'all', helperProfiles.userId),
           // Citywide work is anyone's in the market: there, the market's helpers.
           scope.areaIds && scope.place.kind !== 'citywide' ? (scope.areaIds.length > 0 ? inArray(helperProfiles.areaId, scope.areaIds) : sql`false`) : undefined,
         ),
@@ -401,6 +416,7 @@ async function railOf(db: Db, scope: Scope): Promise<PortalRail> {
       .orderBy(desc(helperProfiles.completedCount), desc(helperProfiles.ratingCount))
       .limit(12),
     db.execute<{ id: string }>(sql`select id from ${itemsUnion(trendingScope)} items where type = 'post' and at >= ${weekAgo} and engagement > 0 order by ${orderOf('top')} limit 5`),
+    unansweredOf(db, scope),
   ]);
   const summaries = await getHelperSummaries(helperRows.map((row) => row.userId), db);
   const helpers: PortalHelper[] = [...summaries.values()]
@@ -438,7 +454,38 @@ async function railOf(db: Db, scope: Scope): Promise<PortalRail> {
       const row = trendingById.get(id);
       return row ? [{ id: row.id, title: row.title, kind: row.kind as CommunityPostKind, replyCount: row.replyCount, helpful: row.helpful, ...(row.areaName ? { areaName: row.areaName } : {}) }] : [];
     }),
+    unanswered,
   };
+}
+
+/**
+ * "Waiting for an answer" (plan 10.17): the place's asks of the last week nobody answered, never the viewer's own, the
+ * oldest first; a helper sees the ones about their own services first.
+ */
+async function unansweredOf(db: Db, scope: Scope): Promise<PortalRail['unanswered']> {
+  const waitingScope: Scope = { ...scope, query: { saved: false, unanswered: true, sort: 'new', view: 'feed', group: 'area', page: 1, ...(scope.query.area ? { area: scope.query.area } : {}) } };
+  const since = new Date(scope.now.getTime() - UNANSWERED_DAYS * 86_400_000);
+  const services = scope.helps
+    ? (await db.select({ slug: categories.slug }).from(helperServices).innerJoin(categories, eq(categories.id, helperServices.categoryId)).where(and(eq(helperServices.userId, scope.viewer.id), eq(helperServices.status, 'active')))).map((row) => row.slug)
+    : [];
+  // A helper's own services first (Postgres refuses a bare constant in ORDER BY, so the term is left out without them).
+  const theirsFirst = services.length > 0 ? sql`(category in (${sql.join(services.map((slug) => sql`${slug}`), sql`, `)})) desc, ` : sql``;
+  const found = await db.execute<{ id: string }>(sql`select id from ${itemsUnion(waitingScope)} items where type = 'post' and at >= ${since} order by ${theirsFirst}at asc, id asc limit 12`);
+  const ids = found.rows.map((row) => row.id);
+  if (ids.length === 0) return [];
+  const rows = await db
+    .select({ id: communityPosts.id, title: communityPosts.title, kind: communityPosts.kind, createdAt: communityPosts.createdAt, authorUserId: communityPosts.authorUserId, categorySlug: communityPosts.categorySlug, areaName: areas.name })
+    .from(communityPosts)
+    .leftJoin(areas, eq(areas.id, communityPosts.areaId))
+    .where(inArray(communityPosts.id, ids));
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return ids
+    .flatMap((id) => {
+      const row = byId.get(id);
+      if (!row || row.authorUserId === scope.viewer.id) return [];
+      return [{ id: row.id, title: row.title, kind: row.kind as CommunityPostKind, createdAt: row.createdAt.toISOString(), ...(row.areaName ? { areaName: row.areaName } : {}), ...(row.categorySlug ? { categorySlug: row.categorySlug as CategorySlug } : {}) }];
+    })
+    .slice(0, 5);
 }
 
 // ---- The page ------------------------------------------------------------------------------------------------
@@ -471,7 +518,7 @@ const pageSize = (query: PortalQueryState) => (query.view === 'list' ? PORTAL_LI
  * not their own, not from someone blocked either way, still visible (a post) or open and shown (a task). The market's
  * stream names no authors, so the pill asks here before it counts. At most 50 keys.
  */
-export async function visibleFreshKeys(db: Db, viewerId: string, keys: readonly string[]): Promise<string[]> {
+export async function visibleFreshKeys(db: Db, viewerId: string, keys: readonly string[], rows: 'all' | 'real' = 'all'): Promise<string[]> {
   const wanted = keys.filter((key): key is string => typeof key === 'string').slice(0, 50);
   const postIds = wanted.flatMap((key) => (key.startsWith('post:') ? [key.slice(5)] : []));
   const taskIds = wanted.flatMap((key) => (key.startsWith('task:') ? [key.slice(5)] : []));
@@ -481,7 +528,9 @@ export async function visibleFreshKeys(db: Db, viewerId: string, keys: readonly 
     taskIds.length ? db.select({ id: tasks.id, poster: tasks.posterUserId }).from(tasks).where(and(inArray(tasks.id, taskIds), eq(tasks.status, 'open'), isNull(tasks.hiddenAt))) : Promise.resolve([]),
   ]);
   const hidden = new Set([viewerId, ...blocked]);
-  const seen = new Set([...postRows.filter((row) => !hidden.has(row.author)).map((row) => `post:${row.id}`), ...taskRows.filter((row) => !hidden.has(row.poster)).map((row) => `task:${row.id}`)]);
+  // The demo marketplace never counts for a real account in production (plan 10, D1).
+  const shown = (id: string) => rows === 'all' || isRealRecordId(id);
+  const seen = new Set([...postRows.filter((row) => !hidden.has(row.author) && shown(row.id)).map((row) => `post:${row.id}`), ...taskRows.filter((row) => !hidden.has(row.poster) && shown(row.id)).map((row) => `task:${row.id}`)]);
   return wanted.filter((key) => seen.has(key));
 }
 
@@ -489,15 +538,19 @@ export async function getPortal(db: Db, viewer: CommunityViewer, params: Params,
   const scope = await scopeFor(db, viewer, parsePortalQuery(params), now);
   if (!scope) return null;
   const { query, facts } = scope;
-  const [listing, { facets, areaCounts }, stats, rail, composer] = await Promise.all([
+  const locale = localeOrDefault(viewer.locale);
+  const [listing, { facets, areaCounts }, stats, rail, composer, announcement] = await Promise.all([
     sectioned(scope)
       ? sectionsOf(db, scope).then((sections) => ({ sections, items: sections.flatMap((section) => section.items), totalCount: sections.reduce((sum, section) => sum + section.count, 0) }))
       : itemPage(db, scope, query.page, pageSize(query)).then((page) => ({ sections: undefined, ...page })),
     facetsOf(db, scope),
     statsOf(db, scope),
     railOf(db, scope),
-    composerData(db, facts),
+    composerData(db, facts, locale, now),
+    announcementFor(db, viewer.id, facts.market.id, locale, now),
   ]);
+  // Staff in production get a switch for the demo marketplace, which members don't see here (plan 10, D1).
+  const samplesSwitch = viewer.staff && samplesHiddenInThisBuild() && isRealRecordId(viewer.id) ? { samples: { shown: (viewer.rows ?? 'all') === 'all' } } : {};
   const placeSlugs = scope.areaIds ? scope.marketAreas.filter((area) => scope.areaIds!.includes(area.id)).map((area) => area.slug) : undefined;
   return {
     market: { slug: facts.market.slug, name: facts.market.name, timeZone: scope.timeZone },
@@ -519,6 +572,10 @@ export async function getPortal(db: Db, viewer: CommunityViewer, params: Params,
     live: { ...(scope.areaIds ? { areaIds: scope.areaIds, areaSlugs: placeSlugs } : {}), withRemote: scope.withCitywide },
     today: marketDayKey(now, scope.timeZone),
     boardHref: boardHrefOf(scope),
+    ...(announcement ? { announcement } : {}),
+    // We don't know their neighborhood (plan 10.15): the page asks, above the stream.
+    ...(!facts.area && scope.marketAreas.length > 0 ? { askArea: true } : {}),
+    ...samplesSwitch,
   };
 }
 
@@ -531,6 +588,7 @@ export async function getPortalMore(db: Db, viewer: CommunityViewer, query: Port
     time: query.time,
     q: query.q,
     saved: query.saved ? '1' : undefined,
+    unanswered: query.unanswered ? '1' : undefined,
     sort: query.sort,
     view: query.view,
     group: query.group,

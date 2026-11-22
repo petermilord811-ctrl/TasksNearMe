@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { ArrowUpRight, Bookmark, Flame, LayoutList, Rows3, SlidersHorizontal, Sparkles, Trophy, X } from 'lucide-react';
+import { ArrowUpRight, Bookmark, Flame, LayoutList, MessageCircleQuestion, Rows3, SlidersHorizontal, Sparkles, Trophy, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { PortalPageData, PortalQuery } from '@/contracts';
 import { CATEGORY_SLUGS } from '@/contracts/common';
@@ -12,7 +12,7 @@ import { ScrollRow } from '@/ui/components/layout/scroll-row';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/primitives/popover';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/ui/primitives/sheet';
 import { PortalSearch } from './portal-header';
-import { activeFilterCount, portalHref } from './portal-href';
+import { activeFilterCount, portalHref, unansweredHref } from './portal-href';
 
 type Data = Pick<PortalPageData, 'query' | 'facets' | 'market' | 'boardHref' | 'composer'>;
 type Option = { key: string; label: string; count?: number; href: string; selected: boolean };
@@ -95,19 +95,52 @@ function SheetGroup({ title, options, onPick }: { title: string; options: Option
   </div>;
 }
 
-/** The Filters panel's groups: the service and when it was posted, each option with its count, Saved, and (in the phone's sheet) the search. */
+/** A filter that's on or off, with its count (Saved, Unanswered). */
+function ToggleOption({ href, on, icon, label, count, onPick }: { href: string; on: boolean; icon: ReactNode; label: string; count: number; onPick: () => void }) {
+  return <Link href={href} onClick={onPick} aria-current={on ? 'page' : undefined} className={cn('flex min-h-11 items-center justify-between rounded-xl border px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-ring', on ? 'border-primary/50 bg-brand-soft' : 'border-border hover:border-foreground/25')}>
+    <span className="inline-flex items-center gap-2">{icon}{label}</span><span className="text-xs text-muted-foreground tabular-nums">{count}</span>
+  </Link>;
+}
+
+/**
+ * The Filters panel's groups: the service and when it was posted, each option with its count, Saved and Unanswered
+ * (plan 10.17), and in the phone's sheet the search and the Feed or List (plan 10.7: the phone's toolbar row is gone).
+ */
 function FilterGroups({ data, withSearch, onPick }: { data: Data; withSearch: boolean; onPick: () => void }) {
   const t = useTranslations('portal');
   const { query, facets } = data;
   const { serviceOptions, timeOptions } = useOptions(data);
   return <div className="space-y-5">
     {withSearch && <PortalSearch data={data} id="portal-search-sheet" />}
+    {withSearch && <div role="group" aria-label={t('view.label')} className="space-y-1.5">
+      <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{t('view.label')}</p>
+      <ul className="grid grid-cols-2 gap-1.5">{(['feed', 'list'] as const).map((view) => <li key={view}>
+        <Link href={portalHref(query, { view })} onClick={onPick} aria-current={query.view === view ? 'page' : undefined} className={cn('flex min-h-11 items-center gap-2 rounded-xl border px-3 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-ring', query.view === view ? 'border-primary/50 bg-brand-soft font-semibold' : 'border-border hover:border-foreground/25')}>
+          {view === 'feed' ? <LayoutList aria-hidden="true" className="size-4 text-primary" /> : <Rows3 aria-hidden="true" className="size-4 text-primary" />}{t(`view.${view}`)}
+        </Link>
+      </li>)}</ul>
+    </div>}
     <SheetGroup title={t('category.label')} options={serviceOptions} onPick={onPick} />
     <SheetGroup title={t('time.label')} options={timeOptions} onPick={onPick} />
-    <Link href={portalHref(query, { saved: !query.saved })} onClick={onPick} aria-current={query.saved ? 'page' : undefined} className={cn('flex min-h-11 items-center justify-between rounded-xl border px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-ring', query.saved ? 'border-primary/50 bg-brand-soft' : 'border-border hover:border-foreground/25')}>
-      <span className="inline-flex items-center gap-2"><Bookmark aria-hidden="true" className="size-4 text-primary" />{t('saved.label')}</span><span className="text-xs text-muted-foreground tabular-nums">{facets.saved}</span>
-    </Link>
+    <div className="grid gap-1.5 sm:grid-cols-2">
+      <ToggleOption href={unansweredHref(query)} on={query.unanswered} icon={<MessageCircleQuestion aria-hidden="true" className="size-4 text-primary" />} label={t('unanswered.label')} count={facets.unanswered} onPick={onPick} />
+      <ToggleOption href={portalHref(query, { saved: !query.saved })} on={query.saved} icon={<Bookmark aria-hidden="true" className="size-4 text-primary" />} label={t('saved.label')} count={facets.saved} onPick={onPick} />
+    </div>
   </div>;
+}
+
+/** The phone's Filters sheet (plan 10.7), opened from the sticky bar: the search, the view, and the filters. */
+export function PortalFiltersSheet({ data, open, onOpenChange }: { data: Data; open: boolean; onOpenChange: (open: boolean) => void }) {
+  const t = useTranslations('portal');
+  return <Sheet open={open} onOpenChange={onOpenChange}>
+    <SheetContent side="bottom" className="max-h-[85dvh] gap-0 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <SheetHeader>
+        <SheetTitle className="font-display text-lg">{t('filters.title')}</SheetTitle>
+        <SheetDescription className="sr-only">{t('filters.title')}</SheetDescription>
+      </SheetHeader>
+      <div className="px-4 pb-2"><FilterGroups data={data} withSearch onPick={() => onOpenChange(false)} /></div>
+    </SheetContent>
+  </Sheet>;
 }
 
 const filtersButtonClass = 'relative inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-border bg-card text-[13px] font-semibold transition-colors hover:border-foreground/30 focus-visible:outline-2 focus-visible:outline-ring data-[state=open]:border-foreground/40';
@@ -153,8 +186,10 @@ export function PortalToolbar({ data }: { data: Data }) {
         </SheetContent>
       </Sheet>
       <Popover open={panelOpen} onOpenChange={setPanelOpen}>
-        <PopoverTrigger aria-label={filters > 0 ? buttonLabel : undefined} className={cn(filtersButtonClass, 'px-3.5 max-sm:hidden')}>
+        {/* Named by its words with the count after them (label in name: "Filters" is what a voice user says). */}
+        <PopoverTrigger className={cn(filtersButtonClass, 'px-3.5 max-sm:hidden')}>
           <SlidersHorizontal aria-hidden="true" className="size-3.5" />{t('filters.button')}<FilterCount count={filters} />
+          {filters > 0 && <span className="sr-only">{t('filters.countOn', { count: filters })}</span>}
         </PopoverTrigger>
         <PopoverContent align="start" className="max-h-[min(34rem,var(--radix-popover-content-available-height))] w-[23rem] overflow-y-auto p-4">
           <p className="mb-3 font-display text-[15px] font-semibold">{t('filters.title')}</p>
@@ -168,10 +203,16 @@ export function PortalToolbar({ data }: { data: Data }) {
         </Segmented>
       </div>
     </div>
-    {query.type === 'task' && <p className="flex justify-end">
-      <Link href={data.boardHref} className="inline-flex min-h-9 items-center gap-1 text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('moreTaskFilters')}<ArrowUpRight aria-hidden="true" className="size-3.5" /></Link>
-    </p>}
+    {query.type === 'task' && <MoreTaskFilters boardHref={data.boardHref} />}
   </div>;
+}
+
+/** With Tasks chosen, the full board one link away for its price and time-of-day filters (phones show it on its own, plan 10.7). */
+export function MoreTaskFilters({ boardHref, className }: { boardHref: string; className?: string }) {
+  const t = useTranslations('portal');
+  return <p className={cn('flex justify-end', className)}>
+    <Link href={boardHref} className="inline-flex min-h-9 items-center gap-1 text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('moreTaskFilters')}<ArrowUpRight aria-hidden="true" className="size-3.5" /></Link>
+  </p>;
 }
 
 /** The List's grouping, right above its rows (completion plan 9.10): by neighborhood (Craigslist) or by the day posted. */
@@ -196,10 +237,11 @@ export function ActiveFilters({ data }: { data: Data }) {
     ...(query.time ? [{ key: 'time', label: t(`time.${query.time}`), href: portalHref(query, { time: undefined }) }] : []),
     ...(query.q ? [{ key: 'q', label: t('filters.keyword', { q: query.q }), href: portalHref(query, { q: undefined }) }] : []),
     ...(query.saved ? [{ key: 'saved', label: t('saved.label'), href: portalHref(query, { saved: false }) }] : []),
+    ...(query.unanswered ? [{ key: 'unanswered', label: t('unanswered.label'), href: portalHref(query, { unanswered: false }) }] : []),
   ];
   if (chips.length === 0) return null;
   return <nav aria-label={t('filters.active')} className="flex flex-wrap items-center gap-1.5">
     {chips.map((chip) => <Link key={chip.key} href={chip.href} aria-label={t('filters.remove', { label: chip.label })} className="inline-flex min-h-8 items-center gap-1 rounded-full border border-primary/30 bg-brand-soft px-3 text-[13px] font-medium transition-colors hover:border-primary/60 focus-visible:outline-2 focus-visible:outline-ring">{chip.label}<X aria-hidden="true" className="size-3.5" /></Link>)}
-    <Link href={portalHref(query, { category: undefined, time: undefined, q: undefined, saved: false })} className="inline-flex min-h-8 items-center px-2 text-[13px] font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('filters.clearAll')}</Link>
+    <Link href={portalHref(query, { category: undefined, time: undefined, q: undefined, saved: false, unanswered: false })} className="inline-flex min-h-8 items-center px-2 text-[13px] font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('filters.clearAll')}</Link>
   </nav>;
 }

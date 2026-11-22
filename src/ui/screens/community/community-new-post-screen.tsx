@@ -19,7 +19,7 @@ export function CommunityNewPostScreen({ data, handlers }: CommunityNewPostScree
     <h1 className="font-display text-[1.75rem]/[1.15] font-semibold tracking-[-0.02em]">{t('newPost.title')}</h1>
     {data.postBlocked && <p role="status" className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm">{t(`postBlocked.${data.postBlocked}`)} {data.postBlocked === 'phone_required' && <Link href={routes.app.account()} className="font-semibold text-primary underline underline-offset-4">{t('verifyPhone')}</Link>}</p>}
     <Card className="gap-0 p-4 sm:p-6">
-      <CommunityPostForm data={data} initialKind={data.kind} onPost={handlers.onPost} label={t('newPost.title')} />
+      <CommunityPostForm data={data} initialKind={data.kind} onPost={handlers.onPost} {...(handlers.onUploadPhoto ? { onUploadPhoto: handlers.onUploadPhoto } : {})} label={t('newPost.title')} />
     </Card>
   </div>;
 }

@@ -17,7 +17,12 @@ export function savedHref(query: PortalQueryState): string {
     : routes.app.community({ area: PORTAL_ALL_AREAS, saved: true, sort: query.sort, view: query.view, group: query.group });
 }
 
-/** How many of the narrowing filters are on (the phone's "Filters (n)"): service, time, words and Saved. */
+/** How many of the narrowing filters are on (the phone's "Filters (n)"): service, time, words, Saved and Unanswered. */
 export function activeFilterCount(query: PortalQueryState): number {
-  return [query.category, query.time, query.q, query.saved || undefined].filter(Boolean).length;
+  return [query.category, query.time, query.q, query.saved || undefined, query.unanswered || undefined].filter(Boolean).length;
+}
+
+/** Asks nobody answered yet (plan 10.17), in the place and filters in view; the type goes (only asks qualify). */
+export function unansweredHref(query: PortalQueryState): string {
+  return query.unanswered ? portalHref(query, { unanswered: false }) : portalHref(query, { unanswered: true, saved: false, type: undefined });
 }

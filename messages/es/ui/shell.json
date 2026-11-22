@@ -183,5 +183,6 @@
     "label": "Tema de color",
     "toLight": "Cambiar al modo claro",
     "toDark": "Cambiar al modo oscuro"
-  }
+  },
+  "neighborsNew": "Publicaciones nuevas"
 }

@@ -10,6 +10,8 @@ import { deleteReplyAction, reactFromWindowAction, saveReplyAction, sendFromWind
 import { handOffToSupportAction, replyToHelpCaseAction } from '@/modules/assist/support-chat-actions';
 import { blockUserAction, reportUserAction } from '@/modules/support/actions';
 import { helpUnreadCount } from '@/modules/support/service';
+import { neighborsNewsOf } from '@/modules/community/home';
+import { communityViewerOf } from '@/modules/community/request-viewer';
 import { shellNoticesFor } from '@/modules/markets/outage';
 import { dispatchNotifications, unreadNotificationCount } from '@/modules/notifications/service';
 import { getViewer, toSignedInViewer } from '@/platform/auth/viewer';
@@ -47,13 +49,20 @@ async function ViewerShell({ children }: { children: React.ReactNode }) {
   await dispatchNotifications(db, now, 50);
   // `notices`: the outage switch of the person's market (completion plan 5.15), on every signed-in page.
   // The chat button counts unread messages and an unread reply from support in the Help conversation (2026-11-22).
-  const [unreadMessages, unreadNotifications, notices, unreadHelp] = await Promise.all([unreadMessageCount(db, viewer.user.id), unreadNotificationCount(db, viewer.user.id), shellNoticesFor(db, viewer.user.id), helpUnreadCount(db, viewer.user.id)]);
+  // `neighborsNews`: the dot on the Neighbors item (plan 10.19).
+  const [unreadMessages, unreadNotifications, notices, unreadHelp, neighborsNews] = await Promise.all([
+    unreadMessageCount(db, viewer.user.id),
+    unreadNotificationCount(db, viewer.user.id),
+    shellNoticesFor(db, viewer.user.id),
+    helpUnreadCount(db, viewer.user.id),
+    communityViewerOf(viewer.user).then((reader) => neighborsNewsOf(db, reader)),
+  ]);
   // The person's own market clock for every client component below (completion plan 8.1); server components get it
   // from the request (getViewer set it), and a page about another market names that market's.
   return (
     <TimeZoneProvider timeZone={viewer.user.timeZone}>
       <AppShell
-        viewer={{ ...toSignedInViewer(viewer.user), unreadMessages, unreadNotifications }}
+        viewer={{ ...toSignedInViewer(viewer.user), unreadMessages, unreadNotifications, ...(neighborsNews ? { neighborsNews } : {}) }}
         notices={notices}
         handlers={{ onModeChange: setMode, onSignOut: signOut, onSwitchLanguage: switchLanguageAction, onCheckPushDevice: checkPushSubscriptionAction, onForgetPushDevice: removePushSubscriptionAction }}
         // Messages: the chat button and window (2026-11-22). Server Actions only (unbound, called with the conversation's

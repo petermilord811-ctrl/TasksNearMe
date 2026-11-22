@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, inArray, isNull, ne, notInArray, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, ne, notInArray, or, sql } from 'drizzle-orm';
 import type {
   AccountPageData,
   AccountProfileInput,
@@ -28,8 +28,12 @@ import { newId } from '@/platform/db/ids';
 import { invites } from '@/modules/invites/schema';
 import { rebookProposals } from '@/modules/rebook/schema';
 import { outboxEvents } from '@/platform/outbox/schema';
-import { communityPosts } from '@/modules/community/schema';
-import { isBlockedBetween } from '@/modules/trust/blocks';
+import { communityPosts, communityReplies } from '@/modules/community/schema';
+import { helpersForAsk } from '@/modules/community/ask-alerts';
+import { followNoticeKey } from '@/modules/community/domain';
+import { followersOf, mutedOf } from '@/modules/community/follows';
+import { areas, markets } from '@/modules/markets/schema';
+import { blockedPeopleOf, isBlockedBetween } from '@/modules/trust/blocks';
 import { instantSearchMatches } from '@/modules/searches/service';
 import { reviews } from '@/modules/reviews/schema';
 import { cancelReceiptMoney, cityLiveKey, EMAIL_ONLY_TYPES, isLockedPreference, preferenceOn, TEXTLESS_TOPICS } from './delivery-domain';
@@ -122,11 +126,104 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
   const p = event.payload as Payload;
   switch (event.type) {
     // The community (completion plan 7.7): never about your own act, never between people who blocked each other.
+    // A reply tells, once each: the post's author; the person it answers ("Replying to…", plan 10.10); a helper it
+    // recommends (plan 10.11); then the post's followers, at most once a post an hour each (plan 10.9). Nobody who muted
+    // the post hears about it.
     case 'community.replied': {
       const post = await communityPost(db, text(p.postId));
       const replier = text(p.replierUserId);
-      if (!post || !replier || post.authorUserId === replier || (await isBlockedBetween(db, post.authorUserId, replier))) return [];
-      return [{ userId: post.authorUserId, type: 'community_reply', target: { kind: 'community_post', postId: post.id }, title: post.title, actorName: await nameOf(db, replier) }];
+      if (!post || !replier) return [];
+      const replyId = text(p.replyId);
+      const [reply] = replyId
+        ? await db.select({ status: communityReplies.status, replyToId: communityReplies.replyToId, recommendedHelperUserId: communityReplies.recommendedHelperUserId }).from(communityReplies).where(eq(communityReplies.id, replyId)).limit(1)
+        : [];
+      if (reply && reply.status !== 'visible') return [];
+      const [answered] = reply?.replyToId
+        ? await db.select({ authorUserId: communityReplies.authorUserId }).from(communityReplies).where(and(eq(communityReplies.id, reply.replyToId), eq(communityReplies.status, 'visible'))).limit(1)
+        : [];
+      const recommended = reply?.recommendedHelperUserId ?? undefined;
+      const blockedWithReplier = new Set(await blockedPeopleOf(db, replier));
+      const muted = await mutedOf(db, post.id, [post.authorUserId, ...(answered ? [answered.authorUserId] : []), ...(recommended ? [recommended] : [])]);
+      const told = new Set<string>([replier]);
+      const may = (userId: string) => !told.has(userId) && !blockedWithReplier.has(userId) && !muted.has(userId);
+      const actorName = await nameOf(db, replier);
+      const target: AttentionTarget = { kind: 'community_post', postId: post.id };
+      const planned: Planned[] = [];
+      const tell = (userId: string, type: NotificationType) => {
+        if (!may(userId)) return;
+        planned.push({ userId, type, target, title: post.title, actorName });
+        told.add(userId);
+      };
+      tell(post.authorUserId, 'community_reply');
+      if (answered) tell(answered.authorUserId, 'community_mention');
+      if (recommended) tell(recommended, 'community_recommended');
+      const sourceKey = followNoticeKey(post.id, new Date(event.createdAt));
+      for (const userId of await followersOf(db, post.id, [...told])) {
+        if (!blockedWithReplier.has(userId)) planned.push({ userId, type: 'community_followed_reply', target, title: post.title, actorName, sourceKey });
+      }
+      return planned;
+    }
+    // A new post (plan 10.11): a thanked helper hears about it; a recommendation request with a service alerts the
+    // helpers who offer it there.
+    case 'community.posted': {
+      const [post] = await db
+        .select({ id: communityPosts.id, title: communityPosts.title, kind: communityPosts.kind, status: communityPosts.status, authorUserId: communityPosts.authorUserId, helperUserId: communityPosts.helperUserId, marketId: communityPosts.marketId, areaId: communityPosts.areaId, categorySlug: communityPosts.categorySlug })
+        .from(communityPosts)
+        .where(eq(communityPosts.id, text(p.postId) ?? event.aggregateId))
+        .limit(1);
+      if (!post || post.status !== 'visible') return [];
+      const target: AttentionTarget = { kind: 'community_post', postId: post.id };
+      if (post.kind === 'thanks' && post.helperUserId && post.helperUserId !== post.authorUserId) {
+        if (await isBlockedBetween(db, post.helperUserId, post.authorUserId)) return [];
+        if ((await mutedOf(db, post.id, [post.helperUserId])).size > 0) return [];
+        return [{ userId: post.helperUserId, type: 'community_thanked', target, title: post.title, actorName: await nameOf(db, post.authorUserId) }];
+      }
+      if (post.kind !== 'recommendation' || !post.categorySlug) return [];
+      // Where it was asked: the neighborhood, or the city for a citywide post.
+      const [area] = post.areaId ? await db.select({ name: areas.name }).from(areas).where(eq(areas.id, post.areaId)).limit(1) : await db.select({ name: markets.name }).from(markets).where(eq(markets.id, post.marketId)).limit(1);
+      const helpers = await helpersForAsk(db, post, new Date(event.createdAt));
+      return helpers.map((userId) => ({ userId, type: 'community_ask_match' as const, target, title: post.title, params: { area: area?.name ?? '' } }));
+    }
+    // "Ask for help" made the thread a task (plan 10.12): the helpers neighbors named in it hear about it, unless a task
+    // alert told them already.
+    case 'community.task_linked': {
+      const postId = text(p.postId);
+      const taskId = text(p.taskId);
+      const poster = text(p.posterUserId);
+      if (!postId || !taskId || !poster) return [];
+      const [task] = await db.select({ title: tasks.title, status: tasks.status }).from(tasks).where(eq(tasks.id, taskId)).limit(1);
+      if (!task || task.status !== 'open') return [];
+      const named = await db
+        .selectDistinct({ userId: communityReplies.recommendedHelperUserId })
+        .from(communityReplies)
+        .innerJoin(helperProfiles, eq(helperProfiles.userId, communityReplies.recommendedHelperUserId))
+        .where(and(eq(communityReplies.postId, postId), eq(communityReplies.status, 'visible'), isNotNull(communityReplies.recommendedHelperUserId), ne(communityReplies.recommendedHelperUserId, poster), eq(helperProfiles.status, 'active')));
+      const ids = named.map((row) => row.userId).filter((id): id is string => Boolean(id));
+      if (ids.length === 0) return [];
+      const blocked = new Set(await blockedPeopleOf(db, poster));
+      const alerted = new Set(
+        (await db.select({ userId: notifications.userId }).from(notifications).where(and(inArray(notifications.userId, ids), eq(notifications.type, 'task_match'), sql`${notifications.target}->>'taskId' = ${taskId}`))).map((row) => row.userId),
+      );
+      const posterName = await nameOf(db, poster);
+      return ids.filter((id) => !blocked.has(id) && !alerted.has(id)).map((userId) => ({ userId, type: 'community_task_posted' as const, target: { kind: 'find_work_task', taskId } as AttentionTarget, title: task.title, actorName: posterName }));
+    }
+    // Hidden after reports (plan 10.21): its author hears it's with our team.
+    case 'community.auto_hidden': {
+      const author = text(p.authorUserId);
+      const postId = text(p.postId);
+      if (!author || !postId) return [];
+      const [post] = await db.select({ title: communityPosts.title }).from(communityPosts).where(eq(communityPosts.id, postId)).limit(1);
+      if (!post) return [];
+      return [{ userId: author, type: 'community_auto_hidden', target: { kind: 'community_post', postId }, title: post.title, params: { on: p.targetKind === 'reply' ? 'reply' : 'post' } }];
+    }
+    // The weekly digest (plan 10.14, src/modules/community/digest.ts): by email only.
+    case 'community.digest': {
+      const userId = text(p.userId);
+      const total = typeof p.count === 'number' ? p.count : undefined;
+      if (!userId || !total) return [];
+      const titles = Array.isArray(p.titles) ? p.titles.filter((title): title is string => typeof title === 'string').slice(0, 3) : [];
+      const area = text(p.area);
+      return [{ userId, type: 'community_digest', target: { kind: 'community' }, params: { count: total, waiting: typeof p.waiting === 'number' ? p.waiting : 0, ...(area ? { area } : {}), ...(titles.length > 0 ? { titles } : {}) } }];
     }
     case 'community.answer_pinned': {
       const post = await communityPost(db, text(p.postId));

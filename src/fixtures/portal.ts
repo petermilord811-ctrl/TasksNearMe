@@ -170,7 +170,7 @@ const byNewest = [...hotItems].sort((a, b) => b.at.localeCompare(a.at) || b.id.l
 
 // ---- The place, its counts and the rail -----------------------------------------------------------------------
 
-const query = (change: Partial<PortalQueryState> = {}): PortalQueryState => ({ saved: false, sort: 'hot', view: 'feed', group: 'area', page: 1, ...change });
+const query = (change: Partial<PortalQueryState> = {}): PortalQueryState => ({ saved: false, unanswered: false, sort: 'hot', view: 'feed', group: 'area', page: 1, ...change });
 
 const areas: PortalArea[] = [
   { slug: 'allandale', name: 'Allandale', count: 1, nearby: false, yours: false },
@@ -191,6 +191,7 @@ const facets: PortalFacets = {
   all: 15,
   times: { '24h': 6, '7d': 13, '30d': 13 },
   saved: 2,
+  unanswered: 1,
 };
 
 const helpers: PortalHelper[] = [
@@ -209,6 +210,11 @@ const rail: PortalRail = {
     { id: recommendation.id, title: recommendation.title, kind: 'recommendation', replyCount: 3, helpful: 4, areaName: 'Mueller' },
     { id: question.id, title: question.title, kind: 'question', replyCount: 2, helpful: 3, areaName: 'Windsor Park' },
     { id: thanks.id, title: thanks.title, kind: 'thanks', replyCount: 1, helpful: 2, areaName: 'Mueller' },
+  ],
+  // Plan 10.17: asks nobody answered yet, the oldest first.
+  unanswered: [
+    { id: 'cpo_gutter', title: 'Anyone know a helper who does gutter-level leaf cleanup from the ground?', kind: 'recommendation', createdAt: '2026-11-16T16:20:00.000Z', areaName: 'Windsor Park', categorySlug: 'yard-cleanup' },
+    { id: 'cpo_printer', title: 'Printer keeps dropping off the Wi-Fi. Worth booking help?', kind: 'question', createdAt: '2026-11-17T08:05:00.000Z', categorySlug: 'computer-help' },
   ],
 };
 
@@ -287,7 +293,7 @@ export const portalHelperData: PortalPageData = {
     const { askForHelpHref: _askForHelp, ...rest } = post;
     return { ...item, post: rest };
   }),
-  rail: { ...rail, yourTasks: [], yourPosts: [], savedCount: 1, helpers: helpers.filter((helper) => helper.handle !== 'jordan-t') },
+  rail: { ...rail, yourTasks: [], yourPosts: [], savedCount: 1, helpers: helpers.filter((helper) => helper.handle !== 'jordan-t'), unanswered: [rail.unanswered[0]!] },
 };
 
 /** Tasks only, in one neighborhood. */
@@ -324,12 +330,38 @@ export const portalFilteredEmptyData: PortalPageData = {
 export const portalEmptyData: PortalPageData = {
   ...base,
   areas: areas.map((area) => ({ ...area, count: 0 })),
-  facets: { types: { all: 0, task: 0, recommendation: 0, question: 0, tip: 0, thanks: 0 }, categories: { 'furniture-assembly': 0, 'moving-help': 0, 'yard-cleanup': 0, 'light-cleaning': 0, 'computer-help': 0, general: 0 }, nearby: 0, all: 0, times: { '24h': 0, '7d': 0, '30d': 0 }, saved: 0 },
+  facets: { types: { all: 0, task: 0, recommendation: 0, question: 0, tip: 0, thanks: 0 }, categories: { 'furniture-assembly': 0, 'moving-help': 0, 'yard-cleanup': 0, 'light-cleaning': 0, 'computer-help': 0, general: 0 }, nearby: 0, all: 0, times: { '24h': 0, '7d': 0, '30d': 0 }, saved: 0, unanswered: 0 },
   items: [],
   totalCount: 0,
   stats: { openTasks: 0, postsThisWeek: 0, helpers: 0 },
-  rail: { yourTasks: [], yourPosts: [], savedCount: 0, helpers: [], trending: [] },
+  rail: { yourTasks: [], yourPosts: [], savedCount: 0, helpers: [], trending: [], unanswered: [] },
 };
+
+/** Launch week (plan 10.16, 10.15): staff's welcome card, and a new member asked for their neighborhood. */
+export const portalLaunchData: PortalPageData = {
+  ...base,
+  place: { kind: 'market' },
+  yourArea: undefined,
+  areas: areas.map((area) => ({ ...area, nearby: false, yours: false })),
+  askArea: true,
+  announcement: {
+    id: 'can_welcome',
+    title: 'Welcome to Neighbors in Austin',
+    body: 'Ask who to hire, share what worked, and thank the helpers you booked. Exact addresses never go here: they go only to the helper you book.',
+    endsAt: '2026-12-15T06:00:00.000Z',
+  },
+};
+
+/** Asks nobody answered yet (plan 10.17): the Unanswered filter on. */
+export const portalUnansweredData: PortalPageData = {
+  ...base,
+  query: query({ unanswered: true }),
+  items: hotItems.filter((item) => item.type === 'post' && (item.post.kind === 'recommendation' || item.post.kind === 'question')).map((item) => (item.type === 'post' ? { ...item, post: { ...item.post, replyCount: 0, previewReplies: [] } } : item)).slice(0, 2),
+  totalCount: 2,
+};
+
+/** Staff in production (plan 10, D1): the demo marketplace hidden from members, with their switch. */
+export const portalStaffSamplesData: PortalPageData = { ...base, samples: { shown: false } };
 
 /** Not phone-verified yet: reading works, posting waits. */
 export const portalBlockedData: PortalPageData = { ...base, postBlocked: 'phone_required', composer: { ...composer, postBlocked: 'phone_required' } };

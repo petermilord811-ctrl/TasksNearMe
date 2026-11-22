@@ -41,7 +41,8 @@ describe('PortalScreen', () => {
 
   it('names the place, lists its neighborhoods with counts, and asks first', () => {
     portal(portalFeedData);
-    expect(screen.getByRole('heading', { level: 1, name: 'Mueller and nearby' })).toBeDefined();
+    // The phone's sticky row and the wide screens' heading each name the place (CSS shows one of them, plan 10.7).
+    expect(screen.getAllByRole('heading', { level: 1, name: 'Mueller and nearby' })).toHaveLength(2);
     const areas = within(screen.getByRole('navigation', { name: 'Neighborhoods' }));
     expect(areas.getByRole('link', { name: /^Near you/ }).getAttribute('aria-current')).toBe('page');
     expect(areas.getByRole('link', { name: /^All of Austin/ }).getAttribute('href')).toBe(routes.app.community({ area: 'all' }));
@@ -109,7 +110,7 @@ describe('PortalScreen', () => {
   it('saves a post at once, and puts it back when the server refuses', async () => {
     const onSavePost = vi.fn(async () => ({ ok: false as const, code: 'rate_limited' as const }));
     portal(portalFeedData, { onSavePost });
-    const save = within(screen.getByRole('article', { name: /Rent the dolly/ })).getByRole('button', { name: /Rent the dolly/ });
+    const save = within(screen.getByRole('article', { name: /Rent the dolly/ })).getByRole('button', { name: /^(Save|Remove from Saved): Rent the dolly/ });
     expect(save.getAttribute('aria-pressed')).toBe('true');
     fireEvent.click(save);
     expect(save.getAttribute('aria-pressed')).toBe('false');
@@ -194,7 +195,7 @@ describe('CommunityPostScreen', () => {
   it('puts the pinned answer first and lets the author pin and delete', () => {
     post(communityPostPageData);
     expect(screen.getByRole('heading', { level: 1, name: /Who do you recommend/ })).toBeDefined();
-    const replies = within(screen.getByRole('region', { name: '3 replies' })).getAllByRole('article');
+    const replies = within(screen.getByRole('region', { name: '4 replies' })).getAllByRole('article');
     expect(within(replies[0]!).getByText('Pinned answer')).toBeDefined();
     expect(within(replies[1]!).getByText('Recommended themself')).toBeDefined();
     expect(screen.getAllByRole('button', { name: /^More:/ }).length).toBeGreaterThan(0);

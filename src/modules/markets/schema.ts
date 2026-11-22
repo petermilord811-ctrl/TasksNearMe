@@ -7,6 +7,18 @@ import { createdAt, tsz, updatedAt } from '../../platform/db/columns';
  * center point, and a location's area is the nearest area center.
  */
 
+/**
+ * One seasonal starter on Neighbors (plan 10.18): the months it shows in (1–12, the market's clock), the kind of post
+ * it starts, its service (a category slug), and its words in each language (the post's title to begin from).
+ */
+export interface CommunityPromptConfig {
+  months: number[];
+  kind: 'recommendation' | 'question' | 'tip';
+  category?: string;
+  en: string;
+  es: string;
+}
+
 export const markets = pgTable('markets', {
   id: text('id').primaryKey(),
   slug: text('slug').notNull().unique(),
@@ -23,6 +35,12 @@ export const markets = pgTable('markets', {
    * waitlist entries elsewhere in the US are matched to a market by their ZIP (src/modules/markets/coverage.ts).
    */
   zipPrefixes: jsonb('zip_prefixes').$type<string[]>().notNull().default([]),
+  /**
+   * Neighbors' seasonal starters (plan 10.18): ideas the composer offers in the months they fit (a city's move-out
+   * weeks, storm season, leaf season), in English and Spanish. Market configuration, so a new city is a data change.
+   * Null: the general starters (src/modules/community/starters.ts).
+   */
+  communityPrompts: jsonb('community_prompts').$type<CommunityPromptConfig[]>(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });

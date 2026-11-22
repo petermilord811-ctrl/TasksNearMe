@@ -163,7 +163,8 @@
         "account": "Account and verification",
         "city_news": "News about your city",
         "task_alerts": "New tasks near you",
-        "community": "Community"
+        "community": "Community",
+        "neighbors_digest": "Weekly Neighbors digest"
       },
       "topicEmails": {
         "bookings": "booking",
@@ -174,7 +175,8 @@
         "account": "account",
         "city_news": "city news",
         "task_alerts": "new-task",
-        "community": "community"
+        "community": "community",
+        "neighbors_digest": "weekly Neighbors digest"
       },
       "cta": {
         "booking": "View the booking",
@@ -195,7 +197,8 @@
         "saved_search": "Open your search",
         "booking_review": "Go to the reviews",
         "saved_searches": "Open your saved searches",
-        "new_task": "Post a task"
+        "new_task": "Post a task",
+        "community": "Open Neighbors"
       },
       "next": {
         "offer_received": "Compare the offers on your task and book the one that fits. You're only charged when you book.",
@@ -259,7 +262,15 @@
         "review_reminder": "After that, reviews for this booking close. They stay hidden until you've both written one.",
         "saved_searches_digest": "Your saved searches page has each one, with its own filters and alerts.",
         "payment_refunded": "It's back on the card you paid with in 5 to 10 business days, depending on your bank.",
-        "address_recheck": "There's nothing you need to do. We'll let you know when it's checked, usually within a day."
+        "address_recheck": "There's nothing you need to do. We'll let you know when it's checked, usually within a day.",
+        "community_followed_reply": "See the newest replies in the conversation.",
+        "community_mention": "See their reply, and answer if it helps.",
+        "community_recommended": "A thank-you in the thread goes a long way.",
+        "community_thanked": "Neighbors see who recommends you on your profile.",
+        "community_ask_match": "Answer if you can help. Neighbors see the helpers others recommend first.",
+        "community_task_posted": "Make an offer while it's open.",
+        "community_auto_hidden": "Nothing to do now. We'll show it again if it follows the community guidelines.",
+        "community_digest": "See what your neighbors are asking and sharing."
       },
       "lockedFooter": "Booking and payment emails are always on: they're your receipts and safety updates.",
       "optionalFooter": "You're getting this because {topic} emails are on.",
@@ -339,12 +350,24 @@
       "review_reminder": "{days, plural, one {One day left} other {# days left}} to review {actorName} for {title}.",
       "saved_searches_digest": "{count, plural, one {# new task} other {# new tasks}} for your saved searches, including {search}.",
       "address_recheck": "We're checking your home address again: the name on your ID differs from the one on your account.",
-      "payment_refunded": "We refunded {hasAmount, select, yes {{amount}} other {a payment}} for {title}: {refundFor, select, late {it came through after the booking had ended} second_tip {it was a second tip for the same booking} change {the change was paid after the booking had moved on} other {it wasn't owed}}."
+      "payment_refunded": "We refunded {hasAmount, select, yes {{amount}} other {a payment}} for {title}: {refundFor, select, late {it came through after the booking had ended} second_tip {it was a second tip for the same booking} change {the change was paid after the booking had moved on} other {it wasn't owed}}.",
+      "community_followed_reply": "{actorName} replied on a post you follow: {title}.",
+      "community_mention": "{actorName} replied to you on: {title}.",
+      "community_recommended": "{actorName} recommended you to a neighbor: {title}.",
+      "community_thanked": "{actorName} thanked you on Neighbors: {title}.",
+      "community_ask_match": "A neighbor in {area} asks for a recommendation: {title}.",
+      "community_task_posted": "{actorName} posted a task from the thread where you were recommended: {title}.",
+      "community_auto_hidden": "Your {on, select, reply {reply} other {post}} on {title} is hidden while our team reviews reports about it.",
+      "community_digest": "This week in {area}: {count, plural, one {# post} other {# posts}}{waiting, plural, =0 {} one {, # waiting for an answer} other {, # waiting for an answer}}."
     },
     "pushTitle": "TasksNearMe",
     "receipt": {
       "money": "{money, select, refund {{amount} is going back to how you paid. Banks can take 5 to 10 business days to show it.} late_refund {{amount} is going back to how you paid, and the rest goes to {actorName} for the late cancellation. Banks can take 5 to 10 business days to show it.} no_refund {Free cancellation had ended, so this booking isn't refunded.} not_charged {Nothing was charged, so there's nothing to refund.} client_refunded {{actorName} gets {amount} back.} client_not_charged {{actorName} hadn't been charged yet.} compensation {{amount} for your time is added to your earnings.} other {}}",
       "told": "We've let {actorName} know."
+    },
+    "digest": {
+      "liveliest": "Liveliest this week:",
+      "title": "“{title}”"
     }
   },
   "emails": {

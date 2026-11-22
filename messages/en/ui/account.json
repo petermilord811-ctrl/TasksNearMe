@@ -118,7 +118,8 @@
       "account": "Account and verification",
       "city_news": "News about your city",
       "task_alerts": "New tasks near you",
-      "community": "Community"
+      "community": "Community",
+      "neighbors_digest": "Weekly Neighbors digest"
     },
     "switchLabel": "{topic} by {channel}",
     "locked": "Receipts and safety messages can't be turned off.",
@@ -240,7 +241,8 @@
       "account": "account",
       "city_news": "city news",
       "task_alerts": "new-task",
-      "community": "community"
+      "community": "community",
+      "neighbors_digest": "weekly Neighbors digest"
     }
   },
   "passkeys": {

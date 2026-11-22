@@ -230,6 +230,7 @@ export const routes = {
         time: query.time,
         q: q ? q : undefined,
         saved: query.saved ? '1' : undefined,
+        unanswered: query.unanswered ? '1' : undefined,
         sort: query.sort && query.sort !== 'hot' ? query.sort : undefined,
         view: query.view && query.view !== 'feed' ? query.view : undefined,
         group: query.group && query.group !== 'area' ? query.group : undefined,
@@ -239,7 +240,8 @@ export const routes = {
     communityPost: (postId: string) => `/app/community/${enc(postId)}`,
     /** A reply in its post's thread (the reply's `reply-<id>` anchor). */
     communityReply: (postId: string, replyId: string) => `/app/community/${enc(postId)}#reply-${enc(replyId)}`,
-    newCommunityPost: (kind?: CommunityPostKind) => withQuery('/app/community/new', { kind }),
+    /** `booking`: "Thank Sam on Neighbors" from a finished booking (plan 10.12), chosen in the thanks form. */
+    newCommunityPost: (kind?: CommunityPostKind, booking?: string) => withQuery('/app/community/new', { kind, booking }),
     payments: () => '/app/payments',
     /** A receipt for one booking (printable). */
     receipt: (bookingId: string) => `/app/payments/${enc(bookingId)}`,

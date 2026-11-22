@@ -16,7 +16,7 @@ import { AuthorCardContent, roleTone } from './author-card';
  * (completion plan 7.7), so a name never has to share its line with badges. The name opens the card behind it
  * (plan 9.10, LinkedIn-style); a tap on the avatar opens the same card.
  */
-export function AuthorLine({ author, at, now, size = 'md' }: { author: CommunityAuthor; at: ISODateTime; now: ISODateTime; size?: 'sm' | 'md' }) {
+export function AuthorLine({ author, at, now, size = 'md', edited }: { author: CommunityAuthor; at: ISODateTime; now: ISODateTime; size?: 'sm' | 'md'; /** Edited since (plan 10.5): "Edited" after the time. */ edited?: ISODateTime }) {
   const t = useTranslations('community');
   const { formatRelative, formatDateTime } = useFormat();
   const [open, setOpen] = useState(false);
@@ -33,6 +33,7 @@ export function AuthorLine({ author, at, now, size = 'md' }: { author: Community
         <span className="truncate">
           {author.areaName && <>{author.areaName} · </>}
           <time dateTime={at} title={formatDateTime(at)}>{formatRelative(at, now)}</time>
+          {edited && <> · <span title={formatDateTime(edited)}>{t('edited')}</span></>}
         </span>
       </p>
     </div>

@@ -70,6 +70,17 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   community_reply: 'community',
   community_answer_pinned: 'community',
   community_helpful: 'community',
+  // Neighbors, plan 10: in the app and on devices like the rest of the community; email and texts only if turned on.
+  community_followed_reply: 'community',
+  community_mention: 'community',
+  community_recommended: 'community',
+  community_thanked: 'community',
+  community_ask_match: 'community',
+  community_auto_hidden: 'community',
+  // A task a helper was recommended for is new work they could take (plan 10.12): as task alerts.
+  community_task_posted: 'task_alerts',
+  // The weekly digest has its own row, on by email (plan 10.14).
+  community_digest: 'neighbors_digest',
   // Questions on a task (completion plan 7.9) are part of getting to an offer.
   question_received: 'offers',
   question_answered: 'offers',
@@ -90,7 +101,7 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
  * Types that go by email only: never in the bell (made read, and left out of the notifications page) and never as a text
  * or a push. The cancellation receipt (the owner's choice, 2026-11-20): the person did it on screen, so it's a record.
  */
-export const EMAIL_ONLY_TYPES: ReadonlySet<NotificationType> = new Set<NotificationType>(['booking_canceled_receipt']);
+export const EMAIL_ONLY_TYPES: ReadonlySet<NotificationType> = new Set<NotificationType>(['booking_canceled_receipt', 'community_digest']);
 
 /**
  * What a cancellation receipt says about the money, for the person who canceled (`by`): from the event's refund and
@@ -136,6 +147,8 @@ export const DEFAULT_PREFERENCES: Record<NotificationTopic, readonly Notificatio
   account: ['email'],
   task_alerts: ['email'],
   community: [],
+  // The weekly Neighbors digest (plan 10.14; the owner's default, 2026-11-22): by email, one click to stop.
+  neighbors_digest: ['email'],
   city_news: ['email'],
   tips_and_news: [],
 };
@@ -147,7 +160,7 @@ export const DEFAULT_PREFERENCES: Record<NotificationTopic, readonly Notificatio
 export const cityLiveKey = (marketId: string) => `city_live:${marketId}`;
 
 /** Topics whose news never goes by text (an announcement by text needs consent we don't collect): no text switch. */
-export const TEXTLESS_TOPICS: ReadonlySet<NotificationTopic> = new Set<NotificationTopic>(['city_news']);
+export const TEXTLESS_TOPICS: ReadonlySet<NotificationTopic> = new Set<NotificationTopic>(['city_news', 'neighbors_digest']);
 
 export const isLockedPreference = (topic: string, channel: string) => LOCKED_PREFERENCES.some((item) => item.topic === topic && item.channel === channel);
 

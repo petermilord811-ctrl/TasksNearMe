@@ -1,13 +1,29 @@
 import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 import { routes } from '@/contracts/routes';
-import { createCommunityPostAction, loadPortalPageAction, portalFreshAction, reactInCommunityAction, saveCommunityPostAction } from '@/modules/community/actions';
+import {
+  createCommunityPostAction,
+  deleteOwnCommunityItemAction,
+  dismissAnnouncementAction,
+  editCommunityItemAction,
+  followCommunityPostAction,
+  loadCommunityReactorsAction,
+  loadPortalPageAction,
+  portalFreshAction,
+  reactInCommunityAction,
+  replyToCommunityPostAction,
+  saveCommunityPostAction,
+  setCommunityAreaAction,
+  setNeighborsSamplesAction,
+  uploadCommunityPhotoAction,
+} from '@/modules/community/actions';
 import { getPortal } from '@/modules/community/portal';
+import { communityViewerOf } from '@/modules/community/request-viewer';
+import { localeOrDefault } from '@/contracts';
 import { saveTaskAction } from '@/modules/offers/helper-actions';
-import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
@@ -34,8 +50,8 @@ function CommunityPage({ searchParams }: PageProps<'/[locale]/app/community'>) {
 async function Portal({ searchParams }: Pick<PageProps<'/[locale]/app/community'>, 'searchParams'>) {
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.community()));
-  const [search, now] = await Promise.all([searchParams, requestNow()]);
-  const data = await getPortal(db, { id: viewer.user.id, staff: staffActorOf(viewer.user) }, search, now);
+  const [search, now, locale] = await Promise.all([searchParams, requestNow(), getLocale()]);
+  const data = await getPortal(db, await communityViewerOf(viewer.user, localeOrDefault(locale)), search, now);
   if (!data) redirect(routes.app.home());
   return (
     <PortalScreen
@@ -48,6 +64,15 @@ async function Portal({ searchParams }: Pick<PageProps<'/[locale]/app/community'
         onPost: createCommunityPostAction,
         onMore: loadPortalPageAction,
         onCheckFresh: portalFreshAction,
+        onReply: replyToCommunityPostAction,
+        onUploadPhoto: uploadCommunityPhotoAction,
+        onEdit: editCommunityItemAction,
+        onFollow: followCommunityPostAction,
+        onDelete: deleteOwnCommunityItemAction,
+        onLoadReactors: loadCommunityReactorsAction,
+        onSetArea: setCommunityAreaAction,
+        onDismissAnnouncement: dismissAnnouncementAction,
+        ...(data.samples ? { onShowSamples: setNeighborsSamplesAction } : {}),
       }}
     />
   );

@@ -56,7 +56,7 @@ const iso = (value: string | null) => (value ? new Date(value.includes('T') ? va
  * `routes.admin.config()` for a market (the launch market): admins only, null for anyone else. The Markets section
  * comes from ./admin-markets.ts (every staff role reads it).
  */
-export async function getAdminConfig(db: Db, staff: StaffActor, marketSlug: string): Promise<Omit<AdminConfigPageData, 'markets'> | null> {
+export async function getAdminConfig(db: Db, staff: StaffActor, marketSlug: string): Promise<Omit<AdminConfigPageData, 'markets' | 'announcements'> | null> {
   if (!canManageConfig(staff.roles)) return null;
   const [market] = await db.select().from(markets).where(eq(markets.slug, marketSlug)).limit(1);
   if (!market) return null;

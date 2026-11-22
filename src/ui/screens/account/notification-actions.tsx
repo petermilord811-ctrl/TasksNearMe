@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlarmClock, ArrowLeftRight, PenLine, Timer, Award, BadgeCheck, Gift, CalendarClock, CalendarOff, CirclePause, CirclePlay, CreditCard, LifeBuoy, MessagesSquare, CircleHelp, BellRing, Repeat, ThumbsUp, Pin, SkipForward, UserSearch, ShieldAlert, ShieldCheck, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, ClipboardX, Clock, DoorOpen, Download, HandCoins, Headset, Hourglass, MapPin, MapPinned, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
+import { AlarmClock, ArrowLeftRight, AtSign, EyeOff, HandHeart, Newspaper, PenLine, Timer, Award, BadgeCheck, Gift, CalendarClock, CalendarOff, CirclePause, CirclePlay, CreditCard, LifeBuoy, MessagesSquare, CircleHelp, BellRing, Repeat, ThumbsUp, Pin, SkipForward, UserSearch, ShieldAlert, ShieldCheck, CalendarCheck, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, ClipboardCheck, ClipboardPenLine, ClipboardX, Clock, DoorOpen, Download, HandCoins, Headset, Hourglass, MapPin, MapPinned, MessageCircle, MessageSquarePlus, Navigation, RefreshCw, RotateCcw, Star, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType, NotificationView } from '@/contracts';
 import { formatDatePhrase, formatMoney } from '@/shared/format';
@@ -67,6 +67,14 @@ const icons: Record<NotificationType, LucideIcon> = {
   community_reply: MessagesSquare,
   community_answer_pinned: Pin,
   community_helpful: ThumbsUp,
+  community_followed_reply: MessagesSquare,
+  community_mention: AtSign,
+  community_recommended: Award,
+  community_thanked: HandHeart,
+  community_ask_match: UserSearch,
+  community_task_posted: ClipboardPenLine,
+  community_auto_hidden: EyeOff,
+  community_digest: Newspaper,
   question_received: CircleHelp,
   question_answered: CircleHelp,
   saved_search_match: BellRing,
@@ -158,6 +166,8 @@ function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
             on: notification.params?.on ?? 'post',
             search: notification.params?.search ?? '',
             refundFor: notification.params?.refundFor ?? 'other',
+            area: notification.params?.area ?? '',
+            waiting: notification.params?.waiting ?? 0,
           })}
         </span>
         <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm leading-5">

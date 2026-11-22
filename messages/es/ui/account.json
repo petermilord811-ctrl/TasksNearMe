@@ -118,7 +118,8 @@
       "account": "Cuenta y verificación",
       "city_news": "Novedades de tu ciudad",
       "task_alerts": "Tareas nuevas cerca de ti",
-      "community": "Comunidad"
+      "community": "Comunidad",
+      "neighbors_digest": "Resumen semanal de Vecinos"
     },
     "switchLabel": "{topic} por {channel}",
     "locked": "Los recibos y los mensajes de seguridad no se pueden desactivar.",
@@ -240,7 +241,8 @@
       "account": "la cuenta",
       "city_news": "novedades de tu ciudad",
       "task_alerts": "tareas nuevas",
-      "community": "comunidad"
+      "community": "comunidad",
+      "neighbors_digest": "resumen semanal de Vecinos"
     }
   },
   "passkeys": {

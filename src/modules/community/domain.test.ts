@@ -1,5 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { authorRole, communityLimits, helpfulMilestone, initialsOf, isSafetyOrCrimePost, milesBetween, HOT_SECONDS, hotScore, parsePortalQuery, portalSince, postTaskState, searchWords } from './domain';
+import { marketDayKey, marketLocalToUtc } from '@/shared/format';
+import {
+  authorRole,
+  bodyFits,
+  bodyRequired,
+  communityLimits,
+  digestDue,
+  digestSendFrom,
+  followNoticeKey,
+  helpfulMilestone,
+  initialsOf,
+  isSafetyOrCrimePost,
+  milesBetween,
+  HOT_SECONDS,
+  hotScore,
+  parsePortalQuery,
+  portalSince,
+  postTaskState,
+  reportsHide,
+  searchWords,
+  soundsUnkind,
+  startersFor,
+} from './domain';
+import { neighborsRowScope, shownUnder } from './samples';
 
 describe('community rules', () => {
   it('limits accounts in their first week more tightly', () => {
@@ -36,11 +59,11 @@ describe('community rules', () => {
 
 describe('the portal (plan 9.10)', () => {
   it('reads its filters from the address, with defaults, and drops what it does not know', () => {
-    expect(parsePortalQuery({})).toEqual({ saved: false, sort: 'hot', view: 'feed', group: 'area', page: 1 });
+    expect(parsePortalQuery({})).toEqual({ saved: false, unanswered: false, sort: 'hot', view: 'feed', group: 'area', page: 1 });
     expect(parsePortalQuery({ area: 'windsor-park', category: 'yard-cleanup', type: 'task', time: '7d', q: '  leaf   bags ', saved: '1', sort: 'top', view: 'list', group: 'day', page: '3' })).toEqual({
-      area: 'windsor-park', category: 'yard-cleanup', type: 'task', time: '7d', q: 'leaf bags', saved: true, sort: 'top', view: 'list', group: 'day', page: 3,
+      area: 'windsor-park', category: 'yard-cleanup', type: 'task', time: '7d', q: 'leaf bags', saved: true, unanswered: false, sort: 'top', view: 'list', group: 'day', page: 3,
     });
-    expect(parsePortalQuery({ area: '../etc', category: 'pottery', type: 'event', time: '1y', sort: 'best', view: 'map', page: '-2' })).toEqual({ saved: false, sort: 'hot', view: 'feed', group: 'area', page: 1 });
+    expect(parsePortalQuery({ area: '../etc', category: 'pottery', type: 'event', time: '1y', sort: 'best', view: 'map', page: '-2' })).toEqual({ saved: false, unanswered: false, sort: 'hot', view: 'feed', group: 'area', page: 1 });
     expect(parsePortalQuery({ area: 'all', category: 'general' })).toMatchObject({ area: 'all', category: 'general' });
   });
 
@@ -80,5 +103,92 @@ describe('the portal (plan 9.10)', () => {
     expect(portalSince('24h', now)?.toISOString()).toBe('2026-11-16T15:00:00.000Z');
     expect(portalSince('7d', now)?.toISOString()).toBe('2026-11-10T15:00:00.000Z');
     expect(portalSince(undefined, now)).toBeUndefined();
+  });
+});
+
+describe('Neighbors, plan 10', () => {
+  it('takes an ask without details, and wants them for a tip or a thanks', () => {
+    expect(bodyRequired('recommendation')).toBe(false);
+    expect(bodyRequired('question')).toBe(false);
+    expect(bodyFits('question', '')).toBe(true);
+    expect(bodyFits('tip', 'short')).toBe(false);
+    expect(bodyFits('thanks', 'Thanks for the careful work!')).toBe(true);
+  });
+
+  it('reminds about name-calling and profanity, in English and Spanish, but not about words a job needs', () => {
+    expect(soundsUnkind('The last crew were idiots')).toBe(true);
+    expect(soundsUnkind('what a pathetic excuse')).toBe(true);
+    expect(soundsUnkind('eres un imbécil')).toBe(true);
+    expect(soundsUnkind('Cállate')).toBe(true);
+    expect(soundsUnkind('Who can take the trash bags to the curb?')).toBe(false);
+    expect(soundsUnkind('The oven was disgusting before the deep clean')).toBe(false);
+    expect(soundsUnkind('Necesito ayuda con la computadora')).toBe(false);
+    expect(soundsUnkind('Una disputa con el casero')).toBe(false);
+  });
+
+  it('keys follow notices by post and hour, so a busy thread tells followers once an hour', () => {
+    const at = new Date('2026-11-22T15:10:00.000Z');
+    expect(followNoticeKey('cpo_a', at)).toBe(followNoticeKey('cpo_a', new Date('2026-11-22T15:59:59.000Z')));
+    expect(followNoticeKey('cpo_a', at)).not.toBe(followNoticeKey('cpo_a', new Date('2026-11-22T16:00:00.000Z')));
+    expect(followNoticeKey('cpo_a', at)).not.toBe(followNoticeKey('cpo_b', at));
+  });
+
+  it('hides after reports only from three different accounts at least a week old', () => {
+    const now = new Date('2026-11-22T12:00:00.000Z');
+    const old = new Date('2026-10-01T12:00:00.000Z');
+    const fresh = new Date('2026-11-20T12:00:00.000Z');
+    expect(reportsHide([{ userId: 'a', createdAt: old }, { userId: 'b', createdAt: old }], now)).toBe(false);
+    expect(reportsHide([{ userId: 'a', createdAt: old }, { userId: 'a', createdAt: old }, { userId: 'b', createdAt: old }], now)).toBe(false);
+    expect(reportsHide([{ userId: 'a', createdAt: old }, { userId: 'b', createdAt: old }, { userId: 'c', createdAt: fresh }], now)).toBe(false);
+    expect(reportsHide([{ userId: 'a', createdAt: old }, { userId: 'b', createdAt: old }, { userId: 'c', createdAt: old }], now)).toBe(true);
+  });
+
+  it('sends the digest from Sunday 9 am on the market’s clock, for 36 hours, once a week', () => {
+    const zone = 'America/New_York';
+    const sunday = digestSendFrom(new Date('2026-11-22T15:00:00.000Z'), zone, marketLocalToUtc, (at, z) => marketDayKey(at, z));
+    expect(sunday.toISOString()).toBe('2026-11-22T14:00:00.000Z');
+    // Sunday before 9 am: last week's moment.
+    expect(digestSendFrom(new Date('2026-11-22T12:00:00.000Z'), zone, marketLocalToUtc, (at, z) => marketDayKey(at, z)).toISOString()).toBe('2026-11-15T14:00:00.000Z');
+    // Wednesday: this week's Sunday, but past the window.
+    const wednesday = new Date('2026-11-25T15:00:00.000Z');
+    const from = digestSendFrom(wednesday, zone, marketLocalToUtc, (at, z) => marketDayKey(at, z));
+    expect(from.toISOString()).toBe('2026-11-22T14:00:00.000Z');
+    expect(digestDue(null, from, wednesday)).toBe(false);
+    expect(digestDue(null, sunday, new Date('2026-11-22T15:00:00.000Z'))).toBe(true);
+    expect(digestDue(new Date('2026-11-22T14:30:00.000Z'), sunday, new Date('2026-11-22T16:00:00.000Z'))).toBe(false);
+    expect(digestDue(new Date('2026-11-15T14:30:00.000Z'), sunday, new Date('2026-11-22T16:00:00.000Z'))).toBe(true);
+  });
+
+  it('offers this month’s starters in the page’s language, at most three, real services only', () => {
+    const prompts = [
+      { months: [11, 12], kind: 'recommendation' as const, category: 'yard-cleanup', en: 'Who rakes leaves?', es: '¿Quién recoge hojas?' },
+      { months: [5], kind: 'question' as const, en: 'Moving out soon?', es: '¿Te mudas pronto?' },
+      { months: [11], kind: 'tip' as const, category: 'not-a-service', en: 'Clean gutters from the ground', es: 'Limpia canaletas desde el suelo' },
+      { months: [11], kind: 'recommendation' as const, en: 'Who assembles cribs?', es: '¿Quién arma cunas?' },
+      { months: [11], kind: 'question' as const, en: 'Best day for bulk pickup?', es: '¿Mejor día para recolección?' },
+    ];
+    expect(startersFor(prompts, 11, 'es').map((starter) => starter.title)).toEqual(['¿Quién recoge hojas?', 'Limpia canaletas desde el suelo', '¿Quién arma cunas?']);
+    expect(startersFor(prompts, 11, 'en')[1]).toEqual({ kind: 'tip', title: 'Clean gutters from the ground' });
+    expect(startersFor(prompts, 5, 'en')).toEqual([{ kind: 'question', title: 'Moving out soon?' }]);
+    expect(startersFor(null, 11, 'en')).toEqual([]);
+  });
+
+  it('reads Unanswered from the address', () => {
+    expect(parsePortalQuery({ unanswered: '1' }).unanswered).toBe(true);
+    expect(parsePortalQuery({}).unanswered).toBe(false);
+  });
+});
+
+describe('the demo marketplace on Neighbors (plan 10, D1)', () => {
+  it('hides it from real accounts where samples are hidden, unless staff switch it on', () => {
+    const real = 'usr_0123456789abcdef0123456789abcdef';
+    expect(neighborsRowScope({ id: real, staff: false }, undefined, true)).toBe('real');
+    expect(neighborsRowScope({ id: real, staff: true }, '1', true)).toBe('all');
+    expect(neighborsRowScope({ id: real, staff: false }, '1', true)).toBe('real');
+    expect(neighborsRowScope({ id: 'usr_maya', staff: false }, undefined, true)).toBe('all');
+    expect(neighborsRowScope({ id: real, staff: false }, undefined, false)).toBe('all');
+    expect(shownUnder('real', 'cpo_demo_1')).toBe(false);
+    expect(shownUnder('real', 'cpo_0123456789abcdef0123456789abcdef')).toBe(true);
+    expect(shownUnder(undefined, 'cpo_demo_1')).toBe(true);
   });
 });

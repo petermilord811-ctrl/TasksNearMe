@@ -191,5 +191,24 @@
     "agent": "Metrics: support agent, no money",
     "week": "Metrics: support lead, 7 days",
     "empty": "Metrics: a new market's first week"
+  },
+  "community": {
+    "title": "Neighbors",
+    "intro": "How the community is doing in the period: real posts only, every market.",
+    "posts": "Posts",
+    "replies": "{count, plural, one {# reply} other {# replies}}",
+    "answered": "Asks answered within a day",
+    "answeredNote": "{answered} of {asks}",
+    "firstReply": "Middle time to a first answer",
+    "minutes": "{count, plural, one {# minute} other {# minutes}}",
+    "hours": "{count, plural, one {# hour} other {# hours}}",
+    "named": "Recommendation requests that named a helper",
+    "namedNote": "{named} of {requests}",
+    "askedForHelp": "Asks posted as tasks",
+    "bookedNote": "{count, plural, one {# booked} other {# booked}}",
+    "reports": "Reports",
+    "reportsNote": "{per} per 100 posts · {hidden} hidden automatically",
+    "byArea": "Posts by neighborhood",
+    "citywide": "Citywide"
   }
 }

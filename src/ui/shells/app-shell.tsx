@@ -73,7 +73,7 @@ export function AppShell({ viewer, handlers, children, currentPath, layout, noti
     <div className="mx-auto w-full max-w-admin flex-1 lg:grid lg:grid-cols-[16.5rem_minmax(0,1fr)]">
       <aside className="hidden py-6 pl-gutter lg:block">
         <div className="sticky top-[calc(var(--app-header-offset,4.25rem)+1.5rem)] rounded-[1.75rem] border border-foreground/[0.06] bg-card/55 p-2 shadow-[0_1px_2px_rgb(23_18_14/0.04),0_20px_40px_-32px_rgb(60_30_10/0.45)] backdrop-blur-md dark:border-white/[0.06] dark:bg-white/[0.025] dark:shadow-none">
-          <Navigation items={nav.primary} label={t('primaryNavigation')} currentPath={currentPath} />
+          <Navigation items={nav.primary} label={t('primaryNavigation')} currentPath={currentPath} {...(viewer.neighborsNews ? { neighborsNews: viewer.neighborsNews } : {})} />
           <div aria-hidden="true" className="mx-3 my-2 h-px bg-foreground/[0.07] dark:bg-white/[0.07]" />
           <Navigation items={nav.secondary} label={t('secondaryNavigation')} currentPath={currentPath} />
         </div>
@@ -90,7 +90,7 @@ export function AppShell({ viewer, handlers, children, currentPath, layout, noti
     </div>
     <TabsOnly layout={layout}>
       <MobileBottomNav>
-        <Navigation items={nav.primary} label={t('mobileNavigation')} currentPath={currentPath} variant="bottom" />
+        <Navigation items={nav.primary} label={t('mobileNavigation')} currentPath={currentPath} variant="bottom" {...(viewer.neighborsNews ? { neighborsNews: viewer.neighborsNews } : {})} />
       </MobileBottomNav>
     </TabsOnly>
     {chat}

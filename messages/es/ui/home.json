@@ -316,5 +316,12 @@
     "dashboardLoading": "Inicio · cargando",
     "shellLoading": "Área con sesión · cargando",
     "shellFlowLoading": "Área con sesión, página paso a paso · cargando"
+  },
+  "neighbors": {
+    "title": "De tus vecinos",
+    "open": "Abrir Vecinos",
+    "placeNearby": "Cerca de {area}",
+    "placeMarket": "En todo {market}",
+    "waiting": "{count, plural, one {# pregunta espera respuesta} other {# preguntas esperan respuesta}}"
   }
 }

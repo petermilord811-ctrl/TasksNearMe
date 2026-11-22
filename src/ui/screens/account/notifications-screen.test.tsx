@@ -85,6 +85,14 @@ const copy: Record<NotificationType, RegExp> = {
   community_reply: /answered your post/,
   community_answer_pinned: /pinned your answer/,
   community_helpful: /found your post/,
+  community_followed_reply: /replied on a post you follow/,
+  community_mention: /replied to you on/,
+  community_recommended: /recommended you to a neighbor/,
+  community_thanked: /thanked you on Neighbors/,
+  community_ask_match: /asks for a recommendation/,
+  community_task_posted: /posted a task from the thread/,
+  community_auto_hidden: /hidden while our team reviews/,
+  community_digest: /This week in/,
   question_received: /asked a question about/,
   question_answered: /answered your question about/,
   saved_search_match: /New task for your search/,
@@ -114,6 +122,7 @@ const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: 
   saved_search: { target: { kind: 'saved_search', searchId: 'search / one' }, href: routes.app.savedSearch('search / one') },
   booking_review: { target: { kind: 'booking_review', bookingId: 'booking / one' }, href: routes.app.bookingReview('booking / one') },
   saved_searches: { target: { kind: 'saved_searches' }, href: routes.app.savedSearches() },
+  community: { target: { kind: 'community' }, href: routes.app.community() },
   new_task: { target: { kind: 'new_task' }, href: routes.app.newTask() },
 };
 

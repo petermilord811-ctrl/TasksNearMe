@@ -32,7 +32,7 @@ export function PortalLive({ data, listId, onCheckFresh }: { data: Data; listId:
   const shown = useMemo(() => new Set(data.items.map((item) => `${item.type}:${item.id}`)), [data.items]);
   const areaNames = useMemo(() => new Set(data.areas.filter((area) => !live.areaSlugs || live.areaSlugs.includes(area.slug)).map((area) => area.name)), [data.areas, live.areaSlugs]);
   // Top ranks by engagement, so a brand-new item wouldn't appear there (sweep P5).
-  const quiet = Boolean(query.q) || query.saved || query.sort === 'top';
+  const quiet = Boolean(query.q) || query.saved || query.unanswered || query.sort === 'top';
   // The server's word on each new item: would this reader see it (not their own, nobody blocked either way, still up)?
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
@@ -129,7 +129,7 @@ export function PortalLive({ data, listId, onCheckFresh }: { data: Data; listId:
       onClick={show}
       disabled={loading}
       className={cn(
-        'fixed top-[calc(var(--app-header-offset,4rem)+0.75rem)] left-1/2 z-30 inline-flex min-h-10 -translate-x-1/2 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2',
+        'fixed top-[calc(var(--app-header-offset,4rem)+0.75rem)] max-sm:top-[calc(var(--app-header-offset,4rem)+4.5rem)] left-1/2 z-30 inline-flex min-h-10 -translate-x-1/2 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-2',
         loading && 'opacity-70',
       )}
     >

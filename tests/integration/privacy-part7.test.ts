@@ -3,7 +3,8 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { EmailProvider } from '@/integrations/email';
 import type { FileStorage } from '@/integrations/storage';
 import { users } from '@/modules/accounts/schema';
-import { communityPosts, communityReactions, communityReplies } from '@/modules/community/schema';
+import { communityFollows, communityPhotos, communityPosts, communityReactions, communityReplies } from '@/modules/community/schema';
+import { files } from '@/modules/tasks/schema';
 import { savedReplies } from '@/modules/messaging/schema';
 import { buildDataExport } from '@/modules/privacy/data-export';
 import { anonymizeAccount } from '@/modules/privacy/requests';
@@ -35,6 +36,11 @@ beforeAll(async () => {
   ]);
   await db.insert(communityReplies).values({ id: `${theirPost}_r`, postId: otherPost, authorUserId: LEAVER, body: 'Yes, every week on trash day.' });
   await db.insert(communityReactions).values({ targetKind: 'post', targetId: otherPost, userId: LEAVER, kind: 'helpful' });
+  // Plan 10: a post they follow, a photo on their own post, and the neighborhood they chose.
+  await db.insert(communityFollows).values({ userId: LEAVER, postId: otherPost, state: 'following' });
+  await db.insert(files).values({ id: `fil_${theirPost}`, ownerUserId: LEAVER, kind: 'community_photo', storageKey: `community_photo/fil_${theirPost}.webp`, contentType: 'image/webp', width: 800, height: 600, bytes: 1024 });
+  await db.insert(communityPhotos).values({ fileId: `fil_${theirPost}`, postId: theirPost, position: 0 });
+  await db.update(users).set({ homeAreaId: 'area_mueller' }).where(eq(users.id, LEAVER));
   await db.insert(savedSearches).values({ id: `ssr_${theirPost}`, userId: LEAVER, marketId: 'mkt_austin', name: 'Desks', source: 'board', params: { category: 'furniture-assembly' } });
   await db.insert(savedReplies).values({ id: `srp_${theirPost}`, userId: LEAVER, title: 'Hi', body: 'Hi {first_name}!' });
 });
@@ -78,5 +84,11 @@ describe('Part 7 and privacy', () => {
     expect(other).toMatchObject({ replies: 1, pinned: null });
     const [hidden] = await db.select({ status: communityReplies.status }).from(communityReplies).where(eq(communityReplies.id, `${theirPost}_r3`));
     expect(hidden?.status).toBe('removed');
+    // Plan 10: what they followed, their community photos and their neighborhood go with the account.
+    expect(await db.select().from(communityFollows).where(eq(communityFollows.userId, LEAVER))).toEqual([]);
+    expect(await db.select().from(files).where(eq(files.id, `fil_${theirPost}`))).toEqual([]);
+    expect(await db.select().from(communityPhotos).where(eq(communityPhotos.postId, theirPost))).toEqual([]);
+    const [left] = await db.select({ homeAreaId: users.homeAreaId }).from(users).where(eq(users.id, LEAVER));
+    expect(left?.homeAreaId).toBeNull();
   });
 });

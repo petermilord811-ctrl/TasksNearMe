@@ -1,6 +1,19 @@
-import type { ActionHandler } from './actions';
+import type { ActionHandler, ActionResult, QueryHandler } from './actions';
 import type { CategorySlug, ISODateTime, Photo, TimeZone } from './common';
-import type { CommunityComposerData, CommunityPostInput, CommunityPostKind, CommunityPostView, CommunityReactInput } from './community';
+import type {
+  CommunityAnnouncementView,
+  CommunityAreaInput,
+  CommunityComposerData,
+  CommunityEditInput,
+  CommunityFollowInput,
+  CommunityPostInput,
+  CommunityPostKind,
+  CommunityPostView,
+  CommunityReactInput,
+  CommunityReactorsView,
+  CommunityReplyInput,
+} from './community';
+import type { PhotoUploadResult } from './posting';
 import type { OfferBlockedReason } from './helper-work';
 import type { OfferStatus } from './status';
 import type { TaskPublicView } from './tasks';
@@ -67,6 +80,11 @@ export interface PortalQuery {
   q?: string;
   /** Only what the viewer saved: posts, and a helper's saved tasks. */
   saved?: boolean;
+  /**
+   * Only asks nobody has answered yet (plan 10.17): recommendation requests and questions without a reply. Tasks and
+   * other posts drop out.
+   */
+  unanswered?: boolean;
   /** Default `hot`. */
   sort?: PortalSort;
   /** Default `feed`. */
@@ -80,6 +98,7 @@ export interface PortalQuery {
 /** The filters in effect, with defaults filled in. Unknown neighborhoods, services and words are dropped. */
 export interface PortalQueryState extends PortalQuery {
   saved: boolean;
+  unanswered: boolean;
   sort: PortalSort;
   view: PortalView;
   group: PortalGroup;
@@ -156,6 +175,8 @@ export interface PortalFacets {
   times: Record<PortalTime, number>;
   /** What the viewer saved, under the other filters. */
   saved: number;
+  /** Asks without an answer yet, under the other filters (plan 10.17). */
+  unanswered: number;
 }
 
 /** A helper who works in the place, for the rail and the feed's "Helpers nearby". */
@@ -189,6 +210,11 @@ export interface PortalRail {
   helpers: PortalHelper[];
   /** The liveliest posts of the past week in the place (at most 5), by engagement. */
   trending: { id: string; title: string; kind: CommunityPostKind; replyCount: number; helpful: number; areaName?: string }[];
+  /**
+   * "Waiting for an answer" (plan 10.17): the place's asks of the last 7 days nobody answered yet (at most 5), the
+   * oldest first; for a helper, those about their own services first. Never the viewer's own.
+   */
+  unanswered: { id: string; title: string; kind: CommunityPostKind; createdAt: ISODateTime; areaName?: string; categorySlug?: CategorySlug }[];
 }
 
 /** The place the page is about. */
@@ -236,6 +262,18 @@ export interface PortalPageData {
   today: string;
   /** The full task board with the same service, neighborhood and time (its price and time-of-day filters live there). */
   boardHref: string;
+  /** The card staff pinned for the market (plan 10.16), unless the viewer closed it. */
+  announcement?: CommunityAnnouncementView;
+  /**
+   * We don't know the viewer's neighborhood (plan 10.15): no choice of theirs, no area they help in, no task with one.
+   * The page asks for it above the stream (`areas` lists the choices).
+   */
+  askArea?: boolean;
+  /**
+   * Staff in production, where members don't see the demo marketplace on Neighbors (decisions.md 2026-11-22): whether
+   * this page shows it, for the switch that turns it on or off. Absent for everyone else.
+   */
+  samples?: { shown: boolean };
 }
 
 /** One more page of the same stream (the Feed's "Show more", and the List by day). */
@@ -254,6 +292,14 @@ export interface PortalMore {
  *   "Show more" is a link to the next page.
  * - `onCheckFresh`: of the new items the live pill heard about (`post:<id>`, `task:<id>`), the ones this viewer would
  *   see: not their own, not from someone blocked either way, still up. The pill counts only those (sweep P5).
+ * - `onReply`: a reply written on a card (plan 10.3), as on the post's page (`CommunityPostHandlers.onReply`), for the
+ *   post named.
+ * - `onUploadPhoto`: a photo for the composer's post or a card's reply (plan 10.1).
+ * - `onEdit`, `onFollow`, `onDelete`: the card's menu (plan 10.5, 10.9), as on the post's page.
+ * - `onLoadReactors`: who found a post helpful or said thanks (plan 10.2).
+ * - `onSetArea`: the viewer's neighborhood (plan 10.15). ok `updated`. Errors: `validation_failed` (`invalid`: not one
+ *   of the market's).
+ * - `onDismissAnnouncement`: close the pinned card for good (plan 10.16). ok `updated`.
  */
 export interface PortalHandlers {
   onReact: ActionHandler<CommunityReactInput>;
@@ -262,4 +308,14 @@ export interface PortalHandlers {
   onPost: ActionHandler<CommunityPostInput>;
   onMore?: (query: PortalQuery & { page: number }) => Promise<PortalMore | null>;
   onCheckFresh?: (keys: string[]) => Promise<string[]>;
+  onReply?: (postId: string, input: CommunityReplyInput) => Promise<ActionResult>;
+  onUploadPhoto?: QueryHandler<FormData, PhotoUploadResult>;
+  onEdit?: ActionHandler<CommunityEditInput>;
+  onFollow?: ActionHandler<CommunityFollowInput>;
+  onDelete?: ActionHandler<{ target: 'post' | 'reply'; id: string }>;
+  onLoadReactors?: QueryHandler<{ target: 'post' | 'reply'; id: string }, CommunityReactorsView | null>;
+  onSetArea?: ActionHandler<CommunityAreaInput>;
+  onDismissAnnouncement?: ActionHandler<{ id: string }>;
+  /** Staff's switch for the demo marketplace here (`samples`). ok `updated`. */
+  onShowSamples?: ActionHandler<{ shown: boolean }>;
 }

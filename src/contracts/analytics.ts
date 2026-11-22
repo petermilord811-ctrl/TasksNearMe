@@ -187,4 +187,31 @@ export interface AdminMetricsPageData {
   liquidity: MetricsLiquidity;
   /** Finance and admins only. */
   rewards?: MetricsRewardSpend;
+  /** How Neighbors is doing in the period (plan 10.22): real posts only where samples are hidden, every market. */
+  community?: MetricsCommunity;
+}
+
+/**
+ * Neighbors' health over the period (plan 10.22). Asks are recommendation requests and questions; "answered" means a
+ * reply from someone other than the author. Real rows only (sample posts never count), in every market.
+ */
+export interface MetricsCommunity {
+  posts: number;
+  replies: number;
+  /** Posts by neighborhood, most first (at most 8; citywide posts as `areaName` absent). */
+  postsByArea: { areaName?: string; count: number }[];
+  asks: number;
+  /** Asks answered within 24 hours of posting. */
+  answeredWithinDay: number;
+  /** The middle time to an ask's first answer, in minutes (absent without answered asks). */
+  medianFirstReplyMinutes?: number;
+  recommendationRequests: number;
+  /** Recommendation requests where someone named a helper. */
+  withNamedHelper: number;
+  /** Asks turned into tasks ("Ask for help"), and how many of those tasks were booked. */
+  askedForHelp: number;
+  booked: number;
+  /** Reports about posts and replies in the period, and items hidden automatically after reports (plan 10.21). */
+  reports: number;
+  autoHidden: number;
 }

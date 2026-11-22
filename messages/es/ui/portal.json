@@ -86,7 +86,8 @@
     "clearAll": "Quitar todos",
     "remove": "Quitar el filtro: {label}",
     "active": "Filtros activos",
-    "keyword": "“{q}”"
+    "keyword": "“{q}”",
+    "countOn": "({count} activos)"
   },
   "moreTaskFilters": "Más filtros de tareas",
   "task": {
@@ -136,7 +137,10 @@
     "trendingMeta": "{replies, plural, =0 {sin respuestas} one {# respuesta} other {# respuestas}} · {helpful} útil",
     "goodToKnow": "Bueno saber",
     "privacy": "La dirección exacta solo la recibe el ayudante reservado, nunca aparece aquí.",
-    "guidelines": "Sé amable y habla de lo local. Los reportes de delitos y de seguridad son para la policía (911 en una emergencia)."
+    "guidelines": "Sé amable y habla de lo local. Los reportes de delitos y de seguridad son para la policía (911 en una emergencia).",
+    "unanswered": "Esperan respuesta",
+    "unansweredAll": "Ver todas las que esperan respuesta",
+    "unansweredGeneral": "General"
   },
   "inFeed": {
     "helpers": "Ayudantes cerca de ti",
@@ -191,6 +195,52 @@
     "spanish": "Portal · vecinos que escriben en español",
     "longThread": "Publicación · una conversación larga (30 respuestas)",
     "postWithTask": "Publicación · ya es una tarea",
-    "taskDiscussion": "Página de la tarea · su publicación del vecindario"
+    "taskDiscussion": "Página de la tarea · su publicación del vecindario",
+    "launch": "Vecinos · semana de lanzamiento: aviso fijado y la pregunta del vecindario",
+    "unanswered": "Vecinos · preguntas que esperan respuesta",
+    "staffSamples": "Vecinos · vista del equipo donde no se ven publicaciones de muestra"
+  },
+  "phoneBar": {
+    "changePlace": "Cambiar el vecindario",
+    "sort": "Ordenar: {sort}"
+  },
+  "unanswered": {
+    "label": "Sin respuesta"
+  },
+  "taskGroup": {
+    "title": "Tareas nuevas cerca de ti",
+    "more": "{count, plural, one {# tarea más} other {# tareas más}}",
+    "all": "Ver todas las tareas"
+  },
+  "announcement": {
+    "eyebrow": "Del equipo de TasksNearMe",
+    "dismiss": "Cerrar este aviso"
+  },
+  "askArea": {
+    "title": "¿En qué vecindario estás?",
+    "body": "Así, Cerca de ti muestra las publicaciones y tareas a tu alrededor en {market}.",
+    "label": "Tu vecindario",
+    "choose": "Elige un vecindario",
+    "save": "Guardar",
+    "later": "Ahora no",
+    "saved": "Guardado. Cerca de ti empieza desde ahí.",
+    "failed": "No se pudo guardar. Intenta de nuevo.",
+    "privacy": "Solo guardamos el vecindario, nunca tu dirección."
+  },
+  "samples": {
+    "hidden": "Quienes usan la app no ven aquí el mercado de demostración. Puedes mostrártelo.",
+    "shown": "Estás viendo aquí el mercado de demostración. Quienes usan la app no lo ven.",
+    "show": "Mostrarlo",
+    "hide": "Ocultarlo"
+  },
+  "yourArea": {
+    "label": "Tu vecindario:",
+    "none": "sin elegir",
+    "change": "Cambiar",
+    "set": "Elegir",
+    "choose": "Elige un vecindario",
+    "save": "Guardar",
+    "saved": "Guardado. Cerca de ti empieza desde ahí.",
+    "failed": "No se pudo guardar. Intenta de nuevo."
   }
 }

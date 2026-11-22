@@ -25,7 +25,7 @@ export { ACCEPTED_IMAGE_TYPES, AVATAR_PX, avatarPhoto, MAX_PHOTO_BYTES, photoFro
 
 export async function storePhoto(
   { db, storage, now = () => new Date() }: UploadDeps,
-  input: { userId: string; kind: 'task_photo' | 'work_sample' | 'evidence' | 'receipt' | 'message' | 'avatar'; file: File; alt?: string },
+  input: { userId: string; kind: 'task_photo' | 'work_sample' | 'evidence' | 'receipt' | 'message' | 'avatar' | 'community_photo'; file: File; alt?: string },
 ): Promise<PhotoUploadResult> {
   const { file } = input;
   if (!(ACCEPTED_IMAGE_TYPES as readonly string[]).includes(file.type)) return { ok: false, code: 'unsupported_type' };

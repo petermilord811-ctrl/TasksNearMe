@@ -72,6 +72,18 @@ export function useLastVisit(key: string): number | null | undefined {
   return useSyncExternalStore(noSubscribe, () => lastVisitOf(key), () => undefined);
 }
 
+/**
+ * When this browser last showed a view (ms), without counting this as a look (plan 10.19: the Neighbors item's dot
+ * compares it with the newest post). `null` when it never did or storage is off.
+ */
+export function peekLastSeen(key: string): number | null {
+  try {
+    return parse(window.localStorage.getItem(STORAGE_PREFIX + key))?.seen ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** For tests: forget what this page life has read. */
 export function resetLastVisits(): void {
   looked.clear();

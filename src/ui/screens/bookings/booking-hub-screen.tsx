@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, Check, Clock3, HelpCircle, Lock, Navigation, Repeat } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, Clock3, HandHeart, HelpCircle, Lock, Navigation, Repeat } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
   routes, type ActionResult, type BadgeTone, type BookingActionId, type BookingHubHandlers,
@@ -170,6 +170,15 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
     <BookingHubActions key={data.id} data={data} handlers={handlers} sheets={sheets} initialResult={initialResult} initialPending={initialPending} now={now} />
 
     <BookingTipCard key={`tip-${data.id}`} data={data} handlers={tip} preview={tipPreview} />
+
+    {/* "Thank Sam on Neighbors" (plan 10.12): a public thanks feeds the helper's "Recommended by". */}
+    {data.thankOnNeighborsHref && <section aria-labelledby="booking-thank-neighbors" className={cn(surface, surfacePad, 'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between')}>
+      <div className="min-w-0 space-y-1">
+        <h2 id="booking-thank-neighbors" className={sectionTitle}>{t('thankNeighbors.title', { name: helper.displayName })}</h2>
+        <p className="text-sm text-muted-foreground">{t('thankNeighbors.body')}</p>
+      </div>
+      <Link href={data.thankOnNeighborsHref} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full border border-primary/35 px-4 text-sm font-semibold text-primary transition-colors hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-ring"><HandHeart aria-hidden="true" className="size-4" />{t('thankNeighbors.action')}</Link>
+    </section>}
 
     {data.myReview && <section aria-label={t('review.title')} className={cn(surface, surfacePad, 'space-y-3')}>
       <h2 className={sectionTitle}>{t('review.title')}</h2>

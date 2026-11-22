@@ -2,10 +2,11 @@
 
 import { useId, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { EllipsisVertical, Flag, Pin, PinOff, ShieldAlert, Trash2 } from 'lucide-react';
+import { Bell, BellOff, BellRing, EllipsisVertical, Flag, Pencil, Pin, PinOff, ShieldAlert, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import type { ActionErrorCode, ActionHandler, ActionResult, CommunityModerationInput } from '@/contracts';
+import type { ActionErrorCode, ActionHandler, ActionResult, CommunityEditInput, CommunityFollowInput, CommunityFollowState, CommunityModerationInput } from '@/contracts';
+import { EditDialog, type EditTarget } from './edit-dialog';
 import { useLocale } from 'next-intl';
 import { localeHref } from '@/ui/lib/locale-link';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
@@ -22,7 +23,8 @@ export interface CommunityItemActionsProps {
   own: boolean;
   /** The post's author pins an answer (a reply only). */
   pin?: { pinned: boolean; onPin: ActionHandler<{ replyId: string | null }> };
-  onDelete: ActionHandler<{ target: 'post' | 'reply'; id: string }>;
+  /** The author's Delete (with `own`). */
+  onDelete?: ActionHandler<{ target: 'post' | 'reply'; id: string }>;
   /** Someone else's: report it. */
   reportHref?: string;
   /** Staff: hide, remove or restore with a reason. */
@@ -30,16 +32,21 @@ export interface CommunityItemActionsProps {
   hidden?: boolean;
   /** Copy for error codes that mean something specific here (a question's restore: `limit_reached`). */
   errorMessages?: Partial<Record<ActionErrorCode, string>>;
+  /** A post: follow it, mute it, or neither (plan 10.9). */
+  follow?: { postId: string; state: CommunityFollowState; onFollow: ActionHandler<CommunityFollowInput> };
+  /** The author's own, still visible: Edit (plan 10.5). */
+  edit?: { item: EditTarget; onEdit: ActionHandler<CommunityEditInput> };
 }
 
 /** The "More" menu on a post or a reply (completion plan 7.7): pin, delete your own, report, and staff tools. */
-export function CommunityItemActions({ target, id, label, own, pin, onDelete, reportHref, onModerate, hidden = false, errorMessages }: CommunityItemActionsProps) {
+export function CommunityItemActions({ target, id, label, own, pin, onDelete, reportHref, onModerate, hidden = false, errorMessages, follow, edit }: CommunityItemActionsProps) {
   const t = useTranslations('community');
   const feedback = useTranslations('feedback');
   const router = useRouter();
   const locale = useLocale();
   const formId = useId();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [moderate, setModerate] = useState<CommunityModerationInput['action'] | null>(null);
   const [reason, setReason] = useState('');
   const [pending, startTransition] = useTransition();
@@ -58,7 +65,8 @@ export function CommunityItemActions({ target, id, label, own, pin, onDelete, re
     } else toast.error(errorMessages?.[result.code] ?? (feedback.has(`error.${result.code}`) ? feedback(`error.${result.code}`) : feedback('error.unknown')));
   });
 
-  const hasItems = Boolean(pin) || own || Boolean(reportHref) || Boolean(onModerate);
+  const hasItems = Boolean(pin) || (own && Boolean(onDelete)) || Boolean(reportHref) || Boolean(onModerate) || Boolean(follow) || Boolean(edit);
+  const setFollow = (state: CommunityFollowState, message: string) => follow && run(() => follow.onFollow({ postId: follow.postId, state }), message);
   if (!hasItems) return null;
   return <>
     <DropdownMenu>
@@ -68,10 +76,19 @@ export function CommunityItemActions({ target, id, label, own, pin, onDelete, re
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-48">
+        {follow && (follow.state === 'muted'
+          ? <DropdownMenuItem onSelect={() => setFollow('none', t('feedback.unmuted'))}><Bell aria-hidden="true" />{t('follow.unmute')}</DropdownMenuItem>
+          : <>
+              {follow.state === 'following'
+                ? <DropdownMenuItem onSelect={() => setFollow('none', t('feedback.unfollowed'))}><BellOff aria-hidden="true" />{t('follow.unfollow')}</DropdownMenuItem>
+                : <DropdownMenuItem onSelect={() => setFollow('following', t('feedback.followed'))}><BellRing aria-hidden="true" />{t('follow.follow')}</DropdownMenuItem>}
+              <DropdownMenuItem onSelect={() => setFollow('muted', t('feedback.muted'))}><BellOff aria-hidden="true" />{t('follow.mute')}</DropdownMenuItem>
+            </>)}
+        {edit && <DropdownMenuItem onSelect={() => setEditing(true)}><Pencil aria-hidden="true" />{t('edit.action')}</DropdownMenuItem>}
         {pin && <DropdownMenuItem onSelect={() => run(() => pin.onPin({ replyId: pin.pinned ? null : id }), t(pin.pinned ? 'feedback.unpinned' : 'feedback.pinned'))}>
           {pin.pinned ? <PinOff aria-hidden="true" /> : <Pin aria-hidden="true" />}{t(pin.pinned ? 'unpin' : 'pin')}
         </DropdownMenuItem>}
-        {own && <DropdownMenuItem variant="destructive" onSelect={() => setConfirmDelete(true)}><Trash2 aria-hidden="true" />{t('delete')}</DropdownMenuItem>}
+        {own && onDelete && <DropdownMenuItem variant="destructive" onSelect={() => setConfirmDelete(true)}><Trash2 aria-hidden="true" />{t('delete')}</DropdownMenuItem>}
         {reportHref && <DropdownMenuItem onSelect={() => router.push(localeHref(reportHref, locale))}><Flag aria-hidden="true" />{t('report')}</DropdownMenuItem>}
         {onModerate && <>
           <DropdownMenuSeparator />
@@ -85,6 +102,8 @@ export function CommunityItemActions({ target, id, label, own, pin, onDelete, re
       </DropdownMenuContent>
     </DropdownMenu>
 
+    {edit && editing && <EditDialog item={edit.item} open={editing} onOpenChange={setEditing} onEdit={edit.onEdit} />}
+
     <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -93,7 +112,7 @@ export function CommunityItemActions({ target, id, label, own, pin, onDelete, re
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>{t('cancel')}</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={() => run(() => onDelete({ target, id }), t('feedback.deleted'), () => setConfirmDelete(false))}>{t('deleteConfirm')}</AlertDialogAction>
+          <AlertDialogAction variant="destructive" onClick={() => onDelete && run(() => onDelete({ target, id }), t('feedback.deleted'), () => setConfirmDelete(false))}>{t('deleteConfirm')}</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

@@ -64,6 +64,14 @@ export const users = pgTable(
      * phone can't change and no passkey or Google or Microsoft sign-in can be added. Signing in still works.
      */
     contactHoldAt: timestamp('contact_hold_at', { withTimezone: true }),
+    /**
+     * The neighborhood they chose on Neighbors (`areas.id` in their home market; plan 10.15): the neighborhood only,
+     * never an address. "Near you" starts from it; without it, from where they help or their latest task. No foreign
+     * key (an area of another market is ignored when read, as after a move).
+     */
+    homeAreaId: text('home_area_id'),
+    /** When their last weekly Neighbors digest went out (plan 10.14): at most one a week. */
+    communityDigestAt: timestamp('community_digest_at', { withTimezone: true }),
   },
   // One account per verified phone number (NULLs don't collide).
   (t) => [uniqueIndex('users_phone_idx').on(t.phone)],

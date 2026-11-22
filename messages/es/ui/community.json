@@ -79,7 +79,9 @@
     "recommendSelf": "{name} (tú)",
     "recommendHint": "Ayudantes que contrataste o guardaste. Uno por publicación.",
     "alreadyRecommended": "Ya recomendaste a alguien en esta publicación.",
-    "closed": "Las respuestas están cerradas."
+    "closed": "Las respuestas están cerradas.",
+    "replyingTo": "Respondiendo a {name}",
+    "replyingToClear": "Dejar de responder a {name}"
   },
   "guidelines": "Sé amable y habla de lo local. Los datos de contacto quedan ocultos hasta que reservas. Los delitos y los problemas de seguridad se reportan a la policía (911 en una emergencia), no aquí.",
   "guidelinesLink": "Normas de la comunidad",
@@ -118,7 +120,8 @@
     "noBookings": "Puedes agradecer a un ayudante aquí cuando una reserva esté terminada y pagada.",
     "submit": "Publicar",
     "submitting": "Publicando…",
-    "success": "Publicado"
+    "success": "Publicado",
+    "bodyOptional": "Detalles (opcional)"
   },
   "pagination": "Páginas de la comunidad",
   "previous": "Anterior",
@@ -140,14 +143,19 @@
     "remove": "Eliminar",
     "restore": "Restaurar",
     "reasonLabel": "Motivo (queda en el registro de auditoría)",
-    "submit": "Aplicar"
+    "submit": "Aplicar",
+    "byReports": "oculta tras varios reportes, en revisión por nuestro equipo"
   },
   "feedback": {
     "replied": "Respuesta publicada",
     "pinned": "Respuesta fijada",
     "unpinned": "Respuesta desfijada",
     "deleted": "Eliminado",
-    "moderated": "Listo"
+    "moderated": "Listo",
+    "followed": "Te avisaremos de las nuevas respuestas",
+    "unfollowed": "Ya no te avisaremos de las nuevas respuestas",
+    "muted": "Silenciada. No recibirás más avisos de esta publicación.",
+    "unmuted": "Ya no está silenciada"
   },
   "previews": {
     "group": "Comunidad",
@@ -155,7 +163,8 @@
     "postStaff": "Comunidad · vista del equipo de una respuesta oculta",
     "postReplyBlocked": "Publicación: aún no puede responder (primero el teléfono)",
     "newPost": "Comunidad · nueva publicación",
-    "newThanks": "Comunidad · agradecer a un ayudante"
+    "newThanks": "Comunidad · agradecer a un ayudante",
+    "newThanksBooking": "Comunidad · agradecimiento desde una reserva terminada"
   },
   "sinceVisit": {
     "badge": "Nueva",
@@ -187,7 +196,7 @@
   },
   "save": {
     "save": "Guardar",
-    "saved": "Guardada",
+    "saved": "Guardado",
     "saveLabel": "Guardar: {title}",
     "unsaveLabel": "Quitar de Guardado: {title}",
     "failed": "No se pudo guardar. Inténtalo de nuevo."
@@ -205,5 +214,108 @@
     "showMore": "{count, plural, one {Ver # respuesta más} other {Ver # respuestas más}}",
     "showLess": "Ver menos respuestas"
   },
-  "fromTask": "Viene de una publicación del vecindario"
+  "fromTask": "Viene de una publicación del vecindario",
+  "photos": {
+    "label": "Fotos (opcional)",
+    "alt": "Foto {number} de {count}",
+    "open": "Abrir la foto {number} de {count}",
+    "title": "Foto {number} de {count}",
+    "previous": "Foto anterior",
+    "next": "Foto siguiente",
+    "add": "Agregar una foto",
+    "addUpTo": "{count, plural, one {Agregar una foto} other {Agregar fotos (hasta #)}}",
+    "uploading": "Subiendo…",
+    "hint": "Sin números de casa, placas ni caras de otras personas. Quitamos los datos de ubicación.",
+    "remove": "Quitar la foto {number}",
+    "errors": {
+      "too_large": "Cada foto puede pesar hasta {megabytes} MB.",
+      "unsupported_type": "Ese archivo no es una foto que podamos usar. Prueba con un JPG o PNG.",
+      "too_many": "{count, plural, one {Una foto como máximo.} other {Hasta # fotos.}}",
+      "rate_limited": "Demasiadas fotos por ahora. Intenta de nuevo en un rato.",
+      "unknown": "La foto no se subió. Intenta de nuevo."
+    }
+  },
+  "reactors": {
+    "loading": "Cargando…",
+    "failed": "No pudimos cargar quién reaccionó. Intenta de nuevo.",
+    "helpful": "{count, plural, one {Útil · #} other {Útil · #}}",
+    "thanks": "{count, plural, one {Gracias · #} other {Gracias · #}}",
+    "none": "Todavía no hay reacciones.",
+    "you": "Tú",
+    "helpfulCount": "{count, plural, one {A # persona le resultó útil} other {A # personas les resultó útil}}",
+    "helpfulBy": "{total, plural, one {{names} lo marcó como útil} other {{names}{others, plural, =0 {} one { y # persona más} other { y # personas más}} lo marcaron como útil}}",
+    "counts": "{helpful} útil, {thanks} gracias",
+    "open": "Ver quién reaccionó",
+    "helpfulYou": "Lo marcaste como útil",
+    "helpfulByShort": "{names}{others, plural, =0 {} one { y # persona más} other { y # personas más}}"
+  },
+  "inlineReply": {
+    "label": "Escribe una respuesta",
+    "placeholder": "Escribe una respuesta…",
+    "send": "Enviar respuesta",
+    "sent": "Respuesta publicada"
+  },
+  "kindness": {
+    "title": "¿Lo revisas otra vez?",
+    "body": "Algunas de estas palabras podrían sonar poco amables. Las publicaciones amables reciben respuestas más útiles.",
+    "edit": "Editar",
+    "postAnyway": "Publicar de todos modos",
+    "replyAnyway": "Responder de todos modos"
+  },
+  "sparks": {
+    "withSparks": "{message} · +{count} Chispas"
+  },
+  "moreText": "Ver más",
+  "less": "Ver menos",
+  "edited": "Editada",
+  "edit": {
+    "action": "Editar",
+    "titlePost": "Editar tu publicación",
+    "titleReply": "Editar tu respuesta",
+    "hint": "Los vecinos verán que se editó.",
+    "titleLabel": "Título",
+    "body": "Detalles",
+    "bodyOptional": "Detalles (opcional)",
+    "replyLabel": "Tu respuesta",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "saved": "Cambios guardados",
+    "cancel": "Cancelar"
+  },
+  "follow": {
+    "follow": "Seguir esta publicación",
+    "unfollow": "Dejar de seguir",
+    "mute": "Silenciar esta publicación",
+    "unmute": "Quitar el silencio"
+  },
+  "replyingTo": "Respondiendo a {name}",
+  "replyTo": "Responder",
+  "threadHelpers": {
+    "label": "Recomendaciones en esta conversación",
+    "title": "Recomendaciones en esta conversación",
+    "recommendedBy": "{count, plural, one {# persona del vecindario recomienda a {name}} other {# personas del vecindario recomiendan a {name}}}",
+    "selfTagged": "{name} se ofreció a ayudar",
+    "more": "{count, plural, one {y # más} other {y # más}}"
+  },
+  "draft": {
+    "restored": "Guardamos tu publicación sin terminar.",
+    "discard": "Descartarla"
+  },
+  "starters": {
+    "title": "Ideas para esta época del año"
+  },
+  "translate": {
+    "show": "Ver traducción",
+    "hide": "Ocultar traducción",
+    "loading": "Traduciendo…",
+    "label": "Traducción",
+    "failed": "No pudimos traducir esto ahora."
+  },
+  "related": {
+    "title": "Más del vecindario",
+    "aside": "Sobre esta conversación",
+    "rules": "Bueno saber"
+  },
+  "replyToPost": "Responder a esta publicación",
+  "replyToPerson": "Responder a {name}"
 }

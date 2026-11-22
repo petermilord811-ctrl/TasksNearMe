@@ -3,7 +3,8 @@
 import { useState, type ReactNode } from 'react';
 import { ChevronDown, House, MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { PortalArea, PortalPageData } from '@/contracts';
+import type { ActionHandler, CommunityAreaInput, PortalArea, PortalPageData } from '@/contracts';
+import { YourAreaControl } from './portal-notes';
 import { PORTAL_ALL_AREAS } from '@/contracts/portal';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
@@ -38,7 +39,7 @@ function AreaOption({ href, area, selected, onPick }: { href: string; area: Port
  * whole city, and every other one under "More", each with what's there under the other filters (Craigslist's
  * counts). One row that scrolls sideways when it doesn't fit, its ends fading while more is past them.
  */
-export function AreaStrip({ data }: { data: Pick<PortalPageData, 'areas' | 'place' | 'query' | 'market' | 'facets' | 'yourArea'> }) {
+export function AreaStrip({ data, onSetArea }: { data: Pick<PortalPageData, 'areas' | 'place' | 'query' | 'market' | 'facets' | 'yourArea'>; /** Your neighborhood, changeable under the list (plan 10.15). */ onSetArea?: ActionHandler<CommunityAreaInput> }) {
   const t = useTranslations('portal.areas');
   const [open, setOpen] = useState(false);
   const { areas, place, query } = data;
@@ -73,6 +74,7 @@ export function AreaStrip({ data }: { data: Pick<PortalPageData, 'areas' | 'plac
               <p className="px-2.5 pt-3 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">{t('elsewhere', { market: data.market.name })}</p>
               <ul className="mt-1">{elsewhere.map((area) => <AreaOption key={area.slug} href={href(area.slug)} area={area} selected={area.slug === selectedSlug} onPick={pick} />)}</ul>
             </>}
+            {onSetArea && <div className="mt-2"><YourAreaControl areas={areas} {...(data.yourArea ? { yourArea: data.yourArea } : {})} onSetArea={onSetArea} /></div>}
           </PopoverContent>
         </Popover>
       </li>}

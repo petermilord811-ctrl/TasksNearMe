@@ -2,6 +2,7 @@ import { Clock, Laptop, MapPin, MessageCircle, ThumbsUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { CommunityPostView, ISODateTime, PortalItem, PortalTaskView } from '@/contracts';
 import { routes } from '@/contracts/routes';
+import { Highlight } from '@/ui/components/community/highlight';
 import { kindIcons, kindTone } from '@/ui/components/community/post-card';
 import { LiveOfferCount, NewSinceBadge } from '@/ui/components/tasks/task-live';
 import { useFormat } from '@/ui/lib/format';
@@ -15,7 +16,7 @@ const metaClass = 'flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] tex
 const titleLink = 'rounded-sm underline-offset-4 outline-offset-2 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring';
 
 /** A task as a dense row (Craigslist): when it is, the title, its type, place, time and offers, and the price. */
-function TaskRow({ view, now, visitKey, showArea }: { view: PortalTaskView; now: ISODateTime; visitKey: string; showArea: boolean }) {
+function TaskRow({ view, now, visitKey, showArea, highlight }: { view: PortalTaskView; now: ISODateTime; visitKey: string; showArea: boolean; highlight: readonly string[] }) {
   const t = useTranslations('portal');
   const card = useTranslations('taskCard');
   const { formatDate, formatDateTime, formatTimeRange, locale, timeZone } = useFormat();
@@ -36,7 +37,7 @@ function TaskRow({ view, now, visitKey, showArea }: { view: PortalTaskView; now:
     </time>
     <div className="min-w-0 space-y-0.5">
       <h3 className="text-[15px]/6 font-semibold [overflow-wrap:anywhere]">
-        <Link href={view.href} className={titleLink}>{task.title}</Link>
+        <Link href={view.href} className={titleLink}><Highlight text={task.title} words={highlight} /></Link>
         <NewSinceBadge postedAt={task.postedAt} recent={recent} visitKey={visitKey} />
       </h3>
       <p className={metaClass}>
@@ -57,7 +58,7 @@ function TaskRow({ view, now, visitKey, showArea }: { view: PortalTaskView; now:
 }
 
 /** A post as a dense row: its kind, the title, service, place and who, its replies and Helpful, and how long ago. */
-function PostRow({ post, now, showArea }: { post: CommunityPostView; now: ISODateTime; showArea: boolean }) {
+function PostRow({ post, now, showArea, highlight }: { post: CommunityPostView; now: ISODateTime; showArea: boolean; highlight: readonly string[] }) {
   const t = useTranslations('portal');
   const community = useTranslations('community');
   const card = useTranslations('taskCard');
@@ -68,7 +69,7 @@ function PostRow({ post, now, showArea }: { post: CommunityPostView; now: ISODat
     <span aria-hidden="true" className={cn('grid h-[2.625rem] place-items-center rounded-lg', kindTone[post.kind])}><Icon className="size-4.5" /></span>
     <div className="min-w-0 space-y-0.5">
       <h3 className="text-[15px]/6 font-semibold [overflow-wrap:anywhere]">
-        <Link href={routes.app.communityPost(post.id)} className={titleLink}>{post.title}</Link>
+        <Link href={routes.app.communityPost(post.id)} className={titleLink}><Highlight text={post.title} words={highlight} /></Link>
       </h3>
       <p className={metaClass}>
         <span className="sm:hidden">{when}</span>
@@ -86,8 +87,8 @@ function PostRow({ post, now, showArea }: { post: CommunityPostView; now: ISODat
 }
 
 /** One item of the portal's List (completion plan 9.10, Craigslist): a post or a task as one dense row. */
-export function PortalRow({ item, now, visitKey, showArea = true }: { item: PortalItem; now: ISODateTime; visitKey: string; showArea?: boolean }) {
+export function PortalRow({ item, now, visitKey, showArea = true, highlight = [] }: { item: PortalItem; now: ISODateTime; visitKey: string; showArea?: boolean; /** A search's words, marked (plan 10.23). */ highlight?: readonly string[] }) {
   return item.type === 'task'
-    ? <TaskRow view={item.task} now={now} visitKey={visitKey} showArea={showArea} />
-    : <PostRow post={item.post} now={now} showArea={showArea} />;
+    ? <TaskRow view={item.task} now={now} visitKey={visitKey} showArea={showArea} highlight={highlight} />
+    : <PostRow post={item.post} now={now} showArea={showArea} highlight={highlight} />;
 }

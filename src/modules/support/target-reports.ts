@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import type { ActionResult, ReportInput, ReportPageData, ReportReason, ReportTargetKind } from '@/contracts';
 import { REPORT_TARGET_KINDS, reportInputSchema, routes } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
+import { hideAfterReports } from '@/modules/community/moderation';
 import { communityPosts, communityReplies } from '@/modules/community/schema';
 import { taskQuestions } from '@/modules/questions/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
@@ -136,5 +137,7 @@ export async function reportTarget(db: Db, userId: string, kind: string, id: str
     await markCaseRead(tx, caseId, userId, now);
     await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'support.case_opened', aggregateType: 'support_case', aggregateId: caseId, payload: { caseId, type, openedByUserId: userId, target: found.page.target.kind } });
   });
+  // Enough reports from established accounts hide a Neighbors post or reply until staff look (plan 10.21).
+  if (found.page.target.kind === 'post' || found.page.target.kind === 'reply') await hideAfterReports(db, found.page.target.kind, found.page.target.id, now);
   return { ok: true, code: 'submitted' };
 }

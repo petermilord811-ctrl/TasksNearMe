@@ -304,6 +304,31 @@ function Rewards({ data }: { data: MetricsRewardSpend }) {
 
 // ---- Screen --------------------------------------------------------------------------------------------
 
+/** Neighbors' health (plan 10.22): posts and replies, asks answered, recommendations, asks that became bookings, reports. */
+function CommunityHealth({ data }: { data: NonNullable<AdminMetricsPageData['community']> }) {
+  const t = useTranslations('adminMetrics.community');
+  const percent = (part: number, whole: number) => (whole > 0 ? `${Math.round((part / whole) * 100)}%` : '—');
+  const tiles: { key: string; label: string; value: string; note?: string }[] = [
+    { key: 'posts', label: t('posts'), value: String(data.posts), note: t('replies', { count: data.replies }) },
+    { key: 'answered', label: t('answered'), value: percent(data.answeredWithinDay, data.asks), note: t('answeredNote', { answered: data.answeredWithinDay, asks: data.asks }) },
+    { key: 'firstReply', label: t('firstReply'), value: data.medianFirstReplyMinutes === undefined ? '—' : data.medianFirstReplyMinutes < 120 ? t('minutes', { count: data.medianFirstReplyMinutes }) : t('hours', { count: Math.round(data.medianFirstReplyMinutes / 60) }) },
+    { key: 'named', label: t('named'), value: percent(data.withNamedHelper, data.recommendationRequests), note: t('namedNote', { named: data.withNamedHelper, requests: data.recommendationRequests }) },
+    { key: 'askedForHelp', label: t('askedForHelp'), value: String(data.askedForHelp), note: t('bookedNote', { count: data.booked }) },
+    { key: 'reports', label: t('reports'), value: String(data.reports), note: t('reportsNote', { per: data.posts > 0 ? Math.round((data.reports / data.posts) * 1000) / 10 : 0, hidden: data.autoHidden }) },
+  ];
+  return <div className="space-y-4">
+    <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{tiles.map((tile) => <li key={tile.key} className={`${adminSection} space-y-1`}>
+      <p className="text-sm text-muted-foreground">{tile.label}</p>
+      <p className="font-display text-2xl font-semibold tabular-nums">{tile.value}</p>
+      {tile.note && <p className="text-xs text-muted-foreground tabular-nums">{tile.note}</p>}
+    </li>)}</ul>
+    {data.postsByArea.length > 0 && <div className={adminSection}>
+      <h3 className="font-semibold">{t('byArea')}</h3>
+      <ul className="mt-2 divide-y divide-border/70">{data.postsByArea.map((row) => <li key={row.areaName ?? 'citywide'} className="flex items-center justify-between gap-3 py-1.5 text-sm"><span>{row.areaName ?? t('citywide')}</span><span className="tabular-nums">{row.count}</span></li>)}</ul>
+    </div>}
+  </div>;
+}
+
 function Section({ id, title, intro, children }: { id: string; title: string; intro?: string; children: ReactNode }) {
   return <section aria-labelledby={id} className="space-y-3">
     <div className="space-y-1">
@@ -346,6 +371,10 @@ export function AdminMetricsScreen({ data }: { data: AdminMetricsPageData }) {
     <Section id="metrics-liquidity" title={t('liquidity.title')} intro={t('liquidity.intro')}>
       <Liquidity data={data.liquidity} />
     </Section>
+
+    {data.community && <Section id="metrics-community" title={t('community.title')} intro={t('community.intro')}>
+      <CommunityHealth data={data.community} />
+    </Section>}
 
     <Section id="metrics-rewards" title={t('rewards.title')} intro={t('rewards.intro')}>
       {data.rewards ? <Rewards data={data.rewards} /> : <p className={adminNote}>{t('rewards.restricted')}</p>}

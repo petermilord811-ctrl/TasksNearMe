@@ -79,7 +79,9 @@
     "recommendSelf": "{name} (you)",
     "recommendHint": "Helpers you booked or saved. One per request.",
     "alreadyRecommended": "You already named a helper on this request.",
-    "closed": "Replies are closed."
+    "closed": "Replies are closed.",
+    "replyingTo": "Replying to {name}",
+    "replyingToClear": "Stop replying to {name}"
   },
   "guidelines": "Be kind and keep it local. Contact details stay hidden until you book. Crime and safety reports belong with the police (911 in an emergency), not here.",
   "guidelinesLink": "Community guidelines",
@@ -118,7 +120,8 @@
     "noBookings": "You can thank a helper here once a booking is done and paid.",
     "submit": "Post",
     "submitting": "Posting…",
-    "success": "Posted"
+    "success": "Posted",
+    "bodyOptional": "Details (optional)"
   },
   "pagination": "Community pages",
   "previous": "Previous",
@@ -140,14 +143,19 @@
     "remove": "Remove",
     "restore": "Restore",
     "reasonLabel": "Reason (kept in the audit log)",
-    "submit": "Apply"
+    "submit": "Apply",
+    "byReports": "hidden after reports, waiting for our team"
   },
   "feedback": {
     "replied": "Reply posted",
     "pinned": "Answer pinned",
     "unpinned": "Answer unpinned",
     "deleted": "Deleted",
-    "moderated": "Done"
+    "moderated": "Done",
+    "followed": "You'll hear about new replies",
+    "unfollowed": "You won't hear about new replies",
+    "muted": "Muted. No more notices about this post.",
+    "unmuted": "Unmuted"
   },
   "previews": {
     "group": "Community",
@@ -155,7 +163,8 @@
     "postStaff": "Community · staff view of a hidden reply",
     "postReplyBlocked": "Post: can’t reply yet (phone first)",
     "newPost": "Community · new post",
-    "newThanks": "Community · thank a helper"
+    "newThanks": "Community · thank a helper",
+    "newThanksBooking": "Community · thanks from a finished booking"
   },
   "sinceVisit": {
     "badge": "New",
@@ -205,5 +214,108 @@
     "showMore": "{count, plural, one {Show # more reply} other {Show # more replies}}",
     "showLess": "Show fewer replies"
   },
-  "fromTask": "From a neighborhood post"
+  "fromTask": "From a neighborhood post",
+  "photos": {
+    "label": "Photos (optional)",
+    "alt": "Photo {number} of {count}",
+    "open": "Open photo {number} of {count}",
+    "title": "Photo {number} of {count}",
+    "previous": "Previous photo",
+    "next": "Next photo",
+    "add": "Add a photo",
+    "addUpTo": "{count, plural, one {Add a photo} other {Add photos (up to #)}}",
+    "uploading": "Uploading…",
+    "hint": "No house numbers, license plates or other people's faces. Location data is removed.",
+    "remove": "Remove photo {number}",
+    "errors": {
+      "too_large": "Each photo can be up to {megabytes} MB.",
+      "unsupported_type": "That file isn't a photo we can use. Try a JPG or PNG.",
+      "too_many": "{count, plural, one {One photo at most.} other {Up to # photos.}}",
+      "rate_limited": "Too many uploads for now. Try again a little later.",
+      "unknown": "That photo didn't upload. Try again."
+    }
+  },
+  "reactors": {
+    "loading": "Loading…",
+    "failed": "Couldn't load who reacted. Try again.",
+    "helpful": "{count, plural, one {Helpful · #} other {Helpful · #}}",
+    "thanks": "{count, plural, one {Thanks · #} other {Thanks · #}}",
+    "none": "No reactions yet.",
+    "you": "You",
+    "helpfulCount": "{count, plural, one {# neighbor found this helpful} other {# neighbors found this helpful}}",
+    "helpfulBy": "{total, plural, one {{names}{others, plural, =0 {} one { and # other} other { and # others}} found this helpful} other {{names}{others, plural, =0 {} one { and # other} other { and # others}} found this helpful}}",
+    "counts": "{helpful} helpful, {thanks} thanks",
+    "open": "See who reacted",
+    "helpfulYou": "You found this helpful",
+    "helpfulByShort": "{names}{others, plural, =0 {} one { and # other} other { and # others}}"
+  },
+  "inlineReply": {
+    "label": "Write a reply",
+    "placeholder": "Write a reply…",
+    "send": "Send reply",
+    "sent": "Reply posted"
+  },
+  "kindness": {
+    "title": "Take another look?",
+    "body": "Some of these words might come across as unkind. Kind posts get more helpful answers.",
+    "edit": "Edit",
+    "postAnyway": "Post anyway",
+    "replyAnyway": "Reply anyway"
+  },
+  "sparks": {
+    "withSparks": "{message} · +{count} Sparks"
+  },
+  "moreText": "More",
+  "less": "Less",
+  "edited": "Edited",
+  "edit": {
+    "action": "Edit",
+    "titlePost": "Edit your post",
+    "titleReply": "Edit your reply",
+    "hint": "Neighbors will see that it was edited.",
+    "titleLabel": "Title",
+    "body": "Details",
+    "bodyOptional": "Details (optional)",
+    "replyLabel": "Your reply",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Changes saved",
+    "cancel": "Cancel"
+  },
+  "follow": {
+    "follow": "Follow this post",
+    "unfollow": "Stop following",
+    "mute": "Mute this post",
+    "unmute": "Unmute"
+  },
+  "replyingTo": "Replying to {name}",
+  "replyTo": "Reply",
+  "threadHelpers": {
+    "label": "Recommended in this thread",
+    "title": "Recommended in this thread",
+    "recommendedBy": "{count, plural, one {# neighbor recommends {name}} other {# neighbors recommend {name}}}",
+    "selfTagged": "{name} offered to help",
+    "more": "{count, plural, one {and # more} other {and # more}}"
+  },
+  "draft": {
+    "restored": "We kept your unfinished post.",
+    "discard": "Discard it"
+  },
+  "starters": {
+    "title": "Ideas for this time of year"
+  },
+  "translate": {
+    "show": "See translation",
+    "hide": "Hide translation",
+    "loading": "Translating…",
+    "label": "Translation",
+    "failed": "Couldn't translate this right now."
+  },
+  "related": {
+    "title": "More from the neighborhood",
+    "aside": "About this conversation",
+    "rules": "Good to know"
+  },
+  "replyToPost": "Reply to this post",
+  "replyToPerson": "Reply to {name}"
 }

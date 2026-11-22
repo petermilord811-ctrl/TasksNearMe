@@ -33,29 +33,48 @@ async function closePortalTasks() {
 
 const query = (page: Page) => new URL(page.url()).searchParams;
 
-test('sorting, the type and the Feed or List keep every other filter', async ({ page }) => {
+test('sorting, the type and the Feed or List keep every other filter', async ({ page }, testInfo) => {
   test.setTimeout(120_000);
+  // Phones keep the sort in the sticky row's menu and Feed or List in the Filters sheet (plan 10.7).
+  const phone = testInfo.project.name === 'app-mobile';
+  const sortBy = async (name: string) => {
+    if (phone) {
+      await page.getByRole('button', { name: /^Sort: / }).click();
+      await page.getByRole('list', { name: 'Sort' }).getByRole('link', { name }).click();
+      await expect(page.getByRole('button', { name: `Sort: ${name}` })).toBeVisible();
+    } else {
+      await page.getByRole('navigation', { name: 'Sort' }).getByRole('link', { name }).click();
+      await expect(page.getByRole('navigation', { name: 'Sort' }).getByRole('link', { name })).toHaveAttribute('aria-current', 'page');
+    }
+  };
+  const viewAs = async (name: 'Feed' | 'List') => {
+    if (phone) {
+      await page.getByRole('button', { name: /^Filters/ }).click();
+      await page.getByRole('dialog').getByRole('group', { name: 'View' }).getByRole('link', { name }).click();
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+    } else {
+      await page.getByRole('navigation', { name: 'View' }).getByRole('link', { name }).click();
+      await expect(page.getByRole('navigation', { name: 'View' }).getByRole('link', { name })).toHaveAttribute('aria-current', 'page');
+    }
+  };
   await devSignIn(page, 'maya@example.test');
   await page.goto('/app/community?area=all&category=furniture-assembly');
   await expect(page.getByRole('heading', { level: 1, name: 'All of Austin' })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Filters in use' }).getByRole('link', { name: 'Remove filter: Furniture assembly' })).toBeVisible();
 
-  await page.getByRole('navigation', { name: 'Sort' }).getByRole('link', { name: 'New' }).click();
-  await expect(page.getByRole('navigation', { name: 'Sort' }).getByRole('link', { name: 'New' })).toHaveAttribute('aria-current', 'page');
-  expect(Object.fromEntries(query(page))).toEqual({ area: 'all', category: 'furniture-assembly', sort: 'new' });
+  await sortBy('New');
+  await expect.poll(() => Object.fromEntries(query(page))).toEqual({ area: 'all', category: 'furniture-assembly', sort: 'new' });
 
   await page.getByRole('navigation', { name: 'Show' }).getByRole('link', { name: /^Tasks/ }).click();
   await expect(page.getByRole('navigation', { name: 'Show' }).getByRole('link', { name: /^Tasks/ })).toHaveAttribute('aria-current', 'page');
   // Tasks only: every card is a task, and the full board is one link away for its price filters.
   await expect(page.getByRole('link', { name: 'More task filters' })).toBeVisible();
 
-  await page.getByRole('navigation', { name: 'View' }).getByRole('link', { name: 'List' }).click();
-  await expect(page.getByRole('navigation', { name: 'View' }).getByRole('link', { name: 'List' })).toHaveAttribute('aria-current', 'page');
-  expect(Object.fromEntries(query(page))).toEqual({ area: 'all', category: 'furniture-assembly', type: 'task', sort: 'new', view: 'list' });
+  await viewAs('List');
+  await expect.poll(() => Object.fromEntries(query(page))).toEqual({ area: 'all', category: 'furniture-assembly', type: 'task', sort: 'new', view: 'list' });
 
-  await page.getByRole('navigation', { name: 'View' }).getByRole('link', { name: 'Feed' }).click();
-  await expect(page.getByRole('navigation', { name: 'View' }).getByRole('link', { name: 'Feed' })).toHaveAttribute('aria-current', 'page');
-  expect(Object.fromEntries(query(page))).toEqual({ area: 'all', category: 'furniture-assembly', type: 'task', sort: 'new' });
+  await viewAs('Feed');
+  await expect.poll(() => Object.fromEntries(query(page))).toEqual({ area: 'all', category: 'furniture-assembly', type: 'task', sort: 'new' });
 
   // A filter comes off on its own; the rest stay.
   await page.getByRole('navigation', { name: 'Filters in use' }).getByRole('link', { name: 'Remove filter: Furniture assembly' }).click();

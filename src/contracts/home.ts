@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { QueryHandler } from './actions';
 import type { AiSearchAccess } from './billing';
 import type { Cents, CategorySlug, ISODateTime, Mode, Photo } from './common';
+import type { CommunityPostKind } from './community';
 import type { FindWorkQuery, FindWorkWaiting, HelperSetupState } from './helper-work';
 import type { HelperBrowseQuery } from './helpers-browse';
 import type { TaskLocation } from './location';
@@ -50,7 +51,9 @@ export type AttentionTarget =
   /** The person's saved searches (`routes.app.savedSearches()`): a morning digest over several of them (sweep SS6). */
   | { kind: 'saved_searches' }
   /** Posting a task (`routes.app.newTask()`): where a city's launch message sends its clients (J-L2). */
-  | { kind: 'new_task' };
+  | { kind: 'new_task' }
+  /** Neighbors (`routes.app.community()`): the weekly digest (plan 10.14). */
+  | { kind: 'community' };
 
 export const ATTENTION_KINDS = [
   /** Client: approve the submitted work (or report a problem) before the deadline. */
@@ -290,6 +293,25 @@ export interface DashboardData {
    * the person searches (journeys on a phone, J-H9).
    */
   firstWork?: { nearbyCount: number };
+  /** "From your neighbors" (plan 10.19): what's new on Neighbors near the person. Absent where there's nothing yet. */
+  neighbors?: DashboardNeighbors;
+}
+
+/** The home's Neighbors card (plan 10.19): the two newest posts near the person, and the asks waiting for an answer. */
+export interface DashboardNeighbors {
+  /** "Mueller and nearby", one neighborhood, or the city: as Neighbors' heading names it. */
+  place: { kind: 'nearby' | 'market'; name: string };
+  posts: {
+    id: string;
+    kind: CommunityPostKind;
+    title: string;
+    authorName: string;
+    areaName?: string;
+    replyCount: number;
+    createdAt: ISODateTime;
+  }[];
+  /** Asks of the last 7 days near them nobody answered yet (never their own). */
+  unansweredCount: number;
 }
 
 // ---- AI search ("describe what you need") ---------------------------------------------------------

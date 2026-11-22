@@ -16,7 +16,8 @@
     "out_of_range": "Elige un valor dentro del rango permitido.",
     "unchanged": "Eso es lo que tienes ahora.",
     "in_market": "Eso está en una ciudad donde ya estamos. Elígela de la lista.",
-    "held": "Los cambios están en pausa mientras nuestro equipo revisa tu cuenta. Contacta a soporte si necesitas ayuda."
+    "held": "Los cambios están en pausa mientras nuestro equipo revisa tu cuenta. Contacta a soporte si necesitas ayuda.",
+    "unkind": "Esto podría sonar poco amable. Revísalo antes de publicar."
   },
   "fields": {
     "email": {

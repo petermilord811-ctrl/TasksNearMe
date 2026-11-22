@@ -1,4 +1,4 @@
-import type { CommunityAuthor, CommunityHelperCard, CommunityNewPostPageData, CommunityPostPageData, CommunityPostView, CommunityReplyView } from '@/contracts';
+import type { CommunityAuthor, CommunityHelperCard, CommunityNewPostPageData, CommunityPostPageData, CommunityPostView, CommunityReplyView, CommunityStarter, Photo } from '@/contracts';
 
 /** The community (completion plan 7.7–7.8), as the community service returns it for Maya in Mueller. */
 
@@ -16,6 +16,15 @@ const samCard: CommunityHelperCard = { handle: 'sam-k', displayName: 'Sam K.', i
 const leeCard: CommunityHelperCard = { handle: 'lee-m', displayName: 'Lee M.', initials: 'LM', headline: 'Patient computer help and quick assembly', rating: { average: 5, count: 11 }, recommendedBy: 2, selfTag: true };
 
 const none = { thanks: 0, helpful: 0, mine: [] };
+
+/** Photos on posts and replies (plan 10.1), from the placeholder images in public/samples. */
+const photo = (id: string, file: string, alt: string, width = 800, height = 600): Photo => ({ id, src: `/samples/${file}`, alt, width, height });
+export const communityPhotos = {
+  boxes: photo('fil_community_boxes', 'work-desk.svg', 'A desk and a bookshelf still in their boxes'),
+  shelf: photo('fil_community_shelf', 'work-bookshelf.svg', 'The bookshelf that needs anchoring'),
+  leaves: photo('fil_community_leaves', 'work-yard.svg', 'Leaves covering the front yard'),
+  wardrobe: photo('fil_community_wardrobe', 'photo-wide.svg', 'The finished wardrobe against the bedroom wall', 1200, 600),
+};
 
 const pinnedAnswer: CommunityReplyView = {
   id: 'cre_sam_rec',
@@ -42,6 +51,20 @@ const tipReply: CommunityReplyView = {
   createdAt: '2026-11-17T14:40:00.000Z',
   reactions: { thanks: 1, helpful: 2, mine: [] },
   pinned: false,
+  photo: communityPhotos.shelf,
+  editedAt: '2026-11-17T14:52:00.000Z',
+  helpfulNames: ['Priya S.', 'Ana P.'],
+};
+/** A reply to a reply (plan 10.10): "Replying to Lee M.". */
+const replyToLee: CommunityReplyView = {
+  id: 'cre_maya_to_lee',
+  author: maya,
+  body: 'Saturday morning works. Do you bring your own drill and wall anchors?',
+  createdAt: '2026-11-17T15:10:00.000Z',
+  reactions: none,
+  pinned: false,
+  canEdit: true,
+  replyTo: { id: 'cre_lee_self', authorName: 'Lee M.' },
 };
 
 const recommendation: CommunityPostView = {
@@ -57,6 +80,13 @@ const recommendation: CommunityPostView = {
   replyCount: 3,
   reactions: { thanks: 0, helpful: 4, mine: [] },
   previewReplies: [pinnedAnswer],
+  photos: [communityPhotos.boxes, communityPhotos.shelf],
+  canEdit: true,
+  canReply: true,
+  follow: 'following',
+  // Plan 10.4: Sam named by three neighbors, Lee by himself.
+  recommended: [{ helper: samCard, count: 3 }, { helper: { ...leeCard, selfTag: true }, count: 1 }],
+  helpfulNames: ['Priya S.', 'Nate O.'],
 };
 
 const question: CommunityPostView = {
@@ -71,6 +101,11 @@ const question: CommunityPostView = {
   lastActivityAt: '2026-11-17T11:02:00.000Z',
   replyCount: 2,
   reactions: { thanks: 1, helpful: 3, mine: ['thanks'] },
+  photos: [communityPhotos.leaves],
+  editedAt: '2026-11-17T09:41:00.000Z',
+  canReply: true,
+  follow: 'none',
+  helpfulNames: ['Nate O.'],
   previewReplies: [
     { id: 'cre_leaves_1', author: nate, body: 'Still weekly on your trash day. Paper lawn bags only, and keep them under 40 pounds.', createdAt: '2026-11-17T10:15:00.000Z', reactions: { thanks: 2, helpful: 4, mine: [] }, pinned: false },
     { id: 'cre_leaves_2', author: lee, body: 'If you have more than 10 bags, a haul-away is usually faster than waiting two weeks.', createdAt: '2026-11-17T11:02:00.000Z', reactions: none, pinned: false },
@@ -89,6 +124,10 @@ const thanks: CommunityPostView = {
   lastActivityAt: '2026-11-17T08:00:00.000Z',
   replyCount: 1,
   reactions: { thanks: 7, helpful: 2, mine: [] },
+  photos: [communityPhotos.wardrobe],
+  canReply: true,
+  follow: 'none',
+  helpfulNames: ['Ana P.', 'Lee M.'],
   thankedHelper: { ...samCard, selfTag: false },
   previewReplies: [{ id: 'cre_thanks_1', author: sam, body: 'Thanks, Priya! The dresser is on my list for Saturday.', createdAt: '2026-11-17T08:00:00.000Z', reactions: { thanks: 3, helpful: 0, mine: [] }, pinned: false }],
 };
@@ -105,7 +144,16 @@ const tip: CommunityPostView = {
   replyCount: 0,
   reactions: { thanks: 4, helpful: 9, mine: [] },
   previewReplies: [],
+  canReply: true,
+  follow: 'none',
+  helpfulNames: ['Priya S.', 'Maya R.'],
 };
+
+/** November's seasonal starters in Austin (plan 10.18), as the composer offers them. */
+export const communityStarters: CommunityStarter[] = [
+  { kind: 'recommendation', categorySlug: 'furniture-assembly', title: 'Who do you recommend for putting together a bed frame?' },
+  { kind: 'recommendation', categorySlug: 'yard-cleanup', title: "Who's good at a fall leaf cleanup?" },
+];
 
 /** The community's posts near Maya, liveliest first (the portal's fixtures, src/fixtures/portal.ts, build on them). */
 export const communityFeedPosts: CommunityPostView[] = [recommendation, question, thanks, tip];
@@ -113,10 +161,15 @@ export const communityFeedPosts: CommunityPostView[] = [recommendation, question
 export const communityPostPageData: CommunityPostPageData = {
   market,
   post: { ...recommendation, previewReplies: [] },
-  replies: [pinnedAnswer, selfTag, tipReply],
+  replies: [pinnedAnswer, selfTag, tipReply, replyToLee],
   viewer: { canReply: true, canPin: true, isAuthor: true, isStaff: false },
   recommendOptions: [],
   alreadyRecommended: false,
+  related: [
+    { id: 'cpo_crib', title: 'Anyone used a helper for a crib and changing table?', kind: 'question', replyCount: 4, areaName: 'Mueller' },
+    { id: 'cpo_thanks_sam', title: 'Thank you, Sam, for the wardrobe!', kind: 'thanks', replyCount: 1, areaName: 'Mueller' },
+  ],
+  canTranslate: true,
 };
 
 /** Lee reads Maya's request: he can name a helper he booked, or himself. */
@@ -160,6 +213,11 @@ export const communityNewPostPageData: CommunityNewPostPageData = {
   ],
   yourArea: { slug: 'mueller', name: 'Mueller' },
   thankOptions: [{ bookingId: 'bkg_wardrobe', helperName: 'Sam K.', taskTitle: 'Assemble a wardrobe', completedAt: '2026-10-27T20:00:00.000Z' }],
+  starters: communityStarters,
+  draftKey: 'community-draft:austin:preview-maya',
 };
 
 export const communityNewThanksData: CommunityNewPostPageData = { ...communityNewPostPageData, kind: 'thanks' };
+
+/** "Thank Sam on Neighbors" from the finished booking (plan 10.12): the thanks form with that booking chosen. */
+export const communityNewThanksFromBookingData: CommunityNewPostPageData = { ...communityNewPostPageData, kind: 'thanks', bookingId: 'bkg_wardrobe' };

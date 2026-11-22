@@ -143,8 +143,19 @@ const jordanBase = {
   },
 };
 
-/** Maya's tasks (her first tab): new offers on the desk, the truck work to approve, the fridge without offers. */
-export const mayaDashboardData: DashboardData = dashboardOf(mayaBase);
+/** Maya's tasks (her first tab): new offers on the desk, the truck work to approve, the fridge without offers; and from
+ * her neighbors (plan 10.19), the two newest posts near Mueller and the asks waiting for an answer. */
+export const mayaDashboardData: DashboardData = {
+  ...dashboardOf(mayaBase),
+  neighbors: {
+    place: { kind: 'nearby', name: 'Mueller' },
+    posts: [
+      { id: 'cpo_crib', kind: 'question', title: 'Anyone used a helper for a crib and changing table?', authorName: 'Priya S.', areaName: 'Mueller', replyCount: 4, createdAt: '2026-11-17T13:40:00.000Z' },
+      { id: 'cpo_truck_tip', kind: 'tip', title: 'Rent the dolly when you book the truck', authorName: 'Nate O.', replyCount: 0, createdAt: '2026-11-16T18:45:00.000Z' },
+    ],
+    unansweredCount: 2,
+  },
+};
 /** The offers waiting on her: Jordan's new one first by start, then Sam's and Lee's. */
 export const mayaDashboardOffersData: DashboardData = dashboardOf({ ...mayaBase, query: { tab: 'offers' } });
 /** Her bookings as cards. */

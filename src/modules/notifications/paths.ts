@@ -42,5 +42,7 @@ export function notificationPath(target: AttentionTarget): string {
       return routes.app.verifyIdentity();
     case 'rewards':
       return routes.app.rewards();
+    case 'community':
+      return routes.app.community();
   }
 }

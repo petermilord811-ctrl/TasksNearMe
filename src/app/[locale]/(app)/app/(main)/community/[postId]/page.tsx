@@ -1,12 +1,25 @@
 import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 import { routes } from '@/contracts/routes';
-import { deleteOwnCommunityItemAction, moderateCommunityItemAction, pinCommunityAnswerAction, reactInCommunityAction, replyToCommunityPostAction, saveCommunityPostAction } from '@/modules/community/actions';
+import {
+  deleteOwnCommunityItemAction,
+  editCommunityItemAction,
+  followCommunityPostAction,
+  loadCommunityReactorsAction,
+  moderateCommunityItemAction,
+  pinCommunityAnswerAction,
+  reactInCommunityAction,
+  replyToCommunityPostAction,
+  saveCommunityPostAction,
+  translateCommunityItemAction,
+  uploadCommunityPhotoAction,
+} from '@/modules/community/actions';
+import { communityViewerOf } from '@/modules/community/request-viewer';
 import { getCommunityPost } from '@/modules/community/service';
-import { staffActorOf } from '@/modules/support/staff';
+import { localeOrDefault } from '@/contracts';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
@@ -31,9 +44,9 @@ async function Post({ params }: Pick<PageProps<'/[locale]/app/community/[postId]
   const { postId } = await params;
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.communityPost(postId)));
-  const staff = staffActorOf(viewer.user);
-  const now = await requestNow();
-  const data = await getCommunityPost(db, { id: viewer.user.id, staff }, postId, now);
+  const [now, locale] = await Promise.all([requestNow(), getLocale()]);
+  const reader = await communityViewerOf(viewer.user, localeOrDefault(locale));
+  const data = await getCommunityPost(db, reader, postId, now);
   if (!data) notFound();
   return (
     <CommunityPostScreen
@@ -45,7 +58,12 @@ async function Post({ params }: Pick<PageProps<'/[locale]/app/community/[postId]
         onPin: pinCommunityAnswerAction.bind(null, postId),
         onDelete: deleteOwnCommunityItemAction,
         onSavePost: saveCommunityPostAction,
-        ...(staff ? { onModerate: moderateCommunityItemAction } : {}),
+        ...(reader.staff ? { onModerate: moderateCommunityItemAction } : {}),
+        onEdit: editCommunityItemAction,
+        onFollow: followCommunityPostAction,
+        onUploadPhoto: uploadCommunityPhotoAction,
+        onLoadReactors: loadCommunityReactorsAction,
+        ...(data.canTranslate ? { onTranslate: translateCommunityItemAction } : {}),
       }}
     />
   );

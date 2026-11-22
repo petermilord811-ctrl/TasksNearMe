@@ -171,5 +171,39 @@
     "marketsEmpty": "Config · no markets",
     "searchOpen": "Config · search engines: tasks and profiles open",
     "searchElsewhere": "Config · search engines: a copy that stays out of search"
+  },
+  "announcements": {
+    "title": "Neighbors announcements",
+    "intro": "A card pinned to the top of a market's Neighbors, in English and Spanish. A new one replaces the market's live card; members can close it.",
+    "state": {
+      "live": "Showing",
+      "scheduled": "Scheduled",
+      "ended": "Ended"
+    },
+    "until": "Until {date}",
+    "by": "By {name}",
+    "dismissals": "{count, plural, one {# member closed it} other {# members closed it}}",
+    "end": "End now",
+    "ending": "Ending…",
+    "endTitle": "End the announcement in {market}?",
+    "endDescription": "Members stop seeing it right away.",
+    "notAllowed": "Only admins can change announcements.",
+    "new": "Pin a new announcement",
+    "market": "Market",
+    "endsDate": "Show until",
+    "endsHint": "The last day it shows, on the market's clock (60 days at most).",
+    "titleEn": "Title (English)",
+    "titleEs": "Title (Spanish)",
+    "bodyEn": "Text (English)",
+    "bodyEs": "Text (Spanish)",
+    "reason": "Reason (kept in the audit log)",
+    "publish": "Pin it",
+    "publishing": "Pinning…",
+    "published": "Pinned",
+    "errors": {
+      "outOfRange": "Choose a day from today to 60 days ahead.",
+      "tooShort": "Too short.",
+      "invalid": "Check this field."
+    }
   }
 }

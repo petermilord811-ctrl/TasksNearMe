@@ -1,8 +1,8 @@
-import { index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { type AnyPgColumn, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 import { users } from '../accounts/schema';
 import { areas, markets } from '../markets/schema';
-import { tasks } from '../tasks/schema';
+import { files, tasks } from '../tasks/schema';
 
 /**
  * The community feed (completion plan 7.7–7.8): members of a market ask their neighbors for a recommendation,
@@ -43,6 +43,8 @@ export const communityPosts = pgTable(
     thanksCount: integer('thanks_count').notNull().default(0),
     helpfulCount: integer('helpful_count').notNull().default(0),
     lastActivityAt: timestamp('last_activity_at', { withTimezone: true }).notNull().defaultNow(),
+    /** The author last edited its words (plan 10.5): the post says "Edited"; earlier versions stay in `community_edits`. */
+    editedAt: timestamp('edited_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -77,6 +79,13 @@ export const communityReplies = pgTable(
     moderatedAt: timestamp('moderated_at', { withTimezone: true }),
     thanksCount: integer('thanks_count').notNull().default(0),
     helpfulCount: integer('helpful_count').notNull().default(0),
+    /**
+     * The reply this one answers ("Replying to Maya R.", plan 10.10): its author is told. Replies stay one level on
+     * screen; this only names who it's for. Set null if that reply row ever goes away.
+     */
+    replyToId: text('reply_to_id').references((): AnyPgColumn => communityReplies.id, { onDelete: 'set null' }),
+    /** The author last edited it (plan 10.5); earlier versions stay in `community_edits`. */
+    editedAt: timestamp('edited_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -120,4 +129,109 @@ export const communitySaves = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.postId] }), index('community_saves_user_idx').on(t.userId, t.createdAt)],
+);
+
+/**
+ * Photos on posts (up to 4) and replies (1) (plan 10.1): uploaded files (kind `community_photo`, re-encoded with every
+ * bit of metadata dropped), attached when the post or reply is written. One row per file, so a file belongs to one
+ * post or reply only. Who may see one is who may read what it's on (src/modules/files/related-access.ts).
+ */
+export const communityPhotos = pgTable(
+  'community_photos',
+  {
+    fileId: text('file_id')
+      .primaryKey()
+      .references(() => files.id, { onDelete: 'cascade' }),
+    postId: text('post_id')
+      .notNull()
+      .references(() => communityPosts.id, { onDelete: 'cascade' }),
+    /** A reply's photo; null for the post's own. */
+    replyId: text('reply_id').references(() => communityReplies.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('community_photos_post_idx').on(t.postId, t.position), index('community_photos_reply_idx').on(t.replyId)],
+);
+
+/**
+ * Earlier versions of edited posts and replies (plan 10.5): what the words were before each edit, for staff, so an
+ * edit can't hide what someone reported. Never shown to members.
+ */
+export const communityEdits = pgTable(
+  'community_edits',
+  {
+    id: text('id').primaryKey(),
+    targetKind: text('target_kind').notNull(), // post | reply
+    targetId: text('target_id').notNull(),
+    editorUserId: text('editor_user_id')
+      .notNull()
+      .references(() => users.id),
+    /** A post's title before the edit (null for a reply). */
+    title: text('title'),
+    body: text('body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('community_edits_target_idx').on(t.targetKind, t.targetId, t.createdAt)],
+);
+
+/**
+ * Who follows a post (plan 10.9): its author, people who replied or saved it, and anyone who taps Follow hear about
+ * new replies (at most one notice a post an hour). `muted` stops that for good, even after they reply again.
+ */
+export const communityFollows = pgTable(
+  'community_follows',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    postId: text('post_id')
+      .notNull()
+      .references(() => communityPosts.id, { onDelete: 'cascade' }),
+    state: text('state').notNull(), // following | muted
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.postId] }), index('community_follows_post_idx').on(t.postId, t.state)],
+);
+
+/**
+ * The card staff pin at the top of a market's Neighbors (plan 10.16): a welcome at launch, a holiday note. One live
+ * per market at a time (the newest that has started and not ended), in English and Spanish; members can dismiss it.
+ */
+export const communityAnnouncements = pgTable(
+  'community_announcements',
+  {
+    id: text('id').primaryKey(),
+    marketId: text('market_id')
+      .notNull()
+      .references(() => markets.id),
+    titleEn: text('title_en').notNull(),
+    bodyEn: text('body_en').notNull(),
+    titleEs: text('title_es').notNull(),
+    bodyEs: text('body_es').notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true }).notNull().defaultNow(),
+    endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+    createdByUserId: text('created_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    /** Staff took it down before its end. */
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('community_announcements_market_idx').on(t.marketId, t.startsAt)],
+);
+
+/** Members who closed an announcement: it stays closed on every device. */
+export const communityAnnouncementDismissals = pgTable(
+  'community_announcement_dismissals',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    announcementId: text('announcement_id')
+      .notNull()
+      .references(() => communityAnnouncements.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.announcementId] })],
 );

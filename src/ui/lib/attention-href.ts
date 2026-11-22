@@ -22,5 +22,6 @@ export function attentionHref(target: AttentionTarget): string {
     case 'booking_review': return routes.app.bookingReview(target.bookingId);
     case 'saved_searches': return routes.app.savedSearches();
     case 'new_task': return routes.app.newTask();
+    case 'community': return routes.app.community();
   }
 }

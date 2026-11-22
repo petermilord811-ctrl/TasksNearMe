@@ -23,6 +23,7 @@ import { staffRoles, users } from '../../src/modules/accounts/schema';
 import { betaAccess, betaInviteCodes } from '../../src/modules/beta/schema';
 import { helperProfiles, helperServices } from '../../src/modules/profiles/schema';
 import { AUSTIN, AUSTIN_AREAS, AUSTIN_ZIP_PREFIXES, CATEGORIES } from './data/austin';
+import { AUSTIN_COMMUNITY_PROMPTS, GAINESVILLE_COMMUNITY_PROMPTS } from './data/community-prompts';
 import { GAINESVILLE, GAINESVILLE_AREAS, GAINESVILLE_POLICY_EFFECTIVE_FROM, GAINESVILLE_POLICY_ID, GAINESVILLE_ZIP_PREFIXES, gainesvilleAreaId } from './data/gainesville';
 import { PEOPLE, displayNameOf, type SeedPerson } from './data/people';
 import { CURRENT_TERMS_VERSION } from '../../src/modules/accounts/terms';
@@ -53,7 +54,7 @@ import { notificationDeliveries, notificationPreferences, notifications, privacy
 import { rebookProposals } from '../../src/modules/rebook/schema';
 import { availabilityPosts } from '../../src/modules/availability/schema';
 import { rewardGrants } from '../../src/modules/rewards/schema';
-import { communityPosts, communityReactions, communityReplies } from '../../src/modules/community/schema';
+import { communityAnnouncementDismissals, communityAnnouncements, communityEdits, communityFollows, communityPosts, communityReactions, communityReplies } from '../../src/modules/community/schema';
 import { taskQuestions } from '../../src/modules/questions/schema';
 import { savedSearches } from '../../src/modules/searches/schema';
 import { paymentMethods, payments, refunds } from '../../src/modules/payments/schema';
@@ -71,8 +72,8 @@ export async function seedDatabase(url: string, options: { testWorld?: boolean }
     await db.transaction(async (tx) => {
       await tx
         .insert(markets)
-        .values({ ...AUSTIN, zipPrefixes: AUSTIN_ZIP_PREFIXES })
-        .onConflictDoUpdate({ target: markets.id, set: { name: AUSTIN.name, status: AUSTIN.status, zipPrefixes: AUSTIN_ZIP_PREFIXES } });
+        .values({ ...AUSTIN, zipPrefixes: AUSTIN_ZIP_PREFIXES, communityPrompts: AUSTIN_COMMUNITY_PROMPTS })
+        .onConflictDoUpdate({ target: markets.id, set: { name: AUSTIN.name, status: AUSTIN.status, zipPrefixes: AUSTIN_ZIP_PREFIXES, communityPrompts: AUSTIN_COMMUNITY_PROMPTS } });
 
       for (const area of AUSTIN_AREAS) {
         await tx
@@ -130,8 +131,8 @@ export async function seedDatabase(url: string, options: { testWorld?: boolean }
       // Production gets the same rows from migration 0061.
       await tx
         .insert(markets)
-        .values({ ...GAINESVILLE, zipPrefixes: GAINESVILLE_ZIP_PREFIXES })
-        .onConflictDoUpdate({ target: markets.id, set: { name: GAINESVILLE.name, timeZone: GAINESVILLE.timeZone, zipPrefixes: GAINESVILLE_ZIP_PREFIXES } });
+        .values({ ...GAINESVILLE, zipPrefixes: GAINESVILLE_ZIP_PREFIXES, communityPrompts: GAINESVILLE_COMMUNITY_PROMPTS })
+        .onConflictDoUpdate({ target: markets.id, set: { name: GAINESVILLE.name, timeZone: GAINESVILLE.timeZone, zipPrefixes: GAINESVILLE_ZIP_PREFIXES, communityPrompts: GAINESVILLE_COMMUNITY_PROMPTS } });
       for (const area of GAINESVILLE_AREAS) {
         const row = { id: gainesvilleAreaId(area.slug), marketId: GAINESVILLE.id, slug: area.slug, name: area.name, centerLat: area.lat, centerLng: area.lng };
         await tx.insert(areas).values(row).onConflictDoUpdate({ target: areas.id, set: { name: area.name, centerLat: area.lat, centerLng: area.lng } });
@@ -235,6 +236,9 @@ export async function upsertPeople(tx: Tx, people: readonly SeedPerson[]): Promi
       ...(person.locale ? { locale: person.locale } : {}),
       // Explicit, never the column's default: the cast is Austin's.
       homeMarketId: person.homeMarketId ?? AUSTIN.id,
+      // Neighbors (plan 10): no chosen neighborhood and no digest yet, each reseed (e2e choose and receive them).
+      homeAreaId: null,
+      communityDigestAt: null,
       createdAt: new Date(person.createdAt),
     };
     await tx.insert(users).values(user).onConflictDoUpdate({ target: users.id, set: { ...user, createdAt: undefined } });
@@ -524,6 +528,11 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
   const seededPosts = tx.select({ id: communityPosts.id }).from(communityPosts).where(inArray(communityPosts.authorUserId, people));
   const seededReplies = tx.select({ id: communityReplies.id }).from(communityReplies).where(or(inArray(communityReplies.authorUserId, people), inArray(communityReplies.postId, seededPosts)));
   await tx.delete(communityReactions).where(or(inArray(communityReactions.userId, people), inArray(communityReactions.targetId, seededPosts), inArray(communityReactions.targetId, seededReplies)));
+  // Plan 10: the people's follows, edit history and announcements start over too (photos go with their posts).
+  await tx.delete(communityFollows).where(inArray(communityFollows.userId, people));
+  await tx.delete(communityEdits).where(inArray(communityEdits.editorUserId, people));
+  await tx.delete(communityAnnouncementDismissals).where(inArray(communityAnnouncementDismissals.userId, people));
+  await tx.delete(communityAnnouncements).where(inArray(communityAnnouncements.createdByUserId, people));
   await tx.delete(communityReplies).where(or(inArray(communityReplies.authorUserId, people), inArray(communityReplies.postId, seededPosts)));
   await tx.delete(communityPosts).where(inArray(communityPosts.authorUserId, people));
   await tx.delete(savedSearches).where(inArray(savedSearches.userId, people));

@@ -106,6 +106,9 @@ export function deliveryContent(
     on: params.on ?? 'post',
     search: params.search ?? '',
     refundFor: params.refundFor ?? 'other',
+    // Neighbors (plan 10): where an ask was posted, the digest's place and its asks waiting for an answer.
+    area: params.area ?? '',
+    waiting: params.waiting ?? 0,
   }));
   const url = `${appUrl()}${localizedPath(notificationPath(row.target), locale)}`;
   const type = row.type as NotificationType;
@@ -114,7 +117,10 @@ export function deliveryContent(
   const details =
     type === 'booking_canceled_receipt'
       ? [t('receipt.money', { money: params.money ?? 'other', amount: params.amountCents === undefined ? '' : formatMoney(params.amountCents), actorName }), t('receipt.told', { actorName })].filter((line) => line !== '').map(endOnce)
-      : [];
+      : type === 'community_digest' && params.titles && params.titles.length > 0
+        ? // The week's liveliest posts by name (plan 10.14).
+          [t('digest.liveliest'), ...params.titles.slice(0, 3).map((title) => t('digest.title', { title }))]
+        : [];
   const email = renderNotificationEmail({ type, topic: NOTIFICATION_TOPIC[type], sentence, details, target: row.target, url, userId: row.userId, appUrl: appUrl(), locale });
   return { ...email, sms: t('sms', { sentence, url: shortCode ? `${appUrl()}/n/${shortCode}` : url }), push: { title: t('pushTitle'), body: sentence, url, ...(row.id ? { tag: row.id } : {}) } };
 }

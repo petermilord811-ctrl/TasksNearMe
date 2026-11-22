@@ -128,6 +128,28 @@ export const NOTIFICATION_TYPES = [
   'community_answer_pinned',
   /** The person's post or answer (`params.on`) on `title` reached `params.count` Helpful (1, 5, then 25). */
   'community_helpful',
+  /** New replies (`actorName` wrote one) on `title`, a post the person follows (plan 10.9; at most one an hour a post). */
+  'community_followed_reply',
+  /** `actorName` replied to the person's reply on `title` ("Replying to…", plan 10.10). */
+  'community_mention',
+  /** `actorName` recommended the helper on `title`, a neighbor's request (plan 10.11). */
+  'community_recommended',
+  /** `actorName` thanked the helper on Neighbors (`title`: the thanks post; plan 10.11). */
+  'community_thanked',
+  /**
+   * A neighbor in `params.area` (absent: somewhere in the city) asks for a recommendation in one of the helper's
+   * services: `title` (plan 10.11; at most 3 a day).
+   */
+  'community_ask_match',
+  /** `actorName` posted `title` as a task from the recommendation thread that named the helper (plan 10.12). */
+  'community_task_posted',
+  /** The person's post or reply (`params.on`) on `title` is hidden while our team looks at reports about it (plan 10.21). */
+  'community_auto_hidden',
+  /**
+   * The weekly digest (plan 10.14): `params.count` posts this week in `params.area` (the person's place), `params.waiting`
+   * of them asks waiting for an answer; `params.titles` names the liveliest (at most 3).
+   */
+  'community_digest',
   /** A helper (`actorName`) asked a question on the poster's task `title` (completion plan 7.9). */
   'question_received',
   /** The poster (`actorName`) answered the helper's question on `title`. */
@@ -171,7 +193,30 @@ export interface NotificationView {
   /** Who did it ("Jordan T."). */
   actorName?: string;
   /** `at` and `day` are on the clock of `timeZone`, the market of the booking or series it's about (completion plan 8.1). */
-  params?: { amountCents?: Cents; minutes?: number; hours?: number; days?: number; track?: VerificationTrack; at?: ISODateTime; day?: string; by?: 'poster' | 'helper' | 'payment' | 'system'; badge?: BadgeCode; tier?: number; count?: number; on?: 'post' | 'reply'; search?: string; timeZone?: TimeZone; money?: CancelReceiptMoney; refundFor?: 'late' | 'second_tip' | 'change' };
+  params?: {
+    amountCents?: Cents;
+    minutes?: number;
+    hours?: number;
+    days?: number;
+    track?: VerificationTrack;
+    at?: ISODateTime;
+    day?: string;
+    by?: 'poster' | 'helper' | 'payment' | 'system';
+    badge?: BadgeCode;
+    tier?: number;
+    count?: number;
+    on?: 'post' | 'reply';
+    search?: string;
+    timeZone?: TimeZone;
+    money?: CancelReceiptMoney;
+    refundFor?: 'late' | 'second_tip' | 'change';
+    /** A neighborhood's (or the city's) name: Neighbors' asks and digest (plan 10). */
+    area?: string;
+    /** The digest's asks waiting for an answer (plan 10.14). */
+    waiting?: number;
+    /** The digest's liveliest post titles (plan 10.14), at most 3. */
+    titles?: string[];
+  };
   /** Where it leads (same targets as the home's attention items). */
   target: AttentionTarget;
   createdAt: ISODateTime;
@@ -193,8 +238,11 @@ export interface NotificationHandlers {
   onOpen: ActionHandler<{ notificationId: string }>;
 }
 
-/** `account`: verification and account notices (email always on, like receipts). */
-export const NOTIFICATION_TOPICS = ['bookings', 'messages', 'offers', 'task_alerts', 'community', 'payments', 'account', 'city_news', 'tips_and_news'] as const;
+/**
+ * `account`: verification and account notices (email always on, like receipts). `neighbors_digest`: the weekly
+ * Neighbors digest (plan 10.14), its own row so it can be on by email while the rest of `community` isn't.
+ */
+export const NOTIFICATION_TOPICS = ['bookings', 'messages', 'offers', 'task_alerts', 'community', 'neighbors_digest', 'payments', 'account', 'city_news', 'tips_and_news'] as const;
 export type NotificationTopic = (typeof NOTIFICATION_TOPICS)[number];
 export const NOTIFICATION_CHANNELS = ['email', 'sms'] as const;
 export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];

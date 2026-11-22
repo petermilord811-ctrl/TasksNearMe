@@ -81,7 +81,15 @@
     "review_reminder": "{days, plural, one {Queda un día} other {Quedan # días}} para dejar tu reseña de {actorName} sobre {title}",
     "saved_searches_digest": "{count, plural, one {# tarea nueva} other {# tareas nuevas}} para tus búsquedas guardadas, entre ellas {search}",
     "payment_refunded": "Te devolvimos {hasAmount, select, yes {{amount}} other {un pago}} de {title}",
-    "address_recheck": "Estamos revisando de nuevo tu domicilio: el nombre de tu identificación es distinto del de tu cuenta"
+    "address_recheck": "Estamos revisando de nuevo tu domicilio: el nombre de tu identificación es distinto del de tu cuenta",
+    "community_followed_reply": "{actorName} respondió en una publicación que sigues: {title}",
+    "community_mention": "{actorName} te respondió en: {title}",
+    "community_recommended": "{actorName} te recomendó a alguien del vecindario: {title}",
+    "community_thanked": "{actorName} te dio las gracias en Vecinos: {title}",
+    "community_ask_match": "Alguien en {area} pide una recomendación: {title}",
+    "community_task_posted": "{actorName} publicó una tarea desde la conversación donde te recomendaron: {title}",
+    "community_auto_hidden": "Tu {on, select, reply {respuesta} other {publicación}} en {title} está oculta mientras nuestro equipo revisa los reportes",
+    "community_digest": "Esta semana en {area}: {count, plural, one {# publicación} other {# publicaciones}}{waiting, plural, =0 {} one {, # espera respuesta} other {, # esperan respuesta}}"
   },
   "previews": {
     "group": "Notificaciones",

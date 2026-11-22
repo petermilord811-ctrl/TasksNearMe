@@ -44,6 +44,7 @@ import { readExactAddress } from '@/modules/tasks/locations';
 import type { PaymentProvider } from '@/integrations/payments';
 import { clientSummary } from './people';
 import { tipViewOf } from './tips';
+import { thankOnNeighborsHref } from '@/modules/community/thanks';
 import { scheduledPaymentViewOf } from './scheduled';
 import { seriesOfBooking, seriesSummaries, skipVisit } from './series';
 import { bookingTerms, bookings } from './schema';
@@ -242,12 +243,14 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     paymentLines.sort((a, b) => a.at.localeCompare(b.at));
   }
 
-  const [dispute, openChange, tip, series, scheduledPayment] = await Promise.all([
+  const [dispute, openChange, tip, series, scheduledPayment, thankHref] = await Promise.all([
     getBookingDispute(db, booking.id, userId, role),
     bookingOpenChange(db, booking.id, userId, role, now),
     tipViewOf(deps, booking, role, completion?.finalBreakdown.taskPriceCents ?? terms.breakdown.taskPriceCents, now),
     seriesOfBooking(db, booking),
     scheduledPaymentViewOf(deps, booking, role),
+    // "Thank Sam on Neighbors" for the client (plan 10.12).
+    role === 'poster' ? thankOnNeighborsHref(db, booking) : Promise.resolve(undefined),
   ]);
 
   const helperBeforePayment = role === 'helper' && !booking.confirmedAt;
@@ -303,6 +306,7 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     ...(review.mine ? { myReview: review.mine } : {}),
     ...(review.theirs ? { theirReview: review.theirs } : {}),
     ...(tip ? { tip } : {}),
+    ...(thankHref ? { thankOnNeighborsHref: thankHref } : {}),
     ...(series ? { series } : {}),
     // The helper canceled and the task is open for offers again: the client's page links to it.
     ...(role === 'poster' && booking.status === 'canceled' && facts.task?.reopened && facts.task.status === 'open' ? { taskReopened: true } : {}),

@@ -1,4 +1,4 @@
-import { ArrowRight, BadgeCheck, Bookmark, ClipboardList, Flame, Lock, MessagesSquare, Star, Users } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Bookmark, ClipboardList, Flame, Lock, MessageCircleQuestion, MessagesSquare, Star, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { PortalHelper, PortalPageData, PortalRail as PortalRailData } from '@/contracts';
 import { routes } from '@/contracts/routes';
@@ -6,7 +6,7 @@ import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
 import { ScrollRow } from '@/ui/components/layout/scroll-row';
-import { savedHref } from './portal-href';
+import { savedHref, unansweredHref } from './portal-href';
 
 const cardClass = 'min-w-0 rounded-[1.375rem] border border-border bg-card p-4 shadow-card';
 const cardTitle = 'flex items-center gap-2 text-[13px] font-semibold tracking-wide text-muted-foreground uppercase';
@@ -78,6 +78,26 @@ export function TrendingCard({ trending }: { trending: PortalRailData['trending'
             </Link>
           </li>)}
         </ol>}
+  </section>;
+}
+
+/**
+ * "Waiting for an answer" (plan 10.17): the place's asks of the week nobody answered yet, the oldest first (a helper's
+ * own services first), each a link to answer it, and the Unanswered filter.
+ */
+export function UnansweredCard({ unanswered, query }: { unanswered: PortalRailData['unanswered']; query: PortalPageData['query'] }) {
+  const t = useTranslations('portal.rail');
+  const card = useTranslations('taskCard');
+  if (unanswered.length === 0) return null;
+  return <section aria-labelledby="portal-unanswered" className={cardClass}>
+    <h2 id="portal-unanswered" className={cardTitle}><MessageCircleQuestion aria-hidden="true" className="size-4 text-primary" />{t('unanswered')}</h2>
+    <ul className="mt-2 space-y-0.5">{unanswered.map((post) => <li key={post.id}>
+      <Link href={routes.app.communityPost(post.id)} className="group/row -mx-2 block rounded-xl px-2 py-2 transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">
+        <span className="line-clamp-2 text-sm font-medium group-hover/row:text-primary">{post.title}</span>
+        <span className="mt-0.5 block text-xs text-muted-foreground">{post.categorySlug ? card(`categories.${post.categorySlug}`) : t('unansweredGeneral')}{post.areaName && <> · {post.areaName}</>}</span>
+      </Link>
+    </li>)}</ul>
+    <Link href={unansweredHref(query)} className="mt-2 inline-flex min-h-9 items-center gap-1 text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('unansweredAll')}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>
   </section>;
 }
 
@@ -159,6 +179,8 @@ export function PortalRail({ data }: { data: Pick<PortalPageData, 'rail' | 'quer
         : <ul className="mt-3 space-y-3.5">{rail.helpers.map((helper) => <li key={helper.handle}><HelperItem helper={helper} layout="rail" /></li>)}</ul>}
       <Link href={helpersHref} className="mt-3 inline-flex min-h-9 items-center gap-1 text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('helpersAll')}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>
     </section>
+
+    <UnansweredCard unanswered={rail.unanswered} query={query} />
 
     <TrendingCard trending={rail.trending} />
 

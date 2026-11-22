@@ -185,7 +185,53 @@ export interface AdminConfigPageData {
   /** Every version, newest first. */
   history: AdminPolicyVersion[];
   flags: AdminFeatureFlag[];
+  /** Neighbors' pinned cards (plan 10.16): live and scheduled first, then the last few that ended. */
+  announcements: AdminAnnouncementRow[];
 }
+
+/** A card pinned to the top of a market's Neighbors (plan 10.16), as the config page lists it. */
+export interface AdminAnnouncementRow {
+  id: string;
+  market: { id: string; name: string };
+  titleEn: string;
+  bodyEn: string;
+  titleEs: string;
+  bodyEs: string;
+  startsAt: ISODateTime;
+  endsAt: ISODateTime;
+  /** Showing now, waiting for its start, or over (its end passed, or staff ended it). */
+  state: 'live' | 'scheduled' | 'ended';
+  createdBy: string;
+  /** Members who closed it. */
+  dismissals: number;
+}
+
+export const ANNOUNCEMENT_TITLE_MAX = 80;
+export const ANNOUNCEMENT_BODY_MAX = 400;
+/** The longest an announcement shows (it ends by itself). */
+export const ANNOUNCEMENT_MAX_DAYS = 60;
+
+/**
+ * Pin a card to a market's Neighbors (plan 10.16), in English and Spanish, until `endsDate` (the market's day, inclusive).
+ * A new one replaces the market's live card. Audited with the reason.
+ */
+export const announcementInputSchema = z.object({
+  marketId: z.string(code('required')).trim().min(1, code('required')).max(80, code('too_long')),
+  titleEn: z.string(code('required')).trim().min(5, code('too_short')).max(ANNOUNCEMENT_TITLE_MAX, code('too_long')),
+  bodyEn: z.string(code('required')).trim().min(10, code('too_short')).max(ANNOUNCEMENT_BODY_MAX, code('too_long')),
+  titleEs: z.string(code('required')).trim().min(5, code('too_short')).max(ANNOUNCEMENT_TITLE_MAX, code('too_long')),
+  bodyEs: z.string(code('required')).trim().min(10, code('too_short')).max(ANNOUNCEMENT_BODY_MAX, code('too_long')),
+  /** `YYYY-MM-DD`, at most `ANNOUNCEMENT_MAX_DAYS` ahead. */
+  endsDate: z.string(code('required')).regex(/^\d{4}-\d{2}-\d{2}$/, code('invalid')),
+  reason: reason(),
+});
+export type AnnouncementInput = z.input<typeof announcementInputSchema>;
+
+export const announcementEndInputSchema = z.object({
+  id: z.string(code('required')).trim().min(1, code('required')).max(80, code('too_long')),
+  reason: reason(),
+});
+export type AnnouncementEndInput = z.input<typeof announcementEndInputSchema>;
 
 const value = (key: keyof AdminPolicyValues) =>
   z.number(code('invalid')).int(code('invalid')).min(POLICY_LIMITS[key].min, code('out_of_range')).max(POLICY_LIMITS[key].max, code('out_of_range'));
@@ -255,6 +301,13 @@ export interface AdminConfigHandlers {
    * Errors: `validation_failed` (`fieldErrors.reason`), `not_allowed` (not an admin), `unknown`.
    */
   onSetSearchIndexing: ActionHandler<SearchIndexingInput>;
+  /**
+   * Neighbors' pinned card (plan 10.16). ok `updated`. Errors: `validation_failed` (`fieldErrors.endsDate`:
+   * `out_of_range` past `ANNOUNCEMENT_MAX_DAYS` or before today), `not_allowed`, `not_found` (no such market).
+   */
+  onPublishAnnouncement?: ActionHandler<AnnouncementInput>;
+  /** Take a card down now. ok `updated`. Errors: `not_found`, `not_allowed`. */
+  onEndAnnouncement?: ActionHandler<AnnouncementEndInput>;
 }
 
 /** The read-only Markets page needs no handler: its rows carry no actions. */

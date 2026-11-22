@@ -1,4 +1,4 @@
-import { communityPosts, communityReactions, communityReplies } from '@/modules/community/schema';
+import { communityAnnouncementDismissals, communityFollows, communityPosts, communityReactions, communityReplies } from '@/modules/community/schema';
 import { messageReactions, savedReplies } from '@/modules/messaging/schema';
 import { taskQuestions } from '@/modules/questions/schema';
 import { savedSearches } from '@/modules/searches/schema';
@@ -320,7 +320,7 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
   const photoFiles = await db
     .select({ id: files.id, storageKey: files.storageKey })
     .from(files)
-    .where(and(eq(files.ownerUserId, userId), inArray(files.kind, ['avatar', 'work_sample', 'task_photo'])));
+    .where(and(eq(files.ownerUserId, userId), inArray(files.kind, ['avatar', 'work_sample', 'task_photo', 'community_photo'])));
   // The cached pages they were on: their public profile, the helper lists, their tasks and their city's pages (J-PR4).
   const [profile] = await db.select({ handle: helperProfiles.handle }).from(helperProfiles).where(eq(helperProfiles.userId, userId)).limit(1);
   const [market] = await db.select({ slug: markets.slug }).from(markets).where(eq(markets.id, user.homeMarketId)).limit(1);
@@ -370,6 +370,9 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
         phone: null,
         phoneVerifiedAt: null,
         avatarFileId: null,
+        // Neighbors (plan 10): their neighborhood and digest mark go with the account.
+        homeAreaId: null,
+        communityDigestAt: null,
         status: 'deleted',
         updatedAt: now,
       })
@@ -410,6 +413,9 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     await tx.delete(savedReplies).where(eq(savedReplies.userId, userId));
     await tx.delete(messageReactions).where(eq(messageReactions.userId, userId));
     await tx.update(communityPosts).set({ status: 'removed', moderationReason: 'account_deleted', moderatedAt: now, updatedAt: now }).where(and(eq(communityPosts.authorUserId, userId), ne(communityPosts.status, 'removed')));
+    // What they followed and the cards they closed go (plan 10); their community photos go with their files below.
+    await tx.delete(communityFollows).where(eq(communityFollows.userId, userId));
+    await tx.delete(communityAnnouncementDismissals).where(eq(communityAnnouncementDismissals.userId, userId));
     const takenDown = await tx
       .update(communityReplies)
       .set({ status: 'removed', moderationReason: 'account_deleted', moderatedAt: now, updatedAt: now })
@@ -437,7 +443,7 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
       }).where(inArray(table.id, ids));
     }
     if (photoFiles.length) {
-      // A task's photos are linked to it with no cascade (J-PR3).
+      // A task's photos are linked to it with no cascade (J-PR3); a community photo's link goes with its file (cascade).
       await tx.delete(taskPhotos).where(inArray(taskPhotos.fileId, photoFiles.map((file) => file.id)));
       await tx.delete(files).where(inArray(files.id, photoFiles.map((file) => file.id)));
     }

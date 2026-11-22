@@ -17,6 +17,7 @@ import { DashboardMapView } from './dashboard-map';
 import { DashboardSearch } from './dashboard-search';
 import { DashboardToolbar } from './dashboard-toolbar';
 import { dashboardBase, seeAllHref } from './links';
+import { NeighborsCard } from './neighbors-card';
 
 export interface DashboardScreenProps {
   data: DashboardData;
@@ -203,5 +204,8 @@ export function DashboardScreen({ data, now, handlers, liveMap = true, initialAi
     <DashboardSearch data={data} {...(handlers?.onAiSearch ? { onAiSearch: handlers.onAiSearch } : {})} {...(initialAiAnswer ? { initialAnswer: initialAiAnswer } : {})} />
 
     {(!firstVisit || data.query.q) && <DashboardLists data={data} liveMap={liveMap} />}
+
+    {/* "From your neighbors" (plan 10.19). */}
+    {data.neighbors && <NeighborsCard neighbors={data.neighbors} now={now} />}
   </div>;
 }

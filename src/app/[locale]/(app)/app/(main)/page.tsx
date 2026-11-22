@@ -4,6 +4,8 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { searchWithAi } from '@/modules/home/actions';
+import { neighborsCard } from '@/modules/community/home';
+import { communityViewerOf } from '@/modules/community/request-viewer';
 import { getDashboard } from '@/modules/home/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
@@ -33,7 +35,12 @@ async function Home({ searchParams }: Pick<PageProps<'/[locale]/app'>, 'searchPa
   const [viewer, params] = await Promise.all([getViewer(), searchParams]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.home()));
   const now = await requestNow();
-  const data = await getDashboard(db, { id: viewer.user.id, firstName: viewer.user.firstName, mode: viewer.user.mode, timeZone: viewer.user.timeZone }, parseDashboardQuery(params), now);
+  const [dashboard, neighbors] = await Promise.all([
+    getDashboard(db, { id: viewer.user.id, firstName: viewer.user.firstName, mode: viewer.user.mode, timeZone: viewer.user.timeZone }, parseDashboardQuery(params), now),
+    // "From your neighbors" (plan 10.19).
+    communityViewerOf(viewer.user).then((reader) => neighborsCard(db, reader, now)),
+  ]);
+  const data = neighbors ? { ...dashboard, neighbors } : dashboard;
   // Ask AI only where the plan allows it (completion plan 9.13); the Server Action checks again and counts.
   return <DashboardScreen data={data} now={now.toISOString()} handlers={data.aiSearch.allowed ? { onAiSearch: searchWithAi } : {}} />;
 }

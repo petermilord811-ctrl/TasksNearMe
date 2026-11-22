@@ -3,7 +3,7 @@
 import { useState, type MouseEvent } from 'react';
 import { Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { ActionHandler, CommunityPostInput, PortalPageData } from '@/contracts';
+import type { ActionHandler, CommunityPostInput, PhotoUploadResult, PortalPageData, QueryHandler } from '@/contracts';
 import { COMMUNITY_POST_KINDS, type CommunityPostKind } from '@/contracts/community';
 import { routes } from '@/contracts/routes';
 import { kindIcons } from '@/ui/components/community/post-card';
@@ -21,7 +21,7 @@ const chipClass = 'inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap r
  * away. On phones it's one line, the prompt and a + for a task, so the stream starts sooner. Without JavaScript
  * each is a link to the new-post page. While posting waits for a verified phone, it says so and links there.
  */
-export function PortalComposer({ data, onPost }: { data: Pick<PortalPageData, 'composer' | 'me' | 'postBlocked'>; onPost: ActionHandler<CommunityPostInput> }) {
+export function PortalComposer({ data, onPost, onUploadPhoto }: { data: Pick<PortalPageData, 'composer' | 'me' | 'postBlocked'>; onPost: ActionHandler<CommunityPostInput>; onUploadPhoto?: QueryHandler<FormData, PhotoUploadResult> }) {
   const t = useTranslations('portal.composer');
   const community = useTranslations('community');
   const [kind, setKind] = useState<CommunityPostKind | null>(null);
@@ -33,7 +33,7 @@ export function PortalComposer({ data, onPost }: { data: Pick<PortalPageData, 'c
 
   return <section aria-label={t('label')} className="rounded-[1.375rem] border border-border bg-card p-3.5 shadow-card sm:p-4">
     {kind
-      ? <CommunityPostForm data={data.composer} initialKind={kind} onPost={onPost} label={t('label')} onCancel={() => setKind(null)} focusOnMount className="pt-1" />
+      ? <CommunityPostForm data={data.composer} initialKind={kind} onPost={onPost} {...(onUploadPhoto ? { onUploadPhoto } : {})} label={t('label')} onCancel={() => setKind(null)} focusOnMount className="pt-1" />
       : <>
           <div className="flex items-center gap-3">
             <InitialsAvatar initials={data.me.initials} photo={data.me.photo} size="md" />

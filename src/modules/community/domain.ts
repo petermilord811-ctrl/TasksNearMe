@@ -1,5 +1,7 @@
 import {
   CATEGORY_SLUGS,
+  COMMUNITY_BODY_MIN,
+  COMMUNITY_BODY_OPTIONAL_KINDS,
   COMMUNITY_POST_KINDS,
   PORTAL_ALL_AREAS,
   PORTAL_FEED_PAGE_SIZE,
@@ -10,8 +12,10 @@ import {
   PORTAL_TIMES,
   PORTAL_TYPES,
   PORTAL_VIEWS,
+  type CategorySlug,
   type CommunityAuthor,
   type CommunityPostKind,
+  type CommunityStarter,
   type CommunityPostTask,
   type PortalCategory,
   type PortalQueryState,
@@ -153,6 +157,7 @@ export function parsePortalQuery(params: Params): PortalQueryState {
     ...(time ? { time } : {}),
     ...(q ? { q } : {}),
     saved: firstOf(params.saved) === '1',
+    unanswered: firstOf(params.unanswered) === '1',
     sort: sortParam === 'active' ? 'hot' : pick(sortParam, PORTAL_SORTS) ?? 'hot',
     view: pick(firstOf(params.view), PORTAL_VIEWS) ?? 'feed',
     group: pick(firstOf(params.group), PORTAL_GROUPS) ?? 'area',
@@ -165,3 +170,104 @@ export function searchWords(q: string | undefined): string[] {
   if (!q) return [];
   return [...new Set(q.toLowerCase().split(/[^\p{L}\p{N}']+/u).filter((word) => word.length >= 2))].slice(0, 6);
 }
+
+// ---- Neighbors, plan 10 (docs/ui/neighbors-10.md) ----------------------------------------------------------------
+
+/** Details a post needs (plan 10.6): optional for an ask, `COMMUNITY_BODY_MIN` characters for a tip or a thanks. */
+export function bodyRequired(kind: CommunityPostKind): boolean {
+  return !(COMMUNITY_BODY_OPTIONAL_KINDS as readonly string[]).includes(kind);
+}
+
+/** Whether these details are enough for the kind of post. */
+export function bodyFits(kind: CommunityPostKind, body: string): boolean {
+  return !bodyRequired(kind) || body.trim().length >= COMMUNITY_BODY_MIN;
+}
+
+/**
+ * Words that tend to start fights (plan 10.20, Nextdoor's "kindness reminder"): insults and name-calling, in English
+ * and Spanish, matched on whole words. Not a filter: the author sees a reminder and can post anyway. Kept local (no
+ * model), so nobody's words leave the server for a tone check.
+ */
+const UNKIND_PATTERNS = [
+  // Name-calling (not words a job can need: "trash" and "disgusting" describe yards and kitchens, so they're left out).
+  /\b(?:idiots?|idiotic|stupid|morons?|dumbass|losers?|pathetic|scum|jerks?|shut up|get a life|nobody asked|you people)\b/i,
+  /\b(?:f+u+c+k+(?:ing|er|ers|ed)?|sh[i1]t(?:ty)?|bullshit|bitch(?:es|y)?|bastards?|assholes?)\b/i,
+  /(?:^|[^\p{L}])(?:idiotas?|estúpid[oa]s?|estupid[oa]s?|imbécil(?:es)?|imbecil(?:es)?|pendej[oa]s?|cállate|callate|mierda|cabr[oó]n(?:es)?|put[oa]s?)(?![\p{L}])/iu,
+];
+
+/** The kindness reminder's check (plan 10.20). */
+export function soundsUnkind(text: string): boolean {
+  return UNKIND_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+/** Followers hear about new replies at most once per post per hour (plan 10.9): the notice's key for that hour. */
+export function followNoticeKey(postId: string, at: Date): string {
+  return `cfollow:${postId}:${Math.floor(at.getTime() / 3_600_000)}`;
+}
+
+/** Edits per person per day (plan 10.5): a backstop against rewriting a thread after the fact. */
+export const EDIT_RULE = { limit: 30, windowSeconds: DAY_SECONDS };
+
+/** Recommendation-request alerts per helper per day, and helpers told about one request (plan 10.11). */
+export const ASK_MATCH_LIMITS = { perDay: 3, perPost: 15 } as const;
+
+/** Reports from different established accounts that hide a post or reply until staff look (plan 10.21). */
+export const AUTO_HIDE_REPORTS = 3;
+/** An account this old counts toward hiding something (a new one alone can't hide a neighbor's post). */
+export const ESTABLISHED_ACCOUNT_DAYS = 7;
+
+/** Whether reports from these reporters hide the item: enough different accounts old enough to count. */
+export function reportsHide(reporters: { userId: string; createdAt: Date }[], now: Date): boolean {
+  const established = new Set(reporters.filter((reporter) => now.getTime() - reporter.createdAt.getTime() >= ESTABLISHED_ACCOUNT_DAYS * DAY_SECONDS * 1000).map((reporter) => reporter.userId));
+  return established.size >= AUTO_HIDE_REPORTS;
+}
+
+/** The weekly digest (plan 10.14): Sunday from 9 am on the market's clock, sent within the next 36 hours, or skipped. */
+export const DIGEST_DAY_TIME = '09:00';
+export const DIGEST_SEND_WINDOW_MS = 36 * 3_600_000;
+/** Posts the person's place needs that week for a digest worth sending. */
+export const DIGEST_MIN_POSTS = 3;
+
+/** This week's digest moment for a market (the latest Sunday 9 am at or before `now`, in its zone). */
+export function digestSendFrom(now: Date, timeZone: string, toUtc: (date: string, time: string, zone: string) => string, dayKeyOf: (at: Date, zone: string) => string): Date {
+  const today = dayKeyOf(now, timeZone);
+  const weekday = new Date(`${today}T12:00:00Z`).getUTCDay(); // 0 is Sunday
+  const sunday = new Date(Date.parse(`${today}T12:00:00Z`) - weekday * DAY_SECONDS * 1000).toISOString().slice(0, 10);
+  const thisWeek = new Date(toUtc(sunday, DIGEST_DAY_TIME, timeZone));
+  if (thisWeek.getTime() <= now.getTime()) return thisWeek;
+  const lastSunday = new Date(Date.parse(`${sunday}T12:00:00Z`) - 7 * DAY_SECONDS * 1000).toISOString().slice(0, 10);
+  return new Date(toUtc(lastSunday, DIGEST_DAY_TIME, timeZone));
+}
+
+/** Whether a digest is due now for someone whose last went out at `lastAt`. */
+export function digestDue(lastAt: Date | null, sendFrom: Date, now: Date): boolean {
+  if (now.getTime() - sendFrom.getTime() > DIGEST_SEND_WINDOW_MS) return false;
+  return lastAt === null || lastAt.getTime() < sendFrom.getTime();
+}
+
+/** One configured starter (markets.community_prompts), as stored. */
+export interface PromptConfig {
+  months: number[];
+  kind: 'recommendation' | 'question' | 'tip';
+  category?: string;
+  en: string;
+  es: string;
+}
+
+/** The starters for a month (1–12) in a language (plan 10.18): at most three, in the market's order. */
+export function startersFor(prompts: readonly PromptConfig[] | null | undefined, month: number, locale: 'en' | 'es'): CommunityStarter[] {
+  return (prompts ?? [])
+    .filter((prompt) => prompt.months.includes(month) && (COMMUNITY_POST_KINDS as readonly string[]).includes(prompt.kind))
+    .slice(0, 3)
+    .map((prompt) => ({
+      kind: prompt.kind,
+      ...(prompt.category && (CATEGORY_SLUGS as readonly string[]).includes(prompt.category) ? { categorySlug: prompt.category as CategorySlug } : {}),
+      title: (locale === 'es' ? prompt.es : prompt.en).trim(),
+    }))
+    .filter((starter) => starter.title.length >= 5);
+}
+
+/** Asks "Unanswered" collects (plan 10.17): the kinds that want an answer. */
+export const UNANSWERED_KINDS = ASK_FOR_HELP_KINDS;
+/** "Waiting for an answer" looks this far back. */
+export const UNANSWERED_DAYS = 7;

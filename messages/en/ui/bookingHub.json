@@ -278,5 +278,10 @@
   "taskReopened": {
     "body": "Your task is open for offers again, and helpers nearby were told.",
     "link": "See offers on your task"
+  },
+  "thankNeighbors": {
+    "title": "Thank {name} on Neighbors",
+    "body": "A public thanks helps neighbors find good help, and counts as a recommendation on their profile.",
+    "action": "Write a thanks"
   }
 }

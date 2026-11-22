@@ -134,6 +134,21 @@ export const adminMetricsFinanceData: AdminMetricsPageData = {
     helpersAtCap: 1,
     helpersNearCap: 2,
   },
+  // Plan 10.22: Neighbors over the same 30 days.
+  community: {
+    posts: 84,
+    replies: 231,
+    postsByArea: [{ areaName: 'Mueller', count: 26 }, { areaName: 'Windsor Park', count: 17 }, { areaName: 'Hyde Park', count: 12 }, { count: 9 }],
+    asks: 47,
+    answeredWithinDay: 39,
+    medianFirstReplyMinutes: 74,
+    recommendationRequests: 28,
+    withNamedHelper: 21,
+    askedForHelp: 11,
+    booked: 7,
+    reports: 3,
+    autoHidden: 1,
+  },
 };
 
 /** The same period for a support agent: no money figures (blueprint 08). */

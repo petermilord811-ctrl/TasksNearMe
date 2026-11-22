@@ -163,7 +163,8 @@
         "account": "Cuenta y verificación",
         "city_news": "Novedades de tu ciudad",
         "task_alerts": "Tareas nuevas cerca de ti",
-        "community": "Comunidad"
+        "community": "Comunidad",
+        "neighbors_digest": "Resumen semanal de Vecinos"
       },
       "topicEmails": {
         "bookings": "reservas",
@@ -174,7 +175,8 @@
         "account": "cuenta",
         "city_news": "novedades de tu ciudad",
         "task_alerts": "tareas nuevas",
-        "community": "comunidad"
+        "community": "comunidad",
+        "neighbors_digest": "resumen semanal de Vecinos"
       },
       "cta": {
         "booking": "Ver la reserva",
@@ -195,7 +197,8 @@
         "saved_search": "Abrir tu búsqueda",
         "booking_review": "Ir a las reseñas",
         "saved_searches": "Abrir tus búsquedas guardadas",
-        "new_task": "Publicar una tarea"
+        "new_task": "Publicar una tarea",
+        "community": "Abrir Vecinos"
       },
       "next": {
         "offer_received": "Compara las ofertas de tu tarea y reserva la que mejor te convenga. Solo se te cobra cuando reservas.",
@@ -259,7 +262,15 @@
         "review_reminder": "Después, las reseñas de esta reserva se cierran. Se mantienen ocultas hasta que estén las dos.",
         "saved_searches_digest": "Tu página de búsquedas guardadas tiene cada una, con sus filtros y avisos.",
         "payment_refunded": "Vuelve a la tarjeta con la que pagaste en 5 a 10 días hábiles, según tu banco.",
-        "address_recheck": "No tienes que hacer nada. Te avisaremos cuando esté revisado, normalmente en un día."
+        "address_recheck": "No tienes que hacer nada. Te avisaremos cuando esté revisado, normalmente en un día.",
+        "community_followed_reply": "Mira las respuestas más recientes en la conversación.",
+        "community_mention": "Mira su respuesta y contesta si ayuda.",
+        "community_recommended": "Un agradecimiento en la conversación ayuda mucho.",
+        "community_thanked": "En tu perfil, los vecinos ven quién te recomienda.",
+        "community_ask_match": "Responde si puedes ayudar. Los vecinos ven primero a quienes otros recomiendan.",
+        "community_task_posted": "Haz una oferta mientras esté abierta.",
+        "community_auto_hidden": "No tienes que hacer nada. La volveremos a mostrar si cumple las normas de la comunidad.",
+        "community_digest": "Mira lo que tus vecinos preguntan y comparten."
       },
       "lockedFooter": "Los correos de reservas y pagos siempre están activados: son tus recibos y avisos de seguridad.",
       "optionalFooter": "Recibes esto porque los correos de {topic} están activados.",
@@ -339,12 +350,24 @@
       "review_reminder": "{days, plural, one {Queda un día} other {Quedan # días}} para dejar tu reseña de {actorName} sobre {title}.",
       "saved_searches_digest": "{count, plural, one {# tarea nueva} other {# tareas nuevas}} para tus búsquedas guardadas, entre ellas {search}.",
       "address_recheck": "Estamos revisando de nuevo tu domicilio: el nombre de tu identificación es distinto del de tu cuenta.",
-      "payment_refunded": "Te devolvimos {hasAmount, select, yes {{amount}} other {un pago}} de {title}: {refundFor, select, late {se cobró después de que la reserva terminó} second_tip {era una segunda propina para la misma reserva} change {el cambio se pagó cuando la reserva ya había cambiado} other {no se debía}}."
+      "payment_refunded": "Te devolvimos {hasAmount, select, yes {{amount}} other {un pago}} de {title}: {refundFor, select, late {se cobró después de que la reserva terminó} second_tip {era una segunda propina para la misma reserva} change {el cambio se pagó cuando la reserva ya había cambiado} other {no se debía}}.",
+      "community_followed_reply": "{actorName} respondió en una publicación que sigues: {title}.",
+      "community_mention": "{actorName} te respondió en: {title}.",
+      "community_recommended": "{actorName} te recomendó a alguien del vecindario: {title}.",
+      "community_thanked": "{actorName} te dio las gracias en Vecinos: {title}.",
+      "community_ask_match": "Alguien en {area} pide una recomendación: {title}.",
+      "community_task_posted": "{actorName} publicó una tarea desde la conversación donde te recomendaron: {title}.",
+      "community_auto_hidden": "Tu {on, select, reply {respuesta} other {publicación}} en {title} está oculta mientras nuestro equipo revisa los reportes.",
+      "community_digest": "Esta semana en {area}: {count, plural, one {# publicación} other {# publicaciones}}{waiting, plural, =0 {} one {, # espera respuesta} other {, # esperan respuesta}}."
     },
     "pushTitle": "TasksNearMe",
     "receipt": {
       "money": "{money, select, refund {Te devolvemos {amount} a tu medio de pago. Tu banco puede tardar de 5 a 10 días hábiles en mostrarlo.} late_refund {Te devolvemos {amount} a tu medio de pago, y el resto es para {actorName} por cancelar tarde. Tu banco puede tardar de 5 a 10 días hábiles en mostrarlo.} no_refund {La cancelación gratis ya había terminado, así que esta reserva no tiene reembolso.} not_charged {No se te cobró nada, así que no hay nada que reembolsar.} client_refunded {A {actorName} le devolvemos {amount}.} client_not_charged {A {actorName} todavía no se le había cobrado.} compensation {Sumamos {amount} a tus ganancias por tu tiempo.} other {}}",
       "told": "Ya se lo avisamos a {actorName}."
+    },
+    "digest": {
+      "liveliest": "Lo más activo esta semana:",
+      "title": "“{title}”"
     }
   },
   "emails": {

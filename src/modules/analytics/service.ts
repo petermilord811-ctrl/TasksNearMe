@@ -1,3 +1,4 @@
+import { communityMetrics } from '@/modules/community/metrics';
 import { and, eq, gte, inArray, isNotNull, isNull, lte, or, sql } from 'drizzle-orm';
 import type { AdminMetricsPageData, CategorySlug, MetricsPeriodDays, RewardProgramCode, RewardStatus, StaffRole } from '@/contracts';
 import { bookingCompletions, bookingTerms, bookings, helperStrikes } from '@/modules/bookings/schema';
@@ -137,7 +138,8 @@ export async function getAdminMetrics(db: Db, staff: StaffActor, days: MetricsPe
     budgets: REWARD_BUDGETS,
     monthlyCapCents: REWARD_RULES.monthlyCapCents,
   };
-  return computeMetrics(facts, period, canSeeMoney);
+  // Neighbors' health (plan 10.22) beside the marketplace's.
+  return { ...computeMetrics(facts, period, canSeeMoney), community: await communityMetrics(db, from, now) };
 }
 
 /** `?days=` → a known period (anything else: 30 days). */

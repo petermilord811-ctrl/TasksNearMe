@@ -2,6 +2,7 @@ import { useTranslations } from 'next-intl';
 import { cn } from '@/ui/lib/utils';
 import { NavIndicator } from './nav-indicator';
 import { NavLink } from './nav-link';
+import { NeighborsDot } from './neighbors-dot';
 import { NAV_ICONS } from './nav-icons';
 import type { NavItem } from './nav';
 
@@ -21,11 +22,13 @@ const SLIDING_PILL = {
  * `bottom`: the phone dock's tabs (one column each), icon over label, with the same gliding pill. Messages isn't one of
  * them since 2026-11-22: the chat button carries its unread count (src/ui/components/messaging/chat-launcher.tsx).
  */
-export function Navigation({ items, label, currentPath, variant = 'sidebar' }: {
+export function Navigation({ items, label, currentPath, variant = 'sidebar', neighborsNews }: {
   items: NavItem[];
   label: string;
   currentPath?: string;
   variant?: 'sidebar' | 'bottom';
+  /** The newest neighbor post (plan 10.19): a dot on Neighbors when it's newer than this device's last look. */
+  neighborsNews?: { latestAt: string; visitKey: string };
 }) {
   const t = useTranslations('shell');
   const bottom = variant === 'bottom';
@@ -48,6 +51,7 @@ export function Navigation({ items, label, currentPath, variant = 'sidebar' }: {
               )}>
               <Icon aria-hidden="true" className={cn('shrink-0 text-muted-foreground transition-[color,translate] duration-300 ease-[var(--ease-out)] group-hover/item:text-foreground group-aria-[current=page]/item:text-primary', bottom ? 'size-[1.375rem] group-aria-[current=page]/item:-translate-y-px' : 'size-5')} />
               <span className={cn('break-words', bottom && 'max-w-full text-center')}>{name}</span>
+              {item.id === 'community' && neighborsNews && <NeighborsDot latestAt={neighborsNews.latestAt} visitKey={neighborsNews.visitKey} bottom={bottom} />}
             </NavLink>
           </li>;
         })}

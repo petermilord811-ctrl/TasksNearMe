@@ -1,0 +1,54 @@
+# Neighbors, upgraded (completion plan 10)
+
+The owner (2026-11-22): "Now, Neighbors (NextDoor similar posts). Give me specific improvement plan about it", then "build all without asking". The plan named four gaps against Nextdoor: posts were text only, conversations stopped after one reply, phones put the first post about 530 px down, and nothing brought people back. This doc records what changed. The portal itself (one stream of posts and tasks, Feed or List, one URL) is in [portal-9.10.md](portal-9.10.md).
+
+## 1. Posts that look like Nextdoor
+
+| Change | What it does | Where |
+|---|---|---|
+| **Photos** (10.1) | Up to 4 on a post and 1 on a reply. Uploaded as files of kind `community_photo`, re-encoded with every bit of metadata dropped (location included). Shown in a grid: one fills the card, two side by side, three as one large and two small, four as a square. Each opens a viewer that steps through them (arrows and keyboard). The form's hint says what not to show: house numbers, license plates, other people's faces. | `community_photos` (one row per file, so a file belongs to one post or reply), `src/modules/community/photos.ts`, `post-photos.tsx`, `community-photo-picker.tsx` |
+| **The card** (10.2) | A quiet line of what neighbors did ("Priya S. and 3 others found this helpful": every name when there are at most two and nobody else, else the first and how many more; Thanks; replies; the names open a list), then one row of actions: Helpful, Thanks, Reply, Save, and Ask for help on your own ask. On phones the line is just the names beside the counts ("Priya S. and 3 others"), and Thanks and Save show as icons (named for screen readers) so Helpful and Reply keep their words in a 360 px card. Long text folds after four lines with More. | `post-card.tsx`, `post-engagement.tsx`, `expandable-text.tsx` |
+| **Reply from the feed** (10.3) | Reply opens a box on the card; sending posts without leaving the feed, and the card's latest replies refresh. | `inline-reply.tsx` |
+| **Recommended in this thread** (10.4) | On a recommendation request, the helpers neighbors named, with how many named each and Request. A helper who named themself counts least and says so. The card shows the first; the post's page shows all (beside the thread on wide screens). | `threadHelpersOf` in `service.ts`, `ThreadRecommendations` |
+| **Editing** (10.5) | The author edits a visible post or reply. It says Edited, the new words are masked and checked like new ones (crime and safety posts, the kindness reminder, a post's details for its kind), and the words before stay in `community_edits` for staff, so an edit can't hide what someone reported. At most 30 edits a day. | `editCommunityItem`, `edit-dialog.tsx` |
+| **A lighter composer** (10.6) | The kind as one row of chips; the service and the neighborhood as two pills; photos; details optional for an ask ("Who do you recommend for gutter cleaning?" says it all; a tip or a thanks still needs 10 characters); the season's starters while the title is empty. An unfinished post stays on the device (per person and market) until it's posted or discarded. | `post-form.tsx` |
+| **Phones** (10.7) | One row that stays under the app's bar: the place as a button (its sheet lists near you, every neighborhood and the city with counts, and the place's numbers), the sort as a small menu, and Filters (its sheet holds the search and Feed or List). It replaces the heading, the numbers, the strip and the toolbar there. The first post starts in the upper half of a 360 × 800 screen (e2e checks it). | `portal-phone-bar.tsx`, `portal-screen.tsx` |
+| **Tasks in the Feed** (10.8) | Task cards are about half as tall (one line of facts, no excerpt). In Everything, three or more tasks in a row fold into one "New tasks near you" card of dense rows; with Tasks or Saved chosen, every card stays a card. | `task-feed-card.tsx` (`compact`), `feedBlocks` in `portal-stream.tsx` |
+
+## 2. Conversations that keep going
+
+- **Follow and Mute** (10.9). You follow posts you wrote, replied to or saved, or tap Follow in the menu. Followers hear about new replies at most once a post an hour (the notice is keyed by post and hour). Mute stops it for good, even after you reply again; "Stop following" forgets the row, so a later reply follows again.
+- **Reply to a person** (10.10). Reply under a reply starts the form with "Replying to Maya R." and she's told. Replies stay one level on screen; the reply links back to the one it answers.
+- **Telling helpers** (10.11). A helper hears when a neighbor recommends them in a reply or thanks them in a post. When a neighbor asks for a recommendation in a service, the active helpers who offer it and cover that neighborhood hear about it (any helper of the city for a citywide post): never the author or anyone blocked either way, at most 3 a day each, 15 helpers a request.
+- **Links to bookings** (10.12). A client's completed booking shows "Thank Sam on Neighbors", which opens the thanks form with that booking chosen. When "Ask for help" turns a recommendation thread into a task, the helpers named in it hear about the task, unless a task alert told them already.
+- **Sparks** (10.13). A post or reply says what it earned ("Posted · +5 Sparks") while the day's cap allows (3 posts and 10 replies a day, UTC days, as Sparks counts them).
+- **The weekly digest** (10.14). Sunday from 9 am on each market's clock (sent within the next 36 hours, or skipped), to members whose place had at least 3 posts that week: "This week in Mueller: 6 posts, 2 waiting for an answer", with the three liveliest titles. Email only, under its own topic (Weekly Neighbors digest), on by default with one-click unsubscribe, never by text. Real posts only where samples are hidden, never your own, nobody blocked.
+
+## 3. Ready for the Gainesville launch
+
+- **Your neighborhood** (10.15). While we can't place someone (no choice of theirs, no area they help in, no task with one), Neighbors asks "Which neighborhood are you in?" above the stream. Only the neighborhood is kept (`users.home_area_id`), never an address. "Not now" waits until the next visit. Anyone can change it later under the neighborhoods' list (the strip's More, the phone's place sheet).
+- **Pinned announcement** (10.16). Admins pin one card per market from the config page, in English and Spanish, until a date (60 days at most), with a reason in the audit log; a new card replaces the live one. A member who closes it doesn't see it again on any device.
+- **Unanswered** (10.17). A filter (`unanswered=1`) for recommendation requests and questions without a reply, and a rail card "Waiting for an answer" (the week's, oldest first; a helper's own services first). Phones get the card in the feed.
+- **Seasonal starters** (10.18). Ideas the composer offers in the months they fit, from market configuration (`markets.community_prompts`, English and Spanish), so a new city is a data change. Gainesville's follow UF's move-out (April and May) and move-in (July and August), storm season (June to November), leaf season and the holidays. Every starter stays inside a launch category's scope.
+- **Home and the nav** (10.19). Home shows "From your neighbors": the two newest posts near the person and the asks waiting for an answer. A dot on Neighbors says a neighbor posted since this device last looked (local storage only; never on a first visit or on Neighbors itself).
+
+## 4. Safety and quality as it grows
+
+- **Kindness reminder** (10.20). Name-calling and profanity in English and Spanish (whole words; words a job can need, like "trash" or "disgusting", are left out) get "Take another look?" with Edit or Post anyway. It's a field code (`unkind`), not a refusal. No model reads posts for it: everyone's words would leave the server for a tone check.
+- **Hidden after reports** (10.21). Three different accounts at least a week old reporting a post or reply since staff last decided on it hide it until trust and safety restore or remove it from the case. Its cases go to high priority, the audit log says why (`community.post.auto_hide`, actor `system`), and the author is told. A new account alone can't hide a neighbor's post.
+- **Health numbers** (10.22). `/admin/metrics` gains Neighbors: posts and replies, asks answered within a day and the middle time to a first answer, recommendation requests that named a helper, asks posted as tasks and booked, reports per 100 posts and items hidden automatically, and posts by neighborhood.
+- **On the post's page and in search** (10.23). Wide screens get a column beside the thread: the helpers named in it, more from the neighborhood (same service or place, the last 30 days), and the rules. "See translation" shows a post or reply in the reader's language when a model is set up (the free providers through the balancer, masked text, made on request and never stored; 60 a day). A search marks its words in the cards' and rows' titles and words.
+
+## 5. The demo marketplace on Neighbors (D1)
+
+Signed-in members saw the demo marketplace everywhere (5.24). On Neighbors that meant real Gainesville neighbors reading made-up neighbors' recommendations as real ones. Now, in production, a real account sees real posts, tasks and helpers only on Neighbors (the feed, counts, the rail, a post's page, the live pill, the home card, the nav dot, the digest). Sample accounts keep the demo marketplace; staff get a switch on the page ("Show it to me", a 12-hour cookie). Development and the e2e build show every row, as before.
+
+## 6. Data
+
+Migration 0076: `users.home_area_id`, `users.community_digest_at`, `community_posts.edited_at`, `community_replies.reply_to_id` and `edited_at`, `markets.community_prompts` (with Gainesville's and Austin's starters), and the tables `community_photos`, `community_edits`, `community_follows`, `community_announcements` and `community_announcement_dismissals`. Every new column is nullable or has a default, so code without them keeps working until the migration runs.
+
+Notification types: `community_followed_reply`, `community_mention`, `community_recommended`, `community_thanked`, `community_ask_match`, `community_auto_hidden` (topic community: in the app and on devices, email if turned on), `community_task_posted` (task alerts) and `community_digest` (its own topic `neighbors_digest`, email only). Outbox events: `community.posted` now plans thanks and ask alerts; `community.replied` plans the author, the person replied to, a recommended helper and followers; new `community.task_linked`, `community.auto_hidden` and `community.digest`.
+
+## 7. Left out, as before
+
+Downvotes and net scores, crime and safety posts, for-sale, events and polls, sharing outside the app, search engine indexing, and deeper reply threads.

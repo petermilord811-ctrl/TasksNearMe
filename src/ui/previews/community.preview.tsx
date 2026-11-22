@@ -4,6 +4,8 @@ import { routes } from '@/contracts/routes';
 import {
   communityNewPostPageData,
   communityNewThanksData,
+  communityNewThanksFromBookingData,
+  communityPhotos,
   communityPostHelperViewData,
   communityPostPageData,
   communityPostReplyBlockedData,
@@ -25,8 +27,13 @@ const postHandlers: CommunityPostHandlers = {
   onPin: fakeHandler({ ok: true, code: 'updated' }),
   onDelete: fakeHandler({ ok: true, code: 'updated' }),
   onModerate: fakeHandler({ ok: true, code: 'updated' }),
+  onEdit: fakeHandler({ ok: true, code: 'updated' }),
+  onFollow: fakeHandler({ ok: true, code: 'updated' }),
+  onUploadPhoto: async () => ({ ok: true, photo: communityPhotos.shelf }),
+  onLoadReactors: async () => ({ helpful: ['Priya S.', 'Nate O.', 'Ana P.'], thanks: ['Lee M.'] }),
+  onTranslate: async () => ({ title: '¿A quién recomiendan para armar un escritorio y un librero?', body: 'Me acabo de mudar a Mueller y tengo un escritorio y un librero alto en cajas.' }),
 };
-const newHandlers: CommunityNewPostHandlers = { onPost: fakeHandler({ ok: true, code: 'sent' }) };
+const newHandlers: CommunityNewPostHandlers = { onPost: fakeHandler({ ok: true, code: 'sent' }), onUploadPhoto: async () => ({ ok: true, photo: communityPhotos.boxes }) };
 const p = copy.previews;
 
 function page(id: string, title: string, path: string, render: () => ReactNode, viewer = mayaShell): PreviewEntry {
@@ -40,4 +47,5 @@ export const communityPreviews: PreviewEntry[] = [
   page('post-staff', p.postStaff, routes.app.communityPost(communityPostStaffData.post.id), () => <CommunityPostScreen data={communityPostStaffData} handlers={postHandlers} now={now} />),
   page('new', p.newPost, routes.app.newCommunityPost(), () => <CommunityNewPostScreen data={communityNewPostPageData} handlers={newHandlers} />),
   page('new-thanks', p.newThanks, routes.app.newCommunityPost('thanks'), () => <CommunityNewPostScreen data={communityNewThanksData} handlers={newHandlers} />),
+  page('new-thanks-booking', p.newThanksBooking, routes.app.newCommunityPost('thanks', 'bkg_wardrobe'), () => <CommunityNewPostScreen data={communityNewThanksFromBookingData} handlers={newHandlers} />),
 ];

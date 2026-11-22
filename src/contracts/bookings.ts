@@ -219,6 +219,11 @@ export interface BookingView {
   /** Completed bookings (UI-057): the client's tip card (`available`), or the tip once given (both people). */
   tip?: BookingTipView;
   /**
+   * "Thank Sam on Neighbors" (plan 10.12): the client's completed booking that has no thanks post yet, in a market they
+   * belong to. Opens the thanks form with this booking chosen (`routes.app.newCommunityPost('thanks', id)`).
+   */
+  thankOnNeighborsHref?: string;
+  /**
    * Clients, on a booking the helper canceled: the task is open for offers again (on its own, or by "Find a
    * replacement"), so the page links to it (`routes.app.task(task.id)`).
    */

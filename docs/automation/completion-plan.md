@@ -185,3 +185,34 @@ Read as (tasksnearme-9c, coordinator): "non ai integration (use claude one and n
 | 9.13 ☑ f8dab35, 6837c14 | A subscription plan | tasksnearme-8c | Designed first (decisions.md: who pays for what, why, prices in market policy), then built: a plan for clients (AI search and more) and one for helpers, Stripe Billing in test mode (Checkout and the customer portal), entitlements from webhooks, the pricing and account pages, honest terms (cancel anytime) |
 | 9.14 ☑ | Simpler page organization | tasksnearme-37 (public ☑ 778519f: the 9.1 audit's 18 public findings), tasksnearme-9c (app ☑: the nav 842d591 79f8b61, the pages 71bbd63 to 52750ee) | Fewer, clearer pages and navigation (the signed-out header and footer, the signed-in nav and account menu); duplicates merged, each page one job. After 9.1's audit |
 | 9.14b ☑ 746e67f | The account page on phones | tasksnearme-aa | Comfortable at 360 without removing anything: the five groups start folded below 1024 px except the one you came for (the address's #account-<group>; Sign-in and security after connecting Google or Microsoft; else Profile), the index opens and jumps to a group, rarely used details (passkey names, the data export) behind Show, and tighter cards on phones; from 1024 px everything open as now. The Plan card (9.13) stays as it is. Length at 360 measured before and after, both themes, Spanish |
+
+## Part 10 — Neighbors, Nextdoor-style (owner, 2026-11-22)
+
+The owner's request: "Now, Neighbors (NextDoor similar posts). Give me specific improvement plan about it", then, after the plan, "build all without asking". The plan's three open choices took their defaults: demo posts hidden from real accounts on Neighbors (staff can switch them on), the weekly digest on by email with one-click unsubscribe, and helper alerts for recommendation requests on (at most 3 a day). Design and decisions: [docs/ui/neighbors-10.md](../ui/neighbors-10.md). Built by tasksnearme-56 in its worktree; lands on the owner's "commit".
+
+| # | Item | Session | What it includes |
+|---|---|---|---|
+| 10.1 ◐ | Photos on posts and replies | tasksnearme-56 | Up to 4 on a post, 1 on a reply, metadata dropped; a grid and a viewer; readable by whoever may read the post |
+| 10.2 ◐ | Nextdoor's card | tasksnearme-56 | The counts line ("Priya S. and 3 others found this helpful", with the list), one row of actions, More on long text |
+| 10.3 ◐ | Reply from the feed | tasksnearme-56 | A reply box on the card |
+| 10.4 ◐ | Recommended in this thread | tasksnearme-56 | The helpers named on a request, how many named each, Request |
+| 10.5 ◐ | Edit posts and replies | tasksnearme-56 | Edited, masked and checked again, earlier words kept for staff |
+| 10.6 ◐ | A lighter composer | tasksnearme-56 | Kind chips, two pills, photos, optional details for an ask, a draft kept on the device |
+| 10.7 ◐ | Phones | tasksnearme-56 | One sticky row (place, sort, Filters) instead of the heading, strip and toolbar |
+| 10.8 ◐ | Tasks in the Feed | tasksnearme-56 | Compact task cards; runs of three or more fold into "New tasks near you" |
+| 10.9 ◐ | Follow and Mute | tasksnearme-56 | Auto-follow on posting, replying or saving; one notice a post an hour |
+| 10.10 ◐ | Reply to a person | tasksnearme-56 | "Replying to…", and that person is told |
+| 10.11 ◐ | Telling helpers | tasksnearme-56 | Recommended and thanked notices; alerts for recommendation requests in their services nearby (3 a day) |
+| 10.12 ◐ | Links to bookings | tasksnearme-56 | "Thank Sam on Neighbors" on a completed booking; the helpers named in a thread hear about its task |
+| 10.13 ◐ | Sparks where they're earned | tasksnearme-56 | "Posted · +5 Sparks" within the day's cap |
+| 10.14 ◐ | The weekly digest | tasksnearme-56 | Sunday 9 am on each market's clock, 3 posts or more, its own email topic |
+| 10.15 ◐ | Your neighborhood | tasksnearme-56 | Asked while we can't place someone; the neighborhood only |
+| 10.16 ◐ | Pinned announcement | tasksnearme-56 | One per market from the config page, English and Spanish, dismissible |
+| 10.17 ◐ | Unanswered | tasksnearme-56 | A filter and "Waiting for an answer" |
+| 10.18 ◐ | Seasonal starters | tasksnearme-56 | From market configuration (Gainesville's and Austin's set by migration 0076) |
+| 10.19 ◐ | Home and the nav | tasksnearme-56 | "From your neighbors" on Home; a dot on Neighbors |
+| 10.20 ◐ | Kindness reminder | tasksnearme-56 | A local word list, English and Spanish; Edit or Post anyway |
+| 10.21 ◐ | Hidden after reports | tasksnearme-56 | Three established accounts hide an item until staff decide |
+| 10.22 ◐ | Health numbers | tasksnearme-56 | A Neighbors section on /admin/metrics |
+| 10.23 ◐ | The post's page | tasksnearme-56 | A column beside the thread on wide screens; "See translation" where a model is set up |
+| D1 ◐ | Demo posts and real accounts | tasksnearme-56 | Real accounts see real rows only on Neighbors in production; staff switch |

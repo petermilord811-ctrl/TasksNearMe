@@ -87,6 +87,7 @@ const attentionTargets: Record<AttentionTarget['kind'], { target: AttentionTarge
   saved_search: { target: { kind: 'saved_search', searchId: 'search / one' }, href: routes.app.savedSearch('search / one') },
   booking_review: { target: { kind: 'booking_review', bookingId: 'booking / one' }, href: routes.app.bookingReview('booking / one') },
   saved_searches: { target: { kind: 'saved_searches' }, href: routes.app.savedSearches() },
+  community: { target: { kind: 'community' }, href: routes.app.community() },
   new_task: { target: { kind: 'new_task' }, href: routes.app.newTask() },
 };
 

@@ -2,6 +2,7 @@ import { and, eq, ne, or, sql } from 'drizzle-orm';
 import { users } from '@/modules/accounts/schema';
 import { bookingCompletionPhotos, bookingExpenses, bookings } from '@/modules/bookings/schema';
 import { canViewMessageFile } from '@/modules/messaging/service';
+import { canViewCommunityPhoto } from '@/modules/community/photos';
 import { supportCases } from '@/modules/support/schema';
 import { loadHelperState } from '@/modules/offers/helper';
 import { taskPhotos, tasks } from '@/modules/tasks/schema';
@@ -14,7 +15,8 @@ import type { Db } from '@/platform/db/connect';
  *   booked helper while the booking lasts (not after it's canceled);
  * - evidence and receipts: both people on the booking they were sent with (completion photos,
  *   receipts, photos in a problem report);
- * - message photos: the people in the thread.
+ * - message photos: the people in the thread;
+ * - community photos: members of the market who may read the post or reply (src/modules/community/photos.ts).
  */
 /**
  * A profile photo is public (anyone, signed in or not) while it's its owner's current photo: helpers' show on
@@ -29,6 +31,8 @@ export async function isCurrentProfilePhoto(db: Db, file: { id: string; kind: st
 export async function canViewRelatedFile(db: Db, file: { id: string; kind: string }, userId: string, now: Date): Promise<boolean> {
   if (file.kind === 'evidence' || file.kind === 'receipt') return isBookingParticipantFor(db, file.id, userId);
   if (file.kind === 'message') return canViewMessageFile(db, file.id, userId);
+  // Neighbors' photos (plan 10.1): whoever may read the post or reply they're on.
+  if (file.kind === 'community_photo') return canViewCommunityPhoto(db, file.id, userId);
   if (file.kind !== 'task_photo') return false;
   const [task] = await db
     .select({ id: tasks.id, status: tasks.status, windowEnd: tasks.windowEnd })

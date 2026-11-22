@@ -81,7 +81,15 @@
     "review_reminder": "{days, plural, one {One day left} other {# days left}} to review {actorName} for {title}",
     "saved_searches_digest": "{count, plural, one {# new task} other {# new tasks}} for your saved searches, including {search}",
     "payment_refunded": "We refunded {hasAmount, select, yes {{amount}} other {a payment}} for {title}",
-    "address_recheck": "We're checking your home address again: the name on your ID differs from your account's"
+    "address_recheck": "We're checking your home address again: the name on your ID differs from your account's",
+    "community_followed_reply": "{actorName} replied on a post you follow: {title}",
+    "community_mention": "{actorName} replied to you on: {title}",
+    "community_recommended": "{actorName} recommended you to a neighbor: {title}",
+    "community_thanked": "{actorName} thanked you on Neighbors: {title}",
+    "community_ask_match": "A neighbor in {area} asks for a recommendation: {title}",
+    "community_task_posted": "{actorName} posted a task from the thread where you were recommended: {title}",
+    "community_auto_hidden": "Your {on, select, reply {reply} other {post}} on {title} is hidden while our team reviews reports about it",
+    "community_digest": "This week in {area}: {count, plural, one {# post} other {# posts}}{waiting, plural, =0 {} one {, # waiting for an answer} other {, # waiting for an answer}}"
   },
   "previews": {
     "group": "Notifications",

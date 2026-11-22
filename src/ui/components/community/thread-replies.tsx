@@ -7,6 +7,8 @@ import type { CommunityPostHandlers, CommunityPostPageData, ISODateTime } from '
 import { routes } from '@/contracts/routes';
 import { CommunityItemActions } from './item-actions';
 import { ReplyItem } from './post-card';
+import { REPLY_FORM_ID, useReplyTarget } from './reply-target';
+import { TranslateButton } from './translate-button';
 
 /** Replies a thread shows before "Show N more" (the pinned answer first, then the conversation in order). */
 export const THREAD_FOLD = 10;
@@ -20,12 +22,20 @@ export const THREAD_FOLD = 10;
 export function ThreadReplies({ data, handlers, now, visitKey }: { data: CommunityPostPageData; handlers: CommunityPostHandlers; now: ISODateTime; visitKey: string }) {
   const t = useTranslations('community.thread');
   const [open, setOpen] = useState(false);
+  const { setTarget } = useReplyTarget();
   const { viewer } = data;
+  // A reply's Reply button (plan 10.10): the form answers its author, and takes focus.
+  const replyTo = viewer.canReply ? (reply: { id: string; author: { displayName: string } }) => {
+    setTarget({ id: reply.id, authorName: reply.author.displayName });
+    const form = document.getElementById(REPLY_FORM_ID);
+    form?.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    form?.querySelector('textarea')?.focus({ preventScroll: true });
+  } : undefined;
   const folded = data.replies.length - THREAD_FOLD;
   return <>
     <ol className="space-y-4">
       {data.replies.map((reply, index) => <li key={reply.id} hidden={!open && index >= THREAD_FOLD} className="border-b border-border/70 pb-4 last:border-b-0">
-        <ReplyItem reply={reply} now={now} onReact={handlers.onReact} visitKey={visitKey} actions={<CommunityItemActions
+        <ReplyItem reply={reply} now={now} onReact={handlers.onReact} visitKey={visitKey} {...(replyTo ? { onReplyTo: replyTo } : {})} {...(handlers.onTranslate && !reply.moderation ? { footer: <TranslateButton target={{ target: 'reply', id: reply.id }} onTranslate={handlers.onTranslate} /> } : {})} actions={<CommunityItemActions
           target="reply"
           id={reply.id}
           label={reply.author.displayName}
@@ -34,6 +44,7 @@ export function ThreadReplies({ data, handlers, now, visitKey }: { data: Communi
           {...(viewer.canPin && !reply.moderation ? { pin: { pinned: reply.pinned, onPin: handlers.onPin } } : {})}
           {...(!reply.author.isYou ? { reportHref: routes.app.report('reply', reply.id) } : {})}
           {...(viewer.isStaff && handlers.onModerate ? { onModerate: handlers.onModerate, hidden: Boolean(reply.moderation) } : {})}
+          {...(handlers.onEdit && reply.canEdit ? { edit: { item: { target: 'reply', id: reply.id, body: reply.body }, onEdit: handlers.onEdit } } : {})}
         />} />
       </li>)}
     </ol>

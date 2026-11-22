@@ -52,7 +52,8 @@ test('neighbors ask, answer, recommend a helper and pin the answer, live', async
     const pill = lee.getByRole('button', { name: /^\d+ new · Show$/ });
     await expect(pill).toBeVisible({ timeout: 15_000 });
     await pill.click();
-    await lee.getByRole('link', { name: title }).click();
+    // Exact: the rail's "Waiting for an answer" lists it too, its row named with the service and place after the title.
+    await lee.getByRole('link', { name: title, exact: true }).click();
     await expect(lee.getByRole('heading', { level: 1, name: title })).toBeVisible();
 
     // Lee answers and names himself (a self-tag).

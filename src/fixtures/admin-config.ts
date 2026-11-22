@@ -91,6 +91,35 @@ export const adminConfigData: AdminConfigPageData = {
     { key: 'reward.repeat', description: '$10 gift card on the 3rd paid booking with the same client', enabled: true },
     { key: 'reward.welcome', description: '$50 welcome gift card for the founding cohort', enabled: true },
   ],
+  // Neighbors' pinned cards (plan 10.16): the launch welcome showing, last month's holiday note ended.
+  announcements: [
+    {
+      id: 'can_welcome',
+      market: { id: 'mkt_austin', name: 'Austin' },
+      titleEn: 'Welcome to Neighbors in Austin',
+      bodyEn: 'Ask who to hire, share what worked, and thank the helpers you booked. Exact addresses never go here.',
+      titleEs: 'Bienvenidos a Vecinos en Austin',
+      bodyEs: 'Pregunta a quién contratar, comparte lo que te funcionó y agradece a quienes contrataste. Las direcciones exactas nunca van aquí.',
+      startsAt: '2026-11-16T15:00:00.000Z',
+      endsAt: '2026-12-15T06:00:00.000Z',
+      state: 'live',
+      createdBy: 'Riley N.',
+      dismissals: 12,
+    },
+    {
+      id: 'can_holidays',
+      market: { id: 'mkt_austin', name: 'Austin' },
+      titleEn: 'Booking help over the holidays',
+      bodyEn: 'Helpers set their own holiday hours. Book early for the week of Thanksgiving.',
+      titleEs: 'Contratar ayuda en las fiestas',
+      bodyEs: 'Cada ayudante fija su horario en las fiestas. Reserva con tiempo para la semana de Acción de Gracias.',
+      startsAt: '2026-10-20T15:00:00.000Z',
+      endsAt: '2026-11-10T06:00:00.000Z',
+      state: 'ended',
+      createdBy: 'Riley N.',
+      dismissals: 30,
+    },
+  ],
 };
 
 /** The outage switch on during a payments incident (completion plan 5.15). */
@@ -139,4 +168,6 @@ export const fakeAdminConfigHandlers: AdminConfigHandlers = {
   onSetOutage: () => wait({ ok: true as const, code: 'updated' as const }),
   onSetMarketStatus: () => wait({ ok: true as const, code: 'updated' as const }),
   onSetSearchIndexing: () => wait({ ok: true as const, code: 'updated' as const }),
+  onPublishAnnouncement: () => wait({ ok: true as const, code: 'updated' as const }),
+  onEndAnnouncement: () => wait({ ok: true as const, code: 'updated' as const }),
 };

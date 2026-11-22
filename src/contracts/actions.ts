@@ -141,12 +141,23 @@ export const FIELD_ERROR_CODES = [
    * the "Not you?" link in a contact change notice, completion plan 5.23).
    */
   'held',
+  /**
+   * Words that may come across as unkind (Neighbors' kindness reminder, plan 10.20): not a refusal. The form asks the
+   * author to have another look, and sending again with `kindnessConfirmed` posts it.
+   */
+  'unkind',
 ] as const;
 export type FieldErrorCode = (typeof FIELD_ERROR_CODES)[number];
 
 /** What every mutation handler resolves to. The UI maps codes to toasts or inline messages. */
 export type ActionResult =
-  | { ok: true; code: ActionSuccessCode; redirectTo?: string }
+  | {
+      ok: true;
+      code: ActionSuccessCode;
+      redirectTo?: string;
+      /** Sparks this action earned the person (a Neighbors post or reply within the day's cap, plan 10.13). */
+      sparks?: number;
+    }
   | {
       ok: false;
       code: ActionErrorCode;

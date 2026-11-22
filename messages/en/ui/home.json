@@ -316,5 +316,12 @@
     "dashboardLoading": "Dashboard · loading",
     "shellLoading": "Signed-in shell · loading",
     "shellFlowLoading": "Signed-in shell, a step-by-step page · loading"
+  },
+  "neighbors": {
+    "title": "From your neighbors",
+    "open": "Open Neighbors",
+    "placeNearby": "Near {area}",
+    "placeMarket": "Across {market}",
+    "waiting": "{count, plural, one {# question is waiting for an answer} other {# questions are waiting for an answer}}"
   }
 }

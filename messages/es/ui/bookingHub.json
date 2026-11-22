@@ -278,5 +278,10 @@
   "taskReopened": {
     "body": "Tu tarea vuelve a recibir ofertas, y avisamos a personas cercanas que pueden ayudar.",
     "link": "Ver las ofertas de tu tarea"
+  },
+  "thankNeighbors": {
+    "title": "Agradécele a {name} en Vecinos",
+    "body": "Un agradecimiento público ayuda a tus vecinos a encontrar buena ayuda y cuenta como recomendación en su perfil.",
+    "action": "Escribir un agradecimiento"
   }
 }

@@ -7,6 +7,7 @@ import { StatusBadge } from '@/ui/components/status/status-badge';
 import { cn } from '@/ui/lib/utils';
 import { AdminConfigControls, type AdminConfigPreviewState } from './admin-config-controls';
 import { AdminMarketsSection, type AdminMarketsPreviewState } from './admin-config-markets';
+import { AdminAnnouncementsSection } from './admin-announcements-section';
 import { AdminReasonAction } from './admin-reason-action';
 import { adminH2, adminPanel, adminSection } from './admin-ui';
 
@@ -90,6 +91,7 @@ export function AdminConfigContent({ data, handlers, outageOpen = false, marketD
       </div>
     </section>
     <AdminMarketsSection markets={data.markets} onSetMarketStatus={handlers.onSetMarketStatus} marketDialog={marketDialog} />
+    <AdminAnnouncementsSection rows={data.announcements} markets={data.markets} {...(handlers.onPublishAnnouncement ? { onPublish: handlers.onPublishAnnouncement } : {})} {...(handlers.onEndAnnouncement ? { onEnd: handlers.onEndAnnouncement } : {})} />
     <section aria-labelledby="config-policy" className="space-y-4">
       <div className="space-y-1"><h2 id="config-policy" className={adminH2}>{t('policyTitle')}</h2><p className="text-sm text-muted-foreground">{t('policyIntro')}</p></div>
       <div className={cn(adminSection, 'space-y-1 border-success/25 dark:border-success/30')}>

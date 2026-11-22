@@ -86,7 +86,8 @@
     "clearAll": "Clear all",
     "remove": "Remove filter: {label}",
     "active": "Filters in use",
-    "keyword": "“{q}”"
+    "keyword": "“{q}”",
+    "countOn": "({count} on)"
   },
   "moreTaskFilters": "More task filters",
   "task": {
@@ -136,7 +137,10 @@
     "trendingMeta": "{replies, plural, =0 {no replies} one {# reply} other {# replies}} · {helpful} helpful",
     "goodToKnow": "Good to know",
     "privacy": "Exact addresses go only to the booked helper, never here.",
-    "guidelines": "Be kind and keep it local. Crime and safety reports belong with the police (911 in an emergency)."
+    "guidelines": "Be kind and keep it local. Crime and safety reports belong with the police (911 in an emergency).",
+    "unanswered": "Waiting for an answer",
+    "unansweredAll": "See all unanswered",
+    "unansweredGeneral": "General"
   },
   "inFeed": {
     "helpers": "Helpers near you",
@@ -191,6 +195,52 @@
     "spanish": "Portal · Spanish-speaking neighbors",
     "longThread": "Post · a long thread (30 replies)",
     "postWithTask": "Post · posted as a task",
-    "taskDiscussion": "Task page · its neighborhood post"
+    "taskDiscussion": "Task page · its neighborhood post",
+    "launch": "Neighbors · launch week: a pinned card and the neighborhood question",
+    "unanswered": "Neighbors · asks waiting for an answer",
+    "staffSamples": "Neighbors · staff view where members don't see sample posts"
+  },
+  "phoneBar": {
+    "changePlace": "Change the neighborhood",
+    "sort": "Sort: {sort}"
+  },
+  "unanswered": {
+    "label": "Unanswered"
+  },
+  "taskGroup": {
+    "title": "New tasks near you",
+    "more": "{count, plural, one {# more task} other {# more tasks}}",
+    "all": "See all tasks"
+  },
+  "announcement": {
+    "eyebrow": "From the TasksNearMe team",
+    "dismiss": "Close this note"
+  },
+  "askArea": {
+    "title": "Which neighborhood are you in?",
+    "body": "So Near you shows the posts and tasks around you in {market}.",
+    "label": "Your neighborhood",
+    "choose": "Choose a neighborhood",
+    "save": "Save",
+    "later": "Not now",
+    "saved": "Saved. Near you starts from there now.",
+    "failed": "Couldn't save that. Try again.",
+    "privacy": "Only the neighborhood is kept, never your address."
+  },
+  "samples": {
+    "hidden": "Members don't see the demo marketplace here. You can show it to yourself.",
+    "shown": "You're seeing the demo marketplace here. Members don't.",
+    "show": "Show it",
+    "hide": "Hide it"
+  },
+  "yourArea": {
+    "label": "Your neighborhood:",
+    "none": "not set",
+    "change": "Change",
+    "set": "Set it",
+    "choose": "Choose a neighborhood",
+    "save": "Save",
+    "saved": "Saved. Near you starts from there now.",
+    "failed": "Couldn't save that. Try again."
   }
 }

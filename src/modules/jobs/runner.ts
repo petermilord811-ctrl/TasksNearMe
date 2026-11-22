@@ -1,4 +1,5 @@
 import { runSavedSearchDigests } from '@/modules/searches/service';
+import { runCommunityDigests } from '@/modules/community/digest';
 import { stripeConnectFromEnv } from '@/integrations/payments/stripe-connect';
 import { runScheduledTransfers } from '@/modules/payments/connect';
 import { cancelStaleCharges } from '@/modules/payments/stale-charges';
@@ -90,6 +91,8 @@ export const JOBS: Job[] = [
   { name: 'rewards.welcome', run: (db, now) => runWelcomeRewards(db, now) },
   // Saved searches' morning digest (completion plan 7.10): once a day from 8 am, before the dispatch.
   { name: 'searches.digest', run: (db, now) => runSavedSearchDigests(db, now).then(() => undefined) },
+  // Neighbors' weekly digest (plan 10.14): Sunday from 9 am on each market's clock, before the dispatch.
+  { name: 'community.digest', run: (db, now) => runCommunityDigests(db, now).then(() => undefined) },
   { name: 'notifications.dispatch', run: (db, now) => dispatchNotifications(db, now) },
   // Sends that all fail on a channel, run after run, page the staff on call (provider-watch.ts; when things break).
   {
