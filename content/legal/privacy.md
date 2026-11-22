@@ -3,7 +3,7 @@ title: Privacy policy
 summary: What we collect, why, who we share it with, and the choices you have.
 version: Draft 0.1
 status: draft
-updated: 2026-11-21
+updated: 2026-11-22
 ---
 > [!warning] This is a working draft for review. It has not been reviewed by a lawyer and is not in effect.
 
@@ -22,7 +22,7 @@ To run bookings and payments, verify helpers, prevent fraud and abuse, provide s
 ## 3. Who sees what {#sharing}
 - Other people see your first name and last initial, never your last name.
 - Your exact address goes only to the helper you book, after the booking is confirmed, and is hidden again 48 hours after the task. We delete it 180 days after the last booking there, or after the task closes if nobody booked it.
-- We share data with service providers that help us run TasksNearMe (payments, identity checks, email and text messages, hosting), under contracts that limit their use.
+- We share data with service providers that help us run TasksNearMe (payments, identity checks, email and text messages, finding roughly where an IP address is, hosting), under contracts that limit their use.
 - When you ask for help writing (a task description, your profile or an offer message) or search with AI, what you typed goes to the AI service that writes the answer, with phone numbers, emails, links and street addresses taken out first. It never gets your ID or proof of address: software on our own servers reads those.
 
 ## 4. Your choices {#choices}

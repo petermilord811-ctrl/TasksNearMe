@@ -15,10 +15,11 @@ import { adminBadgesFor, canModerateBadges } from '@/modules/badges/staff';
 import { moderateBadgeAction } from '@/modules/badges/staff-actions';
 import { adminAccountView } from '@/modules/accounts/account-moderation';
 import { accountActionAction } from '@/modules/accounts/account-moderation-actions';
+import { getAdminSignIns } from '@/modules/accounts/sign-in-locations';
 
 export const metadata: Metadata = { title: 'Person', robots: { index: false } };
 
-/** One person for staff: bookings, cases, rewards, strikes, and suspending a helper. */
+/** One person for staff: bookings, cases, rewards, strikes, suspending a helper, and where they sign in from. */
 function AdminUserPage({ params }: PageProps<'/[locale]/admin/users/[userId]'>) {
   return (
     <Suspense fallback={<PageSkeleton variant="detail" />}>
@@ -32,9 +33,14 @@ async function AdminUser({ params }: Pick<PageProps<'/[locale]/admin/users/[user
   const staff = viewer.kind === 'user' ? staffActorOf(viewer.user) : null;
   if (!staff) notFound();
   const now = await requestNow();
-  const [person, badges, account] = await Promise.all([getAdminUser(db, staff, userId, now), adminBadgesFor(db, userId), adminAccountView(db, staff, userId)]);
+  const [person, badges, account, signIns] = await Promise.all([
+    getAdminUser(db, staff, userId, now),
+    adminBadgesFor(db, userId),
+    adminAccountView(db, staff, userId),
+    getAdminSignIns(db, staff, userId, now),
+  ]);
   if (!person) notFound();
-  const data = { ...person, badges, canModerateBadges: canModerateBadges(staff.roles), ...(account ? { account } : {}) };
+  const data = { ...person, badges, canModerateBadges: canModerateBadges(staff.roles), ...(account ? { account } : {}), ...(signIns ? { signIns } : {}) };
   return (
     <AdminUserScreen
       data={data}

@@ -16,6 +16,7 @@ import { AdminRewardList } from './admin-reward-list';
 import { AdminVerificationSection } from './admin-verification-section';
 import { AdminUserControls, type AdminUserPreviewState } from './admin-user-controls';
 import { AdminHelperBadge, AdminUserRoles } from './admin-user-summary';
+import { AdminSignIns } from './admin-sign-ins';
 import { AdminBackLink, adminCard, adminH2, adminMoneyTd, adminNote, adminPanel, adminSection, adminTableFrame, adminTd, adminTh, adminTr } from './admin-ui';
 import { cn } from '@/ui/lib/utils';
 
@@ -81,6 +82,7 @@ export function AdminUserContent({ data, handlers, now, ...previewState }: Admin
     </section>}
     <AdminUserControls key={user.id} data={data} handlers={handlers} {...previewState} />
     <AdminVerificationSection userId={user.id} verification={data.verification} handlers={handlers} now={now} />
+    {data.signIns && <AdminSignIns rows={data.signIns} now={now} />}
     <section aria-label={t('bookings')} className="space-y-3">
       <h2 className={adminH2}>{t('bookings')}</h2>
       {data.bookings.length === 0 ? <p className={adminNote}>{t('noBookings')}</p> : <>

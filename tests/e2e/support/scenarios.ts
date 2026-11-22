@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { devCardRef } from '../../../src/integrations/payments';
-import { users } from '../../../src/modules/accounts/schema';
+import { sessions, users } from '../../../src/modules/accounts/schema';
 import { invites } from '../../../src/modules/invites/schema';
 import { bookingCompletions, bookingTerms, bookings } from '../../../src/modules/bookings/schema';
 import type { NotificationType } from '../../../src/contracts';
@@ -245,6 +245,29 @@ export async function setAccountStatus(email: string, status: 'active' | 'suspen
   const { db, pool } = database();
   try {
     await db.update(users).set({ status }).where(eq(users.email, email));
+  } finally {
+    await pool.end();
+  }
+}
+
+/** A sign-in (session row) for this person from an address, as Better Auth saves one. Returns its id, to remove it. */
+export async function addSignIn(userId: string, ipAddress: string, userAgent: string): Promise<string> {
+  const { db, pool } = database();
+  try {
+    const run = `${Date.now().toString(36)}${Math.floor(Math.random() * 1e6)}`;
+    const id = `ses_e2e_${run}`;
+    const now = new Date();
+    await db.insert(sessions).values({ id, token: `tok_e2e_${run}`, userId, ipAddress, userAgent, createdAt: now, updatedAt: now, expiresAt: new Date(now.getTime() + 30 * 24 * HOUR) });
+    return id;
+  } finally {
+    await pool.end();
+  }
+}
+
+export async function removeSignIn(id: string): Promise<void> {
+  const { db, pool } = database();
+  try {
+    await db.delete(sessions).where(eq(sessions.id, id));
   } finally {
     await pool.end();
   }
