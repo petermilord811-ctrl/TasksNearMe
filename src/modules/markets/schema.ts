@@ -127,19 +127,21 @@ export interface PolicyTimers {
 }
 
 /**
- * The optional plans' prices and what they add (completion plan 9.13, decisions.md 2026-11-18). Null on a policy
- * version means the defaults (`DEFAULT_PLANS`, policy-defaults.ts).
+ * The optional plans' prices and what they add (completion plan 9.13, decisions.md 2026-11-18 and 2026-11-23). Null on
+ * a policy version means the defaults (`DEFAULT_PLANS`, policy-defaults.ts).
+ *
+ * AI search: `aiSearchesPerDay` and `aiSearchesPerMonth`, calendar days and months in the person's market zone; null
+ * means unlimited, and a version from before the daily limits (no `aiSearchesPerDay`) has none a day.
+ * `posterFeeRebateBps`, `helperFeeRebateBps` and `rebateMonthlyCapCents` paid part of the service fees back on
+ * completed bookings until 2026-11-23 (0 since: there are no service fees).
  */
 export interface PlanPolicy {
-  /**
-   * For clients: part of the client service fee back on completed bookings (`posterFeeRebateBps` of it), up to
-   * `rebateMonthlyCapCents` in a calendar month, and AI search.
-   */
-  plus: { monthlyCents: number; yearlyCents: number; posterFeeRebateBps: number; rebateMonthlyCapCents: number; aiSearchesPerMonth: number };
-  /** For helpers: part of the helper fee back on completed bookings, up to `rebateMonthlyCapCents` a month, and AI search for tasks. */
-  pro: { monthlyCents: number; yearlyCents: number; helperFeeRebateBps: number; rebateMonthlyCapCents: number; aiSearchesPerMonth: number };
-  /** Without a plan. */
-  free: { aiSearchesPerMonth: number };
+  /** Plus: more AI searches (and, before 2026-11-23, the client fee's rebate). */
+  plus: { monthlyCents: number; yearlyCents: number; posterFeeRebateBps: number; rebateMonthlyCapCents: number; aiSearchesPerMonth: number | null; aiSearchesPerDay?: number | null };
+  /** Pro: everything in Plus, no hold fee, unlimited AI search (and, before 2026-11-23, the helper fee's rebate). */
+  pro: { monthlyCents: number; yearlyCents: number; helperFeeRebateBps: number; rebateMonthlyCapCents: number; aiSearchesPerMonth: number | null; aiSearchesPerDay?: number | null };
+  /** Starter: without a plan. */
+  free: { aiSearchesPerMonth: number; aiSearchesPerDay?: number | null };
 }
 
 /** Immutable once published; bookings reference the version they were confirmed under. */

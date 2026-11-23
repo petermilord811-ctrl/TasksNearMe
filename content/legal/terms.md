@@ -23,7 +23,7 @@ A booking is an agreement between a poster and a helper on the task, time, and p
 We don't charge service fees. Posting, making offers, messaging, and booking are free for posters and helpers. Each offer states how the helper will be paid:
 
 - **Paid directly** (the default): the poster pays the helper directly after the task, by any method they agree on. That payment is between the poster and the helper. We don't process, hold, or refund it, and we charge no fee on it.
-- **Paid upfront and held by TasksNearMe**: if the helper asks to be paid upfront, the poster pays when they book: the task price, a hold fee, and any agreed expense allowance. We hold the money as a neutral third party and release the task price to the helper when the poster confirms the task is done, or automatically 72 hours after the helper marks it done if the poster doesn't respond. The helper receives the whole task price, with no fee deducted. Members of the Plus plan pay no hold fee.
+- **Paid upfront and held by TasksNearMe**: if the helper asks to be paid upfront, the poster pays when they book: the task price, a hold fee, and any agreed expense allowance. We hold the money as a neutral third party and release the task price to the helper when the poster confirms the task is done, or automatically 72 hours after the helper marks it done if the poster doesn't respond. The helper receives the whole task price, with no fee deducted. Members of the Pro plan pay no hold fee.
 
 The hold fee and worked examples are on the [pricing page](/pricing). Held payments are processed by our payment provider, Stripe.
 

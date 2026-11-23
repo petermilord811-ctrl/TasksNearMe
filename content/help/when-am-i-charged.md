@@ -18,7 +18,7 @@ When a helper asks to be paid upfront, we charge your card when you book and hol
 ## What you pay upfront
 
 - The task price you agreed with your helper.
-- A hold fee of 5% of the task price, at least $1.00. With a Plus plan there's no hold fee.
+- A hold fee of 5% of the task price, at least $1.00. With a Pro plan there's no hold fee.
 - Any expense allowance you agreed on, for example for parts. Unused allowance is refunded.
 
 ## Hourly tasks

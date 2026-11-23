@@ -1,5 +1,18 @@
-import type { Cents, PlanCode, PlanOffer } from '@/contracts';
+import {
+  DIRECT_CHATS_PER_DAY,
+  INSTANT_ALERT_LIMITS,
+  PLAN_DIRECT_CHATS_PER_DAY,
+  SAVED_SEARCH_LIMITS,
+  type AiSearchAllowance,
+  type Cents,
+  type PlanCode,
+  type PlanOffer,
+  type PlanTier,
+  type StarterPlan,
+  type TimeZone,
+} from '@/contracts';
 import type { PlanPolicy } from '@/modules/markets/schema';
+import { marketDayKey, marketLocalToUtc } from '@/shared/format';
 
 /**
  * The plans' rules as pure functions (completion plan 9.13, decisions.md 2026-11-18).
@@ -52,16 +65,71 @@ export function bookingRebateCents(input: { feeCents: Cents; rebateBps: number; 
   return Math.max(0, Math.min(feeRebateCents(input.feeCents, input.rebateBps), input.capCents - input.rebatedThisMonthCents, input.platformRoomCents));
 }
 
-/** The plans as offered under a policy, the viewer's side first. */
-export function planOffers(plans: PlanPolicy, first: PlanCode): PlanOffer[] {
-  const plus: PlanOffer = { plan: 'plus', monthlyCents: plans.plus.monthlyCents, yearlyCents: plans.plus.yearlyCents, aiSearchesPerMonth: plans.plus.aiSearchesPerMonth };
-  const pro: PlanOffer = { plan: 'pro', monthlyCents: plans.pro.monthlyCents, yearlyCents: plans.pro.yearlyCents, aiSearchesPerMonth: plans.pro.aiSearchesPerMonth };
-  return first === 'pro' ? [pro, plus] : [plus, pro];
+/** A tier's AI searches a day and a month (null: unlimited; no daily figure on an older policy: none a day). */
+export function aiAllowanceOf(plans: PlanPolicy, tier: PlanTier): AiSearchAllowance {
+  const entry = plans[tier];
+  return { perDay: entry.aiSearchesPerDay ?? null, perMonth: entry.aiSearchesPerMonth ?? null };
 }
 
-/** The AI searches a month for someone holding these plans: the most generous of them, or the free allowance. */
-export function aiSearchLimit(plans: PlanPolicy, held: readonly PlanCode[]): number {
-  return Math.max(plans.free.aiSearchesPerMonth, ...held.map((plan) => plans[plan].aiSearchesPerMonth));
+/** The more generous of two limits (null: unlimited). */
+const roomier = (a: number | null, b: number | null): number | null => (a === null || b === null ? null : Math.max(a, b));
+
+/**
+ * The AI searches a day and a month for someone holding these plans: the most generous of Starter's and theirs, each
+ * on its own (null: unlimited).
+ */
+export function aiSearchAllowance(plans: PlanPolicy, held: readonly PlanCode[]): AiSearchAllowance {
+  return held.reduce<AiSearchAllowance>((best, plan) => {
+    const next = aiAllowanceOf(plans, plan);
+    return { perDay: roomier(best.perDay, next.perDay), perMonth: roomier(best.perMonth, next.perMonth) };
+  }, aiAllowanceOf(plans, 'free'));
+}
+
+/** The highest tier among these plans (Pro has everything in Plus), or Starter. */
+export function topTier(held: Iterable<PlanCode>): PlanTier {
+  const codes = new Set(held);
+  return codes.has('pro') ? 'pro' : codes.has('plus') ? 'plus' : 'free';
+}
+
+/** Saved searches someone holding these plans can keep. */
+export function savedSearchLimit(held: Iterable<PlanCode>): number {
+  return SAVED_SEARCH_LIMITS[topTier(held)];
+}
+
+/** Instant alerts a day for someone holding these plans. */
+export function instantAlertLimit(held: Iterable<PlanCode>): number {
+  return INSTANT_ALERT_LIMITS[topTier(held)];
+}
+
+/** The plans as offered under a policy: Plus, then Pro (each has everything in the one before). */
+export function planOffers(plans: PlanPolicy): PlanOffer[] {
+  return (['plus', 'pro'] as const).map((plan) => ({
+    plan,
+    monthlyCents: plans[plan].monthlyCents,
+    yearlyCents: plans[plan].yearlyCents,
+    aiSearches: aiAllowanceOf(plans, plan),
+    directChatsPerDay: PLAN_DIRECT_CHATS_PER_DAY[plan],
+    savedSearches: SAVED_SEARCH_LIMITS[plan],
+    instantAlertsPerDay: INSTANT_ALERT_LIMITS[plan],
+  }));
+}
+
+/** Starter, everything without a plan, under a policy. */
+export function starterPlan(plans: PlanPolicy): StarterPlan {
+  return {
+    aiSearches: aiAllowanceOf(plans, 'free'),
+    directChatsPerDay: DIRECT_CHATS_PER_DAY.newcomer,
+    directChatsWithSparks: Math.max(...Object.values(DIRECT_CHATS_PER_DAY)),
+    savedSearches: SAVED_SEARCH_LIMITS.free,
+    instantAlertsPerDay: INSTANT_ALERT_LIMITS.free,
+  };
+}
+
+/** The start of the next calendar day in a market's zone: when today's AI searches renew. */
+export function nextMarketDayStart(now: Date, timeZone: TimeZone): Date {
+  const [year, month, day] = marketDayKey(now, timeZone).split('-').map(Number) as [number, number, number];
+  const next = new Date(Date.UTC(year, month - 1, day + 1)).toISOString().slice(0, 10);
+  return new Date(marketLocalToUtc(next, '00:00', timeZone));
 }
 
 /** The end of a new stand-in subscription's first period: a month or a year on, on the same day or the month's last. */

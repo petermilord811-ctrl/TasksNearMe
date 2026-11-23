@@ -18,6 +18,7 @@ import {
   jordanShell,
   mayaDashboardBookingsCardsData,
   mayaDashboardCountedData,
+  mayaDashboardDailyLimitData,
   mayaDashboardData,
   mayaDashboardFilteredData,
   mayaDashboardMapData,
@@ -72,6 +73,7 @@ export const homePreviews: PreviewEntry[] = [
   screen('client-search', copy.previews.clientSearch, mayaDashboardSearchData, mayaShell, DASHBOARD_CLIENT_NOW),
   screen('client-ai-needs-plan', copy.previews.clientAiNeedsPlan, mayaDashboardNeedsPlanData, mayaShell, DASHBOARD_CLIENT_NOW),
   screen('client-ai-monthly-limit', copy.previews.clientAiMonthlyLimit, mayaDashboardMonthlyLimitData, mayaShell, DASHBOARD_CLIENT_NOW),
+  screen('client-ai-daily-limit', copy.previews.clientAiDailyLimit, mayaDashboardDailyLimitData, mayaShell, DASHBOARD_CLIENT_NOW),
   screen('client-payment-access', copy.previews.clientPaymentAccess, {
     ...mayaDashboardData,
     attention: [

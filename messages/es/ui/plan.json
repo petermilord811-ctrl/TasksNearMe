@@ -1,24 +1,18 @@
 {
   "title": "Planes",
-  "description": "Planes opcionales para quienes usan TasksNearMe a menudo. Todo funciona sin uno.",
-  "free": {
-    "title": "Sin plan",
-    "body": "Publicar, enviar ofertas, reservar, los mensajes, la seguridad, las búsquedas guardadas con alertas y la ayuda para redactar son gratis, y no hay tarifas de servicio. Además tienes {count, plural, one {# búsqueda con IA} other {# búsquedas con IA}} al mes."
-  },
+  "description": "Starter es gratis para todos. Plus y Pro agregan más, y cada uno incluye todo lo del anterior. Cancela cuando quieras.",
   "plans": {
     "plus": {
       "name": "Plus",
-      "for": "Para clientes",
-      "ai": "{count, plural, one {# búsqueda con IA} other {# búsquedas con IA}} al mes: describe lo que necesitas y encuentra ayudantes y tareas que encajan",
-      "benefits": {
-        "hold": "Sin tarifa de retención: cuando un ayudante pide el pago por adelantado, retenemos tu pago gratis"
-      }
+      "for": "Para quienes lo usan a menudo",
+      "everything": "Todo lo de Starter, y más"
     },
     "pro": {
       "name": "Pro",
-      "for": "Para ayudantes",
-      "ai": "{count, plural, one {# búsqueda con IA} other {# búsquedas con IA}} al mes: describe el trabajo que buscas y encuentra tareas que encajan",
+      "for": "Para ayudantes y clientes muy activos",
+      "everything": "Todo lo de Plus",
       "benefits": {
+        "hold": "Sin tarifa de retención: cuando un ayudante pide el pago por adelantado, retenemos tu pago gratis",
         "first": "Tus ofertas aparecen primero a los clientes",
         "badge": "Una insignia Pro en tus ofertas",
         "insights": "Datos de las ofertas en cada tarea: cuántas tiene y su rango de precios"
@@ -46,13 +40,17 @@
   "manage": "Administrar o cancelar",
   "manageHint": "Cancela, cambia tu tarjeta o consulta tus facturas en la página segura de Stripe.",
   "aiSearch": {
+    "remainingToday": "Te {count, plural, one {queda # búsqueda con IA} other {quedan # búsquedas con IA}} hoy.",
     "remaining": "Te {count, plural, one {queda # búsqueda con IA} other {quedan # búsquedas con IA}} este mes. Se renuevan el {date}.",
-    "used": "No te quedan búsquedas con IA este mes. Se renuevan el {date}.",
+    "usedToday": "Ya usaste las búsquedas con IA de hoy. Mañana tendrás más.",
+    "used": "Ya usaste las búsquedas con IA de este mes. Se renuevan el {date}.",
+    "unlimited": "Búsquedas con IA ilimitadas con tu Pro.",
     "off": "La búsqueda con IA no está disponible ahora. La búsqueda normal siempre funciona."
   },
   "terms": {
     "title": "Condiciones claras",
     "cancel": "Cancela cuando quieras. Conservas el plan hasta el final del periodo que pagaste y no se renueva.",
+    "switch": "Si pasas de Plus a Pro: Pro empieza de inmediato y Plus deja de renovarse, así que nunca pagas los dos.",
     "noTrial": "Sin pruebas gratis que terminan en un cobro y sin cuentas regresivas.",
     "price": "El precio con el que te suscribes se mantiene hasta que canceles. Un precio nuevo solo aplica a suscripciones nuevas.",
     "trust": "Un plan nunca cambia las reseñas, las verificaciones ni la insignia de verificado: todos las ganan igual. Pro muestra primero las ofertas de un ayudante y las marca como Pro, y los clientes siempre ven todas las ofertas."
@@ -62,10 +60,36 @@
     "checkout_canceled": "Saliste del pago. No se cobró nada."
   },
   "unavailable": "Los planes aún no están disponibles. Todo en TasksNearMe funciona sin uno.",
-  "error": "No funcionó. Si ya tienes este plan, actualiza la página para verlo.",
+  "error": "No funcionó. Si ya tienes este plan, o Pro (que incluye Plus), actualiza la página para verlo.",
   "billing": {
     "title": "Historial de facturación",
     "body": "Consulta tus facturas y la tarjeta registrada en la página segura de Stripe.",
     "open": "Abrir facturación"
-  }
+  },
+  "starter": {
+    "name": "Starter",
+    "for": "Para todos",
+    "price": "$0",
+    "always": "Gratis, siempre",
+    "benefits": {
+      "fees": "Sin tarifas de servicio: publica tareas, envía ofertas, escribe mensajes y reserva gratis",
+      "pay": "Paga a tu ayudante directamente sin costo, o deja que retengamos el pago por una pequeña tarifa de retención"
+    }
+  },
+  "allowances": {
+    "ai": "Búsqueda con IA: {day} al día, hasta {month} al mes",
+    "aiDay": "Búsqueda con IA: {day} al día",
+    "aiMonth": "Búsqueda con IA: {month} al mes",
+    "aiUnlimited": "Búsqueda con IA ilimitada",
+    "chats": "Inicia {count, plural, one {# conversación directa nueva} other {# conversaciones directas nuevas}} al día",
+    "chatsSparks": "Inicia {count, plural, one {# conversación directa nueva} other {# conversaciones directas nuevas}} al día, hasta {max} a medida que ganas Chispas",
+    "searches": "{searches} búsquedas guardadas, con {alerts} alertas al instante al día"
+  },
+  "upgrade": {
+    "month": "Mejorar por mes",
+    "year": "Mejorar por año",
+    "note": "Cuando empiece Pro, tu Plus deja de renovarse y termina con el periodo que ya pagaste."
+  },
+  "included": "Incluido en Pro",
+  "includedNote": "Tu Pro incluye todo lo de Plus."
 }

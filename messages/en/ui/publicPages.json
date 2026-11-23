@@ -15,7 +15,7 @@
       "held": {
         "title": "Held by TasksNearMe",
         "price": "{percent}%",
-        "priceNote": "hold fee, paid by the client (at least {minimum}); free with Plus",
+        "priceNote": "hold fee, paid by the client (at least {minimum}); free with Pro",
         "one": "When a helper asks to be paid upfront",
         "two": "You pay when you book; we hold the money until you say the task is done",
         "three": "Your helper gets the whole price; if something goes wrong, the money waits while we sort it out",
@@ -43,40 +43,37 @@
     },
     "plans": {
       "title": "Premium, when you want more",
-      "intro": "Everything above is free. The plans add what busy clients and helpers ask for, like LinkedIn Premium: cancel anytime.",
+      "intro": "Starter is free and has everything you need to get help or find work. Plus and Pro add more, like LinkedIn Premium, and each has everything in the one before. Cancel anytime.",
       "perMonth": "a month",
       "free": {
-        "name": "Free",
-        "for": "Everyone",
+        "name": "Starter",
+        "for": "For everyone",
         "always": "Free, always",
         "cta": "Sign up free",
         "benefits": {
           "fees": "Post tasks and send offers with no service fees",
           "direct": "Pay directly, or have the payment held for {percent}%",
-          "community": "Neighbors, messages, reviews and verified profiles",
-          "ai": "{searches} AI searches a month"
+          "community": "Neighbors, messages, reviews and verified profiles"
         }
       },
       "plus": {
         "name": "Plus",
-        "for": "For clients",
+        "for": "For people who use it often",
         "cta": "Get Plus",
         "benefits": {
-          "everything": "Everything in Free",
-          "hold": "No hold fee: we hold your upfront payments for free",
-          "ai": "{searches} AI searches a month: describe what you need, get matching helpers"
+          "everything": "Everything in Starter, and more of it"
         }
       },
       "pro": {
         "name": "Pro",
-        "for": "For helpers",
+        "for": "For busy helpers and clients",
         "cta": "Get Pro",
         "benefits": {
-          "everything": "Everything in Free",
+          "everything": "Everything in Plus",
+          "hold": "No hold fee: we hold your upfront payments for free",
           "first": "Your offers shown first to clients",
           "badge": "A Pro badge on your offers",
-          "insights": "Offer insights on every task: how many offers and their price range",
-          "ai": "{searches} AI searches a month: describe the work you want, get matching tasks"
+          "insights": "Offer insights on every task: how many offers and their price range"
         }
       }
     },
@@ -89,7 +86,7 @@
       "waived": "Free",
       "holdFee": "{percent}%",
       "plan": {
-        "free": "Free",
+        "free": "Starter",
         "plus": "Plus",
         "pro": "Pro"
       },
@@ -97,11 +94,20 @@
         "serviceFees": "Service fees",
         "direct": "Pay your helper directly",
         "holdFee": "Hold fee on upfront payments (paid by the client)",
+        "ai": "AI search",
+        "chats": "New direct conversations a day",
+        "firstMessages": "Messages before they answer",
+        "savedSearches": "Saved searches",
+        "alerts": "Instant alerts a day",
         "offersFirst": "Offers shown first",
         "badge": "Pro badge",
-        "insights": "Offer insights",
-        "ai": "AI searches a month"
-      }
+        "insights": "Offer insights"
+      },
+      "ai": "{day} a day, {month} a month",
+      "aiDay": "{day} a day",
+      "aiMonth": "{month} a month",
+      "aiUnlimited": "Unlimited",
+      "chatsSparks": "{count} (up to {max} with Sparks)"
     },
     "cancellation": {
       "title": "Canceling a held booking",
@@ -114,6 +120,10 @@
         "q": "Why are there no service fees?",
         "a": "TasksNearMe makes its money from the optional plans. Booking help, and being booked, stays free; only holding money for you costs a little."
       },
+      "which": {
+        "q": "Which plan is right for me?",
+        "a": "Starter has everything most people need. Plus is for people who search, message and save searches often. Pro is for helpers who want to stand out, and for clients who often pay upfront: no hold fee and unlimited AI search."
+      },
       "safe": {
         "q": "Is paying directly safe?",
         "a": "Book through TasksNearMe so the agreed price, your conversation and the reviews are on record. If you'd rather the money wait until the work is done, choose an offer paid upfront, or ask your helper to send one."
@@ -124,17 +134,39 @@
       },
       "fee": {
         "q": "What does the hold fee pay for?",
-        "a": "Taking the card payment, holding the money safely and stepping in if something goes wrong. It's {percent}% of the price, paid by the client, and free with Plus."
+        "a": "Taking the card payment, holding the money safely and stepping in if something goes wrong. It's {percent}% of the price, paid by the client, and free with Pro."
+      },
+      "aiSearch": {
+        "q": "What counts as an AI search?",
+        "a": "Each time you describe what you need and press Ask AI. Starter has {day} a day, up to {month} a month; Plus has more, and Pro has no limit. The regular search is always free and unlimited."
       },
       "cancelPlan": {
         "q": "Can I cancel a plan?",
-        "a": "Anytime, from Plans in your account. It keeps working until the end of the period you paid for."
+        "a": "Anytime, from Plans in your account. It keeps working until the end of the period you paid for. Moving up from Plus to Pro? Plus stops renewing, so you never pay for both."
       }
     },
     "closing": {
       "title": "Get something done, fee-free",
       "body": "Post a task in a minute and choose a helper from the offers.",
       "action": "Post a task"
+    },
+    "allowances": {
+      "ai": "AI search: {day} a day, up to {month} a month",
+      "aiDay": "AI search: {day} a day",
+      "aiMonth": "AI search: {month} a month",
+      "aiUnlimited": "Unlimited AI search",
+      "chats": "Start {count, plural, one {# new direct conversation} other {# new direct conversations}} a day",
+      "chatsSparks": "Start {count, plural, one {# new direct conversation} other {# new direct conversations}} a day, up to {max} as you earn Sparks",
+      "searches": "{searches} saved searches, with {alerts} instant alerts a day"
+    },
+    "messages": {
+      "title": "Direct messages",
+      "daily": "Message anyone on TasksNearMe without a task, like a neighbor or a helper you found. You can start {count, plural, one {# new conversation} other {# new conversations}} a day on Starter (up to {max} as you earn Sparks), {plus} on Plus and {pro} on Pro.",
+      "dailyStarter": "Message anyone on TasksNearMe without a task, like a neighbor or a helper you found. You can start {count, plural, one {# new conversation} other {# new conversations}} a day, up to {max} as you earn Sparks.",
+      "first": "Until the other person answers, you can send up to {first} messages. Once they answer, keep the conversation going.",
+      "replies": "Only new conversations count: replies, and conversations about a task, offer or booking, never do.",
+      "choose": "Everyone chooses who can message them: anyone, only people they've talked with about a task, or nobody. Blocking someone stops their messages at once.",
+      "private": "Phone numbers and emails stay hidden until you've booked together."
     }
   },
   "becomeHelper": {

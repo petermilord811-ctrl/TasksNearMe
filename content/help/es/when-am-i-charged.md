@@ -18,7 +18,7 @@ Cuando un ayudante pide el pago por adelantado, cobramos a tu tarjeta al reserva
 ## Lo que pagas por adelantado
 
 - El precio de la tarea que acordaste con tu ayudante.
-- Una tarifa de retención del 5% del precio de la tarea, mínimo $1.00. Con el plan Plus no hay tarifa de retención.
+- Una tarifa de retención del 5% del precio de la tarea, mínimo $1.00. Con el plan Pro no hay tarifa de retención.
 - Cualquier asignación para gastos que hayan acordado, por ejemplo para piezas. La asignación que no se use se reembolsa.
 
 ## Tareas por hora

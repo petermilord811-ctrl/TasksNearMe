@@ -33,7 +33,7 @@ async function Plan({ searchParams }: { searchParams: Promise<Record<string, str
   const { checkout, plan } = await searchParams;
   const notice: PlanPageData['notice'] = checkout === 'done' ? 'subscribed' : checkout === 'canceled' ? 'checkout_canceled' : undefined;
   const returned = { ...(notice ? { notice } : {}), ...(typeof plan === 'string' ? { plan } : {}) };
-  const data = await planPageData(db, createBillingProvider(), viewer.user.id, viewer.user.mode === 'helper' ? 'helper' : 'client', await requestNow(), returned);
+  const data = await planPageData(db, createBillingProvider(), viewer.user.id, await requestNow(), returned);
   if (!data) redirect(routes.app.home());
   return <PlanScreen data={data} handlers={{ onSubscribe: subscribeToPlanAction, onManage: managePlanAction }} />;
 }

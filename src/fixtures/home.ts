@@ -169,9 +169,13 @@ export const mayaDashboardSearchData: DashboardData = dashboardOf({ ...mayaBase,
 /** AI search comes with a plan: a line links to it, and only Search shows. */
 export const mayaDashboardNeedsPlanData: DashboardData = { ...mayaDashboardData, aiSearch: { allowed: false, reason: 'needs_plan', remaining: null } };
 /** This month's AI searches are used up (they renew Dec 1). */
-export const mayaDashboardMonthlyLimitData: DashboardData = { ...mayaDashboardData, aiSearch: { allowed: false, reason: 'monthly_limit', remaining: 0, resetsAt: '2026-12-01T06:00:00.000Z' } };
-/** Counted AI searches (a free account's 5 a month, completion plan 9.13): 4 left, renewing Dec 1. */
-export const mayaDashboardCountedData: DashboardData = { ...mayaDashboardData, aiSearch: { allowed: true, remaining: 4, resetsAt: '2026-12-01T06:00:00.000Z' } };
+export const mayaDashboardMonthlyLimitData: DashboardData = { ...mayaDashboardData, aiSearch: { allowed: false, reason: 'monthly_limit', remaining: 0, per: 'month', resetsAt: '2026-12-01T06:00:00.000Z' } };
+/** Today's AI searches are used up (Starter's 3 a day: more at midnight in Austin). */
+export const mayaDashboardDailyLimitData: DashboardData = { ...mayaDashboardData, aiSearch: { allowed: false, reason: 'daily_limit', remaining: 0, per: 'day', resetsAt: '2026-11-25T06:00:00.000Z' } };
+/** Counted AI searches (Starter: 3 a day and 50 a month, 2026-11-23): 2 left today. */
+export const mayaDashboardCountedData: DashboardData = { ...mayaDashboardData, aiSearch: { allowed: true, remaining: 2, per: 'day', resetsAt: '2026-11-25T06:00:00.000Z' } };
+/** Near the month's end: 1 of this month's searches left (fewer than today's), renewing Dec 1. */
+export const mayaDashboardMonthEndData: DashboardData = { ...mayaDashboardData, aiSearch: { allowed: true, remaining: 1, per: 'month', resetsAt: '2026-12-01T06:00:00.000Z' } };
 
 /** A new client: nothing yet, nothing needs her. */
 export const ruthDashboardData: DashboardData = dashboardOf({ firstName: 'Ruth', mode: 'poster', sides: { client: true, helper: false }, attention: [], itemsOf: {}, now: DASHBOARD_CLIENT_NOW });
@@ -247,7 +251,9 @@ export const jordanBothDashboardData: DashboardData = dashboardOf({
 /** Maya: "my new IKEA desk needs assembling this weekend near Mueller". */
 export const aiAnswerClientResult: AiSearchResult = {
   ok: true,
-  remaining: 11,
+  remaining: 1,
+  per: 'day',
+  resetsAt: '2026-11-25T06:00:00.000Z',
   answer: {
     understood: { intent: 'get_help', category: 'furniture-assembly', when: 'this_weekend', area: { slug: 'mueller', name: 'Mueller' }, keywords: ['ikea', 'desk'] },
     draft: { title: 'Assemble an IKEA desk', category: 'furniture-assembly', describe: 'My new IKEA desk needs assembling this weekend near Mueller.' },

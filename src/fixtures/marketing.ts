@@ -20,6 +20,7 @@ import type {
   WaitlistUnsubscribePageData,
   TaskMapPin,
 } from '@/contracts';
+import { plusOfferData, proOfferData, starterPlanData } from './billing';
 import { crestviewArea, hydeParkArea, muellerArea, remoteLocation } from './locations';
 import {
   deskBreakdown,
@@ -388,15 +389,14 @@ export const pricingPageData: PricingPageData = {
   examples: { direct: deskDirectBreakdown, held: deskBreakdown },
   cancellation: { freeUntilHours: 24, lateFeePercent: 20, lateFeeMinimumCents: 1000 },
   timers: { autoApproveHours: 72 },
-  freeAiSearches: 5,
+  starter: starterPlanData,
+  directFirstMessages: 3,
 };
 
+/** With the plans open: Starter, Plus and Pro as a ladder (2026-11-23). */
 export const pricingWithPlansData: PricingPageData = {
   ...pricingPageData,
-  plans: [
-    { plan: 'plus', monthlyCents: 499, yearlyCents: 3999, aiSearchesPerMonth: 100 },
-    { plan: 'pro', monthlyCents: 799, yearlyCents: 5999, aiSearchesPerMonth: 100 },
-  ],
+  plans: [plusOfferData, proOfferData],
 };
 
 export const becomeHelperPageData: BecomeHelperPageData = {

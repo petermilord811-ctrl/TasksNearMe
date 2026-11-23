@@ -27,7 +27,7 @@ Each city's service pages show the typical price range there, and its price guid
 Posting, offers, messages and booking are free, for you and for your helper. Each offer says how the helper wants to be paid:
 
 - **Directly:** you pay your helper the agreed price after the task, in cash, with a payment app or however you agree. There's no fee, and the money doesn't go through TasksNearMe.
-- **Upfront, held by TasksNearMe:** you pay when you book, and we hold the money until you say the task is done. You pay a hold fee, today 5% of the task price (at least $1.00), or none with a Plus plan. Your helper gets the whole price.
+- **Upfront, held by TasksNearMe:** you pay when you book, and we hold the money until you say the task is done. You pay a hold fee, today 5% of the task price (at least $1.00), or none with a Pro plan. Your helper gets the whole price.
 
 For a $60.00 desk, paying directly costs $60.00. Paying upfront costs $63.00 ($60.00 plus a $3.00 hold fee). Your helper gets $60.00 either way.
 

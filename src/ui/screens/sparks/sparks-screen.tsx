@@ -91,7 +91,7 @@ export function SparksScreen({ data, handlers, initialResult, initialPendingPack
           <p className="text-sm tabular-nums">{t('total.toNext', { count: nextLevel.at - summary.total, level: t(`levels.${nextLevel.level}`) })}</p>
         </div>
         : <p className="text-sm font-medium">{t('total.top')}</p>}
-      <p className="flex items-start gap-2 text-sm"><MessagesSquare aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" /><span>{t('total.allowance', { count: data.directChatsPerDay })}{data.hasPlan ? ` ${t('total.withPlan', { count: data.planDirectChatsPerDay })}` : ''}</span></p>
+      <p className="flex items-start gap-2 text-sm"><MessagesSquare aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" /><span>{t('total.allowance', { count: data.directChatsPerDay })}{data.yourPlanDirectChatsPerDay ? ` ${t('total.withPlan', { count: data.yourPlanDirectChatsPerDay })}` : ''}</span></p>
     </section>
 
     <div className="grid gap-6 md:grid-cols-2">
@@ -124,7 +124,7 @@ export function SparksScreen({ data, handlers, initialResult, initialPendingPack
             </tr>)}
           </tbody>
         </table>
-        <p className="text-sm text-muted-foreground">{t('planNote', { count: data.planDirectChatsPerDay })} <Link href={routes.app.plan()} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">{t('planLink')}</Link></p>
+        <p className="text-sm text-muted-foreground">{t('planNote', { plus: data.planDirectChatsPerDay.plus, pro: data.planDirectChatsPerDay.pro })} <Link href={routes.app.plan()} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">{t('planLink')}</Link></p>
       </section>
     </div>
 

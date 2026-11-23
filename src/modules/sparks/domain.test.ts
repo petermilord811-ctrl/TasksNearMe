@@ -17,12 +17,16 @@ describe('Sparks (2026-11-21)', () => {
     expect(nextSparkLevel(5000)).toBeUndefined();
   });
 
-  it('allows more direct conversations a day by level, and at least 40 with a plan', () => {
-    expect(directChatsPerDay(0, false)).toBe(3);
-    expect(directChatsPerDay(60, false)).toBe(10);
-    expect(directChatsPerDay(300, false)).toBe(25);
-    expect(directChatsPerDay(0, true)).toBe(40);
-    expect(directChatsPerDay(6000, true)).toBe(60);
+  it('allows more direct conversations a day by level, and at least 25 with Plus and 100 with Pro', () => {
+    expect(directChatsPerDay(0, [])).toBe(3);
+    expect(directChatsPerDay(60, [])).toBe(10);
+    expect(directChatsPerDay(300, [])).toBe(25);
+    expect(directChatsPerDay(0, ['plus'])).toBe(25);
+    // A plan never lowers a level's allowance.
+    expect(directChatsPerDay(1000, ['plus'])).toBe(40);
+    expect(directChatsPerDay(6000, ['plus'])).toBe(60);
+    expect(directChatsPerDay(0, ['pro'])).toBe(100);
+    expect(directChatsPerDay(6000, ['plus', 'pro'])).toBe(100);
   });
 
   it('counts posts and replies up to their daily caps, and every reaction, booking and review', () => {

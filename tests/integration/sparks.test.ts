@@ -4,6 +4,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDevBilling, type BillingCheckoutSession, type BillingProvider } from '@/integrations/billing';
 import { users } from '@/modules/accounts/schema';
 import { billingCustomers } from '@/modules/billing/schema';
+import { startCheckout } from '@/modules/billing/service';
+import { getFindPersonPage } from '@/modules/messaging/direct';
 import { communityPosts, communityReactions, communityReplies } from '@/modules/community/schema';
 import { sparkPurchases } from '@/modules/sparks/schema';
 import { buySparks, directChatAllowance, handleSparksWebhook, isSparksCheckoutEvent, sparksPageData, sparksSummariesOf } from '@/modules/sparks/service';
@@ -14,7 +16,9 @@ import { createDb } from '@/platform/db/connect';
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
 const AUTHOR = 'usr_tmp_sparks_author';
 const FAN = 'usr_tmp_sparks_fan';
-const PEOPLE = [AUTHOR, FAN];
+/** A Newcomer who takes Plus, then Pro. */
+const MEMBER = 'usr_tmp_sparks_member';
+const PEOPLE = [AUTHOR, FAN, MEMBER];
 const now = new Date();
 const SECRET = 'whsec_tmp_sparks';
 
@@ -23,6 +27,7 @@ beforeAll(async () => {
   await db.insert(users).values([
     { ...maya!, id: AUTHOR, email: 'tmp-sparks-author@example.test', name: 'Ari S.', firstName: 'Ari', lastName: 'Stone', phone: '+15125550691' },
     { ...maya!, id: FAN, email: 'tmp-sparks-fan@example.test', name: 'Fay F.', firstName: 'Fay', lastName: 'Fox', phone: '+15125550692' },
+    { ...maya!, id: MEMBER, email: 'tmp-sparks-member@example.test', name: 'Mo M.', firstName: 'Mo', lastName: 'Marsh', phone: '+15125550693' },
   ]);
 });
 
@@ -77,6 +82,18 @@ describe('Sparks', () => {
     expect(page).toMatchObject({ notice: 'purchased', summary: { total: 130, bought: 100 }, purchases: [{ id: purchase, points: 100, priceCents: 99, status: 'paid' }] });
     expect(await buySparks(db, createDevBilling(), AUTHOR, { pack: 'huge' }, now)).toEqual({ ok: false, code: 'not_allowed' });
     expect(await buySparks(db, null, AUTHOR, { pack: 'small' }, now)).toEqual({ ok: false, code: 'not_allowed' });
+  });
+
+  it('raises new direct conversations with a plan: Plus 25 a day, Pro 100, and New message says which sets it (2026-11-23)', async () => {
+    expect(await directChatAllowance(db, MEMBER, now)).toBe(3);
+    expect((await getFindPersonPage(db, MEMBER, {}, now)).allowanceFrom).toBeUndefined();
+    await startCheckout(db, createDevBilling(), MEMBER, { plan: 'plus', interval: 'month' }, now);
+    expect(await directChatAllowance(db, MEMBER, now)).toBe(25);
+    expect(await getFindPersonPage(db, MEMBER, {}, now)).toMatchObject({ allowance: { perDay: 25 }, level: 'newcomer', allowanceFrom: 'plus' });
+    await startCheckout(db, createDevBilling(), MEMBER, { plan: 'pro', interval: 'month' }, now);
+    expect(await directChatAllowance(db, MEMBER, now)).toBe(100);
+    expect(await getFindPersonPage(db, MEMBER, {}, now)).toMatchObject({ allowance: { perDay: 100 }, allowanceFrom: 'pro' });
+    expect(await sparksPageData(db, createDevBilling(), MEMBER, now)).toMatchObject({ directChatsPerDay: 100, hasPlan: true, yourPlanDirectChatsPerDay: 100, planDirectChatsPerDay: { plus: 25, pro: 100 } });
   });
 
   it('with Stripe: counts a pack only once Stripe says its checkout is paid, for its amount, from the return or the webhook', async () => {

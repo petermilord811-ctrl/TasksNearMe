@@ -5,6 +5,7 @@ import {
   SPARK_LEVELS,
   SPARK_RULES,
   SPARK_SOURCES,
+  type PlanCode,
   type SparkLevel,
   type SparkSource,
   type SparksSummary,
@@ -28,10 +29,9 @@ export function nextSparkLevel(total: number): { level: SparkLevel; at: number }
   return next ? { level: next, at: SPARK_LEVEL_THRESHOLDS[next] } : undefined;
 }
 
-/** New direct conversations a day: the level's allowance, or a plan's when that's more. */
-export function directChatsPerDay(total: number, hasPlan: boolean): number {
-  const byLevel = DIRECT_CHATS_PER_DAY[sparkLevel(total)];
-  return hasPlan ? Math.max(byLevel, PLAN_DIRECT_CHATS_PER_DAY) : byLevel;
+/** New direct conversations a day: the level's allowance, or the person's plan's when that's more (Plus 25, Pro 100). */
+export function directChatsPerDay(total: number, plans: Iterable<PlanCode>): number {
+  return Math.max(DIRECT_CHATS_PER_DAY[sparkLevel(total)], ...[...plans].map((plan) => PLAN_DIRECT_CHATS_PER_DAY[plan]));
 }
 
 /**

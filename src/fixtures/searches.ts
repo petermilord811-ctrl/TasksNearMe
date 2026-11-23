@@ -8,6 +8,7 @@ const none: SavedSearchFilters = { when: 'any', times: [], remoteOnly: false, fe
 
 export const savedSearchesPageData: SavedSearchesPageData = {
   max: 10,
+  instantAlertsPerDay: 10,
   searches: [
     { id: 'ssr_furniture', name: 'Furniture · Mueller · Hyde Park', source: 'board', href: '/austin/tasks/furniture-assembly?area=hyde-park,mueller', marketName: 'Austin', filters: { ...none, category: 'furniture-assembly', areaNames: ['Hyde Park', 'Mueller'] }, alert: 'instant', openCount: 9, createdAt: '2026-11-10T15:00:00.000Z' },
     { id: 'ssr_mornings', name: 'Weekend mornings over $50', source: 'board', href: '/austin/tasks?min=50&when=this_weekend&time=morning', marketName: 'Austin', filters: { ...none, minPrice: 50, when: 'this_weekend', times: ['morning'] }, alert: 'daily', openCount: 4, createdAt: '2026-11-12T15:00:00.000Z' },
@@ -15,7 +16,7 @@ export const savedSearchesPageData: SavedSearchesPageData = {
   ],
 };
 
-export const savedSearchesEmptyData: SavedSearchesPageData = { max: 10, searches: [] };
+export const savedSearchesEmptyData: SavedSearchesPageData = { max: 10, instantAlertsPerDay: 10, searches: [] };
 
 export const newSavedSearchPageData: NewSavedSearchPageData = {
   from: '/austin/tasks/furniture-assembly?area=hyde-park,mueller',
@@ -23,6 +24,8 @@ export const newSavedSearchPageData: NewSavedSearchPageData = {
   marketName: 'Austin',
   filters: { ...none, category: 'furniture-assembly', areaNames: ['Hyde Park', 'Mueller'] },
   full: false,
+  max: 10,
+  instantAlertsPerDay: 10,
 };
 
 /** Jordan's furniture tasks within 5 miles, saved from find work (sweep SS5). */
@@ -34,6 +37,8 @@ export const newFindWorkSavedSearchPageData: NewSavedSearchPageData = {
   marketName: 'Austin',
   filters: nearbyFurniture,
   full: false,
+  max: 10,
+  instantAlertsPerDay: 10,
 };
 
 /** The list with a search saved from find work. */
@@ -73,6 +78,7 @@ export const editSavedSearchPageData: EditSavedSearchPageData = {
   values: { category: 'furniture-assembly', areas: ['hyde-park', 'mueller'], when: 'any', times: [], remoteOnly: false, few: false },
   options: editOptions,
   openCount: 9,
+  instantAlertsPerDay: 10,
 };
 
 /** Editing a find work search: its distance too. */
@@ -85,4 +91,5 @@ export const editFindWorkSavedSearchPageData: EditSavedSearchPageData = {
   values: { category: 'furniture-assembly', type: 'desk', areas: [], minPrice: 40, when: 'any', times: ['morning'], remoteOnly: false, few: true, distance: 'within_5_mi' },
   options: editOptions,
   openCount: 3,
+  instantAlertsPerDay: 10,
 };

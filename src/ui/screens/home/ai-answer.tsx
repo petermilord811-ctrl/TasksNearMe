@@ -10,7 +10,7 @@ import { seeAllHref } from './links';
 /** Where the AI answer stands: asked and waiting, or answered (an answer, or why not). */
 export type AiAnswerState = { status: 'pending'; text: string } | { status: 'done'; text: string; result: AiSearchResult };
 
-const ERROR_CODES = ['too_short', 'ai_off', 'needs_plan', 'monthly_limit', 'prohibited', 'rate_limited', 'unavailable'] as const;
+const ERROR_CODES = ['too_short', 'ai_off', 'needs_plan', 'daily_limit', 'monthly_limit', 'prohibited', 'rate_limited', 'unavailable'] as const;
 
 function Understood({ answer }: { answer: AiSearchAnswer }) {
   const t = useTranslations('home.ai');
@@ -109,7 +109,7 @@ export function AiAnswer({ state, onClose }: { state: AiAnswerState; onClose: ()
       {error && <div className="space-y-2" role="alert">
         <p className="text-sm font-medium">{t(`errors.${error}`)}</p>
         {error === 'prohibited' && <Link href={routes.legal('prohibited-tasks')} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline">{t('prohibitedLink')}<ArrowRight aria-hidden="true" className="size-4" /></Link>}
-        {(error === 'needs_plan' || error === 'monthly_limit') && <Link href={routes.app.plan()} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline">{search('seePlans')}<ArrowRight aria-hidden="true" className="size-4" /></Link>}
+        {(error === 'needs_plan' || error === 'daily_limit' || error === 'monthly_limit') && <Link href={routes.app.plan()} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline">{search('seePlans')}<ArrowRight aria-hidden="true" className="size-4" /></Link>}
       </div>}
       {result?.ok && <Answer answer={result.answer} />}
     </div>

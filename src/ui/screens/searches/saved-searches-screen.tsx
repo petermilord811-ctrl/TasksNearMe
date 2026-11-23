@@ -66,7 +66,7 @@ export function SavedSearchesScreen({ data, handlers, boardHref }: { data: Saved
     {data.searches.length === 0
       ? <EmptyState icon={<BellRing />} title={t('empty.title')} body={t('empty.body')} action={{ label: t('empty.action'), href: boardHref }} />
       : <>
-        <p className="text-sm text-muted-foreground">{t('alerts.hint')}</p>
+        <p className="text-sm text-muted-foreground">{t('alerts.hint', { count: data.instantAlertsPerDay })}</p>
         <ul className="space-y-3">{data.searches.map((search) => <SearchRow key={search.id} search={search} handlers={handlers} />)}</ul>
         <p className="text-xs text-muted-foreground">{t('limit', { max: data.max })}</p>
       </>}

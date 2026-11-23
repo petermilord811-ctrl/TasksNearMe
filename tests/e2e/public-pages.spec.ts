@@ -319,14 +319,18 @@ test.describe('public pages', () => {
     const held = page.getByRole('region', { name: 'Held by TasksNearMe' });
     await expect(held.getByText('5%', { exact: true })).toBeVisible();
     await expect(held.getByText('A $60.00 desk: you pay $63.00 ($60.00 + $3.00 hold fee), and your helper gets $60.00.')).toBeVisible();
-    // Free, Plus and Pro, LinkedIn-Premium-style.
-    await expect(page.getByRole('region', { name: 'Plus' }).getByText('No hold fee: we hold your upfront payments for free')).toBeVisible();
+    // Starter, Plus and Pro, LinkedIn-Premium-style, as a ladder (2026-11-23): only Pro waives the hold fee.
+    await expect(page.getByRole('region', { name: 'Starter' }).getByText('AI search: 3 a day, up to 50 a month')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Plus' }).getByText('AI search: 5 a day, up to 150 a month')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Pro' }).getByText('No hold fee: we hold your upfront payments for free')).toBeVisible();
     await expect(page.getByRole('region', { name: 'Pro' }).getByText('Your offers shown first to clients')).toBeVisible();
     await expect(page.getByRole('table')).toBeVisible();
+    // The direct message limits, described.
+    await expect(page.getByRole('region', { name: 'Direct messages' }).getByText(/25 on Plus and 100 on Pro/)).toBeVisible();
     // The questions open one at a time.
     const question = page.getByRole('main').locator('details > summary').filter({ hasText: 'What does the hold fee pay for?' });
     await question.click();
-    await expect(page.getByText(/It's 5% of the price, paid by the client, and free with Plus\./)).toBeVisible();
+    await expect(page.getByText(/It's 5% of the price, paid by the client, and free with Pro\./)).toBeVisible();
   });
 
   test('become a helper: the welcome gift card for the three checks leads, with no spots to count', async ({ page }) => {

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ActionHandler, ActionResult, QueryHandler } from './actions';
 import type { HelpSummary } from './assistant';
+import type { PlanCode } from './billing';
 import type { SparkLevel } from './sparks';
 import { requestKeyField } from './forms';
 import type { ISODateTime, Photo } from './common';
@@ -291,6 +292,8 @@ export interface FindPersonPageData {
   notFound?: boolean;
   allowance: { left: number; perDay: number; resetsAt?: ISODateTime };
   level: SparkLevel;
+  /** The viewer's plan, when it (not their level) sets `allowance.perDay` (Plus 25, Pro 100 a day: 2026-11-23). */
+  allowanceFrom?: PlanCode;
 }
 
 export const MESSAGE_SAVED_REPLY_MAX = 20;

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { ActionHandler, FieldErrorCode } from './actions';
+import type { PlanTier } from './billing';
 import { CATEGORY_SLUGS, type CategorySlug, type ISODateTime } from './common';
 import { FIND_WORK_DISTANCES, type FindWorkDistance } from './helper-work';
 import { TASK_BOARD_POSTED, TASK_BOARD_Q_MAX, TASK_BOARD_TIMES, TASK_BOARD_WHEN, type TaskBoardQueryState } from './tasks';
@@ -16,8 +17,11 @@ const code = (value: FieldErrorCode) => value;
 export const SAVED_SEARCH_ALERTS = ['instant', 'daily', 'off'] as const;
 export type SavedSearchAlert = (typeof SAVED_SEARCH_ALERTS)[number];
 
-/** At most this many saved searches per person. */
-export const SAVED_SEARCH_MAX = 10;
+/**
+ * At most this many saved searches per person: Starter 10, Plus 25, Pro 50 (the plans' ladder, 2026-11-23). The page
+ * data says the viewer's (`max`).
+ */
+export const SAVED_SEARCH_LIMITS: Record<PlanTier, number> = { free: 10, plus: 25, pro: 50 };
 
 /**
  * Where a search was saved from, and where it opens: the public task board, or find work (a helper's feed, which adds
@@ -25,8 +29,11 @@ export const SAVED_SEARCH_MAX = 10;
  */
 export const SAVED_SEARCH_SOURCES = ['board', 'find_work'] as const;
 export type SavedSearchSource = (typeof SAVED_SEARCH_SOURCES)[number];
-/** Instant alerts per person per day, across all their searches (more wait for the next digest). */
-export const INSTANT_ALERTS_PER_DAY = 10;
+/**
+ * Instant alerts per person per day, across all their searches (more wait for the next digest): Starter 10, Plus 25,
+ * Pro 50.
+ */
+export const INSTANT_ALERT_LIMITS: Record<PlanTier, number> = { free: 10, plus: 25, pro: 50 };
 
 /**
  * What a saved search filters on (the board's filters, with the neighborhoods' names). `distance`: a find work search's
@@ -54,7 +61,10 @@ export interface SavedSearchView {
 
 export interface SavedSearchesPageData {
   searches: SavedSearchView[];
+  /** The most the viewer can keep (`SAVED_SEARCH_LIMITS`, by their plan). */
   max: number;
+  /** Instant alerts the viewer gets a day (`INSTANT_ALERT_LIMITS`, by their plan). */
+  instantAlertsPerDay: number;
 }
 
 /** `/app/saved-searches/new?from=<board or find work address>`: name it and pick the alerts. */
@@ -65,8 +75,12 @@ export interface NewSavedSearchPageData {
   source: SavedSearchSource;
   marketName: string;
   filters: SavedSearchFilters;
-  /** The person already has the most they can keep. */
+  /** The person already has the most they can keep (`max`). */
   full: boolean;
+  /** The most the viewer can keep (`SAVED_SEARCH_LIMITS`, by their plan). */
+  max: number;
+  /** Instant alerts the viewer gets a day (`INSTANT_ALERT_LIMITS`, by their plan). */
+  instantAlertsPerDay: number;
 }
 
 export const savedSearchInputSchema = z.object({
@@ -117,6 +131,8 @@ export interface EditSavedSearchPageData {
   };
   /** Open tasks it shows now. */
   openCount: number;
+  /** Instant alerts the viewer gets a day (`INSTANT_ALERT_LIMITS`, by their plan). */
+  instantAlertsPerDay: number;
 }
 
 /** The highest price the filter takes, in whole dollars. */

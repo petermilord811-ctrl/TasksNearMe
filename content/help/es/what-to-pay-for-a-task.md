@@ -23,7 +23,7 @@ Las páginas de servicios de cada ciudad muestran el rango de precios habitual a
 Publicar, ofertar, enviar mensajes y reservar es gratis, para ti y para tu ayudante. Cada oferta dice cómo quiere cobrar el ayudante:
 
 - **Directamente:** le pagas a tu ayudante el precio acordado después de la tarea, en efectivo, con una app de pagos o como acuerden. No hay ninguna tarifa, y el dinero no pasa por TasksNearMe.
-- **Por adelantado, retenido por TasksNearMe:** pagas al reservar, y retenemos el dinero hasta que digas que la tarea está hecha. Pagas una tarifa de retención, que hoy es del 5% del precio de la tarea (mínimo $1.00), o ninguna con el plan Plus. Tu ayudante recibe el precio completo.
+- **Por adelantado, retenido por TasksNearMe:** pagas al reservar, y retenemos el dinero hasta que digas que la tarea está hecha. Pagas una tarifa de retención, que hoy es del 5% del precio de la tarea (mínimo $1.00), o ninguna con el plan Pro. Tu ayudante recibe el precio completo.
 
 Por un escritorio de $60.00, si pagas directamente, pagas $60.00. Si pagas por adelantado, pagas $63.00 ($60.00 más $3.00 de tarifa de retención). Tu ayudante recibe $60.00 de las dos formas.
 

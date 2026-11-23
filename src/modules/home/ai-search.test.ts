@@ -18,7 +18,7 @@ function deps(overrides: Partial<AiSearchDeps> = {}): AiSearchDeps & { calls: st
   return {
     calls,
     matcher: match(),
-    consumeSearch: vi.fn(async () => { calls.push('count'); return { ok: true as const, remaining: 9 }; }),
+    consumeSearch: vi.fn(async () => { calls.push('count'); return { ok: true as const, remaining: 2, per: 'day' as const, resetsAt: '2026-11-25T06:00:00.000Z' }; }),
     releaseSearch: vi.fn(async () => { calls.push('give back'); }),
     allowBurst: vi.fn(async () => { calls.push('burst'); return true; }),
     categoryKeywords: vi.fn(async () => ['gas line']),
@@ -36,7 +36,10 @@ describe('AI search', () => {
     const result = await runAiSearch(d, { text: '  my new IKEA desk this weekend near Mueller ', mode: 'poster' });
     expect(result).toEqual({
       ok: true,
-      remaining: 9,
+      // What's left after this one, as the plan counts it: today's (Starter: 3 a day).
+      remaining: 2,
+      per: 'day',
+      resetsAt: '2026-11-25T06:00:00.000Z',
       answer: {
         understood: { intent: 'get_help', category: 'furniture-assembly', when: 'this_weekend', area: { slug: 'mueller', name: 'Mueller' }, keywords: ['ikea', 'desk'] },
         draft: { title: 'Assemble an IKEA desk', category: 'furniture-assembly', describe: 'my new IKEA desk this weekend near Mueller' },
@@ -81,7 +84,7 @@ describe('AI search', () => {
   });
 
   it("says what the plan says when it doesn't allow a search", async () => {
-    for (const reason of ['needs_plan', 'monthly_limit', 'ai_off'] as const) {
+    for (const reason of ['needs_plan', 'daily_limit', 'monthly_limit', 'ai_off'] as const) {
       const d = deps({ consumeSearch: vi.fn(async () => ({ ok: false as const, reason })) });
       expect(await runAiSearch(d, { text: 'a desk', mode: 'poster' })).toEqual({ ok: false, code: reason });
       expect(d.matcher!.match).not.toHaveBeenCalled();

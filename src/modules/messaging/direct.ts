@@ -1,5 +1,6 @@
 import { and, eq, gt, isNotNull, ne, or, sql } from 'drizzle-orm';
 import {
+  DIRECT_CHATS_PER_DAY,
   DIRECT_FIRST_MESSAGES_MAX,
   DIRECT_MESSAGE_SETTINGS,
   normalizeUsername,
@@ -12,6 +13,8 @@ import {
   type FindPersonPageData,
 } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
+import { topTier } from '@/modules/billing/domain';
+import { activePlans } from '@/modules/billing/service';
 import { bookings } from '@/modules/bookings/schema';
 import { profilePhotoOf } from '@/modules/files/photos';
 import { helperProfiles } from '@/modules/profiles/schema';
@@ -223,14 +226,18 @@ export async function saveDirectMessageSetting(db: Db, userId: string, input: { 
  * conversations (left in any 24 hours, by Sparks level or plan), so they see what their level allows before typing.
  */
 export async function getFindPersonPage(db: Db, viewerId: string, query: { text?: string; notFound?: boolean }, now: Date): Promise<FindPersonPageData> {
-  const [starts, perDay, summary] = await Promise.all([startsLastDay(db, viewerId, now), directChatAllowance(db, viewerId, now), sparksSummaryOf(db, viewerId)]);
+  const [starts, perDay, summary, plans] = await Promise.all([startsLastDay(db, viewerId, now), directChatAllowance(db, viewerId, now), sparksSummaryOf(db, viewerId), activePlans(db, viewerId, now)]);
   const left = Math.max(0, perDay - starts.length);
   const resetsAt = left === 0 ? allowanceResetsAt(starts, now) : undefined;
+  const level = summary?.level ?? 'newcomer';
+  // A plan sets the allowance when it gives more than the level does (the plans' ladder, 2026-11-23).
+  const tier = topTier(plans.keys());
   return {
+    ...(tier !== 'free' && perDay > DIRECT_CHATS_PER_DAY[level] ? { allowanceFrom: tier } : {}),
     // As usernames read (the "@" they typed goes: the box and the message show their own).
     ...(query.text && normalizeUsername(query.text) ? { query: normalizeUsername(query.text).slice(0, 40) } : {}),
     ...(query.notFound ? { notFound: true } : {}),
     allowance: { left, perDay, ...(resetsAt ? { resetsAt: resetsAt.toISOString() } : {}) },
-    level: summary?.level ?? 'newcomer',
+    level,
   };
 }

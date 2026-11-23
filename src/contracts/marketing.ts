@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { ActionHandler, ActionResult, QueryHandler } from './actions';
-import type { PlanOffer } from './billing';
+import type { PlanOffer, StarterPlan } from './billing';
 import type { CategorySlug, Cents, ISODateTime, TimeZone } from './common';
 import type { ContentBlock } from './content';
 import { emailField, zipField } from './forms';
@@ -276,9 +276,11 @@ export interface PricingPageData {
   cancellation: { freeUntilHours: number; lateFeePercent: number; lateFeeMinimumCents: Cents };
   /** A held payment goes to the helper this long after the work is sent, unless the client answers first. */
   timers: { autoApproveHours: number };
-  /** AI searches a month without a plan. */
-  freeAiSearches: number;
-  /** The plans, Plus first; absent where they aren't open (no Stripe here). */
+  /** Starter: everything without a plan (AI searches, new direct conversations, saved searches, instant alerts). */
+  starter: StarterPlan;
+  /** Messages anyone can send in a new direct conversation before the other person answers. */
+  directFirstMessages: number;
+  /** The plans, Plus then Pro (each with everything in the one before); absent where they aren't open (no Stripe here). */
   plans?: PlanOffer[];
 }
 

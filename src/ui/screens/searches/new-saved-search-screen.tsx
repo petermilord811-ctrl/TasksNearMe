@@ -7,7 +7,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import type { ActionResult } from '@/contracts/actions';
 import { routes } from '@/contracts/routes';
-import { SAVED_SEARCH_ALERTS, SAVED_SEARCH_MAX, type NewSavedSearchHandlers, type NewSavedSearchPageData, type SavedSearchAlert } from '@/contracts/searches';
+import { SAVED_SEARCH_ALERTS, type NewSavedSearchHandlers, type NewSavedSearchPageData, type SavedSearchAlert } from '@/contracts/searches';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
 import { SavedSearchFilterChips, useFilterLabels } from '@/ui/components/search/saved-search-filters';
@@ -71,7 +71,7 @@ function NewSavedSearchForm({ data, handlers }: NewSavedSearchProps) {
   });
   return <>
     {data.full
-      ? <p role="status" className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm">{t('new.full', { max: SAVED_SEARCH_MAX })} <Link href={routes.app.savedSearches()} className="font-semibold text-primary underline underline-offset-4">{t('new.manage')}</Link></p>
+      ? <p role="status" className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm">{t('new.full', { max: data.max })} <Link href={routes.app.savedSearches()} className="font-semibold text-primary underline underline-offset-4">{t('new.manage')}</Link></p>
       : <form noValidate aria-label={t('new.title')} className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]" onSubmit={(event) => { event.preventDefault(); if (!pending) submit(); }}>
           <div className="space-y-1.5">
             <p className="text-sm font-semibold">{t('new.filters')}</p>
@@ -89,7 +89,7 @@ function NewSavedSearchForm({ data, handlers }: NewSavedSearchProps) {
                 <input type="radio" name="alert" value={option} checked={alert === option} onChange={() => setAlert(option)} className="accent-[var(--primary)]" />{t(`alerts.${option}`)}
               </label>)}
             </div>
-            <p className="text-sm text-muted-foreground">{t('alerts.hint')}</p>
+            <p className="text-sm text-muted-foreground">{t('alerts.hint', { count: data.instantAlertsPerDay })}</p>
           </fieldset>
           {result && !result.ok && <FormFeedback result={result} />}
           <Button type="submit" disabled={pending || name.trim().length < 2} aria-busy={pending}>{pending && <Spinner aria-hidden="true" />}{t(pending ? 'new.submitting' : 'new.submit')}</Button>

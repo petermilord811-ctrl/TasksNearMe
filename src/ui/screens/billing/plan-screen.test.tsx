@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PlanHandlers, PlanPageData } from '@/contracts';
-import { planAiUsedUpData, planFreeClientData, planPastDueData, planPlusMemberData, planProCancelingData, planUnavailableData } from '@/fixtures';
+import { planAiMonthUsedUpData, planAiUsedUpData, planFreeClientData, planPastDueData, planPlusMemberData, planProCancelingData, planProMemberData, planUnavailableData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { PlanScreen } from './plan-screen';
 
@@ -17,21 +17,24 @@ function mount(data: PlanPageData, handlers: Partial<PlanHandlers> = {}) {
 }
 
 describe('PlanScreen (completion plan 9.13)', () => {
-  it('shows both plans with their prices, what each adds, AI searches and the plain terms (LinkedIn-Premium-style, 2026-11-23)', () => {
+  it('shows Starter, Plus and Pro as a ladder with their numbers, today’s AI searches and the plain terms (owner, 2026-11-23)', () => {
     mount(planFreeClientData);
+    const starter = screen.getByRole('region', { name: 'Starter' });
+    expect(within(starter).getByText('Your plan')).toBeVisible();
+    for (const line of ['AI search: 3 a day, up to 50 a month', 'Start 3 new direct conversations a day, up to 60 as you earn Sparks', '10 saved searches, with 10 instant alerts a day']) expect(within(starter).getByText(line)).toBeVisible();
+    expect(within(starter).getByText('2 AI searches left today.')).toBeVisible();
     const plus = screen.getByRole('region', { name: 'Plus' });
     expect(within(plus).getByText('$4.99 a month')).toBeVisible();
     expect(within(plus).getByText('or $39.99 a year')).toBeVisible();
-    expect(within(plus).getByText('No hold fee: when a helper asks to be paid upfront, we hold your payment for free')).toBeVisible();
-    expect(within(plus).getByText(/100 AI searches a month/)).toBeVisible();
+    for (const line of ['Everything in Starter, and more of it', 'AI search: 5 a day, up to 150 a month', 'Start 25 new direct conversations a day', '25 saved searches, with 25 instant alerts a day']) expect(within(plus).getByText(line)).toBeVisible();
+    // Only Pro waives the hold fee (owner: "Pro only no fee").
+    expect(within(plus).queryByText(/No hold fee/)).not.toBeInTheDocument();
     const pro = screen.getByRole('region', { name: 'Pro' });
-    for (const benefit of ['Your offers shown first to clients', 'A Pro badge on your offers', 'Offer insights on every task: how many offers it has and their price range']) expect(within(pro).getByText(benefit)).toBeVisible();
+    for (const line of ['Everything in Plus', 'No hold fee: when a helper asks to be paid upfront, we hold your payment for free', 'Your offers shown first to clients', 'A Pro badge on your offers', 'Offer insights on every task: how many offers it has and their price range', 'Unlimited AI search', 'Start 100 new direct conversations a day', '50 saved searches, with 50 instant alerts a day']) expect(within(pro).getByText(line)).toBeVisible();
     // Nothing is paid back any more: no service fees.
     expect(screen.queryByText(/paid back|pays for itself|fee back/i)).not.toBeInTheDocument();
-    // The free side and the plain terms.
-    expect(screen.getByText(/there are no service fees\. You also get 5 AI searches a month/)).toBeVisible();
-    expect(screen.getByText(/^3 AI searches left this month\. They renew (\w+, )?Dec 1\.$/)).toBeVisible();
     expect(screen.getByText(/A plan never changes reviews, checks or the verified badge/)).toBeVisible();
+    expect(screen.getByText(/Pro starts at once, and Plus stops renewing, so you never pay for both/)).toBeVisible();
     expect(screen.getByText(/No trial that turns into a charge/)).toBeVisible();
   });
 
@@ -58,8 +61,22 @@ describe('PlanScreen (completion plan 9.13)', () => {
     await userEvent.click(within(plus).getByRole('button', { name: 'Manage or cancel' }));
     expect(handlers.onManage).toHaveBeenCalledOnce();
     await waitFor(() => expect(assign).toHaveBeenCalledWith('https://billing.stripe.com/p/session/test'));
-    // The other plan can still be added.
-    expect(within(screen.getByRole('region', { name: 'Pro' })).getByRole('button', { name: 'Subscribe monthly: Pro, $7.99 a month' })).toBeEnabled();
+    // Pro is the upgrade: Plus then stops renewing.
+    const pro = screen.getByRole('region', { name: 'Pro' });
+    expect(within(pro).getByRole('button', { name: 'Upgrade monthly: Pro, $7.99 a month' })).toBeEnabled();
+    expect(within(pro).getByText("When Pro starts, your Plus stops renewing and ends with the period you've paid for.")).toBeVisible();
+    expect(screen.getByText('4 AI searches left today.')).toBeVisible();
+  });
+
+  it('shows Plus as included for a Pro member, with no buttons, and unlimited AI searches', () => {
+    mount(planProMemberData);
+    const plus = screen.getByRole('region', { name: 'Plus' });
+    expect(within(plus).getByText('Included in Pro')).toBeVisible();
+    expect(within(plus).getByText('Your Pro has everything in Plus.')).toBeVisible();
+    expect(within(plus).queryByRole('button')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Pro' })).getByText('Your plan')).toBeVisible();
+    expect(within(screen.getByRole('region', { name: 'Starter' })).queryByText('Your plan')).not.toBeInTheDocument();
+    expect(screen.getByText('Unlimited AI searches with your Pro.')).toBeVisible();
   });
 
   it('says when a cancelled plan ends, and when a payment failed', () => {
@@ -70,9 +87,12 @@ describe('PlanScreen (completion plan 9.13)', () => {
     expect(screen.getByText(/Your last payment didn't go through/)).toBeVisible();
   });
 
-  it('says when AI searches are used up, and shows the plans without buttons where they aren’t open', () => {
+  it('says when AI searches are used up, today’s or this month’s, and shows the plans without buttons where they aren’t open', () => {
+    mount(planAiMonthUsedUpData);
+    expect(screen.getByText(/^You've used this month's AI searches\. They renew (\w+, )?Dec 1\.$/)).toBeVisible();
+    cleanup();
     mount(planAiUsedUpData);
-    expect(screen.getByText(/^No AI searches left this month\. They renew (\w+, )?Dec 1\.$/)).toBeVisible();
+    expect(screen.getByText("You've used today's AI searches. More tomorrow.")).toBeVisible();
     expect(screen.getByRole('status')).toHaveTextContent('You left checkout. Nothing was charged.');
     cleanup();
     mount(planUnavailableData);
@@ -101,7 +121,7 @@ describe('PlanScreen (completion plan 9.13)', () => {
 
   it('leaves the AI lines out where Claude isn’t set up', () => {
     mount(planUnavailableData);
-    expect(screen.queryByText(/AI searches a month: describe/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^AI search:|^Unlimited AI search$/)).not.toBeInTheDocument();
   });
 
   it('tells the person when a subscribe fails, and stays on the page', async () => {

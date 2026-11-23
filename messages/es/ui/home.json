@@ -53,7 +53,9 @@
     "monthlyLimit": "Ya usaste las búsquedas con IA de este mes.",
     "monthlyLimitRenews": "Ya usaste las búsquedas con IA de este mes. Se renuevan el {date}.",
     "seePlans": "Ver planes",
-    "matches": "{count, plural, =0 {No hay resultados para “{q}” en esta lista} one {# resultado para “{q}”} other {# resultados para “{q}”}}"
+    "matches": "{count, plural, =0 {No hay resultados para “{q}” en esta lista} one {# resultado para “{q}”} other {# resultados para “{q}”}}",
+    "remainingToday": "{count, plural, one {Te queda # búsqueda con IA hoy} other {Te quedan # búsquedas con IA hoy}}",
+    "dailyLimit": "Ya usaste las búsquedas con IA de hoy. Mañana tendrás más."
   },
   "ai": {
     "title": "Lo que encontró la IA",
@@ -94,7 +96,8 @@
       "monthly_limit": "Ya usaste las búsquedas con IA de este mes.",
       "prohibited": "Eso es algo que no se puede reservar en TasksNearMe.",
       "rate_limited": "Son muchas búsquedas seguidas. Espera un minuto y vuelve a intentarlo.",
-      "unavailable": "La IA no pudo responder ahora. Inténtalo de nuevo o usa Buscar."
+      "unavailable": "La IA no pudo responder ahora. Inténtalo de nuevo o usa Buscar.",
+      "daily_limit": "Ya usaste las búsquedas con IA de hoy. Mañana tendrás más, o consigue más con un plan."
     },
     "prohibitedLink": "Ver lo que no se puede reservar"
   },
@@ -315,7 +318,8 @@
     "aiAnswerProhibited": "Respuesta de la IA · no se puede reservar aquí",
     "dashboardLoading": "Inicio · cargando",
     "shellLoading": "Área con sesión · cargando",
-    "shellFlowLoading": "Área con sesión, página paso a paso · cargando"
+    "shellFlowLoading": "Área con sesión, página paso a paso · cargando",
+    "clientAiDailyLimit": "Cliente · búsquedas con IA agotadas hoy"
   },
   "neighbors": {
     "title": "De tus vecinos",

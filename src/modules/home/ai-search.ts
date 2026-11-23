@@ -2,11 +2,13 @@ import {
   aiSearchInputSchema,
   type AiSearchAnswer,
   type AiSearchBlock,
+  type AiSearchPeriod,
   type AiSearchResult,
   type CategorySlug,
   type DashboardItem,
   type DashboardSeeAll,
   type HelperSummary,
+  type ISODateTime,
   type Mode,
 } from '@/contracts';
 import { AiRefusedError, AiUnavailableError } from '@/integrations/ai';
@@ -21,7 +23,7 @@ import type { RateLimitRule } from '@/platform/rate-limit';
  * nothing shown is invented. The words go to the matcher and nowhere else: nothing here stores or logs them.
  */
 
-/** A burst guard on top of the plan's monthly count: this many searches a minute per person. */
+/** A burst guard on top of the plan's daily and monthly counts (and Pro's unlimited ones): this many a minute per person. */
 export const AI_SEARCH_BURST: RateLimitRule = { limit: 6, windowSeconds: 60 };
 export const AI_SEARCH_HELPERS = 3;
 /** Open tasks in the answer: up to 5 for a helper, 3 similar ones for someone who needs help. */
@@ -39,7 +41,7 @@ export interface AiSearchDeps {
   /** Null when AI search isn't set up here (production without a key). */
   matcher: NeedMatcher | null;
   /** The plan's check, counting this search (billing's `consumeAiSearch`). */
-  consumeSearch: () => Promise<{ ok: true; remaining: number | null } | { ok: false; reason: AiSearchBlock }>;
+  consumeSearch: () => Promise<{ ok: true; remaining: number | null; per?: AiSearchPeriod; resetsAt?: ISODateTime } | { ok: false; reason: AiSearchBlock }>;
   /** Gives back the search `consumeSearch` just counted, when AI couldn't run it (billing's `releaseAiSearch`). */
   releaseSearch: () => Promise<void>;
   /** Counts one search toward `AI_SEARCH_BURST`; false once over it. */
@@ -116,5 +118,5 @@ export async function runAiSearch(deps: AiSearchDeps, input: { text: unknown; mo
     ...(getHelp && match.category ? { helpersQuery: { category: match.category, ...(area ? { area: area.slug } : {}) } } : {}),
     ...(tasks.length > 0 || !getHelp ? { tasksLink: deps.tasksLink({ ...(searched.category ? { category: searched.category } : {}), ...(searched.q ? { q: searched.q } : {}), ...(searched.when ? { when: searched.when } : {}) }) } : {}),
   };
-  return { ok: true, answer, remaining: allowed.remaining };
+  return { ok: true, answer, remaining: allowed.remaining, ...(allowed.per ? { per: allowed.per } : {}), ...(allowed.resetsAt ? { resetsAt: allowed.resetsAt } : {}) };
 }

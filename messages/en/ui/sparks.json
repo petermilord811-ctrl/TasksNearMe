@@ -43,7 +43,7 @@
     "pillar": "Pillar",
     "local_legend": "Local legend"
   },
-  "planNote": "Plus and Pro allow at least {count} new conversations a day, whatever your level.",
+  "planNote": "Plus allows at least {plus} new conversations a day and Pro {pro}, whatever your level.",
   "planLink": "See the plans",
   "buy": {
     "heading": "Get more Sparks",

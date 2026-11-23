@@ -1,9 +1,7 @@
 import { and, asc, count, eq, gte, inArray, isNull, lt, ne, notInArray, or, sql, type SQL } from 'drizzle-orm';
 import {
   FIND_WORK_DISTANCES,
-  INSTANT_ALERTS_PER_DAY,
   SAVED_SEARCH_ALERTS,
-  SAVED_SEARCH_MAX,
   routes,
   savedSearchInputSchema,
   savedSearchUpdateInputSchema,
@@ -22,6 +20,9 @@ import {
 } from '@/contracts';
 import { CATEGORY_SLUGS, type TimeZone } from '@/contracts/common';
 import { users } from '@/modules/accounts/schema';
+import { plansAmong } from '@/modules/billing/benefits';
+import { instantAlertLimit, savedSearchLimit } from '@/modules/billing/domain';
+import { activePlans } from '@/modules/billing/service';
 import { milesBetween } from '@/modules/community/domain';
 import { areas, categories, markets } from '@/modules/markets/schema';
 import { marketTimeZone } from '@/modules/markets/time-zone';
@@ -203,13 +204,22 @@ async function openCountOf(db: Db, row: typeof savedSearches.$inferSelect, ids: 
   return totalCount;
 }
 
-export async function getNewSavedSearchPage(db: Db, userId: string, from: string): Promise<NewSavedSearchPageData | null> {
+/**
+ * How many saved searches the person can keep and instant alerts they get a day, by their plan (Starter 10 and 10,
+ * Plus 25 and 25, Pro 50 and 50: 2026-11-23).
+ */
+async function searchAllowances(db: Db, userId: string, now: Date): Promise<{ max: number; instantAlertsPerDay: number }> {
+  const held = [...(await activePlans(db, userId, now)).keys()];
+  return { max: savedSearchLimit(held), instantAlertsPerDay: instantAlertLimit(held) };
+}
+
+export async function getNewSavedSearchPage(db: Db, userId: string, from: string, now: Date): Promise<NewSavedSearchPageData | null> {
   const parsed = parseSavedSearchAddress(from);
   if (!parsed) return null;
   const market = await marketFor(db, userId, parsed);
   if (!market) return null;
-  const [maps, [mine]] = await Promise.all([areaMaps(db, market.id), db.select({ value: count() }).from(savedSearches).where(eq(savedSearches.userId, userId))]);
-  return { from, source: parsed.source, marketName: market.name, filters: filtersOf(parsed.query, maps.names, distanceOf(parsed.params)), full: Number(mine?.value ?? 0) >= SAVED_SEARCH_MAX };
+  const [maps, [mine], allowances] = await Promise.all([areaMaps(db, market.id), db.select({ value: count() }).from(savedSearches).where(eq(savedSearches.userId, userId)), searchAllowances(db, userId, now)]);
+  return { from, source: parsed.source, marketName: market.name, filters: filtersOf(parsed.query, maps.names, distanceOf(parsed.params)), full: Number(mine?.value ?? 0) >= allowances.max, ...allowances };
 }
 
 export async function getSavedSearchesPage(db: Db, userId: string, now: Date): Promise<SavedSearchesPageData> {
@@ -234,7 +244,7 @@ export async function getSavedSearchesPage(db: Db, userId: string, now: Date): P
       createdAt: row.createdAt.toISOString(),
     };
   }));
-  return { searches, max: SAVED_SEARCH_MAX };
+  return { searches, ...(await searchAllowances(db, userId, now)) };
 }
 
 /** Where a saved search opens: its board or find work view, now. */
@@ -251,8 +261,8 @@ export async function createSavedSearch(db: Db, userId: string, input: SavedSear
   const address = parseSavedSearchAddress(parsed.data.from);
   const market = address ? await marketFor(db, userId, address) : null;
   if (!address || !market) return { ok: false, code: 'validation_failed', fieldErrors: { from: ['invalid'] } };
-  const [mine] = await db.select({ value: count() }).from(savedSearches).where(eq(savedSearches.userId, userId));
-  if (Number(mine?.value ?? 0) >= SAVED_SEARCH_MAX) return { ok: false, code: 'limit_reached' };
+  const [[mine], { max }] = await Promise.all([db.select({ value: count() }).from(savedSearches).where(eq(savedSearches.userId, userId)), searchAllowances(db, userId, now)]);
+  if (Number(mine?.value ?? 0) >= max) return { ok: false, code: 'limit_reached' };
   await db.insert(savedSearches).values({ id: newId('ssr'), userId, marketId: market.id, name: parsed.data.name, source: address.source, params: address.params, alert: parsed.data.alert, lastDigestAt: now, createdAt: now, updatedAt: now });
   return { ok: true, code: 'saved', redirectTo: routes.app.savedSearches() };
 }
@@ -263,11 +273,12 @@ export async function getEditSavedSearchPage(db: Db, userId: string, id: string,
   if (!row) return null;
   const [market] = await db.select({ name: markets.name }).from(markets).where(eq(markets.id, row.marketId)).limit(1);
   if (!market) return null;
-  const maps = await areaMaps(db, row.marketId);
+  const [maps, { instantAlertsPerDay }] = await Promise.all([areaMaps(db, row.marketId), searchAllowances(db, userId, now)]);
   const query = parseTaskBoardQuery(row.params);
   const source: SavedSearchSource = row.source === 'find_work' ? 'find_work' : 'board';
   return {
     id: row.id,
+    instantAlertsPerDay,
     name: row.name,
     alert: row.alert as SavedSearchAlert,
     source,
@@ -356,7 +367,8 @@ function withinDistance(params: Record<string, string>, center: { lat: number; l
  * The people a newly posted task should alert at once (read-only, so the dispatcher can plan it more than once):
  * their instant searches in its market that it fits, one alert per person per task, never the poster or
  * someone blocked either way, never a task staff hid before the dispatch (sweep SS4), within a find work search's
- * distance, and at most `INSTANT_ALERTS_PER_DAY` a day (the rest wait for a digest, if any).
+ * distance, and at most the person's instant alerts a day (`INSTANT_ALERT_LIMITS`, by their plan; the rest wait for a
+ * digest, if any).
  */
 export async function instantSearchMatches(db: Db, taskId: string, now: Date, onlyUserId?: string): Promise<{ userId: string; searchId: string; name: string }[]> {
   const found = await findTaskWithPublicView(db, taskId);
@@ -371,19 +383,20 @@ export async function instantSearchMatches(db: Db, taskId: string, now: Date, on
   const timeZone = await marketTimeZone(db, task.marketId);
   const since = new Date(marketLocalToUtc(marketDayKey(now, timeZone), '00:00', timeZone));
   const people = [...new Set(rows.map((row) => row.userId))];
-  const [sentToday, centers] = await Promise.all([
+  const [sentToday, centers, plans] = await Promise.all([
     db
       .select({ userId: notifications.userId, value: count() })
       .from(notifications)
       .where(and(inArray(notifications.userId, people), eq(notifications.type, 'saved_search_match'), gte(notifications.createdAt, since)))
       .groupBy(notifications.userId),
     helperCenters(db, [...new Set(rows.filter((row) => row.source === 'find_work').map((row) => row.userId))]),
+    plansAmong(db, people, now),
   ]);
   const sent = new Map(sentToday.map((row) => [row.userId, Number(row.value)]));
   const out: { userId: string; searchId: string; name: string }[] = [];
   for (const row of rows) {
     if (row.userId === task.posterUserId || out.some((match) => match.userId === row.userId)) continue;
-    if ((sent.get(row.userId) ?? 0) >= INSTANT_ALERTS_PER_DAY) continue;
+    if ((sent.get(row.userId) ?? 0) >= instantAlertLimit(plans.get(row.userId) ?? [])) continue;
     if (!taskMatchesBoard(found.view, parseTaskBoardQuery(row.params), { now, areaNames: names, timeZone })) continue;
     if (row.source === 'find_work' && !withinDistance(row.params, centers.get(row.userId), task)) continue;
     if (await isBlockedBetween(db, row.userId, task.posterUserId)) continue;
@@ -429,9 +442,9 @@ async function digestMatches(db: Db, row: typeof savedSearches.$inferSelect, sin
 
 /**
  * The morning digest (a job), one per person and market (sweep SS6), from 8 am on the market's clock (completion plan
- * 8.1): the new tasks their daily searches fit, and what their instant searches fit but didn't alert about (more than
- * `INSTANT_ALERTS_PER_DAY` in a day wait for it), each task counted once. Each search counts from its last digest, at
- * most 7 days back (SS2). Who is due is decided in SQL, the most overdue first (SS3), so people not due yet never crowd
+ * 8.1): the new tasks their daily searches fit, and what their instant searches fit but didn't alert about (past the
+ * person's instant alerts for the day, `INSTANT_ALERT_LIMITS`), each task counted once. Each search counts from its
+ * last digest, at most 7 days back (SS2). Who is due is decided in SQL, the most overdue first (SS3), so people not due yet never crowd
  * out due ones. Runs every tick; does its work once a day per person.
  */
 export async function runSavedSearchDigests(db: Db, now: Date): Promise<number> {

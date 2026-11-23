@@ -14,7 +14,7 @@
     "instant": "Al momento",
     "daily": "Resumen por la mañana",
     "off": "Desactivados",
-    "hint": "Al momento: hasta 10 avisos al día entre todas tus búsquedas, y el resto en el resumen de la mañana siguiente. Resumen por la mañana: un aviso a las 8 a.m. cuando hay algo nuevo."
+    "hint": "Al momento: hasta {count} avisos al día entre todas tus búsquedas, y el resto en el resumen de la mañana siguiente. Resumen por la mañana: un aviso a las 8 a.m. cuando hay algo nuevo."
   },
   "delete": "Eliminar",
   "deleteLabel": "Eliminar {name}",

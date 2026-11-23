@@ -13,15 +13,17 @@ import type { CancellationPolicy, FeeSchedule, PlanPolicy, PolicyTimers } from '
 export const DEFAULT_FEES: FeeSchedule = { posterBps: 500, posterMinCents: 100, helperBps: 0 };
 
 /**
- * The optional plans (completion plan 9.13; LinkedIn-Premium-style since 2026-11-23, decisions.md): Plus for clients,
- * Pro for helpers. With no service fees nothing is paid back any more (the rebate shares are 0, so the old rebate code
- * computes nothing): Plus waives the hold fee at payment (`plusWaivesHoldFee`), Pro puts a helper's offers first with
- * a badge and shows offer insights; both raise the month's AI searches.
+ * The optional plans (completion plan 9.13; LinkedIn-Premium-style since 2026-11-23, decisions.md), a ladder since the
+ * owner's second change that day ("Make AI search for limit for starter: daily upto 3: monthly 50 / Pro is unlimited
+ * AI search. Plus monthly 150, daily upto 5 / Pro only no fee"): Starter (no plan) 3 AI searches a day and 50 a month;
+ * Plus 5 and 150; Pro unlimited, and the hold fee waived (`waivesHoldFee`). With no service fees nothing is paid back
+ * (the rebate shares are 0, so the old rebate code computes nothing). The plans' other allowances (new direct
+ * conversations, saved searches, instant alerts) are the contracts' constants.
  */
 export const DEFAULT_PLANS: PlanPolicy = {
-  plus: { monthlyCents: 499, yearlyCents: 3999, posterFeeRebateBps: 0, rebateMonthlyCapCents: 0, aiSearchesPerMonth: 100 },
-  pro: { monthlyCents: 799, yearlyCents: 5999, helperFeeRebateBps: 0, rebateMonthlyCapCents: 0, aiSearchesPerMonth: 100 },
-  free: { aiSearchesPerMonth: 5 },
+  plus: { monthlyCents: 499, yearlyCents: 3999, posterFeeRebateBps: 0, rebateMonthlyCapCents: 0, aiSearchesPerMonth: 150, aiSearchesPerDay: 5 },
+  pro: { monthlyCents: 799, yearlyCents: 5999, helperFeeRebateBps: 0, rebateMonthlyCapCents: 0, aiSearchesPerMonth: null, aiSearchesPerDay: null },
+  free: { aiSearchesPerMonth: 50, aiSearchesPerDay: 3 },
 };
 
 export const DEFAULT_CANCELLATION: CancellationPolicy = {

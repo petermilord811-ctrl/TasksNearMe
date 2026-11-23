@@ -15,7 +15,7 @@
       "held": {
         "title": "Retenido por TasksNearMe",
         "price": "{percent}%",
-        "priceNote": "tarifa de retención que paga el cliente (mínimo {minimum}); gratis con Plus",
+        "priceNote": "tarifa de retención que paga el cliente (mínimo {minimum}); gratis con Pro",
         "one": "Cuando un ayudante pide el pago por adelantado",
         "two": "Pagas al reservar; retenemos el dinero hasta que digas que la tarea está hecha",
         "three": "Tu ayudante recibe el precio completo; si algo sale mal, el dinero espera mientras lo resolvemos",
@@ -43,40 +43,37 @@
     },
     "plans": {
       "title": "Premium, cuando quieras más",
-      "intro": "Todo lo anterior es gratis. Los planes agregan lo que piden los clientes y ayudantes más activos, como LinkedIn Premium: cancela cuando quieras.",
+      "intro": "Starter es gratis y tiene todo lo que necesitas para conseguir ayuda o encontrar trabajo. Plus y Pro agregan más, como LinkedIn Premium, y cada uno incluye todo lo del anterior. Cancela cuando quieras.",
       "perMonth": "al mes",
       "free": {
-        "name": "Gratis",
+        "name": "Starter",
         "for": "Para todos",
         "always": "Gratis, siempre",
         "cta": "Regístrate gratis",
         "benefits": {
           "fees": "Publica tareas y envía ofertas sin tarifas de servicio",
           "direct": "Paga directamente, o retén el pago por un {percent}%",
-          "community": "Vecinos, mensajes, reseñas y perfiles verificados",
-          "ai": "{searches} búsquedas con IA al mes"
+          "community": "Vecinos, mensajes, reseñas y perfiles verificados"
         }
       },
       "plus": {
         "name": "Plus",
-        "for": "Para clientes",
+        "for": "Para quienes lo usan a menudo",
         "cta": "Obtener Plus",
         "benefits": {
-          "everything": "Todo lo de Gratis",
-          "hold": "Sin tarifa de retención: retenemos tus pagos por adelantado gratis",
-          "ai": "{searches} búsquedas con IA al mes: describe lo que necesitas y encuentra ayudantes"
+          "everything": "Todo lo de Starter, y más"
         }
       },
       "pro": {
         "name": "Pro",
-        "for": "Para ayudantes",
+        "for": "Para ayudantes y clientes muy activos",
         "cta": "Obtener Pro",
         "benefits": {
-          "everything": "Todo lo de Gratis",
+          "everything": "Todo lo de Plus",
+          "hold": "Sin tarifa de retención: retenemos tus pagos por adelantado gratis",
           "first": "Tus ofertas aparecen primero a los clientes",
           "badge": "Una insignia Pro en tus ofertas",
-          "insights": "Datos de las ofertas en cada tarea: cuántas hay y su rango de precios",
-          "ai": "{searches} búsquedas con IA al mes: describe el trabajo que buscas y encuentra tareas"
+          "insights": "Datos de las ofertas en cada tarea: cuántas hay y su rango de precios"
         }
       }
     },
@@ -89,19 +86,28 @@
       "waived": "Gratis",
       "holdFee": "{percent}%",
       "plan": {
-        "free": "Gratis",
+        "free": "Starter",
         "plus": "Plus",
         "pro": "Pro"
       },
       "rows": {
-        "serviceFees": "Comisiones de servicio",
+        "serviceFees": "Tarifas de servicio",
         "direct": "Pagar directamente a tu ayudante",
         "holdFee": "Tarifa de retención en pagos por adelantado (la paga el cliente)",
+        "ai": "Búsqueda con IA",
+        "chats": "Conversaciones directas nuevas al día",
+        "firstMessages": "Mensajes antes de que te respondan",
+        "savedSearches": "Búsquedas guardadas",
+        "alerts": "Avisos al momento al día",
         "offersFirst": "Ofertas mostradas primero",
         "badge": "Insignia Pro",
-        "insights": "Datos de las ofertas",
-        "ai": "Búsquedas con IA al mes"
-      }
+        "insights": "Datos de las ofertas"
+      },
+      "ai": "{day} al día, {month} al mes",
+      "aiDay": "{day} al día",
+      "aiMonth": "{month} al mes",
+      "aiUnlimited": "Ilimitada",
+      "chatsSparks": "{count} (hasta {max} con Chispas)"
     },
     "cancellation": {
       "title": "Cancelar una reserva con pago retenido",
@@ -114,6 +120,10 @@
         "q": "¿Por qué no hay tarifas de servicio?",
         "a": "TasksNearMe gana dinero con los planes opcionales. Reservar ayuda, y que te reserven, sigue siendo gratis; solo retener dinero por ti cuesta un poco."
       },
+      "which": {
+        "q": "¿Qué plan me conviene?",
+        "a": "Starter tiene todo lo que la mayoría necesita. Plus es para quienes buscan, escriben y guardan búsquedas a menudo. Pro es para ayudantes que quieren destacar y para clientes que pagan por adelantado seguido: sin tarifa de retención y con búsqueda con IA ilimitada."
+      },
       "safe": {
         "q": "¿Es seguro pagar directamente?",
         "a": "Reserva a través de TasksNearMe para que el precio acordado, la conversación y las reseñas queden registrados. Si prefieres que el dinero espere hasta que el trabajo esté hecho, elige una oferta con pago por adelantado o pídele a tu ayudante que te envíe una."
@@ -124,17 +134,39 @@
       },
       "fee": {
         "q": "¿Qué cubre la tarifa de retención?",
-        "a": "Cobrar con tarjeta, retener el dinero de forma segura e intervenir si algo sale mal. Es el {percent}% del precio, la paga el cliente y es gratis con Plus."
+        "a": "Cobrar con tarjeta, retener el dinero de forma segura e intervenir si algo sale mal. Es el {percent}% del precio, la paga el cliente y es gratis con Pro."
+      },
+      "aiSearch": {
+        "q": "¿Qué cuenta como una búsqueda con IA?",
+        "a": "Cada vez que describes lo que necesitas y pulsas Preguntar a la IA. Starter tiene {day} al día, hasta {month} al mes; Plus tiene más y Pro no tiene límite. La búsqueda normal siempre es gratis e ilimitada."
       },
       "cancelPlan": {
         "q": "¿Puedo cancelar un plan?",
-        "a": "Cuando quieras, desde Planes en tu cuenta. Sigue funcionando hasta el final del período que pagaste."
+        "a": "Cuando quieras, desde Planes en tu cuenta. Sigue funcionando hasta el final del período que pagaste. ¿Pasas de Plus a Pro? Plus deja de renovarse, así que nunca pagas los dos."
       }
     },
     "closing": {
       "title": "Haz las cosas, sin tarifas",
       "body": "Publica una tarea en un minuto y elige un ayudante entre las ofertas.",
       "action": "Publicar una tarea"
+    },
+    "allowances": {
+      "ai": "Búsqueda con IA: {day} al día, hasta {month} al mes",
+      "aiDay": "Búsqueda con IA: {day} al día",
+      "aiMonth": "Búsqueda con IA: {month} al mes",
+      "aiUnlimited": "Búsqueda con IA ilimitada",
+      "chats": "Inicia {count, plural, one {# conversación directa nueva} other {# conversaciones directas nuevas}} al día",
+      "chatsSparks": "Inicia {count, plural, one {# conversación directa nueva} other {# conversaciones directas nuevas}} al día, hasta {max} a medida que ganas Chispas",
+      "searches": "{searches} búsquedas guardadas, con {alerts} avisos al momento al día"
+    },
+    "messages": {
+      "title": "Mensajes directos",
+      "daily": "Escríbele a cualquier persona en TasksNearMe sin una tarea, como un vecino o un ayudante que encontraste. Puedes iniciar {count, plural, one {# conversación nueva} other {# conversaciones nuevas}} al día con Starter (hasta {max} a medida que ganas Chispas), {plus} con Plus y {pro} con Pro.",
+      "dailyStarter": "Escríbele a cualquier persona en TasksNearMe sin una tarea, como un vecino o un ayudante que encontraste. Puedes iniciar {count, plural, one {# conversación nueva} other {# conversaciones nuevas}} al día, hasta {max} a medida que ganas Chispas.",
+      "first": "Hasta que la otra persona responda, puedes enviar hasta {first} mensajes. Cuando responda, sigue la conversación.",
+      "replies": "Solo cuentan las conversaciones nuevas: las respuestas, y las conversaciones sobre una tarea, una oferta o una reserva, nunca cuentan.",
+      "choose": "Cada persona elige quién puede escribirle: cualquiera, solo quienes han hablado con ella sobre una tarea, o nadie. Bloquear a alguien detiene sus mensajes de inmediato.",
+      "private": "Los teléfonos y correos se mantienen ocultos hasta que reserven juntos."
     }
   },
   "becomeHelper": {

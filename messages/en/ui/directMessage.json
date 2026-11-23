@@ -41,6 +41,10 @@
     "allowance": "You can start {left, plural, one {# more conversation} other {# more conversations}} today ({perDay} a day at your level, {level}).",
     "resetsAt": "The next one frees up at {time} ({zone}).",
     "moreWithSparks": "Earn Sparks to start more each day.",
-    "sparksLink": "How Sparks work"
-  }
+    "sparksLink": "How Sparks work",
+    "moreWithPlans": "Plus and Pro start more a day.",
+    "plansLink": "See plans",
+    "allowancePlan": "You can start {left, plural, one {# more conversation} other {# more conversations}} today ({perDay} a day with {plan, select, pro {Pro} other {Plus}})."
+  },
+  "moreWithPlans": "Start more a day with Plus or Pro"
 }

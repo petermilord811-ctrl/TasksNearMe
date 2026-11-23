@@ -2,7 +2,7 @@
 
 > Provider facts were checked against Stripe's official docs and pricing pages on 2026-11-10 (sources in [README.md](README.md#verification-log)). Anything marked **F#** still needs confirmation on our own account, or from counsel or a tax advisor.
 
-> **Changed 2026-11-23 (owner: "Totally remove service fee feature … Just receive fee when helper needs upfront from taskers and tasksnearme holds money … send money to helper after tasker says task done").** There are no service fees. Each offer says how the helper is paid: **directly** (the default: the client pays the helper after the task, outside TasksNearMe, with no fees) or **upfront, held by TasksNearMe** (the flow below: charged at booking, held, sent to the helper when the client says the task is done). The only fee is the client's **hold fee** on a held payment, `max(5% × P, $1.00)`, waived for Plus members; helpers pay nothing. Revenue is the hold fee and the plans (Plus and Pro, LinkedIn-Premium-style; [decisions.md](../automation/decisions.md), 2026-11-23). Bookings made under an older policy keep its fees (10% each side, the client's at least $3) and its plan rebates. Everything below about charging, holding, transfers and refunds applies to **held** bookings only.
+> **Changed 2026-11-23 (owner: "Totally remove service fee feature … Just receive fee when helper needs upfront from taskers and tasksnearme holds money … send money to helper after tasker says task done").** There are no service fees. Each offer says how the helper is paid: **directly** (the default: the client pays the helper after the task, outside TasksNearMe, with no fees) or **upfront, held by TasksNearMe** (the flow below: charged at booking, held, sent to the helper when the client says the task is done). The only fee is the client's **hold fee** on a held payment, `max(5% × P, $1.00)`, waived for Pro members (owner, the same day: "Pro only no fee"; Plus waived it for a few hours before); helpers pay nothing. Revenue is the hold fee and the plans (Starter free, Plus and Pro, LinkedIn-Premium-style and a ladder: §8 and [decisions.md](../automation/decisions.md), 2026-11-23). Bookings made under an older policy keep its fees (10% each side, the client's at least $3) and its plan rebates. Everything below about charging, holding, transfers and refunds applies to **held** bookings only.
 
 ## 1. Provider and model (D4)
 
@@ -50,7 +50,7 @@ Configurable per market policy version. Migration 0078 published these defaults 
 |---|---|
 | How it's paid | The helper chooses on each offer: `direct` (the default) or `held`. Requests to a helper, Book again proposals and regular visits are held (they're built on a card hold or a charge) |
 | Task price **P** | Fixed agreed price, or approved hours × rate (≤ funded cap) |
-| Hold fee (client) | `max(5% × P, $1.00)` on a held booking; **0** paid directly; **0** for a Plus member |
+| Hold fee (client) | `max(5% × P, $1.00)` on a held booking; **0** paid directly; **0** for a Pro member |
 | Helper fee | **0** (10% × P before 2026-11-23, deducted from earnings) |
 | Client total at booking | Held: `P (or rate × cap) + hold fee + expense allowance`. Direct: nothing is charged |
 | Helper earnings | **P**, the whole price |
@@ -66,7 +66,7 @@ Configurable per market policy version. Migration 0078 published these defaults 
 | $45 bookshelf rebook | $47.25 | $45.00 | $2.25 |
 | Moving help, $35/h, 4 h cap, 3.5 h worked | Funded $140 + $7.00 = $147.00; final $122.50 + $6.13 = $128.63; **refund $18.37** | **$122.50** | $6.13 |
 | $60 desk + $20 expense allowance, $8 receipt | Charged $83.00; refund $12.00; **net $71.00** | $60.00 earnings + **$8.00 reimbursement** | $3.00 |
-| $60 desk held for a Plus member | **$60.00** | $60.00 | — |
+| $60 desk held for a Pro member | **$60.00** | $60.00 | — |
 
 Both people see these lines before confirming (02 J4). Each accepted change produces a new `booking_terms` version with recalculated lines (a direct booking's change moves no money).
 
@@ -143,7 +143,7 @@ Since 2026-11-23 a booking paid directly costs the platform only its notificatio
 
 | # | Assumption | Value | Status |
 |---|---|---|---|
-| 1 | Hold fee | 5% (minimum $1), held bookings only; waived with Plus; no helper fee | Owner's choice (2026-11-23) |
+| 1 | Hold fee | 5% (minimum $1), held bookings only; waived with Pro; no helper fee | Owner's choice (2026-11-23) |
 | 2 | Card processing | 2.9% + $0.30 per successful domestic card charge | Verified on Stripe US pricing. International cards and currency conversion cost more; ignored here |
 | 3 | Connect (platform handles pricing) | **$2 per monthly active account** (a month with ≥ 1 payout) + **0.25% + $0.25 per payout** | Verified. One ambiguous line on the pricing page is to confirm (**F3**) |
 | 4 | Refunds | Processing and Connect fees are not returned | Verified |
@@ -156,7 +156,7 @@ Since 2026-11-23 a booking paid directly costs the platform only its notificatio
 | 11 | Loss and dispute reserve | 0.5% of the charge | Estimate |
 | 12 | Sales tax | Not modelled (**F6**) | Open |
 | 13 | Payouts | One payout per booking. Conservative: the helper's only payout this month. Typical: 4 payouts this month | Estimate |
-| 14 | Plans | Plus $4.99 a month ($39.99 a year), Pro $7.99 ($59.99); card processing as in #2, plus Stripe Billing's usage fee (about 0.7%, to confirm) | Prices verified in the policy; Billing fee to confirm |
+| 14 | Plans | Plus $4.99 a month ($39.99 a year), Pro $7.99 ($59.99), a ladder with what each allows below; card processing as in #2, plus Stripe Billing's usage fee (about 0.7%, to confirm) | Prices verified in the policy; Billing fee to confirm |
 | — | Support labor and marketing | Excluded (fixed costs) | — |
 
 **A held $60 desk:**
@@ -172,6 +172,23 @@ Since 2026-11-23 a booking paid directly costs the platform only its notificatio
 | **Contribution** | **−$1.95** | **−$0.45** |
 
 **A month of a plan:** Plus nets about $4.51 ($4.99 − $0.44 card − $0.03 Billing), Pro about $7.40 ($7.99 − $0.53 − $0.06); yearly plans a little more per month.
+
+**The plans, a ladder (owner, 2026-11-23: "Make AI search for limit for starter: daily upto 3: monthly 50 / Pro is unlimited AI search. Plus monthly 150, daily upto 5 / Pro only no fee / Describe direct message limit").** Each has everything in the one before; anyone can hold either (clients and helpers alike):
+
+| | Starter (free) | Plus | Pro |
+|---|---|---|---|
+| Service fees | None | None | None |
+| Hold fee on held payments (client) | 5%, at least $1 | 5%, at least $1 | **None** |
+| AI search | 3 a day, up to 50 a month | 5 a day, up to 150 a month | Unlimited (6 a minute at most, for everyone) |
+| New direct conversations a day | 3, raised by Sparks levels to 10, 25, 40, 60 | 25 (or the level's, if more) | 100 |
+| Messages before the other person answers | 3 | 3 | 3 |
+| Saved searches · instant alerts a day | 10 · 10 | 25 · 25 | 50 · 50 |
+| Offers first, Pro badge, offer insights | — | — | Yes |
+
+AI search counts calendar days and months in the person's market zone (`ai_usage` keeps a row for each); the limits are in the market policy's `plans` (`DEFAULT_PLANS` where a version has none), the other allowances in the contracts. Upgrading from Plus to Pro stops Plus renewing (it ends with the period paid for), and Plus can't be bought beside a Pro that renews.
+
+- **A Pro client who pays upfront often costs more than they pay.** Without its hold fee, a held $60 booking costs about $3.34 typical (card $2.04, payout $0.40, account share $0.50, infrastructure $0.10, reserve $0.30), so a Pro member breaks even at about two held bookings a month ($7.40 net). Most people book far fewer; worth watching in the admin metrics.
+- **Unlimited AI search costs little today**: the AI runs on free tiers through a load balancer; the per-minute burst limit, not the plan, protects it.
 
 - **At 5% a held payment doesn't quite cover Stripe's costs** (−$0.45 typical, −$1.95 when it's the helper's only payout that month). The hold fee is a market policy setting (a new policy version in admin config): at 6% a typical held $60 booking breaks even, at 8% it makes about $1.30. That's the owner's call.
 - **Client credits (the welcome credit) come back only up to what a held booking earns**, its hold fee: $3.00 on the $60 desk, the rest kept for later bookings; none on a booking paid directly.

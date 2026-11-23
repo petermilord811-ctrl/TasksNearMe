@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, LockKeyhole, MessageCircle, Send, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Crown, LockKeyhole, MessageCircle, Send, Sparkles } from 'lucide-react';
 import { routes, startDirectChatInputSchema, type ActionResult, type NewDirectMessageHandlers, type NewDirectMessagePageData, type StartDirectChatInput } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
@@ -92,7 +92,11 @@ export function NewDirectMessageScreen({ data, handlers, initialResult, initialB
       ? <div role="status" className="space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
         <p className="flex items-start gap-2.5 font-medium"><LockKeyhole aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-muted-foreground" />{t(`refusals.${data.refusal}`, { name: firstName })}</p>
         {data.refusal === 'limit_reached' && data.allowance.resetsAt && <p className="text-sm tabular-nums text-muted-foreground">{t('resetsAt', { at: formatDateTime(data.allowance.resetsAt), zone: zoneName })}</p>}
-        {data.refusal === 'limit_reached' && <Link href={routes.app.sparks()} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline"><Sparkles aria-hidden="true" className="size-4" />{t('moreWithSparks')}</Link>}
+        {data.refusal === 'limit_reached' && <div className="flex flex-wrap gap-x-5">
+          <Link href={routes.app.sparks()} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline"><Sparkles aria-hidden="true" className="size-4" />{t('moreWithSparks')}</Link>
+          {/* Plus and Pro start more a day (the plans' ladder, 2026-11-23). */}
+          <Link href={routes.app.plan()} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline"><Crown aria-hidden="true" className="size-4" />{t('moreWithPlans')}</Link>
+        </div>}
       </div>
       : <form noValidate aria-label={t('formLabel', { name: firstName })} aria-busy={pending} onSubmit={(event) => { if (locked.current) { event.preventDefault(); return; } void form.handleSubmit(submit)(event); }} className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
         <Field data-invalid={bodyError ? true : undefined}>

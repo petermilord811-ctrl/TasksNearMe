@@ -129,7 +129,7 @@ export async function sparksSummaryOf(db: Db, userId: string): Promise<SparksSum
 /** New direct conversations the person may start in any 24 hours: their level's allowance, or their plan's. */
 export async function directChatAllowance(db: Db, userId: string, now: Date): Promise<number> {
   const [summary, plans] = await Promise.all([sparksSummaryOf(db, userId), activePlans(db, userId, now)]);
-  return directChatsPerDay(summary?.total ?? 0, plans.size > 0);
+  return directChatsPerDay(summary?.total ?? 0, plans.keys());
 }
 
 // ---- Buying ---------------------------------------------------------------------------------------------------
@@ -267,9 +267,10 @@ export async function sparksPageData(db: Db, provider: BillingProvider | null, u
     breakdown,
     ...(next ? { nextLevel: next } : {}),
     levels: SPARK_LEVELS.map((level) => ({ level, at: SPARK_LEVEL_THRESHOLDS[level], directChatsPerDay: DIRECT_CHATS_PER_DAY[level] })),
-    directChatsPerDay: directChatsPerDay(total, hasPlan),
+    directChatsPerDay: directChatsPerDay(total, plans.keys()),
     planDirectChatsPerDay: PLAN_DIRECT_CHATS_PER_DAY,
     hasPlan,
+    ...(hasPlan ? { yourPlanDirectChatsPerDay: Math.max(...[...plans.keys()].map((plan) => PLAN_DIRECT_CHATS_PER_DAY[plan])) } : {}),
     rules: SPARK_SOURCES.map((source) => ({ source, points: SPARK_RULES[source].points, ...(SPARK_RULES[source].dailyCap ? { dailyCap: SPARK_RULES[source].dailyCap } : {}) })),
     packs: SPARK_PACKS.map((pack) => ({ pack, ...SPARK_PACK_OFFERS[pack] })),
     purchases,

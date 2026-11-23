@@ -1,24 +1,18 @@
 {
   "title": "Plans",
-  "description": "Optional plans for people who use TasksNearMe often. Everything works without one.",
-  "free": {
-    "title": "Without a plan",
-    "body": "Posting, offers, booking, messages, safety, saved searches with alerts, and writing help are all free, and there are no service fees. You also get {count, plural, one {# AI search} other {# AI searches}} a month."
-  },
+  "description": "Starter is free for everyone. Plus and Pro add more, and each has everything in the one before. Cancel anytime.",
   "plans": {
     "plus": {
       "name": "Plus",
-      "for": "For clients",
-      "ai": "{count, plural, one {# AI search} other {# AI searches}} a month: describe what you need and get matching helpers and tasks",
-      "benefits": {
-        "hold": "No hold fee: when a helper asks to be paid upfront, we hold your payment for free"
-      }
+      "for": "For people who use it often",
+      "everything": "Everything in Starter, and more of it"
     },
     "pro": {
       "name": "Pro",
-      "for": "For helpers",
-      "ai": "{count, plural, one {# AI search} other {# AI searches}} a month: describe the work you want and get matching tasks",
+      "for": "For busy helpers and clients",
+      "everything": "Everything in Plus",
       "benefits": {
+        "hold": "No hold fee: when a helper asks to be paid upfront, we hold your payment for free",
         "first": "Your offers shown first to clients",
         "badge": "A Pro badge on your offers",
         "insights": "Offer insights on every task: how many offers it has and their price range"
@@ -46,13 +40,17 @@
   "manage": "Manage or cancel",
   "manageHint": "Cancel, change your card or see invoices on Stripe's secure page.",
   "aiSearch": {
+    "remainingToday": "{count, plural, one {# AI search} other {# AI searches}} left today.",
     "remaining": "{count, plural, one {# AI search} other {# AI searches}} left this month. They renew {date}.",
-    "used": "No AI searches left this month. They renew {date}.",
+    "usedToday": "You've used today's AI searches. More tomorrow.",
+    "used": "You've used this month's AI searches. They renew {date}.",
+    "unlimited": "Unlimited AI searches with your Pro.",
     "off": "AI search isn't available right now. The regular search always works."
   },
   "terms": {
     "title": "Plain terms",
     "cancel": "Cancel anytime. You keep the plan to the end of the period you paid for, and it doesn't renew.",
+    "switch": "Upgrading from Plus to Pro: Pro starts at once, and Plus stops renewing, so you never pay for both.",
     "noTrial": "No trial that turns into a charge, and no countdowns.",
     "price": "The price you subscribe at stays until you cancel. A new price applies to new subscriptions only.",
     "trust": "A plan never changes reviews, checks or the verified badge: everyone earns those the same way. Pro puts a helper's offers first and marks them Pro, and clients always see every offer."
@@ -62,10 +60,36 @@
     "checkout_canceled": "You left checkout. Nothing was charged."
   },
   "unavailable": "Plans aren't open yet. Everything on TasksNearMe works without one.",
-  "error": "That didn't work. If you already have this plan, refresh the page to see it.",
+  "error": "That didn't work. If you already have this plan, or Pro (which includes Plus), refresh the page to see it.",
   "billing": {
     "title": "Billing history",
     "body": "See your invoices and the card on file on Stripe's secure page.",
     "open": "Open billing"
-  }
+  },
+  "starter": {
+    "name": "Starter",
+    "for": "For everyone",
+    "price": "$0",
+    "always": "Free, always",
+    "benefits": {
+      "fees": "No service fees: post tasks, send offers, message and book for free",
+      "pay": "Pay your helper directly for free, or have us hold the payment for a small hold fee"
+    }
+  },
+  "allowances": {
+    "ai": "AI search: {day} a day, up to {month} a month",
+    "aiDay": "AI search: {day} a day",
+    "aiMonth": "AI search: {month} a month",
+    "aiUnlimited": "Unlimited AI search",
+    "chats": "Start {count, plural, one {# new direct conversation} other {# new direct conversations}} a day",
+    "chatsSparks": "Start {count, plural, one {# new direct conversation} other {# new direct conversations}} a day, up to {max} as you earn Sparks",
+    "searches": "{searches} saved searches, with {alerts} instant alerts a day"
+  },
+  "upgrade": {
+    "month": "Upgrade monthly",
+    "year": "Upgrade yearly",
+    "note": "When Pro starts, your Plus stops renewing and ends with the period you've paid for."
+  },
+  "included": "Included in Pro",
+  "includedNote": "Your Pro has everything in Plus."
 }

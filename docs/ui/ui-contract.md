@@ -37,7 +37,7 @@ Background-only fixtures: Ben (Crestview, open yard task), Ana (Hyde Park, open 
 
 ## 3. Canonical money values (from `docs/blueprint/04-payments-and-fees.md` §3, §6)
 
-Since 2026-11-23 there are no service fees. Each offer is paid **directly** (the default: nothing goes through TasksNearMe, no fees) or **held** by TasksNearMe; a held booking costs the client a hold fee = max(5% of price, $1.00), waived for Plus members, and the helper gets the whole price. No fees on expenses. Late-cancellation fee (held bookings) = max($10, 20% of price), capped at the price, paid entirely to the helper. The cases below are held unless they say otherwise; a booking made before 2026-11-23 keeps its 10% fees on each side (`legacyDeskBreakdown`: total 6600, earnings 5400).
+Since 2026-11-23 there are no service fees. Each offer is paid **directly** (the default: nothing goes through TasksNearMe, no fees) or **held** by TasksNearMe; a held booking costs the client a hold fee = max(5% of price, $1.00), waived for Pro members (2026-11-23: "Pro only no fee"), and the helper gets the whole price. No fees on expenses. Late-cancellation fee (held bookings) = max($10, 20% of price), capped at the price, paid entirely to the helper. The cases below are held unless they say otherwise; a booking made before 2026-11-23 keeps its 10% fees on each side (`legacyDeskBreakdown`: total 6600, earnings 5400).
 
 | Case | Values |
 |---|---|

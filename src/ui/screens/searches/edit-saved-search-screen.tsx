@@ -155,7 +155,7 @@ function EditSavedSearchForm({ data, handlers, initialResult }: EditSavedSearchP
               <input type="radio" name="alert" value={option} checked={alert === option} onChange={() => setAlert(option)} className="accent-[var(--primary)]" />{t(`alerts.${option}`)}
             </label>)}
           </div>
-          <p className={hintClass}>{t('alerts.hint')}</p>
+          <p className={hintClass}>{t('alerts.hint', { count: data.instantAlertsPerDay })}</p>
         </fieldset>
       </div>
 

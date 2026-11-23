@@ -43,7 +43,7 @@
     "pillar": "Pilar",
     "local_legend": "Leyenda local"
   },
-  "planNote": "Plus y Pro permiten al menos {count} conversaciones nuevas al día, sea cual sea tu nivel.",
+  "planNote": "Plus permite al menos {plus} conversaciones nuevas al día y Pro {pro}, sea cual sea tu nivel.",
   "planLink": "Ver los planes",
   "buy": {
     "heading": "Consigue más Chispas",

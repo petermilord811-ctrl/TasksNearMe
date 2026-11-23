@@ -14,7 +14,7 @@
     "instant": "Right away",
     "daily": "Morning digest",
     "off": "Off",
-    "hint": "Right away: up to 10 alerts a day across your searches, and the rest in the next morning's digest. Morning digest: one note at 8 am when there's something new."
+    "hint": "Right away: up to {count} alerts a day across your searches, and the rest in the next morning's digest. Morning digest: one note at 8 am when there's something new."
   },
   "delete": "Delete",
   "deleteLabel": "Delete {name}",

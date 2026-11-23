@@ -1,5 +1,5 @@
-import type { BecomeHelperPageData, FeeExample, PricingPageData } from '@/contracts';
-import { planOffers } from '@/modules/billing/domain';
+import { DIRECT_FIRST_MESSAGES_MAX, type BecomeHelperPageData, type FeeExample, type PricingPageData } from '@/contracts';
+import { planOffers, starterPlan } from '@/modules/billing/domain';
 import { DEFAULT_PLANS } from '@/modules/markets/policy-defaults';
 import type { CancellationPolicy, FeeSchedule, PlanPolicy, PolicyTimers } from '@/modules/markets/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
@@ -47,8 +47,9 @@ export function buildPricingPageData({ fees, cancellation, timers, plans }: Publ
       lateFeeMinimumCents: cancellation.lateFeeMinCents,
     },
     timers: { autoApproveHours: timers.autoApproveHours },
-    freeAiSearches: policyPlans.free.aiSearchesPerMonth,
-    ...(options.plansOpen ? { plans: planOffers(policyPlans, 'plus') } : {}),
+    starter: starterPlan(policyPlans),
+    directFirstMessages: DIRECT_FIRST_MESSAGES_MAX,
+    ...(options.plansOpen ? { plans: planOffers(policyPlans) } : {}),
   };
 }
 

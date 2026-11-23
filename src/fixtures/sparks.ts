@@ -46,11 +46,12 @@ export const sparksActiveData: SparksPageData = {
   notice: 'purchased',
 };
 
-/** With a plan (at least 40 a day) and a checkout still confirming. */
+/** With Pro (at least 100 a day; Plus gives 25) and a checkout still confirming. */
 export const sparksPlanPendingData: SparksPageData = {
   ...sparksActiveData,
-  directChatsPerDay: PLAN_DIRECT_CHATS_PER_DAY,
+  directChatsPerDay: PLAN_DIRECT_CHATS_PER_DAY.pro,
   hasPlan: true,
+  yourPlanDirectChatsPerDay: PLAN_DIRECT_CHATS_PER_DAY.pro,
   purchases: [{ id: 'spk_jordan_2', pack: 'medium', points: 550, priceCents: 499, status: 'pending', createdAt: '2026-11-21T16:00:00.000Z' }, ...sparksActiveData.purchases],
   notice: 'purchase_pending',
 };
@@ -101,3 +102,6 @@ export const findPersonData: FindPersonPageData = { allowance: { left: 2, perDay
 export const findPersonNotFoundData: FindPersonPageData = { ...findPersonData, query: 'jordan_tx', notFound: true };
 /** The day's new conversations used up: when the next frees up. */
 export const findPersonLimitData: FindPersonPageData = { allowance: { left: 0, perDay: 3, resetsAt: '2026-11-22T14:30:00.000Z' }, level: 'newcomer' };
+
+/** With Pro, which sets the allowance (100 a day, more than any level's): no "Plus and Pro start more" line. */
+export const findPersonProData: FindPersonPageData = { allowance: { left: 97, perDay: PLAN_DIRECT_CHATS_PER_DAY.pro }, level: 'neighbor', allowanceFrom: 'pro' };

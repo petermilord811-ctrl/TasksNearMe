@@ -40,9 +40,10 @@ export function FindPersonScreen({ data }: { data: FindPersonPageData }) {
       <div className="flex items-start gap-3 rounded-2xl bg-brand-soft/50 px-4 py-3 text-sm">
         <Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />
         <div className="space-y-1">
-          <p className="font-medium">{t('allowance', { left: data.allowance.left, perDay: data.allowance.perDay, level: levels(data.level) })}</p>
+          <p className="font-medium">{data.allowanceFrom ? t('allowancePlan', { left: data.allowance.left, perDay: data.allowance.perDay, plan: data.allowanceFrom }) : t('allowance', { left: data.allowance.left, perDay: data.allowance.perDay, level: levels(data.level) })}</p>
           {data.allowance.resetsAt && <p className="text-muted-foreground">{t('resetsAt', { time: formatDateTime(data.allowance.resetsAt), zone: zoneName })}</p>}
           <p className="text-muted-foreground">{t('moreWithSparks')} <Link href={routes.app.sparks()} className="font-semibold text-primary underline-offset-4 hover:underline">{t('sparksLink')}</Link></p>
+          {data.allowanceFrom !== 'pro' && <p className="text-muted-foreground">{t('moreWithPlans')} <Link href={routes.app.plan()} className="font-semibold text-primary underline-offset-4 hover:underline">{t('plansLink')}</Link></p>}
         </div>
       </div>
     </section>

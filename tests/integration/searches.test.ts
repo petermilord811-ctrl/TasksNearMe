@@ -1,6 +1,9 @@
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { INSTANT_ALERTS_PER_DAY, SAVED_SEARCH_MAX, routes } from '@/contracts';
+import { INSTANT_ALERT_LIMITS, SAVED_SEARCH_LIMITS, routes } from '@/contracts';
+import { createDevBilling } from '@/integrations/billing';
+import { billingCustomers, subscriptions } from '@/modules/billing/schema';
+import { startCheckout } from '@/modules/billing/service';
 import { blocks } from '@/modules/messaging/schema';
 import { notifications } from '@/modules/notifications/schema';
 import { savedSearches } from '@/modules/searches/schema';
@@ -40,6 +43,12 @@ beforeAll(async () => {
   await db.insert(tasks).values({ ...desk, id: taskId, slug: `ss-${taskId}`, posterUserId: 'usr_chris', status: 'open', offerCount: 0, publishedAt: now, createdAt: now, updatedAt: now, version: 1 });
 });
 
+/** Ana back on Starter: the plan a test gave her goes, with its billing customer. */
+async function withoutPlan() {
+  await db.delete(subscriptions).where(eq(subscriptions.userId, ana));
+  await db.delete(billingCustomers).where(eq(billingCustomers.userId, ana));
+}
+
 describe('saved searches', () => {
   it('reads board addresses: English or Spanish, a category hub, and nothing that isn’t a board', () => {
     expect(parseBoardAddress('/austin/tasks/furniture-assembly?area=mueller&sort=newest&page=2')).toMatchObject({ marketSlug: 'austin', params: { area: 'mueller', category: 'furniture-assembly' } });
@@ -56,8 +65,18 @@ describe('saved searches', () => {
     expect(saved).toMatchObject({ alert: 'instant', filters: { category: 'furniture-assembly', areaNames: ['Mueller'] } });
     expect(saved!.openCount).toBeGreaterThan(0);
     expect(saved!.href).toContain('area=mueller');
-    for (let i = page.searches.length; i < SAVED_SEARCH_MAX; i += 1) await createSavedSearch(db, ana, { from: '/austin/tasks', name: `All ${i}`, alert: 'off' }, now);
+    expect(page).toMatchObject({ max: SAVED_SEARCH_LIMITS.free, instantAlertsPerDay: INSTANT_ALERT_LIMITS.free });
+    for (let i = page.searches.length; i < SAVED_SEARCH_LIMITS.free; i += 1) await createSavedSearch(db, ana, { from: '/austin/tasks', name: `All ${i}`, alert: 'off' }, now);
     expect(await createSavedSearch(db, ana, { from: '/austin/tasks', name: 'One too many', alert: 'off' }, now)).toMatchObject({ ok: false, code: 'limit_reached' });
+    // Plus keeps 25 (Pro 50), with more instant alerts a day (the plans' ladder, 2026-11-23).
+    await startCheckout(db, createDevBilling(), ana, { plan: 'plus', interval: 'month' }, now);
+    try {
+      expect(await getSavedSearchesPage(db, ana, now)).toMatchObject({ max: SAVED_SEARCH_LIMITS.plus, instantAlertsPerDay: INSTANT_ALERT_LIMITS.plus });
+      expect(await createSavedSearch(db, ana, { from: '/austin/tasks', name: 'With Plus', alert: 'off' }, now)).toMatchObject({ ok: true, code: 'saved' });
+    } finally {
+      await withoutPlan();
+      await db.delete(savedSearches).where(and(eq(savedSearches.userId, ana), eq(savedSearches.name, 'With Plus')));
+    }
   });
 
   it('alerts at once for a new task that fits, never its poster or across a block, and caps the day', async () => {
@@ -76,13 +95,16 @@ describe('saved searches', () => {
     } finally {
       await db.update(tasks).set({ hiddenAt: null }).where(eq(tasks.id, taskId));
     }
-    // Ten alerts already today: the eleventh waits.
+    // Ten alerts already today: the eleventh waits on Starter; Plus gets 25 a day.
     const today = new Date(marketLocalToUtc(marketDayKey(now, 'America/Chicago'), '00:10', 'America/Chicago'));
-    await db.insert(notifications).values(Array.from({ length: INSTANT_ALERTS_PER_DAY }, () => ({ id: newId('ntf'), userId: ana, type: 'saved_search_match', target: { kind: 'saved_search' as const, searchId: 'x' }, sourceEventId: newId('evt'), createdAt: today > now ? now : today })));
+    await db.insert(notifications).values(Array.from({ length: INSTANT_ALERT_LIMITS.free }, () => ({ id: newId('ntf'), userId: ana, type: 'saved_search_match', target: { kind: 'saved_search' as const, searchId: 'x' }, sourceEventId: newId('evt'), createdAt: today > now ? now : today })));
     try {
       expect((await instantSearchMatches(db, taskId, now)).some((match) => match.userId === ana)).toBe(false);
+      await startCheckout(db, createDevBilling(), ana, { plan: 'plus', interval: 'month' }, now);
+      expect((await instantSearchMatches(db, taskId, now)).some((match) => match.userId === ana)).toBe(true);
     } finally {
       await db.delete(notifications).where(and(eq(notifications.userId, ana), eq(notifications.type, 'saved_search_match')));
+      await withoutPlan();
     }
   });
 

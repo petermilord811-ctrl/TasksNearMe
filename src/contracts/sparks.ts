@@ -1,4 +1,5 @@
 import type { ActionHandler } from './actions';
+import type { PlanCode } from './billing';
 import type { Cents, ISODateTime } from './common';
 
 /**
@@ -22,8 +23,11 @@ export const SPARK_LEVEL_THRESHOLDS: Record<SparkLevel, number> = { newcomer: 0,
 /** New direct conversations a person can start in any 24 hours, by level. */
 export const DIRECT_CHATS_PER_DAY: Record<SparkLevel, number> = { newcomer: 3, neighbor: 10, good_neighbor: 25, pillar: 40, local_legend: 60 };
 
-/** With Plus or Pro, at least this many (a plan never lowers a level's allowance). */
-export const PLAN_DIRECT_CHATS_PER_DAY = 40;
+/**
+ * With a plan, at least this many (a plan never lowers a level's allowance): Plus 25, Pro 100 (the plans' ladder,
+ * owner 2026-11-23: "Describe direct message limit").
+ */
+export const PLAN_DIRECT_CHATS_PER_DAY: Record<PlanCode, number> = { plus: 25, pro: 100 };
 
 /** Where earned Sparks come from. */
 export const SPARK_SOURCES = ['posts', 'replies', 'helpful', 'thanks', 'bookings', 'reviews'] as const;
@@ -85,9 +89,11 @@ export interface SparksPageData {
   levels: { level: SparkLevel; at: number; directChatsPerDay: number }[];
   /** The viewer's allowance now (their level, or their plan's when that's more). */
   directChatsPerDay: number;
-  /** Plus or Pro allow at least this many. */
-  planDirectChatsPerDay: number;
+  /** Plus and Pro allow at least this many each (`PLAN_DIRECT_CHATS_PER_DAY`). */
+  planDirectChatsPerDay: Record<PlanCode, number>;
   hasPlan: boolean;
+  /** With a plan: the least it allows a day (the viewer's highest plan's, `PLAN_DIRECT_CHATS_PER_DAY`). */
+  yourPlanDirectChatsPerDay?: number;
   /** What earns Sparks (`SPARK_RULES`), in `SPARK_SOURCES` order. */
   rules: { source: SparkSource; points: number; dailyCap?: number }[];
   packs: { pack: SparkPack; points: number; priceCents: Cents }[];

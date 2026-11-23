@@ -41,6 +41,10 @@
     "allowance": "Puedes empezar {left, plural, one {# conversación más} other {# conversaciones más}} hoy ({perDay} al día en tu nivel, {level}).",
     "resetsAt": "La siguiente se libera a las {time} ({zone}).",
     "moreWithSparks": "Gana Chispas para empezar más cada día.",
-    "sparksLink": "Cómo funcionan las Chispas"
-  }
+    "sparksLink": "Cómo funcionan las Chispas",
+    "moreWithPlans": "Plus y Pro permiten iniciar más al día.",
+    "plansLink": "Ver planes",
+    "allowancePlan": "Puedes empezar {left, plural, one {# conversación más} other {# conversaciones más}} hoy ({perDay} al día con {plan, select, pro {Pro} other {Plus}})."
+  },
+  "moreWithPlans": "Inicia más al día con Plus o Pro"
 }

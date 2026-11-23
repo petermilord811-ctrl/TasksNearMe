@@ -1,0 +1,30 @@
+---
+title: Escribirle a alguien directamente
+summary: Inicia una conversación con cualquier persona que acepte mensajes, sin una tarea. Cuántas puedes iniciar al día depende de tus Chispas y de tu plan.
+topic: getting-started
+order: 3
+updated: 2026-11-23
+---
+Puedes escribirle a un vecino o a un ayudante sin publicar una tarea. Elige **Escribirle** en el perfil de un ayudante o en la tarjeta de alguien en Vecinos, o empieza un mensaje nuevo desde **Mensajes** y búscalo por su @usuario.
+
+## Cuántas puedes iniciar
+
+El límite es de **conversaciones nuevas**, contadas en cualquier periodo de 24 horas:
+
+- **Starter** (sin plan): 3 al día. Las Chispas lo suben a medida que llegas a cada nivel: 10, 25, 40 y luego 60 al día.
+- **Plus**: 25 al día, o las de tu nivel si son más.
+- **Pro**: 100 al día.
+
+Las respuestas, las conversaciones que inició otra persona y las conversaciones sobre una tarea, una oferta o una reserva nunca cuentan. Cada conversación que inicias se libera de nuevo 24 horas después. Consulta los [precios](/pricing) para ver los planes.
+
+## Hasta que te respondan
+
+Puedes enviar hasta 3 mensajes antes de que la otra persona responda. Cuando responda, sigue la conversación.
+
+## Quién puede escribirte
+
+En tu cuenta, en **Mensajes directos**, elige quién puede iniciar una conversación contigo: todos, solo las personas con quienes hablaste de una tarea, o nadie. Bloquear a alguien detiene sus mensajes de inmediato, y puedes reportar un mensaje que no cumpla las [normas de la comunidad](/legal/community-guidelines).
+
+## Qué se mantiene privado
+
+Los teléfonos, correos y enlaces en los mensajes se mantienen ocultos hasta que reserven juntos. Mantén la conversación en TasksNearMe para que quede un registro si alguna vez necesitas ayuda. Más en [cómo mantenerte seguro](/help/staying-safe).

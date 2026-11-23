@@ -1,6 +1,6 @@
 import { routes, type AppShellHandlers, type FindPersonPageData, type NewDirectMessageHandlers, type NewDirectMessagePageData, type PreviewEntry, type SparksHandlers, type SparksPageData } from '@/contracts';
 import {
-  fakeHandler, findPersonData, findPersonLimitData, findPersonNotFoundData, jordanShell, mayaShell, newDirectMessageClientData, newDirectMessageContactsOnlyData, newDirectMessageData, newDirectMessageLimitData,
+  fakeHandler, findPersonData, findPersonLimitData, findPersonNotFoundData, findPersonProData, jordanShell, mayaShell, newDirectMessageClientData, newDirectMessageContactsOnlyData, newDirectMessageData, newDirectMessageLimitData,
   sparksActiveData, sparksNewData, sparksPlanPendingData, sparksTopData, sparksUnavailableData,
 } from '@/fixtures';
 import { FindPersonScreen } from '@/ui/screens/messages/find-person-screen';
@@ -56,5 +56,6 @@ export const sparksPreviews: PreviewEntry[] = [
   findPreview('find', 'New message: find someone by @username', findPersonData),
   findPreview('find-not-found', 'New message: no one has that username', findPersonNotFoundData),
   findPreview('find-limit', 'New message: the day’s conversations used up, by @username', findPersonLimitData),
+  findPreview('find-pro', 'New message: Pro sets the allowance (100 a day)', findPersonProData),
   directPreview('result-limit', 'New message: the last one taken meanwhile', newDirectMessageData, { body: 'Hi Jordan! Do you assemble standing desks too?', result: { ok: false, code: 'limit_reached', retryAt: '2026-11-22T14:30:00.000Z' } }),
 ];

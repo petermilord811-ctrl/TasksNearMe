@@ -7,6 +7,7 @@ import { routes } from '@/contracts/routes';
 import { createSavedSearchAction } from '@/modules/searches/actions';
 import { getNewSavedSearchPage } from '@/modules/searches/service';
 import { getViewer } from '@/platform/auth/viewer';
+import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { NewSavedSearchScreen } from '@/ui/screens/searches/new-saved-search-screen';
@@ -30,7 +31,7 @@ async function NewSavedSearch({ searchParams }: Pick<PageProps<'/[locale]/app/sa
   const from = (Array.isArray(search.from) ? search.from[0] : search.from) ?? '';
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.newSavedSearch(from)));
-  const data = from ? await getNewSavedSearchPage(db, viewer.user.id, from) : null;
+  const data = from ? await getNewSavedSearchPage(db, viewer.user.id, from, await requestNow()) : null;
   if (!data) notFound();
   return <NewSavedSearchScreen data={data} handlers={{ onSave: createSavedSearchAction }} />;
 }

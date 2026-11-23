@@ -15,7 +15,8 @@ import { dashboardBase } from './links';
  * The dashboard's search (completion plan 9.9). Search finds the words in the person's own tasks, offers and bookings
  * and in open tasks nearby, through the URL (`q`), so it works without AI and without JavaScript. Where the plan
  * allows AI search (`data.aiSearch`), Ask AI sends the same words to `onAiSearch` and shows what it found under the
- * field; with `needs_plan` or `monthly_limit` a line links to the plan, and with `ai_off` there's only Search.
+ * field, with what's left today or this month (whichever is fewer; nothing for Pro's unlimited); with `needs_plan`,
+ * `daily_limit` or `monthly_limit` a line links to the plan, and with `ai_off` there's only Search.
  */
 export function DashboardSearch({ data, onAiSearch, initialAnswer }: { data: DashboardData; onAiSearch?: DashboardHandlers['onAiSearch']; /** Previews: an answer already on screen. */ initialAnswer?: AiAnswerState }) {
   const t = useTranslations('home.search');
@@ -31,7 +32,9 @@ export function DashboardSearch({ data, onAiSearch, initialAnswer }: { data: Das
     setText(query.q ?? '');
   }
   const [answer, setAnswer] = useState<AiAnswerState | null>(initialAnswer ?? null);
-  const [remaining, setRemaining] = useState(aiSearch.remaining);
+  // What's left, as the last search left it: the count, which allowance it's about, and when that renews.
+  const [left, setLeft] = useState({ remaining: aiSearch.remaining, per: aiSearch.per, resetsAt: aiSearch.resetsAt });
+  const remaining = left.remaining;
   const asking = useRef(false);
   const pending = answer?.status === 'pending';
 
@@ -51,7 +54,7 @@ export function DashboardSearch({ data, onAiSearch, initialAnswer }: { data: Das
       result = { ok: false, code: 'unavailable' };
     }
     asking.current = false;
-    if (result.ok) setRemaining(result.remaining);
+    if (result.ok) setLeft({ remaining: result.remaining, per: result.per, resetsAt: result.resetsAt });
     setAnswer({ status: 'done', text: words, result });
   }
 
@@ -63,7 +66,7 @@ export function DashboardSearch({ data, onAiSearch, initialAnswer }: { data: Das
     ...(query.date !== 'any' ? [['date', query.date] as [string, string]] : []),
     ...(query.category ? [['category', query.category] as [string, string]] : []),
   ];
-  const blocked = !aiSearch.allowed && (aiSearch.reason === 'needs_plan' || aiSearch.reason === 'monthly_limit') ? aiSearch.reason : null;
+  const blocked = !aiSearch.allowed && (aiSearch.reason === 'needs_plan' || aiSearch.reason === 'daily_limit' || aiSearch.reason === 'monthly_limit') ? aiSearch.reason : null;
 
   return <div className="space-y-3">
     {/* A plain GET form, so Search works before the page's scripts load; after that it stays on the page. */}
@@ -105,10 +108,10 @@ export function DashboardSearch({ data, onAiSearch, initialAnswer }: { data: Das
       {query.q && <Link href={routes.app.home({ tab: query.tab, view: query.view, status: query.status, date: query.date, ...(query.category ? { category: query.category } : {}) })} scroll={false} onClick={() => setText('')} className="inline-flex min-h-11 items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">
         <X aria-hidden="true" className="size-4" />{t('clear')}
       </Link>}
-      {canAsk && remaining !== null && <span className="tabular-nums">{aiSearch.resetsAt ? t('remainingRenews', { count: remaining, date: formatDate(aiSearch.resetsAt) }) : t('remaining', { count: remaining })}</span>}
+      {canAsk && remaining !== null && <span className="tabular-nums">{left.per === 'day' ? t('remainingToday', { count: remaining }) : left.resetsAt ? t('remainingRenews', { count: remaining, date: formatDate(left.resetsAt) }) : t('remaining', { count: remaining })}</span>}
       {blocked && <span className="inline-flex flex-wrap items-center gap-x-1.5">
         <Sparkles aria-hidden="true" className="size-4 shrink-0 text-primary" />
-        {blocked === 'needs_plan' ? t('needsPlan') : aiSearch.resetsAt ? t('monthlyLimitRenews', { date: formatDate(aiSearch.resetsAt) }) : t('monthlyLimit')}
+        {blocked === 'needs_plan' ? t('needsPlan') : blocked === 'daily_limit' ? t('dailyLimit') : aiSearch.resetsAt ? t('monthlyLimitRenews', { date: formatDate(aiSearch.resetsAt) }) : t('monthlyLimit')}
         <Link href={routes.app.plan()} className="inline-flex min-h-11 items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">{t('seePlans')}<ArrowRight aria-hidden="true" className="size-4" /></Link>
       </span>}
     </div>}

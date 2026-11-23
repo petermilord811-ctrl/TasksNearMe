@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { QueryHandler } from './actions';
-import type { AiSearchAccess } from './billing';
+import type { AiSearchAccess, AiSearchPeriod } from './billing';
 import type { Cents, CategorySlug, ISODateTime, Mode, Photo } from './common';
 import type { CommunityPostKind } from './community';
 import type { FindWorkQuery, FindWorkWaiting, HelperSetupState } from './helper-work';
@@ -354,14 +354,15 @@ export interface AiSearchAnswer {
 
 /**
  * - `too_short`: fewer than 3 characters (or more than 300).
- * - `ai_off`, `needs_plan`, `monthly_limit`: as `AiSearchAccess` (billing.ts); `remaining` is what's left after this one.
+ * - `ai_off`, `needs_plan`, `daily_limit`, `monthly_limit`: as `AiSearchAccess` (billing.ts); `remaining`, `per` and
+ *   `resetsAt` are what's left after this one, as there.
  * - `prohibited`: the words describe something that can't be posted.
  * - `rate_limited`: too many searches in a short time.
  * - `unavailable`: AI didn't answer (try again, or use the keyword search).
  */
 export type AiSearchResult =
-  | { ok: true; answer: AiSearchAnswer; remaining: number | null }
-  | { ok: false; code: 'too_short' | 'ai_off' | 'needs_plan' | 'monthly_limit' | 'prohibited' | 'rate_limited' | 'unavailable' };
+  | { ok: true; answer: AiSearchAnswer; remaining: number | null; per?: AiSearchPeriod; resetsAt?: ISODateTime }
+  | { ok: false; code: 'too_short' | 'ai_off' | 'needs_plan' | 'daily_limit' | 'monthly_limit' | 'prohibited' | 'rate_limited' | 'unavailable' };
 
 /** The dashboard's handlers. `onAiSearch` runs only on an explicit click (Ask AI), never per keystroke. */
 export interface DashboardHandlers {

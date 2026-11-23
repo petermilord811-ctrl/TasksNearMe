@@ -16,6 +16,8 @@ import {
   jordanDashboardPayoutData,
   mayaDashboardBookingsCardsData,
   mayaDashboardCountedData,
+  mayaDashboardDailyLimitData,
+  mayaDashboardMonthEndData,
   mayaDashboardData,
   mayaDashboardFilteredData,
   mayaDashboardMonthlyLimitData,
@@ -365,7 +367,7 @@ describe('search', () => {
   it('asks AI on a click and shows what it found: a draft, helpers and similar tasks', async () => {
     const onAiSearch = vi.fn(async () => aiAnswerClientResult);
     renderDashboard(mayaDashboardCountedData, { handlers: { onAiSearch } });
-    expect(screen.getByText(/^4 AI searches left this month · renews Tue, Dec 1$/)).toBeVisible();
+    expect(screen.getByText(/^2 AI searches left today$/)).toBeVisible();
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'my new IKEA desk this weekend near Mueller' } });
     fireEvent.click(screen.getByRole('button', { name: /Ask AI/ }));
     expect(onAiSearch).toHaveBeenCalledWith({ text: 'my new IKEA desk this weekend near Mueller' });
@@ -378,7 +380,7 @@ describe('search', () => {
     expect(within(answer).getByRole('link', { name: 'Jordan T.' })).toHaveAttribute('href', routes.helperProfile('jordan-t'));
     expect(within(answer).getByRole('link', { name: 'See all helpers' })).toHaveAttribute('href', routes.app.helpers({ category: 'furniture-assembly', area: 'mueller' }));
     expect(within(answer).getByText(/AI suggestions can be wrong/)).toBeVisible();
-    await waitFor(() => expect(screen.getByText(/^11 AI searches left this month · renews/)).toBeVisible());
+    await waitFor(() => expect(screen.getByText(/^1 AI search left today$/)).toBeVisible());
     fireEvent.click(within(answer).getByRole('button', { name: 'Close the AI answer' }));
     expect(screen.queryByRole('region', { name: 'What AI found' })).not.toBeInTheDocument();
   });
@@ -399,6 +401,7 @@ describe('search', () => {
     [{ ok: false, code: 'rate_limited' }, /Wait a minute/],
     [{ ok: false, code: 'unavailable' }, /couldn’t answer/],
     [{ ok: false, code: 'needs_plan' }, /comes with a plan/],
+    [{ ok: false, code: 'daily_limit' }, /used today’s/],
     [{ ok: false, code: 'monthly_limit' }, /used this month’s/],
     [{ ok: false, code: 'ai_off' }, /isn’t available/],
   ] as [AiSearchResult, RegExp][])('explains %o', async (result, message) => {
@@ -430,5 +433,16 @@ describe('search', () => {
     cleanup();
     renderDashboard(mayaDashboardMonthlyLimitData, { handlers: { onAiSearch: async () => aiAnswerClientResult } });
     expect(screen.getByText(/They renew Mon, Nov 30|They renew/)).toBeVisible();
+    cleanup();
+    // Today's are used (Starter: 3 a day): more tomorrow, or a plan.
+    renderDashboard(mayaDashboardDailyLimitData, { handlers: { onAiSearch: async () => aiAnswerClientResult } });
+    expect(screen.queryByRole('button', { name: /Ask AI/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/You’ve used today’s AI searches\. More tomorrow\./)).toBeVisible();
+    expect(screen.getByRole('link', { name: 'See plans' })).toHaveAttribute('href', routes.app.plan());
+  });
+
+  it('counts this month’s AI searches near the month’s end, when they’re fewer than today’s', () => {
+    renderDashboard(mayaDashboardMonthEndData, { handlers: { onAiSearch: async () => aiAnswerClientResult } });
+    expect(screen.getByText(/^1 AI search left this month · renews Tue, Dec 1$/)).toBeVisible();
   });
 });

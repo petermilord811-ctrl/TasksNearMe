@@ -53,7 +53,9 @@
     "monthlyLimit": "You’ve used this month’s AI searches.",
     "monthlyLimitRenews": "You’ve used this month’s AI searches. They renew {date}.",
     "seePlans": "See plans",
-    "matches": "{count, plural, =0 {No matches for “{q}” in this list} one {# match for “{q}”} other {# matches for “{q}”}}"
+    "matches": "{count, plural, =0 {No matches for “{q}” in this list} one {# match for “{q}”} other {# matches for “{q}”}}",
+    "remainingToday": "{count, plural, one {# AI search left today} other {# AI searches left today}}",
+    "dailyLimit": "You’ve used today’s AI searches. More tomorrow."
   },
   "ai": {
     "title": "What AI found",
@@ -94,7 +96,8 @@
       "monthly_limit": "You’ve used this month’s AI searches.",
       "prohibited": "That’s something that can’t be booked on TasksNearMe.",
       "rate_limited": "That’s a lot of searches in a row. Wait a minute, then try again.",
-      "unavailable": "AI couldn’t answer just now. Try again, or use Search."
+      "unavailable": "AI couldn’t answer just now. Try again, or use Search.",
+      "daily_limit": "You’ve used today’s AI searches. More tomorrow, or get more with a plan."
     },
     "prohibitedLink": "See what can’t be booked"
   },
@@ -315,7 +318,8 @@
     "aiAnswerProhibited": "AI answer · can't be booked here",
     "dashboardLoading": "Dashboard · loading",
     "shellLoading": "Signed-in shell · loading",
-    "shellFlowLoading": "Signed-in shell, a step-by-step page · loading"
+    "shellFlowLoading": "Signed-in shell, a step-by-step page · loading",
+    "clientAiDailyLimit": "Client · AI searches used up today"
   },
   "neighbors": {
     "title": "From your neighbors",
