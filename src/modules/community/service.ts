@@ -898,7 +898,8 @@ export async function deleteOwnCommunityItem(db: Db, viewer: CommunityViewer, ta
     if (!post || post.status === 'removed') return { ok: false, code: 'not_found' };
     if (post.authorUserId !== viewer.id) return { ok: false, code: 'not_allowed' };
     await db.update(communityPosts).set({ status: 'removed', moderationReason: 'author', moderatedByUserId: viewer.id, moderatedAt: now, updatedAt: now }).where(eq(communityPosts.id, post.id));
-    return { ok: true, code: 'updated', redirectTo: routes.app.community() };
+    // Where to go is the page's call (2026-11-23): a feed card stays in its feed; the post's own page goes back to it.
+    return { ok: true, code: 'updated' };
   }
   const [reply] = await db.select().from(communityReplies).where(eq(communityReplies.id, String(id))).limit(1);
   if (!reply || reply.status === 'removed') return { ok: false, code: 'not_found' };

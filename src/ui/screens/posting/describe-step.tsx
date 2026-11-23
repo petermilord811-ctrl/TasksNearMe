@@ -174,9 +174,9 @@ export function DescribeStep({ data, handlers, initialSuggestion, autoDraft = fa
       {data.aiDraftingEnabled && <FieldDescription id={`${id}-ai-hint`}>{t('describe.aiHint')}</FieldDescription>}
       {descriptionError && <FieldError id={`${id}-description-error`}>
         {errors(`fieldErrors.${errors.has(`fieldErrors.${descriptionError.message}`) ? descriptionError.message : 'invalid'}`)}
-        {descriptionError.message === 'prohibited' && <a href={routes.legal('prohibited-tasks')} className="mt-2 flex min-h-11 items-center font-medium underline underline-offset-4">{t('describe.prohibitedLink')}</a>}
+        {descriptionError.message === 'prohibited' && <a href={routes.legal('prohibited-tasks')} target="_blank" rel="noopener" className="mt-2 flex min-h-11 items-center font-medium underline underline-offset-4">{t('describe.prohibitedLink')}</a>}
       </FieldError>}
-      {failure && <div role="alert" className="text-sm text-destructive"><p>{t(`describe.errors.${failure}`)}</p>{failure === 'prohibited' && <a href={routes.legal('prohibited-tasks')} className="flex min-h-11 items-center font-medium underline underline-offset-4">{t('describe.prohibitedLink')}</a>}</div>}
+      {failure && <div role="alert" className="text-sm text-destructive"><p>{t(`describe.errors.${failure}`)}</p>{failure === 'prohibited' && <a href={routes.legal('prohibited-tasks')} target="_blank" rel="noopener" className="flex min-h-11 items-center font-medium underline underline-offset-4">{t('describe.prohibitedLink')}</a>}</div>}
       {rewrite && <div className="motion-safe:animate-in fade-in-0 slide-in-from-top-1 space-y-2 rounded-2xl border border-primary/15 bg-primary/[0.04] p-3 sm:p-4 dark:border-primary/25 dark:bg-primary/[0.08]">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <p className="flex min-w-0 flex-1 items-start gap-2 text-sm font-medium"><Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />{t('describe.rewrittenNote')}</p>

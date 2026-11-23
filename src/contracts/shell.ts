@@ -80,7 +80,7 @@ export type StaffViewer = Extract<ShellViewer, { kind: 'staff' }>;
 export type LanguageSwitchHandler = ActionHandler<{ locale: AppLocale }>;
 
 export interface AppShellHandlers {
-  /** Switch between "I need help" and "I can help". May resolve with redirectTo (helper onboarding). */
+  /** Switch between "I need help" and "I can help". The page stays (since 2026-11-23 setup is a reminder, not a detour). */
   onModeChange: ActionHandler<{ mode: Mode }>;
   onSignOut: ActionHandler;
   onSwitchLanguage?: LanguageSwitchHandler;

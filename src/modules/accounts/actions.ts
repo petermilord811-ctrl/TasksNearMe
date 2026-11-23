@@ -37,9 +37,8 @@ export async function setMode(input: { mode: 'poster' | 'helper' }): Promise<Act
   await db.update(users).set({ mode: parsed.data.mode }).where(eq(users.id, viewer.user.id));
   revalidatePath('/app', 'layout');
 
-  if (parsed.data.mode === 'helper' && viewer.user.helperStatus !== 'active' && viewer.user.helperStatus !== 'paused') {
-    return { ok: true, code: 'updated', redirectTo: routes.app.helperOnboarding() };
-  }
+  // Before setup is done the person stays where they are (2026-11-23): the shell's verified-helper reminder beside the
+  // search bar leads to setup, in any order, and the helper home lists it too.
   return { ok: true, code: 'updated' };
 }
 

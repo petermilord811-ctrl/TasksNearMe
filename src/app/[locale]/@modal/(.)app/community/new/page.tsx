@@ -1,6 +1,6 @@
 import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 import { localeOrDefault } from '@/contracts';
@@ -42,7 +42,8 @@ async function NewPost({ searchParams }: { searchParams: SearchParams }) {
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.newCommunityPost()));
   const [now, locale] = await Promise.all([requestNow(), getLocale()]);
   const data = await getNewCommunityPostPage(db, await communityViewerOf(viewer.user, localeOrDefault(locale)), kind, booking, now);
-  if (!data) redirect(routes.app.home());
+  // Nothing to post to (no home market): said in the dialog (2026-11-23), not by moving the page underneath to Home.
+  if (!data) notFound();
   return <CommunityNewPostDialog data={data} handlers={{ onPost: createCommunityPostAction, onUploadPhoto: uploadCommunityPhotoAction }} />;
 }
 

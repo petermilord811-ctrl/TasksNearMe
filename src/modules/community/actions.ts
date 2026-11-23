@@ -20,7 +20,7 @@ import type {
   PortalMore,
   PortalQuery,
 } from '@/contracts';
-import { localeOrDefault } from '@/contracts';
+import { localeOrDefault, routes } from '@/contracts';
 import { AI_STAND_IN_COOKIE, wantsAiStandIn } from '@/integrations/ai';
 import { createFakeTranslator } from '@/integrations/ai/translator';
 import { storePhoto } from '@/modules/files/uploads';
@@ -149,11 +149,25 @@ export async function pinCommunityAnswerAction(postId: string, input: { replyId:
   return result;
 }
 
-export async function deleteOwnCommunityItemAction(input: { target: 'post' | 'reply'; id: string }): Promise<ActionResult> {
+async function deleteOwn(input: { target: 'post' | 'reply'; id: string }): Promise<ActionResult> {
   const viewer = await communityViewer();
   if (!viewer) return { ok: false, code: 'not_allowed' };
-  const result = await deleteOwnCommunityItem(db, viewer, input.target === 'post' ? 'post' : 'reply', String(input.id), await requestNow());
-  if (result.ok && !result.redirectTo) refresh();
+  return deleteOwnCommunityItem(db, viewer, input.target === 'post' ? 'post' : 'reply', String(input.id), await requestNow());
+}
+
+/** A feed's Delete (2026-11-23): the post or reply goes and the feed stays where it was, filters and scroll included. */
+export async function deleteOwnCommunityItemAction(input: { target: 'post' | 'reply'; id: string }): Promise<ActionResult> {
+  const result = await deleteOwn(input);
+  if (result.ok) refresh();
+  return result;
+}
+
+/** The post page's Delete: its post gone, back to the feed; a reply goes and the page stays. */
+export async function deleteFromPostPageAction(input: { target: 'post' | 'reply'; id: string }): Promise<ActionResult> {
+  const result = await deleteOwn(input);
+  if (!result.ok) return result;
+  if (input.target === 'post') return { ...result, redirectTo: routes.app.community() };
+  refresh();
   return result;
 }
 

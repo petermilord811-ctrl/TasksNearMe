@@ -36,7 +36,9 @@ function SearchRow({ search, handlers }: { search: SavedSearchView; handlers: Sa
         <SavedSearchFilterChips filters={search.filters} everything={t('everything', { market: search.marketName })} />
         <p className="text-sm text-muted-foreground tabular-nums">{search.marketName} · {t('openCount', { count: search.openCount })}</p>
       </div>
-      <Link href={routes.app.savedSearch(search.id)} className={buttonVariants({ variant: 'outline', size: 'sm' })}>{t('open')}<ArrowRight aria-hidden="true" className="size-4" /></Link>
+      {/* Straight to the view it opens (2026-11-23: no trip through routes.app.savedSearch's redirect, which alert
+          emails and notifications still use). */}
+      <Link href={search.href} className={buttonVariants({ variant: 'outline', size: 'sm' })}>{t('open')}<ArrowRight aria-hidden="true" className="size-4" /></Link>
     </div>
     <div className="flex flex-wrap items-center justify-between gap-2 border-t border-foreground/[0.06] pt-3 dark:border-white/[0.05]">
       <div role="radiogroup" aria-label={t('alerts.label')} className="inline-flex items-center gap-1 rounded-lg bg-foreground/[0.05] p-0.5 dark:bg-white/[0.06]">

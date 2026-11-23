@@ -57,7 +57,12 @@ export function RouteDialogFrame({ children }: { children: ReactNode }) {
       router.back();
     },
     finish: (result, message, options) => {
-      if (result.ok) toast.success(message ?? feedback(`success.${result.code}`));
+      const action = options?.action;
+      if (result.ok) {
+        const text = message ?? feedback(`success.${result.code}`);
+        if (action) toast.success(text, { action: { label: action.label, onClick: () => router.push(action.href) } });
+        else toast.success(text);
+      }
       const next = options?.follow && result.ok ? result.redirectTo : undefined;
       if (!visible.current) {
         if (next) router.push(next);

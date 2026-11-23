@@ -54,6 +54,7 @@
   "send": "Send request",
   "sending": "Sending request…",
   "sent": "Request sent. You'll hear back when your helper responds.",
+  "viewTask": "View task",
   "previews": {
     "group": "Direct invites",
     "default": "Request Jordan — last price suggested",

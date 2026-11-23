@@ -111,8 +111,9 @@ export function RequestHelperForm({ data, handlers, initialResult, initialPendin
     if (needsBankVerification(next)) { setVerification(next.verification); return; }
     setVerification(undefined); setResult(next);
     if (next.ok) locked.current = true;
-    // In a route dialog it closes and the task the request went to opens, as the full page goes to it.
-    if (next.ok && dialog) dialog.finish(next, next.code === 'sent' ? t('sent') : undefined, { follow: true });
+    // In a route dialog it closes over the page it was opened from (2026-11-23: nothing happens on the task until the
+    // helper answers), and the toast offers the task; the full page goes to it.
+    if (next.ok && dialog) dialog.finish(next, next.code === 'sent' ? t('sent') : undefined, next.redirectTo ? { action: { label: t('viewTask'), href: next.redirectTo } } : undefined);
     else if (next.ok && next.redirectTo) router.push(next.redirectTo);
   }
 

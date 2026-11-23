@@ -5,7 +5,7 @@ import { getLocale, getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 import { routes } from '@/contracts/routes';
 import {
-  deleteOwnCommunityItemAction,
+  deleteFromPostPageAction,
   editCommunityItemAction,
   followCommunityPostAction,
   loadCommunityReactorsAction,
@@ -56,7 +56,7 @@ async function Post({ params }: Pick<PageProps<'/[locale]/app/community/[postId]
         onReact: reactInCommunityAction,
         onReply: replyToCommunityPostAction.bind(null, postId),
         onPin: pinCommunityAnswerAction.bind(null, postId),
-        onDelete: deleteOwnCommunityItemAction,
+        onDelete: deleteFromPostPageAction,
         onSavePost: saveCommunityPostAction,
         ...(reader.staff ? { onModerate: moderateCommunityItemAction } : {}),
         onEdit: editCommunityItemAction,

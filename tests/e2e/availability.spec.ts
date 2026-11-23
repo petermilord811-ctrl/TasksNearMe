@@ -41,6 +41,10 @@ test('a client requests an open time from the profile; the helper sees it reques
   await page.getByRole('radio', { name: 'Approved' }).click();
   await page.getByRole('checkbox', { name: /I agree to the/ }).click();
   await page.getByRole('button', { name: 'Send request' }).click();
+  // The dialog closes over the profile (2026-11-23: nothing happens on the task until Jordan answers), and the toast
+  // offers the task.
+  await expect(page).toHaveURL(/\/helpers\/jordan-t$/, { timeout: 30_000 });
+  await page.getByRole('button', { name: 'View task' }).click();
   await expect(page).toHaveURL(/\/app\/tasks\/tsk_leaves$/, { timeout: 30_000 });
 
   await devSignIn(page, 'jordan@example.test');
