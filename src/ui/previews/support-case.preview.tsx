@@ -1,5 +1,5 @@
 import { CASE_STATUSES, routes, type ActionResult, type AppShellHandlers, type PreviewEntry, type SignedInViewer, type SupportCasePageData } from '@/contracts';
-import { closedCasePageData, disputeAdminCaseData, disputeCasePageData, fakeHandler, fakeSupportCaseHandlers, jordanShell, mayaShell } from '@/fixtures';
+import { closedCasePageData, disputeAdminCaseData, disputeCasePageData, fakeHandler, fakeSupportCaseHandlers, jordanShell, mayaShell, solvedCasePageData, solvedRatedCasePageData } from '@/fixtures';
 import { SupportCaseContent } from '@/ui/screens/support/support-case-screen';
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/supportCase.json';
@@ -38,6 +38,9 @@ export const supportCasePreviews: PreviewEntry[] = [
   preview('empty', copy.previews.empty, { ...disputeCasePageData, events: [] }),
   preview('sending', copy.previews.sending, disputeCasePageData, { pending: true }),
   preview('sent', copy.previews.sent, disputeCasePageData, { result: { ok: true, code: 'sent' } }),
+  // After a live chat (2026-11-23): Riley's name and initial, rating the help, and a copy by email.
+  preview('solved-rate', copy.feedback.previews.casePage, solvedCasePageData),
+  preview('solved-rated', `${copy.feedback.previews.casePage} (${copy.feedback.previews.rated})`, solvedRatedCasePageData),
   ...(['validation_failed', 'not_allowed', 'rate_limited', 'unknown'] as const).map((code) => {
     const id = code.replaceAll('_', '-') as 'validation-failed' | 'not-allowed' | 'rate-limited' | 'unknown';
     return preview(id, copy.previews[id], disputeCasePageData, { result: {

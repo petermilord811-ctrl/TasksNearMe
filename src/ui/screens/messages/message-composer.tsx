@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { CircleAlert, Lock, MessageSquareText, Paperclip, Send, X } from 'lucide-react';
+import { CircleAlert, Lock, MessageSquareText, Paperclip, Send, Sparkles, X } from 'lucide-react';
 import { sendMessageInputSchema, type ActionResult, type ComposerRules, type MessageSavedReply, type Photo, type SendMessageInput, type ThreadHandlers } from '@/contracts';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/primitives/popover';
@@ -31,6 +31,11 @@ export interface MessageComposerProps {
   onRefresh?: () => void;
   /** The chat window's tighter composer: no hint line under the box. */
   compact?: boolean;
+  /**
+   * The other person's latest message, when they wrote last (2026-11-23): "Suggest replies" answers it (with
+   * `handlers.onSuggest`). New suggestions for each new message.
+   */
+  suggestFor?: string;
 }
 
 export function MessageComposer({ rules, handlers }: MessageComposerProps) {
@@ -38,10 +43,12 @@ export function MessageComposer({ rules, handlers }: MessageComposerProps) {
 }
 
 /** Seeds let previews show asynchronous states without starting a request on mount. */
-export function MessageComposerContent({ rules, handlers, savedReplies = [], template, onRefresh, compact = false, initialResult, initialPending = false, initialBody = '' }: MessageComposerProps & {
+export function MessageComposerContent({ rules, handlers, savedReplies = [], template, onRefresh, compact = false, suggestFor, initialResult, initialPending = false, initialBody = '', initialSuggestions }: MessageComposerProps & {
   initialResult?: ActionResult;
   initialPending?: boolean;
   initialBody?: string;
+  /** Seeds for the preview gallery: the suggestions shown. */
+  initialSuggestions?: string[];
 }) {
   const { formatDateTime, zoneName } = useFormat();
   const t = useTranslations('thread.composer');
@@ -68,6 +75,18 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
   const { setError, setFocus } = form;
   const { replyTo, setReplyTo } = useReply();
   const [repliesOpen, setRepliesOpen] = useState(false);
+  // Suggested replies (2026-11-23): for one message of theirs; a newer one starts over.
+  const [suggestions, setSuggestions] = useState<{ for?: string; status: 'loading' | 'error' | 'ready'; replies: string[] } | null>(initialSuggestions ? { for: suggestFor, status: 'ready', replies: initialSuggestions } : null);
+  const shownSuggestions = suggestions && suggestions.for === suggestFor ? suggestions : null;
+  async function suggest() {
+    if (!handlers.onSuggest || shownSuggestions?.status === 'loading') return;
+    const asked = suggestFor;
+    setSuggestions({ for: asked, status: 'loading', replies: [] });
+    let answer: Awaited<ReturnType<NonNullable<ThreadHandlers['onSuggest']>>> = null;
+    try { answer = await handlers.onSuggest(); } catch { answer = null; }
+    if (!mounted.current) return;
+    setSuggestions(answer && answer.replies.length > 0 ? { for: asked, status: 'ready', replies: answer.replies } : { for: asked, status: 'error', replies: [] });
+  }
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const fill = (text: string) => text.replaceAll('{first_name}', template?.firstName ?? '').replaceAll('{task}', template?.task ?? '');
 
@@ -132,6 +151,13 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
       <p className="min-w-0"><span className="font-semibold">{t('replyingTo', { name: replyTo.name })}</span> <span className="line-clamp-1 text-muted-foreground [overflow-wrap:anywhere]">{replyTo.text}</span></p>
       <button type="button" onClick={() => setReplyTo(null)} aria-label={t('cancelReply')} className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><X aria-hidden="true" className="size-4" /></button>
     </div>}
+    {/* Suggested replies (2026-11-23): a tap puts one in the box, to change or send; nothing goes by itself. */}
+    {shownSuggestions && <div role="group" aria-label={t('suggest.label')} aria-busy={shownSuggestions.status === 'loading'} className="flex flex-wrap items-center gap-1.5">
+      {shownSuggestions.status === 'loading' && <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground"><Spinner aria-hidden="true" className="size-3.5" />{t('suggest.loading')}</p>}
+      {shownSuggestions.status === 'error' && <p role="status" className="text-xs text-muted-foreground">{t('suggest.failed')}</p>}
+      {shownSuggestions.replies.map((reply) => <button key={reply} type="button" onClick={() => { form.setValue('body', reply, { shouldDirty: true }); setSuggestions(null); setFocus('body'); }} className="max-w-full rounded-full border border-primary/30 bg-brand-soft/50 px-3 py-1.5 text-left text-[13px] leading-5 hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-ring [overflow-wrap:anywhere]">{reply}</button>)}
+      {shownSuggestions.status !== 'loading' && <button type="button" onClick={() => setSuggestions(null)} aria-label={t('suggest.dismiss')} className="inline-flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><X aria-hidden="true" className="size-3.5" /></button>}
+    </div>}
     <Field className="gap-1.5" data-invalid={!!bodyError}>
       {/* The panel above already says what this is: the label is for screen readers. */}
       <FieldLabel htmlFor={`${id}-body`} className="sr-only">{t('label')}</FieldLabel>
@@ -157,6 +183,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
       <div id={`${id}-body-error`}>{bodyError && <FieldError>{bodyError}</FieldError>}</div>
     </Field>
     <div className="flex flex-wrap items-start gap-x-2">
+    {handlers.onSuggest && suggestFor && !shownSuggestions && <button type="button" onClick={() => void suggest()} className="flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium text-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><Sparkles aria-hidden="true" className="size-4" />{t('suggest.button')}</button>}
     {(handlers.onSaveReply || savedReplies.length > 0) && <Popover open={repliesOpen} onOpenChange={setRepliesOpen}>
       <PopoverTrigger asChild>
         <button type="button" className="flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium text-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><MessageSquareText aria-hidden="true" className="size-4" />{t('savedReplies.button')}</button>

@@ -39,5 +39,60 @@
     "not-allowed": "Case closed before replying",
     "rate-limited": "Reply rate limit",
     "unknown": "Reply could not be sent"
+  },
+  "feedback": {
+    "rating": {
+      "title": "How did we do?",
+      "titleLive": "How was your chat with {name}?",
+      "body": "One tap tells our support team. Only they see it.",
+      "good": "Good",
+      "bad": "Bad",
+      "comment": "Anything to add? (optional)",
+      "commentHint": "Up to 500 characters. Only our support team sees it.",
+      "commentCount": "{count} / {maximum}",
+      "send": "Send",
+      "sending": "Sending…",
+      "thanksGood": "Thanks! We're glad it helped.",
+      "thanksBad": "Thanks for telling us. We'll use it to do better.",
+      "yours": "You rated this help {rating, select, good {good} other {bad}}.",
+      "change": "Change",
+      "cancel": "Cancel",
+      "changeUntil": "You can change it until {date}.",
+      "errors": {
+        "required": "Choose Good or Bad.",
+        "too_long": "Use 500 characters or fewer.",
+        "expired": "This rating can't be changed anymore.",
+        "not_allowed": "This help can't be rated.",
+        "rate_limited": "Too many tries. Try again at {time}.",
+        "unknown": "That didn't send. Try again."
+      }
+    },
+    "transcript": {
+      "action": "Email me this conversation",
+      "sending": "Sending…",
+      "hint": "We'll send it to {email}.",
+      "sent": "Sent to {email}.",
+      "errors": {
+        "rate_limited": "You've emailed this conversation 3 times today. Try again at {time}.",
+        "unavailable": "The email didn't go out. Try again in a few minutes.",
+        "not_allowed": "This conversation can't be emailed.",
+        "unknown": "That didn't send. Try again."
+      }
+    },
+    "liveHours": {
+      "line": "Live chat with a person: {schedule} ({zone}).",
+      "openUntil": "Live chat is open now, until {time}.",
+      "closed": "Live chat is closed now. It opens {time}.",
+      "closedWaiting": "Live chat is closed now. It opens {time}. Leave your message here: we'll reply in this chat and by email.",
+      "days": "{from}–{to}"
+    },
+    "previews": {
+      "liveClosed": "Help: asked for a person outside live chat hours",
+      "agentPhoto": "Help: live chat with the agent's photo",
+      "rate": "Help: rating after the live chat ended",
+      "rated": "Help: rated, with a comment",
+      "recentRate": "Help: rating a solved case",
+      "casePage": "Support case: solved, rate it and email it"
+    }
   }
 }

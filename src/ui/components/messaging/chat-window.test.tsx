@@ -27,6 +27,8 @@ const base: ChatWindowProps = {
   threadHandlers: fakeChatThreadHandlers,
   helpHandlers: fakeHelpChatHandlers,
   newChatHandlers: fakeNewChatHandlers,
+  listHandlers: { onFlag: fakeChatThreadHandlers.onFlag, onAccept: fakeChatThreadHandlers.onAccept },
+  onJump: () => undefined,
   onShow: () => undefined,
   onStarted: () => undefined,
   onMinimize: () => undefined,

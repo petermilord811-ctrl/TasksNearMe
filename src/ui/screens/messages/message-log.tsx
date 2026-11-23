@@ -6,9 +6,10 @@ import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowUp, Expand } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { ActionHandler, ISODateTime, MessageReaction, MessageView, PersonSummary, Photo } from '@/contracts';
+import type { ActionHandler, ConversationCards, ISODateTime, MessageReaction, MessageTranslation, MessageView, PersonSummary, Photo, RequestCardHandlers } from '@/contracts';
+import { ChangeCardView, TaskRequestCardView } from '@/ui/components/messaging/conversation-cards';
 import { MESSAGE_REACTIONS } from '@/contracts/messaging';
-import { Reply } from 'lucide-react';
+import { Languages, Reply } from 'lucide-react';
 import { REACTION_EMOJI, useReply } from './reply-context';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
@@ -87,7 +88,7 @@ function newAnnouncements(before: MessageView[], now: MessageView[]): Announceme
 /** Messages from the same person within this long read as one group: their name once, tighter spacing. */
 const GROUP_MS = 5 * 60_000;
 
-export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, otherParty, now, seenMessageId, firstUnreadId, onReact, canReply = false, className }: {
+export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, otherParty, now, seenMessageId, firstUnreadId, focusId, onReact, onTranslate, cards, requestCardHandlers, canReply = false, className }: {
   messages: MessageView[];
   /** "Load earlier messages" (sweep MN11): this conversation from 100 messages earlier. */
   earlierHref?: string;
@@ -99,7 +100,14 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
   now: ISODateTime;
   seenMessageId?: string;
   firstUnreadId?: string;
+  /** A message to bring into view and mark for a moment: a search's result (2026-11-23). */
+  focusId?: string;
   onReact?: ActionHandler<{ messageId: string; emoji: MessageReaction; on: boolean }>;
+  /** "Translate" on the other person's messages, by id (2026-11-23): where this server offers it. */
+  onTranslate?: (messageId: string) => Promise<MessageTranslation | null>;
+  /** Task requests and booking changes its lines show as cards (2026-11-23), and the request cards' buttons. */
+  cards?: ConversationCards;
+  requestCardHandlers?: RequestCardHandlers;
   /** Reply only where one can be sent: not in a closed or blocked conversation. */
   canReply?: boolean;
   className?: string;
@@ -125,6 +133,21 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
       delete next[key];
       return next;
     }));
+  };
+  // Translations asked for in this visit (never stored): each message's, shown under it until "Show original" (2026-11-23).
+  const [translations, setTranslations] = useState<Record<string, { status: 'loading' | 'error' } | { status: 'ready'; text: string; shown: boolean }>>({});
+  const translate = (messageId: string) => {
+    if (!onTranslate) return;
+    const current = translations[messageId];
+    if (current?.status === 'ready') {
+      setTranslations((all) => ({ ...all, [messageId]: { ...current, shown: !current.shown } }));
+      return;
+    }
+    if (current?.status === 'loading') return;
+    setTranslations((all) => ({ ...all, [messageId]: { status: 'loading' } }));
+    void onTranslate(messageId)
+      .catch(() => null)
+      .then((answer) => setTranslations((all) => ({ ...all, [messageId]: answer ? { status: 'ready', text: answer.text, shown: true } : { status: 'error' } })));
   };
   const liveRef = useRef(live);
   useEffect(() => { liveRef.current = live; }, [live]);
@@ -174,6 +197,24 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
     shown.current = { firstId: messages[0]?.id, height: log.scrollHeight };
   }, [messages]);
 
+  // A search's result (2026-11-23): into view once it's in the log, marked for a moment. After the scroll position above,
+  // so it wins over "stay at the bottom".
+  const [marked, setMarked] = useState<string | undefined>(undefined);
+  const focusedFor = useRef<string | undefined>(undefined);
+  useLayoutEffect(() => {
+    if (!focusId || focusedFor.current === focusId) return;
+    const node = logRef.current?.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(focusId)}"]`);
+    if (!node) return;
+    focusedFor.current = focusId;
+    node.scrollIntoView({ block: 'center' });
+    const mark = window.setTimeout(() => setMarked(focusId), 0);
+    const unmark = window.setTimeout(() => setMarked(undefined), 2600);
+    return () => {
+      window.clearTimeout(mark);
+      window.clearTimeout(unmark);
+    };
+  }, [focusId, messages]);
+
   const days = new Map<string, MessageView[]>();
   for (const message of messages) {
     const key = dayKey(message.createdAt);
@@ -218,6 +259,15 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
           const time = <time dateTime={message.createdAt} title={formatRelative(message.createdAt, now)} className={cn('text-xs tabular-nums', isNotice ? 'text-muted-foreground' : 'block', !isNotice && (mine ? 'text-right' : 'text-muted-foreground'))}>
             <span aria-hidden="true">{formatTime(message.createdAt)}</span><span className="sr-only">{formatDateTime(message.createdAt)}</span>
           </time>;
+          // A task request or a booking change (2026-11-23): its card, as it stands now.
+          const requestCard = isNotice && message.event?.type === 'invite_sent' && message.event.params?.inviteId ? cards?.requests?.[message.event.params.inviteId] : undefined;
+          const changeCard = isNotice && message.event?.type === 'change_proposed' && message.event.params?.changeId ? cards?.changes?.[message.event.params.changeId] : undefined;
+          const firstName = otherParty.displayName.split(' ')[0] ?? otherParty.displayName;
+          if (requestCard || changeCard) return <Fragment key={message.id}>{divider}<li data-message-id={message.id} className="flex min-w-0 justify-center">
+            {requestCard
+              ? <TaskRequestCardView card={requestCard} name={firstName} createdAt={message.createdAt} {...(requestCardHandlers ? { handlers: requestCardHandlers } : {})} {...(onRefresh ? { onDone: onRefresh } : {})} />
+              : <ChangeCardView card={changeCard!} name={firstName} createdAt={message.createdAt} />}
+          </li></Fragment>;
           // Updates ("On the way", an offer received…) are small notes between the bubbles.
           if (isNotice) return <Fragment key={message.id}>{divider}<li className="flex min-w-0 justify-center">
             <article className="inline-flex max-w-full flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5 rounded-full bg-foreground/[0.045] px-3.5 py-1.5 text-center text-sm text-muted-foreground [overflow-wrap:anywhere] dark:bg-white/[0.06]">
@@ -226,7 +276,7 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
               {time}
             </article>
           </li></Fragment>;
-          return <Fragment key={message.id}>{divider}<li className={cn('group/msg flex min-w-0 flex-col', mine ? 'items-end' : 'items-start', grouped && '-mt-1.5')}>
+          return <Fragment key={message.id}>{divider}<li data-message-id={message.id} className={cn('group/msg flex min-w-0 flex-col rounded-[1.5rem] transition-[background-color,box-shadow] duration-700', mine ? 'items-end' : 'items-start', grouped && '-mt-1.5', marked === message.id && 'bg-primary/10 ring-2 ring-primary/40')}>
             <article className={cn(
               'min-w-0 max-w-[86%] space-y-1.5 rounded-[1.25rem] px-3.5 py-2.5 [overflow-wrap:anywhere] sm:max-w-[75%] sm:px-4 sm:py-3',
               mine
@@ -239,6 +289,14 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
                 <span className="font-semibold">{message.replyTo.sender === 'me' ? t('you') : otherParty.displayName}: </span><MaskedText segments={message.replyTo.segments} />
               </blockquote>}
               <p className="text-[15px] leading-6"><MessageContent message={message} /></p>
+              {(() => {
+                const translation = translations[message.id];
+                if (!translation || translation.status === 'loading' || (translation.status === 'ready' && !translation.shown)) return null;
+                return <div className="space-y-0.5 border-t border-foreground/[0.08] pt-1.5 dark:border-white/[0.08]">
+                  <p className="text-xs font-semibold text-muted-foreground">{t('translate.label')}</p>
+                  {translation.status === 'ready' ? <p className="text-[15px] leading-6 whitespace-pre-wrap">{translation.text}</p> : <p role="alert" className="text-sm text-destructive">{t('translate.failed')}</p>}
+                </div>;
+              })()}
               {message.attachments.length > 0 && <ul aria-label={t('photos')} className="grid max-w-96 grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
                 {message.attachments.map((photo, index) => <li key={photo.id} className="min-w-0"><MessagePhoto photo={photo} number={index + 1} count={message.attachments.length} sender={sender} /></li>)}
               </ul>}
@@ -262,10 +320,18 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
             </article>
             {/* Reply and react: under the message, quiet until the pointer or the keyboard comes near on wide screens; none
                 where nothing can be sent (a closed or blocked conversation has no composer to reply in). */}
-            {(canReply || onReact) && <div role="group" aria-label={t('actions.label', { name: sender })} className="flex items-center gap-0.5 opacity-100 transition-opacity lg:opacity-0 lg:focus-within:opacity-100 lg:group-hover/msg:opacity-100">
-              {canReply && <button type="button" onClick={() => setReplyTo({ id: message.id, name: sender, text: message.segments.map((segment) => ('text' in segment ? segment.text : '•••')).join('').slice(0, 120) })} className="inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-xs font-medium text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+            {(canReply || onReact || (onTranslate && message.sender === 'them')) && <div role="group" aria-label={t('actions.label', { name: sender })} className="flex items-center gap-0.5 opacity-100 transition-opacity lg:opacity-0 lg:focus-within:opacity-100 lg:group-hover/msg:opacity-100">
+              {canReply && <button type="button" onClick={() => setReplyTo({ id: message.id, name: sender, text: message.segments.map((segment) => (segment.kind === 'text' ? segment.text : segment.kind === 'mention' ? `@${segment.name}` : '•••')).join('').slice(0, 120) })} className="inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-xs font-medium text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
                 <Reply aria-hidden="true" className="size-3.5" />{t('actions.reply')}
               </button>}
+              {/* Translate (2026-11-23): their words in the reader's language, under the message; again: the original. */}
+              {onTranslate && message.sender === 'them' && (() => {
+                const translation = translations[message.id];
+                const showing = translation?.status === 'ready' && translation.shown;
+                return <button type="button" onClick={() => translate(message.id)} disabled={translation?.status === 'loading'} aria-busy={translation?.status === 'loading'} aria-pressed={showing} className="inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-xs font-medium text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+                  {translation?.status === 'loading' ? <Spinner aria-hidden="true" className="size-3.5" /> : <Languages aria-hidden="true" className="size-3.5" />}{showing ? t('translate.original') : t('translate.action')}
+                </button>;
+              })()}
               {onReact && MESSAGE_REACTIONS.map((emoji) => {
                 const mineAlready = pendingReactions[`${message.id}:${emoji}`] ?? message.reactions?.find((reaction) => reaction.emoji === emoji)?.mine ?? false;
                 return <button key={emoji} type="button" aria-pressed={mineAlready} aria-label={t(`reactions.${emoji}`)} onClick={() => react(message.id, emoji, !mineAlready)} className={cn('inline-flex size-8 items-center justify-center rounded-full text-sm hover:bg-foreground/[0.05] focus-visible:outline-2 focus-visible:outline-ring', mineAlready && 'bg-brand-soft')}>

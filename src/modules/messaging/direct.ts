@@ -6,16 +6,19 @@ import {
   normalizeUsername,
   PEOPLE_SUGGESTIONS_MAX,
   routes,
+  STAFF_DIRECT_CHATS_PER_DAY,
   startDirectChatInputSchema,
   type ActionResult,
+  type DirectChatAllowance,
   type DirectChatStart,
   type DirectChatTarget,
   type DirectMessageSetting,
   type PeopleSearchData,
   type StartDirectChatInput,
   type FindPersonPageData,
+  type TimelineEvent,
 } from '@/contracts';
-import { usernames, users } from '@/modules/accounts/schema';
+import { staffRoles, usernames, users } from '@/modules/accounts/schema';
 import { findUserIdByUsername } from '@/modules/accounts/usernames';
 import { topTier } from '@/modules/billing/domain';
 import { activePlans } from '@/modules/billing/service';
@@ -33,6 +36,7 @@ import { violatedConstraint } from '@/platform/db/errors';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { allowanceResetsAt, directChatRefusal, directPairKey } from './direct-rules';
+import { noteSampleRecipient } from './samples';
 import { messages, threadParticipants, threads } from './schema';
 import { SEND_RATE_LIMIT, sendMessage } from './service';
 
@@ -77,6 +81,22 @@ export async function directThreadBetween(db: Db, a: string, b: string): Promise
   return row?.id ?? null;
 }
 
+/**
+ * A line in the two people's direct conversation, when they have one (2026-11-23): a task request one of them sent the
+ * other (`invite_sent` with its id) shows there as a card. Nothing when they don't talk directly. `actorUserId`'s own
+ * news: it doesn't count as unread for them, unless something else in the conversation still is.
+ */
+export async function postInDirectThread(db: Pick<Db, 'select' | 'insert' | 'update'>, a: string, b: string, event: Pick<TimelineEvent, 'type' | 'params'>, now: Date, actorUserId: string): Promise<string | null> {
+  const [thread] = await db.select({ id: threads.id }).from(threads).where(and(eq(threads.kind, 'direct'), eq(threads.linkedId, directPairKey(a, b)))).limit(1);
+  if (!thread) return null;
+  const id = newId('msg');
+  await db.insert(messages).values({ id, threadId: thread.id, kind: 'status', event, createdAt: now });
+  await db.update(threads).set({ lastMessageAt: now }).where(eq(threads.id, thread.id));
+  const unreadBefore = sql`exists (select 1 from ${messages} where ${messages.threadId} = ${thread.id} and ${messages.id} <> ${id} and (${messages.senderUserId} is null or ${messages.senderUserId} <> ${actorUserId}) and (${threadParticipants.lastReadAt} is null or ${messages.createdAt} > ${threadParticipants.lastReadAt}))`;
+  await db.update(threadParticipants).set({ lastReadAt: now }).where(and(eq(threadParticipants.threadId, thread.id), eq(threadParticipants.userId, actorUserId), sql`not ${unreadBefore}`));
+  return thread.id;
+}
+
 /** They've talked about a task before: an offer, invite, booking or regular visits conversation with both in it. */
 async function taskContactsBetween(db: Db, a: string, b: string): Promise<boolean> {
   const [row] = await db.execute<{ found: number }>(sql`
@@ -86,6 +106,28 @@ async function taskContactsBetween(db: Db, a: string, b: string): Promise<boolea
     where mine.user_id = ${a}
     limit 1`).then((result) => result.rows);
   return Boolean(row);
+}
+
+/** A staff account (any role): no daily limit on new conversations (2026-11-23). */
+async function staffAccount(db: Pick<Db, 'select'>, userId: string): Promise<boolean> {
+  const [row] = await db.select({ userId: staffRoles.userId }).from(staffRoles).where(eq(staffRoles.userId, userId)).limit(1);
+  return Boolean(row);
+}
+
+/**
+ * How many new direct conversations the person may start in any 24 hours: their Sparks level's or plan's allowance, or
+ * for a staff account no limit to speak of (`STAFF_DIRECT_CHATS_PER_DAY`, a guard against a runaway script only).
+ */
+async function startsAllowed(db: Db, userId: string, now: Date): Promise<{ perDay: number; staff: boolean }> {
+  if (await staffAccount(db, userId)) return { perDay: STAFF_DIRECT_CHATS_PER_DAY, staff: true };
+  return { perDay: await directChatAllowance(db, userId, now), staff: false };
+}
+
+/** What New message says about the allowance: left of the day's, when the next frees up, or a staff account's none. */
+function allowanceOf(starts: readonly Date[], allowed: { perDay: number; staff: boolean }, now: Date): DirectChatAllowance {
+  const left = Math.max(0, allowed.perDay - starts.length);
+  const resetsAt = left === 0 ? allowanceResetsAt([...starts], now) : undefined;
+  return { left, perDay: allowed.perDay, ...(resetsAt ? { resetsAt: resetsAt.toISOString() } : {}), ...(allowed.staff ? { staff: true } : {}) };
 }
 
 /** The direct conversations the person started in the 24 hours before `now`. */
@@ -100,12 +142,13 @@ async function startsLastDay(db: Pick<Db, 'select'>, userId: string, now: Date):
 async function facts(db: Db, viewerId: string, recipient: Recipient, now: Date) {
   const [viewer] = await db.select({ status: users.status }).from(users).where(eq(users.id, viewerId)).limit(1);
   const setting = isDirectMessageSetting(recipient.row.directMessages) ? recipient.row.directMessages : 'everyone';
-  const [blocked, taskContacts, starts, perDay] = await Promise.all([
+  const [blocked, taskContacts, starts, allowed] = await Promise.all([
     isBlockedBetween(db, viewerId, recipient.id),
     setting === 'task_contacts' ? taskContactsBetween(db, viewerId, recipient.id) : Promise.resolve(false),
     startsLastDay(db, viewerId, now),
-    directChatAllowance(db, viewerId, now),
+    startsAllowed(db, viewerId, now),
   ]);
+  const { perDay } = allowed;
   const refusal = directChatRefusal({
     self: viewerId === recipient.id,
     viewerActive: STARTER_STATUSES.has(viewer?.status ?? ''),
@@ -116,7 +159,7 @@ async function facts(db: Db, viewerId: string, recipient: Recipient, now: Date) 
     startedLastDay: starts.length,
     perDay,
   });
-  return { refusal, starts, perDay };
+  return { refusal, starts, perDay, allowed };
 }
 
 /** Contact details stay masked until the two have a paid booking together. */
@@ -142,9 +185,7 @@ export async function getNewDirectMessagePage(db: Db, viewerId: string, to: Dire
     const existing = await directThreadBetween(db, viewerId, recipient.id);
     if (existing) return { kind: 'thread', threadId: existing };
   }
-  const [{ refusal, starts, perDay }, paid] = await Promise.all([facts(db, viewerId, recipient, now), paidBookingBetween(db, viewerId, recipient.id)]);
-  const left = Math.max(0, perDay - starts.length);
-  const resetsAt = left === 0 ? allowanceResetsAt(starts, now) : undefined;
+  const [{ refusal, starts, allowed }, paid] = await Promise.all([facts(db, viewerId, recipient, now), paidBookingBetween(db, viewerId, recipient.id)]);
   const user = recipient.row;
   return {
     kind: 'page',
@@ -155,7 +196,7 @@ export async function getNewDirectMessagePage(db: Db, viewerId: string, to: Dire
       ...(recipient.handle ? { helperHandle: recipient.handle } : {}),
       canRequest: recipient.helperActive && recipient.id !== viewerId,
       ...(refusal ? { refusal } : {}),
-      allowance: { left, perDay, ...(resetsAt ? { resetsAt: resetsAt.toISOString() } : {}) },
+      allowance: allowanceOf(starts, allowed, now),
       firstMessagesMax: DIRECT_FIRST_MESSAGES_MAX,
       contactMasking: !paid,
       maxLength: 2000,
@@ -192,7 +233,7 @@ export async function startDirectChat(db: Db, viewerId: string, input: StartDire
     const existing = await directThreadBetween(db, viewerId, recipient.id);
     if (existing) return sendThere(existing);
   }
-  const { refusal, starts, perDay } = await facts(db, viewerId, recipient, now);
+  const [{ refusal, starts, perDay }, contacts] = await Promise.all([facts(db, viewerId, recipient, now), taskContactsBetween(db, viewerId, recipient.id)]);
   if (refusal === 'limit_reached') return { ok: false, code: 'limit_reached', ...(allowanceResetsAt(starts, now) ? { retryAt: allowanceResetsAt(starts, now)!.toISOString() } : {}) };
   if (refusal) return { ok: false, code: 'not_allowed' };
   const limited = await consumeRateLimit(db, `messages:${viewerId}`, SEND_RATE_LIMIT, now);
@@ -205,9 +246,10 @@ export async function startDirectChat(db: Db, viewerId: string, input: StartDire
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`direct-start:${viewerId}`}))`);
       if ((await startsLastDay(tx, viewerId, now)).length >= perDay) throw new Refused({ ok: false, code: 'limit_reached' });
       await tx.insert(threads).values({ id: threadId, kind: 'direct', linkedId: directPairKey(viewerId, recipient.id), taskId: null, startedByUserId: viewerId, createdAt: now, lastMessageAt: now });
+      // A message request for the recipient (2026-11-23), unless the two have talked about a task before.
       await tx.insert(threadParticipants).values([
-        { threadId, userId: viewerId, lastReadAt: now },
-        { threadId, userId: recipient.id },
+        { threadId, userId: viewerId, lastReadAt: now, acceptedAt: now },
+        { threadId, userId: recipient.id, acceptedAt: contacts ? now : null },
       ]);
       await tx.insert(messages).values({ id: newId('msg'), threadId, senderUserId: viewerId, kind: 'text', body, attachmentFileIds: [], requestKey: requestKey ?? null, createdAt: now });
       await tx.insert(outboxEvents).values({
@@ -217,6 +259,8 @@ export async function startDirectChat(db: Db, viewerId: string, input: StartDire
         aggregateId: threadId,
         payload: { threadId, taskId: null, senderUserId: viewerId, recipientIds: [recipient.id] },
       });
+      // A sample profile never answers: the app says so under the first message (2026-11-23).
+      await noteSampleRecipient(tx, threadId, viewerId, [recipient.id], now);
     });
   } catch (error) {
     if (error instanceof Refused) return error.result;
@@ -248,18 +292,17 @@ export async function saveDirectMessageSetting(db: Db, userId: string, input: { 
  * conversations (left in any 24 hours, by Sparks level or plan), so they see what their level allows before typing.
  */
 export async function getFindPersonPage(db: Db, viewerId: string, query: { text?: string; notFound?: boolean }, now: Date): Promise<FindPersonPageData> {
-  const [starts, perDay, summary, plans] = await Promise.all([startsLastDay(db, viewerId, now), directChatAllowance(db, viewerId, now), sparksSummaryOf(db, viewerId), activePlans(db, viewerId, now)]);
-  const left = Math.max(0, perDay - starts.length);
-  const resetsAt = left === 0 ? allowanceResetsAt(starts, now) : undefined;
+  const [starts, allowed, summary, plans] = await Promise.all([startsLastDay(db, viewerId, now), startsAllowed(db, viewerId, now), sparksSummaryOf(db, viewerId), activePlans(db, viewerId, now)]);
   const level = summary?.level ?? 'newcomer';
-  // A plan sets the allowance when it gives more than the level does (the plans' ladder, 2026-11-23).
+  // A plan sets the allowance when it gives more than the level does (the plans' ladder, 2026-11-23); a staff account
+  // has no limit to speak of (2026-11-23).
   const tier = topTier(plans.keys());
   return {
-    ...(tier !== 'free' && perDay > DIRECT_CHATS_PER_DAY[level] ? { allowanceFrom: tier } : {}),
+    ...(!allowed.staff && tier !== 'free' && allowed.perDay > DIRECT_CHATS_PER_DAY[level] ? { allowanceFrom: tier } : {}),
     // As usernames read (the "@" they typed goes: the box and the message show their own).
     ...(query.text && normalizeUsername(query.text) ? { query: normalizeUsername(query.text).slice(0, 40) } : {}),
     ...(query.notFound ? { notFound: true } : {}),
-    allowance: { left, perDay, ...(resetsAt ? { resetsAt: resetsAt.toISOString() } : {}) },
+    allowance: allowanceOf(starts, allowed, now),
     level,
   };
 }

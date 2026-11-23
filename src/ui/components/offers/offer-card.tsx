@@ -25,7 +25,7 @@ export interface OfferCardProps {
 }
 
 /** Whether a helper wrote anything (a one-tap offer has no message). */
-export const hasMessage = (segments: MessageSegment[]) => segments.some((segment) => segment.kind === 'masked' || segment.text.trim().length > 0);
+export const hasMessage = (segments: MessageSegment[]) => segments.some((segment) => segment.kind !== 'text' || segment.text.trim().length > 0);
 
 /**
  * One helper's offer on the poster's task: who (rating, verifications), the price and the proposed start, their

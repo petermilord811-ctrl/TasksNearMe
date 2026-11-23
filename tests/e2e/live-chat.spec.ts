@@ -1,9 +1,10 @@
 import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { usernames, users } from '../../src/modules/accounts/schema';
 import { notificationDeliveries, notifications } from '../../src/modules/notifications/schema';
 import { supportCaseEvents, supportCaseReads, supportCases } from '../../src/modules/support/schema';
 import { auditLog } from '../../src/platform/audit/schema';
+import { devOutboxMessages } from '../../src/platform/dev-outbox/schema';
 import { createDb } from '../../src/platform/db/connect';
 import { outboxEvents } from '../../src/platform/outbox/schema';
 import { devSignIn } from './support/sign-in';
@@ -69,8 +70,19 @@ async function removeMember(member: Member): Promise<void> {
       await db.delete(notificationDeliveries).where(inArray(notificationDeliveries.notificationId, own));
       await db.delete(notifications).where(inArray(notifications.id, own));
     }
+    await db.delete(devOutboxMessages).where(eq(devOutboxMessages.to, member.email.toLowerCase()));
     await db.delete(usernames).where(eq(usernames.userId, member.id));
     await db.delete(users).where(eq(users.id, member.id));
+  } finally {
+    await pool.end();
+  }
+}
+
+/** The transcript emails the member got (the e2e build's email outbox, 2026-11-23). */
+async function transcriptsTo(email: string) {
+  const { db, pool } = database();
+  try {
+    return await db.select().from(devOutboxMessages).where(and(eq(devOutboxMessages.to, email.toLowerCase()), eq(devOutboxMessages.tag, 'support-transcript')));
   } finally {
     await pool.end();
   }
@@ -159,6 +171,21 @@ test.describe('live chat with support', () => {
       await expect(message).toBeEditable();
       // They can ask for another.
       await expect(box.getByRole('button', { name: 'Chat live with support' })).toBeVisible();
+
+      // After the chat (2026-11-23): how was it (Alex sees the rating at once), and a copy by email.
+      const rating = box.getByRole('region', { name: 'How was your chat with Alex?' });
+      await rating.getByRole('button', { name: 'Good' }).click();
+      await rating.getByRole('textbox', { name: 'Anything to add? (optional)' }).fill('Quick and kind.');
+      await rating.getByRole('button', { name: 'Send' }).click();
+      await expect(box.getByText("Thanks! We're glad it helped.")).toBeVisible({ timeout: 30_000 });
+      await expect(chat.getByText(`${member.name} rated the help good: “Quick and kind.”`)).toBeVisible({ timeout: 30_000 });
+      await box.getByRole('button', { name: 'Email me this conversation' }).click();
+      await expect(box.getByText('Sent to e•••@example.test.')).toBeVisible({ timeout: 30_000 });
+      await expect.poll(async () => (await transcriptsTo(member.email)).length, { timeout: 30_000 }).toBe(1);
+      const [copy] = await transcriptsTo(member.email);
+      expect(copy!.subject).toMatch(/^Your conversation with TasksNearMe Help: /);
+      expect(copy!.body).toContain('Hi Lena, I’m Alex from support. What happened?');
+      expect(copy!.body).toContain('My helper never came on Saturday.');
     } finally {
       await staff.context.close();
       await removeMember(member);
@@ -189,6 +216,12 @@ test.describe('live chat with support', () => {
       await expect(page.getByRole('log').getByText('Hi Lena, Alex here. How can I help?')).toBeVisible({ timeout: 30_000 });
       await chat.getByRole('button', { name: 'End chat' }).click();
       await expect(page.getByRole('log').getByText('The live chat ended.', { exact: true })).toBeVisible({ timeout: 30_000 });
+      // How was it (2026-11-23): one tap and Send on a phone too; Alex sees it.
+      const rating = page.getByRole('region', { name: 'How was your chat with Alex?' });
+      await rating.getByRole('button', { name: 'Bad' }).click();
+      await rating.getByRole('button', { name: 'Send' }).click();
+      await expect(page.getByText("Thanks for telling us. We'll use it to do better.")).toBeVisible({ timeout: 30_000 });
+      await expect(chat.getByText(`${member.name} rated the help bad`, { exact: true })).toBeVisible({ timeout: 30_000 });
     } finally {
       await staff.context.close();
       await removeMember(member);

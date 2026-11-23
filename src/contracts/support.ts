@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ActionHandler, FieldErrorCode, QueryHandler } from './actions';
+import type { ActionHandler, ActionResult, FieldErrorCode, QueryHandler } from './actions';
 import type { ISODateTime, Photo } from './common';
 import type { PhotoUploadResult } from './posting';
 import type { CaseStatus } from './status';
@@ -52,6 +52,16 @@ export const newSupportRequestInputSchema = z.object({
 });
 export type NewSupportRequestInput = z.input<typeof newSupportRequestInputSchema>;
 
+/**
+ * The person from support on a live chat (2026-11-23, owner: "Live support: … see the agent's name and photo"): their
+ * first name and profile photo, or the first name's initial. Never their last name or email.
+ */
+export interface SupportAgentView {
+  name: string;
+  initials: string;
+  photo?: Photo;
+}
+
 export interface CaseEventView {
   id: string;
   /** `live`: someone from support joined the live chat, or it ended (2026-11-22; `live`, `agentName`). */
@@ -65,7 +75,75 @@ export interface CaseEventView {
   live?: 'joined' | 'ended';
   /** Live chat events: the support person's first name. */
   agentName?: string;
+  /**
+   * Who from support it is (2026-11-23): on a live chat's joined and ended lines, and on the messages of someone who
+   * joined a live chat on this case. Other replies from support stay "Support".
+   */
+  agent?: SupportAgentView;
   at: ISODateTime;
+}
+
+// ---- After a conversation with support (2026-11-23, owner: "Live support: rate the chat afterwards, see the agent's
+// name and photo, and get a transcript by email") ------------------------------------------------------------------
+
+/** How the member found the help they got: one tap, good or bad. */
+export const SUPPORT_RATINGS = ['good', 'bad'] as const;
+export type SupportRating = (typeof SUPPORT_RATINGS)[number];
+/** The optional comment with a rating. */
+export const SUPPORT_RATING_COMMENT_MAX = 500;
+/** A rating can be changed this many days after it was first given; then it stays. */
+export const SUPPORT_RATING_CHANGE_DAYS = 7;
+/** Copies of a case's conversation a member can email themselves in any 24 hours. */
+export const SUPPORT_TRANSCRIPTS_PER_DAY = 3;
+
+export const rateSupportInputSchema = z.object({
+  rating: z.enum(SUPPORT_RATINGS, code('required')),
+  comment: z.string().trim().max(SUPPORT_RATING_COMMENT_MAX, code('too_long')).optional(),
+});
+export type RateSupportInput = z.input<typeof rateSupportInputSchema>;
+
+/**
+ * The rating of a case, for the member who opened it: asked for once its live chat ended or the case is resolved or
+ * closed. One per case (`given`), which they can change until `changeUntil` (`SUPPORT_RATING_CHANGE_DAYS` after they
+ * first gave it). Support staff see it on the case and the live chat console.
+ */
+export interface SupportRatingView {
+  given?: { rating: SupportRating; comment?: string; at: ISODateTime };
+  /** They may rate it now, or change the rating they gave. */
+  canRate: boolean;
+  changeUntil?: ISODateTime;
+}
+
+/**
+ * "Email me this conversation" (2026-11-23): the case's conversation as the member sees it, sent to their account's
+ * address, in their language. `to` is that address partly hidden ("m•••@gmail.com").
+ */
+export interface SupportTranscriptView {
+  to: string;
+}
+
+/**
+ * When a person from support answers live chats (2026-11-23): Gainesville's time zone; by weekday (Sunday 0), the
+ * wall-clock hours, or null for a day without live chat. Outside them a live chat request still waits in line, and
+ * support replies in the conversation (and by email) when they can.
+ */
+export const LIVE_CHAT_HOURS: { timeZone: string; week: readonly (readonly [string, string] | null)[] } = {
+  timeZone: 'America/New_York',
+  week: [null, ['09:00', '18:00'], ['09:00', '18:00'], ['09:00', '18:00'], ['09:00', '18:00'], ['09:00', '18:00'], ['10:00', '14:00']],
+};
+
+/**
+ * Live chat hours as the Help conversation shows them (src/shared/support-hours.ts): open now or not, when that next
+ * changes, and the week's hours with days that share their hours together ("Mon–Fri 9:00 am–6:00 pm"), as wall-clock
+ * times in `timeZone` (shown with that zone's name).
+ */
+export interface LiveChatHours {
+  open: boolean;
+  /** Closed: when it next opens. Open: when it closes today. */
+  nextChange: ISODateTime;
+  /** Weekdays (Sunday 0) from `fromDay` to `toDay`, with their opening and closing wall-clock times ("09:00"). */
+  schedule: { fromDay: number; toDay: number; opens: string; closes: string }[];
+  timeZone: string;
 }
 
 /** `/app/support/[caseId]`: one case and its conversation with support (oldest first). */
@@ -74,6 +152,10 @@ export interface SupportCasePageData {
   events: CaseEventView[];
   /** Closed cases can't be replied to (open a new request instead). */
   canReply: boolean;
+  /** The member who opened it rates it once its live chat ended or it's solved (2026-11-23). */
+  rating?: SupportRatingView;
+  /** Email the conversation to the viewer's own address (2026-11-23). */
+  transcript?: SupportTranscriptView;
 }
 
 export const supportReplyInputSchema = z.object({
@@ -90,8 +172,16 @@ export interface SupportHandlers {
   onCreate: ActionHandler<NewSupportRequestInput>;
   onUploadPhoto: QueryHandler<FormData, PhotoUploadResult>;
 }
+/**
+ * - `onRate` (2026-11-23): ok `saved`. Errors: `validation_failed` (`rating`, `comment`), `not_allowed` (not theirs, or
+ *   nothing to rate yet), `expired` (past `changeUntil`), `rate_limited`, `unknown`.
+ * - `onEmailTranscript` (2026-11-23): ok `sent`. Errors: `not_allowed`, `rate_limited` (with `retryAt`: 3 a day),
+ *   `unavailable` (the email didn't go: try again later), `unknown`.
+ */
 export interface SupportCaseHandlers {
   onReply: ActionHandler<SupportReplyInput>;
+  onRate?: ActionHandler<RateSupportInput>;
+  onEmailTranscript?: () => Promise<ActionResult>;
 }
 
 // ---- Reporting and blocking a person ------------------------------------------------------------------

@@ -215,7 +215,8 @@ export const routes = {
     newMessage: (to?: { userId: string } | { helper: string } | { username: string }) =>
       !to ? '/app/messages/new' : withQuery('/app/messages/new', 'helper' in to ? { helper: to.helper } : 'username' in to ? { u: to.username } : { to: to.userId }),
     /** A conversation; `from` (its `earlier`): from that message on, after "Load earlier messages" (sweep MN11). */
-    thread: (threadId: string, page: { from?: string } = {}) => withQuery(`/app/messages/${enc(threadId)}`, { from: page.from }),
+    /** `from`: the conversation from that message on ("Load earlier messages"); `focus`: a message to scroll to and mark (a search's). */
+    thread: (threadId: string, page: { from?: string; focus?: string } = {}) => withQuery(`/app/messages/${enc(threadId)}`, { from: page.from, focus: page.focus }),
     /** The Help conversation (2026-11-22): the AI assistant, and support's replies once the person asks for a person. */
     helpChat: () => '/app/messages/help',
     /**

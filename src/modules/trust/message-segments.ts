@@ -1,4 +1,4 @@
-import type { MessageSegment } from '@/contracts';
+import type { MentionSegment, MessageSegment } from '@/contracts';
 import { findContactDetails, MASK } from './contact-masking';
 
 /**
@@ -11,20 +11,53 @@ import { findContactDetails, MASK } from './contact-masking';
 /** Where a quote or preview is cut: its first 157 characters and "…", for anything longer than 160. */
 export const QUOTE_LENGTH = 160;
 
-export function toMessageSegments(text: string, options: { mask: boolean }): MessageSegment[] {
-  if (!options.mask || text === '') return text === '' ? [] : [{ kind: 'text', text }];
+/** The people "@name"s in a text may be: lowercase @usernames, without "@", to the person (`mentionedUsernames`). */
+export type Mentions = ReadonlyMap<string, Omit<MentionSegment, 'kind'>>;
 
-  // The same patterns as task text (contact-masking.ts).
+/** "@name" as the patterns find it ("@Minh"), as usernames are kept: lowercase, without "@". */
+const usernameOf = (folded: string) => folded.slice(1).toLowerCase();
+
+/**
+ * The @usernames a text may name (2026-11-23): every "@name" the handle pattern finds, lowercase, without "@". The app
+ * looks them up once for a whole conversation (`mentionsOf` in messaging) and passes what it found to `toMessageSegments`.
+ */
+export function mentionedUsernames(text: string): string[] {
+  return findContactDetails(text, ['handle']).map((match) => usernameOf(match.folded));
+}
+
+/**
+ * `mentions`: TasksNearMe @usernames found in the text, which show as the person (`MentionSegment`), masked or not (2026-11-23).
+ * Any other "@name" is a payment or social handle: hidden before a booking, as written after.
+ */
+export function toMessageSegments(text: string, options: { mask: boolean; mentions?: Mentions }): MessageSegment[] {
+  if (text === '') return [];
+  const mentions = options.mentions;
+  if (!options.mask && !mentions?.size) return [{ kind: 'text', text }];
+
+  // The same patterns as task text (contact-masking.ts); unmasked, only "@name"s, for the people among them.
   const segments: MessageSegment[] = [];
   let cursor = 0;
-  for (const match of findContactDetails(text)) {
+  for (const match of findContactDetails(text, options.mask ? undefined : ['handle'])) {
+    const person = match.detail === 'handle' ? mentions?.get(usernameOf(match.folded)) : undefined;
+    if (!person && !options.mask) continue;
     if (match.start > cursor) segments.push({ kind: 'text', text: text.slice(cursor, match.start) });
     const digits = match.folded.replace(/\D/g, '');
-    segments.push(match.detail === 'phone' && digits.length >= 4 ? { kind: 'masked', detail: 'phone', hint: digits.slice(-4) } : { kind: 'masked', detail: match.detail });
+    segments.push(person ? { kind: 'mention', ...person } : match.detail === 'phone' && digits.length >= 4 ? { kind: 'masked', detail: 'phone', hint: digits.slice(-4) } : { kind: 'masked', detail: match.detail });
     cursor = match.end;
   }
   if (cursor < text.length) segments.push({ kind: 'text', text: text.slice(cursor) });
-  return segments;
+  // Consecutive text pieces (an unmasked handle kept as written) read as one.
+  return segments.reduce<MessageSegment[]>((out, segment) => {
+    const last = out[out.length - 1];
+    if (segment.kind === 'text' && last?.kind === 'text') out[out.length - 1] = { kind: 'text', text: last.text + segment.text };
+    else out.push(segment);
+    return out;
+  }, []);
+}
+
+/** How long a segment reads: a masked detail as "[hidden]", a person as "@" and their name. */
+function lengthOf(segment: MessageSegment): number {
+  return segment.kind === 'text' ? segment.text.length : segment.kind === 'mention' ? segment.name.length + 1 : MASK.length;
 }
 
 /**
@@ -32,7 +65,6 @@ export function toMessageSegments(text: string, options: { mask: boolean }): Mes
  * phone number at the cut never shows its first digits (sweep MN4): a masked detail that doesn't fit is left out whole.
  */
 export function shortenSegments(segments: MessageSegment[], maxLength = QUOTE_LENGTH): MessageSegment[] {
-  const lengthOf = (segment: MessageSegment) => (segment.kind === 'text' ? segment.text.length : MASK.length);
   if (segments.reduce((sum, segment) => sum + lengthOf(segment), 0) <= maxLength) return segments;
   const room = maxLength - 3;
   const kept: MessageSegment[] = [];

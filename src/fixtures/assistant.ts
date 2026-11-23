@@ -8,8 +8,10 @@ import type {
   HelpChatData,
   HelpChatHandlers,
   HelpSummary,
+  LiveChatHours,
+  SupportAgentView,
 } from '@/contracts';
-import { deskBookingThreadPageData, inboxEmptyData, mayaInboxWithDirectData } from './messaging';
+import { conversationSearchData, deskBookingThreadPageData, inboxEmptyData, mayaFoldersInboxData, mayaInboxWithDirectData, requestCardThreadPageData, requestThreadPageData } from './messaging';
 import { jordanSparks } from './sparks';
 
 /**
@@ -70,10 +72,31 @@ export const failedTranscript: AssistantTranscript = { turns: [chargedTurn], err
 
 const replyHours = { booking: 24, payment: 24, account: 24, safety: 4, other: 24 } as const;
 
+/**
+ * Live chat hours (2026-11-23): Monday to Friday 9–18, Saturday 10–14, Gainesville time. At the canonical "now" (Tuesday
+ * 11:00 Eastern) it's open until 18:00; `liveHoursClosed` is the same week seen on Saturday evening (opens Monday 9:00).
+ */
+const liveSchedule: LiveChatHours['schedule'] = [
+  { fromDay: 1, toDay: 5, opens: '09:00', closes: '18:00' },
+  { fromDay: 6, toDay: 6, opens: '10:00', closes: '14:00' },
+];
+export const liveHoursOpen: LiveChatHours = { open: true, nextChange: '2026-11-17T23:00:00.000Z', schedule: liveSchedule, timeZone: 'America/New_York' };
+export const liveHoursClosed: LiveChatHours = { open: false, nextChange: '2026-11-23T14:00:00.000Z', schedule: liveSchedule, timeZone: 'America/New_York' };
+
+/** Riley from support, as members see them on a live chat: first name and photo (2026-11-23). Never a last name. */
+export const rileyAgent: SupportAgentView = {
+  name: 'Riley',
+  initials: 'R',
+  photo: { id: 'fil_avatar_riley', src: '/samples/avatar-sam.svg', alt: 'Riley', width: 512, height: 512 },
+};
+/** The same without a photo: the first name's initial. */
+export const rileyAgentNoPhoto: SupportAgentView = { name: 'Riley', initials: 'R' };
+
 export const helpChatAssistantData: HelpChatData = {
   viewer: { firstName: 'Maya', mode: 'poster' },
   assistantAvailable: true,
   handoff: { bookings: [{ id: 'bkg_desk', title: 'Assemble an IKEA desk', start: '2026-11-15T15:00:00.000Z' }], replyHours },
+  liveHours: liveHoursOpen,
 };
 
 export const helpChatUnavailableData: HelpChatData = { ...helpChatAssistantData, assistantAvailable: false };
@@ -158,6 +181,48 @@ export const helpChatLiveEndedData: HelpChatData = {
 
 export const helpChatRecentData: HelpChatData = { ...helpChatAssistantData, recent: { id: 'case_help_0', status: 'resolved', topic: 'payment' } };
 
+// ---- After a live chat (2026-11-23, owner: "Live support: rate the chat afterwards, see the agent's name and photo, and
+// get a transcript by email") ------------------------------------------------------------------------------------------
+
+/** Riley joined with their photo: the header, the joined line and their messages show it. */
+export const helpChatLiveAgentData: HelpChatData = {
+  ...helpChatLiveJoinedData,
+  case: {
+    ...helpChatLiveJoinedData.case!,
+    live: { state: 'joined', agentsOnline: true, agentName: 'Riley', agent: rileyAgent, requestedAt: '2026-11-17T15:56:00.000Z' },
+    events: helpChatLiveJoinedData.case!.events.map((event) => (event.id === 'cev_live1' || event.id === 'cev_s1' ? { ...event, agent: rileyAgent } : event)),
+  },
+};
+
+/** Asked for a person on Saturday evening: live chat is closed until Monday 9:00, and support replies here and by email. */
+export const helpChatLiveClosedData: HelpChatData = { ...helpChatLiveOfflineData, liveHours: liveHoursClosed };
+
+/** The member's own address, partly hidden, for "Email me this conversation". */
+export const helpTranscript = { to: 'm•••@example.test' };
+
+/** The live chat ended: "How was your chat with Riley?", and a copy by email. */
+export const helpChatRateData: HelpChatData = {
+  ...helpChatLiveEndedData,
+  case: {
+    ...helpChatLiveEndedData.case!,
+    events: helpChatLiveEndedData.case!.events.map((event) => (event.id === 'cev_live1' || event.id === 'cev_s1' ? { ...event, agent: rileyAgentNoPhoto } : event)),
+    rating: { canRate: true },
+    transcript: helpTranscript,
+  },
+};
+
+/** Rated good with a comment; it can still be changed until a week after. */
+export const helpChatRatedData: HelpChatData = {
+  ...helpChatRateData,
+  case: {
+    ...helpChatRateData.case!,
+    rating: { given: { rating: 'good', comment: 'Riley paused the payment right away. Thank you!', at: '2026-11-17T15:59:50.000Z' }, canRate: true, changeUntil: '2026-11-24T15:59:50.000Z' },
+  },
+};
+
+/** A case solved yesterday: the Help conversation asks how the help was. */
+export const helpChatRecentRateData: HelpChatData = { ...helpChatRecentData, recent: { ...helpChatRecentData.recent!, rating: { canRate: true } } };
+
 export const helpSummaryAssistant: HelpSummary = { assistantAvailable: true };
 export const helpSummaryWaiting: HelpSummary = {
   assistantAvailable: true,
@@ -185,6 +250,8 @@ export const fakeHelpChatHandlers: HelpChatHandlers = {
   onReply: ok,
   onRequestLive: async () => ({ ok: true, code: 'updated' }),
   onTyping: () => undefined,
+  onRate: async () => ({ ok: true, code: 'saved' }),
+  onEmailTranscript: async () => ({ ok: true, code: 'sent' }),
 };
 
 export const fakeChatThreadHandlers: ChatThreadHandlers = {
@@ -196,4 +263,17 @@ export const fakeChatThreadHandlers: ChatThreadHandlers = {
   onDeleteReply: async () => ({ ok: true, code: 'saved' }),
   onReport: async () => ({ ok: true, code: 'submitted' }),
   onBlock: async () => ({ ok: true, code: 'updated' }),
+  // The chat's tools (2026-11-23): everything works; "desk" finds two messages.
+  onFlag: async () => ({ ok: true, code: 'updated' }),
+  onAccept: async () => ({ ok: true, code: 'updated' }),
+  onSearch: async (_threadId, query) => ({ ...conversationSearchData, query, hits: query.toLowerCase().includes('desk') ? conversationSearchData.hits : [] }),
+  onTranslate: async () => ({ text: '¡Hola Maya! Jordan T. dijo que quizá necesitas ayuda para mover un sofá el sábado.' }),
+  onSuggest: async () => ({ replies: ['Sounds good to me!', 'What day and time work best for you?', 'Let me check and get back to you today.'] }),
+  requestCards: { onAccept: async () => ({ ok: true, code: 'booked' }), onDecline: async () => ({ ok: true, code: 'updated' }), onCancel: async () => ({ ok: true, code: 'updated' }) },
 };
+
+/** The window's list with a pinned, a muted and an archived conversation, and a message request (2026-11-23). */
+export const chatInboxFoldersData: ChatInboxData = { ...mayaFoldersInboxData, help: helpSummaryReplied };
+/** A message request in the window, and a conversation with a task request card. */
+export const chatRequestThreadData: ChatThreadData = { data: requestThreadPageData };
+export const chatRequestCardThreadData: ChatThreadData = { data: requestCardThreadPageData };

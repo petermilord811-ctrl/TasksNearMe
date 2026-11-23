@@ -662,7 +662,11 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
       if (!threadId) return [];
       const title = await taskTitle(db, text(p.taskId));
       const actorName = await nameOf(db, text(p.senderUserId));
-      return recipients.map((userId) => ({ userId, type: 'message_received' as const, target: { kind: 'thread', threadId } as AttentionTarget, title, actorName }));
+      // A conversation someone muted tells them nothing, by any channel (2026-11-23).
+      const muted = recipients.length
+        ? new Set((await db.select({ userId: threadParticipants.userId }).from(threadParticipants).where(and(eq(threadParticipants.threadId, threadId), inArray(threadParticipants.userId, recipients), eq(threadParticipants.muted, true)))).map((row) => row.userId))
+        : new Set<string>();
+      return recipients.filter((userId) => !muted.has(userId)).map((userId) => ({ userId, type: 'message_received' as const, target: { kind: 'thread', threadId } as AttentionTarget, title, actorName }));
     }
     default:
       return [];

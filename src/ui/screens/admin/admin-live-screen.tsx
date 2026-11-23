@@ -73,13 +73,15 @@ function EventLine({ event, now }: { event: AdminCaseEventView; now: ISODateTime
       </article>
     </li>;
   }
-  const actorName = event.actor.kind === 'staff' ? event.actor.staff.displayName : t('system');
+  const actorName = event.actor.kind === 'staff' ? event.actor.staff.displayName : event.actor.kind === 'member' ? event.actor.person.displayName : t('system');
   const label = event.kind === 'live'
     ? event.live === 'ended' ? t('events.liveEnded', { name: actorName }) : t('events.liveJoined', { name: actorName })
     : event.kind === 'note' ? t('events.note', { body: event.body ?? '' })
       : event.kind === 'status' ? t('events.status', { status: event.status ?? '' })
-        : t(`events.${event.kind === 'assignment' ? 'assignment' : 'other'}`);
-  return <li className="flex justify-center"><p className={cn('max-w-[90%] rounded-2xl px-3 py-1 text-center text-xs', event.kind === 'note' ? 'bg-badge-warning/40 text-foreground' : 'bg-foreground/[0.045] text-muted-foreground dark:bg-white/[0.06]')}>{label}</p></li>;
+        // The member rated the help (2026-11-23), with their comment.
+        : event.kind === 'rating' ? event.body ? t('events.ratingComment', { name: actorName, rating: event.rating ?? 'good', comment: event.body }) : t('events.rating', { name: actorName, rating: event.rating ?? 'good' })
+          : t(`events.${event.kind === 'assignment' ? 'assignment' : 'other'}`);
+  return <li className="flex justify-center"><p className={cn('max-w-[90%] rounded-2xl px-3 py-1 text-center text-xs', event.kind === 'note' ? 'bg-badge-warning/40 text-foreground' : event.kind === 'rating' ? (event.rating === 'bad' ? 'bg-destructive/10 text-foreground' : 'bg-brand-soft/70 text-foreground') : 'bg-foreground/[0.045] text-muted-foreground dark:bg-white/[0.06]')}>{label}</p></li>;
 }
 
 /**

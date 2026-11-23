@@ -13,11 +13,16 @@ import {
   helpChatAssistantData,
   helpChatCaseRepliedData,
   helpChatCaseWaitingData,
+  helpChatLiveAgentData,
+  helpChatLiveClosedData,
   helpChatLiveEndedData,
   helpChatLiveJoinedData,
   helpChatLiveOfflineData,
   helpChatLiveWaitingData,
+  helpChatRateData,
+  helpChatRatedData,
   helpChatRecentData,
+  helpChatRecentRateData,
   helpChatUnavailableData,
   pendingTranscript,
   suggestTranscript,
@@ -175,5 +180,96 @@ describe('HelpChat', () => {
     expect(screen.getByText('Tu caso de soporte sobre Un pago está resuelto.')).toBeDefined();
     expect(screen.getByText(/¡Hola, Maya! Soy el asistente de TasksNearMe, una IA/)).toBeDefined();
     expect(screen.getByRole('button', { name: 'Hablar con una persona' })).toBeDefined();
+  });
+});
+
+describe('HelpChat after the chat (2026-11-23: rating, the agent, transcripts, live chat hours)', () => {
+  it('shows who from support is on the chat: their photo in the header, on the joined line and on their messages', () => {
+    wrap(<HelpChat data={helpChatLiveAgentData} transcript={emptyTranscript} handlers={handlers()} now={now} />);
+    const header = screen.getByRole('banner');
+    // Their photo (or, where it can't load, their initial).
+    expect(within(header).getByRole('img', { name: /Profile photo of Riley|Avatar with initials R/ })).toBeDefined();
+    expect(within(header).getByText('Riley · Support')).toBeDefined();
+    const log = screen.getByRole('log', { name: 'Conversation with TasksNearMe Help' });
+    expect(within(log).getByText('Riley from support joined the chat.')).toBeDefined();
+    // Their message is signed with their first name, not "Support".
+    const message = within(log).getByText(/I'm Riley from support/).closest('article')!;
+    expect(within(message).getByText('Riley')).toBeDefined();
+    expect(within(log).getAllByRole('img', { name: /Profile photo of Riley|Avatar with initials R/ }).length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('says live chat hours where a person is asked for, and outside them that the reply comes here and by email', () => {
+    const { unmount } = wrap(<HelpChat data={helpChatAssistantData} transcript={suggestTranscript} handlers={handlers()} now={now} />);
+    expect(screen.getAllByText(/Live chat is open now, until 6:00\s?pm Eastern Time\. Live chat with a person: Mon–Fri 9:00\s?am–6:00\s?pm, Sat 10:00\s?am–2:00\s?pm \(Eastern Time\)\./).length).toBe(2);
+    unmount();
+    wrap(<HelpChat data={helpChatLiveClosedData} transcript={emptyTranscript} handlers={handlers()} now={now} />);
+    const waiting = screen.getByRole('status');
+    expect(waiting.textContent).toMatch(/Live chat is closed now\. It opens Mon, Nov 23 · 9:00\s?am Eastern Time\. Leave your message here: we'll reply in this chat and by email\./);
+    expect(screen.queryByText(/No one from support is online right now/)).toBeNull();
+  });
+
+  it('asks how the chat with Riley was once it ended: Good or Bad, an optional comment, then thanks', async () => {
+    let finish: (result: { ok: true; code: 'saved' }) => void = () => undefined;
+    const onRate = vi.fn(() => new Promise<{ ok: true; code: 'saved' }>((resolve) => { finish = resolve; }));
+    wrap(<HelpChat data={helpChatRateData} transcript={emptyTranscript} handlers={handlers({ onRate })} now={now} />);
+    const card = screen.getByRole('region', { name: 'How was your chat with Riley?' });
+    fireEvent.click(within(card).getByRole('button', { name: 'Good' }));
+    expect(within(card).getByRole('button', { name: 'Good' }).getAttribute('aria-pressed')).toBe('true');
+    fireEvent.change(within(card).getByRole('textbox', { name: 'Anything to add? (optional)' }), { target: { value: 'Paused the payment at once.' } });
+    fireEvent.click(within(card).getByRole('button', { name: 'Send' }));
+    expect(onRate).toHaveBeenCalledWith('case_help_1', { rating: 'good', comment: 'Paused the payment at once.' });
+    expect(within(card).getByRole('button', { name: 'Sending…' })).toBeDefined();
+    finish({ ok: true, code: 'saved' });
+    await waitFor(() => expect(screen.getByText("Thanks! We're glad it helped.")).toBeDefined());
+    expect(screen.getByRole('button', { name: 'Change' })).toBeDefined();
+  });
+
+  it('shows a rating given, with Change until a week after, and says why a rating fails', async () => {
+    const onRate = vi.fn(async () => ({ ok: false as const, code: 'expired' as const }));
+    wrap(<HelpChat data={helpChatRatedData} transcript={emptyTranscript} handlers={handlers({ onRate })} now={now} />);
+    expect(screen.getByText('You rated this help good.')).toBeDefined();
+    expect(screen.getByText('Riley paused the payment right away. Thank you!')).toBeDefined();
+    expect(screen.getByText(/You can change it until/)).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }));
+    const card = screen.getByRole('region', { name: 'How was your chat with Riley?' });
+    expect((within(card).getByRole('textbox', { name: 'Anything to add? (optional)' }) as HTMLTextAreaElement).value).toBe('Riley paused the payment right away. Thank you!');
+    fireEvent.click(within(card).getByRole('button', { name: 'Bad' }));
+    fireEvent.click(within(card).getByRole('button', { name: 'Send' }));
+    expect(onRate).toHaveBeenCalledWith('case_help_1', { rating: 'bad', comment: 'Riley paused the payment right away. Thank you!' });
+    await waitFor(() => expect(within(card).getByRole('alert').textContent).toBe("This rating can't be changed anymore."));
+    fireEvent.click(within(card).getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByText('You rated this help good.')).toBeDefined();
+  });
+
+  it('emails the conversation to the member, and says where it went or why it did not', async () => {
+    const onEmailTranscript = vi.fn(async () => ({ ok: true as const, code: 'sent' as const }));
+    const { unmount } = wrap(<HelpChat data={helpChatRateData} transcript={emptyTranscript} handlers={handlers({ onEmailTranscript })} now={now} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Email me this conversation' }));
+    expect(onEmailTranscript).toHaveBeenCalledWith('case_help_1');
+    await waitFor(() => expect(screen.getByText('Sent to m•••@example.test.')).toBeDefined());
+    unmount();
+    const limited = vi.fn(async () => ({ ok: false as const, code: 'rate_limited' as const, retryAt: '2026-11-18T16:00:00.000Z' }));
+    wrap(<HelpChat data={helpChatRateData} transcript={emptyTranscript} handlers={handlers({ onEmailTranscript: limited })} now={now} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Email me this conversation' }));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/You've emailed this conversation 3 times today\. Try again at/));
+  });
+
+  it('asks about a case solved lately from the assistant, and in Spanish', () => {
+    const onRate = vi.fn(async () => ({ ok: true as const, code: 'saved' as const }));
+    const { unmount } = wrap(<HelpChat data={helpChatRecentRateData} transcript={emptyTranscript} handlers={handlers({ onRate })} now={now} />);
+    const card = screen.getByRole('region', { name: 'How did we do?' });
+    fireEvent.click(within(card).getByRole('button', { name: 'Bad' }));
+    fireEvent.click(within(card).getByRole('button', { name: 'Send' }));
+    expect(onRate).toHaveBeenCalledWith('case_help_0', { rating: 'bad' });
+    unmount();
+    wrap(<HelpChat data={helpChatRateData} transcript={emptyTranscript} handlers={handlers()} now={now} />, 'es');
+    expect(screen.getByRole('region', { name: '¿Qué tal tu chat con Riley?' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Envíame esta conversación por correo' })).toBeDefined();
+  });
+
+  it('offers no rating without its handler or before there is help to rate', () => {
+    wrap(<HelpChat data={helpChatLiveEndedData} transcript={emptyTranscript} handlers={handlers()} now={now} />);
+    expect(screen.queryByRole('region', { name: /How (did we do|was your chat)/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Email me this conversation' })).toBeNull();
   });
 });

@@ -21,6 +21,16 @@ Replies, conversations someone else started, and conversations about a task, an 
 
 You can send up to 3 messages before the other person answers. Once they answer, keep the conversation going.
 
+## Message requests
+
+When someone you haven't talked to about a task writes to you first, their message waits under **Requests** in Messages, and it doesn't add to your Messages count. Open it to **Accept** it, answer it, **Ignore** it (they aren't told) or **Block** them.
+
+## Keeping track
+
+In Messages and in a conversation's **⋯** menu you can pin up to 3 conversations on top, mute one (no notifications from it) or archive it until the other person writes again. **Search in conversation** finds words in it, and **Translate** shows a message in your language. When someone has written to you, **Suggest replies** offers a few short answers to start from; nothing is sent until you send it.
+
+Someone's @username in a message shows as their name and opens their profile.
+
 ## Who can message you
 
 In your account, under **Direct messages**, choose who can start a conversation with you: everyone, only people you've talked to about a task, or nobody. Blocking someone stops their messages at once, and you can report a message that breaks the [community guidelines](/legal/community-guidelines).

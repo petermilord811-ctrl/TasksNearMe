@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
-import { deleteReplyAction, reactToMessageAction, saveReplyAction, sendMessageAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
+import { acceptMessageRequestAction, deleteReplyAction, reactToMessageAction, saveReplyAction, searchConversationAction, sendMessageAction, setConversationFlagAction, suggestRepliesAction, translateMessageAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
 import { supportAssistantForRequest } from '@/modules/assist/assistant-choice';
 import { getHelpSummary } from '@/modules/assist/support-chat';
 import { getInbox, getThreadPage } from '@/modules/messaging/service';
@@ -15,6 +15,7 @@ import { ThreadContent, ThreadPanes } from '@/ui/screens/messages';
 import { requestNow } from '@/platform/clock';
 import { ThreadSkeleton } from '@/ui/screens/messages/thread-skeleton';
 import { appPageMetadata } from '@/i18n/metadata';
+import { acceptInviteAction, cancelInviteAction, declineInviteAction } from '@/modules/invites/actions';
 
 export async function generateMetadata(): Promise<Metadata> {
   return appPageMetadata('conversation');
@@ -44,11 +45,11 @@ async function Conversations({ params, searchParams }: Pick<PageProps<'/[locale]
       <Thread params={params} searchParams={searchParams} wide={beside} />
     </Suspense>
   );
-  return beside ? <ThreadPanes inbox={threads} currentId={threadId} now={now.toISOString()} help={help}>{conversation}</ThreadPanes> : conversation;
+  return beside ? <ThreadPanes inbox={threads} currentId={threadId} now={now.toISOString()} help={help} listHandlers={{ onFlag: setConversationFlagAction, onAccept: acceptMessageRequestAction }}>{conversation}</ThreadPanes> : conversation;
 }
 
 async function Thread({ params, searchParams, wide }: Pick<PageProps<'/[locale]/app/messages/[threadId]'>, 'params' | 'searchParams'> & { wide: boolean }) {
-  const [{ threadId }, { from }, viewer] = await Promise.all([params, searchParams, getViewer()]);
+  const [{ threadId }, { from, focus }, viewer] = await Promise.all([params, searchParams, getViewer()]);
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.thread(threadId)));
   const now = await requestNow();
   const [data, subject] = await Promise.all([getThreadPage(db, viewer.user.id, threadId, now, typeof from === 'string' ? { from } : {}), getReportSubject(db, viewer.user.id, threadId)]);
@@ -58,7 +59,22 @@ async function Thread({ params, searchParams, wide }: Pick<PageProps<'/[locale]/
       wide={wide}
       data={data}
       now={now.toISOString()}
-      handlers={{ onSend: sendMessageAction.bind(null, threadId), onUploadPhoto: uploadMessagePhoto, onTyping: typingAction.bind(null, threadId), onReact: reactToMessageAction.bind(null, threadId), onSaveReply: saveReplyAction, onDeleteReply: deleteReplyAction }}
+      {...(typeof focus === 'string' ? { focusId: focus } : {})}
+      handlers={{
+        onSend: sendMessageAction.bind(null, threadId),
+        onUploadPhoto: uploadMessagePhoto,
+        onTyping: typingAction.bind(null, threadId),
+        onReact: reactToMessageAction.bind(null, threadId),
+        onSaveReply: saveReplyAction,
+        onDeleteReply: deleteReplyAction,
+        // The viewer's own list, a message request, and the conversation's search (2026-11-23).
+        onFlag: setConversationFlagAction.bind(null, threadId),
+        onAccept: acceptMessageRequestAction.bind(null, threadId),
+        onSearch: searchConversationAction.bind(null, threadId),
+        onTranslate: translateMessageAction.bind(null, threadId),
+        onSuggest: suggestRepliesAction.bind(null, threadId),
+        requestCards: { onAccept: acceptInviteAction, onDecline: declineInviteAction, onCancel: cancelInviteAction },
+      }}
       {...(subject ? { safety: { subject, handlers: { onReport: reportUserAction.bind(null, threadId), onBlock: blockUserAction.bind(null, threadId) } } } : {})}
     />
   );

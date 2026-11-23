@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Mail, LockKeyhole, MessageSquare, UserRound } from 'lucide-react';
+import { Mail, LockKeyhole, MessageSquare, ThumbsDown, ThumbsUp, UserRound } from 'lucide-react';
 import type { AdminCaseActor, AdminCaseBookingSummary, AdminCaseEventView, AdminCaseHandlers, AdminCasePageData, CaseStatus, ISODateTime, Photo } from '@/contracts';
 import { routes } from '@/contracts';
 import { formatMoney } from '@/shared/format';
@@ -74,10 +74,12 @@ function CaseEvent({ event, parties, contact, now }: { event: AdminCaseEventView
   return <li className="relative min-w-0 pl-6 before:absolute before:top-3 before:left-0 before:size-2 before:rounded-full before:bg-border">
     <article className={cn('space-y-2 rounded-lg border p-3 sm:p-4', note ? 'border-warning/30 bg-badge-warning' : 'bg-card')}>
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-        <p className="flex items-center gap-2 font-semibold">{note && <LockKeyhole aria-hidden="true" className="size-4 text-badge-warning-foreground" />}{event.kind === 'message' && (event.emailed || event.actor.kind === 'contact' ? <Mail aria-hidden="true" className="size-4 text-primary" /> : <MessageSquare aria-hidden="true" className="size-4 text-primary" />)}{event.kind === 'live' ? t(event.live === 'ended' ? 'details.events.liveEnded' : 'details.events.liveJoined', { name: actor }) : event.kind === 'review' ? t(event.reviewAction === 'shown' ? 'details.events.reviewShown' : 'details.events.reviewHidden') : event.kind === 'question' ? t(`details.events.question.${event.questionAction ?? 'hidden'}`) : note ? t('details.internalNote') : event.kind === 'message' ? messageTitle : t(`details.events.${event.kind}`)}</p>
+        <p className="flex items-center gap-2 font-semibold">{note && <LockKeyhole aria-hidden="true" className="size-4 text-badge-warning-foreground" />}{event.kind === 'message' && (event.emailed || event.actor.kind === 'contact' ? <Mail aria-hidden="true" className="size-4 text-primary" /> : <MessageSquare aria-hidden="true" className="size-4 text-primary" />)}{event.kind === 'rating' && (event.rating === 'bad' ? <ThumbsDown aria-hidden="true" className="size-4 text-destructive" /> : <ThumbsUp aria-hidden="true" className="size-4 text-primary" />)}{event.kind === 'live' ? t(event.live === 'ended' ? 'details.events.liveEnded' : 'details.events.liveJoined', { name: actor }) : event.kind === 'rating' ? t('details.events.rating', { rating: event.rating ?? 'good' }) : event.kind === 'review' ? t(event.reviewAction === 'shown' ? 'details.events.reviewShown' : 'details.events.reviewHidden') : event.kind === 'question' ? t(`details.events.question.${event.questionAction ?? 'hidden'}`) : note ? t('details.internalNote') : event.kind === 'message' ? messageTitle : t(`details.events.${event.kind}`)}</p>
         <time dateTime={event.at} title={formatRelative(event.at, now)} className="tabular-nums text-muted-foreground">{formatDateTime(event.at)}</time>
       </div>
       <p className="text-sm text-muted-foreground">{actor}</p>
+      {/* The member's rating (2026-11-23): when they last changed it. */}
+      {event.kind === 'rating' && event.changedAt && <p className="text-xs text-muted-foreground">{t('details.ratingChanged', { date: formatDateTime(event.changedAt) })}</p>}
       {event.kind === 'status' && event.status && <CaseBadge status={event.status} />}
       {event.kind === 'assignment' && <p className="text-sm">{event.assignee ? t('details.assignedTo', { name: event.assignee.displayName }) : t('details.unassigned')}</p>}
       {event.kind === 'resolution' && event.resolution && <p className="text-sm font-medium">{t(`resolutions.${event.resolution}`)}</p>}

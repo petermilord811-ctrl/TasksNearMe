@@ -47,11 +47,13 @@
     "allowancePlan": "Puedes empezar {left, plural, one {# conversación más} other {# conversaciones más}} hoy ({perDay} al día con {plan, select, pro {Pro} other {Plus}}).",
     "suggestions": "Personas",
     "noMatches": "Nadie a quien podamos escribir tiene un nombre de usuario que empiece por @{username}.",
-    "openConversation": "Tu conversación"
+    "openConversation": "Tu conversación",
+    "allowanceStaff": "Cuenta del equipo: puedes empezar todas las conversaciones nuevas que necesites."
   },
   "moreWithPlans": "Inicia más al día con Plus o Pro",
   "helperBadge": "Ayudante",
   "sampleBadge": "Perfil de muestra",
   "sampleNote": "{name} es un perfil de muestra que enseña cómo funciona TasksNearMe, así que no va a responder.",
-  "someoneElse": "Otra persona"
+  "someoneElse": "Otra persona",
+  "allowanceStaff": "Cuenta del equipo: sin límite diario de conversaciones nuevas"
 }

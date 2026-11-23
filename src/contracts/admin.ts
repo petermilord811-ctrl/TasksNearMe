@@ -11,6 +11,7 @@ import type { PriceBreakdown } from './money';
 import type { CommunityModerationInput } from './community';
 import type { PersonSummary } from './people';
 import type { PublicReviewView } from './profiles';
+import type { SupportRating } from './support';
 import { CASE_RESOLUTIONS, CASE_STATUSES } from './status';
 import type { BookingStatus, CaseResolution, CaseStatus, CaseType, EarningsStatus } from './status';
 import type { EarningsKind } from './earnings';
@@ -123,9 +124,10 @@ export interface AdminCaseEventView {
   /**
    * `message`: between support and one party. `note`: staff only. `review`: the reported review was hidden or shown
    * (staff only; `body` is the reason). `question`: the reported question was hidden, removed or restored (staff only;
-   * `body` is the reason).
+   * `body` is the reason). `rating`: the member rated the help (2026-11-23; `rating`, `body` their comment, `at` when
+   * they first rated, `changedAt` when they last changed it).
    */
-  kind: 'message' | 'note' | 'status' | 'assignment' | 'resolution' | 'review' | 'question' | 'live';
+  kind: 'message' | 'note' | 'status' | 'assignment' | 'resolution' | 'review' | 'question' | 'live' | 'rating';
   actor: AdminCaseActor;
   /** Messages: whose conversation with support (an `AdminCaseParty` person id). */
   partyId?: string;
@@ -145,6 +147,9 @@ export interface AdminCaseEventView {
   questionAction?: 'hidden' | 'removed' | 'restored';
   /** `live` events (2026-11-22): the live chat joined (by `actor`) or ended. */
   live?: 'joined' | 'ended';
+  /** `rating` events (2026-11-23): good or bad. */
+  rating?: SupportRating;
+  changedAt?: ISODateTime;
   at: ISODateTime;
 }
 

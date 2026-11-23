@@ -40,7 +40,17 @@ export const threadParticipants = pgTable(
       .notNull()
       .references(() => users.id),
     lastReadAt: timestamp('last_read_at', { withTimezone: true }),
+    /** No "sent you a message" for this conversation, by any channel, and it doesn't count in the Messages badge (2026-11-23). */
     muted: boolean('muted').notNull().default(false),
+    /** Pinned on top of the person's list (at most `PINNED_CONVERSATIONS_MAX`), since when (2026-11-23). */
+    pinnedAt: timestamp('pinned_at', { withTimezone: true }),
+    /** Out of the list, under Archived, since when; a new message from the other person brings it back (2026-11-23). */
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    /**
+     * A direct conversation the person takes messages in (2026-11-23): the one who started it, someone they've talked to
+     * about a task, or once they accept it or answer. Null: a message request (Accept, Ignore or Block). Unused elsewhere.
+     */
+    acceptedAt: timestamp('accepted_at', { withTimezone: true }),
   },
   (t) => [primaryKey({ columns: [t.threadId, t.userId] }), index('thread_participants_user_idx').on(t.userId)],
 );

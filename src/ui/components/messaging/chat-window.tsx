@@ -11,6 +11,7 @@ import type {
   ChatThreadHandlers,
   ChatView,
   ChatWindowState,
+  ConversationListHandlers,
   DirectChatStart,
   HelpChatData,
   HelpChatHandlers,
@@ -23,8 +24,8 @@ import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useShownPerson } from '@/ui/lib/shown-person';
 import { cn } from '@/ui/lib/utils';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
-import { ReportBlockMenu } from '@/ui/components/safety';
 import { SparksBadge } from '@/ui/components/people/sparks-badge';
+import { Badge } from '@/ui/primitives/badge';
 import { buttonVariants } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 import { MessageComposerContent } from '@/ui/screens/messages/message-composer';
@@ -32,6 +33,7 @@ import { MessageLog } from '@/ui/screens/messages/message-log';
 import { ReplyProvider } from '@/ui/screens/messages/reply-context';
 import { subjectHref } from '@/ui/screens/messages/thread-screen';
 import { ThreadPresence } from '@/ui/screens/messages/thread-presence';
+import { ConversationMarks, ConversationMenu, RequestBanner } from './conversation-tools';
 import { HelpChat } from './help-chat';
 import { HelpAvatar, HelpRow } from './help-row';
 import { InboxList } from './inbox-list';
@@ -53,6 +55,14 @@ export interface ChatWindowProps {
   helpHandlers: HelpChatHandlers;
   /** New message in the window: suggestions as the @username is typed, and the first message. */
   newChatHandlers: Pick<NewChatHandlers, 'onSearch' | 'onStart'>;
+  /** Pin, mute, archive and accept from the list's rows (2026-11-23). */
+  listHandlers: ConversationListHandlers;
+  /** A message the open conversation scrolls to and marks: a search's result (2026-11-23). */
+  focusId?: string;
+  /** A search's result chosen: the open conversation from that message. */
+  onJump(messageId: string): void;
+  /** A conversation in a docked window of its own beside this one (2026-11-23); absent where there's no room. */
+  onOpenBeside?: (threadId: string) => void;
   /** Show the list, the Help conversation, a conversation or New message. */
   onShow(view: ChatView): void;
   /** The first message went: the new conversation (`redirectTo`), shown in the window. */
@@ -89,7 +99,21 @@ function Failed({ onRetry, notFound = false }: { onRetry(): void; notFound?: boo
 }
 
 /** One conversation in the window: who and what it's about, the messages, and the composer (or why it's closed). */
-function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier }: { load: ChatLoad<ChatThreadData>; now: ISODateTime; handlers: ChatThreadHandlers; onRetry(): void; onRefresh(): void; onLoadEarlier(from: string): Promise<void> }) {
+function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, focusId, onJump, onIgnored, onOpenBeside, controls }: {
+  load: ChatLoad<ChatThreadData>;
+  now: ISODateTime;
+  handlers: ChatThreadHandlers;
+  onRetry(): void;
+  onRefresh(): void;
+  onLoadEarlier(from: string): Promise<void>;
+  focusId?: string;
+  onJump(messageId: string): void;
+  onIgnored(): void;
+  /** "Open beside": this conversation in a window of its own, docked beside the chat window (2026-11-23). */
+  onOpenBeside?: () => void;
+  /** A docked window's own buttons (minimize, close), at the end of the header. */
+  controls?: ReactNode;
+}) {
   const t = useTranslations('thread');
   const w = useTranslations('chat.window');
   const person = useShownPerson();
@@ -110,33 +134,50 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier }: 
     onReact: (input) => handlers.onReact(id, input),
     onSaveReply: handlers.onSaveReply,
     onDeleteReply: handlers.onDeleteReply,
+    onFlag: (input) => handlers.onFlag(id, input),
+    onAccept: () => handlers.onAccept(id),
+    onSearch: (query) => handlers.onSearch(id, query),
+    onTranslate: (messageId) => handlers.onTranslate(id, messageId),
+    onSuggest: () => handlers.onSuggest(id),
   };
+  // Suggest replies answers the other person's latest message, when they wrote last (2026-11-23).
+  const lastWritten = [...messages].reverse().find((message) => message.kind === 'text');
+  const suggestFor = data.assist?.suggest && lastWritten?.sender === 'them' ? lastWritten.id : undefined;
+  const safetyMenu = safety ? { subject: safety, handlers: { onReport: (input: Parameters<ChatThreadHandlers['onReport']>[1]) => handlers.onReport(id, input), onBlock: (input: { blocked: boolean }) => handlers.onBlock(id, input) } } : undefined;
   return <section aria-label={w('conversation', { name: other.displayName })} className="flex min-h-0 flex-1 flex-col">
     <header className="flex min-w-0 items-center gap-2.5 border-b border-foreground/[0.07] px-3 py-2.5 dark:border-white/[0.06]">
       <InitialsAvatar initials={other.initials} photo={other.photo} size="sm" />
       <div className="min-w-0 flex-1">
-        <h3 className="truncate text-[15px] font-semibold">{other.displayName}</h3>
+        <div className="flex min-w-0 items-center gap-1.5"><h3 className="truncate text-[15px] font-semibold">{other.displayName}</h3><ConversationMarks thread={thread} /></div>
         <div className="flex min-w-0 items-center gap-x-2 text-xs text-muted-foreground">
           <ThreadPresence threadId={thread.id} presence={data.presence} className="shrink-0 text-xs" />
           {/* Their @username and Sparks (2026-11-22). */}
           {other.username && <span className="shrink-0">@{other.username}</span>}
+          {thread.sample && <Badge variant="outline" className="shrink-0">{t('sampleBadge')}</Badge>}
           {other.sparks && <SparksBadge sparks={other.sparks} compact className="shrink-0 flex-nowrap" />}
           <span className="truncate">{thread.kind === 'direct' ? t('direct.label') : thread.title}</span>
         </div>
       </div>
       {subjectLink && <Link href={subjectLink} title={t(`subject.${thread.subject.kind}`)} aria-label={t(`subject.${thread.subject.kind}`)} className={control}><ArrowUpRight aria-hidden="true" className="size-4" /></Link>}
-      {safety && <ReportBlockMenu key={safety.userId} subject={safety} handlers={{ onReport: (input) => handlers.onReport(id, input), onBlock: (input) => handlers.onBlock(id, input) }} />}
+      {/* Search, pin, mute, archive, then Report and Block (2026-11-23). */}
+      <ConversationMenu thread={thread} handlers={bound} safety={safetyMenu} name={other.displayName} onJump={onJump} now={now} {...(onOpenBeside ? { onOpenBeside } : {})} />
+      {controls}
     </header>
     {thread.contactMasking && <p className="flex items-start gap-2 border-b border-foreground/[0.07] bg-secondary/60 px-3 py-2 text-xs leading-5 text-secondary-foreground dark:border-white/[0.06]"><LockKeyhole aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" /><span>{thread.kind === 'direct' ? t('direct.masking') : t('masking')}</span></p>}
+    {data.canProposeChange && thread.subject.kind === 'booking' && <p className="flex flex-wrap items-center justify-between gap-x-3 border-b border-foreground/[0.07] px-3 py-1.5 text-xs dark:border-white/[0.06]">
+      <span className="text-muted-foreground">{t('cards.change.hint')}</span>
+      <Link href={routes.app.bookingProposeChange(thread.subject.bookingId)} className="inline-flex min-h-9 items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">{t('cards.change.propose')}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>
+    </p>}
     {requestHandle && <p className="flex flex-wrap items-center justify-between gap-x-3 border-b border-foreground/[0.07] px-3 py-1.5 text-xs dark:border-white/[0.06]">
       <span className="text-muted-foreground">{t('direct.requestHint', { name: firstName })}</span>
       <Link href={routes.app.requestHelper(requestHandle)} className="inline-flex min-h-9 items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">{t('direct.request')}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>
     </p>}
     <ReplyProvider>
-      <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier), onLoadEarlier: () => onLoadEarlier(data.earlier!.from) } : {})} onRefresh={onRefresh} otherParty={other} now={now} seenMessageId={data.seenMessageId} firstUnreadId={data.firstUnreadId} canReply={composer.canSend} {...(composer.canSend ? { onReact: bound.onReact } : {})} className="min-h-0 flex-1 space-y-5 px-3 py-3 sm:px-3 sm:py-3" />
+      <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier), onLoadEarlier: () => onLoadEarlier(data.earlier!.from) } : {})} onRefresh={onRefresh} otherParty={other} now={now} seenMessageId={data.seenMessageId} firstUnreadId={data.firstUnreadId} focusId={focusId} canReply={composer.canSend} {...(composer.canSend ? { onReact: bound.onReact } : {})} {...(data.assist?.translate ? { onTranslate: bound.onTranslate } : {})} {...(data.cards ? { cards: data.cards } : {})} requestCardHandlers={handlers.requestCards} className="min-h-0 flex-1 space-y-5 px-3 py-3 sm:px-3 sm:py-3" />
+      {composer.disabledReason !== 'blocked' && <RequestBanner thread={thread} name={firstName} handlers={bound} onBlock={(input) => handlers.onBlock(id, input)} onIgnored={onIgnored} compact />}
       {composer.canSend && composer.firstMessagesLeft !== undefined && <p role="note" className="border-t border-foreground/[0.07] bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground dark:border-white/[0.06]">{t('direct.firstMessagesLeft', { count: composer.firstMessagesLeft, name: firstName })}</p>}
       {composer.canSend
-        ? <MessageComposerContent key={`composer-${thread.id}`} compact rules={composer} handlers={bound} savedReplies={data.savedReplies} template={{ firstName, task: thread.title }} onRefresh={onRefresh} />
+        ? <MessageComposerContent key={`composer-${thread.id}`} compact rules={composer} handlers={bound} savedReplies={data.savedReplies} template={{ firstName, task: thread.title }} onRefresh={onRefresh} {...(suggestFor ? { suggestFor } : {})} />
         : <div role="status" className="border-t border-foreground/[0.07] bg-muted/60 px-3 py-3 text-center text-sm dark:border-white/[0.06]">
           <p className="font-medium">{closedReason ? t(`closed.${thread.subject.kind}.${closedReason}`, { name: other.displayName }) : t(`disabled.${composer.disabledReason ?? 'unavailable'}`, { name: firstName })}</p>
           {closedReason && subjectLink && <Link href={subjectLink} className="mt-1 inline-flex min-h-9 items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">{t(`wayOn.${thread.subject.kind}`)}<ArrowRight aria-hidden="true" className="size-4" /></Link>}
@@ -146,7 +187,7 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier }: 
 }
 
 /** The conversations, with Help pinned on top. */
-function ListPane({ load, view, now, onShow, onRetry }: { load: ChatLoad<ChatInboxData>; view: ChatView; now: ISODateTime; onShow(view: ChatView): void; onRetry(): void }) {
+function ListPane({ load, view, now, onShow, onRetry, handlers, onOpenBeside }: { load: ChatLoad<ChatInboxData>; view: ChatView; now: ISODateTime; onShow(view: ChatView): void; onRetry(): void; handlers: ConversationListHandlers; onOpenBeside?: (threadId: string) => void }) {
   const t = useTranslations('chat.window');
   const loaded = load.status === 'idle' ? undefined : load.data;
   if (!loaded) return load.status === 'error' ? <Failed onRetry={onRetry} /> : <Loading />;
@@ -154,7 +195,7 @@ function ListPane({ load, view, now, onShow, onRetry }: { load: ChatLoad<ChatInb
   if (loaded.threads.length === 0) {
     return <div className="flex min-h-0 flex-1 flex-col">{help}<p className="px-4 py-6 text-center text-sm text-muted-foreground">{t('empty')}</p></div>;
   }
-  return <InboxList threads={loaded.threads} now={now} variant="pane" currentId={view.kind === 'thread' ? view.threadId : undefined} pinned={help} onSelect={(threadId) => onShow({ kind: 'thread', threadId })} />;
+  return <InboxList threads={loaded.threads} now={now} variant="pane" currentId={view.kind === 'thread' ? view.threadId : undefined} pinned={help} onSelect={(threadId) => onShow({ kind: 'thread', threadId })} handlers={handlers} {...(onOpenBeside ? { onOpenBeside } : {})} />;
 }
 
 function Choose() {
@@ -271,7 +312,7 @@ function useWindowSize(box: RefObject<HTMLElement | null>) {
  * usable behind it, Tab moves on past it, and Esc minimizes it. Everything it shows comes in as props (loaded by the app).
  */
 export function ChatWindow(props: ChatWindowProps) {
-  const { state, view, unread, inbox, thread, help, start, transcript, now, threadHandlers, helpHandlers, newChatHandlers, onShow, onStarted, onMinimize, onRestore, onClose, onRetry, onRefreshThread, onLoadEarlier, fullPageHref, onFullPage, focusKey } = props;
+  const { state, view, unread, inbox, thread, help, start, transcript, now, threadHandlers, helpHandlers, newChatHandlers, listHandlers, focusId, onJump, onOpenBeside, onShow, onStarted, onMinimize, onRestore, onClose, onRetry, onRefreshThread, onLoadEarlier, fullPageHref, onFullPage, focusKey } = props;
   const t = useTranslations('chat.window');
   const helpCopy = useTranslations('chat.help');
   const person = useShownPerson();
@@ -321,11 +362,11 @@ export function ChatWindow(props: ChatWindowProps) {
     {/* Two panes when the window is wide enough (its own width: it can be resized), one at a time below that. */}
     <div className="grid min-h-0 flex-1 bg-card/85 @2xl:grid-cols-[18rem_minmax(0,1fr)]">
       <div className={cn('min-h-0 flex-col border-foreground/[0.07] @2xl:flex @2xl:border-r dark:border-white/[0.06]', listShown ? 'flex' : 'hidden')}>
-        <ListPane load={inbox} view={view} now={now} onShow={onShow} onRetry={onRetry} />
+        <ListPane load={inbox} view={view} now={now} onShow={onShow} onRetry={onRetry} handlers={listHandlers} {...(onOpenBeside ? { onOpenBeside } : {})} />
       </div>
       <div className={cn('min-h-0 flex-col', listShown ? 'hidden @2xl:flex' : 'flex')}>
         {view.kind === 'thread'
-          ? <ThreadPane load={thread} now={now} handlers={threadHandlers} onRetry={onRetry} onRefresh={onRefreshThread} onLoadEarlier={onLoadEarlier} />
+          ? <ThreadPane load={thread} now={now} handlers={threadHandlers} onRetry={onRetry} onRefresh={onRefreshThread} onLoadEarlier={onLoadEarlier} focusId={focusId} onJump={onJump} onIgnored={() => onShow({ kind: 'list' })} {...(onOpenBeside ? { onOpenBeside: () => onOpenBeside(view.threadId) } : {})} />
           : view.kind === 'new'
             ? <NewChat
               variant="pane"
@@ -342,4 +383,122 @@ export function ChatWindow(props: ChatWindowProps) {
       </div>
     </div>
   </section>;
+}
+
+// ---- Conversations side by side (2026-11-23, owner: "plan all and implement") ---------------------------------------------
+
+/** A conversation docked beside the chat window, open or minimized to a bar. */
+export interface DockedChat {
+  threadId: string;
+  minimized: boolean;
+}
+
+/** A docked window's width, and the gap between windows. */
+export const DOCKED_WIDTH = 360;
+const DOCKED_GAP = 12;
+const EDGE = 24;
+
+/**
+ * How far from the right the docked windows start: past the chat window, its minimized bar, or the chat button
+ * (`mainKey`: which of them is there; its size is followed as it's resized).
+ */
+function useDockOffset(mainKey: string): number {
+  const [offset, setOffset] = useState(EDGE + 64 + DOCKED_GAP);
+  useEffect(() => {
+    let frame = 0;
+    let tries = 0;
+    let watched: HTMLElement | null = null;
+    const find = () => document.querySelector<HTMLElement>('[data-chat-window]') ?? document.querySelector<HTMLElement>('[data-chat-launcher="window"]');
+    const measure = () => {
+      const main = watched ?? find();
+      setOffset(EDGE + Math.round(main ? main.getBoundingClientRect().width : 64) + DOCKED_GAP);
+    };
+    const observer = new ResizeObserver(measure);
+    // The chat window's code may still be loading: look again for a few frames.
+    const attach = () => {
+      const main = find();
+      if (!main && tries < 30) {
+        tries += 1;
+        frame = requestAnimationFrame(attach);
+        return;
+      }
+      watched = main;
+      if (main) observer.observe(main);
+      measure();
+    };
+    frame = requestAnimationFrame(attach);
+    window.addEventListener('resize', measure);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [mainKey]);
+  return offset;
+}
+
+/**
+ * Conversations side by side (2026-11-23): "Open beside" docks a conversation in a window of its own to the left of the
+ * chat window, at most two, each with its messages, composer and live updates, minimized to a bar or closed on its own.
+ * Not modal, as the chat window; Esc in one minimizes it.
+ */
+export function DockedChats({ docked, mainKey, loads, now, handlers, onMinimize, onRestore, onClose, onRefresh, onLoadEarlier, onShowInWindow }: {
+  docked: DockedChat[];
+  /** What the chat window is now (open, minimized, closed), so the row moves with it. */
+  mainKey: string;
+  loads: Record<string, ChatLoad<ChatThreadData>>;
+  now: ISODateTime;
+  handlers: ChatThreadHandlers;
+  onMinimize(threadId: string): void;
+  onRestore(threadId: string): void;
+  onClose(threadId: string): void;
+  onRefresh(threadId: string): void;
+  onLoadEarlier(threadId: string, from: string): Promise<void>;
+  /** Back into the chat window (its own pane). */
+  onShowInWindow(threadId: string): void;
+}) {
+  const t = useTranslations('chat.window');
+  const person = useShownPerson();
+  const offset = useDockOffset(mainKey);
+  if (docked.length === 0) return null;
+  return <div data-chat-docked-row="" className="fixed bottom-6 z-40 hidden flex-row-reverse items-end gap-3 lg:flex" style={{ right: offset }}>
+    {docked.map((chat) => {
+      const load = loads[chat.threadId] ?? { status: 'idle' };
+      const loaded = load.status === 'idle' ? undefined : load.data;
+      const other = loaded ? person(loaded.data.thread.otherParty) : undefined;
+      const name = other?.displayName ?? t('title');
+      const close = <button type="button" onClick={() => onClose(chat.threadId)} aria-label={t('closeDocked', { name })} title={t('closeDocked', { name })} className={control}><X aria-hidden="true" className="size-4" /></button>;
+      if (chat.minimized) {
+        const unread = loaded?.data.thread.unreadCount ?? 0;
+        return <div key={chat.threadId} data-chat-docked="minimized" role="region" aria-label={t('dockedMinimized', { name })} className="app-glass flex w-56 items-center gap-1 rounded-full border border-foreground/[0.08] p-1.5 shadow-[0_18px_40px_-18px_rgb(40_20_5/0.5)] dark:border-white/[0.1]">
+          <button type="button" onClick={() => onRestore(chat.threadId)} className="flex min-w-0 flex-1 items-center gap-2 rounded-full py-0.5 pr-2 pl-0.5 text-left hover:bg-foreground/[0.04] focus-visible:outline-2 focus-visible:outline-ring">
+            {other ? <InitialsAvatar initials={other.initials} photo={other.photo} size="sm" /> : <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground"><MessagesSquare className="size-4" /></span>}
+            <span className="min-w-0 flex-1 truncate text-sm font-semibold"><span className="sr-only">{t('restore')}: </span>{name}</span>
+            {unread > 0 && <span className="shrink-0 rounded-full bg-primary px-2 text-xs leading-5 font-semibold text-primary-foreground tabular-nums">{unread > 99 ? '99+' : unread}<span className="sr-only"> {t('unreadWord')}</span></span>}
+          </button>
+          {close}
+        </div>;
+      }
+      const controls = <>
+        <button type="button" onClick={() => onShowInWindow(chat.threadId)} aria-label={t('showInWindow')} title={t('showInWindow')} className={control}><ArrowRight aria-hidden="true" className="size-4" /></button>
+        <button type="button" onClick={() => onMinimize(chat.threadId)} aria-label={t('minimizeDocked', { name })} title={t('minimizeDocked', { name })} className={control}><Minus aria-hidden="true" className="size-4" /></button>
+        {close}
+      </>;
+      return <section key={chat.threadId} data-chat-docked="open" role="dialog" aria-modal="false" aria-label={t('docked', { name })} tabIndex={-1}
+        onKeyDown={(event) => {
+          if (event.key !== 'Escape' || event.defaultPrevented) return;
+          event.stopPropagation();
+          onMinimize(chat.threadId);
+        }}
+        className="app-glass flex h-[min(34rem,calc(100dvh-var(--app-header-offset,4.25rem)-3rem))] flex-col overflow-hidden rounded-[1.5rem] border border-foreground/[0.08] bg-card/85 shadow-[0_2px_6px_rgb(23_18_14/0.06),0_30px_60px_-24px_rgb(40_20_5/0.55)] outline-none motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 dark:border-white/[0.1]"
+        style={{ width: DOCKED_WIDTH }}>
+        {loaded
+          ? <ThreadPane load={load} now={now} handlers={handlers} onRetry={() => onRefresh(chat.threadId)} onRefresh={() => onRefresh(chat.threadId)} onLoadEarlier={(from) => onLoadEarlier(chat.threadId, from)} onJump={() => onShowInWindow(chat.threadId)} onIgnored={() => onClose(chat.threadId)} controls={controls} />
+          : <>
+            <div className="flex justify-end border-b border-foreground/[0.07] px-2 py-1.5 dark:border-white/[0.06]">{controls}</div>
+            {load.status === 'error' ? <Failed onRetry={() => onRefresh(chat.threadId)} notFound={load.notFound} /> : <Loading />}
+          </>}
+      </section>;
+    })}
+  </div>;
 }

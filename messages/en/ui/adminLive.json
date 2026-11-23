@@ -47,7 +47,9 @@
     "note": "Note: {body}",
     "status": "Status: {status}",
     "assignment": "Assignment changed",
-    "other": "Case updated"
+    "other": "Case updated",
+    "rating": "{name} rated the help {rating, select, good {good} other {bad}}",
+    "ratingComment": "{name} rated the help {rating, select, good {good} other {bad}}: “{comment}”"
   },
   "errors": {
     "notAllowed": "You can't do that on this chat (someone else may have it). The page shows the latest.",
@@ -64,6 +66,7 @@
     "others": "Another agent's chat: read only",
     "ended": "A chat you ended",
     "empty": "No live chats",
-    "readOnly": "A role that reads but doesn't answer"
+    "readOnly": "A role that reads but doesn't answer",
+    "rated": "Chat ended and rated by the member"
   }
 }

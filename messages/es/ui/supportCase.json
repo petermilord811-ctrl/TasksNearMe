@@ -44,5 +44,60 @@
     "unknown": "No se pudo enviar la respuesta"
   },
   "liveJoined": "{name}, de soporte, se unió al chat en vivo.",
-  "liveEnded": "El chat en vivo terminó."
+  "liveEnded": "El chat en vivo terminó.",
+  "feedback": {
+    "rating": {
+      "title": "¿Qué tal te ayudamos?",
+      "titleLive": "¿Qué tal tu chat con {name}?",
+      "body": "Con un toque se lo dices a nuestro equipo de soporte. Solo ellos lo ven.",
+      "good": "Bien",
+      "bad": "Mal",
+      "comment": "¿Algo más? (opcional)",
+      "commentHint": "Hasta 500 caracteres. Solo lo ve nuestro equipo de soporte.",
+      "commentCount": "{count} / {maximum}",
+      "send": "Enviar",
+      "sending": "Enviando…",
+      "thanksGood": "¡Gracias! Nos alegra que te haya servido.",
+      "thanksBad": "Gracias por decírnoslo. Lo usaremos para mejorar.",
+      "yours": "Calificaste esta ayuda como {rating, select, good {buena} other {mala}}.",
+      "change": "Cambiar",
+      "cancel": "Cancelar",
+      "changeUntil": "Puedes cambiarla hasta el {date}.",
+      "errors": {
+        "required": "Elige Bien o Mal.",
+        "too_long": "Usa 500 caracteres o menos.",
+        "expired": "Esta calificación ya no se puede cambiar.",
+        "not_allowed": "Esta ayuda no se puede calificar.",
+        "rate_limited": "Demasiados intentos. Vuelve a intentarlo a las {time}.",
+        "unknown": "No se envió. Inténtalo de nuevo."
+      }
+    },
+    "transcript": {
+      "action": "Envíame esta conversación por correo",
+      "sending": "Enviando…",
+      "hint": "La enviaremos a {email}.",
+      "sent": "Enviada a {email}.",
+      "errors": {
+        "rate_limited": "Ya enviaste esta conversación 3 veces hoy. Vuelve a intentarlo a las {time}.",
+        "unavailable": "El correo no salió. Inténtalo de nuevo en unos minutos.",
+        "not_allowed": "Esta conversación no se puede enviar por correo.",
+        "unknown": "No se envió. Inténtalo de nuevo."
+      }
+    },
+    "liveHours": {
+      "line": "Chat en vivo con una persona: {schedule} ({zone}).",
+      "openUntil": "El chat en vivo está abierto ahora, hasta las {time}.",
+      "closed": "El chat en vivo está cerrado ahora. Abre {time}.",
+      "closedWaiting": "El chat en vivo está cerrado ahora. Abre {time}. Deja tu mensaje aquí: te responderemos en este chat y por correo.",
+      "days": "{from}–{to}"
+    },
+    "previews": {
+      "liveClosed": "Ayuda: pidió una persona fuera del horario del chat en vivo",
+      "agentPhoto": "Ayuda: chat en vivo con la foto del agente",
+      "rate": "Ayuda: calificar al terminar el chat en vivo",
+      "rated": "Ayuda: calificada, con un comentario",
+      "recentRate": "Ayuda: calificar un caso resuelto",
+      "casePage": "Caso de soporte: resuelto, calificarlo y enviarlo por correo"
+    }
+  }
 }

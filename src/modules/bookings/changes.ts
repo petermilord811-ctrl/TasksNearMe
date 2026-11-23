@@ -33,6 +33,7 @@ import { allowedChangeTypes, changeExpiresAt, changeScheduleWindow, OPEN_CHANGE_
 import { bankStep, chargeMethodOf, methodForChoice, paymentPanel, type BookingDeps } from './confirm';
 import { pausedIn } from '@/modules/markets/outage';
 import { bookingChangeRequests, bookingTerms, bookings } from './schema';
+import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 
 /**
  * Change requests on a booking (UI-027; blueprint 03 §5, 04 §5). Either person proposes new terms; the
@@ -228,6 +229,8 @@ export async function proposeChange(db: Db, userId: string, bookingId: string, i
         updatedAt: now,
       });
       await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'change.proposed', aggregateType: 'booking', aggregateId: loaded.booking.id, payload: { bookingId: loaded.booking.id, changeId: id, proposedByUserId: userId } });
+      // The booking's conversation shows the proposal as a card, with its status as it goes (2026-11-23).
+      await postEvent(tx, bookingThreadLink(loaded.booking), 'status', { type: 'change_proposed', params: { changeId: id } }, now, userId);
     });
   } catch (error) {
     if (isUniqueViolation(error)) return { ok: false, code: 'not_allowed' };

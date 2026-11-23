@@ -140,6 +140,18 @@ export const adminLiveEndedChatData: AdminLivePageData = {
   canWork: true,
 };
 
+/** The member rated the chat after it ended (2026-11-23): staff see it in the conversation. */
+export const adminLiveRatedChatData: AdminLivePageData = {
+  ...adminLiveEndedChatData,
+  selected: {
+    ...adminLiveEndedChatData.selected!,
+    events: [
+      ...adminLiveEndedChatData.selected!.events,
+      { id: 'aev_rating', kind: 'rating', actor: { kind: 'member', person: adminLiveEndedChatData.selected!.member }, rating: 'good', body: 'Alex paused the payment right away. Thank you!', at: '2026-11-23T16:01:00.000Z' },
+    ],
+  },
+};
+
 /** Nobody waiting and no chats. */
 export const adminLiveEmptyData: AdminLivePageData = { waiting: [], mine: [], others: [], agentsOnline: 1, canWork: true };
 

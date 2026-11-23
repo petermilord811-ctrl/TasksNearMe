@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
-import { replyToSupportCaseAction } from '@/modules/support/actions';
+import { emailSupportTranscriptAction, rateSupportCaseAction, replyToSupportCaseAction } from '@/modules/support/actions';
 import { getSupportCasePage } from '@/modules/support/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
@@ -31,7 +31,7 @@ async function SupportCase({ params }: Pick<PageProps<'/[locale]/app/support/[ca
   const now = await requestNow();
   const data = await getSupportCasePage(db, viewer.user.id, caseId, now);
   if (!data) notFound();
-  return <SupportCaseScreen data={data} now={now.toISOString()} handlers={{ onReply: replyToSupportCaseAction.bind(null, caseId) }} />;
+  return <SupportCaseScreen data={data} now={now.toISOString()} handlers={{ onReply: replyToSupportCaseAction.bind(null, caseId), onRate: rateSupportCaseAction.bind(null, caseId), onEmailTranscript: emailSupportTranscriptAction.bind(null, caseId) }} />;
 }
 
 export default withClientMessages('[locale]/(app)/app/(main)/support/[caseId]/page.tsx', SupportCasePage);

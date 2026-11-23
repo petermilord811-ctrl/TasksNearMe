@@ -84,7 +84,8 @@ export const supportCaseEvents = pgTable(
     caseId: text('case_id')
       .notNull()
       .references(() => supportCases.id),
-    kind: text('kind').notNull(), // message | note | status | assignment | resolution | live
+    // `rating` (2026-11-23): the opener's rating of the help (`meta.rating`, `body` their comment), staff only (`internal`).
+    kind: text('kind').notNull(), // message | note | status | assignment | resolution | live | rating
     /** The member or a staff member; null for status changes and a public request's follow-ups (`meta.fromContact`). */
     authorUserId: text('author_user_id').references(() => users.id),
     /** Whose conversation with support this belongs to; null for the whole case (status changes, notes). */
@@ -97,7 +98,8 @@ export const supportCaseEvents = pgTable(
     /** Assignment and resolution changes: the new assignee (null when unassigned) or the resolution. */
     /** `emailed`: staff's answer went to a public request's address. `fromContact`: that address wrote again (5.22). */
     /** `assistant`: an answer from the support assistant, in the chat attached to a case opened from it (no author). */
-    meta: jsonb('meta').$type<{ assigneeUserId?: string | null; resolution?: string; reviewAction?: 'hidden' | 'shown'; questionAction?: 'hidden' | 'removed' | 'restored'; emailed?: boolean; fromContact?: boolean; refundRequestId?: string; assistant?: boolean; live?: 'joined' | 'ended' }>(),
+    /** `rating`, `changedAt`: a rating event's good or bad, and when the member last changed it (2026-11-23). */
+    meta: jsonb('meta').$type<{ assigneeUserId?: string | null; resolution?: string; reviewAction?: 'hidden' | 'shown'; questionAction?: 'hidden' | 'removed' | 'restored'; emailed?: boolean; fromContact?: boolean; refundRequestId?: string; assistant?: boolean; live?: 'joined' | 'ended'; rating?: 'good' | 'bad'; changedAt?: string }>(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index('support_case_events_case_idx').on(t.caseId, t.createdAt)],

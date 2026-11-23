@@ -25,7 +25,12 @@
     "searchHint": "Buscar conversaciones",
     "resize": "Cambiar el tamaño de la ventana de mensajes",
     "resizeHint": "Arrastra para cambiar el tamaño. Con el teclado: flechas, e Inicio para restablecer. Doble clic restablece.",
-    "newMessage": "Nuevo mensaje"
+    "newMessage": "Nuevo mensaje",
+    "docked": "Conversación con {name}, junto a la ventana del chat",
+    "dockedMinimized": "Conversación con {name}, minimizada",
+    "minimizeDocked": "Minimizar la conversación con {name}",
+    "closeDocked": "Cerrar la conversación con {name}",
+    "showInWindow": "Ver en la ventana del chat"
   },
   "help": {
     "title": "Ayuda de TasksNearMe",

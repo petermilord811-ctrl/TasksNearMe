@@ -47,6 +47,7 @@ import { consumeRateLimit } from '@/platform/rate-limit';
 import { pausedIn } from '@/modules/markets/outage';
 import { holdKeysOf, releaseHold, releaseInviteHolds } from './holds';
 import { invites } from './schema';
+import { postInDirectThread } from '@/modules/messaging/direct';
 
 /**
  * Direct invites (UI-025; blueprint 02 J3, 03 §3). The card is authorized for the total when the client
@@ -566,6 +567,8 @@ async function settleRequest(
   if (!invite) return settledRequest(db, inviteId);
   await db.update(payments).set({ status: 'authorized', providerRef: result.providerRef, updatedAt: now }).where(eq(payments.id, paymentId));
   await db.insert(outboxEvents).values({ id: newId('evt'), type: 'invite.sent', aggregateType: 'invite', aggregateId: invite.id, payload: { inviteId: invite.id, taskId: invite.taskId, posterUserId: invite.posterUserId, helperUserId: invite.helperUserId } });
+  // The two people's direct conversation, when they have one, shows the request as a card (2026-11-23).
+  await postInDirectThread(db, invite.posterUserId, invite.helperUserId, { type: 'invite_sent', params: { inviteId: invite.id } }, now, invite.posterUserId);
   return { ok: true, code: 'sent', redirectTo: routes.app.task(invite.taskId) };
 }
 

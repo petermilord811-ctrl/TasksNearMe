@@ -1,6 +1,6 @@
 import { MessagesSquare, SquarePen } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { HelpSummary, InboxPageData, ISODateTime } from '@/contracts';
+import type { ConversationListHandlers, HelpSummary, InboxPageData, ISODateTime } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { PageHeader } from '@/ui/components/layout/page-header';
@@ -14,6 +14,8 @@ export interface InboxScreenProps {
   now: ISODateTime;
   /** TasksNearMe Help, pinned on top (2026-11-22): the AI assistant, and support once the person asks for a person. */
   help?: HelpSummary;
+  /** Pin, mute, archive and accept from the rows (2026-11-23). */
+  handlers?: ConversationListHandlers;
 }
 
 /**
@@ -21,7 +23,7 @@ export interface InboxScreenProps {
  * and a search that answer as you type (completion plan 7.3). From 1024 px the list is a pane beside "Choose a
  * conversation", as on a conversation's page.
  */
-export function InboxScreen({ data, now, help }: InboxScreenProps) {
+export function InboxScreen({ data, now, help, handlers }: InboxScreenProps) {
   const t = useTranslations('inbox');
 
   // From 1024 px the panes start at the top, as on a conversation's page (the title stays for screen readers).
@@ -36,7 +38,7 @@ export function InboxScreen({ data, now, help }: InboxScreenProps) {
     </div> : <div className="lg:grid lg:grid-cols-[21rem_minmax(0,1fr)] lg:items-start lg:gap-5">
       {/* From 1024 px the same two panes as an open conversation, so opening one doesn't rearrange the page (audit M34). */}
       <div className="lg:sticky lg:top-24 lg:flex lg:h-[calc(100dvh-8rem)] lg:flex-col lg:overflow-hidden lg:rounded-[1.375rem] lg:border lg:border-foreground/[0.07] lg:bg-card lg:shadow-card dark:lg:border-white/[0.06]">
-        <InboxList threads={data.threads} now={now} variant="split" pinned={<HelpRow summary={help} now={now} variant="split" />} />
+        <InboxList threads={data.threads} now={now} variant="split" pinned={<HelpRow summary={help} now={now} variant="split" />} {...(handlers ? { handlers } : {})} />
       </div>
       <div className="hidden h-[calc(100dvh-8rem)] flex-col items-center justify-center gap-3 rounded-[1.375rem] border border-dashed border-foreground/[0.12] p-8 text-center lg:flex dark:border-white/[0.1]">
         <span aria-hidden="true" className="grid size-12 place-items-center rounded-full bg-secondary text-secondary-foreground"><MessagesSquare className="size-6" /></span>

@@ -4,6 +4,9 @@ import {
   answeredTranscript,
   chatInboxData,
   chatInboxEmptyData,
+  chatInboxFoldersData,
+  chatRequestCardThreadData,
+  chatRequestThreadData,
   chatThreadData,
   emptyTranscript,
   failedTranscript,
@@ -14,10 +17,15 @@ import {
   helpChatAssistantData,
   helpChatCaseRepliedData,
   helpChatCaseWaitingData,
+  helpChatLiveAgentData,
+  helpChatLiveClosedData,
   helpChatLiveEndedData,
   helpChatLiveJoinedData,
   helpChatLiveOfflineData,
   helpChatLiveWaitingData,
+  helpChatRateData,
+  helpChatRatedData,
+  helpChatRecentRateData,
   helpChatUnavailableData,
   mayaShell,
   newDirectMessageData,
@@ -27,13 +35,15 @@ import {
   urgentTranscript,
 } from '@/fixtures';
 import { ChatLauncher } from '@/ui/components/messaging/chat-launcher';
-import { ChatWindow } from '@/ui/components/messaging/chat-window';
+import { ChatWindow, DockedChats } from '@/ui/components/messaging/chat-window';
 import { HelpChatScreen } from '@/ui/screens/messages/help-chat-screen';
 import { AppShell } from '@/ui/shells/app-shell';
 import chatCopy from '../../../messages/en/ui/chat.json';
+import supportCaseCopy from '../../../messages/en/ui/supportCase.json';
 
 const now = '2026-11-17T16:00:00.000Z';
 const copy = chatCopy.help.previews;
+const feedbackCopy = { ...supportCaseCopy.feedback.previews, liveAgent: supportCaseCopy.feedback.previews.agentPhoto };
 const shellHandlers: AppShellHandlers = {
   onModeChange: fakeHandler({ ok: true, code: 'updated' }),
   onSignOut: fakeHandler({ ok: true, code: 'updated' }),
@@ -51,7 +61,7 @@ function shell(chat: ReactNode, children: ReactNode = <Page />, layout: 'tabs' |
   return <AppShell viewer={{ ...mayaShell, unreadMessages: 3 }} handlers={shellHandlers} currentPath={routes.app.bookings()} layout={layout} chat={chat}>{children}</AppShell>;
 }
 
-function windowPreview(id: string, title: string, options: { view?: ChatView; thread?: ChatLoad<ChatThreadData>; help?: HelpChatData; transcript?: AssistantTranscript; state?: 'open' | 'minimized'; inbox?: ChatLoad<typeof chatInboxData>; start?: ChatLoad<DirectChatStart> }): PreviewEntry {
+function windowPreview(id: string, title: string, options: { view?: ChatView; thread?: ChatLoad<ChatThreadData>; help?: HelpChatData; transcript?: AssistantTranscript; state?: 'open' | 'minimized'; inbox?: ChatLoad<typeof chatInboxData>; start?: ChatLoad<DirectChatStart>; docked?: boolean }): PreviewEntry {
   const view = options.view ?? { kind: 'list' };
   return {
     id: `chat-window/${id}`,
@@ -74,6 +84,9 @@ function windowPreview(id: string, title: string, options: { view?: ChatView; th
         threadHandlers={fakeChatThreadHandlers}
         helpHandlers={fakeHelpChatHandlers}
         newChatHandlers={fakeNewChatHandlers}
+        listHandlers={{ onFlag: fakeChatThreadHandlers.onFlag, onAccept: fakeChatThreadHandlers.onAccept }}
+        onJump={() => undefined}
+        onOpenBeside={() => undefined}
         onShow={() => undefined}
         onStarted={() => undefined}
         onMinimize={() => undefined}
@@ -85,6 +98,20 @@ function windowPreview(id: string, title: string, options: { view?: ChatView; th
         fullPageHref={routes.app.messages()}
         onFullPage={() => undefined}
       />
+      {/* Two conversations docked beside the window (2026-11-23): one open, one minimized. */}
+      {options.docked && <DockedChats
+        docked={[{ threadId: chatRequestCardThreadData.data.thread.id, minimized: false }, { threadId: chatRequestThreadData.data.thread.id, minimized: true }]}
+        mainKey={options.state ?? 'open'}
+        loads={{ [chatRequestCardThreadData.data.thread.id]: { status: 'ready', data: chatRequestCardThreadData }, [chatRequestThreadData.data.thread.id]: { status: 'ready', data: chatRequestThreadData } }}
+        now={now}
+        handlers={fakeChatThreadHandlers}
+        onMinimize={() => undefined}
+        onRestore={() => undefined}
+        onClose={() => undefined}
+        onRefresh={() => undefined}
+        onLoadEarlier={async () => undefined}
+        onShowInWindow={() => undefined}
+      />}
     </>),
   };
 }
@@ -129,8 +156,20 @@ export const chatWindowPreviews: PreviewEntry[] = [
   windowPreview('new-sample', 'Chat window: New message to a sample profile (the live site)', { view: { kind: 'new', to: { username: 'jonah' } }, start: { status: 'ready', data: { kind: 'page', data: newDirectMessageSampleData } } }),
   windowPreview('new-not-found', 'Chat window: New message, a username that’s nobody’s', { view: { kind: 'new', to: { username: 'jordan_tx' } }, start: { status: 'error', notFound: true } }),
   windowPreview('new-loading', 'Chat window: New message, loading the chosen person', { view: { kind: 'new', to: { username: 'jordan' } }, start: { status: 'loading' } }),
+  // The chat, 2026-11-23: the list's own places, a message request, a task request card, conversations side by side.
+  windowPreview('list-folders', 'Chat window: pinned, muted and archived conversations, and Requests', { inbox: { status: 'ready', data: chatInboxFoldersData } }),
+  windowPreview('thread-request', 'Chat window: a message request (Accept, Ignore, Block)', { view: { kind: 'thread', threadId: chatRequestThreadData.data.thread.id }, thread: { status: 'ready', data: chatRequestThreadData } }),
+  windowPreview('thread-request-card', 'Chat window: a task request card in the conversation', { view: { kind: 'thread', threadId: chatRequestCardThreadData.data.thread.id }, thread: { status: 'ready', data: chatRequestCardThreadData } }),
+  windowPreview('docked', 'Chat window with two conversations docked beside it, one minimized', { docked: true }),
   helpPagePreview('answer', `${copy.page}: ${copy.answer}`, helpChatAssistantData, suggestTranscript),
   helpPagePreview('live-waiting', `${copy.page}: ${copy.liveWaiting}`, helpChatLiveWaitingData, emptyTranscript),
   helpPagePreview('live-joined', `${copy.page}: ${copy.liveJoined}`, helpChatLiveJoinedData, emptyTranscript),
   helpPagePreview('replied', `${copy.page}: ${copy.replied}`, helpChatCaseRepliedData, emptyTranscript),
+  // Live support, after the chat (2026-11-23): the agent's photo, live chat hours, the rating and the transcript.
+  windowPreview('help-live-agent', feedbackCopy.liveAgent, { view: { kind: 'help' }, help: helpChatLiveAgentData }),
+  windowPreview('help-live-closed', feedbackCopy.liveClosed, { view: { kind: 'help' }, help: helpChatLiveClosedData }),
+  windowPreview('help-rate', feedbackCopy.rate, { view: { kind: 'help' }, help: helpChatRateData }),
+  windowPreview('help-rated', feedbackCopy.rated, { view: { kind: 'help' }, help: helpChatRatedData }),
+  windowPreview('help-recent-rate', feedbackCopy.recentRate, { view: { kind: 'help' }, help: helpChatRecentRateData }),
+  helpPagePreview('rate', `${copy.page}: ${feedbackCopy.rate}`, helpChatRateData, emptyTranscript),
 ];

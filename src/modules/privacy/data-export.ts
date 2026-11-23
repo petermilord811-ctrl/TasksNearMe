@@ -54,7 +54,7 @@ const tFor = perLocale((locale) => createTranslator({ locale, messages: messages
 function masked(text: string | null, hidden: (detail: 'phone' | 'email' | 'link' | 'handle') => string): string | null {
   if (text === null) return null;
   return toMessageSegments(text, { mask: true })
-    .map((segment) => (segment.kind === 'text' ? segment.text : hidden(segment.detail)))
+    .map((segment) => (segment.kind === 'text' ? segment.text : segment.kind === 'mention' ? `@${segment.name}` : hidden(segment.detail)))
     .join('');
 }
 

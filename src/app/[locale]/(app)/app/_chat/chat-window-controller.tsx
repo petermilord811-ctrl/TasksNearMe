@@ -11,6 +11,9 @@ import type {
   ChatThreadHandlers,
   ChatView,
   ChatWindowState,
+  ConversationFlagInput,
+  ConversationListHandlers,
+  ConversationSearchData,
   DirectChatStart,
   DirectChatTarget,
   HandOffInput,
@@ -18,8 +21,11 @@ import type {
   HelpChatHandlers,
   MessageReaction,
   MessageSavedReplyInput,
+  MessageTranslation,
   NewChatHandlers,
   PhotoUploadResult,
+  RateSupportInput,
+  ReplySuggestions,
   ReportInput,
   SendMessageInput,
   StartDirectChatInput,
@@ -35,6 +41,14 @@ import { useHelpChat } from './use-help-chat';
 
 /** The window's code loads the first time it opens: every signed-in page carries only the button. */
 const ChatWindow = dynamic(() => import('@/ui/components/messaging/chat-window').then((module) => module.ChatWindow), { ssr: false, loading: () => null });
+/** Conversations docked beside it (2026-11-23), from the same code. */
+const DockedChats = dynamic(() => import('@/ui/components/messaging/chat-window').then((module) => module.DockedChats), { ssr: false, loading: () => null });
+
+/** A conversation docked beside the chat window (the window's `DockedChat`). */
+type Docked = { threadId: string; minimized: boolean };
+/** At most two docked windows, each this wide with this gap (chat-window.tsx's `DOCKED_WIDTH`), from 1024 px. */
+const DOCKED_MAX = 2;
+const DOCKED_SPACE = 360 + 12;
 
 /** Server Actions the signed-in shell hands over (never closures: src/app/[locale]/(app)/app/signed-in-shell.tsx). */
 export interface ChatActions {
@@ -52,23 +66,41 @@ export interface ChatActions {
   typingInCase(caseId: string): Promise<void>;
   /** New message's first message (2026-11-23): starts the conversation, without refreshing the page behind. */
   startChat(input: StartDirectChatInput): Promise<ActionResult>;
+  // Live support, after the chat (2026-11-23): rating the help on a case, and a copy of its conversation by email.
+  rateCase(caseId: string, input: RateSupportInput): Promise<ActionResult>;
+  emailTranscript(caseId: string): Promise<ActionResult>;
+  /** Pin, mute or archive a conversation, accept a message request, search a conversation (2026-11-23). */
+  flag(threadId: string, input: ConversationFlagInput): Promise<ActionResult>;
+  accept(threadId: string): Promise<ActionResult>;
+  searchThread(threadId: string, query: string): Promise<ConversationSearchData | null>;
+  /** Translate a message, suggest replies (2026-11-23). */
+  translate(threadId: string, messageId: string): Promise<MessageTranslation | null>;
+  suggest(threadId: string): Promise<ReplySuggestions | null>;
+  /** A task request card's buttons: the invites' own actions (2026-11-23). */
+  acceptInvite(input: { inviteId: string }): Promise<ActionResult>;
+  declineInvite(input: { inviteId: string }): Promise<ActionResult>;
+  cancelInvite(input: { inviteId: string }): Promise<ActionResult>;
 }
 
 const WIDE = '(min-width: 1024px)';
 const POLL_MS = 15_000;
 const storageKey = (viewerId: string) => `tnm.chat.${viewerId}`;
 
-function useWide(): boolean {
-  const [wide, setWide] = useState(false);
+function useMatches(media: string): boolean {
+  const [matches, setMatches] = useState(false);
   useEffect(() => {
-    const query = window.matchMedia(WIDE);
-    const update = () => setWide(query.matches);
+    const query = window.matchMedia(media);
+    const update = () => setMatches(query.matches);
     update();
     query.addEventListener('change', update);
     return () => query.removeEventListener('change', update);
-  }, []);
-  return wide;
+  }, [media]);
+  return matches;
 }
+
+const useWide = () => useMatches(WIDE);
+/** Room for a conversation docked beside the chat window (2026-11-23). */
+const BESIDE = '(min-width: 1280px)';
 
 function useVisible(): boolean {
   const [visible, setVisible] = useState(true);
@@ -95,9 +127,18 @@ function storedTarget(value: unknown): DirectChatTarget | undefined {
 }
 const dataOf = <T,>(load: ChatLoad<T>): T | undefined => (load.status === 'idle' ? undefined : load.data);
 
-function restored(viewerId: string): { state: ChatWindowState; view: ChatView } | null {
+/** Docked conversations read back from storage: ids as conversations have them, at most `DOCKED_MAX`. */
+function storedDocked(value: unknown): Docked[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    const chat = item as Partial<Record<'threadId' | 'minimized', unknown>> | null;
+    return chat && typeof chat.threadId === 'string' && chat.threadId.length > 0 && chat.threadId.length <= 80 ? [{ threadId: chat.threadId, minimized: chat.minimized === true }] : [];
+  }).slice(0, DOCKED_MAX);
+}
+
+function restored(viewerId: string): { state: ChatWindowState; view: ChatView; docked: Docked[] } | null {
   try {
-    const stored = JSON.parse(sessionStorage.getItem(storageKey(viewerId)) ?? 'null') as { state?: unknown; view?: unknown } | null;
+    const stored = JSON.parse(sessionStorage.getItem(storageKey(viewerId)) ?? 'null') as { state?: unknown; view?: unknown; docked?: unknown } | null;
     if (!stored || (stored.state !== 'open' && stored.state !== 'minimized' && stored.state !== 'closed')) return null;
     const view = stored.view as Partial<{ kind: string; threadId: string; to: unknown }> | undefined;
     const to = view?.kind === 'new' ? storedTarget(view.to) : undefined;
@@ -108,7 +149,7 @@ function restored(viewerId: string): { state: ChatWindowState; view: ChatView } 
         : view?.kind === 'new'
           ? to ? { kind: 'new', to } : { kind: 'new' }
           : { kind: 'list' };
-    return { state: stored.state, view: next };
+    return { state: stored.state, view: next, docked: storedDocked(stored.docked) };
   } catch {
     return null;
   }
@@ -129,6 +170,7 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
   const onMessagesPage = segments[1] === 'messages';
   const routeKey = segments.join('/');
   const wide = useWide();
+  const roomBeside = useMatches(BESIDE);
   const visible = useVisible();
   const live = useRealtimeConnected();
 
@@ -142,25 +184,36 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
   const [help, setHelp] = useState<ChatLoad<HelpChatData>>({ status: 'idle' });
   const [start, setStart] = useState<ChatLoad<DirectChatStart>>({ status: 'idle' });
   const [focusKey, setFocusKey] = useState(0);
+  // A search's result in the open conversation (2026-11-23): shown from that message, scrolled to it.
+  const [focusMessage, setFocusMessage] = useState<string | undefined>(undefined);
+  // Conversations docked beside the window (2026-11-23), each with what it loaded.
+  const [docked, setDocked] = useState<Docked[]>(initial?.docked ?? []);
+  const [dockedLoads, setDockedLoads] = useState<Record<string, ChatLoad<ChatThreadData>>>({});
   const [now, setNow] = useState(() => new Date().toISOString());
 
   const active = wide && visible && state === 'open' && !onMessagesPage;
+  // Docked conversations show whatever the window does (open, minimized or closed), on wide screens away from Messages.
+  const dockActive = wide && visible && !onMessagesPage && docked.length > 0;
   const activeRef = useRef(active);
+  const dockActiveRef = useRef(dockActive);
+  const dockedRef = useRef(docked);
   const viewRef = useRef(view);
   const onMessagesPageRef = useRef(onMessagesPage);
   useEffect(() => {
     activeRef.current = active;
+    dockActiveRef.current = dockActive;
+    dockedRef.current = docked;
     viewRef.current = view;
     onMessagesPageRef.current = onMessagesPage;
   });
 
   useEffect(() => {
     try {
-      sessionStorage.setItem(storageKey(viewerId), JSON.stringify({ state, view }));
+      sessionStorage.setItem(storageKey(viewerId), JSON.stringify({ state, view, docked }));
     } catch {
       // Storage off: the window just doesn't come back after a reload.
     }
-  }, [state, view, viewerId]);
+  }, [state, view, docked, viewerId]);
 
   // Messages' own pages are the chat: the window closes there (adjusted while rendering, React's pattern for state that
   // follows a change of route).
@@ -207,6 +260,30 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
       setNow(new Date().toISOString());
     } catch {
       if (turn === counters.current.thread) setThread((current) => ({ status: 'error', data: dataOf(current) }));
+    }
+  }, []);
+
+  // A docked conversation (2026-11-23): its own load, from an earlier message on after "Load earlier messages".
+  const dockTurns = useRef<Record<string, number>>({});
+  const dockEarlier = useRef<Record<string, string>>({});
+  const loadDocked = useCallback(async (threadId: string, from?: string) => {
+    const turn = (dockTurns.current[threadId] = (dockTurns.current[threadId] ?? 0) + 1);
+    if (from) dockEarlier.current[threadId] = from;
+    const since = from ?? dockEarlier.current[threadId];
+    try {
+      const response = await fetch(`/api/messages/threads/${encodeURIComponent(threadId)}${since ? `?from=${encodeURIComponent(since)}` : ''}`, { cache: 'no-store', credentials: 'same-origin' });
+      if (turn !== dockTurns.current[threadId]) return;
+      if (response.status === 404) {
+        setDockedLoads((loads) => ({ ...loads, [threadId]: { status: 'error', notFound: true } }));
+        return;
+      }
+      if (!response.ok) throw new Error(`docked ${response.status}`);
+      const data = (await response.json()) as ChatThreadData;
+      if (turn !== dockTurns.current[threadId]) return;
+      setDockedLoads((loads) => ({ ...loads, [threadId]: { status: 'ready', data } }));
+      setNow(new Date().toISOString());
+    } catch {
+      if (turn === dockTurns.current[threadId]) setDockedLoads((loads) => ({ ...loads, [threadId]: { status: 'error', data: dataOf(loads[threadId] ?? { status: 'idle' }) } }));
     }
   }, []);
 
@@ -274,6 +351,17 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
     return () => clearTimeout(timer);
   }, [active, viewKey, loadInbox, reloadView]);
 
+  // Docked conversations: each once as it docks (and when the tab comes back); their logs ask again on their own while
+  // the live connection is down, as the window's does.
+  const dockedKey = docked.map((chat) => chat.threadId).join(',');
+  useEffect(() => {
+    if (!dockActive) return;
+    const timer = setTimeout(() => {
+      for (const chat of dockedRef.current) void loadDocked(chat.threadId);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [dockActive, dockedKey, loadDocked]);
+
   // The live connection is down: ask again every 15 s (the conversation's own log does the same for its messages).
   useEffect(() => {
     if (!active || live) return;
@@ -286,6 +374,7 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
 
   // Live notices: the window reads again; the page behind refreshes as usual (nothing here says it handled them).
   const onThreadNotice = (notice: RealtimeNotice) => {
+    if (dockActiveRef.current) for (const chat of dockedRef.current) if (notice.thread === chat.threadId) soon(`dock:${chat.threadId}`, () => void loadDocked(chat.threadId));
     if (!activeRef.current) return;
     soon('inbox', () => void loadInbox());
     const current = viewRef.current;
@@ -294,7 +383,15 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
   useRealtime('message', onThreadNotice);
   useRealtime('read', onThreadNotice);
   useRealtime('update', (notice) => {
-    if (!activeRef.current || typeof notice.event !== 'string' || !notice.event.startsWith('support.')) return;
+    if (!(activeRef.current || dockActiveRef.current) || typeof notice.event !== 'string') return;
+    // A task request or a booking change moved on (2026-11-23): the open conversation's card shows where it stands now.
+    if (notice.event.startsWith('invite.') || notice.event.startsWith('change.')) {
+      const current = viewRef.current;
+      if (activeRef.current && current.kind === 'thread') soon('thread', () => void loadThread(current.threadId));
+      if (dockActiveRef.current) for (const chat of dockedRef.current) soon(`dock:${chat.threadId}`, () => void loadDocked(chat.threadId));
+      return;
+    }
+    if (!notice.event.startsWith('support.') || !activeRef.current) return;
     soon('inbox', () => void loadInbox());
     if (viewRef.current.kind === 'help') soon('help', () => void loadHelp());
   });
@@ -302,6 +399,7 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
   // ---- Opening, showing, closing -----------------------------------------------------------------------------------
 
   const show = useCallback((next: ChatView) => {
+    setFocusMessage(undefined);
     setView((current) => {
       if (next.kind === 'thread' && !(current.kind === 'thread' && current.threadId === next.threadId)) setThread({ status: 'idle' });
       if (next.kind === 'new' && keyOf(current) !== keyOf(next)) setStart({ status: 'idle' });
@@ -366,10 +464,12 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
 
   // ---- Handlers -----------------------------------------------------------------------------------------------------
 
-  const threadAgain = useCallback(() => {
+  const threadAgain = useCallback((threadId?: string) => {
     const current = viewRef.current;
-    if (current.kind === 'thread') soon('thread', () => void loadThread(current.threadId));
-  }, [loadThread, soon]);
+    if (current.kind === 'thread' && (!threadId || threadId === current.threadId)) soon('thread', () => void loadThread(current.threadId));
+    // The same conversation docked beside the window reads again too (2026-11-23).
+    for (const chat of dockedRef.current) if (!threadId || chat.threadId === threadId) soon(`dock:${chat.threadId}`, () => void loadDocked(chat.threadId));
+  }, [loadThread, loadDocked, soon]);
 
   const threadHandlers = useMemo<ChatThreadHandlers>(
     () => ({
@@ -378,7 +478,7 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
       onTyping: actions.typing,
       onReact: async (threadId, input) => {
         const result = await actions.react(threadId, input);
-        if (result.ok) threadAgain();
+        if (result.ok) threadAgain(threadId);
         return result;
       },
       onSaveReply: async (input) => {
@@ -394,12 +494,50 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
       onReport: actions.report,
       onBlock: async (threadId, input) => {
         const result = await actions.block(threadId, input);
-        if (result.ok) threadAgain();
+        if (result.ok) threadAgain(threadId);
         return result;
       },
+      // The list and the conversation read again: pinned, muted, archived or accepted show at once (2026-11-23).
+      onFlag: async (threadId, input) => {
+        const result = await actions.flag(threadId, input);
+        if (result.ok) {
+          threadAgain(threadId);
+          soon('inbox', () => void loadInbox());
+        }
+        return result;
+      },
+      onAccept: async (threadId) => {
+        const result = await actions.accept(threadId);
+        if (result.ok) {
+          threadAgain(threadId);
+          soon('inbox', () => void loadInbox());
+        }
+        return result;
+      },
+      onSearch: actions.searchThread,
+      onTranslate: actions.translate,
+      onSuggest: actions.suggest,
+      requestCards: { onAccept: actions.acceptInvite, onDecline: actions.declineInvite, onCancel: actions.cancelInvite },
     }),
-    [actions, threadAgain],
+    [actions, threadAgain, soon, loadInbox],
   );
+
+  // The rows' menus in the window's list (2026-11-23).
+  const listHandlers = useMemo<ConversationListHandlers>(
+    () => ({
+      onFlag: (threadId, input) => threadHandlers.onFlag(threadId, input),
+      onAccept: (threadId) => threadHandlers.onAccept(threadId),
+    }),
+    [threadHandlers],
+  );
+
+  // A search's result: the conversation from that message on (the same view; "Load earlier messages" keeps it).
+  const jump = (messageId: string) => {
+    const current = viewRef.current;
+    if (current.kind !== 'thread') return;
+    setFocusMessage(messageId);
+    void loadThread(current.threadId, messageId);
+  };
 
   const newChatHandlers = useMemo<Pick<NewChatHandlers, 'onSearch' | 'onStart'>>(() => ({ onSearch: searchPeopleRequest, onStart: actions.startChat }), [actions]);
   // The first message went: its conversation, here; the list reads again (it's on top now).
@@ -448,6 +586,40 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
       lastCaseTyping.current = Date.now();
       void actions.typingInCase(helpCaseId).catch(() => undefined);
     },
+    // After the chat (2026-11-23): the rating stays as given (the conversation reads again), and the email just goes.
+    onRate: async (caseId, input) => {
+      const result = await actions.rateCase(caseId, input);
+      if (result.ok) void loadHelp();
+      return result;
+    },
+    onEmailTranscript: actions.emailTranscript,
+  };
+
+  // ---- Side by side (2026-11-23) ---------------------------------------------------------------------------------------
+
+  /** As many docked windows as fit to the left of the chat window (at most `DOCKED_MAX`). */
+  const dockRoom = () => {
+    const main = document.querySelector<HTMLElement>('[data-chat-window]');
+    const mainWidth = main ? main.getBoundingClientRect().width : 64;
+    return Math.max(0, Math.min(DOCKED_MAX, Math.floor((window.innerWidth - 48 - mainWidth) / DOCKED_SPACE)));
+  };
+  const openBeside = (threadId: string) => {
+    const room = dockRoom();
+    // No room: it opens in the window itself.
+    if (room === 0) {
+      openWith({ kind: 'thread', threadId });
+      return;
+    }
+    setDocked((current) => [{ threadId, minimized: false }, ...current.filter((chat) => chat.threadId !== threadId)].slice(0, room));
+    // The window goes back to the list: the conversation is beside it now.
+    const current = viewRef.current;
+    if (current.kind === 'thread' && current.threadId === threadId) show({ kind: 'list' });
+  };
+  const dockedChange = (threadId: string, change: Partial<Docked> | null) =>
+    setDocked((current) => (change ? current.map((chat) => (chat.threadId === threadId ? { ...chat, ...change } : chat)) : current.filter((chat) => chat.threadId !== threadId)));
+  const showInWindow = (threadId: string) => {
+    dockedChange(threadId, null);
+    openWith({ kind: 'thread', threadId });
   };
 
   const shown = state !== 'closed' && !onMessagesPage;
@@ -466,6 +638,10 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
       threadHandlers={threadHandlers}
       helpHandlers={helpHandlers}
       newChatHandlers={newChatHandlers}
+      listHandlers={listHandlers}
+      focusId={focusMessage}
+      onJump={jump}
+      {...(roomBeside ? { onOpenBeside: openBeside } : {})}
       onShow={show}
       onStarted={started}
       onMinimize={minimize}
@@ -483,6 +659,19 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
       fullPageHref={chatViewHref(view)}
       onFullPage={() => setState('closed')}
       focusKey={focusKey}
+    />}
+    {wide && !onMessagesPage && docked.length > 0 && <DockedChats
+      docked={docked}
+      mainKey={shown ? state : 'closed'}
+      loads={dockedLoads}
+      now={now}
+      handlers={threadHandlers}
+      onMinimize={(threadId) => dockedChange(threadId, { minimized: true })}
+      onRestore={(threadId) => dockedChange(threadId, { minimized: false })}
+      onClose={(threadId) => dockedChange(threadId, null)}
+      onRefresh={(threadId) => void loadDocked(threadId)}
+      onLoadEarlier={(threadId, from) => loadDocked(threadId, from)}
+      onShowInWindow={showInWindow}
     />}
   </>;
 }

@@ -87,6 +87,39 @@ export const closedCasePageData: SupportCasePageData = {
   canReply: false,
 };
 
+/**
+ * A request solved after a live chat with Riley (2026-11-23): Maya can rate the help and email herself the
+ * conversation; Riley's messages carry their first name and initial.
+ */
+export const solvedCasePageData: SupportCasePageData = {
+  case: {
+    id: 'case_live',
+    kind: 'request',
+    status: 'resolved',
+    subject: 'Payment',
+    topic: 'payment',
+    openedAt: '2026-11-23T14:00:00.000Z',
+    updatedAt: '2026-11-23T14:20:00.000Z',
+    description: 'I was charged twice for the desk.',
+  },
+  events: [
+    { id: 'ev_l1', kind: 'message', from: 'me', body: 'I was charged twice for the desk.', at: '2026-11-23T14:00:00.000Z' },
+    { id: 'ev_l2', kind: 'live', from: 'system', live: 'joined', agentName: 'Riley', agent: { name: 'Riley', initials: 'R' }, at: '2026-11-23T14:02:00.000Z' },
+    { id: 'ev_l3', kind: 'message', from: 'support', body: "Hi Maya, I'm Riley. I see the second charge: it's a hold that drops off by tomorrow. I've released it now.", agent: { name: 'Riley', initials: 'R' }, at: '2026-11-23T14:05:00.000Z' },
+    { id: 'ev_l4', kind: 'live', from: 'system', live: 'ended', agentName: 'Riley', at: '2026-11-23T14:10:00.000Z' },
+    { id: 'ev_l5', kind: 'status', from: 'system', status: 'resolved', at: '2026-11-23T14:20:00.000Z' },
+  ],
+  canReply: true,
+  rating: { canRate: true },
+  transcript: { to: 'm•••@example.test' },
+};
+
+/** The same, rated: changeable for a week. */
+export const solvedRatedCasePageData: SupportCasePageData = {
+  ...solvedCasePageData,
+  rating: { given: { rating: 'bad', comment: 'It took two days to get an answer.', at: '2026-11-23T15:00:00.000Z' }, canRate: true, changeUntil: '2026-11-30T15:00:00.000Z' },
+};
+
 export const jordanReportSubject: ReportSubject = { userId: 'usr_jordan', displayName: 'Jordan T.', blocked: false };
 export const blockedReportSubject: ReportSubject = { ...jordanReportSubject, blocked: true };
 
@@ -99,6 +132,8 @@ export const fakeSupportHandlers: SupportHandlers = {
 
 export const fakeSupportCaseHandlers: SupportCaseHandlers = {
   onReply: () => wait({ ok: true, code: 'sent' }),
+  onRate: () => wait({ ok: true, code: 'saved' }),
+  onEmailTranscript: () => wait({ ok: true, code: 'sent' }),
 };
 
 export const fakeReportHandlers: ReportHandlers = {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -11,7 +11,7 @@ import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { useFormAction } from '@/ui/lib/use-form-action';
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
 import { Button } from '@/ui/primitives/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/primitives/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/ui/primitives/dropdown-menu';
 import { Spinner } from '@/ui/primitives/spinner';
 
 // The report form opens from this menu, so its code (and its schema) loads with the menu, not with the page (speed on a
@@ -22,9 +22,13 @@ const ReportDialog = dynamic(() => import('./report-dialog').then((module) => mo
 export interface ReportBlockMenuProps {
   subject: ReportSubject;
   handlers: ReportHandlers;
+  /** More of the menu's items above Report and Block (a conversation's pin, mute and archive: 2026-11-23). */
+  items?: ReactNode;
+  /** The trigger's name when `items` make it more than Report and Block. */
+  label?: string;
 }
 
-export function ReportBlockMenu({ subject, handlers }: ReportBlockMenuProps) {
+export function ReportBlockMenu({ subject, handlers, items, label }: ReportBlockMenuProps) {
   const t = useTranslations('safety');
   const router = useRouter();
   const trigger = useRef<HTMLButtonElement>(null);
@@ -44,8 +48,9 @@ export function ReportBlockMenu({ subject, handlers }: ReportBlockMenuProps) {
 
   return <div className="contents">
     <DropdownMenu onOpenChange={(open) => { if (open) void loadReportDialog(); }}>
-      <DropdownMenuTrigger asChild><Button ref={trigger} variant="ghost" size="icon" aria-label={t('menu', { name: subject.displayName })} disabled={action.pending} aria-busy={action.pending}>{action.pending ? <Spinner aria-hidden="true" /> : <MoreHorizontal aria-hidden="true" />}</Button></DropdownMenuTrigger>
+      <DropdownMenuTrigger asChild><Button ref={trigger} variant="ghost" size="icon" aria-label={label ?? t('menu', { name: subject.displayName })} disabled={action.pending} aria-busy={action.pending}>{action.pending ? <Spinner aria-hidden="true" /> : <MoreHorizontal aria-hidden="true" />}</Button></DropdownMenuTrigger>
       <DropdownMenuContent align="end" onCloseAutoFocus={(event) => { if (reportOpen || blockOpen) event.preventDefault(); }}>
+        {items && <>{items}<DropdownMenuSeparator /></>}
         <DropdownMenuItem onSelect={() => { setReportMounted(true); setReportOpen(true); }}><Flag aria-hidden="true" />{t('report')}</DropdownMenuItem>
         <DropdownMenuItem onSelect={() => subject.blocked ? void updateBlocked(false) : setBlockOpen(true)}>{subject.blocked ? <ShieldCheck aria-hidden="true" /> : <Ban aria-hidden="true" />}{t(subject.blocked ? 'unblock' : 'block')}</DropdownMenuItem>
       </DropdownMenuContent>

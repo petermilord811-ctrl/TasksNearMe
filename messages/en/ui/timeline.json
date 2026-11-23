@@ -35,5 +35,6 @@
   "payout_paid": "{hasAmount, select, yes {Payout arrived · {amount}} other {Payout arrived}}",
   "review_submitted": "Review submitted",
   "reviews_published": "Reviews published",
-  "support_note": "Support added a note"
+  "support_note": "Support added a note",
+  "sample_profile_notice": "This is a sample profile that shows how TasksNearMe works, so it won't reply. Post a task to reach real helpers near you."
 }

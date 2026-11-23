@@ -79,7 +79,7 @@ const HIDDEN_AS = { phone: '[phone number hidden]', email: '[email hidden]', lin
 /** What someone wrote, with phone numbers, emails, links and usernames replaced (src/modules/trust/message-segments.ts). */
 function withoutContacts(text: string): string {
   return toMessageSegments(text, { mask: true })
-    .map((segment) => (segment.kind === 'text' ? segment.text : HIDDEN_AS[segment.detail]))
+    .map((segment) => (segment.kind === 'text' ? segment.text : segment.kind === 'mention' ? `@${segment.name}` : HIDDEN_AS[segment.detail]))
     .join('');
 }
 const APPROVAL_VIA: Record<string, string> = { poster: 'client', auto: 'automatic', support: 'support', settlement: 'settlement' };

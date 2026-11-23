@@ -34,6 +34,8 @@ import { userChannel } from '@/platform/realtime/hub';
 import { publishNotices } from '@/platform/realtime/publish';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { announceLiveRequest, liveStateOf } from '@/modules/support/live-chat';
+import { ratingViewFor } from '@/modules/support/ratings';
+import { liveChatHoursAt } from '@/shared/support-hours';
 import { aiDraftingFlag } from './availability';
 import { genuineTurns, newTurnId, signTurn } from './assistant-turns';
 import { pickHelpArticles } from './help-retrieval';
@@ -193,12 +195,16 @@ export async function getHelpChat(db: Db, userId: string, now: Date, { assistant
   // The live chat (2026-11-22): waiting in line, joined, or ended; and whether they may ask for one on this case.
   const live = open ? await liveStateOf(db, open, agentsOnline) : undefined;
   const caseView = shown && open ? { ...shown.view, ...(live ? { live } : {}), canRequestLive: !open.liveRequestedAt || open.liveEndedAt !== null } : undefined;
+  // A case that finished lately asks how the help was (2026-11-23), once.
+  const recentRating = !open && finished ? await ratingViewFor(db, finished, userId, now) : undefined;
   return {
     viewer: { firstName: person.firstName, mode: person.mode },
     assistantAvailable: available,
     ...(caseView ? { case: caseView } : {}),
-    ...(!open && finished ? { recent: { id: finished.id, status: caseStatusOf(finished.status), topic: topicOf(finished.topic) } } : {}),
+    ...(!open && finished ? { recent: { id: finished.id, status: caseStatusOf(finished.status), topic: topicOf(finished.topic), ...(recentRating ? { rating: recentRating } : {}) } } : {}),
     handoff: { bookings, replyHours: TOPIC_REPLY_HOURS },
+    // Live chat hours (2026-11-23): shown where a person is asked for.
+    liveHours: liveChatHoursAt(now),
   };
 }
 

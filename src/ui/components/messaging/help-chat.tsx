@@ -12,10 +12,15 @@ import {
   type HelpChatData,
   type HelpChatHandlers,
   type ISODateTime,
+  type LiveChatHours,
   type Mode,
   type SupportTopic,
 } from '@/contracts';
 import { routes } from '@/contracts/routes';
+import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
+import { LiveChatHoursLine } from '@/ui/components/support/live-hours';
+import { SupportRatingCard } from '@/ui/components/support/support-rating';
+import { EmailTranscriptButton } from '@/ui/components/support/transcript-button';
 import { useFormat } from '@/ui/lib/format';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useRealtime } from '@/ui/lib/realtime';
@@ -65,7 +70,7 @@ function Sender({ children }: { children: ReactNode }) {
 }
 
 /** The assistant's turn: the answer, the articles it used, and on the newest answer what it suggests next. */
-function AnswerBubble({ turn, latest, connecting, onTalk }: { turn: AssistantTurn; latest: boolean; connecting: boolean; onTalk(): void }) {
+function AnswerBubble({ turn, latest, connecting, onTalk, hours }: { turn: AssistantTurn; latest: boolean; connecting: boolean; onTalk(): void; hours: LiveChatHours }) {
   const t = useTranslations('chat.help');
   const { answer } = turn;
   return <li className="flex min-w-0 flex-col items-start gap-2">
@@ -79,16 +84,18 @@ function AnswerBubble({ turn, latest, connecting, onTalk }: { turn: AssistantTur
         </ul>
       </div>}
     </article>
-    {latest && (answer.handoff === 'suggest' || answer.handoff === 'urgent') && <HandoffCard urgent={answer.handoff === 'urgent'} connecting={connecting} onTalk={onTalk} />}
+    {latest && (answer.handoff === 'suggest' || answer.handoff === 'urgent') && <HandoffCard urgent={answer.handoff === 'urgent'} connecting={connecting} onTalk={onTalk} hours={hours} />}
   </li>;
 }
 
-function HandoffCard({ urgent, connecting, onTalk }: { urgent: boolean; connecting: boolean; onTalk(): void }) {
+function HandoffCard({ urgent, connecting, onTalk, hours }: { urgent: boolean; connecting: boolean; onTalk(): void; hours: LiveChatHours }) {
   const t = useTranslations('chat.help');
   return <div role={urgent ? 'alert' : undefined} className={cn('w-full max-w-[88%] space-y-2 rounded-2xl border px-3.5 py-3 text-sm', urgent ? 'border-destructive/40 bg-destructive/[0.06]' : 'border-primary/25 bg-brand-soft/50')}>
     <p className="flex items-start gap-2 font-semibold">{urgent ? <ShieldAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-destructive" /> : <LifeBuoy aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />}{urgent ? t('urgentTitle') : t('suggestPerson')}</p>
     {urgent && <p className="text-muted-foreground">{t('urgentBody')}</p>}
     <Button type="button" size="sm" variant={urgent ? 'destructive' : 'default'} onClick={onTalk} disabled={connecting} aria-busy={connecting} className="rounded-full">{connecting ? <Spinner aria-hidden="true" /> : <UserRound aria-hidden="true" />}{connecting ? t('live.connecting') : t('talkToPerson')}</Button>
+    {/* When a person answers live chats (2026-11-23). */}
+    <LiveChatHoursLine hours={hours} />
   </div>;
 }
 
@@ -96,13 +103,20 @@ function CaseEvent({ event, now }: { event: CaseEventView; now: ISODateTime }) {
   const t = useTranslations('chat.help');
   const { formatTime, formatDateTime, formatRelative } = useFormat();
   if (event.kind === 'status') return <li className="flex justify-center"><p className={notice}>{t('case.status', { status: t(`statuses.${event.status ?? 'open'}`) })}</p></li>;
-  // Live chat (2026-11-22): someone from support joined, or the chat ended.
+  // Live chat (2026-11-22): someone from support joined (with their photo or initial since 2026-11-23), or the chat ended.
   if (event.kind === 'live') {
-    return <li className="flex justify-center"><p className={cn(notice, event.live === 'joined' && 'bg-brand-soft/70 text-foreground')}>{event.live === 'ended' ? t('live.endedEvent') : t('live.joined', { name: event.agentName ?? t('support') })}</p></li>;
+    const joined = event.live !== 'ended';
+    return <li className="flex justify-center"><p className={cn(notice, joined && 'inline-flex items-center gap-1.5 bg-brand-soft/70 text-foreground')}>
+      {joined && event.agent && <InitialsAvatar initials={event.agent.initials} {...(event.agent.photo ? { photo: event.agent.photo } : {})} size="xs" />}
+      {joined ? t('live.joined', { name: event.agentName ?? t('support') }) : t('live.endedEvent')}
+    </p></li>;
   }
   const own = event.from === 'me';
-  const sender = own ? t('you') : event.from === 'assistant' ? t('assistant') : event.from === 'support' ? t('support') : t('update');
-  return <li className={cn('flex min-w-0 flex-col', own ? 'items-end' : 'items-start')}>
+  // The person from support on a live chat writes as themselves: first name and photo (2026-11-23).
+  const agent = event.from === 'support' ? event.agent : undefined;
+  const sender = own ? t('you') : event.from === 'assistant' ? t('assistant') : event.from === 'support' ? agent?.name ?? t('support') : t('update');
+  return <li className={cn('flex min-w-0', own ? 'flex-col items-end' : 'items-end gap-2')}>
+    {agent && <InitialsAvatar initials={agent.initials} {...(agent.photo ? { photo: agent.photo } : {})} size="sm" />}
     <article className={cn(bubble, own ? mine : theirs, event.from === 'assistant' && 'bg-muted/60')}>
       <p className={cn('text-xs font-semibold', own ? 'sr-only' : event.from === 'support' ? 'text-primary' : 'text-muted-foreground')}>{sender}</p>
       {event.from === 'assistant' ? <AnswerText text={event.body ?? ''} /> : <p className="whitespace-pre-line">{event.body}</p>}
@@ -277,13 +291,21 @@ export function HelpChat({ data, transcript, handlers, now, variant = 'window' }
   const canRetry = transcript.error && (transcript.error.code === 'unavailable' || transcript.error.code === 'unknown');
   const supportReplied = supportCount > 0;
   const agent = live?.state === 'joined' ? live.agentName : undefined;
+  // Who's on the live chat, with their photo or initial (2026-11-23).
+  const agentView = live?.state === 'joined' ? live.agent : undefined;
   const announcement = connecting ? t('live.connecting') : transcript.pending ? t('thinking') : lastTurn ? `${t('assistant')}: ${lastTurn.answer.text}` : '';
   const talkButton = (className?: string) => <Button type="button" variant="ghost" size="sm" onClick={() => void connect()} disabled={connecting} aria-busy={connecting} className={cn('rounded-full', className)}>{connecting ? <Spinner aria-hidden="true" /> : <UserRound aria-hidden="true" />}{connecting ? t('live.connecting') : t('talkToPerson')}</Button>;
+  // After the live chat, or a case that finished lately: how was the help, and a copy by email (2026-11-23).
+  const { onRate, onEmailTranscript } = handlers;
+  // "How was your chat with Riley?": the person who joined the live chat that ended.
+  const ratedAgent = [...(open?.events ?? [])].reverse().find((event) => event.kind === 'live' && event.live === 'joined')?.agentName;
+  const caseRating = mode === 'case' && open?.rating && onRate ? <li><SupportRatingCard key={open.id} rating={open.rating} variant="chat" {...(ratedAgent ? { agentName: ratedAgent } : {})} onRate={(input) => onRate(open.id, input)} /></li> : null;
+  const caseTranscript = mode === 'case' && open?.transcript && onEmailTranscript ? <li className="flex justify-center"><EmailTranscriptButton key={open.id} transcript={open.transcript} compact onEmail={() => onEmailTranscript(open.id)} /></li> : null;
 
   return <div className="flex min-h-0 flex-1 flex-col">
     {/* Who this is with, and what it is now: the assistant, the support team, or the person on the live chat. */}
     <header className={cn('flex min-w-0 items-center gap-2.5 border-b border-foreground/[0.07] dark:border-white/[0.06]', variant === 'page' ? 'px-4 py-3' : 'px-3 py-2.5')}>
-      <HelpAvatar size="sm" />
+      {mode === 'case' && agentView ? <InitialsAvatar initials={agentView.initials} {...(agentView.photo ? { photo: agentView.photo } : {})} size="sm" /> : <HelpAvatar size="sm" />}
       <div className="min-w-0 flex-1">
         <h3 className="truncate text-[15px] font-semibold">{t('title')}</h3>
         <p className="truncate text-xs text-muted-foreground">{mode === 'case' ? (agent ? t('live.with', { name: agent }) : t('subtitleSupport')) : t('subtitleAssistant')}</p>
@@ -298,10 +320,14 @@ export function HelpChat({ data, transcript, handlers, now, variant = 'window' }
         <span>{t('case.backToCase')}</span>
         <button type="button" onClick={() => setAssistantOverCase(false)} className="font-semibold text-primary underline-offset-4 hover:underline">{t('case.backToCaseLink')}</button>
       </p>}
-      {mode === 'assistant' && !open && data.recent && <p className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-foreground/[0.04] px-3.5 py-2 text-sm dark:bg-white/[0.05]">
-        <span>{t('case.recent', { topic: t(`handoff.topics.${data.recent.topic}`), status: t(`statuses.${data.recent.status}`) })}</span>
-        <Link href={routes.app.supportCase(data.recent.id)} className="font-semibold text-primary underline-offset-4 hover:underline">{t('case.recentLink')}</Link>
-      </p>}
+      {mode === 'assistant' && !open && data.recent && <div className="mb-3 space-y-2">
+        <p className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-foreground/[0.04] px-3.5 py-2 text-sm dark:bg-white/[0.05]">
+          <span>{t('case.recent', { topic: t(`handoff.topics.${data.recent.topic}`), status: t(`statuses.${data.recent.status}`) })}</span>
+          <Link href={routes.app.supportCase(data.recent.id)} className="font-semibold text-primary underline-offset-4 hover:underline">{t('case.recentLink')}</Link>
+        </p>
+        {/* A case solved lately asks how the help was (2026-11-23). */}
+        {data.recent.rating && onRate && <SupportRatingCard key={data.recent.id} rating={data.recent.rating} variant="chat" onRate={(input) => onRate(data.recent!.id, input)} />}
+      </div>}
 
       {mode === 'case' && open
         ? <ol className="space-y-3">
@@ -309,16 +335,24 @@ export function HelpChat({ data, transcript, handlers, now, variant = 'window' }
           {supportTyping && <TypingBubble label={agent ? t('live.typing', { name: agent }) : t('live.typingSupport')} />}
           {live?.state === 'waiting' && <li className="flex justify-center"><div role="status" className="flex max-w-[92%] items-start gap-2.5 rounded-2xl border border-primary/25 bg-brand-soft/50 px-3.5 py-2.5 text-sm">
             {live.agentsOnline ? <Spinner aria-hidden="true" className="mt-0.5 shrink-0 text-primary" /> : <Headset aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />}
-            <span>{live.agentsOnline ? t('live.waiting', { position: live.position ?? 1 }) : t('live.offline')}</span>
+            {/* Nobody on now: outside live chat hours it says when it opens, and that the reply comes here and by email
+                (2026-11-23); in hours, that someone will reply. */}
+            {live.agentsOnline
+              ? <span>{t('live.waiting', { position: live.position ?? 1 })}</span>
+              : data.liveHours.open ? <span>{t('live.offline')}</span> : <LiveChatHoursLine hours={data.liveHours} waiting className="text-sm text-foreground" />}
           </div></li>}
           {live?.state === 'ended' && <li className="flex justify-center"><p className="max-w-[92%] text-center text-sm text-muted-foreground">{t('live.ended')}</p></li>}
           {!live && !supportReplied && open.canReply && <li className="flex justify-center"><p className="max-w-[92%] rounded-2xl border border-dashed border-foreground/[0.14] px-3.5 py-2.5 text-center text-sm text-muted-foreground dark:border-white/[0.12]">{t('case.waiting')} {t('case.replyHours', { hours: open.replyHours })}</p></li>}
+          {caseRating}
+          {caseTranscript}
         </ol>
         : <ol className="space-y-3">
-          <li className="flex min-w-0 flex-col items-start"><article className={cn(bubble, theirs)}>
+          <li className="flex min-w-0 flex-col items-start gap-1.5"><article className={cn(bubble, theirs)}>
             <Sender>{t('assistant')}</Sender>
             <p>{name ? t('greeting', { name }) : t('greetingNoName')}</p>
-          </article></li>
+          </article>
+          {/* When a person answers live chats (2026-11-23): the greeting says one is a tap away. */}
+          <LiveChatHoursLine hours={data.liveHours} className="max-w-[88%] px-1" /></li>
           {!data.assistantAvailable && <li className="flex min-w-0 flex-col items-start gap-2">
             <p className={cn(bubble, theirs, 'text-sm text-muted-foreground')}>{t('unavailable')}</p>
           </li>}
@@ -331,7 +365,7 @@ export function HelpChat({ data, transcript, handlers, now, variant = 'window' }
           {turns.map((turn, index) => <li key={turn.id} className="space-y-3">
             <ol className="space-y-3">
               <li className="flex min-w-0 flex-col items-end"><p className={cn(bubble, mine, 'whitespace-pre-line')}><span className="sr-only">{t('you')}: </span>{turn.question}</p></li>
-              <AnswerBubble turn={turn} latest={index === turns.length - 1 && !transcript.pending} connecting={connecting} onTalk={() => void connect()} />
+              <AnswerBubble turn={turn} latest={index === turns.length - 1 && !transcript.pending} connecting={connecting} onTalk={() => void connect()} hours={data.liveHours} />
             </ol>
           </li>)}
           {transcript.pending && <>

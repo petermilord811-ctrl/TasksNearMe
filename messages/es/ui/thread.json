@@ -127,7 +127,14 @@
       "failed": "No se pudo guardar esa respuesta. Inténtalo de nuevo.",
       "hint": "'{first_name}' y '{task}' se completan en cada conversación."
     },
-    "awaiting_reply": "Podrás escribir de nuevo cuando te responda"
+    "awaiting_reply": "Podrás escribir de nuevo cuando te responda",
+    "suggest": {
+      "button": "Sugerir respuestas",
+      "label": "Respuestas sugeridas",
+      "loading": "Pensando respuestas…",
+      "failed": "No hay sugerencias ahora. Escribe la tuya o inténtalo más tarde.",
+      "dismiss": "Ocultar sugerencias"
+    }
   },
   "newMessages": "Mensajes nuevos",
   "loadEarlier": "Cargar mensajes anteriores",
@@ -150,5 +157,127 @@
     "requestHint": "¿Quieres que {name} haga una tarea para ti?",
     "request": "Enviar una solicitud de tarea",
     "firstMessagesLeft": "{count, plural, one {Puedes enviar # mensaje más hasta que {name} responda.} other {Puedes enviar # mensajes más hasta que {name} responda.}}"
+  },
+  "mention": {
+    "profile": "Ver el perfil de {name}",
+    "message": "Escribir a {name}"
+  },
+  "sampleBadge": "Perfil de muestra",
+  "tools": {
+    "menu": "Opciones de tu conversación con {name}",
+    "rowMenu": "Acciones rápidas para tu conversación con {name}",
+    "search": "Buscar en la conversación",
+    "pin": "Fijar arriba",
+    "unpin": "Dejar de fijar",
+    "mute": "Silenciar notificaciones",
+    "unmute": "Activar notificaciones",
+    "archive": "Archivar",
+    "unarchive": "Volver a Mensajes",
+    "accept": "Aceptar solicitud",
+    "pinnedMark": "Fijada",
+    "mutedMark": "Silenciada",
+    "pinLimit": "Puedes fijar hasta 3 conversaciones. Deja de fijar una primero.",
+    "failed": "No funcionó. Inténtalo de nuevo.",
+    "done": {
+      "pinned": "{on, select, yes {Fijada arriba} other {Ya no está fijada}}",
+      "muted": "{on, select, yes {Silenciada: no recibirás notificaciones de esta conversación} other {Las notificaciones vuelven a estar activas}}",
+      "archived": "{on, select, yes {Archivada} other {De vuelta en Mensajes}}",
+      "accepted": "Solicitud aceptada"
+    },
+    "openBeside": "Abrir al lado"
+  },
+  "request": {
+    "label": "Solicitud de mensaje",
+    "title": "{name} quiere escribirte",
+    "body": "{name} y tú aún no han hablado de una tarea. Acepta para pasarla a tus mensajes, o responde. Si la ignoras, {name} no se enterará.",
+    "accept": "Aceptar",
+    "ignore": "Ignorar",
+    "block": "Bloquear",
+    "ignored": "Ignorada. Está en Archivadas, en Mensajes, por si cambias de opinión.",
+    "blocked": "{name} está bloqueado.",
+    "failed": "No funcionó. Inténtalo de nuevo."
+  },
+  "search": {
+    "title": "Busca en tus mensajes con {name}",
+    "description": "Encuentra palabras en esta conversación tal como la ves. Los datos de contacto ocultos no se buscan.",
+    "label": "Buscar en esta conversación",
+    "placeholder": "Palabras a buscar",
+    "submit": "Buscar",
+    "failed": "La búsqueda no funcionó. Inténtalo de nuevo.",
+    "tooShort": "Escribe al menos 2 letras.",
+    "none": "No hay mensajes con «{query}».",
+    "count": "{count, plural, one {# mensaje} other {# mensajes}}",
+    "countMore": "Los {count} mensajes más recientes",
+    "results": "Mensajes encontrados"
+  },
+  "translate": {
+    "action": "Traducir",
+    "original": "Ver original",
+    "label": "Traducido",
+    "failed": "No se pudo traducir ahora. Inténtalo más tarde."
+  },
+  "cards": {
+    "when": "Cuándo",
+    "price": "Precio",
+    "hourly": "{rate}/h · unas {hours} h (hasta {cap} h)",
+    "answerBy": "Responde antes de: {at}",
+    "failed": "No funcionó. Inténtalo de nuevo.",
+    "expiredNow": "Esta solicitud venció.",
+    "changedNow": "Esta solicitud cambió. Ábrela para ver cómo está.",
+    "done": {
+      "accept": "Aceptada: ya está reservada",
+      "decline": "Solicitud rechazada",
+      "cancel": "Solicitud cancelada"
+    },
+    "request": {
+      "label": "Solicitud de tarea: {title}",
+      "kind": "Solicitud de tarea",
+      "status": {
+        "authorizing": "Enviando",
+        "sent": "{role, select, poster {Esperando a {name}} other {Esperando tu respuesta}}",
+        "countered": "{role, select, poster {{name} propuso cambios} other {Tu contraoferta enviada}}",
+        "accepted": "Reservada",
+        "declined": "Rechazada",
+        "canceled": "Cancelada",
+        "expired": "Vencida",
+        "auth_failed": "Tarjeta no aprobada"
+      },
+      "counterNote": "contraoferta de {name}",
+      "accept": "Aceptar",
+      "decline": "Rechazar",
+      "cancel": "Cancelar solicitud",
+      "booking": "Ver reserva",
+      "task": "Ver tarea",
+      "counter": "Proponer cambios",
+      "details": "Detalles"
+    },
+    "change": {
+      "label": "Cambio en la reserva",
+      "fromYou": "Propusiste un cambio",
+      "fromThem": "{name} propuso un cambio",
+      "status": {
+        "proposed": "Esperando respuesta",
+        "accepted_pending_funding": "Esperando el pago",
+        "applied": "Aplicado",
+        "declined": "Rechazado",
+        "withdrawn": "Retirado",
+        "expired": "Vencido"
+      },
+      "types": {
+        "price": "Precio",
+        "scope": "Qué incluye",
+        "schedule": "Hora",
+        "hours_cap": "Límite de horas",
+        "expense_allowance": "Gastos"
+      },
+      "newTime": "Nueva hora: {time}",
+      "samePrice": "El precio no cambia.",
+      "more": "El cliente paga {amount} más.",
+      "less": "El cliente paga {amount} menos.",
+      "review": "Revisar y responder",
+      "view": "Ver cambio",
+      "hint": "¿Necesitas otra hora, otro precio u otro alcance?",
+      "propose": "Proponer un cambio"
+    }
   }
 }

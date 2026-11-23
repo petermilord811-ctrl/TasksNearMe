@@ -32,7 +32,9 @@
     "all": "Todas",
     "unread": "Sin leer",
     "offers": "Ofertas",
-    "bookings": "Reservas"
+    "bookings": "Reservas",
+    "requests": "Solicitudes",
+    "archived": "Archivadas"
   },
   "search": {
     "label": "Buscar conversaciones",
@@ -44,5 +46,7 @@
     "body": "Elige una a la izquierda para leerla y responder. Las no leídas están arriba."
   },
   "shown": "{count, plural, one {# conversación} other {# conversaciones}}",
-  "newMessage": "Nuevo mensaje"
+  "newMessage": "Nuevo mensaje",
+  "noRequests": "No hay solicitudes de mensaje. Cuando alguien con quien no has hablado de una tarea te escriba primero, aparecerá aquí.",
+  "noArchived": "No hay nada archivado."
 }

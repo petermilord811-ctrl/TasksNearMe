@@ -127,7 +127,14 @@
       "failed": "That reply couldn’t be saved. Try again.",
       "hint": "'{first_name}' and '{task}' are filled in for each conversation."
     },
-    "awaiting_reply": "You can write again when they reply"
+    "awaiting_reply": "You can write again when they reply",
+    "suggest": {
+      "button": "Suggest replies",
+      "label": "Suggested replies",
+      "loading": "Thinking of replies…",
+      "failed": "No suggestions right now. Write your own, or try again later.",
+      "dismiss": "Hide suggestions"
+    }
   },
   "newMessages": "New messages",
   "loadEarlier": "Load earlier messages",
@@ -150,5 +157,127 @@
     "requestHint": "Want {name} to do a task for you?",
     "request": "Send a task request",
     "firstMessagesLeft": "{count, plural, one {You can send # more message until {name} replies.} other {You can send # more messages until {name} replies.}}"
+  },
+  "mention": {
+    "profile": "See {name}'s profile",
+    "message": "Message {name}"
+  },
+  "sampleBadge": "Sample profile",
+  "tools": {
+    "menu": "Options for your conversation with {name}",
+    "rowMenu": "Quick actions for your conversation with {name}",
+    "search": "Search in conversation",
+    "pin": "Pin to top",
+    "unpin": "Unpin",
+    "mute": "Mute notifications",
+    "unmute": "Unmute notifications",
+    "archive": "Archive",
+    "unarchive": "Move back to Messages",
+    "accept": "Accept request",
+    "pinnedMark": "Pinned",
+    "mutedMark": "Muted",
+    "pinLimit": "You can pin up to 3 conversations. Unpin one first.",
+    "failed": "That didn't work. Try again.",
+    "done": {
+      "pinned": "{on, select, yes {Pinned to the top} other {Unpinned}}",
+      "muted": "{on, select, yes {Muted: no notifications from this conversation} other {Notifications are back on}}",
+      "archived": "{on, select, yes {Archived} other {Back in Messages}}",
+      "accepted": "Request accepted"
+    },
+    "openBeside": "Open beside"
+  },
+  "request": {
+    "label": "Message request",
+    "title": "{name} wants to message you",
+    "body": "You and {name} haven't talked about a task yet. Accept to move this into your messages, or reply. If you ignore it, {name} won't be told.",
+    "accept": "Accept",
+    "ignore": "Ignore",
+    "block": "Block",
+    "ignored": "Ignored. It's under Archived in Messages if you change your mind.",
+    "blocked": "{name} is blocked.",
+    "failed": "That didn't work. Try again."
+  },
+  "search": {
+    "title": "Search your messages with {name}",
+    "description": "Finds words in this conversation as you see it. Hidden contact details aren't searched.",
+    "label": "Search this conversation",
+    "placeholder": "Words to find",
+    "submit": "Search",
+    "failed": "The search didn't work. Try again.",
+    "tooShort": "Type at least 2 letters.",
+    "none": "No messages with “{query}”.",
+    "count": "{count, plural, one {# message} other {# messages}}",
+    "countMore": "The newest {count} messages",
+    "results": "Messages found"
+  },
+  "translate": {
+    "action": "Translate",
+    "original": "Show original",
+    "label": "Translated",
+    "failed": "Couldn't translate this right now. Try again later."
+  },
+  "cards": {
+    "when": "When",
+    "price": "Price",
+    "hourly": "{rate}/hr · about {hours} h (up to {cap} h)",
+    "answerBy": "Answer by {at}",
+    "failed": "That didn't work. Try again.",
+    "expiredNow": "This request has expired.",
+    "changedNow": "This request changed. Open it to see where it stands.",
+    "done": {
+      "accept": "Accepted: it's booked",
+      "decline": "Request declined",
+      "cancel": "Request canceled"
+    },
+    "request": {
+      "label": "Task request: {title}",
+      "kind": "Task request",
+      "status": {
+        "authorizing": "Sending",
+        "sent": "{role, select, poster {Waiting for {name}} other {Waiting for you}}",
+        "countered": "{role, select, poster {{name} suggested changes} other {Your counter sent}}",
+        "accepted": "Booked",
+        "declined": "Declined",
+        "canceled": "Canceled",
+        "expired": "Expired",
+        "auth_failed": "Card not approved"
+      },
+      "counterNote": "{name}'s counter",
+      "accept": "Accept",
+      "decline": "Decline",
+      "cancel": "Cancel request",
+      "booking": "View booking",
+      "task": "View task",
+      "counter": "Suggest changes",
+      "details": "Details"
+    },
+    "change": {
+      "label": "Booking change",
+      "fromYou": "You proposed a change",
+      "fromThem": "{name} proposed a change",
+      "status": {
+        "proposed": "Waiting for an answer",
+        "accepted_pending_funding": "Waiting for payment",
+        "applied": "Applied",
+        "declined": "Declined",
+        "withdrawn": "Withdrawn",
+        "expired": "Expired"
+      },
+      "types": {
+        "price": "Price",
+        "scope": "What's included",
+        "schedule": "Time",
+        "hours_cap": "Hours cap",
+        "expense_allowance": "Expenses"
+      },
+      "newTime": "New time: {time}",
+      "samePrice": "The price stays the same.",
+      "more": "The client pays {amount} more.",
+      "less": "The client pays {amount} less.",
+      "review": "Review and answer",
+      "view": "View change",
+      "hint": "Need a different time, price or scope?",
+      "propose": "Propose a change"
+    }
   }
 }

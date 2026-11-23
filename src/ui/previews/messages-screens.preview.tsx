@@ -4,7 +4,7 @@ import {
 } from '@/contracts';
 import {
   blockedThreadPageData, closedThreadPageData, deskBookingThreadPageData, deskOfferThreadPageData, directThreadAwaitingReplyData, directThreadPageData, earlierThreadPageData, expiredOfferThreadPageData,
-  mayaInboxWithDirectData,
+  mayaInboxWithDirectData, changeCardThreadPageData, fakeConversationHandlers, mayaFoldersInboxData, requestCardForHelperPageData, requestCardThreadPageData, requestThreadPageData, sampleThreadPageData,
   fakeHandler, fakeThreadHandlers, inboxEmptyData, jordanInboxPageData, jordanShell, mayaInboxPageData,
   mayaShell, movingOfferThreadForHelper, taskCanceledOfferThreadPageData, taskCanceledThreadForHelperPageData,
 } from '@/fixtures';
@@ -29,10 +29,11 @@ function inboxPreview(id: keyof typeof inboxCopy.previews, data: InboxPageData, 
 }
 
 function threadPreview(id: string, title: string, data: ThreadPageData, options: {
-  result?: ActionResult; pending?: boolean; helper?: boolean;
+  result?: ActionResult; pending?: boolean; helper?: boolean; suggestions?: string[];
 } = {}): PreviewEntry {
   const handlers: ThreadHandlers = {
     ...fakeThreadHandlers,
+    ...fakeConversationHandlers,
     onSend: fakeHandler(options.result ?? { ok: true, code: 'sent' }, options.pending ? 60_000 : 400),
   };
   return {
@@ -41,6 +42,7 @@ function threadPreview(id: string, title: string, data: ThreadPageData, options:
       <ThreadContent data={data} handlers={handlers} now={data.thread.contactMasking ? beforeBooking : now} composerState={{
         initialResult: options.result, initialPending: options.pending,
         initialBody: options.pending || (options.result && !options.result.ok) ? threadCopy.previews.draft : undefined,
+        ...(options.suggestions ? { initialSuggestions: options.suggestions } : {}),
       }} />
     </AppShell>,
   };
@@ -61,6 +63,17 @@ export const messagesScreenPreviews: PreviewEntry[] = [
     render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.messages()}><InboxScreen data={mayaInboxWithDirectData} now={now} /></AppShell>,
   },
   threadPreview('direct', 'Direct conversation: the first message, two more until a reply', directThreadPageData),
+  // The chat, 2026-11-23: a message request with a person named by @username, a sample profile, the cards, suggestions.
+  {
+    id: 'screen-inbox/folders', group: inboxCopy.previews.group, title: 'Inbox: a pinned, a muted and an archived conversation, and a message request', layout: 'fullscreen',
+    render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.messages()}><InboxScreen data={mayaFoldersInboxData} now={now} handlers={{ onFlag: fakeHandler({ ok: true, code: 'updated' }), onAccept: fakeHandler({ ok: true, code: 'updated' }) }} /></AppShell>,
+  },
+  threadPreview('request', 'Message request: Accept, Ignore or Block, with a person named by @username', requestThreadPageData),
+  threadPreview('sample', 'Direct conversation with a sample profile: the app’s note under the first message', sampleThreadPageData),
+  threadPreview('request-card', 'A task request card in the conversation, waiting on the helper (client)', requestCardThreadPageData),
+  threadPreview('request-card-helper', 'A task request card the helper accepts or declines in the conversation', requestCardForHelperPageData, { helper: true }),
+  threadPreview('change-card', 'A booking change card in the booking’s conversation, with Propose a change', changeCardThreadPageData),
+  threadPreview('suggestions', 'Suggested replies above the composer', requestThreadPageData, { suggestions: ['Sounds good to me!', 'What day and time work best for you?', 'Let me check and get back to you today.'] }),
   threadPreview('direct-awaiting-reply', 'Direct conversation: three sent, waiting on a reply', directThreadAwaitingReplyData),
   threadPreview('booking', threadCopy.previews.booking, deskBookingThreadPageData),
   // A long conversation: "Load earlier messages" above its latest 100 (sweep MN11).

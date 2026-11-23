@@ -35,6 +35,11 @@ export const TIMELINE_EVENT_TYPES = [
   'review_submitted',
   'reviews_published',
   'support_note',
+  /**
+   * A conversation's note when someone writes to a sample profile of the demo marketplace (2026-11-23): it shows how the
+   * app works and won't reply. Only where sample rows are told apart (production).
+   */
+  'sample_profile_notice',
 ] as const;
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];
 
@@ -52,5 +57,8 @@ export interface TimelineEvent {
     minutes?: number;
     hours?: number;
     at?: ISODateTime;
+    /** A conversation's card (2026-11-23): the task request (`invite_sent`) or the booking change (`change_proposed`) it shows. */
+    inviteId?: string;
+    changeId?: string;
   };
 }

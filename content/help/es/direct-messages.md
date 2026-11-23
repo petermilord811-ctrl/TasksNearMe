@@ -21,6 +21,16 @@ Las respuestas, las conversaciones que inició otra persona y las conversaciones
 
 Puedes enviar hasta 3 mensajes antes de que la otra persona responda. Cuando responda, sigue la conversación.
 
+## Solicitudes de mensaje
+
+Cuando alguien con quien no has hablado de una tarea te escribe primero, su mensaje espera en **Solicitudes**, en Mensajes, y no suma a tu contador de Mensajes. Ábrelo para **Aceptarlo**, responderlo, **Ignorarlo** (no se le avisa) o **Bloquear** a esa persona.
+
+## Mantener el orden
+
+En Mensajes y en el menú **⋯** de una conversación puedes fijar hasta 3 conversaciones arriba, silenciar una (no recibirás notificaciones de ella) o archivarla hasta que la otra persona vuelva a escribir. **Buscar en la conversación** encuentra palabras en ella, y **Traducir** muestra un mensaje en tu idioma. Cuando alguien te ha escrito, **Sugerir respuestas** te ofrece algunas respuestas cortas para empezar; no se envía nada hasta que tú lo envíes.
+
+El @usuario de alguien en un mensaje se muestra con su nombre y abre su perfil.
+
 ## Quién puede escribirte
 
 En tu cuenta, en **Mensajes directos**, elige quién puede iniciar una conversación contigo: todos, solo las personas con quienes hablaste de una tarea, o nadie. Bloquear a alguien detiene sus mensajes de inmediato, y puedes reportar un mensaje que no cumpla las [normas de la comunidad](/legal/community-guidelines).

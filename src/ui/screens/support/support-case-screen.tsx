@@ -8,6 +8,9 @@ import { PageHeader } from '@/ui/components/layout/page-header';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { useCaseStatus } from '@/ui/components/status/use-status';
 import { CasePhoto } from '@/ui/components/support/case-photo';
+import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
+import { SupportRatingCard } from '@/ui/components/support/support-rating';
+import { EmailTranscriptButton } from '@/ui/components/support/transcript-button';
 import { cn } from '@/ui/lib/utils';
 import { buttonVariants } from '@/ui/primitives/button';
 import { SupportReplyForm } from './support-reply-form';
@@ -26,10 +29,13 @@ function CaseStatusLine({ status, viewerRole }: { status: CaseStatus; viewerRole
 function CaseEvent({ event, now, viewerRole }: { event: CaseEventView; now: ISODateTime; viewerRole?: SupportCasePageData['case']['viewerRole'] }) {
   const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('supportCase');
-  const sender = t(`sender.${event.from}`);
+  // The person from support on a live chat writes as themselves: first name and photo (2026-11-23).
+  const agent = event.kind === 'message' && event.from === 'support' ? event.agent : undefined;
+  const sender = agent?.name ?? t(`sender.${event.from}`);
   // Status changes and the live chat's joins and ends (2026-11-22) are small notes between the bubbles.
   const notice = event.kind === 'status' || event.kind === 'live';
-  return <li className={cn('flex min-w-0', notice ? 'justify-center' : event.from === 'me' ? 'justify-end' : 'justify-start')}>
+  return <li className={cn('flex min-w-0', notice ? 'justify-center' : event.from === 'me' ? 'justify-end' : 'items-end justify-start gap-2')}>
+    {agent && <InitialsAvatar initials={agent.initials} {...(agent.photo ? { photo: agent.photo } : {})} size="sm" />}
     {/* The same bubbles as messages: yours on the right, support's on the left, status changes as small notes. */}
     <article className={cn(
       'min-w-0 [overflow-wrap:anywhere]',
@@ -80,7 +86,11 @@ export function SupportCaseContent({ data, handlers, now, replyState }: SupportC
       <div role="log" aria-label={t('conversation')} aria-live="polite" aria-relevant="additions text" className="rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-3 shadow-card sm:p-5">
         {data.events.length ? <ol className="space-y-2.5">{data.events.map((event) => <CaseEvent key={event.id} event={event} now={now} viewerRole={data.case.viewerRole} />)}</ol> : <p className="py-8 text-center text-sm text-muted-foreground">{t('emptyConversation')}</p>}
       </div>
+      {/* A copy of the conversation by email (2026-11-23). */}
+      {data.transcript && handlers.onEmailTranscript && <EmailTranscriptButton transcript={data.transcript} onEmail={handlers.onEmailTranscript} />}
     </section>
+    {/* How the help was, once the live chat ended or the case is solved (2026-11-23). */}
+    {data.rating && handlers.onRate && <SupportRatingCard rating={data.rating} onRate={handlers.onRate} />}
     {data.canReply ? <section className="space-y-4"><h2 className="font-display text-xl font-semibold tracking-[-0.015em]">{t('reply')}</h2><SupportReplyForm key={data.case.id} handlers={handlers} {...replyState} /></section> : <div className="space-y-3 rounded-[1.375rem] bg-muted p-4 sm:p-6">
       <p className="flex items-start gap-3"><LockKeyhole aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-muted-foreground" /><span>{t('closed')}</span></p>
       <Link href={routes.app.support()} className={buttonVariants({ variant: 'outline' })}>{t('newRequest')}</Link>

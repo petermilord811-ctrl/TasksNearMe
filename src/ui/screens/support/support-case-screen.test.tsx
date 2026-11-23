@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CASE_STATUSES, routes, type SupportCasePageData } from '@/contracts';
-import { closedCasePageData, disputeCasePageData, fakeSupportCaseHandlers } from '@/fixtures';
+import { closedCasePageData, disputeCasePageData, fakeSupportCaseHandlers, solvedCasePageData, solvedRatedCasePageData } from '@/fixtures';
 import { formatDate } from '@/shared/format';
 import uiMessages from '../../../../messages/en/ui';
 import supportCase from '../../../../messages/en/ui/supportCase.json';
@@ -82,5 +82,33 @@ describe('SupportCaseScreen', () => {
     expect(screen.queryByText(disputeCasePageData.case.description)).not.toBeInTheDocument();
     expect(screen.getByRole('log')).toHaveTextContent(disputeCasePageData.events[2]!.body!);
     expect(screen.getByRole('form', { name: supportCase.reply })).toBeVisible();
+  });
+
+  it('after a live chat: Riley signs their messages, the help can be rated, and the conversation emailed (2026-11-23)', async () => {
+    const onRate = vi.fn(async () => ({ ok: true as const, code: 'saved' as const }));
+    const onEmailTranscript = vi.fn(async () => ({ ok: true as const, code: 'sent' as const }));
+    render(<NextIntlClientProvider locale="en" messages={messages}><SupportCaseScreen data={solvedCasePageData} handlers={{ ...fakeSupportCaseHandlers, onRate, onEmailTranscript }} now={now} /></NextIntlClientProvider>);
+    const log = screen.getByRole('log');
+    expect(within(log).getByText('Riley')).toBeVisible();
+    expect(within(log).getByText('Riley from support joined the live chat.')).toBeVisible();
+    expect(screen.getByText("We'll send it to m•••@example.test.")).toBeVisible();
+    await userEvent.click(screen.getByRole('button', { name: supportCase.feedback.transcript.action }));
+    expect(onEmailTranscript).toHaveBeenCalledWith();
+    expect(await screen.findByText('Sent to m•••@example.test.')).toBeVisible();
+    const card = screen.getByRole('region', { name: supportCase.feedback.rating.title });
+    await userEvent.click(within(card).getByRole('button', { name: 'Good' }));
+    await userEvent.click(within(card).getByRole('button', { name: 'Send' }));
+    expect(onRate).toHaveBeenCalledWith({ rating: 'good' });
+    expect(await screen.findByText(supportCase.feedback.rating.thanksGood)).toBeVisible();
+  });
+
+  it('shows a rating given, and no rating or email without their handlers', () => {
+    const { unmount } = mount(solvedRatedCasePageData);
+    expect(screen.getByText('You rated this help bad.')).toBeVisible();
+    expect(screen.getByText('It took two days to get an answer.')).toBeVisible();
+    unmount();
+    render(<NextIntlClientProvider locale="en" messages={messages}><SupportCaseScreen data={solvedCasePageData} handlers={{ onReply: fakeSupportCaseHandlers.onReply }} now={now} /></NextIntlClientProvider>);
+    expect(screen.queryByRole('region', { name: supportCase.feedback.rating.title })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: supportCase.feedback.transcript.action })).not.toBeInTheDocument();
   });
 });

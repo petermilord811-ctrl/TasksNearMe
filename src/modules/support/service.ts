@@ -35,6 +35,8 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
+import { supportAgentsOf } from './agents';
+import { caseRateable, givenRating, supportRatingView } from './ratings';
 import { supportCaseEvents, supportCaseReads, supportCases } from './schema';
 import { FIRST_RESPONSE_HOURS, queueOf } from './staff-domain';
 
@@ -330,22 +332,52 @@ export async function getSupportCasePage(db: Db, userId: string, caseId: string,
   const opening: CaseEventView[] = isOpener && !repeats
     ? [{ id: `${row.id}_opened`, kind: 'message', from: 'me', body: row.description, ...photos(row.fileIds), at: row.createdAt.toISOString() }]
     : [];
-  // Live chat events name who from support joined, by first name (2026-11-22).
-  const agentIds = [...new Set(events.flatMap((event) => (event.kind === 'live' && event.authorUserId ? [event.authorUserId] : [])))];
-  const agentNames = new Map(agentIds.length > 0 ? (await db.select({ id: users.id, firstName: users.firstName }).from(users).where(inArray(users.id, agentIds))).map((row) => [row.id, row.firstName] as const) : []);
-  const conversation = events.map((event): CaseEventView =>
-    event.kind === 'status'
-      ? { id: event.id, kind: 'status', from: 'system', status: caseStatusOf(event.status), at: event.createdAt.toISOString() }
-      : event.kind === 'live'
-        ? { id: event.id, kind: 'live', from: 'system', live: event.meta?.live === 'ended' ? 'ended' : 'joined', ...(event.authorUserId && agentNames.get(event.authorUserId) ? { agentName: agentNames.get(event.authorUserId) } : {}), at: event.createdAt.toISOString() }
-        : { id: event.id, kind: 'message', from: event.meta?.assistant ? 'assistant' : event.authorUserId === userId ? 'me' : 'support', body: event.body ?? '', ...photos(event.fileIds), at: event.createdAt.toISOString() },
-  );
+  // Live chat events name who from support joined, by first name (2026-11-22), with their photo or initial; the messages
+  // of someone who joined a live chat on this case carry the same (2026-11-23). Other replies from support stay
+  // "Support".
+  const liveAuthors = [...new Set(events.flatMap((event) => (event.kind === 'live' && event.authorUserId ? [event.authorUserId] : [])))];
+  const joinedAgents = new Set(events.flatMap((event) => (event.kind === 'live' && event.meta?.live === 'joined' && event.authorUserId ? [event.authorUserId] : [])));
+  const [agents, viewer, given] = await Promise.all([
+    supportAgentsOf(db, liveAuthors),
+    db.select({ email: users.email }).from(users).where(eq(users.id, userId)).limit(1),
+    isOpener ? givenRating(db, row.id, userId) : Promise.resolve(undefined),
+  ]);
+  const agentOf = (authorUserId: string | null) => (authorUserId ? agents.get(authorUserId) : undefined);
+  const conversation = events
+    // A rating is the member's word about the help, never a message (it's staff only; this keeps it out either way).
+    .filter((event) => event.kind !== 'rating')
+    .map((event): CaseEventView => {
+      if (event.kind === 'status') return { id: event.id, kind: 'status', from: 'system', status: caseStatusOf(event.status), at: event.createdAt.toISOString() };
+      if (event.kind === 'live') {
+        const agent = agentOf(event.authorUserId);
+        return { id: event.id, kind: 'live', from: 'system', live: event.meta?.live === 'ended' ? 'ended' : 'joined', ...(agent ? { agentName: agent.name, agent } : {}), at: event.createdAt.toISOString() };
+      }
+      const from = event.meta?.assistant ? 'assistant' : event.authorUserId === userId ? 'me' : 'support';
+      const agent = from === 'support' && event.authorUserId && joinedAgents.has(event.authorUserId) ? agentOf(event.authorUserId) : undefined;
+      return { id: event.id, kind: 'message', from, body: event.body ?? '', ...photos(event.fileIds), ...(agent ? { agent } : {}), at: event.createdAt.toISOString() };
+    });
   if (markRead) await markCaseRead(db, row.id, userId, now);
   const view = rowOf(row, labels.get(row.id) ?? FALLBACK_LABEL);
   // In time order: a case opened from the assistant starts with the chat that came before the request (a stable sort,
   // so the opening stays first among events at the same moment).
   const ordered = [...opening, ...conversation].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
-  return { case: { ...view, description: isOpener ? row.description : '' }, events: ordered, canReply: view.status !== 'closed' };
+  // Rating the help, for the person who opened it (2026-11-23), and a copy of the conversation by email to the viewer.
+  const rating = supportRatingView({ isOpener, rateable: caseRateable(row), ...(given ? { given } : {}), now });
+  const email = viewer[0]?.email;
+  return {
+    case: { ...view, description: isOpener ? row.description : '' },
+    events: ordered,
+    canReply: view.status !== 'closed',
+    ...(rating ? { rating } : {}),
+    ...(email ? { transcript: { to: maskedEmailAddress(email) } } : {}),
+  };
+}
+
+/** An address as the page shows it to its owner: "m•••@gmail.com" (enough to recognise, nothing to copy). */
+export function maskedEmailAddress(address: string): string {
+  const [local = '', domain = ''] = address.split('@');
+  const first = Array.from(local)[0] ?? '';
+  return domain ? `${first}•••@${domain}` : `${first}•••`;
 }
 
 /** The member writes to support. A case waiting on a member goes back to support. */
@@ -513,6 +545,9 @@ export async function helpCaseView(db: Db, userId: string, row: CaseRow, now: Da
       unread: markRead ? false : unread,
       openedAt: row.createdAt.toISOString(),
       replyHours: FIRST_RESPONSE_HOURS[queueOf(row.type)],
+      // Rating the help once the live chat ended, and a copy by email (2026-11-23).
+      ...(page.rating ? { rating: page.rating } : {}),
+      ...(page.transcript ? { transcript: page.transcript } : {}),
     },
   };
 }

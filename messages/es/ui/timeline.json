@@ -35,5 +35,6 @@
   "payout_paid": "{hasAmount, select, yes {Pago depositado · {amount}} other {Pago depositado}}",
   "review_submitted": "Reseña enviada",
   "reviews_published": "Reseñas publicadas",
-  "support_note": "Soporte agregó una nota"
+  "support_note": "Soporte agregó una nota",
+  "sample_profile_notice": "Este es un perfil de muestra que enseña cómo funciona TasksNearMe, así que no responderá. Publica una tarea para llegar a ayudantes reales cerca de ti."
 }

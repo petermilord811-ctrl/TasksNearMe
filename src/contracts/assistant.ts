@@ -2,7 +2,17 @@ import { z } from 'zod';
 import type { ActionResult } from './actions';
 import type { ISODateTime, Mode } from './common';
 import type { CaseStatus } from './status';
-import { SUPPORT_TOPICS, type CaseEventView, type SupportReplyInput, type SupportTopic } from './support';
+import {
+  SUPPORT_TOPICS,
+  type CaseEventView,
+  type LiveChatHours,
+  type RateSupportInput,
+  type SupportAgentView,
+  type SupportRatingView,
+  type SupportReplyInput,
+  type SupportTopic,
+  type SupportTranscriptView,
+} from './support';
 
 // ---- The support assistant in Messages (2026-11-22, owner: "integrate smoothly with AI agent chat, AI support and if
 // need, they need contact live agent") ---------------------------------------------------------------------------------
@@ -107,6 +117,8 @@ export interface HelpLiveState {
   position?: number;
   agentsOnline: boolean;
   agentName?: string;
+  /** Who joined (2026-11-23): their first name and photo, or initial, for the conversation's header. */
+  agent?: SupportAgentView;
   requestedAt: ISODateTime;
 }
 
@@ -128,6 +140,10 @@ export interface HelpCaseView {
   live?: HelpLiveState;
   /** They may ask for a live chat on this case (it has none yet and isn't finished). */
   canRequestLive: boolean;
+  /** Rating the help (2026-11-23): once the live chat ended. */
+  rating?: SupportRatingView;
+  /** "Email me this conversation" (2026-11-23). */
+  transcript?: SupportTranscriptView;
 }
 
 /**
@@ -139,13 +155,16 @@ export interface HelpChatData {
   /** The assistant can answer here (an AI is set up and the market's AI switch is on). */
   assistantAvailable: boolean;
   case?: HelpCaseView;
-  recent?: { id: string; status: CaseStatus; topic: SupportTopic };
+  /** A case that finished in the last 7 days, with its rating (2026-11-23: asked for once it's solved). */
+  recent?: { id: string; status: CaseStatus; topic: SupportTopic; rating?: SupportRatingView };
   handoff: {
     /** The person's recent bookings, to name one. */
     bookings: { id: string; title: string; start: ISODateTime }[];
     /** Each topic's queue target for a first reply, in hours. */
     replyHours: Record<SupportTopic, number>;
   };
+  /** When a person answers live chats (2026-11-23): shown where a live chat is asked for. */
+  liveHours: LiveChatHours;
 }
 
 /** The pinned Help row in a conversation list: the open case's state and last line, when there is one. */
@@ -172,6 +191,13 @@ export interface HelpChatHandlers {
   onRequestLive?(): Promise<ActionResult>;
   /** They're typing to support (the app spaces the notices out); the person on the chat sees "typing…". */
   onTyping?(): void;
+  /**
+   * Rate the help on a case (the open one once its live chat ended, or `recent`: 2026-11-23), as
+   * `SupportCaseHandlers.onRate`: ok `saved`. Errors: `validation_failed`, `not_allowed`, `expired`, `rate_limited`.
+   */
+  onRate?(caseId: string, input: RateSupportInput): Promise<ActionResult>;
+  /** Email the case's conversation to the person (2026-11-23), as `SupportCaseHandlers.onEmailTranscript`. */
+  onEmailTranscript?(caseId: string): Promise<ActionResult>;
 }
 
 /** The assistant's side of the Help conversation, kept by the browser for the tab. */

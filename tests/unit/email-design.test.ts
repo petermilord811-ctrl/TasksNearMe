@@ -8,7 +8,8 @@ import { renderCityOpenEmail } from '@/modules/marketing/city-open';
 import { renderNotificationEmail } from '@/modules/notifications/emails';
 import { renderAccountDeletedNotice } from '@/modules/privacy/emails';
 import { renderGiftCardEmail } from '@/modules/rewards/emails';
-import { renderPublicSupportReceived, renderSupportEmailReply } from '@/modules/support/emails';
+import { renderPublicSupportReceived, renderSupportEmailReply, renderSupportTranscript } from '@/modules/support/emails';
+import { solvedCasePageData } from '@/fixtures';
 
 /**
  * Every email shares one design (the owner's email upgrade, 2026-11-22): a fluid column with Outlook's fixed-width
@@ -33,6 +34,8 @@ function transactional(locale: AppLocale) {
     giftCard: renderGiftCardEmail({ firstName: 'Jordan', amountCents: 5000, program: 'welcome', url: 'https://cards.example/redeem/abc', appUrl: APP, locale }),
     supportReceived: renderPublicSupportReceived({ appUrl: APP, locale }),
     supportReply: renderSupportEmailReply({ body: 'We refunded the visit.\n\nThanks for waiting.', staffName: 'Ana O.', appUrl: APP, locale }),
+    // A copy of a conversation with support (2026-11-23), at its longest: the newest lines that fit.
+    supportTranscript: renderSupportTranscript({ page: { ...solvedCasePageData, events: Array.from({ length: 120 }, (_, index) => ({ ...solvedCasePageData.events[2]!, id: `ev_${index}`, body: 'x'.repeat(1_900) })) }, firstName: 'Maya', appUrl: APP, locale, timeZone: 'America/New_York', now: new Date('2026-11-23T15:00:00.000Z') }),
     accountDeleted: renderAccountDeletedNotice({ appUrl: APP, locale }),
     bookingNotification: renderNotificationEmail({ type: 'booking_confirmed', topic: 'bookings', sentence: 'Ruth A. booked you for Assemble a desk.', target: { kind: 'booking', bookingId: 'bkg_desk' }, url: `${APP}/app/bookings/bkg_desk`, userId: 'usr_jordan', appUrl: APP, locale }),
   };

@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef } from 'react';
-import type { ActionResult, HandOffInput, HelpChatData, ISODateTime, SupportReplyInput } from '@/contracts';
+import type { ActionResult, HandOffInput, HelpChatData, ISODateTime, RateSupportInput, SupportReplyInput } from '@/contracts';
 import { HelpChatScreen } from '@/ui/screens/messages/help-chat-screen';
 import { useHelpChat } from './use-help-chat';
 
@@ -20,6 +20,9 @@ export function HelpChatPage({ viewerId, data, now, actions }: {
     reply(caseId: string, input: SupportReplyInput): Promise<ActionResult>;
     requestLive(caseId: string): Promise<ActionResult>;
     typing(caseId: string): Promise<void>;
+    /** After the chat (2026-11-23): rating the help, and a copy of the conversation by email. */
+    rate(caseId: string, input: RateSupportInput): Promise<ActionResult>;
+    emailTranscript(caseId: string): Promise<ActionResult>;
   };
 }) {
   const router = useRouter();
@@ -59,5 +62,11 @@ export function HelpChatPage({ viewerId, data, now, actions }: {
       lastTyping.current = Date.now();
       void actions.typing(caseId).catch(() => undefined);
     },
+    onRate: async (ratedCaseId, input) => {
+      const result = await actions.rate(ratedCaseId, input);
+      if (result.ok) router.refresh();
+      return result;
+    },
+    onEmailTranscript: actions.emailTranscript,
   }} />;
 }

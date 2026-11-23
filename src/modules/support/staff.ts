@@ -446,6 +446,21 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
       // Live chat (2026-11-22): someone from support joined it, or it ended.
       case 'live':
         return event.meta?.live ? [{ id: event.id, kind: 'live', actor, live: event.meta.live, at }] : [];
+      // The member's rating of the help (2026-11-23): good or bad, their comment, and when they last changed it.
+      case 'rating': {
+        const member = event.authorUserId ? members.get(event.authorUserId) : undefined;
+        return [
+          {
+            id: event.id,
+            kind: 'rating',
+            actor: member ? { kind: 'member', person: personSummaryOf(member) } : { kind: 'system' },
+            rating: event.meta?.rating === 'bad' ? 'bad' : 'good',
+            ...(event.body ? { body: event.body } : {}),
+            ...(event.meta?.changedAt ? { changedAt: event.meta.changedAt } : {}),
+            at,
+          },
+        ];
+      }
       default:
         return [];
     }

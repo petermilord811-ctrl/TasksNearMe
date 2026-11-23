@@ -4,11 +4,14 @@ import type { HelpSummary } from './assistant';
 import type { PlanCode } from './billing';
 import type { SparkLevel } from './sparks';
 import { requestKeyField } from './forms';
-import type { ISODateTime, Photo } from './common';
+import type { Cents, ISODateTime, Photo } from './common';
 import type { PersonSummary, PresenceState } from './people';
 import type { PhotoUploadResult } from './posting';
 import type { ReportInput, ReportSubject } from './support';
 import type { TimelineEvent } from './timeline';
+import type { ProposableChangeType } from './changes';
+import type { PricingInput } from './money';
+import type { ChangeStatus, InviteStatus } from './status';
 
 /**
  * Message text arrives already split into segments. Contact details are detected and masked by the
@@ -22,7 +25,24 @@ export type MessageSegment =
       detail: 'phone' | 'email' | 'link' | 'handle';
       /** Safe hint the UI may show, e.g. last 4 digits of a phone number ("0134"). */
       hint?: string;
-    };
+    }
+  | MentionSegment;
+
+/**
+ * Someone's TasksNearMe @username in a message (2026-11-23, owner: "plan all and implement"): a person, shown by name
+ * ("@Minh T."), never as the handle text, so a payment or social handle that happens to be someone's username doesn't
+ * get past the masking. Before, every "@name" read as a social handle and showed "[hidden]" until a paid booking.
+ * A helper's opens their profile (`routes.helperProfile(helperHandle)`); anyone else's, a conversation with them
+ * (`routes.app.newMessage({ userId })`); the viewer's own (`self`) opens nothing.
+ */
+export interface MentionSegment {
+  kind: 'mention';
+  userId: string;
+  /** Their shown name ("Minh T."). */
+  name: string;
+  helperHandle?: string;
+  self?: boolean;
+}
 
 // ---- Threads and messages (UI-014) ---------------------------------------------------------------
 // Blueprint 02 J2 step 6 (pre-booking thread), 06 (contact details masked before confirmation),
@@ -100,6 +120,63 @@ export interface ThreadSummary {
   unreadCount: number;
   /** Contact details are hidden until a booking is confirmed (blueprint 06). */
   contactMasking: boolean;
+  /**
+   * The other person is a sample profile of the demo marketplace (2026-11-23): they won't reply ("Sample profile"). Only
+   * where sample rows are told apart (production); in development and the e2e build every row is seed data.
+   */
+  sample?: boolean;
+  /** The viewer pinned it: on top of their list (2026-11-23). */
+  pinned?: boolean;
+  /** The viewer muted it: no "sent you a message", and not in the Messages badge; its own count still shows. */
+  muted?: boolean;
+  /** The viewer archived it: out of the list, under Archived, until the other person writes again. */
+  archived?: boolean;
+  /**
+   * A message request (2026-11-23): a direct conversation someone else started that the viewer hasn't accepted or
+   * answered, from someone they haven't talked to about a task. Under Requests, not in the Messages badge.
+   */
+  request?: boolean;
+}
+
+// ---- The viewer's own list (2026-11-23, owner: "plan all and implement"): pinned, muted, archived; message requests --
+
+/** Conversations a person can pin. */
+export const PINNED_CONVERSATIONS_MAX = 3;
+
+export const CONVERSATION_FLAGS = ['pinned', 'muted', 'archived'] as const;
+export type ConversationFlag = (typeof CONVERSATION_FLAGS)[number];
+
+/** Pin, mute or archive a conversation, or undo it. */
+export const conversationFlagInputSchema = z.object({ flag: z.enum(CONVERSATION_FLAGS, 'invalid'), on: z.boolean('invalid') });
+export type ConversationFlagInput = z.input<typeof conversationFlagInputSchema>;
+
+/**
+ * A conversation's place in the viewer's list, and its message request.
+ * - `onFlag`: ok `updated`. Errors: `limit_reached` (already `PINNED_CONVERSATIONS_MAX` pinned), `not_found`.
+ * - `onAccept`: a message request into the list: ok `updated`. Ignore is `onFlag({ flag: 'archived', on: true })`, and the
+ *   sender isn't told; Block is the conversation's Block.
+ */
+export interface ConversationListHandlers {
+  onFlag(threadId: string, input: ConversationFlagInput): Promise<ActionResult>;
+  onAccept(threadId: string): Promise<ActionResult>;
+}
+
+/** A conversation's search (2026-11-23): its messages as the viewer sees them (masked details can't be found). */
+export const CONVERSATION_SEARCH_MAX = 30;
+
+export interface ConversationSearchHit {
+  id: string;
+  sender: 'me' | 'them';
+  /** The message, cut to its first 160 characters as quotes are. */
+  segments: MessageSegment[];
+  createdAt: ISODateTime;
+}
+
+/** Newest first. `more`: there were more than `CONVERSATION_SEARCH_MAX`; a longer search finds fewer. */
+export interface ConversationSearchData {
+  query: string;
+  hits: ConversationSearchHit[];
+  more: boolean;
 }
 
 /** `/app/messages`: threads with unread messages first, then the latest activity first (audit M33). */
@@ -170,6 +247,86 @@ export interface ThreadPageData {
   firstUnreadId?: string;
   /** The viewer's saved replies, for the composer (7.3). */
   savedReplies?: MessageSavedReply[];
+  /**
+   * Help from the free models (2026-11-23), where this server offers it: Translate on the other person's messages, and
+   * Suggest replies in the composer when they wrote last.
+   */
+  assist?: { translate: boolean; suggest: boolean };
+  /** The cards its status lines show: task requests and booking changes (2026-11-23). */
+  cards?: ConversationCards;
+  /**
+   * A booking's conversation where the booking can still change (confirmed or under way): "Propose a change" opens the
+   * change dialog (`routes.app.bookingProposeChange`), and the proposal shows here as a card (2026-11-23).
+   */
+  canProposeChange?: boolean;
+}
+
+// ---- Cards in a conversation (2026-11-23, owner: "plan all and implement") ---------------------------------------------
+//
+// A task request between two people who talk directly shows in their conversation as a card the helper answers there; a
+// booking change shows in the booking's conversation with its status. Status lines in the log carry the id (`event.params`
+// `inviteId` or `changeId`); the cards come with the conversation, already for the viewer.
+
+/** A task request (a funded direct invite), as one of its two people sees it in their direct conversation. */
+export interface TaskRequestCard {
+  inviteId: string;
+  title: string;
+  /** When: the request's start, or the helper's counter's while it's countered. */
+  start: ISODateTime;
+  pricing: PricingInput;
+  status: InviteStatus;
+  viewerRole: 'poster' | 'helper';
+  /** The helper answers while it waits (Accept, Decline); the client may Cancel it while it waits or is countered. */
+  actions: ('accept' | 'decline' | 'cancel')[];
+  /** Where it lives: the client's task (`routes.app.task`), the helper's offers with it open (`routes.app.offers(inviteId)`). */
+  href: string;
+  /** Accepted: its booking (`routes.app.booking`). */
+  bookingId?: string;
+  /** While it waits: when it lapses. */
+  expiresAt?: ISODateTime;
+}
+
+/** A booking change, as one of its two people sees it in the booking's conversation. */
+export interface ChangeCard {
+  bookingId: string;
+  changeId: string;
+  status: ChangeStatus;
+  /** The viewer proposed it. */
+  fromViewer: boolean;
+  types: ProposableChangeType[];
+  /** The new start, when the time changes. */
+  startAt?: ISODateTime;
+  /** The client's total after minus before (positive: they pay more). */
+  differenceCents: Cents;
+  /** While it's open: when it lapses. */
+  expiresAt?: ISODateTime;
+}
+
+export interface ConversationCards {
+  /** By invite id. */
+  requests?: Record<string, TaskRequestCard>;
+  /** By change id. */
+  changes?: Record<string, ChangeCard>;
+}
+
+/**
+ * A task request card's buttons (the invites' own actions, with `{ inviteId }`): ok `booked` (accept, with `redirectTo` the
+ * booking) or `updated`. Errors: `not_allowed`, `expired`, `version_conflict`, `unknown`.
+ */
+export interface RequestCardHandlers {
+  onAccept: ActionHandler<{ inviteId: string }>;
+  onDecline: ActionHandler<{ inviteId: string }>;
+  onCancel: ActionHandler<{ inviteId: string }>;
+}
+
+/** A message in the reader's language (made on request, never stored). */
+export interface MessageTranslation {
+  text: string;
+}
+
+/** Up to three short replies the reader might send next; choosing one fills the composer, never sends it. */
+export interface ReplySuggestions {
+  replies: string[];
 }
 
 export const sendMessageInputSchema = z
@@ -204,6 +361,18 @@ export interface ThreadHandlers {
   /** Save the composer's text as a saved reply: ok `saved`. Errors: `validation_failed`, `limit_reached` (20). */
   onSaveReply?: ActionHandler<MessageSavedReplyInput>;
   onDeleteReply?: ActionHandler<{ id: string }>;
+  /** Pin, mute or archive this conversation (2026-11-23): as `ConversationListHandlers.onFlag`, bound to it. */
+  onFlag?: ActionHandler<ConversationFlagInput>;
+  /** Accept this message request: as `ConversationListHandlers.onAccept`, bound to it. */
+  onAccept?: () => Promise<ActionResult>;
+  /** Search this conversation (null: it isn't the viewer's any more). */
+  onSearch?: QueryHandler<string, ConversationSearchData | null>;
+  /** A message in the reader's language, by its id (null: not now: no model, the day's 60 used). */
+  onTranslate?: QueryHandler<string, MessageTranslation | null>;
+  /** Replies to the other person's latest message (null: not now: no model, the hour's 30 used, nothing to answer). */
+  onSuggest?: () => Promise<ReplySuggestions | null>;
+  /** A task request card's Accept, Decline and Cancel (2026-11-23). */
+  requestCards?: RequestCardHandlers;
 }
 
 // ---- Direct conversations (2026-11-21) -----------------------------------------------------------------------
@@ -219,6 +388,23 @@ export type DirectMessageSetting = (typeof DIRECT_MESSAGE_SETTINGS)[number];
 
 /** Messages the person who started a direct conversation can send before the other person answers. */
 export const DIRECT_FIRST_MESSAGES_MAX = 3;
+
+/**
+ * Staff accounts start any number of new direct conversations (2026-11-23, owner: "plan all and implement"): this is
+ * only the guard against a runaway script. Their allowance says `staff` and shows no count.
+ */
+export const STAFF_DIRECT_CHATS_PER_DAY = 500;
+
+/**
+ * New direct conversations the viewer can start: `left` of `perDay` in any 24 hours. With none left, `resetsAt` is when
+ * the next one frees up. `staff`: a staff account, with no daily limit to show (`STAFF_DIRECT_CHATS_PER_DAY`).
+ */
+export interface DirectChatAllowance {
+  left: number;
+  perDay: number;
+  resetsAt?: ISODateTime;
+  staff?: boolean;
+}
 
 /** Why a direct conversation can't be started. */
 export const DIRECT_CHAT_REFUSALS = [
@@ -262,7 +448,7 @@ export interface NewDirectMessagePageData {
    * New direct conversations the viewer can start: `left` of `perDay` in any 24 hours. With none left, `resetsAt` is
    * when the next one frees up. `perDay` grows with the viewer's Sparks level and with a plan (`routes.app.sparks()`).
    */
-  allowance: { left: number; perDay: number; resetsAt?: ISODateTime };
+  allowance: DirectChatAllowance;
   /** Messages the viewer can send before the recipient answers (`DIRECT_FIRST_MESSAGES_MAX`). */
   firstMessagesMax: number;
   /** Phone numbers, emails and links are hidden until the two have a paid booking together (blueprint 06). */
@@ -297,7 +483,7 @@ export interface NewDirectMessageHandlers {
 export interface FindPersonPageData {
   query?: string;
   notFound?: boolean;
-  allowance: { left: number; perDay: number; resetsAt?: ISODateTime };
+  allowance: DirectChatAllowance;
   level: SparkLevel;
   /** The viewer's plan, when it (not their level) sets `allowance.perDay` (Plus 25, Pro 100 a day: 2026-11-23). */
   allowanceFrom?: PlanCode;
@@ -339,7 +525,7 @@ export interface PersonSuggestion {
 export interface PeopleSearchData {
   query: string;
   people: PersonSuggestion[];
-  allowance: { left: number; perDay: number; resetsAt?: ISODateTime };
+  allowance: DirectChatAllowance;
   level: SparkLevel;
   /** The viewer's plan, when it (not their level) sets `allowance.perDay` (as on `FindPersonPageData`). */
   allowanceFrom?: PlanCode;
@@ -414,4 +600,11 @@ export interface ChatThreadHandlers {
   onDeleteReply: ActionHandler<{ id: string }>;
   onReport(threadId: string, input: ReportInput): Promise<ActionResult>;
   onBlock(threadId: string, input: { blocked: boolean }): Promise<ActionResult>;
+  /** Pin, mute, archive, accept and search (2026-11-23), as on the conversation page. */
+  onFlag(threadId: string, input: ConversationFlagInput): Promise<ActionResult>;
+  onAccept(threadId: string): Promise<ActionResult>;
+  onSearch(threadId: string, query: string): Promise<ConversationSearchData | null>;
+  onTranslate(threadId: string, messageId: string): Promise<MessageTranslation | null>;
+  onSuggest(threadId: string): Promise<ReplySuggestions | null>;
+  requestCards: RequestCardHandlers;
 }

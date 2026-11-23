@@ -32,7 +32,9 @@
     "all": "All",
     "unread": "Unread",
     "offers": "Offers",
-    "bookings": "Bookings"
+    "bookings": "Bookings",
+    "requests": "Requests",
+    "archived": "Archived"
   },
   "search": {
     "label": "Search conversations",
@@ -44,5 +46,7 @@
     "body": "Pick one on the left to read it and reply. Unread conversations are at the top."
   },
   "shown": "{count, plural, one {# conversation} other {# conversations}}",
-  "newMessage": "New message"
+  "newMessage": "New message",
+  "noRequests": "No message requests. When someone you haven't talked to about a task writes first, it waits here.",
+  "noArchived": "Nothing archived."
 }

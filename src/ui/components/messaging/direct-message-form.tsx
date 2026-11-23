@@ -127,7 +127,7 @@ export function DirectMessageForm({ data, onStart, onStarted, compact = false, a
     <FormFeedback result={result} {...(limitResult ? { errorMessage: t('refusals.limit_reached', { name: firstName }) } : {})} />
     {limitResult && result.retryAt && <p className="text-sm tabular-nums text-muted-foreground">{t('resetsAt', { at: formatDateTime(result.retryAt), zone: zoneName })}</p>}
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <p className={cn('tabular-nums text-muted-foreground', compact ? 'text-xs' : 'text-sm')}>{t('allowance', { left: data.allowance.left, perDay: data.allowance.perDay })}</p>
+      <p className={cn('tabular-nums text-muted-foreground', compact ? 'text-xs' : 'text-sm')}>{data.allowance.staff ? t('allowanceStaff') : t('allowance', { left: data.allowance.left, perDay: data.allowance.perDay })}</p>
       <Button type="submit" disabled={pending || overLimit} className="min-h-11">
         {pending ? <Spinner aria-hidden="true" className="size-4" /> : <Send aria-hidden="true" className="size-4" />}
         {pending ? t('sending') : t('send')}

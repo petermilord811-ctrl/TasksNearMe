@@ -130,7 +130,8 @@
         "restored": "Question restored"
       },
       "liveJoined": "Live chat: {name} joined",
-      "liveEnded": "Live chat ended by {name}"
+      "liveEnded": "Live chat ended by {name}",
+      "rating": "Member's rating: {rating, select, good {good} other {bad}}"
     },
     "assignedTo": "Assigned to {name}",
     "unassigned": "Unassigned",
@@ -152,7 +153,8 @@
       "account": "An account uses this address: {name}. That doesn’t prove they wrote.",
       "openAccount": "Open the account",
       "noAccount": "No account uses this address."
-    }
+    },
+    "ratingChanged": "Changed {date}"
   },
   "conversation": {
     "title": "Reported conversation",

@@ -25,7 +25,12 @@
     "searchHint": "Search conversations",
     "resize": "Resize the messages window",
     "resizeHint": "Drag to resize. With the keyboard: arrow keys, and Home to reset. Double-click resets.",
-    "newMessage": "New message"
+    "newMessage": "New message",
+    "docked": "Conversation with {name}, beside the chat window",
+    "dockedMinimized": "Conversation with {name}, minimized",
+    "minimizeDocked": "Minimize the conversation with {name}",
+    "closeDocked": "Close the conversation with {name}",
+    "showInWindow": "Show in the chat window"
   },
   "help": {
     "title": "TasksNearMe Help",

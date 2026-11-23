@@ -1,4 +1,5 @@
 import type {
+  ConversationSearchData,
   InboxPageData,
   MessageSegment,
   MessageView,
@@ -182,3 +183,129 @@ export const directThreadAwaitingReplyData: ThreadPageData = {
 
 /** Maya's inbox with the direct conversation on top. */
 export const mayaInboxWithDirectData: InboxPageData = { threads: [directThreadWithJordan, deskBookingThread, deskOfferLeeThread] };
+
+// ---- The chat, 2026-11-23: people by @username, a sample profile, the viewer's own list, message requests, a
+// conversation's search, Translate and Suggest replies, and cards for task requests and booking changes ----------------
+
+const wrote = (id: string, sender: MessageView['sender'], segments: MessageSegment[], createdAt: string): MessageView => ({ id, sender, kind: 'text', segments, attachments: [], createdAt });
+const sam = { id: 'usr_sam_rivera', displayName: 'Sam R.', initials: 'SR', memberSince: '2026-11-19T15:00:00.000Z', phoneVerified: true };
+
+/** Jordan named by @username in Sam's message: a person (a link to his profile), not a hidden handle. */
+export const mentionMessage: MessageSegment[] = [
+  { kind: 'text', text: 'Hi Maya! ' },
+  { kind: 'mention', userId: 'usr_jordan', name: 'Jordan T.', helperHandle: 'jordan-t' },
+  { kind: 'text', text: ' said you might need help moving a couch on Saturday. Venmo me at ' },
+  { kind: 'masked', detail: 'handle' },
+  { kind: 'text', text: ' if you like.' },
+];
+
+/** Sam wrote to Maya first, and they haven't talked about a task: a message request. */
+export const requestThreadFromSam: ThreadSummary = {
+  id: 'thr_direct_sam_maya',
+  kind: 'direct',
+  title: 'Sam R.',
+  otherParty: sam,
+  subject: { kind: 'person', canRequest: false },
+  lastMessage: { sender: 'them', kind: 'text', preview: mentionMessage, createdAt: '2026-11-21T15:40:00.000Z' },
+  unreadCount: 1,
+  contactMasking: true,
+  request: true,
+};
+
+/** The request open: Accept, Ignore or Block above the composer; Translate and Suggest replies offered. */
+export const requestThreadPageData: ThreadPageData = {
+  thread: requestThreadFromSam,
+  messages: [wrote('msg_r1', 'them', mentionMessage, '2026-11-21T15:40:00.000Z')],
+  composer,
+  assist: { translate: true, suggest: true },
+};
+
+/** Writing to a sample profile on the live site: the app's note under the first message, and the badge in the header. */
+export const sampleThreadPageData: ThreadPageData = {
+  thread: { ...directThreadWithJordan, id: 'thr_direct_maya_minh', title: 'Minh T.', otherParty: { id: 'usr_minh', displayName: 'Minh T.', initials: 'MT', memberSince: '2026-09-30T15:00:00.000Z', phoneVerified: true, username: 'minh' }, subject: { kind: 'person', helperHandle: 'jordan-t', canRequest: true }, sample: true, lastMessage: { sender: 'system', kind: 'system', preview: [], event: { type: 'sample_profile_notice' }, createdAt: '2026-11-21T15:50:01.000Z' } },
+  messages: [
+    wrote('msg_s1', 'me', text('Hi Minh! Are you free to help hang shelves this week?'), '2026-11-21T15:50:00.000Z'),
+    { id: 'msg_s2', sender: 'system', kind: 'system', segments: [], attachments: [], event: { type: 'sample_profile_notice' }, createdAt: '2026-11-21T15:50:01.000Z' },
+  ],
+  composer: { ...composer, firstMessagesLeft: 2 },
+};
+
+/** Maya's list: the desk booking pinned, Jordan muted, Lee's offer archived, and Sam's request waiting. */
+export const mayaFoldersInboxData: InboxPageData = {
+  threads: [
+    { ...deskBookingThread, pinned: true },
+    { ...directThreadWithJordan, muted: true, unreadCount: 2, lastMessage: { sender: 'them', kind: 'text', preview: text('Yes, I can bring my drill.'), createdAt: '2026-11-21T15:58:00.000Z' } },
+    { ...deskOfferLeeThread, archived: true },
+    requestThreadFromSam,
+  ],
+};
+
+/** "desk" in Maya's conversation with Jordan: two messages, newest first. */
+export const conversationSearchData: ConversationSearchData = {
+  query: 'desk',
+  hits: [
+    { id: 'msg_d2', sender: 'me', segments: text('It’s a two-motor standing desk frame, about 60 inches wide.'), createdAt: '2026-11-21T15:51:00.000Z' },
+    { id: 'msg_d1', sender: 'me', segments: text('Hi Jordan! Do you assemble standing desks too?'), createdAt: '2026-11-21T15:50:00.000Z' },
+  ],
+  more: false,
+};
+
+/** Maya asked Jordan for a task from their conversation: the request's card, waiting on him (Maya's view). */
+export const requestCardThreadPageData: ThreadPageData = {
+  ...directThreadPageData,
+  thread: { ...directThreadWithJordan, lastMessage: { sender: 'system', kind: 'status', preview: [], event: { type: 'invite_sent', params: { inviteId: 'inv_desk_direct' } }, createdAt: '2026-11-21T15:55:00.000Z' } },
+  messages: [
+    ...directThreadPageData.messages,
+    wrote('msg_d4', 'them', text('Yes! Send me a request and I’ll take a look.'), '2026-11-21T15:53:00.000Z'),
+    { id: 'msg_d5', sender: 'system', kind: 'status', segments: [], attachments: [], event: { type: 'invite_sent', params: { inviteId: 'inv_desk_direct' } }, createdAt: '2026-11-21T15:55:00.000Z' },
+  ],
+  composer,
+  cards: {
+    requests: {
+      inv_desk_direct: {
+        inviteId: 'inv_desk_direct',
+        title: 'Assemble a standing desk',
+        start: '2026-11-28T15:00:00.000Z',
+        pricing: { type: 'fixed', priceCents: 8000 },
+        status: 'sent',
+        viewerRole: 'poster',
+        actions: ['cancel'],
+        href: '/app/tasks/tsk_desk_direct',
+        expiresAt: '2026-11-23T15:55:00.000Z',
+      },
+    },
+  },
+};
+
+/** The same request as Jordan sees it: Accept and Decline right in the conversation. */
+export const requestCardForHelperPageData: ThreadPageData = {
+  ...requestCardThreadPageData,
+  thread: { ...requestCardThreadPageData.thread, title: 'Maya R.', otherParty: maya, subject: { kind: 'person', canRequest: false } },
+  messages: requestCardThreadPageData.messages.map((message) => (message.sender === 'me' ? { ...message, sender: 'them' as const } : message.sender === 'them' ? { ...message, sender: 'me' as const } : message)),
+  cards: { requests: { inv_desk_direct: { ...requestCardThreadPageData.cards!.requests!.inv_desk_direct!, viewerRole: 'helper', actions: ['accept', 'decline'], href: '/app/offers?invite=inv_desk_direct' } } },
+};
+
+/** Jordan proposed a later start in the desk booking's conversation: the change's card, and "Propose a change". */
+export const changeCardThreadPageData: ThreadPageData = {
+  ...deskBookingThreadPageData,
+  messages: [
+    ...deskBookingThreadPageData.messages,
+    { id: 'msg_c1', sender: 'system', kind: 'status', segments: [], attachments: [], event: { type: 'change_proposed', params: { changeId: 'chg_desk_later' } }, createdAt: '2026-11-21T16:00:00.000Z' },
+  ],
+  cards: { changes: { chg_desk_later: { bookingId: 'bkg_desk', changeId: 'chg_desk_later', status: 'proposed', fromViewer: false, types: ['schedule', 'price'], startAt: '2026-11-21T19:00:00.000Z', differenceCents: 1500, expiresAt: '2026-11-21T19:00:00.000Z' } } },
+  canProposeChange: true,
+};
+
+/** Fake handlers for the chat's new tools: everything works, "desk" finds two messages, Translate marks the text. */
+export const fakeConversationHandlers: Pick<ThreadHandlers, 'onFlag' | 'onAccept' | 'onSearch' | 'onTranslate' | 'onSuggest' | 'requestCards'> = {
+  onFlag: () => wait({ ok: true, code: 'updated' }),
+  onAccept: () => wait({ ok: true, code: 'updated' }),
+  onSearch: (query) => wait({ ...conversationSearchData, query, hits: query.toLowerCase().includes('desk') ? conversationSearchData.hits : [] }),
+  onTranslate: () => wait({ text: '¡Hola Maya! Jordan T. dijo que quizá necesitas ayuda para mover un sofá el sábado.' }),
+  onSuggest: () => wait({ replies: ['Sounds good to me!', 'What day and time work best for you?', 'Let me check and get back to you today.'] }),
+  requestCards: {
+    onAccept: () => wait({ ok: true, code: 'booked' }),
+    onDecline: () => wait({ ok: true, code: 'updated' }),
+    onCancel: () => wait({ ok: true, code: 'updated' }),
+  },
+};

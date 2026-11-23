@@ -4,6 +4,7 @@ import {
   ADMIN_NOW,
   adminLiveEmptyData,
   adminLiveEndedChatData,
+  adminLiveRatedChatData,
   adminLiveJoinedChatData,
   adminLiveOthersChatData,
   adminLiveQueueData,
@@ -39,6 +40,8 @@ export const adminLivePreviews: PreviewEntry[] = [
   entry('joined', c.joined, adminLiveJoinedChatData),
   entry('others', c.others, adminLiveOthersChatData),
   entry('ended', c.ended, adminLiveEndedChatData),
+  // The member's rating after the chat (2026-11-23).
+  entry('rated', c.rated, adminLiveRatedChatData),
   entry('empty', c.empty, adminLiveEmptyData),
   entry('read-only', c.readOnly, { ...adminLiveWaitingChatData, canWork: false, selected: { ...adminLiveWaitingChatData.selected!, canJoin: false } }),
 ];

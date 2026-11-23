@@ -1,6 +1,6 @@
 import { helperProfiles } from '@/modules/profiles/schema';
 import { recomputeResponseTime } from '@/modules/profiles/response-time';
-import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, ne, not, or, sql } from 'drizzle-orm';
 import type {
   ActionResult,
   ComposerClosedReason,
@@ -25,7 +25,7 @@ import { declinedByCancel } from '@/modules/offers/closing';
 import { offers } from '@/modules/offers/schema';
 import { files, tasks } from '@/modules/tasks/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
-import { shortenSegments, toMessageSegments } from '@/modules/trust/message-segments';
+import { shortenSegments, toMessageSegments, type Mentions } from '@/modules/trust/message-segments';
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
@@ -36,6 +36,12 @@ import { userChannel } from '@/platform/realtime/hub';
 import { publishNotices } from '@/platform/realtime/publish';
 import { presenceOf } from '@/modules/realtime/presence';
 import { firstMessagesLeft } from './direct-rules';
+import { mentionsOf } from './mentions';
+import { noteSampleRecipient } from './samples';
+import { chatAssistOffered } from './assist';
+import { cardsFor } from './cards';
+import { allowedChangeTypes } from '@/modules/bookings/changes-domain';
+import { isSampleId, samplesHiddenInThisBuild } from '@/shared/sample-data';
 import { messageReactions, messages, savedReplies, threadParticipants, threads } from './schema';
 import { deletedLabelFor, shownPerson } from '@/modules/accounts/shown-name';
 import { sparksSummaryOf } from '@/modules/sparks/service';
@@ -218,6 +224,29 @@ async function contextsOf(db: Db, list: ThreadRow[], viewerId: string, now: Date
   return out;
 }
 
+/**
+ * A message request for the viewer (2026-11-23): a direct conversation someone else started that they haven't accepted
+ * or answered (`accepted_at` stays null until then; it's set at once for someone they've talked to about a task).
+ */
+function isRequestFor(thread: ThreadRow, participant: { acceptedAt: Date | null }, viewerId: string): boolean {
+  return thread.kind === 'direct' && participant.acceptedAt === null && thread.startedByUserId !== viewerId;
+}
+
+/** `isRequestFor` in SQL, for a query that joins `threads` and the viewer's `thread_participants` row. */
+function requestCondition(viewerId: string) {
+  return sql`(${threads.kind} = 'direct' and ${threadParticipants.acceptedAt} is null and ${threads.startedByUserId} is distinct from ${viewerId})`;
+}
+
+/**
+ * Whether contact details are hidden in a conversation for the viewer (until a paid booking between the two), or null
+ * when it isn't theirs (2026-11-23: a conversation's search sees what the viewer sees).
+ */
+export async function maskingFor(db: Db, viewerId: string, threadId: string, now: Date): Promise<boolean | null> {
+  const [thread] = await db.select().from(threads).where(eq(threads.id, threadId)).limit(1);
+  const found = thread ? await summaryOf(db, thread, viewerId, now) : null;
+  return found ? found.context.masking : null;
+}
+
 /** The other person of a direct conversation's pair key (`directPairKey`), when the viewer is one of the two. */
 function otherOfPair(linkedId: string, viewerId: string): string | undefined {
   const [a, b] = linkedId.split(':');
@@ -277,14 +306,15 @@ function personOf(user: typeof users.$inferSelect, deletedLabel?: string, userna
 
 const isBlocked = isBlockedBetween;
 
-function toView(row: typeof messages.$inferSelect, viewerId: string, masking: boolean, photos: Map<string, typeof files.$inferSelect>): MessageView {
+/** `mentions`: the people the conversation's texts name by @username (`mentionsOf`). */
+function toView(row: typeof messages.$inferSelect, viewerId: string, masking: boolean, photos: Map<string, typeof files.$inferSelect>, mentions?: Mentions): MessageView {
   const sender: MessageView['sender'] = row.senderUserId === null ? 'system' : row.senderUserId === viewerId ? 'me' : 'them';
   return {
     id: row.id,
     sender,
     kind: row.kind as MessageView['kind'],
     // Your own words are never hidden from you.
-    segments: row.kind === 'text' ? toMessageSegments(row.body, { mask: masking && sender !== 'me' }) : [],
+    segments: row.kind === 'text' ? toMessageSegments(row.body, { mask: masking && sender !== 'me', ...(mentions ? { mentions } : {}) }) : [],
     attachments: row.attachmentFileIds.flatMap((id) => {
       const file = photos.get(id);
       return file ? [photoFromFile(file)] : [];
@@ -307,7 +337,16 @@ async function summariesOf(db: Db, list: ThreadRow[], viewerId: string, now: Dat
   const [contexts, people, latestRows, unreadRows] = await Promise.all([
     contextsOf(db, list, viewerId, now),
     db
-      .select({ threadId: threadParticipants.threadId, lastReadAt: threadParticipants.lastReadAt, user: users, username: usernames.username })
+      .select({
+        threadId: threadParticipants.threadId,
+        lastReadAt: threadParticipants.lastReadAt,
+        pinnedAt: threadParticipants.pinnedAt,
+        archivedAt: threadParticipants.archivedAt,
+        acceptedAt: threadParticipants.acceptedAt,
+        muted: threadParticipants.muted,
+        user: users,
+        username: usernames.username,
+      })
       .from(threadParticipants)
       .innerJoin(users, eq(users.id, threadParticipants.userId))
       .leftJoin(usernames, eq(usernames.userId, users.id))
@@ -329,7 +368,7 @@ async function summariesOf(db: Db, list: ThreadRow[], viewerId: string, now: Dat
   ]);
   const latestByThread = new Map(latestRows.map((row) => [row.threadId, row]));
   const unreadByThread = new Map(unreadRows.map((row) => [row.threadId, row.value]));
-  const deletedLabel = await deletedLabelFor(people.map((person) => person.user));
+  const [deletedLabel, mentions] = await Promise.all([deletedLabelFor(people.map((person) => person.user)), mentionsOf(db, latestRows.map((row) => (row.kind === 'text' ? row.body : '')), viewerId)]);
   for (const thread of list) {
     const context = contexts.get(thread.id);
     const here = people.filter((person) => person.threadId === thread.id);
@@ -338,7 +377,7 @@ async function summariesOf(db: Db, list: ThreadRow[], viewerId: string, now: Dat
     const other = otherRow?.user;
     if (!context || !other || !viewer) continue;
     const latest = latestByThread.get(thread.id);
-    const latestView = latest ? toView(latest, viewerId, context.masking, new Map()) : null;
+    const latestView = latest ? toView(latest, viewerId, context.masking, new Map(), mentions) : null;
     out.set(thread.id, {
       summary: {
         id: thread.id,
@@ -359,6 +398,13 @@ async function summariesOf(db: Db, list: ThreadRow[], viewerId: string, now: Dat
           : {}),
         unreadCount: unreadByThread.get(thread.id) ?? 0,
         contactMasking: context.masking,
+        // A sample profile of the demo marketplace, where they're told apart (2026-11-23).
+        ...(samplesHiddenInThisBuild() && isSampleId(other.id) ? { sample: true } : {}),
+        // The viewer's own list (2026-11-23).
+        ...(viewer.pinnedAt ? { pinned: true } : {}),
+        ...(viewer.muted ? { muted: true } : {}),
+        ...(viewer.archivedAt ? { archived: true } : {}),
+        ...(isRequestFor(thread, viewer, viewerId) ? { request: true } : {}),
       },
       context,
       other,
@@ -371,16 +417,22 @@ async function summaryOf(db: Db, thread: ThreadRow, viewerId: string, now: Date)
   return (await summariesOf(db, [thread], viewerId, now)).get(thread.id) ?? null;
 }
 
-/** Messages (and booking updates) in the viewer's threads that they haven't read yet: the shell's badge. */
+/**
+ * Messages (and booking updates) in the viewer's threads that they haven't read yet: the shell's badge. Not in muted
+ * conversations or message requests (2026-11-23): those show their own counts in Messages.
+ */
 export async function unreadMessageCount(db: Db, userId: string): Promise<number> {
   const [row] = await db
     .select({ value: sql<number>`count(*)::int` })
     .from(messages)
     .innerJoin(threadParticipants, and(eq(threadParticipants.threadId, messages.threadId), eq(threadParticipants.userId, userId)))
+    .innerJoin(threads, eq(threads.id, messages.threadId))
     .where(
       and(
         or(isNull(messages.senderUserId), ne(messages.senderUserId, userId)),
         or(isNull(threadParticipants.lastReadAt), gt(messages.createdAt, threadParticipants.lastReadAt)),
+        eq(threadParticipants.muted, false),
+        not(requestCondition(userId)),
       ),
     );
   return row?.value ?? 0;
@@ -396,8 +448,9 @@ export async function getInbox(db: Db, userId: string, now: Date): Promise<Inbox
     .orderBy(desc(sql`coalesce(${threads.lastMessageAt}, ${threads.createdAt})`));
   const summaries = await summariesOf(db, rows.map(({ thread }) => thread), userId, now);
   const list = rows.flatMap(({ thread }) => { const found = summaries.get(thread.id); return found ? [found.summary] : []; });
-  // Conversations waiting on the viewer first (audit M33), each group by latest activity (the query's order; sort is stable).
-  return { threads: list.sort((a, b) => Number(b.unreadCount > 0) - Number(a.unreadCount > 0)) };
+  // Pinned ones on top (2026-11-23), then conversations waiting on the viewer (audit M33), each group by latest activity
+  // (the query's order; sort is stable).
+  return { threads: list.sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || Number(b.unreadCount > 0) - Number(a.unreadCount > 0)) };
 }
 
 /**
@@ -481,6 +534,9 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
     await publishNotices(db, senders.map((sender) => ({ channel: userChannel(sender), notice: { type: 'read', thread: thread.id } })));
   }
   const lastMine = [...rows].reverse().find((row) => row.senderUserId === userId);
+  const assist = chatAssistOffered();
+  // Task requests and booking changes its lines show as cards, as they are now (2026-11-23).
+  const cards = await cardsFor(db, userId, rows, now);
   // A deleted account reads nothing (privacy rehearsal J-PR8): the conversation reads as closed, with no reason that
   // points a way on (no offer to request again, no booking to write about).
   const otherGone = found.other.status === 'deleted';
@@ -488,6 +544,10 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   const firstLeft = await directFirstMessagesLeft(db, thread, userId);
   const disabledReason: ComposerDisabledReason | undefined = blocked ? 'blocked' : otherGone || found.context.closed ? 'closed' : firstLeft === 0 ? 'awaiting_reply' : undefined;
   const closedReason = disabledReason === 'closed' && !otherGone ? found.context.closedReason : undefined;
+  // A booking that can still change: "Propose a change" from its conversation.
+  // Price and scope can change while it's confirmed or under way (bookings/changes-domain.ts); the dialog says what else.
+  const [changeable] = thread.kind === 'booking' && !disabledReason ? await db.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, thread.linkedId)).limit(1) : [];
+  const canProposeChange = changeable ? allowedChangeTypes({ status: changeable.status, pricingType: 'fixed', startAt: now, now }).length > 0 : false;
   // Quotes (a replied-to message may be older than this page) and reactions, then the viewer's saved replies (7.3).
   const quotedIds = [...new Set(rows.flatMap((row) => (row.replyToMessageId ? [row.replyToMessageId] : [])))];
   const [quotedRows, reactionRows, replies] = await Promise.all([
@@ -496,6 +556,8 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
     listSavedReplies(db, userId),
   ]);
   const quoted = new Map(quotedRows.map((row) => [row.id, row]));
+  // The people the messages and their quotes name by @username (2026-11-23), in one look.
+  const mentions = await mentionsOf(db, [...rows.filter((row) => row.kind === 'text').map((row) => row.body), ...quotedRows.map((row) => row.body)], userId);
   const reactionsOf = (messageId: string) => {
     const mine = reactionRows.filter((row) => row.messageId === messageId);
     return MESSAGE_REACTIONS.flatMap((emoji) => {
@@ -504,12 +566,12 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
     });
   };
   const withExtras = (row: typeof messages.$inferSelect) => {
-    const view = toView(row, userId, found.context.masking, photos);
+    const view = toView(row, userId, found.context.masking, photos, mentions);
     const quote = row.replyToMessageId ? quoted.get(row.replyToMessageId) : undefined;
     const reactions = reactionsOf(row.id);
     return {
       ...view,
-      ...(quote ? { replyTo: { id: quote.id, sender: quote.senderUserId === userId ? ('me' as const) : ('them' as const), segments: shortenSegments(toMessageSegments(quote.body, { mask: found.context.masking && quote.senderUserId !== userId })) } } : {}),
+      ...(quote ? { replyTo: { id: quote.id, sender: quote.senderUserId === userId ? ('me' as const) : ('them' as const), segments: shortenSegments(toMessageSegments(quote.body, { mask: found.context.masking && quote.senderUserId !== userId, mentions })) } } : {}),
       ...(reactions.length ? { reactions } : {}),
     };
   };
@@ -519,6 +581,10 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
     messages: rows.map(withExtras),
     ...(earlier ? { earlier: { from: earlier.id } } : {}),
     ...(replies.length ? { savedReplies: replies } : {}),
+    // Translate and Suggest replies, where a model (or, outside production, the stand-in) answers (2026-11-23).
+    ...(assist.translate || assist.suggest ? { assist } : {}),
+    ...(cards ? { cards } : {}),
+    ...(canProposeChange ? { canProposeChange: true } : {}),
     ...(presence ? { presence } : {}),
     ...(mutual && lastMine && theirs?.lastReadAt && theirs.lastReadAt >= lastMine.createdAt ? { seenMessageId: lastMine.id } : {}),
     ...(newlyRead[0] ? { firstUnreadId: newlyRead[0].id } : {}),
@@ -588,7 +654,18 @@ export async function sendMessage(db: Db, userId: string, threadId: string, inpu
     payload: { threadId: thread.id, taskId: thread.taskId, senderUserId: userId, recipientIds: others.map((row) => row.userId) },
   });
   await db.update(threads).set({ lastMessageAt: now }).where(eq(threads.id, thread.id));
-  await db.update(threadParticipants).set({ lastReadAt: now }).where(and(eq(threadParticipants.threadId, thread.id), eq(threadParticipants.userId, userId)));
+  // Answering a message request accepts it (2026-11-23); the sender's own list keeps it as it was otherwise.
+  await db
+    .update(threadParticipants)
+    .set({ lastReadAt: now, ...(thread.kind === 'direct' ? { acceptedAt: sql`coalesce(${threadParticipants.acceptedAt}, ${now})` } : {}) })
+    .where(and(eq(threadParticipants.threadId, thread.id), eq(threadParticipants.userId, userId)));
+  // A new message brings an archived conversation back into the other person's list, unless it's a request they ignored.
+  await db
+    .update(threadParticipants)
+    .set({ archivedAt: null })
+    .where(and(eq(threadParticipants.threadId, thread.id), ne(threadParticipants.userId, userId), isNotNull(threadParticipants.archivedAt), ...(thread.kind === 'direct' ? [isNotNull(threadParticipants.acceptedAt)] : [])));
+  // A sample profile never answers: the app says so, once (2026-11-23).
+  await noteSampleRecipient(db, thread.id, userId, others.map((row) => row.userId), now);
   // Answering reads the conversation too: the person's other devices hear it (this page refreshes with the action).
   await noticeReadByReader(db, userId, thread.id, found.summary.unreadCount, await readMessageNotifications(db, userId, thread.id, now));
   // A helper's answer may change how fast they usually reply (completion plan 7.12); never holds up the message.

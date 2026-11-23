@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { shortenSegments, toMessageSegments } from './message-segments';
+import { mentionedUsernames, shortenSegments, toMessageSegments, type Mentions } from './message-segments';
 
 describe('message segments', () => {
   it('masks a phone with the country code run into it, keeping the last 4 digits as a hint (security review 2026-11-20)', () => {
@@ -58,5 +58,40 @@ describe('shortening a quote', () => {
   it('keeps short text whole and cuts long text to 157 characters and "…"', () => {
     expect(shortenSegments([{ kind: 'text', text: 'Short' }])).toEqual([{ kind: 'text', text: 'Short' }]);
     expect(shortenSegments(toMessageSegments('b'.repeat(200), { mask: false }))).toEqual([{ kind: 'text', text: `${'b'.repeat(157)}…` }]);
+  });
+});
+
+describe('people named by @username (2026-11-23)', () => {
+  const mentions: Mentions = new Map([
+    ['minh', { userId: 'usr_minh', name: 'Minh T.', helperHandle: 'minh-t' }],
+    ['sam_r', { userId: 'usr_sam', name: 'Sam R.' }],
+  ]);
+
+  it('finds every "@name", lowercase and without "@", but not an email or a time', () => {
+    expect(mentionedUsernames('Ask @Minh or @sam_r. Mail maya@gmail.com @5pm')).toEqual(['minh', 'sam_r']);
+  });
+
+  it('shows a TasksNearMe @username as the person, masked or not, and keeps other handles hidden before a booking', () => {
+    expect(toMessageSegments('Ask @Minh, or pay @venmo_guy', { mask: true, mentions })).toEqual([
+      { kind: 'text', text: 'Ask ' },
+      { kind: 'mention', userId: 'usr_minh', name: 'Minh T.', helperHandle: 'minh-t' },
+      { kind: 'text', text: ', or pay ' },
+      { kind: 'masked', detail: 'handle' },
+    ]);
+    expect(toMessageSegments('Ask @sam_r or @venmo_guy', { mask: false, mentions })).toEqual([
+      { kind: 'text', text: 'Ask ' },
+      { kind: 'mention', userId: 'usr_sam', name: 'Sam R.' },
+      { kind: 'text', text: ' or @venmo_guy' },
+    ]);
+  });
+
+  it('keeps a longer handle that only starts with a username hidden (a dot or a dash makes it another handle)', () => {
+    expect(toMessageSegments('IG @minh.tran', { mask: true, mentions })).toEqual([{ kind: 'text', text: 'IG ' }, { kind: 'masked', detail: 'handle' }]);
+    expect(toMessageSegments('IG @minh.tran', { mask: false, mentions })).toEqual([{ kind: 'text', text: 'IG @minh.tran' }]);
+  });
+
+  it('counts a person as "@" and their name when a quote is cut, and leaves them out whole', () => {
+    const cut = shortenSegments([{ kind: 'text', text: 'a'.repeat(150) }, { kind: 'mention', userId: 'usr_minh', name: 'Minh T.' }, { kind: 'text', text: 'b'.repeat(20) }]);
+    expect(cut).toEqual([{ kind: 'text', text: `${'a'.repeat(150)}…` }]);
   });
 });

@@ -6,6 +6,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { STAFF_SUPPORT_CHANNEL, userChannel, type RealtimeEnvelope } from '@/platform/realtime/hub';
 import { publishNotices } from '@/platform/realtime/publish';
+import { supportAgentViewOf } from './agents';
 import { supportCaseEvents, supportCases } from './schema';
 import { audit, getAdminCase, loadCase, staffById, staffReply, type StaffActor } from './staff';
 import { staffCaseActions } from './staff-domain';
@@ -54,8 +55,10 @@ export async function liveStateOf(db: Db, row: CaseRow, agentsOnline: number): P
   // A case resolved or closed while it was live ended the chat too.
   if (row.liveEndedAt || FINISHED.includes(row.status)) return { state: 'ended', agentsOnline: agentsOnline > 0, requestedAt };
   if (row.liveJoinedAt && row.liveAgentUserId) {
-    const [agent] = await db.select({ firstName: users.firstName }).from(users).where(eq(users.id, row.liveAgentUserId)).limit(1);
-    return { state: 'joined', agentsOnline: true, ...(agent?.firstName ? { agentName: agent.firstName } : {}), requestedAt };
+    // Who joined: first name, and photo or initial (2026-11-23), for the conversation's header.
+    const [person] = await db.select({ firstName: users.firstName, avatarFileId: users.avatarFileId }).from(users).where(eq(users.id, row.liveAgentUserId)).limit(1);
+    const agent = person ? supportAgentViewOf(person) : undefined;
+    return { state: 'joined', agentsOnline: true, ...(agent ? { agentName: agent.name, agent } : {}), requestedAt };
   }
   const ahead = await db
     .select({ id: supportCases.id })

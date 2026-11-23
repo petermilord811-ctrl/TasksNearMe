@@ -562,7 +562,45 @@
       "why": "Recibes esto porque {email} se unió a la lista de espera de TasksNearMe para {zip}. Es el único correo que enviamos sobre esto.",
       "unsubscribe": "Cancelar la suscripción"
     },
-    "securityNotice": "Aviso de seguridad"
+    "securityNotice": "Aviso de seguridad",
+    "supportTranscript": {
+      "subject": "Tu conversación con TasksNearMe Help: {subject}",
+      "title": "Tu conversación con TasksNearMe Help",
+      "preheader": "Una copia de tu conversación con nuestro equipo de soporte sobre {subject}.",
+      "heading": "Tu conversación con soporte",
+      "intro": "Hola, {name}: aquí tienes tu conversación con nuestro equipo de soporte sobre {subject}, al {date}.",
+      "introNoName": "Aquí tienes tu conversación con nuestro equipo de soporte sobre {subject}, al {date}.",
+      "zone": "Los horarios están en {zone}.",
+      "earlier": "{count, plural, one {# línea anterior está} other {# líneas anteriores están}} en el caso.",
+      "empty": "Todavía no hay nada escrito.",
+      "you": "Tú",
+      "support": "Soporte",
+      "agent": "{name}, de soporte",
+      "assistant": "Asistente (IA)",
+      "update": "Actualización del caso",
+      "status": "Caso de soporte: {status}",
+      "statuses": {
+        "open": "abierto",
+        "awaiting_poster": "esperando tu respuesta",
+        "awaiting_helper": "esperando tu respuesta",
+        "awaiting_support": "con soporte",
+        "escalated": "con un miembro sénior del equipo",
+        "resolved": "resuelto",
+        "closed": "cerrado"
+      },
+      "liveJoined": "{name}, de soporte, se unió al chat en vivo.",
+      "liveEnded": "El chat en vivo terminó.",
+      "photos": "{count, plural, one {# foto} other {# fotos}} (en el caso)",
+      "topics": {
+        "booking": "una reserva",
+        "payment": "un pago",
+        "account": "tu cuenta",
+        "safety": "seguridad",
+        "other": "tu pregunta"
+      },
+      "open": "Abrir el caso",
+      "why": "Pediste esta copia en TasksNearMe. Las respuestas a este correo no nos llegan: escribe a soporte en el caso."
+    }
   },
   "sms": {
     "phoneCode": "{code} es tu código de TasksNearMe. Funciona durante {minutes} minutos. Nunca te llamaremos para pedírtelo.",

@@ -7,6 +7,7 @@ import { appPageMetadata } from '@/i18n/metadata';
 import { supportAssistantForRequest } from '@/modules/assist/assistant-choice';
 import { getHelpChat } from '@/modules/assist/support-chat';
 import { handOffToSupportAction, replyToHelpCaseAction, requestLiveChatAction, typingInHelpCaseAction } from '@/modules/assist/support-chat-actions';
+import { emailSupportTranscriptAction, rateSupportCaseAction } from '@/modules/support/actions';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
@@ -37,7 +38,7 @@ async function Help() {
   const now = await requestNow();
   const data = await getHelpChat(db, viewer.user.id, now, { assistant: await supportAssistantForRequest(), markRead: true, agentsOnline: realtimeHub().count(STAFF_SUPPORT_CHANNEL) });
   if (!data) notFound();
-  return <HelpChatPage viewerId={viewer.user.id} data={data} now={now.toISOString()} actions={{ handOff: handOffToSupportAction, reply: replyToHelpCaseAction, requestLive: requestLiveChatAction, typing: typingInHelpCaseAction }} />;
+  return <HelpChatPage viewerId={viewer.user.id} data={data} now={now.toISOString()} actions={{ handOff: handOffToSupportAction, reply: replyToHelpCaseAction, requestLive: requestLiveChatAction, typing: typingInHelpCaseAction, rate: rateSupportCaseAction, emailTranscript: emailSupportTranscriptAction }} />;
 }
 
 export default withClientMessages('[locale]/(app)/app/(flow)/messages/help/page.tsx', HelpPage);

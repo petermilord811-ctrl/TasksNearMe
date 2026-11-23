@@ -562,7 +562,45 @@
       "why": "You're getting this because {email} joined the TasksNearMe waitlist for {zip}. It's the only email we send about it.",
       "unsubscribe": "Unsubscribe"
     },
-    "securityNotice": "Security notice"
+    "securityNotice": "Security notice",
+    "supportTranscript": {
+      "subject": "Your conversation with TasksNearMe Help: {subject}",
+      "title": "Your conversation with TasksNearMe Help",
+      "preheader": "A copy of your conversation with our support team about {subject}.",
+      "heading": "Your conversation with support",
+      "intro": "Hi {name}, here's your conversation with our support team about {subject}, as of {date}.",
+      "introNoName": "Here's your conversation with our support team about {subject}, as of {date}.",
+      "zone": "Times are in {zone}.",
+      "earlier": "{count, plural, one {# earlier line is} other {# earlier lines are}} in the case.",
+      "empty": "Nothing has been written yet.",
+      "you": "You",
+      "support": "Support",
+      "agent": "{name} from support",
+      "assistant": "Assistant (AI)",
+      "update": "Case update",
+      "status": "Support case: {status}",
+      "statuses": {
+        "open": "open",
+        "awaiting_poster": "waiting for you",
+        "awaiting_helper": "waiting for you",
+        "awaiting_support": "with support",
+        "escalated": "with a senior team member",
+        "resolved": "resolved",
+        "closed": "closed"
+      },
+      "liveJoined": "{name} from support joined the live chat.",
+      "liveEnded": "The live chat ended.",
+      "photos": "{count, plural, one {# photo} other {# photos}} (in the case)",
+      "topics": {
+        "booking": "a booking",
+        "payment": "a payment",
+        "account": "your account",
+        "safety": "safety",
+        "other": "your question"
+      },
+      "open": "Open the case",
+      "why": "You asked for this copy in TasksNearMe. Replies to this email don't reach us: write to support in the case."
+    }
   },
   "sms": {
     "phoneCode": "{code} is your TasksNearMe code. It works for {minutes} minutes. We'll never call to ask for it.",

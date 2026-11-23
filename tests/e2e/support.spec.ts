@@ -37,7 +37,7 @@ test('a conversation: report the other person, block and unblock them', async ({
   // Wide screens open it in the chat window (2026-11-23); its Open full page goes to the conversation's page.
   await onConversationPage(page);
 
-  await page.getByRole('button', { name: 'Safety options for Jordan T.' }).click();
+  await page.getByRole('button', { name: 'Options for your conversation with Jordan T.' }).click();
   await page.getByRole('menuitem', { name: 'Report' }).click();
   // Paying a helper directly is allowed since 2026-11-23, so "Payment outside TasksNearMe" is no longer a reason.
   await expect(page.getByRole('radio', { name: 'Payment outside TasksNearMe' })).toHaveCount(0);
@@ -47,11 +47,11 @@ test('a conversation: report the other person, block and unblock them', async ({
   await expect(page.getByText('Thanks. Support will review this.').first()).toBeVisible();
   await page.getByRole('button', { name: 'Done' }).click();
 
-  await page.getByRole('button', { name: 'Safety options for Jordan T.' }).click();
+  await page.getByRole('button', { name: 'Options for your conversation with Jordan T.' }).click();
   await page.getByRole('menuitem', { name: 'Block' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Block' }).click();
   await expect(page.getByText('Jordan T. is blocked.').first()).toBeVisible();
-  await page.getByRole('button', { name: 'Safety options for Jordan T.' }).click();
+  await page.getByRole('button', { name: 'Options for your conversation with Jordan T.' }).click();
   await page.getByRole('menuitem', { name: 'Unblock' }).click();
   await expect(page.getByText('Jordan T. is unblocked.').first()).toBeVisible();
 });
