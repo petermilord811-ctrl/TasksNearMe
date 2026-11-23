@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="Two herons on a small island in a lake">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c9dbe6"/>
+      <stop offset="1" stop-color="#eadfcf"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9fb7c4"/>
+      <stop offset="1" stop-color="#5f7d8f"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#sky)"/>
+  <path d="M0 250 Q140 226 300 244 T600 238 T800 246 V290 H0 Z" fill="#7d8f6a"/>
+  <rect y="284" width="800" height="316" fill="url(#water)"/>
+  <ellipse cx="420" cy="420" rx="230" ry="46" fill="#6f7f52"/>
+  <ellipse cx="420" cy="432" rx="250" ry="30" fill="#4f6a5c" opacity="0.35"/>
+  <g stroke="#55663f" stroke-width="5" stroke-linecap="round">
+    <path d="M250 410 l-8 -54"/><path d="M262 412 l2 -62"/><path d="M276 410 l10 -48"/>
+    <path d="M560 410 l-6 -46"/><path d="M572 412 l4 -58"/><path d="M586 410 l12 -40"/>
+  </g>
+  <g fill="#f7f4ee">
+    <ellipse cx="380" cy="352" rx="30" ry="15"/>
+    <path d="M400 346 q12 -34 4 -52 q-2 -6 6 -8 l18 6 l-16 4 q8 22 -6 54 z"/>
+    <ellipse cx="470" cy="364" rx="26" ry="13"/>
+    <path d="M452 358 q-10 -28 -2 -44 q2 -6 -6 -7 l-16 6 l14 3 q-6 18 4 44 z"/>
+  </g>
+  <g stroke="#3f4a3a" stroke-width="3" stroke-linecap="round">
+    <path d="M374 366 l-4 40"/><path d="M386 366 l2 40"/><path d="M466 376 l-2 32"/><path d="M476 376 l4 32"/>
+  </g>
+</svg>

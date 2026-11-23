@@ -7,6 +7,7 @@ import { upsertPeople } from '../../db/seeds/seed';
 import { betaAccess } from '../../src/modules/beta/schema';
 import { communityPosts } from '../../src/modules/community/schema';
 import { createDb } from '../../src/platform/db/connect';
+import { rateLimits } from '../../src/platform/rate-limit/schema';
 import { devSignIn } from './support/sign-in';
 
 /**
@@ -195,6 +196,66 @@ test('a neighbor shares a general post with a photo from the dialog, and the fee
     await expect(posted).toBeVisible({ timeout: 30_000 });
     await expect(posted.getByText('The herons were out early.')).toBeVisible();
     await expect(posted.getByRole('button', { name: /^Open photo 1 of 1/ })).toBeVisible();
+  } finally {
+    const { db, pool } = database();
+    try {
+      await db.delete(communityPosts).where(eq(communityPosts.title, words));
+    } finally {
+      await pool.end();
+    }
+  }
+});
+
+test('two or more photos on a post show as a carousel: arrows with a mouse, a swipe on a phone (2026-11-23)', async ({ page }, testInfo) => {
+  test.setTimeout(150_000);
+  const words = `Three views of the pond ${Date.now().toString(36)}`;
+  // Maya posts in several specs on both projects; this one shouldn't be what reaches her 8 posts a day.
+  const setup = database();
+  try {
+    await setup.db.delete(rateLimits).where(eq(rateLimits.key, 'community:post:usr_maya'));
+  } finally {
+    await setup.pool.end();
+  }
+  try {
+    await devSignIn(page, 'maya@example.test');
+    await page.goto('/app/community?area=all&sort=new');
+    await page.getByRole('region', { name: 'Start a post' }).getByRole('link', { name: 'Share something with your neighbors…' }).click();
+    const dialog = page.getByRole('dialog', { name: 'New post' });
+    const form = dialog.getByRole('form', { name: 'New post' });
+    await form.getByRole('textbox', { name: "What's on your mind?" }).fill(words);
+    const colors = [{ r: 120, g: 160, b: 200 }, { r: 200, g: 150, b: 110 }, { r: 110, g: 170, b: 120 }];
+    const files = await Promise.all(colors.map(async (background, at) => ({ name: `pond-${at + 1}.png`, mimeType: 'image/png', buffer: await sharp({ create: { width: 900, height: 600, channels: 3, background } }).png().toBuffer() })));
+    await form.getByLabel(/^Add photos/).setInputFiles(files);
+    await expect(form.getByRole('button', { name: 'Remove photo 3' })).toBeVisible({ timeout: 45_000 });
+    await form.getByRole('button', { name: 'Post', exact: true }).click();
+    await expect(dialog).toBeHidden({ timeout: 30_000 });
+
+    // One photo at a time, with where you are ("1/3"); the next comes by arrow with a mouse, by swipe on a phone.
+    const posted = page.getByRole('article', { name: words }).filter({ visible: true });
+    const carousel = posted.getByRole('group', { name: `3 photos: ${words}` });
+    await expect(carousel).toBeVisible({ timeout: 30_000 });
+    // Other runs' posts can sit above this one (newest first), so on a phone it may start below the fold.
+    await carousel.scrollIntoViewIfNeeded();
+    await expect(carousel.getByText('1/3', { exact: true })).toBeVisible();
+    await expect(carousel.getByRole('group', { name: '1 of 3' })).toBeInViewport();
+    await expect(carousel.getByRole('group', { name: '2 of 3' })).not.toBeInViewport();
+    await expect(carousel.getByRole('button', { name: 'Previous photo' })).toHaveCount(0);
+    if (testInfo.project.name === 'app-mobile') {
+      await expect(carousel.getByRole('button', { name: 'Next photo' })).toBeHidden();
+      await carousel.getByRole('group', { name: '1 of 3' }).locator('..').evaluate((strip) => strip.scrollTo({ left: strip.clientWidth, behavior: 'instant' }));
+    } else {
+      await carousel.hover();
+      await carousel.getByRole('button', { name: 'Next photo' }).click();
+    }
+    await expect(carousel.getByText('2/3', { exact: true })).toBeVisible();
+    await expect(carousel.getByRole('group', { name: '2 of 3' })).toBeInViewport();
+
+    // A photo opens the viewer on itself; closing it leaves the carousel where it was.
+    await carousel.getByRole('button', { name: 'Open photo 2 of 3' }).click();
+    await expect(page.getByRole('dialog', { name: 'Photo 2 of 3' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Photo 2 of 3' })).toBeHidden();
+    await expect(carousel.getByText('2/3', { exact: true })).toBeVisible();
   } finally {
     const { db, pool } = database();
     try {

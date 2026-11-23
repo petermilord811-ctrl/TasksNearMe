@@ -25,6 +25,8 @@ export const communityPhotos = {
   leaves: photo('fil_community_leaves', 'work-yard.svg', 'Leaves covering the front yard'),
   wardrobe: photo('fil_community_wardrobe', 'photo-wide.svg', 'The finished wardrobe against the bedroom wall', 1200, 600),
   lake: photo('fil_community_lake', 'neighborhood-lake.svg', 'The Mueller lake at sunset'),
+  herons: photo('fil_community_herons', 'neighborhood-herons.svg', 'Two herons on the little island'),
+  path: photo('fil_community_path', 'neighborhood-path.svg', 'The lakeside path under the trees'),
 };
 
 const pinnedAnswer: CommunityReplyView = {
@@ -152,8 +154,9 @@ const tip: CommunityPostView = {
 
 
 /**
- * A general post (2026-11-22, any social post): words and a photo, no title of its own. The title is its first line, as
- * the community service makes it (untitledPostTitle), and names the card for screen readers.
+ * A general post (2026-11-22, any social post): words and photos, no title of its own. The title is its first line, as
+ * the community service makes it (untitledPostTitle), and names the card for screen readers. Its three photos show as a
+ * carousel (2026-11-23); the recommendation request's two do too.
  */
 const general: CommunityPostView = {
   id: 'cpo_lake_sunset',
@@ -166,7 +169,7 @@ const general: CommunityPostView = {
   lastActivityAt: '2026-11-17T14:30:00.000Z',
   replyCount: 1,
   reactions: { thanks: 3, helpful: 8, mine: [] },
-  photos: [communityPhotos.lake],
+  photos: [communityPhotos.lake, communityPhotos.herons, communityPhotos.path],
   canReply: true,
   follow: 'none',
   helpfulNames: ['Priya S.', 'Ana P.'],
