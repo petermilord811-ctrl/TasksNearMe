@@ -11,9 +11,11 @@ import type {
   ChatThreadHandlers,
   ChatView,
   ChatWindowState,
+  DirectChatStart,
   HelpChatData,
   HelpChatHandlers,
   ISODateTime,
+  NewChatHandlers,
   ThreadHandlers,
 } from '@/contracts';
 import { routes } from '@/contracts/routes';
@@ -33,6 +35,7 @@ import { ThreadPresence } from '@/ui/screens/messages/thread-presence';
 import { HelpChat } from './help-chat';
 import { HelpAvatar, HelpRow } from './help-row';
 import { InboxList } from './inbox-list';
+import { NewChat } from './new-chat';
 
 export interface ChatWindowProps {
   state: Exclude<ChatWindowState, 'closed'>;
@@ -42,12 +45,18 @@ export interface ChatWindowProps {
   inbox: ChatLoad<ChatInboxData>;
   thread: ChatLoad<ChatThreadData>;
   help: ChatLoad<HelpChatData>;
+  /** New message's chosen person: their first message's form (2026-11-23). */
+  start: ChatLoad<DirectChatStart>;
   transcript: AssistantTranscript;
   now: ISODateTime;
   threadHandlers: ChatThreadHandlers;
   helpHandlers: HelpChatHandlers;
-  /** Show the list, the Help conversation or a conversation. */
+  /** New message in the window: suggestions as the @username is typed, and the first message. */
+  newChatHandlers: Pick<NewChatHandlers, 'onSearch' | 'onStart'>;
+  /** Show the list, the Help conversation, a conversation or New message. */
   onShow(view: ChatView): void;
+  /** The first message went: the new conversation (`redirectTo`), shown in the window. */
+  onStarted(redirectTo: string): void;
   onMinimize(): void;
   onRestore(): void;
   onClose(): void;
@@ -262,7 +271,7 @@ function useWindowSize(box: RefObject<HTMLElement | null>) {
  * usable behind it, Tab moves on past it, and Esc minimizes it. Everything it shows comes in as props (loaded by the app).
  */
 export function ChatWindow(props: ChatWindowProps) {
-  const { state, view, unread, inbox, thread, help, transcript, now, threadHandlers, helpHandlers, onShow, onMinimize, onRestore, onClose, onRetry, onRefreshThread, onLoadEarlier, fullPageHref, onFullPage, focusKey } = props;
+  const { state, view, unread, inbox, thread, help, start, transcript, now, threadHandlers, helpHandlers, newChatHandlers, onShow, onStarted, onMinimize, onRestore, onClose, onRetry, onRefreshThread, onLoadEarlier, fullPageHref, onFullPage, focusKey } = props;
   const t = useTranslations('chat.window');
   const helpCopy = useTranslations('chat.help');
   const person = useShownPerson();
@@ -277,7 +286,7 @@ export function ChatWindow(props: ChatWindowProps) {
   const threadData = thread.status === 'idle' ? undefined : thread.data;
   const other = view.kind === 'thread' && threadData ? person(threadData.data.thread.otherParty) : undefined;
   if (state === 'minimized') {
-    const label = view.kind === 'help' ? helpCopy('title') : other ? other.displayName : t('title');
+    const label = view.kind === 'help' ? helpCopy('title') : view.kind === 'new' ? t('newMessage') : other ? other.displayName : t('title');
     const avatar = view.kind === 'help' ? <HelpAvatar size="sm" /> : other ? <InitialsAvatar initials={other.initials} photo={other.photo} size="sm" /> : <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground"><MessagesSquare className="size-4" /></span>;
     return <MinimizedBar label={label} avatar={avatar} unread={unread} onRestore={onRestore} onClose={onClose} />;
   }
@@ -301,8 +310,9 @@ export function ChatWindow(props: ChatWindowProps) {
       <h2 id={titleId} className={cn('font-display text-base font-semibold tracking-[-0.01em]', listShown ? 'pl-2' : 'pl-2 @max-2xl:pl-0.5')}>{t('title')}</h2>
       {unread > 0 && <span className="rounded-full bg-primary px-2 text-xs leading-5 font-semibold text-primary-foreground tabular-nums">{t('unread', { count: unread })}</span>}
       <div className="ml-auto flex items-center gap-0.5">
-        {/* A conversation with anyone, by their @username (2026-11-22): the New message page. */}
-        <Link href={routes.app.newMessage()} onClick={onFullPage} aria-label={t('newMessage')} title={t('newMessage')} className={control}><SquarePen aria-hidden="true" className="size-4" /></Link>
+        {/* A conversation with anyone, by their @username (2026-11-22), started right here since 2026-11-23 (owner: "I want
+            to do it in live chat box itself"). */}
+        <button type="button" onClick={() => onShow({ kind: 'new' })} aria-label={t('newMessage')} title={t('newMessage')} className={control}><SquarePen aria-hidden="true" className="size-4" /></button>
         <Link href={fullPageHref} onClick={onFullPage} aria-label={t('fullPage')} title={t('fullPage')} className={control}><Maximize2 aria-hidden="true" className="size-4" /></Link>
         <button type="button" onClick={onMinimize} aria-label={t('minimize')} title={t('minimize')} className={control}><Minus aria-hidden="true" className="size-4" /></button>
         <button type="button" onClick={onClose} aria-label={t('close')} title={t('close')} className={control}><X aria-hidden="true" className="size-4" /></button>
@@ -316,6 +326,16 @@ export function ChatWindow(props: ChatWindowProps) {
       <div className={cn('min-h-0 flex-col', listShown ? 'hidden @2xl:flex' : 'flex')}>
         {view.kind === 'thread'
           ? <ThreadPane load={thread} now={now} handlers={threadHandlers} onRetry={onRetry} onRefresh={onRefreshThread} onLoadEarlier={onLoadEarlier} />
+          : view.kind === 'new'
+            ? <NewChat
+              variant="pane"
+              {...(view.to ? { to: view.to } : {})}
+              start={start}
+              handlers={newChatHandlers}
+              onChoose={(to, person) => onShow(person?.threadId ? { kind: 'thread', threadId: person.threadId } : to ? { kind: 'new', to } : { kind: 'new' })}
+              onStarted={onStarted}
+              onRetry={onRetry}
+            />
           : view.kind === 'help'
             ? help.status !== 'idle' && help.data ? <HelpChat data={help.data} transcript={transcript} handlers={helpHandlers} now={now} /> : help.status === 'error' ? <Failed onRetry={onRetry} /> : <Loading />
             : <Choose />}

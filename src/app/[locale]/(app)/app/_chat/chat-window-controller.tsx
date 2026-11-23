@@ -11,20 +11,26 @@ import type {
   ChatThreadHandlers,
   ChatView,
   ChatWindowState,
+  DirectChatStart,
+  DirectChatTarget,
   HandOffInput,
   HelpChatData,
   HelpChatHandlers,
   MessageReaction,
   MessageSavedReplyInput,
+  NewChatHandlers,
   PhotoUploadResult,
   ReportInput,
   SendMessageInput,
+  StartDirectChatInput,
   SupportReplyInput,
 } from '@/contracts';
-import { chatViewHref, chatViewOfHref } from '@/shared/chat-links';
+import { chatViewHref, chatViewOfHref, directChatTargetKey } from '@/shared/chat-links';
+import { OPEN_IN_CHAT_EVENT, type OpenInChatDetail } from '@/ui/lib/chat-window-open';
 import { ChatLauncher } from '@/ui/components/messaging/chat-launcher';
 import { useRealtime, useRealtimeConnected, type RealtimeNotice } from '@/ui/lib/realtime';
 import { useAppShellLayout } from '@/ui/shells/app-shell-layout';
+import { directChatStartRequest, searchPeopleRequest } from './new-chat-requests';
 import { useHelpChat } from './use-help-chat';
 
 /** The window's code loads the first time it opens: every signed-in page carries only the button. */
@@ -44,6 +50,8 @@ export interface ChatActions {
   reply(caseId: string, input: SupportReplyInput): Promise<ActionResult>;
   requestLive(caseId: string): Promise<ActionResult>;
   typingInCase(caseId: string): Promise<void>;
+  /** New message's first message (2026-11-23): starts the conversation, without refreshing the page behind. */
+  startChat(input: StartDirectChatInput): Promise<ActionResult>;
 }
 
 const WIDE = '(min-width: 1024px)';
@@ -73,15 +81,33 @@ function useVisible(): boolean {
   return visible;
 }
 
-const keyOf = (view: ChatView) => (view.kind === 'thread' ? `thread:${view.threadId}` : view.kind);
+const keyOf = (view: ChatView) => (view.kind === 'thread' ? `thread:${view.threadId}` : view.kind === 'new' && view.to ? `new:${directChatTargetKey(view.to)}` : view.kind);
+
+/** A New message target read back from storage: one string field, as links name people. */
+function storedTarget(value: unknown): DirectChatTarget | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const to = value as Partial<Record<'userId' | 'helper' | 'username', unknown>>;
+  const ok = (field: unknown): field is string => typeof field === 'string' && field.length > 0 && field.length <= 80;
+  if (ok(to.helper)) return { helper: to.helper };
+  if (ok(to.userId)) return { userId: to.userId };
+  if (ok(to.username)) return { username: to.username };
+  return undefined;
+}
 const dataOf = <T,>(load: ChatLoad<T>): T | undefined => (load.status === 'idle' ? undefined : load.data);
 
 function restored(viewerId: string): { state: ChatWindowState; view: ChatView } | null {
   try {
     const stored = JSON.parse(sessionStorage.getItem(storageKey(viewerId)) ?? 'null') as { state?: unknown; view?: unknown } | null;
     if (!stored || (stored.state !== 'open' && stored.state !== 'minimized' && stored.state !== 'closed')) return null;
-    const view = stored.view as Partial<{ kind: string; threadId: string }> | undefined;
-    const next: ChatView = view?.kind === 'help' ? { kind: 'help' } : view?.kind === 'thread' && typeof view.threadId === 'string' && view.threadId.length <= 80 ? { kind: 'thread', threadId: view.threadId } : { kind: 'list' };
+    const view = stored.view as Partial<{ kind: string; threadId: string; to: unknown }> | undefined;
+    const to = view?.kind === 'new' ? storedTarget(view.to) : undefined;
+    const next: ChatView = view?.kind === 'help'
+      ? { kind: 'help' }
+      : view?.kind === 'thread' && typeof view.threadId === 'string' && view.threadId.length <= 80
+        ? { kind: 'thread', threadId: view.threadId }
+        : view?.kind === 'new'
+          ? to ? { kind: 'new', to } : { kind: 'new' }
+          : { kind: 'list' };
     return { state: stored.state, view: next };
   } catch {
     return null;
@@ -114,6 +140,7 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
   const [inbox, setInbox] = useState<ChatLoad<ChatInboxData>>({ status: 'idle' });
   const [thread, setThread] = useState<ChatLoad<ChatThreadData>>({ status: 'idle' });
   const [help, setHelp] = useState<ChatLoad<HelpChatData>>({ status: 'idle' });
+  const [start, setStart] = useState<ChatLoad<DirectChatStart>>({ status: 'idle' });
   const [focusKey, setFocusKey] = useState(0);
   const [now, setNow] = useState(() => new Date().toISOString());
 
@@ -145,7 +172,7 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
 
   // ---- Loading -----------------------------------------------------------------------------------------------------
 
-  const counters = useRef({ inbox: 0, thread: 0, help: 0 });
+  const counters = useRef({ inbox: 0, thread: 0, help: 0, start: 0 });
   const loadInbox = useCallback(async () => {
     const turn = ++counters.current.inbox;
     try {
@@ -197,6 +224,28 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
     }
   }, []);
 
+  // New message's chosen person (2026-11-23): their first message's form, or straight to the conversation the two have.
+  const loadStart = useCallback(async (to: DirectChatTarget) => {
+    const turn = ++counters.current.start;
+    try {
+      const data = await directChatStartRequest(to);
+      if (turn !== counters.current.start) return;
+      if (!data) {
+        setStart({ status: 'error', notFound: true });
+        return;
+      }
+      if (data.kind === 'thread') {
+        setStart({ status: 'idle' });
+        setThread({ status: 'idle' });
+        setView({ kind: 'thread', threadId: data.threadId });
+        return;
+      }
+      setStart({ status: 'ready', data });
+    } catch {
+      if (turn === counters.current.start) setStart((current) => ({ status: 'error', data: dataOf(current) }));
+    }
+  }, []);
+
   // A burst of notices reads once.
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const soon = useCallback((key: string, run: () => void) => {
@@ -209,7 +258,9 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
     const current = viewRef.current;
     if (current.kind === 'thread') void loadThread(current.threadId);
     if (current.kind === 'help') void loadHelp();
-  }, [loadHelp, loadThread]);
+    // New message: the chosen person's form once (typing a message isn't interrupted by the page's notices).
+    if (current.kind === 'new' && current.to) void loadStart(current.to);
+  }, [loadHelp, loadStart, loadThread]);
 
   // While it's open: the list, and what's on screen, each time that changes (and when the tab comes back).
   const viewKey = keyOf(view);
@@ -253,6 +304,7 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
   const show = useCallback((next: ChatView) => {
     setView((current) => {
       if (next.kind === 'thread' && !(current.kind === 'thread' && current.threadId === next.threadId)) setThread({ status: 'idle' });
+      if (next.kind === 'new' && keyOf(current) !== keyOf(next)) setStart({ status: 'idle' });
       return keyOf(current) === keyOf(next) ? current : next;
     });
   }, []);
@@ -284,6 +336,20 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
     };
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
+  }, [openWith]);
+
+  // A Message button's answer (a booking's, an offer's): the conversation here, not its page (2026-11-23).
+  useEffect(() => {
+    const onOpen = (event: Event) => {
+      const href = (event as CustomEvent<OpenInChatDetail>).detail?.href;
+      if (typeof href !== 'string' || onMessagesPageRef.current || !window.matchMedia(WIDE).matches) return;
+      const next = chatViewOfHref(href, window.location.origin);
+      if (!next) return;
+      event.preventDefault();
+      openWith(next);
+    };
+    window.addEventListener(OPEN_IN_CHAT_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_IN_CHAT_EVENT, onOpen);
   }, [openWith]);
 
   const focusInWindow = () => Boolean(document.activeElement?.closest('[data-chat-window]'));
@@ -334,6 +400,14 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
     }),
     [actions, threadAgain],
   );
+
+  const newChatHandlers = useMemo<Pick<NewChatHandlers, 'onSearch' | 'onStart'>>(() => ({ onSearch: searchPeopleRequest, onStart: actions.startChat }), [actions]);
+  // The first message went: its conversation, here; the list reads again (it's on top now).
+  const started = (redirectTo: string) => {
+    const next = chatViewOfHref(redirectTo, window.location.origin);
+    if (next?.kind === 'thread') show(next);
+    soon('inbox', () => void loadInbox());
+  };
 
   const helpChat = useHelpChat(viewerId, actions.handOff);
   const helpCaseId = dataOf(help)?.case?.id;
@@ -386,11 +460,14 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
       inbox={inbox}
       thread={thread}
       help={help}
+      start={start}
       transcript={helpChat.transcript}
       now={now}
       threadHandlers={threadHandlers}
       helpHandlers={helpHandlers}
+      newChatHandlers={newChatHandlers}
       onShow={show}
+      onStarted={started}
       onMinimize={minimize}
       onRestore={() => openWith()}
       onClose={close}

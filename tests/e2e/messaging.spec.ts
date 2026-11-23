@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { onConversationPage } from './support/conversation';
 import { devSignIn } from './support/sign-in';
 
 /**
@@ -12,7 +13,7 @@ test('the client and the helper talk before booking, with contact details hidden
   await devSignIn(page, 'maya@example.test');
   await page.goto('/app/tasks/tsk_desk/offers/off_sam');
   await page.getByRole('button', { name: 'Message helper' }).first().click();
-  await expect(page).toHaveURL(/\/app\/messages\/thr_/, { timeout: 30_000 });
+  await onConversationPage(page);
   const threadUrl = page.url();
   await page.getByRole('textbox', { name: 'Message' }).fill('Could you come at 11 instead?');
   await page.getByRole('button', { name: 'Send' }).click();

@@ -1,7 +1,7 @@
 import { and, eq, inArray, like, or } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { users } from '@/modules/accounts/schema';
-import { getNewDirectMessagePage, saveDirectMessageSetting, startDirectChat } from '@/modules/messaging/direct';
+import { usernames, users } from '@/modules/accounts/schema';
+import { directThreadBetween, getNewDirectMessagePage, saveDirectMessageSetting, searchPeople, startDirectChat } from '@/modules/messaging/direct';
 import { messages, threadParticipants, threads, blocks } from '@/modules/messaging/schema';
 import { getInbox, getThreadPage, sendMessage } from '@/modules/messaging/service';
 import { helperProfiles } from '@/modules/profiles/schema';
@@ -130,5 +130,71 @@ describe('direct conversations', () => {
     // A day later the oldest has dropped out.
     const later = new Date(now.getTime() + 4 * 3_600_000 + 60_000);
     expect(await startDirectChat(db, OTHER, { to: HELPER, body: 'Hi Hank!' }, later)).toMatchObject({ ok: true, code: 'sent' });
+  });
+});
+
+describe('New message in place (2026-11-23): suggestions by @username, and the form for one', () => {
+  // "tmpdm_…": nobody else's username starts with it.
+  beforeAll(async () => {
+    await db.insert(usernames).values([
+      { userId: CLIENT, username: 'tmpdm_dee' },
+      { userId: HELPER, username: 'tmpdm_hank' },
+      { userId: OTHER, username: 'tmpdm_ola' },
+    ]);
+  });
+
+  it('suggests reachable people by the start of their @username, shortest first, never the viewer, with their conversation', async () => {
+    const found = await searchPeople(db, CLIENT, '@TMPDM_', now, false);
+    expect(found.query).toBe('tmpdm_');
+    expect(found.people.map((person) => person.username)).toEqual(['tmpdm_ola', 'tmpdm_hank']);
+    const hank = found.people.find((person) => person.id === HELPER)!;
+    expect(hank).toMatchObject({ displayName: 'Hank D.', initials: 'HD', helper: true });
+    expect(hank.sample).toBeUndefined();
+    const talking = await directThreadBetween(db, CLIENT, HELPER);
+    expect(hank.threadId).toBe(talking ?? undefined);
+    expect(found.people.find((person) => person.id === OTHER)).toMatchObject({ helper: false });
+    expect(found.allowance.perDay).toBeGreaterThan(0);
+    expect(found.level).toBeTruthy();
+    // The exact one first, whatever its length.
+    expect((await searchPeople(db, CLIENT, 'tmpdm_hank', now, false)).people.map((person) => person.username)).toEqual(['tmpdm_hank']);
+  });
+
+  it('takes "_" as itself and nothing that can’t start a username, and leaves out blocked and suspended people', async () => {
+    expect((await searchPeople(db, CLIENT, 'tmpdmx', now, false)).people).toEqual([]);
+    expect((await searchPeople(db, CLIENT, 'tmpdm%', now, false)).people).toEqual([]);
+    expect((await searchPeople(db, CLIENT, '', now, false)).people).toEqual([]);
+    await db.insert(blocks).values({ blockerId: OTHER, blockedId: CLIENT });
+    try {
+      expect((await searchPeople(db, CLIENT, 'tmpdm_', now, false)).people.map((person) => person.id)).toEqual([HELPER]);
+    } finally {
+      await db.delete(blocks).where(and(eq(blocks.blockerId, OTHER), eq(blocks.blockedId, CLIENT)));
+    }
+    await db.update(users).set({ status: 'suspended' }).where(eq(users.id, OTHER));
+    try {
+      expect((await searchPeople(db, CLIENT, 'tmpdm_', now, false)).people.map((person) => person.id)).toEqual([HELPER]);
+    } finally {
+      await db.update(users).set({ status: 'active' }).where(eq(users.id, OTHER));
+    }
+  });
+
+  it('marks sample profiles where sample rows are told apart (the base seed’s fixed ids are sample rows)', async () => {
+    const found = await searchPeople(db, CLIENT, 'tmpdm_', now, true);
+    expect(found.people.every((person) => person.sample === true)).toBe(true);
+  });
+
+  it('opens the first message’s form by @username, any case, with their username and whether they’re a sample', async () => {
+    // Dee and Ola haven't talked (Ola started one with Hank above).
+    const page = await getNewDirectMessagePage(db, CLIENT, { username: '@TMPDM_OLA' }, now, true);
+    expect(page?.kind).toBe('page');
+    if (page?.kind !== 'page') return;
+    expect(page.data).toMatchObject({ recipient: { id: OTHER, displayName: 'Ola O.' }, username: 'tmpdm_ola', sample: true, canRequest: false });
+    expect(page.data.helperHandle).toBeUndefined();
+    const plain = await getNewDirectMessagePage(db, CLIENT, { username: 'tmpdm_ola' }, now, false);
+    expect(plain).toMatchObject({ kind: 'page', data: { username: 'tmpdm_ola' } });
+    expect(plain?.kind === 'page' && plain.data.sample).toBeUndefined();
+    // Someone they already talk to: that conversation.
+    expect(await getNewDirectMessagePage(db, OTHER, { username: 'tmpdm_hank' }, now)).toEqual({ kind: 'thread', threadId: await directThreadBetween(db, OTHER, HELPER) });
+    expect(await getNewDirectMessagePage(db, CLIENT, { username: 'nobody_tmpdm' }, now)).toBeNull();
+    expect(await getNewDirectMessagePage(db, CLIENT, { username: 'x' }, now)).toBeNull();
   });
 });

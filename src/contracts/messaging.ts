@@ -245,6 +245,13 @@ export type DirectChatRefusal = (typeof DIRECT_CHAT_REFUSALS)[number];
  */
 export interface NewDirectMessagePageData {
   recipient: PersonSummary;
+  /** Their @username (2026-11-23), under their name. */
+  username?: string;
+  /**
+   * A sample profile of the demo marketplace (2026-11-23): it shows how the app works and never answers, so the form
+   * says so. Only where sample rows are told apart (production); in development and the e2e build every row is seed data.
+   */
+  sample?: boolean;
   /** The recipient's helper handle, when they're a helper: their profile, and "Send a task request" with `canRequest`. */
   helperHandle?: string;
   /** "Send a task request" (`routes.app.requestHelper(helperHandle)`): the recipient is a bookable helper and not the viewer. */
@@ -296,6 +303,67 @@ export interface FindPersonPageData {
   allowanceFrom?: PlanCode;
 }
 
+// ---- Starting a conversation where you are (2026-11-23, owner: "I want to do it in live chat box itself. I hate to
+// redirect to new pages continually … if possible, use dialog") ------------------------------------------------------
+//
+// New message finds the person as you type their @username and shows the first message's form in place: in the chat
+// window on wide screens, and in a dialog over the page (or on the New message page itself) on phones.
+
+/** Who a new direct conversation is with: as a link names them (`routes.app.newMessage`). */
+export type DirectChatTarget = { userId: string } | { username: string } | { helper: string };
+
+/** Suggestions while typing an @username: at most this many. */
+export const PEOPLE_SUGGESTIONS_MAX = 6;
+
+/** A person whose @username starts with what was typed. */
+export interface PersonSuggestion {
+  id: string;
+  username: string;
+  /** First name + last initial ("Minh T."). */
+  displayName: string;
+  initials: string;
+  photo?: Photo;
+  /** They have a bookable helper profile. */
+  helper: boolean;
+  /** A sample profile of the demo marketplace (see `NewDirectMessagePageData.sample`). */
+  sample?: boolean;
+  /** The viewer's conversation with them, when they have one: choosing them opens it. */
+  threadId?: string;
+}
+
+/**
+ * `GET /api/messages/people?q=`: reachable people (not the viewer, not blocked either way, accounts in use) whose
+ * @username starts with `query` (lowercase, without "@"; empty: nobody), exact match first, then shortest. With the
+ * viewer's allowance of new conversations, as on the find step.
+ */
+export interface PeopleSearchData {
+  query: string;
+  people: PersonSuggestion[];
+  allowance: { left: number; perDay: number; resetsAt?: ISODateTime };
+  level: SparkLevel;
+  /** The viewer's plan, when it (not their level) sets `allowance.perDay` (as on `FindPersonPageData`). */
+  allowanceFrom?: PlanCode;
+}
+
+/**
+ * `GET /api/messages/new?to=|u=|helper=`: where a new conversation with that person starts. Their conversation when
+ * the two already have one, else the first message's form, as the New message page shows it (`not_found` 404: nobody
+ * reachable by that id or handle).
+ */
+export type DirectChatStart = { kind: 'thread'; threadId: string } | { kind: 'page'; data: NewDirectMessagePageData };
+
+/**
+ * New message in place (the chat window, the dialog and the page share it).
+ * - `onSearch`: suggestions for what's typed (`PeopleSearchData`); a failure shows nothing new.
+ * - `onLoad`: the conversation or the first message's form for a person (null: nobody reachable by that).
+ * - `onStart`: as `NewDirectMessageHandlers.onStart`; ok `sent` with `redirectTo` the new conversation.
+ */
+export interface NewChatHandlers {
+  onSearch: QueryHandler<string, PeopleSearchData>;
+  onLoad: QueryHandler<DirectChatTarget, DirectChatStart | null>;
+  onStart: ActionHandler<StartDirectChatInput>;
+}
+
 export const MESSAGE_SAVED_REPLY_MAX = 20;
 export const messageSavedReplyInputSchema = z.object({
   title: z.string('required').trim().min(1, 'required').max(40, 'too_long'),
@@ -313,8 +381,11 @@ export type MessageSavedReplyInput = z.input<typeof messageSavedReplyInputSchema
 export const CHAT_WINDOW_STATES = ['closed', 'open', 'minimized'] as const;
 export type ChatWindowState = (typeof CHAT_WINDOW_STATES)[number];
 
-/** What the window shows: the conversations, the pinned Help conversation, or one conversation. */
-export type ChatView = { kind: 'list' } | { kind: 'help' } | { kind: 'thread'; threadId: string };
+/**
+ * What the window shows: the conversations, the pinned Help conversation, one conversation, or a new one (2026-11-23):
+ * finding the person by @username (`to` absent), then the first message to them.
+ */
+export type ChatView = { kind: 'list' } | { kind: 'help' } | { kind: 'thread'; threadId: string } | { kind: 'new'; to?: DirectChatTarget };
 
 /** `GET /api/messages/inbox`: the conversations, and the pinned Help row. */
 export interface ChatInboxData extends InboxPageData {

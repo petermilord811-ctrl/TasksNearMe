@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { routes, type AppShellHandlers, type AssistantTranscript, type ChatLoad, type ChatThreadData, type ChatView, type HelpChatData, type PreviewEntry } from '@/contracts';
+import { routes, type AppShellHandlers, type AssistantTranscript, type ChatLoad, type ChatThreadData, type ChatView, type DirectChatStart, type HelpChatData, type PreviewEntry } from '@/contracts';
 import {
   answeredTranscript,
   chatInboxData,
@@ -10,6 +10,7 @@ import {
   fakeChatThreadHandlers,
   fakeHandler,
   fakeHelpChatHandlers,
+  fakeNewChatHandlers,
   helpChatAssistantData,
   helpChatCaseRepliedData,
   helpChatCaseWaitingData,
@@ -19,6 +20,8 @@ import {
   helpChatLiveWaitingData,
   helpChatUnavailableData,
   mayaShell,
+  newDirectMessageData,
+  newDirectMessageSampleData,
   pendingTranscript,
   suggestTranscript,
   urgentTranscript,
@@ -48,7 +51,7 @@ function shell(chat: ReactNode, children: ReactNode = <Page />, layout: 'tabs' |
   return <AppShell viewer={{ ...mayaShell, unreadMessages: 3 }} handlers={shellHandlers} currentPath={routes.app.bookings()} layout={layout} chat={chat}>{children}</AppShell>;
 }
 
-function windowPreview(id: string, title: string, options: { view?: ChatView; thread?: ChatLoad<ChatThreadData>; help?: HelpChatData; transcript?: AssistantTranscript; state?: 'open' | 'minimized'; inbox?: ChatLoad<typeof chatInboxData> }): PreviewEntry {
+function windowPreview(id: string, title: string, options: { view?: ChatView; thread?: ChatLoad<ChatThreadData>; help?: HelpChatData; transcript?: AssistantTranscript; state?: 'open' | 'minimized'; inbox?: ChatLoad<typeof chatInboxData>; start?: ChatLoad<DirectChatStart> }): PreviewEntry {
   const view = options.view ?? { kind: 'list' };
   return {
     id: `chat-window/${id}`,
@@ -65,11 +68,14 @@ function windowPreview(id: string, title: string, options: { view?: ChatView; th
         inbox={options.inbox ?? { status: 'ready', data: chatInboxData }}
         thread={options.thread ?? { status: 'idle' }}
         help={options.help ? { status: 'ready', data: options.help } : { status: 'idle' }}
+        start={options.start ?? { status: 'idle' }}
         transcript={options.transcript ?? emptyTranscript}
         now={now}
         threadHandlers={fakeChatThreadHandlers}
         helpHandlers={fakeHelpChatHandlers}
+        newChatHandlers={fakeNewChatHandlers}
         onShow={() => undefined}
+        onStarted={() => undefined}
         onMinimize={() => undefined}
         onRestore={() => undefined}
         onClose={() => undefined}
@@ -117,6 +123,12 @@ export const chatWindowPreviews: PreviewEntry[] = [
   windowPreview('help-live-offline', copy.liveOffline, { view: { kind: 'help' }, help: helpChatLiveOfflineData }),
   windowPreview('help-live-joined', copy.liveJoined, { view: { kind: 'help' }, help: helpChatLiveJoinedData }),
   windowPreview('help-live-ended', copy.liveEnded, { view: { kind: 'help' }, help: helpChatLiveEndedData }),
+  // New message in the window (2026-11-23, owner: "I want to do it in live chat box itself").
+  windowPreview('new-find', 'Chat window: New message, the @username box and the day’s allowance', { view: { kind: 'new' } }),
+  windowPreview('new-compose', 'Chat window: New message to Jordan, the first message', { view: { kind: 'new', to: { userId: newDirectMessageData.recipient.id } }, start: { status: 'ready', data: { kind: 'page', data: newDirectMessageData } } }),
+  windowPreview('new-sample', 'Chat window: New message to a sample profile (the live site)', { view: { kind: 'new', to: { username: 'jonah' } }, start: { status: 'ready', data: { kind: 'page', data: newDirectMessageSampleData } } }),
+  windowPreview('new-not-found', 'Chat window: New message, a username that’s nobody’s', { view: { kind: 'new', to: { username: 'jordan_tx' } }, start: { status: 'error', notFound: true } }),
+  windowPreview('new-loading', 'Chat window: New message, loading the chosen person', { view: { kind: 'new', to: { username: 'jordan' } }, start: { status: 'loading' } }),
   helpPagePreview('answer', `${copy.page}: ${copy.answer}`, helpChatAssistantData, suggestTranscript),
   helpPagePreview('live-waiting', `${copy.page}: ${copy.liveWaiting}`, helpChatLiveWaitingData, emptyTranscript),
   helpPagePreview('live-joined', `${copy.page}: ${copy.liveJoined}`, helpChatLiveJoinedData, emptyTranscript),

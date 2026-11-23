@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { onConversationPage } from './support/conversation';
 import { devSignIn } from './support/sign-in';
 
 /**
@@ -21,7 +22,7 @@ test('a conversation updates live: typing, new messages, then presence and Seen'
     await devSignIn(ruth, 'ruth@example.test');
     await ruth.goto('/app/tasks/tsk_computer/offers/off_lee_computer');
     await ruth.getByRole('button', { name: 'Message helper' }).first().click({ timeout: 30_000 });
-    await expect(ruth).toHaveURL(/\/app\/messages\/thr_/, { timeout: 30_000 });
+    await onConversationPage(ruth);
     const threadUrl = ruth.url();
 
     await devSignIn(lee, 'lee@example.test');

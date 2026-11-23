@@ -1,18 +1,22 @@
-import { and, eq, gt, isNotNull, ne, or, sql } from 'drizzle-orm';
+import { and, eq, gt, inArray, isNotNull, ne, notInArray, or, sql } from 'drizzle-orm';
 import {
   DIRECT_CHATS_PER_DAY,
   DIRECT_FIRST_MESSAGES_MAX,
   DIRECT_MESSAGE_SETTINGS,
   normalizeUsername,
+  PEOPLE_SUGGESTIONS_MAX,
   routes,
   startDirectChatInputSchema,
   type ActionResult,
+  type DirectChatStart,
+  type DirectChatTarget,
   type DirectMessageSetting,
-  type NewDirectMessagePageData,
+  type PeopleSearchData,
   type StartDirectChatInput,
   type FindPersonPageData,
 } from '@/contracts';
-import { users } from '@/modules/accounts/schema';
+import { usernames, users } from '@/modules/accounts/schema';
+import { findUserIdByUsername } from '@/modules/accounts/usernames';
 import { topTier } from '@/modules/billing/domain';
 import { activePlans } from '@/modules/billing/service';
 import { bookings } from '@/modules/bookings/schema';
@@ -20,7 +24,8 @@ import { profilePhotoOf } from '@/modules/files/photos';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { initialsOf } from '@/modules/profiles/queries';
 import { directChatAllowance, sparksSummaryOf } from '@/modules/sparks/service';
-import { isBlockedBetween } from '@/modules/trust/blocks';
+import { blockedPeopleOf, isBlockedBetween } from '@/modules/trust/blocks';
+import { isSampleId, samplesHiddenInThisBuild } from '@/shared/sample-data';
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
@@ -44,13 +49,26 @@ const RECIPIENT_STATUSES = new Set(['active', 'restricted']);
 
 export const isDirectMessageSetting = (value: unknown): value is DirectMessageSetting => (DIRECT_MESSAGE_SETTINGS as readonly unknown[]).includes(value);
 
-type Recipient = { id: string; row: typeof users.$inferSelect; handle?: string; helperActive: boolean };
+type Recipient = { id: string; row: typeof users.$inferSelect; handle?: string; helperActive: boolean; username?: string };
 
 async function recipientOf(db: Db, to: { userId: string } | { helper: string }): Promise<Recipient | null> {
   const where = 'helper' in to ? eq(helperProfiles.handle, String(to.helper)) : eq(users.id, String(to.userId));
-  const [row] = await db.select({ user: users, handle: helperProfiles.handle, profileStatus: helperProfiles.status }).from(users).leftJoin(helperProfiles, eq(helperProfiles.userId, users.id)).where(where).limit(1);
+  const [row] = await db
+    .select({ user: users, handle: helperProfiles.handle, profileStatus: helperProfiles.status, username: usernames.username })
+    .from(users)
+    .leftJoin(helperProfiles, eq(helperProfiles.userId, users.id))
+    .leftJoin(usernames, eq(usernames.userId, users.id))
+    .where(where)
+    .limit(1);
   if (!row || ('helper' in to && !row.handle)) return null;
-  return { id: row.user.id, row: row.user, ...(row.handle ? { handle: row.handle } : {}), helperActive: row.profileStatus === 'active' };
+  return { id: row.user.id, row: row.user, ...(row.handle ? { handle: row.handle } : {}), helperActive: row.profileStatus === 'active', ...(row.username ? { username: row.username } : {}) };
+}
+
+/** A link's or the window's way of naming the person, as the id or handle `recipientOf` reads (an @username: its account). */
+async function resolvedTarget(db: Db, to: DirectChatTarget): Promise<{ userId: string } | { helper: string } | null> {
+  if (!('username' in to)) return to;
+  const userId = await findUserIdByUsername(db, String(to.username));
+  return userId ? { userId } : null;
 }
 
 /** The two people's direct conversation, when they have one. */
@@ -112,11 +130,13 @@ async function paidBookingBetween(db: Db, a: string, b: string): Promise<boolean
 }
 
 /**
- * `/app/messages/new`: the conversation to go to when the two already have one, the page to write the first message,
- * or null (nobody by that id or handle, or an account that's gone).
+ * `/app/messages/new` (and the chat window's and the dialog's New message, `GET /api/messages/new`): the conversation to
+ * go to when the two already have one, the first message's form, or null (nobody by that id, handle or @username, or an
+ * account that's gone). `hiding`: whether sample profiles are told apart in this build (tests pass it).
  */
-export async function getNewDirectMessagePage(db: Db, viewerId: string, to: { userId: string } | { helper: string }, now: Date): Promise<{ kind: 'thread'; threadId: string } | { kind: 'page'; data: NewDirectMessagePageData } | null> {
-  const recipient = await recipientOf(db, to);
+export async function getNewDirectMessagePage(db: Db, viewerId: string, to: DirectChatTarget, now: Date, hiding: boolean = samplesHiddenInThisBuild()): Promise<DirectChatStart | null> {
+  const target = await resolvedTarget(db, to);
+  const recipient = target ? await recipientOf(db, target) : null;
   if (!recipient || recipient.row.status === 'deleted') return null;
   if (recipient.id !== viewerId) {
     const existing = await directThreadBetween(db, viewerId, recipient.id);
@@ -130,6 +150,8 @@ export async function getNewDirectMessagePage(db: Db, viewerId: string, to: { us
     kind: 'page',
     data: {
       recipient: { id: user.id, displayName: user.name, initials: initialsOf(user.firstName, user.lastName), ...profilePhotoOf(user), memberSince: user.createdAt.toISOString(), phoneVerified: user.phoneVerifiedAt !== null },
+      ...(recipient.username ? { username: recipient.username } : {}),
+      ...(hiding && isSampleId(user.id) ? { sample: true } : {}),
       ...(recipient.handle ? { helperHandle: recipient.handle } : {}),
       canRequest: recipient.helperActive && recipient.id !== viewerId,
       ...(refusal ? { refusal } : {}),
@@ -239,5 +261,52 @@ export async function getFindPersonPage(db: Db, viewerId: string, query: { text?
     ...(query.notFound ? { notFound: true } : {}),
     allowance: { left, perDay, ...(resetsAt ? { resetsAt: resetsAt.toISOString() } : {}) },
     level,
+  };
+}
+
+/** What may start an @username: `USERNAME_PATTERN`'s first letter, then its letters, digits and "_", up to its 20. */
+const USERNAME_PREFIX = /^[a-z][a-z0-9_]{0,19}$/;
+
+/**
+ * New message's suggestions as the person types an @username (2026-11-23, owner: "I want to do it in live chat box
+ * itself"): reachable people whose username starts with what's typed (any case, with or without "@"), the exact one
+ * first, then the shortest. Never the viewer, nobody blocked either way, only accounts in use (as `findUserIdByUsername`).
+ * Each says whether they're a helper, whether they're a sample profile (`hiding`: where sample rows are told apart), and
+ * the viewer's conversation with them, so choosing one opens it. With the viewer's allowance, as on the find step.
+ */
+export async function searchPeople(db: Db, viewerId: string, text: string, now: Date, hiding: boolean = samplesHiddenInThisBuild()): Promise<PeopleSearchData> {
+  const query = normalizeUsername(text).slice(0, 20);
+  const found = await getFindPersonPage(db, viewerId, {}, now);
+  const base = { query, allowance: found.allowance, level: found.level, ...(found.allowanceFrom ? { allowanceFrom: found.allowanceFrom } : {}) };
+  if (!USERNAME_PREFIX.test(query)) return { ...base, people: [] };
+  const blocked = await blockedPeopleOf(db, viewerId);
+  // "_" is LIKE's one-character wildcard: escaped, it's itself.
+  const startsWith = `${query.replace(/_/g, '\\_')}%`;
+  const rows = await db
+    .select({ id: users.id, name: users.name, firstName: users.firstName, lastName: users.lastName, avatarFileId: users.avatarFileId, username: usernames.username, profileStatus: helperProfiles.status })
+    .from(usernames)
+    .innerJoin(users, eq(users.id, usernames.userId))
+    .leftJoin(helperProfiles, eq(helperProfiles.userId, users.id))
+    .where(and(sql`lower(${usernames.username}) like ${startsWith}`, inArray(users.status, [...RECIPIENT_STATUSES]), ne(users.id, viewerId), ...(blocked.length > 0 ? [notInArray(users.id, blocked)] : [])))
+    .orderBy(sql`lower(${usernames.username}) = ${query} desc`, sql`length(${usernames.username})`, sql`lower(${usernames.username})`)
+    .limit(PEOPLE_SUGGESTIONS_MAX);
+  const keys = rows.map((row) => directPairKey(viewerId, row.id));
+  const existing = keys.length > 0 ? await db.select({ id: threads.id, linkedId: threads.linkedId }).from(threads).where(and(eq(threads.kind, 'direct'), inArray(threads.linkedId, keys))) : [];
+  const threadOf = new Map(existing.map((row) => [row.linkedId, row.id] as const));
+  return {
+    ...base,
+    people: rows.map((row) => {
+      const threadId = threadOf.get(directPairKey(viewerId, row.id));
+      return {
+        id: row.id,
+        username: row.username,
+        displayName: row.name,
+        initials: initialsOf(row.firstName, row.lastName),
+        ...profilePhotoOf(row),
+        helper: row.profileStatus === 'active',
+        ...(hiding && isSampleId(row.id) ? { sample: true } : {}),
+        ...(threadId ? { threadId } : {}),
+      };
+    }),
   };
 }

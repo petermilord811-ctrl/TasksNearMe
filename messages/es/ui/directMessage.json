@@ -44,7 +44,14 @@
     "sparksLink": "Cómo funcionan las Chispas",
     "moreWithPlans": "Plus y Pro permiten iniciar más al día.",
     "plansLink": "Ver planes",
-    "allowancePlan": "Puedes empezar {left, plural, one {# conversación más} other {# conversaciones más}} hoy ({perDay} al día con {plan, select, pro {Pro} other {Plus}})."
+    "allowancePlan": "Puedes empezar {left, plural, one {# conversación más} other {# conversaciones más}} hoy ({perDay} al día con {plan, select, pro {Pro} other {Plus}}).",
+    "suggestions": "Personas",
+    "noMatches": "Nadie a quien podamos escribir tiene un nombre de usuario que empiece por @{username}.",
+    "openConversation": "Tu conversación"
   },
-  "moreWithPlans": "Inicia más al día con Plus o Pro"
+  "moreWithPlans": "Inicia más al día con Plus o Pro",
+  "helperBadge": "Ayudante",
+  "sampleBadge": "Perfil de muestra",
+  "sampleNote": "{name} es un perfil de muestra que enseña cómo funciona TasksNearMe, así que no va a responder.",
+  "someoneElse": "Otra persona"
 }

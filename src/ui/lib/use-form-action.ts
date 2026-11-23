@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { FieldValues, Path, UseFormReturn } from 'react-hook-form';
 import type { ActionHandler, ActionResult } from '@/contracts';
+import { openInChatWindow } from './chat-window-open';
 import { useRouteDialog } from './route-dialog';
 
 /** Shares result handling, but leaves validation and flow decisions with the contracts/app. */
@@ -51,7 +52,8 @@ export function useFormAction<T extends FieldValues>(form: UseFormReturn<T>, opt
     // A full page goes where the result says; a route dialog closes over the page it was opened from instead.
     if (next.ok && next.redirectTo) {
       if (dialog) dialog.finish(next, options.successToast);
-      else router[options.navigation ?? 'push'](next.redirectTo);
+      // A conversation opens in the chat window on wide screens instead (2026-11-23); anything else, its page.
+      else if (!openInChatWindow(next.redirectTo)) router[options.navigation ?? 'push'](next.redirectTo);
     }
     return next;
   }

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { onConversationPage } from './support/conversation';
 import { devSignIn } from './support/sign-in';
 
 /**
@@ -19,10 +20,12 @@ async function ensureConversation(page: Page): Promise<void> {
   if (await list.count()) return;
   await page.goto('/app/tasks/tsk_desk/offers/off_sam');
   const direct = page.getByRole('button', { name: 'Message helper', exact: true });
+  // A click before the page hydrates does nothing: again until the conversation opens (its page, or the chat window).
   await expect(async () => {
     await direct.first().click({ timeout: 5_000 });
-    await expect(page).toHaveURL(/\/app\/messages\/thr_/, { timeout: 10_000 });
+    await expect(page.getByRole('dialog', { name: 'Messages' }).getByRole('log').or(page.getByRole('heading', { level: 1, name: /^Messages with / })).first()).toBeVisible({ timeout: 10_000 });
   }).toPass({ timeout: 60_000 });
+  await onConversationPage(page);
 }
 
 /** Marks the visible shell and records, every frame, what's on screen. */

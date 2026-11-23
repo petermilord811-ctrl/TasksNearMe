@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import type { ActionDescriptor, ActionResult, ISODateTime } from '@/contracts';
+import { openInChatWindow } from '@/ui/lib/chat-window-open';
 import { useFormat } from '@/ui/lib/format';
 import { actionTray, trayGap } from '@/ui/components/bookings/surface';
 import { cn } from '@/ui/lib/utils';
@@ -104,7 +105,8 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
     setPendingId(null);
     // Only another page opens (the conversation, the review form): nothing changed, so there's nothing to confirm.
     if (result.ok && result.code === 'opened') {
-      if (result.redirectTo) router.push(result.redirectTo);
+      // A conversation (Message) opens in the chat window on wide screens, the page behind staying (2026-11-23).
+      if (result.redirectTo && !openInChatWindow(result.redirectTo)) router.push(result.redirectTo);
       onResult?.(result);
       return;
     }
@@ -119,7 +121,7 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
     setResult(result);
     if (result.ok) {
       toast.success(text);
-      if (result.redirectTo) router.push(result.redirectTo);
+      if (result.redirectTo && !openInChatWindow(result.redirectTo)) router.push(result.redirectTo);
     } else {
       toast.error(text);
     }

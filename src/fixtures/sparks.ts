@@ -1,4 +1,4 @@
-import { DIRECT_CHATS_PER_DAY, PLAN_DIRECT_CHATS_PER_DAY, SPARK_LEVEL_THRESHOLDS, SPARK_LEVELS, SPARK_PACK_OFFERS, SPARK_PACKS, SPARK_RULES, SPARK_SOURCES, type FindPersonPageData, type NewDirectMessagePageData, type SparksPageData, type SparksSummary } from '@/contracts';
+import { DIRECT_CHATS_PER_DAY, normalizeUsername, PLAN_DIRECT_CHATS_PER_DAY, routes, SPARK_LEVEL_THRESHOLDS, SPARK_LEVELS, SPARK_PACK_OFFERS, SPARK_PACKS, SPARK_RULES, SPARK_SOURCES, type NewChatHandlers, type NewDirectMessagePageData, type PeopleSearchData, type SparksPageData, type SparksSummary } from '@/contracts';
 import { jordan, maya } from './people';
 
 /** Sparks and direct conversations (2026-11-21): the canonical states for the previews and tests. */
@@ -72,6 +72,7 @@ export const sparksUnavailableData: SparksPageData = { ...sparksNewData, unavail
 /** Maya writing to Jordan, a bookable helper, for the first time. */
 export const newDirectMessageData: NewDirectMessagePageData = {
   recipient: { id: jordan.id, displayName: jordan.displayName, initials: jordan.initials, memberSince: jordan.memberSince, phoneVerified: true },
+  username: 'jordan',
   helperHandle: jordan.handle,
   canRequest: true,
   allowance: { left: 2, perDay: 3 },
@@ -83,6 +84,7 @@ export const newDirectMessageData: NewDirectMessagePageData = {
 /** Jordan writing to Maya, a client (no profile, no task request). */
 export const newDirectMessageClientData: NewDirectMessagePageData = {
   recipient: { id: maya.id, displayName: maya.displayName, initials: maya.initials, memberSince: maya.memberSince, phoneVerified: true },
+  username: 'maya',
   canRequest: false,
   allowance: { left: 24, perDay: 25 },
   firstMessagesMax: 3,
@@ -96,12 +98,48 @@ export const newDirectMessageLimitData: NewDirectMessagePageData = { ...newDirec
 /** Jordan takes direct messages only from people they've talked to about a task. */
 export const newDirectMessageContactsOnlyData: NewDirectMessagePageData = { ...newDirectMessageData, refusal: 'task_contacts_only' };
 
-/** New message with no one named yet (2026-11-22): find someone by @username; a newcomer with 2 of 3 left today. */
-export const findPersonData: FindPersonPageData = { allowance: { left: 2, perDay: 3 }, level: 'newcomer' };
-/** A username nobody we can reach has. */
-export const findPersonNotFoundData: FindPersonPageData = { ...findPersonData, query: 'jordan_tx', notFound: true };
-/** The day's new conversations used up: when the next frees up. */
-export const findPersonLimitData: FindPersonPageData = { allowance: { left: 0, perDay: 3, resetsAt: '2026-11-22T14:30:00.000Z' }, level: 'newcomer' };
 
+// ---- New message in place (2026-11-23): suggestions as the @username is typed, and a sample profile -------------------
+
+/** Nothing typed yet: the allowance only (a newcomer with 2 of 3 left today). */
+export const peopleSearchEmptyData: PeopleSearchData = { query: '', people: [], allowance: { left: 2, perDay: 3 }, level: 'newcomer' };
+/** Maya has typed "jo": Jordan (a helper she already talks to), a neighbor, and a sample profile. */
+export const peopleSearchData: PeopleSearchData = {
+  query: 'jo',
+  people: [
+    { id: jordan.id, username: 'jordan', displayName: jordan.displayName, initials: jordan.initials, helper: true, threadId: 'thr_maya_jordan_direct' },
+    { id: 'usr_josie_park', username: 'josie_p', displayName: 'Josie P.', initials: 'JP', helper: false },
+    { id: 'usr_demo_jonah', username: 'jonah', displayName: 'Jonah L.', initials: 'JL', helper: true, sample: true },
+  ],
+  allowance: { left: 2, perDay: 3 },
+  level: 'newcomer',
+};
+/** "jox": nobody's username starts with it. */
+export const peopleSearchNoMatchData: PeopleSearchData = { ...peopleSearchEmptyData, query: 'jox' };
+/** The day's new conversations used up. */
+export const peopleSearchLimitData: PeopleSearchData = { ...peopleSearchEmptyData, allowance: { left: 0, perDay: 3, resetsAt: '2026-11-22T14:30:00.000Z' } };
+/** Writing to a sample profile on the live site: Jonah, a demo helper who never answers. */
+export const newDirectMessageSampleData: NewDirectMessagePageData = {
+  ...newDirectMessageData,
+  recipient: { id: 'usr_demo_jonah', displayName: 'Jonah L.', initials: 'JL', memberSince: '2026-09-30T15:00:00.000Z', phoneVerified: true },
+  username: 'jonah',
+  sample: true,
+  // A seed helper's handle: the previews' links (View profile, Send a task request) must reach a real page.
+  helperHandle: jordan.handle,
+};
+
+/**
+ * New message's handlers for previews and tests: "jo…" suggests the three above, "jox" nobody, an empty box the
+ * allowance only; the first message opens a new conversation.
+ */
+export const fakeNewChatHandlers: Pick<NewChatHandlers, 'onSearch' | 'onStart'> = {
+  onSearch: async (text) => {
+    const query = normalizeUsername(text);
+    if (!query) return peopleSearchEmptyData;
+    if (!query.startsWith('jo') || query.startsWith('jox')) return { ...peopleSearchNoMatchData, query };
+    return { ...peopleSearchData, query, people: peopleSearchData.people.filter((person) => person.username.startsWith(query)) };
+  },
+  onStart: async () => ({ ok: true, code: 'sent', redirectTo: routes.app.thread('thr_new_direct') }),
+};
 /** With Pro, which sets the allowance (100 a day, more than any level's): no "Plus and Pro start more" line. */
-export const findPersonProData: FindPersonPageData = { allowance: { left: 97, perDay: PLAN_DIRECT_CHATS_PER_DAY.pro }, level: 'neighbor', allowanceFrom: 'pro' };
+export const peopleSearchProData: PeopleSearchData = { ...peopleSearchEmptyData, allowance: { left: 97, perDay: PLAN_DIRECT_CHATS_PER_DAY.pro }, level: 'neighbor', allowanceFrom: 'pro' };

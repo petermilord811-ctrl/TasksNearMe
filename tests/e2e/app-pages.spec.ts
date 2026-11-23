@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { onConversationPage } from './support/conversation';
 import { devSignIn } from './support/sign-in';
 import { openAccountGroup } from './support/account';
 
@@ -33,7 +34,7 @@ async function ensureConversation(page: Page): Promise<void> {
     await expect(direct.first()).toBeVisible({ timeout: 5_000 });
   }).toPass({ timeout: 45_000 });
   await direct.first().click();
-  await expect(page).toHaveURL(/\/app\/messages\/thr_/, { timeout: 30_000 });
+  await onConversationPage(page);
 }
 
 test('detail pages leave the phone tab dock out; lists keep it', async ({ page }, testInfo) => {

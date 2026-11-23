@@ -84,14 +84,16 @@ test('a client messages a helper from the profile, the helper reads it masked, a
     await page.goto(`/helpers/${cast.handle}`);
     await page.getByRole('link', { name: 'Message Hal H.' }).first().click();
     await expect(page).toHaveURL(/\/app\/messages\/new\?helper=/, { timeout: 30_000 });
-    await expect(page.getByRole('heading', { level: 1, name: 'Message Hal H.' })).toBeVisible({ timeout: 30_000 });
+    // A dialog over the profile (2026-11-23, owner: "I hate to redirect to new pages continually … use dialog").
+    const dialog = page.getByRole('dialog', { name: 'New message' });
+    await expect(dialog.getByRole('heading', { level: 2, name: 'Message Hal H.' })).toBeVisible({ timeout: 30_000 });
     // A newcomer starts 3 a day (2026-11-22; more with Sparks).
-    await expect(page.getByText('3 new conversations left today (of 3)')).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Send a task request' })).toBeVisible();
+    await expect(dialog.getByText('3 new conversations left today (of 3)')).toBeVisible();
+    await expect(dialog.getByRole('link', { name: 'Send a task request' })).toBeVisible();
 
-    const box = page.getByLabel('Your message');
+    const box = dialog.getByLabel('Your message');
     await box.fill('Hi Hal! Do you build standing desks? Text me at 512-555-0123.');
-    await page.getByRole('button', { name: 'Send message' }).click();
+    await dialog.getByRole('button', { name: 'Send message' }).click();
     await expect(page).toHaveURL(/\/app\/messages\/thr_/, { timeout: 30_000 });
     const threadPath = new URL(page.url()).pathname;
     const log = page.getByRole('log');
@@ -156,17 +158,21 @@ test('a person finds someone by @username from New message, and chooses their ow
     await page.goto('/app/messages');
     await page.getByRole('link', { name: 'New message' }).first().click();
     await expect(page).toHaveURL(/\/app\/messages\/new$/, { timeout: 30_000 });
-    await expect(page.getByRole('heading', { level: 1, name: 'New message' })).toBeVisible();
-    await expect(page.getByText('You can start 3 more conversations today (3 a day at your level, Newcomer).')).toBeVisible();
+    // A dialog over Messages (2026-11-23): finding the person and the first message happen in it.
+    const dialog = page.getByRole('dialog', { name: 'New message' });
+    await expect(dialog.getByText('You can start 3 more conversations today (3 a day at your level, Newcomer).')).toBeVisible({ timeout: 30_000 });
 
-    const field = page.getByRole('textbox', { name: 'Their username' });
+    const field = dialog.getByRole('combobox', { name: 'Their username' });
     await field.fill('@nobody_has_this_name');
-    await page.getByRole('button', { name: 'Find' }).click();
+    await dialog.getByRole('button', { name: 'Find' }).click();
     // Said with one "@", whatever they typed (the box keeps their typing, to fix a typo).
-    await expect(page.locator('#find-person-error')).toHaveText('No one we can reach has the username @nobody_has_this_name. Check the spelling.', { timeout: 30_000 });
+    await expect(dialog.getByRole('alert')).toHaveText('No one we can reach has the username @nobody_has_this_name. Check the spelling.', { timeout: 30_000 });
+    // Suggestions as it's typed, any case: the helper, chosen with a tap.
     await field.fill(`@${helperName.toUpperCase()}`);
-    await page.getByRole('button', { name: 'Find' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Message Hal H.' })).toBeVisible({ timeout: 30_000 });
+    await expect(dialog.getByRole('alert')).toHaveCount(0);
+    await dialog.getByRole('option', { name: /Hal H\./ }).click();
+    await expect(dialog.getByRole('heading', { level: 2, name: 'Message Hal H.' })).toBeVisible({ timeout: 30_000 });
+    await expect(dialog.getByText(`@${helperName}`, { exact: true })).toBeVisible();
 
     // Their own: shown on the account page, changed there (once in 30 days).
     await page.goto('/app/account');
@@ -186,3 +192,38 @@ test('a person finds someone by @username from New message, and chooses their ow
   }
 });
 
+test('on a wide screen New message happens in the chat window: suggestions as the @username is typed, the first message, then the conversation there (2026-11-23)', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'app-desktop', 'the chat window is for wide screens; phones get the dialog');
+  test.setTimeout(180_000);
+  const cast = await makeCast();
+  const { db, pool } = database();
+  try {
+    const run = cast.handle.replace('e2e-dm-', '').replace(/[^a-z0-9]/g, '');
+    const helperName = `hal_${run}`.slice(0, 20);
+    await db.insert(usernames).values({ userId: cast.helperId, username: helperName });
+    await devSignIn(page, cast.clientEmail);
+    await page.goto('/app/bookings');
+    await page.getByRole('button', { name: /^Messages(, \d+ unread)?$/ }).click();
+    const chat = page.getByRole('dialog', { name: 'Messages' });
+    await chat.getByRole('button', { name: 'New message' }).click();
+    await expect(chat.getByText('You can start 3 more conversations today (3 a day at your level, Newcomer).')).toBeVisible({ timeout: 30_000 });
+    // The start of their username is enough: they're suggested, and a click chooses them.
+    await chat.getByRole('combobox', { name: 'Their username' }).fill(helperName.slice(0, -1));
+    await chat.getByRole('option', { name: /Hal H\./ }).click();
+    await expect(chat.getByRole('heading', { name: 'Message Hal H.' })).toBeVisible({ timeout: 30_000 });
+    await chat.getByLabel('Your message').fill('Hi Hal, from the chat window!');
+    await chat.getByRole('button', { name: 'Send message' }).click();
+    // The new conversation opens in the window; the page behind never moved.
+    await expect(chat.getByRole('log').getByText('Hi Hal, from the chat window!')).toBeVisible({ timeout: 30_000 });
+    await expect(page).toHaveURL(/\/app\/bookings$/);
+    // New message again: the helper is suggested with the conversation, and choosing them opens it.
+    await chat.getByRole('button', { name: 'New message' }).click();
+    await chat.getByRole('combobox', { name: 'Their username' }).fill(helperName);
+    await chat.getByRole('option', { name: /Hal H\..*Your conversation/ }).click();
+    await expect(chat.getByRole('log').getByText('Hi Hal, from the chat window!')).toBeVisible({ timeout: 30_000 });
+  } finally {
+    await db.delete(usernames).where(inArray(usernames.userId, [cast.clientId, cast.helperId]));
+    await pool.end();
+    await removeCast(cast);
+  }
+});

@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { routes } from '@/contracts/routes';
-import { chatInboxData, chatInboxEmptyData, chatThreadData, emptyTranscript, fakeChatThreadHandlers, fakeHelpChatHandlers, helpChatAssistantData } from '@/fixtures';
+import { chatInboxData, chatInboxEmptyData, chatThreadData, emptyTranscript, fakeChatThreadHandlers, fakeHelpChatHandlers, fakeNewChatHandlers, helpChatAssistantData, newDirectMessageData, newDirectMessageSampleData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { ChatWindow, type ChatWindowProps } from './chat-window';
 import { ChatLauncher } from './chat-launcher';
@@ -21,11 +21,14 @@ const base: ChatWindowProps = {
   inbox: { status: 'ready', data: chatInboxData },
   thread: { status: 'idle' },
   help: { status: 'idle' },
+  start: { status: 'idle' },
   transcript: emptyTranscript,
   now,
   threadHandlers: fakeChatThreadHandlers,
   helpHandlers: fakeHelpChatHandlers,
+  newChatHandlers: fakeNewChatHandlers,
   onShow: () => undefined,
+  onStarted: () => undefined,
   onMinimize: () => undefined,
   onRestore: () => undefined,
   onClose: () => undefined,
@@ -67,13 +70,63 @@ describe('ChatWindow', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('starts a new message by @username, and closes into the page for it', () => {
+  it('starts a new message right in the window (2026-11-23, owner: "I want to do it in live chat box itself")', () => {
+    const onShow = vi.fn();
     const onFullPage = vi.fn();
-    wrap(<ChatWindow {...base} onFullPage={onFullPage} />);
-    const link = screen.getByRole('link', { name: 'New message' });
-    expect(link.getAttribute('href')).toBe(routes.app.newMessage());
-    fireEvent.click(link);
-    expect(onFullPage).toHaveBeenCalled();
+    wrap(<ChatWindow {...base} onShow={onShow} onFullPage={onFullPage} />);
+    expect(screen.queryByRole('link', { name: 'New message' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'New message' }));
+    expect(onShow).toHaveBeenCalledWith({ kind: 'new' });
+    expect(onFullPage).not.toHaveBeenCalled();
+  });
+
+  it('suggests people as their @username is typed; one the viewer talks to opens that conversation, Find takes what’s typed', async () => {
+    const onShow = vi.fn();
+    wrap(<ChatWindow {...base} view={{ kind: 'new' }} onShow={onShow} />);
+    const box = screen.getByRole('combobox', { name: 'Their username' });
+    expect(await screen.findByText('You can start 2 more conversations today (3 a day at your level, Newcomer).')).toBeTruthy();
+    fireEvent.change(box, { target: { value: '@jo' } });
+    fireEvent.click(await screen.findByRole('option', { name: /Jordan T\./ }));
+    expect(onShow).toHaveBeenLastCalledWith({ kind: 'thread', threadId: 'thr_maya_jordan_direct' });
+    fireEvent.click(screen.getByRole('option', { name: /Josie P\./ }));
+    expect(onShow).toHaveBeenLastCalledWith({ kind: 'new', to: { userId: 'usr_josie_park' } });
+    // A sample profile says so.
+    expect(within(screen.getByRole('option', { name: /Jonah L\./ })).getByText('Sample profile')).toBeTruthy();
+    // The arrow keys move through them and Enter chooses.
+    fireEvent.keyDown(box, { key: 'ArrowDown' });
+    fireEvent.keyDown(box, { key: 'ArrowDown' });
+    expect(box.getAttribute('aria-activedescendant')).toBe(screen.getByRole('option', { name: /Josie P\./ }).id);
+    fireEvent.submit(box.closest('form')!);
+    expect(onShow).toHaveBeenLastCalledWith({ kind: 'new', to: { userId: 'usr_josie_park' } });
+    fireEvent.change(box, { target: { value: 'jox' } });
+    expect(await screen.findByText('No one we can reach has a username starting with @jox.')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Find' }));
+    expect(onShow).toHaveBeenLastCalledWith({ kind: 'new', to: { username: 'jox' } });
+  });
+
+  it('writes the first message in the window, and Send shows the new conversation there', async () => {
+    const onStarted = vi.fn();
+    const onStart = vi.fn(async () => ({ ok: true as const, code: 'sent' as const, redirectTo: routes.app.thread('thr_new') }));
+    const onShow = vi.fn();
+    wrap(<ChatWindow {...base} view={{ kind: 'new', to: { userId: newDirectMessageData.recipient.id } }} start={{ status: 'ready', data: { kind: 'page', data: newDirectMessageData } }} newChatHandlers={{ ...fakeNewChatHandlers, onStart }} onStarted={onStarted} onShow={onShow} />);
+    expect(screen.getByRole('heading', { name: 'Message Jordan T.' })).toBeTruthy();
+    expect(screen.getByText('@jordan')).toBeTruthy();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Your message' }), { target: { value: 'Hi Jordan!' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send message' }));
+    await vi.waitFor(() => expect(onStarted).toHaveBeenCalledWith(routes.app.thread('thr_new')));
+    expect(onStart).toHaveBeenCalledWith(expect.objectContaining({ to: newDirectMessageData.recipient.id, body: 'Hi Jordan!' }));
+    // Someone else: back to the box.
+    fireEvent.click(screen.getByRole('button', { name: 'Someone else' }));
+    expect(onShow).toHaveBeenLastCalledWith({ kind: 'new' });
+  });
+
+  it('says when an @username belongs to nobody, and that a sample profile won’t reply', async () => {
+    const { unmount } = wrap(<ChatWindow {...base} view={{ kind: 'new', to: { username: 'jordan_tx' } }} start={{ status: 'error', notFound: true }} />);
+    expect((await screen.findByRole('alert')).textContent).toBe('No one we can reach has the username @jordan_tx. Check the spelling.');
+    expect((screen.getByRole('combobox', { name: 'Their username' }) as HTMLInputElement).value).toBe('jordan_tx');
+    unmount();
+    wrap(<ChatWindow {...base} view={{ kind: 'new', to: { username: 'jonah' } }} start={{ status: 'ready', data: { kind: 'page', data: newDirectMessageSampleData } }} />);
+    expect(screen.getByRole('note').textContent).toBe('Jonah is a sample profile that shows how TasksNearMe works, so they won\'t reply.');
   });
 
   it('resizes from its corner with the keyboard, keeps the size for this browser, and Home puts it back', () => {

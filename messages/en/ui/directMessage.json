@@ -44,7 +44,14 @@
     "sparksLink": "How Sparks work",
     "moreWithPlans": "Plus and Pro start more a day.",
     "plansLink": "See plans",
-    "allowancePlan": "You can start {left, plural, one {# more conversation} other {# more conversations}} today ({perDay} a day with {plan, select, pro {Pro} other {Plus}})."
+    "allowancePlan": "You can start {left, plural, one {# more conversation} other {# more conversations}} today ({perDay} a day with {plan, select, pro {Pro} other {Plus}}).",
+    "suggestions": "People",
+    "noMatches": "No one we can reach has a username starting with @{username}.",
+    "openConversation": "Your conversation"
   },
-  "moreWithPlans": "Start more a day with Plus or Pro"
+  "moreWithPlans": "Start more a day with Plus or Pro",
+  "helperBadge": "Helper",
+  "sampleBadge": "Sample profile",
+  "sampleNote": "{name} is a sample profile that shows how TasksNearMe works, so they won't reply.",
+  "someoneElse": "Someone else"
 }

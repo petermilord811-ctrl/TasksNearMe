@@ -6,7 +6,7 @@ import { setMode, signOut } from '@/modules/accounts/actions';
 import { checkPushSubscriptionAction, removePushSubscriptionAction } from '@/modules/notifications/actions';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { unreadMessageCount } from '@/modules/messaging/service';
-import { deleteReplyAction, reactFromWindowAction, saveReplyAction, sendFromWindowAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
+import { deleteReplyAction, reactFromWindowAction, saveReplyAction, sendFromWindowAction, startDirectChatAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
 import { handOffToSupportAction, replyToHelpCaseAction, requestLiveChatAction, typingInHelpCaseAction } from '@/modules/assist/support-chat-actions';
 import { blockUserAction, reportUserAction } from '@/modules/support/actions';
 import { helpUnreadCount } from '@/modules/support/service';
@@ -77,7 +77,7 @@ async function ViewerShell({ children }: { children: React.ReactNode }) {
         handlers={{ onModeChange: setMode, onSignOut: signOut, onSwitchLanguage: switchLanguageAction, onCheckPushDevice: checkPushSubscriptionAction, onForgetPushDevice: removePushSubscriptionAction, ...(aiWritingSetUp() ? { onAskSearch: searchWithAi } : {}) }}
         // Messages: the chat button and window (2026-11-22). Server Actions only (unbound, called with the conversation's
         // or the case's id), never closures.
-        chat={<ChatWindowController viewerId={viewer.user.id} unread={unreadMessages + unreadHelp} actions={{ send: sendFromWindowAction, react: reactFromWindowAction, typing: typingAction, upload: uploadMessagePhoto, saveReply: saveReplyAction, deleteReply: deleteReplyAction, report: reportUserAction, block: blockUserAction, handOff: handOffToSupportAction, reply: replyToHelpCaseAction, requestLive: requestLiveChatAction, typingInCase: typingInHelpCaseAction }} />}
+        chat={<ChatWindowController viewerId={viewer.user.id} unread={unreadMessages + unreadHelp} actions={{ send: sendFromWindowAction, react: reactFromWindowAction, typing: typingAction, upload: uploadMessagePhoto, saveReply: saveReplyAction, deleteReply: deleteReplyAction, report: reportUserAction, block: blockUserAction, handOff: handOffToSupportAction, reply: replyToHelpCaseAction, requestLive: requestLiveChatAction, typingInCase: typingInHelpCaseAction, startChat: startDirectChatAction }} />}
       >
         {children}
       </AppShell>

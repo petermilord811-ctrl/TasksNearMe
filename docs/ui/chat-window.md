@@ -89,9 +89,14 @@ first name (accents folded, letters and digits, `maya`, `maya_2`…), a new acco
 page loads. 3–20 lowercase letters, numbers or `_`, starting with a letter; unique without regard to case; words that
 pass for the company or its staff are reserved. People change it on the account page once every 30 days. It shows in
 the avatar menu (with their Sparks), in a conversation's header (theirs, with their Sparks), on a community author's
-card, under a helper's name on their profile, and on the staff console. **New message** (the window, the Messages
-page) finds anyone by it: their profile and the first message come next, under the same rules as other direct
-conversations, with the daily allowance shown: **3 new conversations a day for a Newcomer, 10 for a Neighbor**, 25, 40
+card, under a helper's name on their profile, and on the staff console. **New message** finds anyone by it where the
+person is (2026-11-23, owner: "I want to do it in live chat box itself. I hate to redirect to new pages continually"):
+a pane in the chat window on wide screens, a dialog over the page on phones, and the page itself, each with
+suggestions as the @username is typed (the start of usernames, never names; not the viewer, blocked people or accounts
+not in use; the exact one first) and then the first message in the same place; Send opens the new conversation (in the
+window, or its page). A profile's or a post's Message, and a booking's or an offer's Message button, open the window
+too. Sample profiles (the demo marketplace) are labeled on the live site, and the form says they won't reply. The
+same rules as other direct conversations apply, with the daily allowance shown: **3 new conversations a day for a Newcomer, 10 for a Neighbor**, 25, 40
 and 60 for the higher levels (at least 40 with Plus or Pro). A deleted account's username is free again.
 
 **Privacy and integrity.** Nothing is stored for people who only ask the assistant: the chat lives in the tab
@@ -110,7 +115,8 @@ minutes and 120 a day per person; a hand-off shares the 5 an hour of other reque
 | Asking | `POST /api/assistant/ask` (JSON, same origin; an answer can take seconds) |
 | Actions | `sendFromWindowAction`, `reactFromWindowAction` (no page refresh), `handOffToSupportAction`, `replyToHelpCaseAction`, `requestLiveChatAction`, `typingInHelpCaseAction` |
 | Live chat | `src/modules/support/live-chat.ts` (the queue, joining, ending, staff replies, typing, the console's data), `live-chat-actions.ts`; `support_cases.live_*` (migration 0077); `/admin/live` (`AdminLiveScreen`); the staff channel `staff:support` in `src/platform/realtime/hub.ts` |
-| Usernames | `src/modules/accounts/usernames.ts`, `usernames` table (0077), `saveUsernameAction`, `FindPersonScreen` on `/app/messages/new` (`?u=`) |
+| Usernames | `src/modules/accounts/usernames.ts`, `usernames` table (0077), `saveUsernameAction` |
+| New message in place (2026-11-23) | `searchPeople` and `getNewDirectMessagePage` (any `DirectChatTarget`, with the recipient's `username` and `sample`) in `src/modules/messaging/direct.ts`; `GET /api/messages/people` (90 a minute per person) and `GET /api/messages/new`; `ChatView` `{ kind: 'new', to? }` and `chatViewOfHref` for `/app/messages/new` links (`src/shared/chat-links.ts`); `openInChatWindow` (`src/ui/lib/chat-window-open.ts`) for Message buttons; UI `NewChat`, `PersonPicker`, `DirectMessageForm` (`src/ui/components/messaging`); `NewMessageFlow` (`_chat/new-message-flow.tsx`) on `/app/messages/new` and its dialog `@modal/(.)app/messages/new` |
 | The assistant | `src/integrations/ai/support-assistant.ts` (prompt, answer schema, tidy, the stand-in), `src/modules/assist/support-chat.ts`, `assistant-turns.ts` |
 | Support | `openCaseFromAssistant`, `helpCaseView`, `helpUnreadCount`, `helpRowFacts` in `src/modules/support/service.ts`; the assistant marked in staff's timeline (`AdminCaseActor` `assistant`) and the member's (`CaseEventView.from` `assistant`) |
 | The window | `src/app/[locale]/(app)/app/_chat/chat-window-controller.tsx` (state, loading, live notices, the link catch), `use-help-chat.ts` (the tab's assistant chat); UI in `src/ui/components/messaging/` (`ChatLauncher`, `ChatWindow`, `HelpChat`, `HelpRow`), loaded on first open |

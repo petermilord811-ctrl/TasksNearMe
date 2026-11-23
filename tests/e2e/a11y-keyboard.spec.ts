@@ -3,6 +3,7 @@ import { auditPage, focusIsVisible, noTransitions, press, smallTargets, tabTo, t
 import { latestCode } from './support/outbox';
 import { submittedBooking } from './support/scenarios';
 import { devSignIn } from './support/sign-in';
+import { onConversationPage } from './support/conversation';
 
 /**
  * WCAG 2.2 AA with the keyboard only (completion plan 5.8): the core journeys done without a mouse. Signing up,
@@ -195,7 +196,8 @@ test('keyboard only: post a task, a helper offers, the client books and pays, th
 
   // And writes to the helper.
   await press(page, page.getByRole('button', { name: 'Send message' }).or(page.getByRole('link', { name: 'Send message' })).first());
-  await expect(page).toHaveURL(/\/app\/messages\/thr_/, { timeout: 30_000 });
+  // Wide screens open it in the chat window (2026-11-23); its Open full page goes to the conversation's page.
+  await onConversationPage(page);
   await auditPage(page, testInfo.project.name);
   await typeInto(page, page.getByRole('textbox', { name: 'Message' }), 'The box is by the door. See you then.');
   await press(page, page.getByRole('button', { name: 'Send' }));

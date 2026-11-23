@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { devSignIn } from './support/sign-in';
+import { onConversationPage } from './support/conversation';
 
 /** Support for members, and reporting or blocking from a conversation (UI-031), on the seeded data. */
 
@@ -33,7 +34,8 @@ test('a conversation: report the other person, block and unblock them', async ({
   await devSignIn(page, 'ruth@example.test');
   await page.goto('/app/bookings/bkg_bookcase');
   await page.getByRole('button', { name: 'Send message' }).first().click();
-  await expect(page).toHaveURL(/\/app\/messages\/thr_/, { timeout: 30_000 });
+  // Wide screens open it in the chat window (2026-11-23); its Open full page goes to the conversation's page.
+  await onConversationPage(page);
 
   await page.getByRole('button', { name: 'Safety options for Jordan T.' }).click();
   await page.getByRole('menuitem', { name: 'Report' }).click();
