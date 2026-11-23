@@ -1,3 +1,4 @@
+import type { PaymentMode } from '@/contracts';
 import { OWNER_TASK_ATTENTIONS, type ActionDescriptor, type OfferActionId, type OfferStatus, type OwnerTaskRow, type TaskActionId, type TaskStatus } from '@/contracts';
 
 /**
@@ -105,4 +106,9 @@ export function byAttention(a: Pick<OwnerTaskRow, 'attention' | 'schedule'>, b: 
   const rank = (row: typeof a) => (row.attention ? OWNER_TASK_ATTENTIONS.indexOf(row.attention.kind) : OWNER_TASK_ATTENTIONS.length);
   const when = (row: typeof a) => row.attention?.dueAt ?? row.schedule.windowStart;
   return rank(a) - rank(b) || when(a).localeCompare(when(b));
+}
+
+/** A stored payment mode as the contract's (anything unknown reads as held, the only mode before 2026-11-23). */
+export function paymentModeOf(value: string | null | undefined): PaymentMode {
+  return value === 'direct' ? 'direct' : 'held';
 }

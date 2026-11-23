@@ -200,8 +200,8 @@ describe('TaskManageScreen offers and task details', () => {
     expect(screen.queryByRole('table', { name: 'Compare offers' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: "Compare Sam K.'s offer" }));
     const table = screen.getByRole('table', { name: 'Compare offers' });
-    expect(within(table).getByText('$66.00')).toBeVisible();
-    expect(within(table).getByText('$60.50')).toBeVisible();
+    expect(within(table).getByText('$63.00')).toBeVisible();
+    expect(within(table).getByText('$57.75')).toBeVisible();
     expect(screen.getByText('2 offers selected')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Clear selection' }));
     expect(screen.queryByRole('table', { name: 'Compare offers' })).not.toBeInTheDocument();

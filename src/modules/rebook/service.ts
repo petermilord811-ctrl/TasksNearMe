@@ -30,6 +30,7 @@ import { scheduleOf, startSeriesFromProposal } from '@/modules/bookings/series';
 import { upcomingIndexes, visitStart } from '@/modules/bookings/series-domain';
 import { loadHelperState } from '@/modules/offers/helper';
 import { quoteBreakdown } from '@/modules/payments/fees';
+import { waivesHoldFee } from '@/modules/billing/benefits';
 import { payments } from '@/modules/payments/schema';
 import { getHelperSummaries } from '@/modules/profiles/queries';
 import { taskLocations, tasks } from '@/modules/tasks/schema';
@@ -201,7 +202,8 @@ async function feesOfMarket(db: Db, marketId: string) {
 export async function quoteRebook(db: Db, helperId: string, bookingId: string, pricing: PricingInput): Promise<PriceBreakdown | null> {
   const past = await pastBooking(db, helperId, bookingId);
   const fees = past ? await feesOfMarket(db, past.booking.marketId) : null;
-  return fees ? quoteBreakdown(fees, pricing) : null;
+  // Paid upfront and held by TasksNearMe: the client's hold fee, none for a Plus member (2026-11-23).
+  return fees && past ? quoteBreakdown(fees, pricing, { waiveHoldFee: await waivesHoldFee(db, past.booking.posterUserId, new Date()) }) : null;
 }
 
 export async function proposeRebook(db: Db, helperId: string, bookingId: string, input: RebookProposalInput, now: Date): Promise<ActionResult> {
@@ -241,7 +243,7 @@ export async function proposeRebook(db: Db, helperId: string, bookingId: string,
       ...pricingColumns(pricing),
       message: message?.trim() || null,
       cadence: repeat === 'once' ? null : repeat,
-      breakdown: quoteBreakdown(fees, pricing),
+      breakdown: quoteBreakdown(fees, pricing, { waiveHoldFee: await waivesHoldFee(db, posterId, now) }),
       expiresAt: new Date(Math.min(now.getTime() + 48 * HOUR, start.getTime() - 2 * HOUR)),
       createdAt: now,
       updatedAt: now,
@@ -405,14 +407,15 @@ export async function acceptProposal(deps: BookingDeps, posterId: string, propos
   const policy = await getPublishedPolicy(past.task.marketId, db);
   if (!policy) return { ok: false, code: 'unknown' };
   // Risk asked this client to verify their ID first; the amount counts for new accounts.
-  if (await posterIdentityRequirement(db, posterId, now, quoteBreakdown(policy.fees, pricingOf(row)).posterTotalCents)) return { ok: false, code: 'identity_required' };
+  const waiveHoldFee = await waivesHoldFee(db, posterId, now);
+  if (await posterIdentityRequirement(db, posterId, now, quoteBreakdown(policy.fees, pricingOf(row), { waiveHoldFee }).posterTotalCents)) return { ok: false, code: 'identity_required' };
   const chosen = await methodForChoice(deps, posterId, parsed.data.payment);
   if (!('providerRef' in chosen)) return chosen;
   // Regular visits charge this card again before each visit: a new card is kept (the client agreed when accepting).
   const method = row.cadence && !chosen.paymentMethodId ? { ...chosen, save: true } : chosen;
 
   const pricing = pricingOf(row);
-  const breakdown = quoteBreakdown(policy.fees, pricing);
+  const breakdown = quoteBreakdown(policy.fees, pricing, { waiveHoldFee });
   const amountCents = breakdown.posterTotalCents;
   const length = Math.min(12 * HOUR, Math.max(HOUR, past.task.windowEnd.getTime() - past.task.windowStart.getTime()));
   const hold = await db.transaction(async (tx) => {

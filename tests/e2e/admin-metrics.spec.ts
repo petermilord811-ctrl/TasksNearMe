@@ -26,7 +26,7 @@ test('finance reads the market metrics, reward spend included, and changes the p
 
   const targets = page.getByRole('region', { name: 'Launch targets' });
   await expect(targets.getByRole('heading', { name: 'Tasks with an offer within 2 h' })).toBeVisible();
-  await expect(targets.getByRole('heading', { name: 'Contribution per booking, before rewards' })).toBeVisible();
+  await expect(targets.getByRole('heading', { name: 'Contribution per held booking, before rewards' })).toBeVisible();
   await expect(targets.getByText('Money figures are shown to finance and admins.')).toHaveCount(0);
   await expect(targets.getByRole('heading', { name: 'Address exposure incidents' })).toBeVisible();
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { OfferPaymentMode } from './offer-payment-mode';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { FormProvider, useForm, useWatch, type FieldPath } from 'react-hook-form';
@@ -38,8 +39,8 @@ export function OfferForm({ data, handlers, revising = false, onCancel, onSent, 
   const form = useForm<OfferInput>({ resolver: zodResolver(schema), defaultValues: own ? {
     pricing: own.pricing,
     startTime: data.offerRules.startTimes.find((time) => marketLocalToUtc(data.offerRules.date, time, data.offerRules.timeZone) === own.proposedStart) ?? '',
-    message: own.message, brings: own.brings,
-  } : data.offerDefaults });
+    message: own.message, brings: own.brings, paymentMode: own.paymentMode,
+  } : { paymentMode: 'direct', ...data.offerDefaults } });
   const { setError, setFocus } = form;
   const pricing = useWatch({ control: form.control, name: 'pricing' });
   const validPricing = schema.safeParse({ pricing, startTime: data.offerRules.startTimes[0] ?? '', message: '', brings: [] }).success;
@@ -145,6 +146,7 @@ export function OfferForm({ data, handlers, revising = false, onCancel, onSent, 
     <p className="text-sm text-muted-foreground">{t('intro')}</p>
     <FormProvider {...form}><form noValidate aria-labelledby={`${id}-title`} aria-busy={pending} onSubmit={(event) => { void form.handleSubmit(submit)(event); }} className="space-y-6">
       <fieldset ref={fields} disabled={pending} className="min-w-0"><legend className="sr-only">{t('details')}</legend><OfferFields rules={data.offerRules} onDraftMessage={data.aiDraftingEnabled ? handlers.onDraftOfferMessage : undefined} /></fieldset>
+      <OfferPaymentMode disabled={pending} />
       <OfferEarnings pricing={pricing} valid={validPricing} onQuote={handlers.onQuote} />
       {!revising && data.botCheck && <BotCheckField check={check} result={result} />}
       <FormFeedback result={feedback} />

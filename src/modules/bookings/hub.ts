@@ -116,6 +116,7 @@ function factsOf(booking: BookingRow, remote: boolean): BookingFacts {
     posterResponseDueAt: booking.posterResponseDueAt,
     seriesId: booking.seriesId,
     fundingFailure: booking.fundingFailure,
+    paymentMode: booking.paymentMode === 'direct' ? 'direct' : 'held',
   };
 }
 
@@ -260,6 +261,7 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     ...(dispute ? { dispute } : {}),
     ...(openChange ? { openChange } : {}),
     status: booking.status as BookingStatus,
+    paymentMode: booking.paymentMode === 'direct' ? 'direct' : 'held',
     ...(booking.cancelReason ? { cancelReason: booking.cancelReason as CancelReason } : {}),
     ...(booking.completedVia ? { completedVia: booking.completedVia as CompletedVia } : {}),
     viewerRole: role,

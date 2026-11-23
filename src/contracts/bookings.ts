@@ -5,7 +5,7 @@ import type { CategorySlug, Cents, ISODateTime, Photo } from './common';
 import { mustAcceptField } from './forms';
 import type { ExactAddress, TaskLocation } from './location';
 import type { MessageSegment } from './messaging';
-import type { PriceBreakdown, PricingInput } from './money';
+import type { PaymentMode, PriceBreakdown, PricingInput } from './money';
 import { paymentChoiceSchema, type CardRemovalHandlers, type PaymentAttemptResult, type PaymentMethodLabel, type PaymentPanelData } from './payments';
 import type { ClientSummary, HelperSummary, PersonSummary } from './people';
 import type { PhotoUploadResult } from './posting';
@@ -71,7 +71,15 @@ export interface BookingConfirmPageData {
     message: MessageSegment[];
     brings: string[];
   };
-  /** Poster variant. Hourly offers are charged for the cap now; unused hours are refunded after approval. */
+  /**
+   * How the helper is paid (2026-11-23). `direct`: the client pays them directly after the task, so nothing is charged
+   * here and the page has no payment form; `held`: paid now and held by TasksNearMe until the client says it's done.
+   */
+  paymentMode: PaymentMode;
+  /**
+   * Poster variant. Held: hourly offers are charged for the cap now; unused hours are refunded after approval. Direct:
+   * the price agreed, no fee.
+   */
   breakdown: PriceBreakdown;
   cancellation: CancellationPolicySummary;
   payment: PaymentPanelData;
@@ -91,8 +99,9 @@ export interface BookingConfirmPageData {
    */
   paysLater?: { chargeAt: ISODateTime; payBy: ISODateTime };
   /**
-   * The client's TasksNearMe credit: it comes back to their card when the job is done, up to what the
-   * platform earns on it (so it never costs the helper anything). Expiring soonest first.
+   * The client's TasksNearMe credit: what comes back to their card when this job is done, which is at most what the
+   * platform earns on it (the hold fee since 2026-11-23, so it never costs the helper anything); the rest stays for a
+   * later booking. Absent when paid directly or the fee is waived. Expiring soonest first.
    */
   credit?: { amountCents: Cents; expiresAt: ISODateTime };
 }
@@ -100,7 +109,8 @@ export interface BookingConfirmPageData {
 export const confirmBookingInputSchema = z.object({
   /** `BookingConfirmPageData.offer.revision`. */
   offerRevision: z.number().int().min(1),
-  payment: paymentChoiceSchema,
+  /** The card, for an offer paid upfront (held); an offer paid directly needs none. */
+  payment: paymentChoiceSchema.optional(),
   acceptTerms: mustAcceptField,
 });
 export type ConfirmBookingInput = z.input<typeof confirmBookingInputSchema>;
@@ -188,6 +198,12 @@ export interface BookingView {
   id: string;
   task: { id: string; title: string; categorySlug: CategorySlug; schedule: TaskSchedule };
   status: BookingStatus;
+  /**
+   * How the helper is paid (2026-11-23): `direct`, by the client after the task, outside TasksNearMe (no payments,
+   * refunds or tips here); `held`, upfront and held by TasksNearMe until the work is approved. Absent in older fixtures
+   * (held).
+   */
+  paymentMode?: PaymentMode;
   cancelReason?: CancelReason;
   completedVia?: CompletedVia;
   viewerRole: BookingViewerRole;
@@ -584,6 +600,11 @@ export interface CancellationPreview {
   helperStrike: boolean;
   /** A booking paid later (`scheduled`): nothing was charged yet, so canceling is free and there's nothing to refund. */
   nothingCharged?: boolean;
+  /**
+   * Paid directly between the two people (2026-11-23): nothing went through TasksNearMe, so there's nothing to refund
+   * or pay (the amounts are 0); a helper's late cancellation still counts (`helperStrike`).
+   */
+  paidDirectly?: true;
 }
 
 export const cancelBookingInputSchema = z.object({

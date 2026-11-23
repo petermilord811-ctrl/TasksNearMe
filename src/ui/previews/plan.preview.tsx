@@ -21,9 +21,9 @@ function preview(variant: string, title: string, data: PlanPageData, helper = fa
 }
 
 export const planPreviews: PreviewEntry[] = [
-  preview('free-client', 'Plans: a client without a plan, with an estimate', planFreeClientData),
+  preview('free-client', 'Plans: a client without a plan', planFreeClientData),
   preview('plus-member', 'Plans: on Plus, just subscribed', planPlusMemberData),
-  preview('pro-canceling', 'Plans: Pro, cancelled, at the month’s cap', planProCancelingData, true),
+  preview('pro-canceling', 'Plans: Pro, cancelled (ends with its period)', planProCancelingData, true),
   preview('past-due', 'Plans: Pro, renewal payment failed', planPastDueData, true),
   preview('ai-used-up', 'Plans: AI searches used up, checkout left', planAiUsedUpData),
   preview('unavailable', 'Plans: not open here (no Stripe, no AI)', planUnavailableData),

@@ -58,7 +58,12 @@ export interface BookingFacts {
   fundingFailure?: string | null;
   /** The other person deleted their account (privacy rehearsal J-PR8): nothing more goes their way. */
   otherDeleted?: boolean;
+  /** Paid directly between the two people (2026-11-23): no money moves here, so no money actions. Default held. */
+  paymentMode?: 'direct' | 'held';
 }
+
+/** Actions that move money through TasksNearMe: none for a booking paid directly (owner, 2026-11-23). */
+const MONEY_ACTIONS: readonly BookingActionId[] = ['pay', 'pay_change_difference', 'offer_settlement', 'accept_settlement', 'decline_settlement'];
 
 /** What a booking can't offer once the other person's account is deleted: their profile, a review, a message, a new booking. */
 const TOWARD_THE_OTHER: readonly BookingActionId[] = ['book_again', 'offer_rebook', 'save_helper', 'review', 'message', 'propose_change'];
@@ -241,7 +246,9 @@ const KIND_ORDER: Record<ActionDescriptor['kind'], number> = { primary: 0, secon
 
 /** The booking page's actions: single taps (`bookingActions`) and sheets (`sheetActions`), primary first, destructive last. */
 export function allBookingActions(booking: BookingFacts, role: BookingViewerRole, policy: BookingPolicy, now: Date): ActionDescriptor<BookingActionId>[] {
-  const all = [...bookingActions(booking, role, now), ...sheetActions(booking, role, policy, now)].filter((action) => !booking.otherDeleted || !TOWARD_THE_OTHER.includes(action.id));
+  const all = [...bookingActions(booking, role, now), ...sheetActions(booking, role, policy, now)]
+    .filter((action) => !booking.otherDeleted || !TOWARD_THE_OTHER.includes(action.id))
+    .filter((action) => booking.paymentMode !== 'direct' || !MONEY_ACTIONS.includes(action.id));
   return all.map((action, index) => ({ action, index })).sort((a, b) => KIND_ORDER[a.action.kind] - KIND_ORDER[b.action.kind] || a.index - b.index).map(({ action }) => action);
 }
 

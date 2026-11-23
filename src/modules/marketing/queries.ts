@@ -97,7 +97,7 @@ export async function getHomePageData(rows: RowScope, slug: string = DEFAULT_MAR
     ...page,
     data: {
       ...page.data,
-      feeExample: buildPricingPageData(policy).fixedExample,
+      feeExample: buildPricingPageData(policy).examples.held,
       feeExamples: landingFeeExamples(policy.fees),
       ...(reward ? { welcomeReward: { amountCents: reward.amountCents, checks: reward.checks } } : {}),
       map: await landingMap(market, rows),
@@ -255,13 +255,14 @@ export async function getCostGuideData(
     quoteBreakdown(
       policy.fees,
       unit === 'hour' ? { type: 'hourly', rateCents: priceCents, estimatedHours: hours, hoursCap: hours } : { type: 'fixed', priceCents },
+      { held: true },
     );
   return {
     market: view,
     category,
     examples: { low: at(lowCents), high: at(highCents) },
     ...(unit === 'hour' ? { exampleHours: hours } : {}),
-    fees: { posterFeePercent: policy.fees.posterBps / 100, posterMinimumCents: policy.fees.posterMinCents, helperFeePercent: policy.fees.helperBps / 100 },
+    holdFee: { percent: policy.fees.posterBps / 100, minimumCents: policy.fees.posterMinCents },
   };
 }
 

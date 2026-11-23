@@ -118,7 +118,7 @@ describe('BookingHubScreen change requests', () => {
 
   it('shows the supplied payment difference to the client after acceptance', () => {
     mount({ ...deskBookingPosterWithOpenChange, openChange: { ...deskBookingPosterWithOpenChange.openChange!, status: 'accepted_pending_funding' } });
-    expect(screen.getByRole('region', { name: messages.bookingHub.change.title })).toHaveTextContent('Accepted: pay $22.00 to apply it.');
+    expect(screen.getByRole('region', { name: messages.bookingHub.change.title })).toHaveTextContent('Accepted: pay $21.00 to apply it.');
   });
 
   it('shows the payment wait to the helper after acceptance', () => {
@@ -149,7 +149,7 @@ describe('BookingHubScreen dispute integration', () => {
     expect(screen.getByText('Completed through a settlement')).toBeVisible();
     const dispute = screen.getByRole('region', { name: messages.bookingHub.dispute.resolvedTitle });
     expect(dispute).toHaveTextContent(data.dispute!.resolution!.summary);
-    expect(dispute).toHaveTextContent(data.viewerRole === 'poster' ? '$16.50 was refunded to your card' : 'You receive $40.50 for this booking');
+    expect(dispute).toHaveTextContent(data.viewerRole === 'poster' ? '$15.75 was refunded to your card' : 'You receive $45.00 for this booking');
   });
 });
 
@@ -197,7 +197,7 @@ describe('BookingHubScreen privacy and supplied data', () => {
   it('shows client payments, payment method and charge date', () => {
     mount();
     const payments = screen.getByRole('region', { name: 'Payments' });
-    expect(payments).toHaveTextContent('$66.00');
+    expect(payments).toHaveTextContent('$63.00');
     expect(payments).toHaveTextContent(/Visa.*1881/);
     expect(payments).toHaveTextContent(formatDateTime(deskBookingPosterConfirmed.payments![0].at, 'en', 'America/Chicago'));
     expect(within(payments).getByText(messages.status.payment.succeeded)).toBeVisible();
@@ -210,14 +210,14 @@ describe('BookingHubScreen privacy and supplied data', () => {
     expect(container.textContent).not.toContain('1881');
     expect(container.textContent).not.toContain('Visa');
     expect(screen.queryByText('Total charged')).not.toBeInTheDocument();
-    expect(screen.getByText("You'll earn").closest('div')).toHaveTextContent('$54.00');
+    expect(screen.getByText("You'll earn").closest('div')).toHaveTextContent('$60.00');
   });
 
   it('uses the client money variant and shows supplied refunds without recalculation', () => {
     mount(deskBookingPosterCanceledLate);
-    expect(screen.getByText('Total charged').closest('div')).toHaveTextContent('$66.00');
+    expect(screen.getByText('Total charged').closest('div')).toHaveTextContent('$63.00');
     expect(screen.queryByText("You'll earn")).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Payments' })).toHaveTextContent('$54.00');
+    expect(screen.getByRole('region', { name: 'Payments' })).toHaveTextContent('$51.00');
   });
 
   it('links the client to their task when it is open for offers again after the helper canceled', () => {
@@ -359,7 +359,7 @@ describe('BookingHubScreen privacy and supplied data', () => {
     expect(container.textContent).toContain('$35.00');
     expect(container.textContent).toContain('3.5 h');
     expect(container.textContent).toContain('4 h');
-    expect(screen.getByText('Total charged').closest('div')).toHaveTextContent('$154.00');
+    expect(screen.getByText('Total charged').closest('div')).toHaveTextContent('$147.00');
     expect(screen.getByText(/You paid for up to 4 hours.*Unused hours are refunded after you approve/)).toBeVisible();
   });
 
@@ -368,7 +368,7 @@ describe('BookingHubScreen privacy and supplied data', () => {
     const allowance = deskBookingPosterCompletionWithExpenses.terms.expenseAllowance!;
     expect(container.textContent).toContain(formatMoney(allowance.amountCents));
     expect(container.textContent).toContain(allowance.description);
-    // One money card: what was charged up front ($60.00 + $6.00 fee + the $20.00 allowance), the refund, the final total.
+    // One money card: what was charged up front ($60.00 + $3.00 hold fee + the $20.00 allowance), the refund, the final total.
     const final = deskBookingPosterCompletionWithExpenses.completion!.finalBreakdown;
     const money = screen.getByRole('region', { name: messages.completion.finalCost });
     expect(within(money).getByText(messages.money.charged).closest('div')).toHaveTextContent(formatMoney(final.posterChargedCents!));
@@ -382,7 +382,7 @@ describe('BookingHubScreen privacy and supplied data', () => {
     const first = mount(deskBookingPosterPendingFunding);
     expect(first.container.textContent).toMatch(/Finish paying by.*9:31 am/);
     expect(first.container.textContent).toContain('in 29 minutes');
-    expect(screen.getByText('Total due').closest('div')).toHaveTextContent('$66.00');
+    expect(screen.getByText('Total due').closest('div')).toHaveTextContent('$63.00');
     expect(screen.queryByText('Total charged')).not.toBeInTheDocument();
     first.unmount();
     const next = mount(deskBookingPosterCompletionSubmitted, '2026-11-21T17:48:00.000Z');

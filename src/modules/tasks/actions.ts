@@ -24,6 +24,7 @@ import { marketTag } from '@/modules/marketing/queries';
 import { getFlags, getPublishedPolicy } from '@/modules/markets/queries';
 import { categories, markets } from '@/modules/markets/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
+import { waivesHoldFee } from '@/modules/billing/benefits';
 import { AI_STAND_IN_COOKIE, AiRefusedError, AiUnavailableError, wantsAiStandIn } from '@/integrations/ai';
 import { createFakeTaskDrafter } from '@/integrations/ai/task-drafter';
 import { GEO_STAND_IN_COOKIE, wantsGeoStandIn } from '@/integrations/geocoding';
@@ -109,14 +110,18 @@ export async function uploadTaskPhoto(formData: FormData): Promise<PhotoUploadRe
   return storePhoto({ db, storage: fileStorage }, { userId, kind: 'task_photo', file });
 }
 
-/** The poster's price breakdown for the review step, from the fee engine and the market policy. */
+/**
+ * The poster's price breakdown for the review step, from the fee engine and the market policy: what they'd pay if a
+ * helper asks to be paid upfront and TasksNearMe holds it (the hold fee, none with Plus); paid directly, it's just the
+ * price (2026-11-23).
+ */
 export async function quoteTaskPrice(input: { budget: PricingInput; expenseAllowanceCents: Cents }): Promise<PriceBreakdown> {
   const userId = await signedInUserId();
   const marketId = userId ? await homeMarketIdOf(userId) : null;
   const policy = marketId ? await getPublishedPolicy(marketId) : null;
   if (!policy || !isPricingInput(input.budget)) throw new Error('Cannot quote this budget.');
   const allowance = Number.isInteger(input.expenseAllowanceCents) && input.expenseAllowanceCents > 0 ? input.expenseAllowanceCents : 0;
-  return quoteBreakdown(policy.fees, input.budget, { expenseAllowanceCents: allowance });
+  return quoteBreakdown(policy.fees, input.budget, { expenseAllowanceCents: allowance, waiveHoldFee: userId ? await waivesHoldFee(db, userId, new Date()) : false });
 }
 
 /** Posting attempts per person (B-061 rate-limit review). */

@@ -144,8 +144,8 @@ test('finance sees the money: totals, what needs a look, and charges searched by
   await search.getByRole('searchbox').fill('ben@example.test');
   await search.getByRole('button', { name: 'Search' }).click();
   await expect(page).toHaveURL(/tab=charges&q=ben%40example\.test$/, { timeout: 30_000 });
-  // Ben paid $88.00 for the TV (seeded).
-  await expect(page.getByRole('listitem').filter({ hasText: 'Anchor a tall bookshelf to the wall' }).first().getByText('$88.00')).toBeVisible();
+  // Ben paid $84.00 for the TV (seeded).
+  await expect(page.getByRole('listitem').filter({ hasText: 'Anchor a tall bookshelf to the wall' }).first().getByText('$84.00')).toBeVisible();
 });
 
 test('an admin adds a role and removes it; the audit log keeps both', async ({ page }, testInfo) => {
@@ -181,7 +181,7 @@ test('an admin sees the policy in use and turns a flag on and off', async ({ pag
   await expect(page.getByRole('heading', { level: 1, name: 'Config' })).toBeVisible();
   await expect(page.getByText('Version 1, in use')).toBeVisible();
   const form = page.getByRole('form', { name: 'Publish a new version' });
-  await expect(form.getByLabel('Client fee (%)')).toHaveValue('10');
+  await expect(form.getByLabel('Client fee (%)')).toHaveValue('5');
 
   // `reward.acceptance` is off at launch (a campaign switch): on and back off.
   await page.getByRole('button', { name: 'Turn on reward.acceptance' }).click();

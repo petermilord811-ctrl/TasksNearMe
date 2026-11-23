@@ -27,7 +27,7 @@ const panel: PaymentPanelData = { methods: [], newCard: { kind: 'stripe', publis
 
 function Picker({ onValue }: { onValue: (choice: PaymentChoice) => void }) {
   const [value, setValue] = useState<PaymentChoice>(getDefaultPaymentChoice(panel));
-  const field = { name: 'payment' as const, value, onChange: (next: ConfirmBookingInput['payment']) => { setValue(next); onValue(next); }, onBlur: () => {}, ref: () => {} };
+  const field = { name: 'payment' as const, value, onChange: (next: NonNullable<ConfirmBookingInput['payment']>) => { setValue(next); onValue(next); }, onBlur: () => {}, ref: () => {} };
   return <NextIntlClientProvider locale="en" messages={messages}><PaymentMethodPicker panel={panel} field={field as never} /></NextIntlClientProvider>;
 }
 

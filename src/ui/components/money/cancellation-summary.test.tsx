@@ -12,8 +12,8 @@ afterEach(cleanup);
 
 describe('CancellationSummary', () => {
   it.each([
-    ['fixed-price', deskConfirmData, 'Fri, Nov 20 · 10:00 am', '$54.00', '$12.00'],
-    ['hourly', movingConfirmHourlyData, 'Sat, Nov 21 · 9:00 am', '$126.00', '$28.00'],
+    ['fixed-price', deskConfirmData, 'Fri, Nov 20 · 10:00 am', '$51.00', '$12.00'],
+    ['hourly', movingConfirmHourlyData, 'Sat, Nov 21 · 9:00 am', '$119.00', '$28.00'],
   ] as const)('shows supplied cancellation terms for %s offers', (_kind, data, deadline, refund, compensation) => {
     render(<NextIntlClientProvider locale="en" messages={uiMessages}><TimeZoneProvider timeZone="America/Chicago">
       <CancellationSummary policy={data.cancellation} helperName="Jordan" />

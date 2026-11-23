@@ -437,14 +437,14 @@ export const fakeAdminCaseHandlers: AdminCaseHandlers = {
 export const disputeMoneyCaseData: AdminCasePageData = {
   ...disputeAdminCaseData,
   resolutions: ['release_full', 'settle', 'refund_full', 'rework', 'account_action'],
-  money: { priceCents: 6000, chargedCents: 6600, refundedCents: 0 },
+  money: { priceCents: 6000, chargedCents: 6300, refundedCents: 0 },
 };
 
-/** Settling the $60 desk at $45 (blueprint 04 §6). */
-export const settleAt45Preview: ResolutionPreview = { posterRefundCents: 1650, helperReceivesCents: 4050, platformKeepsCents: 900, withinLimit: true };
-export const releaseFullPreview: ResolutionPreview = { posterRefundCents: 0, helperReceivesCents: 5400, platformKeepsCents: 1200, withinLimit: true };
+/** Settling the $60 desk, held for $63.00, at $45 (blueprint 04 §6): the platform keeps only the $2.25 hold fee. */
+export const settleAt45Preview: ResolutionPreview = { posterRefundCents: 1575, helperReceivesCents: 4500, platformKeepsCents: 225, withinLimit: true };
+export const releaseFullPreview: ResolutionPreview = { posterRefundCents: 0, helperReceivesCents: 6000, platformKeepsCents: 300, withinLimit: true };
 /** A refund above Alex's $100 limit: a lead or finance records it. */
-export const overLimitPreview: ResolutionPreview = { posterRefundCents: 15400, helperReceivesCents: 0, platformKeepsCents: 0, withinLimit: false };
+export const overLimitPreview: ResolutionPreview = { posterRefundCents: 14700, helperReceivesCents: 0, platformKeepsCents: 0, withinLimit: false };
 
 const deskBookingSummary: AdminBookingPageData['booking'] = {
   id: 'bkg_desk',
@@ -456,20 +456,20 @@ const deskBookingSummary: AdminBookingPageData['booking'] = {
   pricingType: 'fixed',
 };
 
-/** The disputed desk: charged $66.00, nothing refunded, earnings on hold. */
+/** The disputed desk: charged $63.00, nothing refunded, earnings on hold. */
 export const adminBookingDisputedData: AdminBookingPageData = {
   booking: deskBookingSummary,
   poster: person(maya),
   helper: person(jordan),
-  money: { breakdown: deskBreakdown, chargedCents: 6600, refundedCents: 0, refunds: [], earnings: [{ kind: 'earnings', amountCents: 5400, status: 'on_hold' }] },
+  money: { breakdown: deskBreakdown, chargedCents: 6300, refundedCents: 0, refunds: [], earnings: [{ kind: 'earnings', amountCents: 6000, status: 'on_hold' }] },
   checklist: deskCompletionView.checklist,
   cases: [disputeRow],
-  refund: { maxCents: 6600, limitCents: 10000, leftCents: 6600 },
+  refund: { maxCents: 6300, limitCents: 10000, leftCents: 6300 },
   refundRequests: [],
   actions: ['refund', 'reveal_address', 'reveal_conversation'],
 };
 
-/** After settling at $45: $16.50 back to Maya, $40.50 to Jordan. */
+/** After settling at $45: $15.75 back to Maya, $45.00 to Jordan. */
 export const adminBookingSettledData: AdminBookingPageData = {
   booking: { ...deskBookingSummary, status: 'completed' },
   poster: person(maya),
@@ -477,25 +477,25 @@ export const adminBookingSettledData: AdminBookingPageData = {
   money: {
     breakdown: deskBreakdown,
     finalBreakdown: deskSettledBreakdown,
-    chargedCents: 6600,
-    refundedCents: 1650,
-    refunds: [{ id: 'ref_settle', amountCents: 1650, reason: 'dispute_settlement', status: 'succeeded', createdAt: '2026-11-24T17:00:00.000Z' }],
-    earnings: [{ kind: 'earnings', amountCents: 4050, status: 'transferred', transferredAt: '2026-11-24T17:00:00.000Z' }],
+    chargedCents: 6300,
+    refundedCents: 1575,
+    refunds: [{ id: 'ref_settle', amountCents: 1575, reason: 'dispute_settlement', status: 'succeeded', createdAt: '2026-11-24T17:00:00.000Z' }],
+    earnings: [{ kind: 'earnings', amountCents: 4500, status: 'transferred', transferredAt: '2026-11-24T17:00:00.000Z' }],
   },
   checklist: deskCompletionView.checklist,
   cases: [{ ...disputeRow, status: 'resolved', slaBreached: false, awaitingReply: false }],
-  refund: { maxCents: 4950, limitCents: 10000, leftCents: 4950 },
+  refund: { maxCents: 4725, limitCents: 10000, leftCents: 4725 },
   refundRequests: [],
   actions: ['refund', 'reveal_address', 'reveal_conversation'],
 };
 
-/** A $154 move: an agent (limit $100) asked a lead to approve a $120 refund; Morgan can decide. */
+/** A $147 move: an agent (limit $100) asked a lead to approve a $120 refund; Morgan can decide. */
 export const adminBookingRefundRequestData: AdminBookingPageData = {
   ...adminBookingDisputedData,
-  money: { ...adminBookingDisputedData.money, chargedCents: 15400 },
+  money: { ...adminBookingDisputedData.money, chargedCents: 14700 },
   /** Work sent before checklists: nothing to show. */
   checklist: undefined,
-  refund: { maxCents: 10000, limitCents: 10000, leftCents: 15400 },
+  refund: { maxCents: 10000, limitCents: 10000, leftCents: 14700 },
   refundRequests: [
     { id: 'rrq_moving', amountCents: 12000, reason: 'goodwill', note: 'The helper left two hours early; the client asked for most of it back.', requestedBy: 'Alex P.', requestedAt: '2026-11-22T18:00:00.000Z', status: 'pending', canDecide: true },
     { id: 'rrq_old', amountCents: 2000, reason: 'goodwill', note: 'A smaller refund asked for before the limits changed.', requestedBy: 'Alex P.', requestedAt: '2026-11-21T15:00:00.000Z', status: 'declined', decidedBy: 'Morgan L.', decidedAt: '2026-11-21T16:00:00.000Z', canDecide: false },

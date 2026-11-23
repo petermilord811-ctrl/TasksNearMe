@@ -31,7 +31,7 @@
   "total": "Tu total",
   "earnings": "Tus ganancias",
   "payment": "Método de pago",
-  "paymentNote": "Pagas al reservar. Tu ayudante recibe su pago cuando la tarea está terminada.",
+  "paymentNote": "Pagas al reservar. TasksNearMe lo retiene y le paga a tu ayudante cuando digas que la tarea está hecha.",
   "chargeNow": "Al aceptar, se cobrarán {amount} ahora a tu método de pago seleccionado.",
   "hourly": "Esto cubre hasta {hours} horas. Las horas no usadas se reembolsan al finalizar.",
   "terms": "Acepto los <terms>Términos del servicio</terms> y la <cancellation>Política de cancelación</cancellation>.",

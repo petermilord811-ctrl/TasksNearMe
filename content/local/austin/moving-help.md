@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-14
+updated: 2026-11-23
 ---
 Moving help covers the lifting: loading and unloading the truck or container you've arranged, moving furniture between rooms, and packing. Your helper doesn't bring a vehicle, so book your transport first and plan the helper's hours around it.
 
@@ -13,4 +13,4 @@ Many apartment buildings ask you to reserve the freight elevator or the loading 
 
 ## How the price works
 
-Moving help is booked by the hour, with a maximum number of hours. You pay for the maximum when you book, and unused time is refunded after the final hours are approved. Pianos, safes and hazardous materials aren't part of moving help.
+Moving help is booked by the hour, with a maximum number of hours. If you pay your helper directly, you pay for the hours worked once the task is done. If your helper asks to be paid upfront, you pay for the maximum when you book, and unused time is refunded after the final hours are approved. Pianos, safes and hazardous materials aren't part of moving help.

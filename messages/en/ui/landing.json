@@ -19,7 +19,7 @@
       "light-cleaning": "tidy up before guests",
       "computer-help": "set up a new laptop"
     },
-    "trust": "ID-verified helpers · Price agreed up front · Pay through the platform",
+    "trust": "ID-verified helpers · Price agreed up front · No service fees",
     "floatingTaskLabel": "Open task",
     "floatingOffers": "{count, plural, =0 {New} one {# offer} other {# offers}}",
     "floatingHelperLabel": "Helper nearby",
@@ -95,9 +95,9 @@
       "verifiedBody": "Every helper passes an ID check. In-home tasks also need a background check.",
       "openThisWeek": "{count, plural, one {# of them has} other {# of them have}} open times this week.",
       "price": "Upfront prices",
-      "priceBody": "You and your helper agree on the price before anything starts, and every fee is shown before you book.",
+      "priceBody": "You and your helper agree on the price before anything starts. There are no service fees on either side.",
       "payment": "Secure payment",
-      "paymentBody": "You pay when you book; your helper is paid when you approve the work.",
+      "paymentBody": "Pay your helper directly, or have us hold the payment until you say the task is done.",
       "learnTrust": "How we keep it safe",
       "learnPricing": "See pricing"
     },
@@ -340,22 +340,31 @@
   },
   "pricing": {
     "eyebrow": "Pricing you can see",
-    "title": "One price.",
-    "titleAccent": "Both sides.",
-    "body": "The price you agree on is the price. The service fees are shown before anyone commits.",
+    "title": "No service fees.",
+    "titleAccent": "On either side.",
+    "body": "Agree on a price and pay your helper directly, free. When a helper asks to be paid upfront, TasksNearMe holds the payment until you say the task is done, for a small hold fee.",
+    "modeLabel": "How it's paid",
+    "modes": {
+      "direct": "Paid directly",
+      "held": "Held by us"
+    },
     "example": "A {price} task",
     "taskPrice": "Agreed task price",
-    "clientFee": "Client service fee",
-    "helperFee": "Helper service fee",
+    "serviceFees": "Service fees",
+    "holdFee": "Hold fee",
+    "none": "None",
     "clientPays": "You pay",
-    "helperEarns": "Your helper earns",
-    "note": "You pay when you book. Your helper is paid after you approve the work.",
+    "helperEarns": "Your helper gets",
+    "note": {
+      "direct": "You pay your helper directly once the task is done.",
+      "held": "You pay when you book. We hold it and pay your helper when you say the task is done."
+    },
     "link": "See full pricing",
     "pickPrice": "See the split for a task price",
     "priceOption": "{price} task",
-    "splitLabel": "Where {total} goes",
     "splitHelper": "Helper {amount}",
-    "splitFees": "Service fees {amount}"
+    "splitHold": "Hold fee {amount}",
+    "splitNone": "No fees"
   },
   "trust": {
     "eyebrow": "Built-in trust",
@@ -370,8 +379,8 @@
       "body": "Helpers see the general area. Only the helper you book gets your exact address."
     },
     "payment": {
-      "title": "Pay through the platform",
-      "body": "You pay through TasksNearMe when you book, and your helper is paid after you approve the work."
+      "title": "Pay directly, or have us hold it",
+      "body": "Pay your helper directly once the task is done, with no fees. If a helper asks to be paid upfront, TasksNearMe holds the money and pays them when you say the task is done."
     },
     "reviews": {
       "title": "Reviews from both sides",
@@ -411,8 +420,8 @@
     },
     "rewardTerms": "Reward terms",
     "earnTitle": "What you keep",
-    "earnBody": "From {price} of agreed work, after the helper service fee.",
-    "earnLink": "How fees work",
+    "earnBody": "From {price} of agreed work: all of it. There are no helper fees.",
+    "earnLink": "How payment works",
     "joinCount": "{count, plural, one {Join # ID-verified helper in {market}} other {Join # ID-verified helpers in {market}}}",
     "meetTitle": "Meet helpers in {market}",
     "idVerified": "ID verified",
@@ -433,8 +442,8 @@
     "title": "Questions, answered",
     "body": "The short answers to what people ask first.",
     "pay": {
-      "question": "When do I pay?",
-      "answer": "When you book. The total, with the service fee, is shown before you pay. Your helper is paid after you approve the work."
+      "question": "How do I pay, and are there fees?",
+      "answer": "There are no service fees. Most helpers are paid directly once the task is done. If a helper asks to be paid upfront, you pay when you book, plus a small hold fee, and TasksNearMe holds it until you say the task is done."
     },
     "address": {
       "question": "Who can see my address?",

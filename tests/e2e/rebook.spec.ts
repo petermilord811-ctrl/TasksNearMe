@@ -4,7 +4,7 @@ import { devSignIn } from './support/sign-in';
 /**
  * Rebooking (UI-032, blueprint 02 J8) on the seeded completed booking "Assemble a wardrobe" (Maya's, done
  * with Sam three weeks ago for $90): Sam proposes the same task again from My clients; Maya sees it on her
- * home, accepts and pays with her saved card ($99.00), and it's booked.
+ * home, accepts and pays with her saved card ($94.50), and it's booked.
  */
 
 test('a helper proposes a past client’s task again; the client pays and it is booked', async ({ page }, testInfo) => {
@@ -24,8 +24,8 @@ test('a helper proposes a past client’s task again; the client pays and it is 
   const tomorrow = new Date(Date.now() + 86_400_000).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
   await page.getByLabel('Date').fill(tomorrow);
   await page.getByLabel('Start time').fill('10:00');
-  // The last price ($90) is filled in; the server's quote shows what Sam earns after the 10% fee.
-  await expect(page.getByText('$81.00').first()).toBeVisible({ timeout: 20_000 });
+  // The last price ($90) is filled in; the server's quote shows what Sam gets: all of it, with no helper fee.
+  await expect(page.getByText('$90.00').first()).toBeVisible({ timeout: 20_000 });
   await page.getByRole('button', { name: 'Send proposal' }).click();
   await expect(page).toHaveURL(/\/app\/clients$/, { timeout: 30_000 });
   await expect(page.getByText('Waiting for your client').first()).toBeVisible();
@@ -34,8 +34,8 @@ test('a helper proposes a past client’s task again; the client pays and it is 
   await page.getByRole('link', { name: /Sam K\. proposed a booking: Assemble a wardrobe/ }).click();
   await expect(page).toHaveURL(/\/app\/proposals\/[^/]+$/, { timeout: 30_000 });
   await expect(page.getByRole('heading', { level: 1, name: 'Sam K. proposed a booking' })).toBeVisible();
-  // $90 plus the 10% client fee.
-  await expect(page.getByText('$99.00').first()).toBeVisible();
+  // Paid upfront and held: $90 plus the $4.50 hold fee.
+  await expect(page.getByText('$94.50').first()).toBeVisible();
   await page.getByRole('checkbox', { name: /I agree to the/ }).click();
   await page.getByRole('button', { name: 'Accept and pay' }).click();
   await expect(page).toHaveURL(/\/app\/bookings\/bkg_/, { timeout: 30_000 });

@@ -85,6 +85,8 @@ export interface BookingFact {
   visitIndex?: number;
   /** The final breakdown once completed, otherwise the current terms'. */
   breakdown: PriceBreakdown;
+  /** Paid directly (2026-11-23): no money moved through TasksNearMe, so it has no contribution of its own. */
+  paymentMode?: 'direct' | 'held';
 }
 
 export interface GrantFact {
@@ -190,8 +192,12 @@ function groupRows<T extends { key: string; name: string }>(tasks: TaskFact[], k
     .sort((a, b) => b.posted - a.posted || a.name.localeCompare(b.name));
 }
 
-/** Contribution per completed booking before rewards (04 §8 assumptions), in cents. */
-export function contributionOf(bookings: BookingFact[], timeZone: TimeZone): { cents: Cents; bookings: number } | undefined {
+/**
+ * Contribution per completed held booking before rewards (04 §8 assumptions), in cents: the bookings TasksNearMe held
+ * the money for. A booking paid directly (2026-11-23) moves no money here, and the plans' revenue isn't counted.
+ */
+export function contributionOf(all: BookingFact[], timeZone: TimeZone): { cents: Cents; bookings: number } | undefined {
+  const bookings = all.filter((booking) => booking.paymentMode !== 'direct');
   if (bookings.length === 0) return undefined;
   const a = CONTRIBUTION_ASSUMPTIONS;
   // The connected account's monthly fee, split over the helper's completed bookings that month.
@@ -366,11 +372,12 @@ export function computeMetrics(facts: MetricsFacts, period: MetricsPeriod, canSe
       id: 'contribution_per_booking',
       area: 'economics',
       comparison: 'at_least',
-      target: { kind: 'money', cents: 600 },
+      // A held payment should at least pay for itself (2026-11-23: no service fees, revenue is the plans; it was $6).
+      target: { kind: 'money', cents: 0 },
       ...(!canSeeMoney
         ? { status: 'restricted' as const }
         : contribution
-          ? { value: { kind: 'money_per_booking' as const, ...contribution }, status: contribution.cents >= 600 ? ('met' as const) : ('missed' as const) }
+          ? { value: { kind: 'money_per_booking' as const, ...contribution }, status: contribution.cents >= 0 ? ('met' as const) : ('missed' as const) }
           : { status: 'no_data' as const }),
     },
     shareTarget('helpers_id_verified', 'trust', 'at_least', 100, share(verifiedHelpers.length, helpers.length)),

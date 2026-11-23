@@ -32,7 +32,7 @@ describe('market config', () => {
     expect(await getAdminConfig(db, morgan, 'austin')).toBeNull();
     expect(await setFeatureFlag(db, morgan, { key: 'reward.acceptance', enabled: true, reason })).toEqual({ ok: false, code: 'not_allowed' });
     const page = await getAdminConfig(db, riley, 'austin');
-    expect(page?.current).toMatchObject({ version: 1, status: 'published', values: { posterBps: 1000, helperBps: 1000, posterMinCents: 300, autoApproveHours: 72 } });
+    expect(page?.current).toMatchObject({ version: 1, status: 'published', values: { posterBps: 500, helperBps: 0, posterMinCents: 100, autoApproveHours: 72 } });
     expect(page?.flags.map((flag) => flag.key)).toContain('ai_drafting');
   });
 
@@ -44,7 +44,7 @@ describe('market config', () => {
     expect(await publishPolicy(db, riley, 'mkt_test_cfg', { ...values, reason }, new Date())).toEqual({ ok: true, code: 'updated' });
 
     const published = await getPublishedPolicy('mkt_test_cfg', db);
-    expect(published).toMatchObject({ version: 2, status: 'published', fees: { posterBps: 1200, posterMinCents: 300, helperBps: 1000 }, cancellation: { lateFeeMinCents: 1200 } });
+    expect(published).toMatchObject({ version: 2, status: 'published', fees: { posterBps: 1200, posterMinCents: 100, helperBps: 0 }, cancellation: { lateFeeMinCents: 1200 } });
     const after = await getAdminConfig(db, riley, 'test-config-city');
     expect(after?.history.map((item) => [item.version, item.status])).toEqual([[2, 'published'], [1, 'retired']]);
     expect(after?.current.publishedBy).toBe('Riley N.');

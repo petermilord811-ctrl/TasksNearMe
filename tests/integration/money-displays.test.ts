@@ -55,11 +55,11 @@ describe('money displays', () => {
     await db.insert(refunds).values({ id: newId('ref'), paymentId: charge!.id, bookingId, amountCents: 1200, reason: 'cancellation', status: 'succeeded', providerRef: 'devre_md', idempotencyKey: `md:${bookingId}`, createdAt: later });
     const view = await getBookingView(hub, CLIENT, bookingId, now);
     const received = view?.timeline.find((event) => event.type === 'payment_succeeded');
-    expect(received).toMatchObject({ params: { amountCents: 6600 } });
+    expect(received).toMatchObject({ params: { amountCents: 6300 } });
     expect(received?.at).toBe(charge!.createdAt.toISOString());
     expect(view?.payments?.find((line) => line.kind === 'charge')?.at).toBe(charge!.createdAt.toISOString());
     const row = (await getPaymentsPage(db, CLIENT)).receipts.find((receipt) => receipt.bookingId === bookingId);
-    expect(row).toMatchObject({ paidAt: charge!.createdAt.toISOString(), chargedCents: 6600, refundedCents: 1200, netCents: 5400 });
+    expect(row).toMatchObject({ paidAt: charge!.createdAt.toISOString(), chargedCents: 6300, refundedCents: 1200, netCents: 5100 });
   });
 
   it('counts a change’s charge with the booking’s on Payments and the receipt (D5)', async () => {
@@ -68,10 +68,10 @@ describe('money displays', () => {
     await db.insert(payments).values({ ...charge!, id: newId('pay'), purpose: 'change_funding', amountCents: 2200, idempotencyKey: `md-change:${bookingId}`, createdAt: new Date(charge!.createdAt.getTime() + HOUR), updatedAt: new Date(charge!.createdAt.getTime() + HOUR) });
     const rows = (await getPaymentsPage(db, CLIENT)).receipts.filter((receipt) => receipt.bookingId === bookingId);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ chargedCents: 8800, netCents: 8800 });
+    expect(rows[0]).toMatchObject({ chargedCents: 8500, netCents: 8500 });
     const receipt = await getReceiptPage(db, CLIENT, bookingId);
-    expect(receipt?.lines.filter((line) => line.kind === 'charge').map((line) => line.amountCents)).toEqual([6600, 2200]);
-    expect(receipt?.netCents).toBe(8800);
+    expect(receipt?.lines.filter((line) => line.kind === 'charge').map((line) => line.amountCents)).toEqual([6300, 2200]);
+    expect(receipt?.netCents).toBe(8500);
   });
 
   it('shows finished bookings at what actually moved: a cancelled one fully refunded, a completed one at its earnings (D6)', async () => {
@@ -79,16 +79,16 @@ describe('money displays', () => {
     const [charge] = await db.select().from(payments).where(and(eq(payments.bookingId, canceled), eq(payments.purpose, 'booking_funding')));
     await db.update(bookings).set({ status: 'canceled', cancelReason: 'poster_early', canceledAt: now }).where(eq(bookings.id, canceled));
     await db.update(payments).set({ status: 'refunded' }).where(eq(payments.id, charge!.id));
-    await db.insert(refunds).values({ id: newId('ref'), paymentId: charge!.id, bookingId: canceled, amountCents: 6600, reason: 'cancellation', status: 'succeeded', providerRef: 'devre_md3', idempotencyKey: `md:${canceled}`, createdAt: now });
+    await db.insert(refunds).values({ id: newId('ref'), paymentId: charge!.id, bookingId: canceled, amountCents: 6300, reason: 'cancellation', status: 'succeeded', providerRef: 'devre_md3', idempotencyKey: `md:${canceled}`, createdAt: now });
     const completed = await bookedDesk(4);
     await db.update(bookings).set({ status: 'completed', completedVia: 'poster', completedAt: now }).where(eq(bookings.id, completed));
     await recordCompletionMoney(db, completed, now, deps.payments);
 
     const client = await getBookingsPage(db, CLIENT, now);
     expect(client.past.find((row) => row.id === canceled)?.amountCents).toBe(0);
-    expect(client.past.find((row) => row.id === completed)?.amountCents).toBe(6600);
+    expect(client.past.find((row) => row.id === completed)?.amountCents).toBe(6300);
     const helper = await getBookingsPage(db, 'usr_jordan', now);
     expect(helper.past.find((row) => row.id === canceled)?.amountCents).toBe(0);
-    expect(helper.past.find((row) => row.id === completed)?.amountCents).toBe(5400);
+    expect(helper.past.find((row) => row.id === completed)?.amountCents).toBe(6000);
   });
 });

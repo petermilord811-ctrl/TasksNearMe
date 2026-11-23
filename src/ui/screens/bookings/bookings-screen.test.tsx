@@ -49,7 +49,7 @@ describe('BookingsScreen', () => {
     // A client's own list doesn't say "You booked" on every row (audit M28).
     expect(article.queryByText('You booked')).not.toBeInTheDocument();
     expect(article.getByText('Booked')).toBeVisible();
-    expect(article.getByText('Total $66.00')).toBeVisible();
+    expect(article.getByText('Total $63.00')).toBeVisible();
     expect(article.getByText('Furniture assembly')).toBeVisible();
     expect(article.getByText('Jordan T.')).toBeVisible();
     expect(article.getByRole('img', { name: 'Avatar with initials JT' })).toBeVisible();
@@ -79,8 +79,8 @@ describe('BookingsScreen', () => {
     renderBookings({ ...bookingsEmptyData, upcoming: [mayaBookingsPageData.upcoming[0], { ...jordanBookingsPageData.upcoming[0], id: 'bkg_helper' }] });
     expect(screen.getByText('You booked')).toBeVisible();
     expect(screen.getByText("You're helping")).toBeVisible();
-    expect(screen.getByText('Total $66.00')).toBeVisible();
-    expect(screen.getByText("You'll earn $54.00")).toBeVisible();
+    expect(screen.getByText('Total $63.00')).toBeVisible();
+    expect(screen.getByText("You'll earn $60.00")).toBeVisible();
     expect(screen.getByText('Maya R.')).toBeVisible();
     expect(screen.getByText('Jordan T.')).toBeVisible();
   });

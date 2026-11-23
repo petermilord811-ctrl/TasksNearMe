@@ -57,7 +57,8 @@ export async function tipViewOf(
   taskPriceCents: number,
   now: Date,
 ): Promise<BookingTipView | undefined> {
-  if (booking.status !== 'completed') return undefined;
+  // Paid directly (2026-11-23): a tip goes the same way, between the two people.
+  if (booking.status !== 'completed' || booking.paymentMode === 'direct') return undefined;
   const tip = await tipThatWentThrough(deps.db, booking.id);
   if (tip) return { state: 'tipped', amountCents: tip.amountCents, at: tip.updatedAt.toISOString() };
   if (!deps.payments || !booking.completedAt || tipRefusal(factsOf(booking, false), role, now)) return undefined;

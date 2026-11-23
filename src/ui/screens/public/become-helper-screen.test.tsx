@@ -36,7 +36,8 @@ describe('BecomeHelperScreen', () => {
     expect(screen.queryByRole('region', { name: 'Repeat-client gift card reward' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Gift card rewards for helping locally' })).not.toBeInTheDocument();
     expect(screen.getByText('Rewards never depend on reviews or ratings.')).toBeInTheDocument();
-    expect(screen.getByText('$54.00')).toBeInTheDocument();
+    // No helper fees since 2026-11-23: the example's earnings are the whole $60.00 price.
+    expect(screen.getByText("You'll earn").closest('div')).toHaveTextContent('$60.00');
   });
 
   it('renders repeat rewards independently and follows the supplied background-check requirement', () => {

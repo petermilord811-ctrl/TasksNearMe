@@ -133,14 +133,14 @@ describe('ChangeReviewScreen', () => {
     const { handlers } = mount(movingCapChangeData);
     await user.click(screen.getByRole('button', { name: 'Accept change' }));
     const dialog = await screen.findByRole('alertdialog');
-    expect(dialog).toHaveAccessibleDescription('Accept these proposed terms and pay $38.50 with the selected card? The new terms apply after payment goes through.');
+    expect(dialog).toHaveAccessibleDescription('Accept these proposed terms and pay $36.75 with the selected card? The new terms apply after payment goes through.');
     expect(handlers.onAccept).not.toHaveBeenCalled();
   });
 
   it('labels and focuses a server-rejected payment choice', async () => {
     const user = userEvent.setup();
     mount(deskChairChangePayData, { onPayDifference: fakeHandler({ ok: false, code: 'validation_failed', fieldErrors: { 'payment.methodId': ['invalid'] } }, 0) });
-    await confirmAction(user, 'Pay $22.00');
+    await confirmAction(user, 'Pay $21.00');
     expect(await screen.findByText(messages.forms.fieldErrors.invalid)).toBeVisible();
     await waitFor(() => expect(screen.getByRole('radio', { name: /Visa.*1881/ })).toHaveFocus());
     expect(screen.getByRole('radiogroup', { name: 'Payment method' })).toHaveAttribute('aria-invalid', 'true');
@@ -149,7 +149,7 @@ describe('ChangeReviewScreen', () => {
   it('shows bank verification, sends its payment id and outcome, and waits for payment before redirecting', async () => {
     const user = userEvent.setup();
     const { handlers } = mount(deskChairChangePayData, { onPayDifference: vi.fn().mockResolvedValue(verification) });
-    await confirmAction(user, 'Pay $22.00');
+    await confirmAction(user, 'Pay $21.00');
     const dialog = await screen.findByRole('dialog');
     expect(dialog).toHaveAccessibleName(/Your bank wants to confirm/);
     expect(navigation.push).not.toHaveBeenCalled();
@@ -164,13 +164,13 @@ describe('ChangeReviewScreen', () => {
       onPayDifference: vi.fn().mockResolvedValue(verification),
       onFinishVerification: fakeHandler({ ok: false, code: 'payment_declined' }, 0),
     });
-    await confirmAction(user, 'Pay $22.00');
+    await confirmAction(user, 'Pay $21.00');
     await screen.findByRole('dialog');
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     await waitFor(() => expect(screen.getByRole('region', { name: 'Payment' })).toHaveFocus());
     expect(screen.getByRole('radio', { name: /Visa.*1881/ })).toBeChecked();
-    expect(screen.getByRole('button', { name: 'Pay $22.00' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Pay $21.00' })).toBeEnabled();
     expect(navigation.push).not.toHaveBeenCalled();
   });
 
@@ -179,8 +179,8 @@ describe('ChangeReviewScreen', () => {
     let finish!: (result: PaymentAttemptResult) => void;
     const onPayDifference = vi.fn(() => new Promise<PaymentAttemptResult>((resolve) => { finish = resolve; }));
     mount(deskChairChangePayData, { onPayDifference });
-    await confirmAction(user, 'Pay $22.00');
-    const pay = screen.getByRole('button', { name: 'Pay $22.00' });
+    await confirmAction(user, 'Pay $21.00');
+    const pay = screen.getByRole('button', { name: 'Pay $21.00' });
     expect(pay).toBeDisabled();
     expect(pay).toHaveAttribute('aria-busy', 'true');
     screen.getAllByRole('radio').forEach((radio) => expect(radio).toBeDisabled());
@@ -194,7 +194,7 @@ describe('ChangeReviewScreen', () => {
   it.each(ACTION_ERROR_CODES)('announces friendly feedback for %s', async (code) => {
     const user = userEvent.setup();
     mount(deskChairChangePayData, { onPayDifference: fakeHandler({ ok: false, code }, 0) });
-    await confirmAction(user, 'Pay $22.00');
+    await confirmAction(user, 'Pay $21.00');
     const copy = code in changes.review.errors
       ? changes.review.errors[code as keyof typeof changes.review.errors]
       : code in messages.forms.actionErrors
@@ -202,14 +202,14 @@ describe('ChangeReviewScreen', () => {
         : messages.feedback.error[code];
     const feedback = await screen.findByText(copy);
     expect(feedback.closest('[aria-live]')).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'Pay $22.00' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Pay $21.00' })).toBeEnabled();
     expect(navigation.push).not.toHaveBeenCalled();
   });
 
   it('offers a working reload for changed terms and preserves the selected card', async () => {
     const user = userEvent.setup();
     mount(deskChairChangePayData, { onPayDifference: fakeHandler({ ok: false, code: 'version_conflict' }, 0) });
-    await confirmAction(user, 'Pay $22.00');
+    await confirmAction(user, 'Pay $21.00');
     await user.click(await screen.findByRole('button', { name: 'Reload change' }));
     expect(navigation.refresh).toHaveBeenCalledOnce();
     expect(screen.getByRole('radio', { name: /Visa.*1881/ })).toBeChecked();
@@ -218,7 +218,7 @@ describe('ChangeReviewScreen', () => {
   it('maps rejected requests to friendly unknown feedback', async () => {
     const user = userEvent.setup();
     mount(deskChairChangePayData, { onPayDifference: vi.fn().mockRejectedValue(new Error('offline')) });
-    await confirmAction(user, 'Pay $22.00');
+    await confirmAction(user, 'Pay $21.00');
     expect(await screen.findByText(messages.feedback.error.unknown)).toBeVisible();
   });
 

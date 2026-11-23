@@ -60,7 +60,7 @@ test("staff read a booking's money and open the address with a logged reason", a
   await staffSignIn(page, 'alex@example.test');
   await page.goto('/admin/bookings/bkg_tv');
   await expect(page.getByRole('heading', { level: 1, name: 'Anchor a tall bookshelf to the wall' })).toBeVisible();
-  await expect(page.getByText('$88.00').first()).toBeVisible();
+  await expect(page.getByText('$84.00').first()).toBeVisible();
   await expect(page.getByText('88 Sample Street')).toHaveCount(0);
   await page.getByRole('button', { name: 'Show the address' }).click();
   await page.getByLabel(/Reason for access/).fill('Checking where the TV was mounted for a support question.');

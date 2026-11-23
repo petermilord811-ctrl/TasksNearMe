@@ -43,7 +43,7 @@ describe('ProposalScreen', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Jordan T. proposed a booking');
     expect(screen.getByText('Sat, Dec 19 · 10:00 am')).toBeVisible();
     expect(screen.getByRole('region', { name: messages.location.exactAddress })).toHaveTextContent('1234 Example Lane');
-    expect(screen.getByRole('region', { name: 'Your total' })).toHaveTextContent('$66.00');
+    expect(screen.getByRole('region', { name: 'Your total' })).toHaveTextContent('$63.00');
     expect(screen.queryByRole('button', { name: 'Withdraw' })).not.toBeInTheDocument();
     await submit(user);
     await waitFor(() => expect(handlers.onAccept).toHaveBeenCalledExactlyOnceWith({ payment: { kind: 'saved', methodId: 'pm_maya_visa' }, acceptTerms: true }));
@@ -78,7 +78,7 @@ describe('ProposalScreen', () => {
     expect(screen.queryByRole('region', { name: messages.location.exactAddress })).not.toBeInTheDocument();
     expect(screen.queryByText('1234 Example Lane')).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Your earnings' })).toHaveTextContent('$54.00');
+    expect(screen.getByRole('region', { name: 'Your earnings' })).toHaveTextContent('$60.00');
   });
 
   it('honors a supplied action order and absence without inventing controls', () => {

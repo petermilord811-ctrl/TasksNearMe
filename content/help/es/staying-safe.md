@@ -3,13 +3,14 @@ title: Cómo mantenerte seguro
 summary: Hábitos sencillos que mantienen las tareas seguras para todos.
 topic: safety
 order: 2
-updated: 2026-11-14
+updated: 2026-11-23
 ---
 La mayoría de las tareas salen bien. Estos hábitos ayudan a que siga siendo así.
 
 ## Para todos
 
-- Mantén los mensajes y los pagos dentro de TasksNearMe. Los pagos fuera de la app no están cubiertos si algo sale mal.
+- Mantén tus mensajes y reservas dentro de TasksNearMe, para que lo que acordaron quede registrado.
+- ¿Le pagas directamente a tu ayudante? Paga cuando el trabajo esté hecho, nunca por adelantado a alguien que no conoces. Solo los pagos que retiene TasksNearMe están protegidos por nosotros, así que si quieres esa protección, pide un pago retenido.
 - Revisa el perfil: insignias, reseñas y cuánto tiempo lleva como miembro.
 - Confía en tu instinto. Puedes cancelar y reportar cualquier cosa que no te parezca bien.
 

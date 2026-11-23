@@ -362,11 +362,11 @@
     "unit": "Unit or apartment",
     "accessNotes": "Access notes",
     "remotePrivacy": "This is a remote task. No address is shared.",
-    "priceTitle": "If you book at this price",
+    "priceTitle": "If a helper asks to be paid upfront",
     "priceLoading": "Getting your price breakdown…",
-    "priceError": "We couldn't load the price breakdown. Try again to see what you'll pay when you book.",
+    "priceError": "We couldn't load the price breakdown. Try again to see what you'd pay upfront.",
     "retryPrice": "Try price breakdown again",
-    "payment": "You pay when you book. Your helper is paid after the task is done."
+    "payment": "Most helpers are paid directly once the task is done: you pay just the agreed price, with no fees. If a helper asks to be paid upfront, you pay when you book, and TasksNearMe holds it until you say the task is done."
   },
   "previews": {
     "group": "Post a task",

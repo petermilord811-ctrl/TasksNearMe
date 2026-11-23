@@ -227,7 +227,7 @@ describe('NotificationsScreen', () => {
 
   it('shows the canonical payout amount', () => {
     show(jordanNotificationsData);
-    expect(screen.getByRole('link', { name: /You were paid \$62\.00/ })).toBeVisible();
+    expect(screen.getByRole('link', { name: /You were paid \$68\.00/ })).toBeVisible();
   });
 
   it.each(['helper_running_late', 'payout_paid', 'offer_received', 'change_proposed', 'change_applied', 'invite_received', 'invite_countered', 'invite_accepted', 'rebook_proposed', 'rebook_accepted', 'rebook_declined', 'task_reopened', 'approval_reminder', 'booking_reminder'] as const)('does not invent optional details for %s', (type) => {

@@ -110,7 +110,8 @@ describe('market metrics', () => {
     expect(byId.rebook_60d).toMatchObject({ status: 'met', value: { share: { part: 1, whole: 1 } } });
     expect(byId.helpers_id_verified).toMatchObject({ status: 'met', value: { share: { part: 1, whole: 1 } } });
     // A $60 booking: blueprint 04 §8's conservative $6.97.
-    expect(byId.contribution_per_booking).toMatchObject({ status: 'met', value: { kind: 'money_per_booking', cents: 697, bookings: 1 } });
+    // The $60 desk held for $63.00 (2026-11-23): the $3.00 hold fee doesn't cover Stripe's costs and the month's $2 account fee.
+    expect(byId.contribution_per_booking).toMatchObject({ status: 'missed', value: { kind: 'money_per_booking', cents: -194, bookings: 1 } });
   });
 
   it('counts each market day, and the reward delivered, for finance', async () => {

@@ -3,9 +3,9 @@ title: Cómo publicar tu primera tarea
 summary: Qué incluir para que los ayudantes puedan hacer una oferta clara.
 topic: getting-started
 order: 1
-updated: 2026-11-11
+updated: 2026-11-23
 ---
-Publicar es gratis. Solo pagas cuando reservas a un ayudante.
+Publicar es gratis y no hay tarifas de servicio. Solo pagas por una tarea si reservas a un ayudante.
 
 ## Qué incluir
 

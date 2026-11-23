@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, ne, notInArray } from 'drizzle-orm';
+import { proHelpersAmong, waivesHoldFee } from '@/modules/billing/benefits';
 import type {
   ActionResult,
   BookingStatus,
@@ -33,7 +34,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { declinedByCancel, declinedForCancel } from './closing';
-import { byAttention, offerSortKey, ownerTaskAttention, posterOfferActions, taskOwnerActions } from './domain';
+import { byAttention, offerSortKey, ownerTaskAttention, paymentModeOf, posterOfferActions, taskOwnerActions } from './domain';
 import { offers } from './schema';
 
 /** The poster's side of tasks and offers: reads projected for the poster, and their changes. */
@@ -207,7 +208,7 @@ export async function getMyTasks(db: Db, userId: string, now: Date): Promise<MyT
 }
 
 async function offerViews(deps: OwnerDeps, task: typeof tasks.$inferSelect, rows: OfferRow[], now: Date): Promise<OfferView[]> {
-  const [helpers, facts, canceled, paid] = await Promise.all([
+  const [helpers, facts, canceled, paid, pro, plus] = await Promise.all([
     getHelperSummaries(
       rows.map((row) => row.helperUserId),
       deps.db,
@@ -221,10 +222,13 @@ async function offerViews(deps: OwnerDeps, task: typeof tasks.$inferSelect, rows
     // helper showed every other offerer's number under "Earlier offers", and a booking not paid yet (made more than
     // 14 days ahead) showed the booked one's (sweep MN2). What a helper brings is their own words too.
     paidOffers(deps.db, rows.map((row) => row.id)),
+    // Plans (2026-11-23): Pro helpers' offers come first, with a badge; a Plus client pays no hold fee.
+    proHelpersAmong(deps.db, rows.map((row) => row.helperUserId), now),
+    waivesHoldFee(deps.db, task.posterUserId, now),
   ]);
   return rows
     .filter((row) => helpers.has(row.helperUserId))
-    .sort((a, b) => offerSortKey(a.status) - offerSortKey(b.status) || b.createdAt.getTime() - a.createdAt.getTime())
+    .sort((a, b) => offerSortKey(a.status) - offerSortKey(b.status) || Number(pro.has(b.helperUserId)) - Number(pro.has(a.helperUserId)) || b.createdAt.getTime() - a.createdAt.getTime())
     .map((row) => {
       const pricing = offerPricing(row);
       return {
@@ -240,8 +244,11 @@ async function offerViews(deps: OwnerDeps, task: typeof tasks.$inferSelect, rows
         revision: row.revision,
         submittedAt: row.updatedAt.toISOString(),
         isNew: row.posterSeenAt === null && ACTIVE.includes(row.status as OfferStatus),
-        breakdown: quoteBreakdown(deps.fees, pricing, { expenseAllowanceCents: task.expenseAllowanceCents }),
+        paymentMode: paymentModeOf(row.paymentMode),
+        // Paid directly: no fee; held upfront: the hold fee, unless the client has Plus.
+        breakdown: quoteBreakdown(deps.fees, pricing, { expenseAllowanceCents: task.expenseAllowanceCents, held: row.paymentMode === 'held', waiveHoldFee: plus }),
         actions: posterOfferActions(row, task, now),
+        ...(pro.has(row.helperUserId) ? { pro: true } : {}),
         ...(canceled.has(row.id) ? { taskCanceled: true } : {}),
       };
     });

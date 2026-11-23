@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react';
 import { Check, CircleAlert, Info, Sparkles } from 'lucide-react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import type { ActionResult, PlanCode, PlanHandlers, PlanInterval, PlanMembership, PlanOffer, PlanPageData } from '@/contracts';
 import { formatMoney } from '@/shared/format';
@@ -36,7 +36,7 @@ function useAction() {
   return { pending, run };
 }
 
-function MembershipStatus({ membership, offer }: { membership: PlanMembership; offer: PlanOffer }) {
+function MembershipStatus({ membership }: { membership: PlanMembership }) {
   const t = useTranslations('plan');
   const { formatDate } = useFormat();
   const name = t(`plans.${membership.plan}.name`);
@@ -45,16 +45,13 @@ function MembershipStatus({ membership, offer }: { membership: PlanMembership; o
   return <div className="space-y-1.5 rounded-2xl bg-secondary/60 p-4 text-sm">
     {membership.status === 'past_due' && <p className="flex items-start gap-2 font-medium text-destructive"><CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('current.pastDue', { plan: name })}</p>}
     <p>{membership.cancelAtPeriodEnd ? t('current.ends', { date: formatDate(membership.periodEnd, { withYear: true }) }) : t('current.renews', { date: formatDate(membership.periodEnd, { withYear: true }), price: money(membership.priceCents) })}</p>
-    <p className="tabular-nums text-muted-foreground">{t('current.rebated', { amount: money(membership.rebatedThisMonthCents), cap: money(offer.rebateMonthlyCapCents) })}</p>
   </div>;
 }
 
-function PlanCard({ offer, membership, estimate, data, handlers }: { offer: PlanOffer; membership?: PlanMembership; estimate?: PlanPageData['estimates'][number]; data: PlanPageData; handlers: PlanHandlers }) {
+function PlanCard({ offer, membership, data, handlers }: { offer: PlanOffer; membership?: PlanMembership; data: PlanPageData; handlers: PlanHandlers }) {
   const t = useTranslations('plan');
-  const locale = useLocale();
   const { pending, run } = useAction();
   const name = t(`plans.${offer.plan}.name`);
-  const share = new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 1 }).format(offer.rebateBps / 10_000);
   const subscribe = (interval: PlanInterval) => run(() => handlers.onSubscribe({ plan: offer.plan, interval }));
   const priceOf = (interval: PlanInterval) => money(interval === 'year' ? offer.yearlyCents : offer.monthlyCents);
   return <section aria-labelledby={`plan-${offer.plan}`} className={cn(cardClass, 'flex flex-col gap-5', membership && 'ring-2 ring-primary/40')}>
@@ -67,13 +64,12 @@ function PlanCard({ offer, membership, estimate, data, handlers }: { offer: Plan
     </div>
     <p className="tabular-nums"><span className="font-display text-3xl font-semibold tracking-[-0.02em]">{t('price.month', { price: money(offer.monthlyCents) })}</span> <span className="text-muted-foreground">{t('price.year', { price: money(offer.yearlyCents) })}</span></p>
     <ul className="space-y-2.5 text-[15px]">
-      <li className="flex items-start gap-2.5"><Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-success" />{t(`plans.${offer.plan}.rebate`, { share, cap: money(offer.rebateMonthlyCapCents) })}</li>
-      {/* AI search only where Claude is set up (aa's sweep #8): the plan still pays back its fees without it. */}
+      {/* What the plan adds (LinkedIn-Premium-style since 2026-11-23: no service fees, so nothing is paid back). */}
+      {Object.keys(t.raw(`plans.${offer.plan}.benefits`) as Record<string, string>).map((key) => <li key={key} className="flex items-start gap-2.5"><Check aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-success" />{t(`plans.${offer.plan}.benefits.${key}`)}</li>)}
+      {/* AI search only where Claude is set up (aa's sweep #8). */}
       {data.aiSearch.reason !== 'ai_off' && <li className="flex items-start gap-2.5"><Sparkles aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />{t(`plans.${offer.plan}.ai`, { count: offer.aiSearchesPerMonth })}</li>}
     </ul>
-    <p className="text-sm text-muted-foreground">{t(`plans.${offer.plan}.breakEven`, { amount: money(offer.breakEvenMonthlyCents) })}</p>
-    {estimate && <p className="rounded-2xl border border-primary/20 bg-primary/[0.06] p-3 text-sm tabular-nums">{t(`estimate.${offer.plan}`, { count: estimate.bookings, amount: money(estimate.savedCents) })}</p>}
-    {membership && <MembershipStatus membership={membership} offer={offer} />}
+    {membership && <MembershipStatus membership={membership} />}
     <div className="mt-auto flex flex-wrap gap-2">
       {membership ? (
         <div className="space-y-2">
@@ -108,10 +104,10 @@ function BillingHistory({ onManage }: { onManage: PlanHandlers['onManage'] }) {
 }
 
 /**
- * The optional plans (completion plan 9.13): each with its price, what it adds (money back on fees, capped a month,
- * and AI search), an honest break-even and, from the person's own last 30 days, what it would have paid back. Members
- * see when it renews or ends and what it paid back this month, and manage it on Stripe's portal. Plain terms close the
- * page. Without Stripe here, the plans show without buttons.
+ * The optional plans (completion plan 9.13; LinkedIn-Premium-style since 2026-11-23): each with its price and what it
+ * adds (Plus: no hold fee on payments TasksNearMe holds; Pro: offers first, a Pro badge, offer insights; both: AI
+ * search). Members see when it renews or ends, and manage it on Stripe's portal. Plain terms close the page. Without
+ * Stripe here, the plans show without buttons.
  */
 export function PlanScreen({ data, handlers }: { data: PlanPageData; handlers: PlanHandlers }) {
   const t = useTranslations('plan');
@@ -122,7 +118,7 @@ export function PlanScreen({ data, handlers }: { data: PlanPageData; handlers: P
     {data.notice && <Alert role="status"><Info aria-hidden="true" /><AlertDescription className="text-foreground">{t(`notices.${data.notice}`)}</AlertDescription></Alert>}
     {data.unavailable && <Alert role="status"><Info aria-hidden="true" /><AlertDescription className="text-foreground">{t('unavailable')}</AlertDescription></Alert>}
     <div className="grid gap-4 md:grid-cols-2">
-      {data.offers.map((offer) => <PlanCard key={offer.plan} offer={offer} membership={memberOf(offer.plan)} estimate={data.estimates.find((estimate) => estimate.plan === offer.plan)} data={data} handlers={handlers} />)}
+      {data.offers.map((offer) => <PlanCard key={offer.plan} offer={offer} membership={memberOf(offer.plan)} data={data} handlers={handlers} />)}
     </div>
     <section aria-labelledby="plan-free" className={cn(cardClass, 'space-y-2')}>
       <h2 id="plan-free" className="text-lg font-semibold">{t('free.title')}</h2>
@@ -139,7 +135,7 @@ export function PlanScreen({ data, handlers }: { data: PlanPageData; handlers: P
     <section aria-labelledby="plan-terms" className={cn(cardClass, 'space-y-3')}>
       <h2 id="plan-terms" className="text-lg font-semibold">{t('terms.title')}</h2>
       <ul className="space-y-2 text-[15px] text-muted-foreground">
-        {(['cancel', 'noTrial', 'price', 'trust', 'rebates'] as const).map((key) => <li key={key} className="flex items-start gap-2.5"><Check aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t(`terms.${key}`)}</li>)}
+        {(['cancel', 'noTrial', 'price', 'trust'] as const).map((key) => <li key={key} className="flex items-start gap-2.5"><Check aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t(`terms.${key}`)}</li>)}
       </ul>
     </section>
   </div>;

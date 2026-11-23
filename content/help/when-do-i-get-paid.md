@@ -1,21 +1,29 @@
 ---
 title: When do I get paid?
-summary: After the task is approved. Your first payout can take about 7 days.
+summary: Paid directly, your client pays you after the task. Paid upfront, after the task is approved; your first payout can take about 7 days.
 topic: helpers
 order: 2
-updated: 2026-11-14
+updated: 2026-11-23
 ---
-You're paid when the task is complete: when your client approves it, or automatically 72 hours after you mark it done if they don't respond.
+Each offer you send says how you want to be paid: directly by your client, or upfront, held by TasksNearMe. There's no helper fee either way.
+
+## Paid directly
+
+Your client pays you after the task, in cash, with a payment app or however you agree. The money doesn't go through TasksNearMe, so it isn't part of your payouts. Tips go to you directly too.
+
+## Paid upfront
+
+Your client pays when they book, and TasksNearMe holds the money. You're paid when the task is complete: when your client approves it, or automatically 72 hours after you mark it done if they don't respond.
 
 ## What you receive
 
-- The task price minus a 10% service fee. You see the exact amount before you accept a task.
+- The whole task price. The client pays the hold fee, and nothing is taken from your earnings.
 - Approved expenses are paid back separately, with no fees.
-- Tips are all yours, with no fee. They go out with your next payout.
+- Tips added in the app are all yours, with no fee. They go out with your next payout.
 
 ## Timing
 
-Your first payout usually arrives about **7 days** after your first paid task. After that, payouts are daily and arrive about 2 business days after a task is complete.
+Your first payout usually arrives about **7 days** after your first task paid upfront. After that, payouts are daily and arrive about 2 business days after a task is complete.
 
 ## When a payment waits
 

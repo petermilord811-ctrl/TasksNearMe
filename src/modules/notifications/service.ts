@@ -99,7 +99,7 @@ async function taskTitle(db: Db, taskId: string | undefined): Promise<string | u
 async function bookingContext(db: Db, bookingId: string | undefined) {
   if (!bookingId) return null;
   const [row] = await db
-    .select({ id: bookings.id, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId, title: tasks.title, marketId: bookings.marketId, startAt: bookings.startAt, confirmedAt: bookings.confirmedAt })
+    .select({ id: bookings.id, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId, title: tasks.title, marketId: bookings.marketId, startAt: bookings.startAt, confirmedAt: bookings.confirmedAt, paymentMode: bookings.paymentMode })
     .from(bookings)
     .innerJoin(tasks, eq(tasks.id, bookings.taskId))
     .where(eq(bookings.id, bookingId))
@@ -437,7 +437,8 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
             ...(reason ? { reason } : {}),
             ...(typeof p.refundCents === 'number' ? { refundCents: p.refundCents } : {}),
             ...(typeof p.helperCompensationCents === 'number' ? { compensationCents: p.helperCompensationCents } : {}),
-            paid: booking.confirmedAt !== null,
+            // Paid directly (2026-11-23): nothing went through TasksNearMe, so there's nothing to refund.
+            paid: booking.confirmedAt !== null && booking.paymentMode !== 'direct',
           });
           const params: NotificationView['params'] = { by, at: booking.startAt.toISOString(), timeZone: await marketTimeZone(db, booking.marketId), ...money };
           return [...told, by === 'poster' ? forPoster('booking_canceled_receipt', { params }) : forHelper('booking_canceled_receipt', { params })];

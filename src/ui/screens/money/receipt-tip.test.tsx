@@ -21,7 +21,7 @@ describe('tips on receipts (UI-057)', () => {
     const activity = screen.getByRole('region', { name: messages.receipt.activity });
     const tip = within(activity).getByText(messages.receipt.tip).closest('li')!;
     expect(within(tip).getByText('$9.00')).toBeInTheDocument();
-    expect(within(activity).getByText('$75.00')).toBeInTheDocument();
+    expect(within(activity).getByText('$72.00')).toBeInTheDocument();
   });
 
   it('adds the tip to the booking row on the payments page', () => {
@@ -30,8 +30,8 @@ describe('tips on receipts (UI-057)', () => {
     </NextIntlClientProvider>);
     // The tipped row says the tip and what was paid in all; no "Refunded $0.00" where nothing came back (audit L30).
     const tipped = screen.getByText('Tip $9.00').closest('li')!;
-    expect(within(tipped).getAllByText('$75.00').length).toBeGreaterThan(0);
+    expect(within(tipped).getAllByText('$72.00').length).toBeGreaterThan(0);
     expect(within(tipped).queryByText(/Refunded/)).not.toBeInTheDocument();
-    expect(screen.getByText('Charged $86.00 · Refunded $12.00')).toBeInTheDocument();
+    expect(screen.getByText('Charged $83.00 · Refunded $12.00')).toBeInTheDocument();
   });
 });

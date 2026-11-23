@@ -5,7 +5,7 @@ import type { PushHandlers, PushSetup } from './account';
 import type { InviteView } from './invites';
 import type { ExactAddress } from './location';
 import type { MessageSegment } from './messaging';
-import type { PriceBreakdown, PricingInput } from './money';
+import type { PaymentMode, PriceBreakdown, PricingInput } from './money';
 import type { HelperSummary, PersonSummary } from './people';
 import type { TaskDetailsValue } from './posting';
 import type { BookingStatus, OfferStatus, TaskStatus } from './status';
@@ -36,10 +36,17 @@ export interface OfferView {
   submittedAt: ISODateTime;
   /** The poster hasn't opened it yet. */
   isNew: boolean;
-  /** The poster's side of the money if this offer is booked (poster variant). */
+  /**
+   * How the helper wants to be paid (2026-11-23): directly after the task (no fee), or upfront, held by TasksNearMe until
+   * the client says it's done (the hold fee, waived with Plus).
+   */
+  paymentMode: PaymentMode;
+  /** The poster's side of the money if this offer is booked (poster variant): no fee when paid directly. */
   breakdown: PriceBreakdown;
   /** From the domain: book, decline, message. Disabled ones carry a reason. */
   actions: ActionDescriptor<OfferActionId>[];
+  /** The helper has Pro: their offer comes first, with a Pro badge (2026-11-23). */
+  pro?: boolean;
   /**
    * `declined` because the task was canceled while this offer was open, not because another was chosen (sweep D9):
    * say the task was canceled, never "You declined" or "Not selected".

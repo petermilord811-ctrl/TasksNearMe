@@ -63,7 +63,7 @@ describe('ActionBar', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Approve task' }));
     expect(handler).not.toHaveBeenCalled();
     const dialog = screen.getByRole('alertdialog');
-    await userEvent.click(within(dialog).getByRole('button', { name: 'Approve and release payment' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Approve the task' }));
     expect(handler).toHaveBeenCalledExactlyOnceWith('approve');
     expect(await screen.findByText('Task approved')).toBeVisible();
   });
@@ -74,7 +74,7 @@ describe('ActionBar', () => {
     const dialog = screen.getByRole('alertdialog');
     expect(within(dialog).getByRole('heading', { name: 'Approve the completed task?' })).toBeVisible();
     expect(dialog).toHaveTextContent(feedback.confirmations.approve.description);
-    expect(within(dialog).getByRole('button', { name: 'Approve and release payment' })).toBeVisible();
+    expect(within(dialog).getByRole('button', { name: 'Approve the task' })).toBeVisible();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Go back' }));
     cleanup();
     show([{ id: 'skip_visit', kind: 'destructive', enabled: true, confirm: true }]);
@@ -202,7 +202,7 @@ describe('ActionBar', () => {
     const approve = screen.getByRole('button', { name: 'Approve task' });
     approve.focus();
     await userEvent.keyboard('{Enter}');
-    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Approve and release payment' }));
+    await userEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Approve the task' }));
     expect(await screen.findByText('Task approved')).toBeVisible();
     expect(approve).toHaveFocus();
     // The refreshed booking has other actions: focus moves to the result, not to the top of the page.

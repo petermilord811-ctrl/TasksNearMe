@@ -18,13 +18,13 @@ import { DESK_TIMES } from './timeline';
 /**
  * My clients and rebooking proposals (UI-032). Seen on Tue Dec 8: Jordan's past clients are Maya (the desk,
  * Sat Nov 21), Chris (the moving truck, with a proposal waiting) and Ruth (no proposal possible). Jordan
- * proposes the desk again to Maya: Sat Dec 19, 10:00 am, $60 (Maya pays $66.00; Jordan earns $54.00).
+ * proposes the desk again to Maya: Sat Dec 19, 10:00 am, $60 (Maya pays $63.00 with the hold fee; Jordan earns $60.00).
  */
 
 const mayaRow: MyClientRow = {
   client: maya,
   completedCount: 1,
-  lastBooking: { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', categorySlug: 'furniture-assembly', completedAt: DESK_TIMES.approved, pricing: { type: 'fixed', priceCents: 6000 }, earnedCents: 5400 },
+  lastBooking: { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', categorySlug: 'furniture-assembly', completedAt: DESK_TIMES.approved, pricing: { type: 'fixed', priceCents: 6000 }, earnedCents: 6000 },
   actions: ['propose_rebook'],
 };
 
@@ -37,7 +37,7 @@ const chrisRow: MyClientRow = {
     categorySlug: 'moving-help',
     completedAt: '2026-11-22T19:30:00.000Z',
     pricing: { type: 'hourly', rateCents: 3500, estimatedHours: 3.5, hoursCap: 4 },
-    earnedCents: 12600,
+    earnedCents: 14000,
   },
   openProposal: { id: 'prp_moving', start: '2026-12-19T15:00:00.000Z', expiresAt: '2026-12-10T15:00:00.000Z' },
   actions: [],
@@ -46,7 +46,7 @@ const chrisRow: MyClientRow = {
 const ruthRow: MyClientRow = {
   client: ruth,
   completedCount: 1,
-  lastBooking: { id: 'bkg_bookcase', title: 'Assemble a bookcase', categorySlug: 'furniture-assembly', completedAt: '2026-11-20T18:00:00.000Z', pricing: { type: 'fixed', priceCents: 7000 }, earnedCents: 6300 },
+  lastBooking: { id: 'bkg_bookcase', title: 'Assemble a bookcase', categorySlug: 'furniture-assembly', completedAt: '2026-11-20T18:00:00.000Z', pricing: { type: 'fixed', priceCents: 7000 }, earnedCents: 7000 },
   actions: [],
 };
 

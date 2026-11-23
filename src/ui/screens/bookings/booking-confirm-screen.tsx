@@ -32,12 +32,14 @@ type BookingConfirmState = { initialResult?: PaymentAttemptResult; initialPendin
 export function BookingConfirmContent(props: BookingConfirmScreenProps & BookingConfirmState) {
   const t = useTranslations('bookingConfirm');
   const { task, offer } = props.data;
+  // Paid directly (2026-11-23): nothing to pay here, so the heading says confirm, not pay.
+  const direct = props.data.paymentMode === 'direct';
   return <div className="mx-auto max-w-reading space-y-6">
     <BookingConfirmBody {...props} lead={<>
       <Link href={routes.app.offer(task.id, offer.id)} className={backLink}>
         <ArrowLeft aria-hidden="true" className={backArrow} />{t('backToOffer')}
       </Link>
-      <PageHeader title={t('title')} description={t('intro')} />
+      <PageHeader title={t(direct ? 'titleDirect' : 'title')} description={t(direct ? 'introDirect' : 'intro')} />
     </>} />
   </div>;
 }
@@ -49,7 +51,7 @@ export function BookingConfirmContent(props: BookingConfirmScreenProps & Booking
 export function BookingConfirmDialogScreen(props: BookingConfirmScreenProps & BookingConfirmState) {
   const t = useTranslations('bookingConfirm');
   return <>
-    <RouteDialogHeader title={t('title')} description={t('intro')} />
+    <RouteDialogHeader title={t(props.data.paymentMode === 'direct' ? 'titleDirect' : 'title')} description={t(props.data.paymentMode === 'direct' ? 'introDirect' : 'intro')} />
     <RouteDialogBody><BookingConfirmBody {...props} /></RouteDialogBody>
   </>;
 }
@@ -88,15 +90,20 @@ function BookingConfirmBody({ data, handlers, now, initialResult, initialPending
         {offer.brings.length > 0 && <p className="text-sm text-muted-foreground">{t('brings', { items: offer.brings.join(', ') })}</p>}
       </div>
     </section>
-    <div className="space-y-3">
+    {data.paymentMode === 'direct' ? <div className={cn(surface, surfacePad, 'space-y-2')}>
+      {/* Paid directly (owner, 2026-11-23): nothing is charged here, so no breakdown, fee or cancellation money. */}
+      <h3 className={cardTitle}>{t('direct.title', { helper })}</h3>
+      <p className="font-display text-2xl font-semibold tabular-nums">{formatMoney(data.breakdown.taskPriceCents)}{offer.pricing.type === 'hourly' && <span className="ml-2 font-sans text-sm font-normal text-muted-foreground">{t('direct.hourly', { rate: formatMoney(offer.pricing.rateCents), hours: offer.pricing.hoursCap })}</span>}</p>
+      <p className="text-sm text-muted-foreground">{t('direct.body', { helper })}</p>
+    </div> : <div className="space-y-3">
       <PriceBreakdown breakdown={data.breakdown} variant="poster" title={t(data.paysLater ? 'totalLater' : 'totalToday')} />
       {data.paysLater
         ? <p className={note}>{t('paysLater', { chargeAt: formatDateTime(data.paysLater.chargeAt), payBy: formatDateTime(data.paysLater.payBy) })}</p>
         : <p className="text-sm text-muted-foreground">{t('paymentNote')}</p>}
       {data.credit && <p className={note}>{t('credit', { amount: formatMoney(data.credit.amountCents), date: formatDate(data.credit.expiresAt) })}</p>}
       {offer.pricing.type === 'hourly' && <p className={note}>{t('hourlyNote', { hours: offer.pricing.hoursCap })}</p>}
-    </div>
-    <CancellationSummary policy={data.cancellation} helperName={helper} />
+    </div>}
+    {data.paymentMode === 'direct' ? <p className={note}>{t('direct.cancel')}</p> : <CancellationSummary policy={data.cancellation} helperName={helper} />}
   </>;
 
   return <>

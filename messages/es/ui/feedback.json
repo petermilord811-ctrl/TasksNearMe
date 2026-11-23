@@ -21,8 +21,8 @@
   "confirmations": {
     "approve": {
       "title": "¿Aprobar la tarea completada?",
-      "description": "Al aprobarla, tu pago se libera para tu ayudante y no se puede deshacer. Si algo no está bien, vuelve y elige Reportar un problema.",
-      "confirm": "Aprobar y liberar el pago"
+      "description": "Al aprobarla, confirmas que el trabajo está hecho y no se puede deshacer. Si TasksNearMe retiene tu pago, ahora se le envía a tu ayudante. Si algo no está bien, vuelve y elige Reportar un problema.",
+      "confirm": "Aprobar la tarea"
     },
     "decline_offer": {
       "title": "¿Rechazar esta oferta?",

@@ -25,18 +25,18 @@ export const deskTimelineCompleted: TimelineEvent[] = [
   { id: 'evt_1', at: DESK_TIMES.posted, actor: 'poster', actorName: 'Maya R.', type: 'task_posted' },
   { id: 'evt_2', at: DESK_TIMES.jordanOffered, actor: 'helper', actorName: 'Jordan T.', type: 'offer_received', params: { amountCents: 6000 } },
   { id: 'evt_3', at: DESK_TIMES.booked, actor: 'poster', actorName: 'Maya R.', type: 'booked' },
-  { id: 'evt_4', at: DESK_TIMES.booked, actor: 'system', type: 'payment_succeeded', params: { amountCents: 6600 } },
+  { id: 'evt_4', at: DESK_TIMES.booked, actor: 'system', type: 'payment_succeeded', params: { amountCents: 6300 } },
   { id: 'evt_5', at: '2026-11-21T15:58:00.000Z', actor: 'helper', actorName: 'Jordan T.', type: 'on_my_way' },
   { id: 'evt_6', at: DESK_TIMES.arrived, actor: 'helper', actorName: 'Jordan T.', type: 'arrived' },
   { id: 'evt_7', at: DESK_TIMES.completionSubmitted, actor: 'helper', actorName: 'Jordan T.', type: 'completion_submitted' },
   { id: 'evt_8', at: DESK_TIMES.approved, actor: 'poster', actorName: 'Maya R.', type: 'approved' },
-  { id: 'evt_9', at: DESK_TIMES.approved, actor: 'system', type: 'earnings_transferred', params: { amountCents: 5400 } },
+  { id: 'evt_9', at: DESK_TIMES.approved, actor: 'system', type: 'earnings_transferred', params: { amountCents: 6000 } },
 ];
 
 /**
- * The same desk timeline as Jordan (the helper) sees it (audit M26): the client paid, and his own $54.00 is held until
- * approval, never the client's $66.00 total.
+ * The same desk timeline as Jordan (the helper) sees it (audit M26): the client paid, and his own $60.00 is held until
+ * approval, never the client's $63.00 total.
  */
 export const deskTimelineHelper: TimelineEvent[] = deskTimelineCompleted.map((event) =>
-  event.type === 'payment_succeeded' ? { ...event, type: 'payment_held', params: { amountCents: 5400 } } : event,
+  event.type === 'payment_succeeded' ? { ...event, type: 'payment_held', params: { amountCents: 6000 } } : event,
 );

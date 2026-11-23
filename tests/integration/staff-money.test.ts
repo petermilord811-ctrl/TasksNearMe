@@ -46,23 +46,23 @@ async function disputedDesk(id: string): Promise<{ bookingId: string; caseId: st
 const versionOf = async (caseId: string) => (await getAdminCase(db, alex, caseId, now()))!.version;
 
 describe('money resolutions', () => {
-  it('settles at $45: $16.50 back to the client, $40.50 to the helper (blueprint 04 §6)', async () => {
+  it('settles at $45: $15.75 back to the client, $45.00 to the helper (blueprint 04 §6)', async () => {
     const { bookingId, caseId } = await disputedDesk('tsk_settle');
     const page = await getAdminCase(db, alex, caseId, now());
     expect(page?.data.resolutions).toEqual(['release_full', 'settle', 'refund_full', 'account_action']);
-    expect(page?.data.money).toEqual({ priceCents: 6000, chargedCents: 6600, refundedCents: 0 });
+    expect(page?.data.money).toEqual({ priceCents: 6000, chargedCents: 6300, refundedCents: 0 });
     expect(await previewResolution(db, alex, caseId, { resolution: 'settle', settlePriceCents: 6000, summary: 'Settled at a lower price.' })).toMatchObject({ ok: false, fieldErrors: { settlePriceCents: ['invalid'] } });
     expect(await previewResolution(db, alex, caseId, { resolution: 'settle', settlePriceCents: 4500, summary: 'Settled at a lower price.' })).toEqual({
       ok: true,
-      preview: { posterRefundCents: 1650, helperReceivesCents: 4050, platformKeepsCents: 900, withinLimit: true },
+      preview: { posterRefundCents: 1575, helperReceivesCents: 4500, platformKeepsCents: 225, withinLimit: true },
     });
 
     const settle = { resolution: 'settle' as const, settlePriceCents: 4500, summary: 'Settled at $45 for the unfinished drawers.' };
     expect(await resolveCaseWithMoney(db, pay, alex, caseId, await versionOf(caseId), settle, now())).toEqual({ ok: true, code: 'saved' });
     const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
     expect(booking).toMatchObject({ status: 'completed', completedVia: 'settlement' });
-    expect((await db.select().from(refunds).where(eq(refunds.bookingId, bookingId))).map((row) => [row.amountCents, row.reason, row.status])).toEqual([[1650, 'dispute_settlement', 'succeeded']]);
-    expect((await db.select().from(earnings).where(and(eq(earnings.bookingId, bookingId), eq(earnings.kind, 'earnings'))))[0]?.amountCents).toBe(4050);
+    expect((await db.select().from(refunds).where(eq(refunds.bookingId, bookingId))).map((row) => [row.amountCents, row.reason, row.status])).toEqual([[1575, 'dispute_settlement', 'succeeded']]);
+    expect((await db.select().from(earnings).where(and(eq(earnings.bookingId, bookingId), eq(earnings.kind, 'earnings'))))[0]?.amountCents).toBe(4500);
     // Resolving again (a stale page) never pays twice.
     expect(await resolveCaseWithMoney(db, pay, alex, caseId, 1, settle, now())).toEqual({ ok: false, code: 'not_allowed' });
     expect(await db.select().from(refunds).where(eq(refunds.bookingId, bookingId))).toHaveLength(1);
@@ -77,7 +77,7 @@ describe('money resolutions', () => {
     const release = await disputedDesk('tsk_release');
     expect(await resolveCaseWithMoney(db, pay, alex, release.caseId, await versionOf(release.caseId), { resolution: 'release_full', summary: 'The work matches the request; paid in full.' }, now())).toEqual({ ok: true, code: 'saved' });
     expect((await db.select().from(bookings).where(eq(bookings.id, release.bookingId)))[0]).toMatchObject({ status: 'completed', completedVia: 'support' });
-    expect((await db.select().from(earnings).where(and(eq(earnings.bookingId, release.bookingId), eq(earnings.kind, 'earnings'))))[0]?.amountCents).toBe(5400);
+    expect((await db.select().from(earnings).where(and(eq(earnings.bookingId, release.bookingId), eq(earnings.kind, 'earnings'))))[0]?.amountCents).toBe(6000);
     expect(await db.select().from(refunds).where(eq(refunds.bookingId, release.bookingId))).toHaveLength(0);
   });
 });
@@ -86,17 +86,17 @@ describe('the staff booking page', () => {
   it('shows the money and cases, refunds within the limit, and opens the address only with a reason', async () => {
     const [settled] = await db.select({ id: bookings.id }).from(bookings).where(eq(bookings.taskId, 'tsk_settle'));
     const page = await getAdminBooking(db, alex, settled!.id, now());
-    expect(page?.money).toMatchObject({ chargedCents: 6600, refundedCents: 1650 });
+    expect(page?.money).toMatchObject({ chargedCents: 6300, refundedCents: 1575 });
     expect(page?.money.finalBreakdown?.taskPriceCents).toBe(4500);
     expect(page?.cases[0]).toMatchObject({ type: 'dispute', status: 'resolved' });
-    expect(page?.refund).toEqual({ maxCents: 4950, limitCents: 10_000, leftCents: 4950 });
+    expect(page?.refund).toEqual({ maxCents: 4725, limitCents: 10_000, leftCents: 4725 });
     expect(page?.actions).toEqual(['refund', 'reveal_address', 'reveal_conversation']);
     // Finance refunds (blueprint 08: up to $500 at once, then a second finance or admin approves) but doesn't work cases here.
-    expect(await getAdminBooking(db, casey, settled!.id, now())).toMatchObject({ actions: ['refund'], refund: { maxCents: 4950, limitCents: 50_000, leftCents: 4950 } });
+    expect(await getAdminBooking(db, casey, settled!.id, now())).toMatchObject({ actions: ['refund'], refund: { maxCents: 4725, limitCents: 50_000, leftCents: 4725 } });
 
     expect(await staffRefund(db, pay, alex, settled!.id, { amountCents: 5000, reason: 'goodwill', note: 'More than is left on this booking.' }, now())).toEqual({ ok: false, code: 'not_allowed' });
     expect(await staffRefund(db, pay, alex, settled!.id, { amountCents: 500, reason: 'goodwill', note: 'A scratch found after the visit.' }, now())).toEqual({ ok: true, code: 'submitted' });
-    expect((await getAdminBooking(db, alex, settled!.id, now()))?.money.refundedCents).toBe(2150);
+    expect((await getAdminBooking(db, alex, settled!.id, now()))?.money.refundedCents).toBe(2075);
 
     expect(await revealBookingAddress(db, fieldCipherFromEnv(), alex, settled!.id, { reason: 'short' }, now())).toMatchObject({ ok: false, code: 'validation_failed' });
     const revealed = await revealBookingAddress(db, fieldCipherFromEnv(), alex, settled!.id, { reason: 'Checking the reported damage location.' }, now());
@@ -129,8 +129,8 @@ describe('the dispute on the booking page (UI-026)', () => {
 
     const settle = { resolution: 'settle' as const, settlePriceCents: 4500, summary: 'Settled at $45 for the unfinished drawers.' };
     expect(await resolveCaseWithMoney(db, pay, alex, caseId, await versionOf(caseId), settle, now())).toEqual({ ok: true, code: 'saved' });
-    expect((await getBookingView(hub, 'usr_priya', bookingId, now()))?.dispute?.resolution).toMatchObject({ type: 'settle', refundCents: 1650 });
-    expect((await getBookingView(hub, 'usr_jordan', bookingId, now()))?.dispute?.resolution).toMatchObject({ type: 'settle', receivesCents: 4050 });
+    expect((await getBookingView(hub, 'usr_priya', bookingId, now()))?.dispute?.resolution).toMatchObject({ type: 'settle', refundCents: 1575 });
+    expect((await getBookingView(hub, 'usr_jordan', bookingId, now()))?.dispute?.resolution).toMatchObject({ type: 'settle', receivesCents: 4500 });
     const priyaNotes = await getNotificationsPage(db, 'usr_priya', now());
     expect(priyaNotes.notifications.find((note) => note.type === 'case_resolved')).toMatchObject({ target: { kind: 'support_case', caseId } });
   });

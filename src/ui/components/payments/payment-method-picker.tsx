@@ -3,7 +3,7 @@
 import { useId, useRef } from 'react';
 import type { ControllerRenderProps } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
-import type { CardRemovalHandlers, ConfirmBookingInput, PaymentChoice, PaymentPanelData } from '@/contracts';
+import type { CardRemovalHandlers, PaymentChoice, PaymentPanelData } from '@/contracts';
 import { Badge } from '@/ui/primitives/badge';
 import { Checkbox } from '@/ui/primitives/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/ui/primitives/radio-group';
@@ -35,7 +35,8 @@ export function getDefaultPaymentChoice(panel: PaymentPanelData): PaymentChoice 
 
 interface PaymentMethodPickerProps {
   panel: PaymentPanelData;
-  field: ControllerRenderProps<ConfirmBookingInput, 'payment'>;
+  /** A form's `payment` field (optional on the booking confirmation since 2026-11-23: a direct booking has none). */
+  field: Pick<ControllerRenderProps, 'name' | 'onBlur' | 'ref' | 'disabled'> & { value?: PaymentChoice; onChange: (value: PaymentChoice) => void };
   disabled?: boolean;
   error?: string;
   id?: string;
@@ -57,7 +58,7 @@ export function PaymentMethodPicker({ panel, field, disabled = false, error, id:
   const t = useTranslations('payments');
   const disabledControl = disabled || field.disabled;
   const lastNewCard = useRef<NewCardChoice>(newCardChoice(panel));
-  const choice = field.value;
+  const choice = field.value ?? getDefaultPaymentChoice(panel);
   const selected = choice.kind === 'saved' ? `saved:${choice.methodId}` : 'new';
   const removal = useCardRemoval(onRemoveCard, id);
   const shown = panel.methods.filter((method) => !removal.removed.has(method.id));

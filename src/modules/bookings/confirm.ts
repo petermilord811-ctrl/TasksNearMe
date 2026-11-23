@@ -1,4 +1,6 @@
 import { and, asc, desc, eq, inArray, isNull, lte, ne, notInArray, sql } from 'drizzle-orm';
+import { waivesHoldFee } from '@/modules/billing/benefits';
+import { paymentModeOf } from '@/modules/offers/domain';
 import { posterIdentityRequirement } from '@/modules/trust/poster-risk';
 import type {
   ActionResult,
@@ -173,8 +175,9 @@ async function lastFailure(db: Db, bookingId: string): Promise<FailedPaymentAtte
   };
 }
 
-function breakdownFor(fees: Parameters<typeof quoteBreakdown>[0], task: TaskRow, offer: OfferRow): PriceBreakdown {
-  return quoteBreakdown(fees, offerPricing(offer), { expenseAllowanceCents: task.expenseAllowanceCents });
+/** What the client pays: no fee when paid directly; held, the hold fee unless they have Plus (2026-11-23). */
+function breakdownFor(fees: Parameters<typeof quoteBreakdown>[0], task: TaskRow, offer: OfferRow, waiveHoldFee: boolean): PriceBreakdown {
+  return quoteBreakdown(fees, offerPricing(offer), { expenseAllowanceCents: task.expenseAllowanceCents, held: offer.paymentMode === 'held', waiveHoldFee });
 }
 
 /**
@@ -213,10 +216,13 @@ export async function getBookingConfirmPage(
   const helper = helpers.get(ctx.offer.helperUserId);
   if (!policy || !found || !helper) return null;
 
-  const breakdown = breakdownFor(policy.fees, ctx.task, ctx.offer);
-  // A first-time client's welcome credit (when the market offers one), shown with the price.
+  const breakdown = breakdownFor(policy.fees, ctx.task, ctx.offer, await waivesHoldFee(db, posterId, now));
+  // A first-time client's welcome credit (when the market offers one), shown with the price: what comes back on this
+  // booking, which is at most what the platform earns on it (the hold fee since 2026-11-23); none when paid directly or
+  // the fee is waived. The rest stays for a later booking.
   await ensureWelcomeCredit(db, posterId, ctx.task.marketId, now);
-  const credit = await availableCredit(db, posterId, now);
+  const available = ctx.offer.paymentMode === 'held' && breakdown.posterFeeCents > 0 ? await availableCredit(db, posterId, now) : null;
+  const credit = available ? { amountCents: Math.min(available.amountCents, breakdown.platformRevenueCents), expiresAt: available.expiresAt } : null;
   const proposedStart = ctx.offer.proposedStart.toISOString();
   const pending =
     live && live.status === 'pending_funding' && live.offerId === offerId && live.fundingExpiresAt
@@ -240,6 +246,7 @@ export async function getBookingConfirmPage(
         // Masked like the message (sweep MN2b): contact details in a brings line reach no one before booking.
         brings: ctx.offer.brings.map((item) => maskContactDetails(item).text),
       },
+      paymentMode: paymentModeOf(ctx.offer.paymentMode),
       breakdown,
       cancellation: cancellationSummary(policy.cancellation, breakdown, proposedStart),
       payment: await paymentPanel(db, posterId, deps.payments),
@@ -269,15 +276,15 @@ export interface ChosenMethod {
   fingerprint?: string | null;
 }
 
-async function chosenMethod(deps: BookingDeps, posterId: string, input: ConfirmBookingInput): Promise<ChosenMethod | ActionResult> {
-  return methodForChoice(deps, posterId, input.payment);
+async function chosenMethod(deps: BookingDeps, posterId: string, choice: PaymentChoice): Promise<ChosenMethod | ActionResult> {
+  return methodForChoice(deps, posterId, choice);
 }
 
 /**
  * The card a client chose (a saved one, or a development test card); also used to pay change differences, tips, requests
  * to a helper and rebooking. A card some banned account used is refused here, neutrally (abuse rehearsal J-AB4).
  */
-export async function methodForChoice(deps: BookingDeps, posterId: string, choice: ConfirmBookingInput['payment']): Promise<ChosenMethod | ActionResult> {
+export async function methodForChoice(deps: BookingDeps, posterId: string, choice: PaymentChoice): Promise<ChosenMethod | ActionResult> {
   const method = await chosenCard(deps, posterId, choice);
   if ('ok' in method) return method;
   if (await cardOfBannedAccount(deps.db, method.fingerprint, posterId)) {
@@ -288,7 +295,7 @@ export async function methodForChoice(deps: BookingDeps, posterId: string, choic
   return method;
 }
 
-async function chosenCard(deps: BookingDeps, posterId: string, choice: ConfirmBookingInput['payment']): Promise<ChosenMethod | ActionResult> {
+async function chosenCard(deps: BookingDeps, posterId: string, choice: PaymentChoice): Promise<ChosenMethod | ActionResult> {
   if (choice.kind === 'saved') {
     const [method] = await deps.db
       .select()
@@ -363,11 +370,14 @@ export async function confirmBooking(
 
   const policy = await getPublishedPolicy(ctx.task.marketId, db);
   if (!policy) return { ok: false, code: 'unknown' };
-  const breakdown = breakdownFor(policy.fees, ctx.task, ctx.offer);
+  const breakdown = breakdownFor(policy.fees, ctx.task, ctx.offer, await waivesHoldFee(db, posterId, now));
+  // Paid directly after the task (owner, 2026-11-23): nothing to charge or hold, so it's booked now.
+  if (ctx.offer.paymentMode === 'direct') return confirmDirectBooking(deps, posterId, ctx, policy.id, breakdown, now);
+  if (!parsed.data.payment) return { ok: false, code: 'validation_failed', fieldErrors: { payment: ['required'] } };
   const amountCents = breakdown.posterChargedCents ?? breakdown.posterTotalCents;
   // Risk asked this client to verify their ID first; the amount counts for new accounts.
   if (await posterIdentityRequirement(db, posterId, now, amountCents)) return { ok: false, code: 'identity_required' };
-  const method = await chosenMethod(deps, posterId, parsed.data);
+  const method = await chosenMethod(deps, posterId, parsed.data.payment);
   if ('ok' in method) return method;
 
   const pricing = offerPricing(ctx.offer);
@@ -483,7 +493,103 @@ export async function confirmBooking(
   return settle(deps, posterId, hold.paymentId, result, now);
 }
 
+/**
+ * Booking an offer the client pays directly (owner, 2026-11-23): nothing is charged or held, so the booking is
+ * confirmed at once, with what a paid booking's confirmation does (the offer accepted, the others declined, the task
+ * assigned, the conversation's "booked" line, the events), and no payment, earnings or refund ever follow it.
+ */
+async function confirmDirectBooking(deps: BookingDeps, posterId: string, ctx: NonNullable<Awaited<ReturnType<typeof loadContext>>>, policyId: string, breakdown: PriceBreakdown, now: Date): Promise<PaymentAttemptResult> {
+  const { db } = deps;
+  const pricing = offerPricing(ctx.offer);
+  let bookingId: string;
+  try {
+    bookingId = await db.transaction(async (tx) => {
+      await tx.execute(sql`select id from tasks where id = ${ctx.task.id} for update`);
+      const [fresh] = await tx.select({ status: tasks.status }).from(tasks).where(eq(tasks.id, ctx.task.id)).limit(1);
+      if (fresh?.status !== 'open') throw new HoldConflict();
+      const live = await liveBooking(tx, ctx.task.id);
+      if (live && live.status !== 'pending_funding') throw new HoldConflict();
+      if (live) {
+        // A held booking of an offer waiting for its payment: never while a charge is in flight; else it lets go.
+        const [inFlight] = await tx.select({ id: payments.id }).from(payments).where(and(eq(payments.bookingId, live.id), eq(payments.status, 'processing'))).limit(1);
+        if (inFlight) throw new PaymentInFlight();
+        await tx.update(bookings).set({ status: 'canceled', cancelReason: 'funding_failed', canceledAt: now, fundingExpiresAt: null, updatedAt: now }).where(eq(bookings.id, live.id));
+        await tx.update(payments).set({ status: 'canceled', updatedAt: now }).where(and(eq(payments.bookingId, live.id), eq(payments.status, 'requires_confirmation')));
+      }
+      const id = newId('bkg');
+      await tx.insert(bookings).values({
+        id,
+        taskId: ctx.task.id,
+        offerId: ctx.offer.id,
+        posterUserId: posterId,
+        helperUserId: ctx.offer.helperUserId,
+        marketId: ctx.task.marketId,
+        policyVersionId: policyId,
+        paymentMode: 'direct',
+        status: 'confirmed',
+        startAt: ctx.offer.proposedStart,
+        confirmedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await tx.insert(bookingTerms).values({
+        id: newId('btm'),
+        bookingId: id,
+        version: 1,
+        pricingType: pricing.type,
+        priceCents: pricing.type === 'fixed' ? pricing.priceCents : null,
+        hourlyRateCents: pricing.type === 'hourly' ? pricing.rateCents : null,
+        estimatedHours: pricing.type === 'hourly' ? pricing.estimatedHours : null,
+        hoursCap: pricing.type === 'hourly' ? pricing.hoursCap : null,
+        expenseAllowanceCents: ctx.task.expenseAllowanceCents,
+        breakdown,
+        scopeText: ctx.task.description,
+        startAt: ctx.offer.proposedStart,
+        createdAt: now,
+      });
+      await tx.update(offers).set({ status: 'accepted', closedAt: now, updatedAt: now }).where(eq(offers.id, ctx.offer.id));
+      const others = await tx
+        .update(offers)
+        .set({ status: 'declined', closedAt: now, updatedAt: now })
+        .where(and(eq(offers.taskId, ctx.task.id), inArray(offers.status, ACTIVE_OFFER)))
+        .returning({ id: offers.id, helperUserId: offers.helperUserId });
+      await tx
+        .update(tasks)
+        .set({ status: 'assigned', offerCount: 0, updatedAt: now, version: sql`${tasks.version} + 1` })
+        .where(eq(tasks.id, ctx.task.id));
+      await tx.insert(outboxEvents).values([
+        {
+          id: newId('evt'),
+          type: 'booking.confirmed',
+          aggregateType: 'booking',
+          aggregateId: id,
+          payload: { bookingId: id, taskId: ctx.task.id, posterUserId: posterId, helperUserId: ctx.offer.helperUserId },
+        },
+        ...others.map((offer) => ({
+          id: newId('evt'),
+          type: 'offer.declined',
+          aggregateType: 'offer',
+          aggregateId: offer.id,
+          payload: { offerId: offer.id, taskId: ctx.task.id, helperUserId: offer.helperUserId, reason: 'task_booked' },
+        })),
+      ]);
+      await tx.insert(auditLog).values({ id: newId('aud'), actorId: posterId, actorRole: 'user', action: 'booking.confirmed', targetType: 'booking', targetId: id, metadata: { paymentMode: 'direct' } });
+      await postEvent(tx, bookingThreadLink({ id, taskId: ctx.task.id, posterUserId: posterId, helperUserId: ctx.offer.helperUserId }), 'system', { type: 'booked' }, now, posterId);
+      return id;
+    });
+  } catch (error) {
+    if (error instanceof PaymentInFlight) return { ok: false, code: 'not_ready' };
+    if (error instanceof HoldConflict || isUniqueViolation(error)) return { ok: false, code: 'not_allowed' };
+    throw error;
+  }
+  // Booked: the task's other invites end and let go of the client's card now (repeats review #11).
+  await closeTaskInvites(db, ctx.task.id, now, deps.payments);
+  return { ok: true, code: 'booked', redirectTo: routes.app.booking(bookingId) };
+}
+
 class HoldConflict extends Error {}
+/** The card the client chose for a held booking (the confirmation's `payment`). */
+type PaymentChoice = NonNullable<ConfirmBookingInput['payment']>;
 /** Another attempt on the same hold is being charged, or its outcome is still unknown. */
 class PaymentInFlight extends Error {}
 

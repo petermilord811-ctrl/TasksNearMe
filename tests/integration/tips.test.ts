@@ -151,12 +151,12 @@ describe('tips', () => {
     // The receipt and the receipts list count it; the helper's earnings list it; staff refunds leave it alone.
     const receipt = await getReceiptPage(db, 'usr_ana', id);
     expect(receipt?.lines.filter((line) => line.kind === 'tip')).toEqual([expect.objectContaining({ amountCents: 900 })]);
-    expect(receipt?.netCents).toBe(6600 + 900);
-    expect((await getPaymentsPage(db, 'usr_ana')).receipts.find((row) => row.bookingId === id)).toMatchObject({ chargedCents: 6600, tipCents: 900, netCents: 7500 });
+    expect(receipt?.netCents).toBe(6300 + 900);
+    expect((await getPaymentsPage(db, 'usr_ana')).receipts.find((row) => row.bookingId === id)).toMatchObject({ chargedCents: 6300, tipCents: 900, netCents: 7200 });
     expect((await getEarningsPage(db, 'usr_jordan', new Date())).rows.filter((row) => row.bookingId === id && row.kind === 'tip')).toEqual([expect.objectContaining({ amountCents: 900 })]);
     const staff = await getAdminBooking(db, alex, id, new Date());
-    expect(staff?.money.chargedCents).toBe(6600);
-    expect(staff?.refund?.leftCents).toBe(6600);
+    expect(staff?.money.chargedCents).toBe(6300);
+    expect(staff?.refund?.leftCents).toBe(6300);
     expect(staff?.money.earnings.filter((line) => line.kind === 'tip')).toEqual([expect.objectContaining({ amountCents: 900 })]);
   });
 

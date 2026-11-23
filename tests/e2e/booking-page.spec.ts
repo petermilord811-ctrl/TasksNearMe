@@ -3,7 +3,7 @@ import { devSignIn } from './support/sign-in';
 
 /**
  * The bookings list and the booking page (UI-011), read-only, on the seeded booking: Ben's TV with
- * Jordan ($80; $88.00 charged; Jordan earns $72.00), in a few days.
+ * Jordan ($80; $84.00 charged, the $4.00 hold fee included; Jordan gets $80.00), in a few days.
  */
 
 test('the client finds the booking with their address and the charge', async ({ page }) => {
@@ -14,7 +14,7 @@ test('the client finds the booking with their address and the charge', async ({ 
   await expect(page).toHaveURL(/\/app\/bookings\/bkg_tv$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Anchor a tall bookshelf to the wall' })).toBeVisible();
   await expect(page.getByText('88 Sample Street').first()).toBeVisible();
-  await expect(page.getByText('$88.00').first()).toBeVisible();
+  await expect(page.getByText('$84.00').first()).toBeVisible();
 });
 
 test('the helper sees the address and earnings; check-in opens on the day', async ({ page }) => {
@@ -22,7 +22,7 @@ test('the helper sees the address and earnings; check-in opens on the day', asyn
   await page.goto('/app/bookings/bkg_tv');
   await expect(page.getByRole('heading', { level: 1, name: 'Anchor a tall bookshelf to the wall' })).toBeVisible();
   await expect(page.getByText('88 Sample Street').first()).toBeVisible();
-  await expect(page.getByText('$72.00').first()).toBeVisible();
+  await expect(page.getByText('$80.00').first()).toBeVisible();
   await expect(page.getByRole('button', { name: "I'm on my way" })).toBeDisabled();
 
   const calendar = await page.request.get('/app/bookings/bkg_tv/calendar.ics');

@@ -1,21 +1,29 @@
 ---
 title: ¿Cuándo me pagan?
-summary: Después de que se aprueba la tarea. Tu primer pago puede tardar unos 7 días.
+summary: Con pago directo, tu cliente te paga después de la tarea. Con pago por adelantado, después de que se aprueba la tarea; tu primer pago puede tardar unos 7 días.
 topic: helpers
 order: 2
-updated: 2026-11-14
+updated: 2026-11-23
 ---
-Te pagan cuando la tarea está completa: cuando tu cliente la aprueba, o automáticamente 72 horas después de que la marcas como terminada si no responde.
+Cada oferta que envías dice cómo quieres cobrar: directamente de tu cliente, o por adelantado, con el pago retenido por TasksNearMe. En ningún caso hay tarifa para el ayudante.
+
+## Pago directo
+
+Tu cliente te paga después de la tarea, en efectivo, con una app de pagos o como acuerden. El dinero no pasa por TasksNearMe, así que no forma parte de tus pagos. Las propinas también te llegan directamente.
+
+## Pago por adelantado
+
+Tu cliente paga al reservar y TasksNearMe retiene el dinero. Te pagan cuando la tarea está completa: cuando tu cliente la aprueba, o automáticamente 72 horas después de que la marcas como terminada si no responde.
 
 ## Lo que recibes
 
-- El precio de la tarea menos una tarifa de servicio del 10%. Ves el monto exacto antes de aceptar una tarea.
+- El precio completo de la tarea. El cliente paga la tarifa de retención y no se descuenta nada de tus ganancias.
 - Los gastos aprobados se pagan por separado, sin tarifas.
-- Las propinas son todas tuyas, sin tarifa. Salen con tu próximo pago.
+- Las propinas que se dan en la app son todas tuyas, sin tarifa. Salen con tu próximo pago.
 
 ## Tiempos
 
-Tu primer pago suele llegar unos **7 días** después de tu primera tarea pagada. Después, los pagos son diarios y llegan unos 2 días hábiles después de que se completa una tarea.
+Tu primer pago suele llegar unos **7 días** después de tu primera tarea pagada por adelantado. Después, los pagos son diarios y llegan unos 2 días hábiles después de que se completa una tarea.
 
 ## Cuando un pago espera
 

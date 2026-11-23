@@ -63,7 +63,10 @@
     },
     "nothingChargedTitle": "Cancelar es gratis",
     "nothingCharged": "Todavía no se ha cobrado nada, así que no hay nada que reembolsar ni tarifa que pagar.",
-    "nothingChargedHelper": "A {client} todavía no se le ha cobrado, así que cancelar ahora es gratis y no cuenta en tu contra."
+    "nothingChargedHelper": "A {client} todavía no se le ha cobrado, así que cancelar ahora es gratis y no cuenta en tu contra.",
+    "directTitle": "Nada que reembolsar",
+    "directPoster": "Le pagas a {helper} directamente, así que aquí no se cobró nada. Avísale lo antes posible: reservó ese tiempo para ti.",
+    "directHelper": "{client} te paga directamente, así que aquí no se cobró nada y no hay nada que reembolsar."
   },
   "late": {
     "title": "¿Cuánto te retrasarás?",

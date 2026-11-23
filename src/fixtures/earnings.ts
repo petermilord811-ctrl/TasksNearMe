@@ -32,9 +32,9 @@ const deskReceipt: ReceiptRow = {
   categorySlug: 'furniture-assembly',
   helper: person(jordan),
   paidAt: DESK_TIMES.booked,
-  chargedCents: 6600,
+  chargedCents: 6300,
   refundedCents: 0,
-  netCents: 6600,
+  netCents: 6300,
   status: 'succeeded',
 };
 
@@ -43,9 +43,9 @@ const deskAllowanceReceipt: ReceiptRow = {
   ...deskReceipt,
   bookingId: 'bkg_desk_allowance',
   title: 'Assemble a desk and mount the shelf',
-  chargedCents: 8600,
+  chargedCents: 8300,
   refundedCents: 1200,
-  netCents: 7400,
+  netCents: 7100,
   status: 'partially_refunded',
 };
 
@@ -56,8 +56,8 @@ const yardRefundedReceipt: ReceiptRow = {
   categorySlug: 'yard-cleanup',
   helper: person(sam),
   paidAt: '2026-10-20T15:00:00.000Z',
-  chargedCents: 9900,
-  refundedCents: 9900,
+  chargedCents: 9450,
+  refundedCents: 9450,
   netCents: 0,
   status: 'refunded',
 };
@@ -73,7 +73,7 @@ export const mayaPaymentsPageData: PaymentsPageData = {
 /** The desk after Maya tipped Jordan $9 (UI-057): its own line, in the net. */
 export const mayaPaymentsWithTipData: PaymentsPageData = {
   ...mayaPaymentsPageData,
-  receipts: [deskAllowanceReceipt, { ...deskReceipt, tipCents: 900, netCents: 7500 }, yardRefundedReceipt],
+  receipts: [deskAllowanceReceipt, { ...deskReceipt, tipCents: 900, netCents: 7200 }, yardRefundedReceipt],
 };
 
 /** A longer history (plan 9.14, audit M36): receipts over four months, grouped by month with the older ones folded. */
@@ -84,11 +84,11 @@ export const mayaPaymentsHistoryData: PaymentsPageData = {
   ...mayaPaymentsPageData,
   receipts: [
     ...mayaPaymentsPageData.receipts,
-    pastReceipt('bkg_shelves_oct', 'Hang three floating shelves', 'furniture-assembly', jordan, '2026-10-09T16:30:00.000Z', 5500),
-    pastReceipt('bkg_move_sep', 'Move a couch and two boxes upstairs', 'moving-help', sam, '2026-09-26T14:00:00.000Z', 13200),
-    pastReceipt('bkg_clean_sep', 'Clean the kitchen after a party', 'light-cleaning', sam, '2026-09-12T19:00:00.000Z', 8800),
-    pastReceipt('bkg_wifi_aug', 'Set up the new Wi‑Fi router', 'computer-help', jordan, '2026-08-30T17:15:00.000Z', 4400),
-    pastReceipt('bkg_bed_aug', 'Assemble a bed frame', 'furniture-assembly', jordan, '2026-08-14T15:45:00.000Z', 7700),
+    pastReceipt('bkg_shelves_oct', 'Hang three floating shelves', 'furniture-assembly', jordan, '2026-10-09T16:30:00.000Z', 5250),
+    pastReceipt('bkg_move_sep', 'Move a couch and two boxes upstairs', 'moving-help', sam, '2026-09-26T14:00:00.000Z', 12600),
+    pastReceipt('bkg_clean_sep', 'Clean the kitchen after a party', 'light-cleaning', sam, '2026-09-12T19:00:00.000Z', 8400),
+    pastReceipt('bkg_wifi_aug', 'Set up the new Wi‑Fi router', 'computer-help', jordan, '2026-08-30T17:15:00.000Z', 4200),
+    pastReceipt('bkg_bed_aug', 'Assemble a bed frame', 'furniture-assembly', jordan, '2026-08-14T15:45:00.000Z', 7350),
   ],
 };
 
@@ -102,10 +102,10 @@ export const deskReceiptPageData: ReceiptPageData = {
   helper: person(jordan),
   breakdown: deskWithExpensesFinalBreakdown,
   lines: [
-    { id: 'pay_desk_allow', kind: 'charge', amountCents: 8600, method: { brand: 'visa', last4: '1881' }, at: DESK_TIMES.booked },
+    { id: 'pay_desk_allow', kind: 'charge', amountCents: 8300, method: { brand: 'visa', last4: '1881' }, at: DESK_TIMES.booked },
     { id: 'ref_desk_allow', kind: 'refund', amountCents: 1200, reason: 'unused_allowance', method: { brand: 'visa', last4: '1881' }, at: DESK_TIMES.approved },
   ],
-  netCents: 7400,
+  netCents: 7100,
 };
 
 /** A plain receipt: charged once, nothing back. */
@@ -114,15 +114,15 @@ export const deskSimpleReceiptPageData: ReceiptPageData = {
   receiptNumber: 'TNM-2026-000141',
   booking: { ...deskReceiptPageData.booking, id: 'bkg_desk', title: deskReceipt.title },
   breakdown: deskBreakdown,
-  lines: [{ id: 'pay_desk', kind: 'charge', amountCents: 6600, method: { brand: 'visa', last4: '1881' }, at: DESK_TIMES.booked }],
-  netCents: 6600,
+  lines: [{ id: 'pay_desk', kind: 'charge', amountCents: 6300, method: { brand: 'visa', last4: '1881' }, at: DESK_TIMES.booked }],
+  netCents: 6300,
 };
 
 /** The desk receipt with Maya's $9 tip after approval (UI-057). */
 export const deskTipReceiptPageData: ReceiptPageData = {
   ...deskSimpleReceiptPageData,
   lines: [...deskSimpleReceiptPageData.lines, { id: 'pay_desk_tip', kind: 'tip', amountCents: 900, method: { brand: 'visa', last4: '1881' }, at: '2026-11-21T19:20:00.000Z' }],
-  netCents: 7500,
+  netCents: 7200,
 };
 
 const deskEarnings: EarningsRowView = {
@@ -131,7 +131,7 @@ const deskEarnings: EarningsRowView = {
   title: 'Assemble a desk (flat-pack, 1 item)',
   client: person(maya),
   kind: 'earnings',
-  amountCents: 5400,
+  amountCents: 6000,
   status: 'paid_out',
   transferredAt: DESK_TIMES.approved,
   payout: { id: 'po_1123', arrivalDate: '2026-11-25', bankLast4: '6789', status: 'paid' },
@@ -175,13 +175,13 @@ const disputedEarnings: EarningsRowView = {
   title: 'Assemble a bookcase',
   client: { id: 'usr_ruth', displayName: 'Ruth A.', initials: 'RA', memberSince: '2026-11-02T15:00:00.000Z', phoneVerified: true },
   kind: 'earnings',
-  amountCents: 6300,
+  amountCents: 7000,
   status: 'on_hold',
   holdReason: 'dispute',
 };
 
 export const jordanEarningsPageData: EarningsPageData = {
-  totals: { upcomingCents: 7500, onHoldCents: 6300, onTheWayCents: movingEarnings.amountCents, paidThisYearCents: 6200 },
+  totals: { upcomingCents: 8200, onHoldCents: 7000, onTheWayCents: movingEarnings.amountCents, paidThisYearCents: 6800 },
   rows: [disputedEarnings, lateCancellationEarnings, movingEarnings, deskReimbursement, deskEarnings],
   payoutAccount: { status: 'active', bankLast4: '6789', actionNeeded: false },
   firstPayoutNotice: false,
@@ -198,7 +198,7 @@ export const jordanEarningsPaidOutData: EarningsPageData = {
   ...jordanEarningsPageData,
   payouts: [
     { id: 'po_instant', arrivalDate: '2026-11-20', status: 'paid', method: 'instant', amountCents: 11300, feeCents: 170, netCents: 11130 },
-    { id: 'po_standard', arrivalDate: '2026-11-19', status: 'paid', method: 'standard', amountCents: 5400, bankLast4: '6789' },
+    { id: 'po_standard', arrivalDate: '2026-11-19', status: 'paid', method: 'standard', amountCents: 6000, bankLast4: '6789' },
   ],
 };
 
@@ -217,7 +217,7 @@ export const jordanEarningsActionNeededData: EarningsPageData = {
 
 /** A new helper before the first payout. */
 export const earningsFirstPayoutData: EarningsPageData = {
-  totals: { upcomingCents: 5400, onHoldCents: 0, onTheWayCents: 0, paidThisYearCents: 0 },
+  totals: { upcomingCents: 6000, onHoldCents: 0, onTheWayCents: 0, paidThisYearCents: 0 },
   rows: [{ ...deskEarnings, status: 'scheduled', payout: undefined, transferredAt: undefined }],
   payoutAccount: { status: 'active', bankLast4: '6789', actionNeeded: false },
   firstPayoutNotice: true,

@@ -2,11 +2,13 @@ import type { ActionResult } from './actions';
 import type { Cents, ISODateTime } from './common';
 
 /**
- * Subscription plans (completion plan 9.13; the design is in docs/automation/decisions.md, 2026-11-18). Everything on
- * the site works without a plan and without AI; a plan adds money back on fees and AI search, never ranking, a badge
- * or a trust signal.
- * - `plus`: for clients. Part of the client service fee back on each completed booking, up to a monthly cap.
- * - `pro`: for helpers. Part of the helper fee back on each completed booking, up to a monthly cap.
+ * Subscription plans (completion plan 9.13; LinkedIn-Premium-style since 2026-11-23, docs/automation/decisions.md).
+ * Everything on the site works without a plan and without AI, and there are no service fees to pay back.
+ * - `plus`: for clients. No hold fee when a helper asks to be paid upfront and TasksNearMe holds the payment; more AI
+ *   searches.
+ * - `pro`: for helpers. Their offers first on a client's list, with a Pro badge; offer insights on every task (how
+ *   many offers and their price range); more AI searches. Reviews, checks and the verified badge are earned the same
+ *   way by everyone.
  */
 export const PLAN_CODES = ['plus', 'pro'] as const;
 export type PlanCode = (typeof PLAN_CODES)[number];
@@ -39,13 +41,7 @@ export interface PlanOffer {
   monthlyCents: Cents;
   /** Billed once a year. */
   yearlyCents: Cents;
-  /** The share of that side's service fee paid back, in basis points (5,000: half). */
-  rebateBps: number;
-  /** The most paid back in one calendar month (the same on yearly plans). */
-  rebateMonthlyCapCents: Cents;
   aiSearchesPerMonth: number;
-  /** Booked (Plus) or earned (Pro) in a month at which the money back equals the monthly price, rounded up to $10. */
-  breakEvenMonthlyCents: Cents;
 }
 
 /** One of the person's plans. */
@@ -61,18 +57,6 @@ export interface PlanMembership {
   /** When it renews, or ends when `cancelAtPeriodEnd`. */
   periodEnd: ISODateTime;
   cancelAtPeriodEnd: boolean;
-  /** Paid back so far this calendar month, against the plan's cap. */
-  rebatedThisMonthCents: Cents;
-}
-
-/**
- * An honest estimate from the person's own last 30 days: what the plan's money back would have been on the bookings
- * they completed (cap included). Absent when they completed none.
- */
-export interface PlanEstimate {
-  plan: PlanCode;
-  bookings: number;
-  savedCents: Cents;
 }
 
 /** `/app/plan`. */
@@ -80,7 +64,6 @@ export interface PlanPageData {
   /** In the order to show: the viewer's side first. */
   offers: PlanOffer[];
   memberships: PlanMembership[];
-  estimates: PlanEstimate[];
   /** AI searches a month without a plan. */
   freeAiSearchesPerMonth: number;
   /** This month's AI search allowance. */

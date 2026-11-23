@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 TasksNearMe connects people in Gainesville with verified neighbors for everyday tasks: [furniture assembly](/gainesville/furniture-assembly), [moving help](/gainesville/moving-help), [yard cleanup](/gainesville/yard-cleanup), [light cleaning](/gainesville/light-cleaning), and [computer and phone help](/gainesville/computer-help). You describe what you need, helpers nearby send offers with their price, and you choose the one that fits.
 
@@ -16,7 +16,7 @@ The service area is the city and the rest of Alachua County within about 15 mile
 
 ## Prices and payment
 
-You and your helper agree on the price before you book: a fixed price for the job, or an hourly rate with the most hours you want to pay for. You see every fee before you confirm. Your card is charged when you book, and your helper is paid after the task is done. Each service has a cost guide for Gainesville, such as [what furniture assembly costs](/gainesville/furniture-assembly/cost).
+You and your helper agree on the price before you book: a fixed price for the job, or an hourly rate with the most hours you want to pay for. There are no service fees: you pay your helper directly once the task is done, in cash or with a payment app. If a helper asks to be paid upfront, your card is charged when you book, plus a small hold fee, and TasksNearMe holds the money until you say the task is done. Each service has a cost guide for Gainesville, such as [what furniture assembly costs](/gainesville/furniture-assembly/cost).
 
 ## Who you meet
 

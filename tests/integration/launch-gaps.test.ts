@@ -85,9 +85,9 @@ describe('launch-scenario details', () => {
   it("T-28: an agent can't refund $150 (over the $100 agent limit); a lead can, and both attempts' outcomes are audited", async () => {
     const { bookingId } = await booked('tsk_gap_refund');
     const refund = { amountCents: 15_000, reason: 'goodwill' as const, note: 'The client waited an hour past the start.' };
-    // The booking was charged $66: a lead refunds what's left, an agent can't go over their limit.
+    // The booking was charged $63 (held, with the hold fee): a lead refunds what's left, an agent can't go over their limit.
     expect(await staffRefund(db, pay, alex, bookingId, refund, new Date())).toEqual({ ok: false, code: 'not_allowed' });
-    expect(await staffRefund(db, pay, morgan, bookingId, { ...refund, amountCents: 6600 }, new Date())).toMatchObject({ ok: true });
+    expect(await staffRefund(db, pay, morgan, bookingId, { ...refund, amountCents: 6300 }, new Date())).toMatchObject({ ok: true });
     const entries = await db.select().from(auditLog).where(and(eq(auditLog.targetId, bookingId), eq(auditLog.action, 'booking.refund')));
     expect(entries.map((entry) => entry.actorId)).toContain('usr_morgan');
   });

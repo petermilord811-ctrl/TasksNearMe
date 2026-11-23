@@ -1,47 +1,141 @@
 {
   "pricing": {
-    "title": "Know what you'll pay. Know what you'll earn.",
-    "description": "Agree on the task price before booking. See each service fee and any expense allowance before you confirm.",
-    "paymentTiming": "You pay when you book. Your helper is paid after the task is done.",
-    "feesTitle": "How service fees work",
-    "posterFeeTitle": "When you book help",
-    "posterFeeAmount": "{percent}% service fee",
-    "posterFeeDescription": "Added to the task price, with a minimum of {minimum} per booking.",
-    "helperFeeTitle": "When you help",
-    "helperFeeAmount": "{percent}% service fee",
-    "helperFeeDescription": "Deducted from the task price. You'll see your earnings before you agree.",
-    "fixedIntro": "For a fixed-price task, you and your helper agree on the price for the whole task. Here is a {price} example.",
-    "fixedPosterTitle": "Fixed price: what you pay",
-    "fixedHelperTitle": "Fixed price: what your helper earns",
-    "minimumTitle": "When the minimum fee applies",
-    "minimumDescription": "On this {price} task, the {minimum} minimum service fee applies. The total is shown below.",
-    "minimumBreakdownTitle": "A smaller task",
-    "hourlyTitle": "Hourly help, with an agreed cap",
-    "hourlyDescription": "You pay for the agreed hours cap and service fee when you book. After the task, you approve the hours worked. Unused hours and their fee share are refunded. Extra hours need your agreement and payment first.",
-    "hourlyFundedTitle": "Hourly: paid when you book",
-    "hourlyFinalTitle": "Hourly: after the task",
-    "expensesTitle": "Expenses stay separate",
-    "expensesDescription": "Agree on an expense allowance before your helper buys supplies. You approve receipts after the task. Unused allowance is refunded, and neither person pays a service fee on reimbursed expenses.",
-    "expensesPosterTitle": "With an expense allowance",
-    "expensesHelperTitle": "Earnings and reimbursement",
-    "cancellationTitle": "If plans change",
-    "cancellationDescription": "Cancel free at least {hours} hours before the task starts. Later cancellations cost {percent}% of the task price or {minimum}, whichever is greater, up to the task price. Your helper receives all of that fee.",
-    "cancellationCaption": "Cancellation example for a {price} task",
-    "cancellationScenario": "When it happens",
-    "cancellationRefund": "You get back",
-    "cancellationHelper": "Helper receives",
-    "cancellationEarly": "You cancel at least {hours} hours before the start",
-    "cancellationLate": "You cancel less than {hours} hours before the start",
-    "cancellationHelperCancels": "Your helper cancels",
-    "fullRefund": "Full refund: {amount}",
-    "noPayment": "No payment",
-    "lateFeeExample": "In this example, the late cancellation fee is {fee}. Your helper receives {received}, and you get {refund} back.",
-    "cancellationPolicy": "Read the cancellation policy",
-    "approvalTitle": "Time to check the finished task",
-    "approvalDescription": "After your helper submits completion, you have {hours} hours to approve it or report a problem. After that, the task is approved automatically. Reporting a problem pauses payment while it is reviewed.",
-    "inviteTitle": "Inviting a helper directly",
-    "inviteDescription": "An invite places a hold on your card for up to {hours} hours. You're charged only if the helper accepts. The hold is released if they decline or don't answer in time.",
-    "postTask": "Post a task"
+    "title": "No service fees",
+    "description": "Posting, offers, messages and booking are free for everyone. Pay your helper directly, or have TasksNearMe hold the payment until the task is done.",
+    "ways": {
+      "direct": {
+        "title": "Pay directly",
+        "price": "$0",
+        "priceNote": "No fee for either of you",
+        "one": "Agree on the price and the time in the app",
+        "two": "Pay your helper after the task: cash, Zelle, Venmo or however you agree",
+        "three": "Your conversation, the agreed price and reviews stay on record",
+        "example": "A {price} desk: you pay your helper {price}. Nothing goes through TasksNearMe."
+      },
+      "held": {
+        "title": "Held by TasksNearMe",
+        "price": "{percent}%",
+        "priceNote": "hold fee, paid by the client (at least {minimum}); free with Plus",
+        "one": "When a helper asks to be paid upfront",
+        "two": "You pay when you book; we hold the money until you say the task is done",
+        "three": "Your helper gets the whole price; if something goes wrong, the money waits while we sort it out",
+        "example": "A {price} desk: you pay {total} ({price} + {fee} hold fee), and your helper gets {earns}."
+      }
+    },
+    "how": {
+      "title": "How a held payment works",
+      "book": {
+        "title": "Book and pay",
+        "body": "You pay when you book. TasksNearMe holds the money; your helper can see it's there."
+      },
+      "work": {
+        "title": "The task gets done",
+        "body": "Your helper does the work and tells you it's done, with photos if they like."
+      },
+      "done": {
+        "title": "You say it's done",
+        "body": "Approve the work, or report a problem. No answer within {hours} hours counts as done."
+      },
+      "paid": {
+        "title": "Your helper is paid",
+        "body": "The whole price goes to your helper. Nothing is taken from it."
+      }
+    },
+    "plans": {
+      "title": "Premium, when you want more",
+      "intro": "Everything above is free. The plans add what busy clients and helpers ask for, like LinkedIn Premium: cancel anytime.",
+      "perMonth": "a month",
+      "free": {
+        "name": "Free",
+        "for": "Everyone",
+        "always": "Free, always",
+        "cta": "Sign up free",
+        "benefits": {
+          "fees": "Post tasks and send offers with no service fees",
+          "direct": "Pay directly, or have the payment held for {percent}%",
+          "community": "Neighbors, messages, reviews and verified profiles",
+          "ai": "{searches} AI searches a month"
+        }
+      },
+      "plus": {
+        "name": "Plus",
+        "for": "For clients",
+        "cta": "Get Plus",
+        "benefits": {
+          "everything": "Everything in Free",
+          "hold": "No hold fee: we hold your upfront payments for free",
+          "ai": "{searches} AI searches a month: describe what you need, get matching helpers"
+        }
+      },
+      "pro": {
+        "name": "Pro",
+        "for": "For helpers",
+        "cta": "Get Pro",
+        "benefits": {
+          "everything": "Everything in Free",
+          "first": "Your offers shown first to clients",
+          "badge": "A Pro badge on your offers",
+          "insights": "Offer insights on every task: how many offers and their price range",
+          "ai": "{searches} AI searches a month: describe the work you want, get matching tasks"
+        }
+      }
+    },
+    "compare": {
+      "title": "Compare the plans",
+      "feature": "What you get",
+      "yes": "Included",
+      "no": "Not included",
+      "none": "None",
+      "waived": "Free",
+      "holdFee": "{percent}%",
+      "plan": {
+        "free": "Free",
+        "plus": "Plus",
+        "pro": "Pro"
+      },
+      "rows": {
+        "serviceFees": "Service fees",
+        "direct": "Pay your helper directly",
+        "holdFee": "Hold fee on upfront payments (paid by the client)",
+        "offersFirst": "Offers shown first",
+        "badge": "Pro badge",
+        "insights": "Offer insights",
+        "ai": "AI searches a month"
+      }
+    },
+    "cancellation": {
+      "title": "Canceling a held booking",
+      "body": "Cancel for free until {hours} hours before the start and get everything back. Later, your helper gets {percent}% of the price (at least {minimum}) for the time they set aside. Paid directly? Nothing is charged, so there's nothing to refund.",
+      "link": "Cancellation policy"
+    },
+    "faq": {
+      "title": "Questions",
+      "why": {
+        "q": "Why are there no service fees?",
+        "a": "TasksNearMe makes its money from the optional plans. Booking help, and being booked, stays free; only holding money for you costs a little."
+      },
+      "safe": {
+        "q": "Is paying directly safe?",
+        "a": "Book through TasksNearMe so the agreed price, your conversation and the reviews are on record. If you'd rather the money wait until the work is done, choose an offer paid upfront, or ask your helper to send one."
+      },
+      "when": {
+        "q": "When should a helper ask to be paid upfront?",
+        "a": "For bigger tasks, new clients, or work with supplies to buy: the money is there before the work starts, and it's yours once the client says it's done."
+      },
+      "fee": {
+        "q": "What does the hold fee pay for?",
+        "a": "Taking the card payment, holding the money safely and stepping in if something goes wrong. It's {percent}% of the price, paid by the client, and free with Plus."
+      },
+      "cancelPlan": {
+        "q": "Can I cancel a plan?",
+        "a": "Anytime, from Plans in your account. It keeps working until the end of the period you paid for."
+      }
+    },
+    "closing": {
+      "title": "Get something done, fee-free",
+      "body": "Post a task in a minute and choose a helper from the offers.",
+      "action": "Post a task"
+    }
   },
   "becomeHelper": {
     "title": "Put your everyday skills to work nearby",
@@ -55,7 +149,7 @@
     "backgroundTitle": "Complete a background check for in-home help",
     "backgroundDescription": "In-home categories require a background check before you can accept bookings in those categories.",
     "earningsTitle": "An example of what you'll earn",
-    "earningsDescription": "Your task price and service fee are shown separately. Approved expenses are reimbursed separately from earnings.",
+    "earningsDescription": "You get the whole task price: there are no helper fees. Approved expenses are reimbursed separately from earnings.",
     "earningsBreakdownTitle": "Your earnings on a task",
     "timingTitle": "When payment reaches you",
     "timingDescription": "Your payment is sent after the task is completed and approved, or approved automatically. It usually reaches your bank in about 2 business days.",
@@ -86,7 +180,7 @@
   },
   "shared": {
     "postTask": "Post a task",
-    "freeToPost": "Free to post. You pay when you book, and your helper is paid after the work is done.",
+    "freeToPost": "Free to post, with no service fees. Pay your helper directly, or upfront when they ask: TasksNearMe holds it until the work is done.",
     "trustPoints": {
       "label": "Why you can trust it",
       "verified": "ID-verified helpers",
@@ -112,7 +206,7 @@
     "joinWaitlist": "Join the waitlist",
     "trustTitle": "Clear from the first step",
     "paymentTitle": "Know when you pay",
-    "payment": "You pay when you book. Your helper is paid after the task is done.",
+    "payment": "Pay your helper directly once the task is done, or upfront when they ask: TasksNearMe holds it until you say the task is done.",
     "privacyTitle": "Your address stays private",
     "privacy": "Helpers see only the general area. Your exact address is shared with your helper after you book.",
     "identityTitle": "ID-verified helpers",
@@ -145,8 +239,8 @@
     "faqTitle": "A few things to know",
     "faq": {
       "payment": {
-        "question": "When do I pay?",
-        "answer": "You pay when you book. Your helper is paid after the task is done."
+        "question": "How do I pay?",
+        "answer": "There are no service fees. Pay your helper directly once the task is done or, when they ask to be paid upfront, when you book: TasksNearMe holds it until you say the task is done."
       },
       "address": {
         "question": "Who can see my address?",
@@ -176,8 +270,8 @@
       "task": "Typical in {market}: {low}⁠–⁠{high} per task"
     },
     "minimumHours": "{hours, plural, one {# hour minimum} other {# hours minimum}}",
-    "guidanceNote": "These are typical task prices. Your agreed price and service fee appear before you book.",
-    "feesLink": "See fees and examples",
+    "guidanceNote": "These are typical task prices. You see your agreed price, and any fee, before you book.",
+    "feesLink": "See pricing and examples",
     "includedTitle": "What’s included",
     "excludedTitle": "What isn’t included",
     "backgroundNote": "Helpers taking in-home tasks must complete a background check. The badge shows the date of the check; it is not a promise of work quality or safety.",
@@ -197,12 +291,11 @@
     "back": "{category} in {market}",
     "typicalTitle": "Typical prices in {market}",
     "examplesTitle": "What you pay, and what your helper earns",
-    "examplesIntro": "Worked out with the service fees in effect today, for {unit, select, item {one item} hour {{hours} hours} other {one task}}.",
+    "examplesIntro": "Worked out for an upfront payment TasksNearMe holds, at today's hold fee, for {unit, select, item {one item} hour {{hours} hours} other {one task}}. Paid directly, you pay just the task price.",
     "lowEnd": "At the low end: {price}{unit, select, item { per item} hour { an hour} other {}}",
     "highEnd": "At the high end: {price}{unit, select, item { per item} hour { an hour} other {}}",
-    "helperEarns": "What your helper earns at {price}{unit, select, item { per item} hour { an hour} other {}}",
-    "feesNote": "Posters pay a service fee of {posterFeePercent}% (at least {posterMinimum}). Helpers pay {helperFeePercent}% of the task price.",
-    "feesLink": "How fees work",
+    "feesNote": "There are no service fees, and helpers get the whole price. A hold fee of {percent}% (at least {minimum}) applies only when a helper asks to be paid upfront and TasksNearMe holds the payment. Plus members don't pay it.",
+    "feesLink": "How payment works",
     "factorsTitle": "What changes the price",
     "factors": {
       "furniture-assembly": {
@@ -240,7 +333,7 @@
     "steps": {
       "post": "Post your task with these details. Posting is free.",
       "offers": "Helpers near you send offers with their price, and you can ask them questions first.",
-      "book": "You see the service fee and your total before you book, and you pay when you book."
+      "book": "You see the total before you book. Pay your helper directly once the task is done or, if they ask to be paid upfront, when you book."
     }
   },
   "categories": {
@@ -337,7 +430,7 @@
       },
       "three": {
         "title": "Confirm the details and book",
-        "body": "Review the scope, schedule, total, and cancellation terms. Pay to confirm an offer. Direct invites place a hold on your card; you’re charged when the helper accepts."
+        "body": "Review the scope, schedule and total. Most helpers are paid directly once the task is done; when a helper asks to be paid upfront, you pay to confirm and TasksNearMe holds it. Direct requests place a hold on your card; you’re charged when the helper accepts."
       },
       "four": {
         "title": "Keep the work on track",
@@ -396,7 +489,7 @@
     "contactMasking": "Phone numbers, emails, links and usernames are hidden until the booking is confirmed.",
     "paymentTitle": "Payment stays with your booking",
     "paymentBody": "See the full total before confirming. Keep messages, changes, and payments in the app so support can review the booking if there is a problem. Platform support and payment protection apply only to bookings made and paid here.",
-    "pricingLink": "Read about fees and refunds",
+    "pricingLink": "Read about payments and refunds",
     "reviewsTitle": "Feedback goes both ways",
     "reviewsBody": "After a completed booking, you and your helper can review each other. Reviews appear when both are submitted or after 14 days. Reviews can be reported, and low ratings are not hidden just because they are low.",
     "reviewRewards": "Reviews are optional and are not rewarded. Rewards never depend on reviews or ratings.",
@@ -413,9 +506,9 @@
     "description": "TasksNearMe (tasksnearme.com) is where you book a verified local helper for an everyday task, with the price agreed before anyone commits. We're opening city by city across the US, starting with Gainesville, Florida.",
     "whatTitle": "What we do",
     "whatBody1": "TasksNearMe connects people who need a hand with neighbors who can help: furniture assembly, moving help, yard cleanup, light cleaning, and computer and phone help.",
-    "whatBody2": "You post a task or book a helper's open time, agree on a price up front, and pay through TasksNearMe. Your helper is paid after the task is done.",
+    "whatBody2": "You post a task or book a helper's open time and agree on a price up front. You pay your helper directly once the task is done or, when they ask to be paid upfront, TasksNearMe holds the payment until it's done. There are no service fees.",
     "whatBody3": "Helpers are independent: they choose their tasks, set their own prices and hours, and do the work themselves. TasksNearMe arranges the booking and the payment, and our support team helps when something goes wrong.",
-    "pricingLink": "See how fees work",
+    "pricingLink": "See how pricing works",
     "principlesTitle": "What we stand for",
     "principles": {
       "task": {
@@ -424,7 +517,7 @@
       },
       "money": {
         "title": "No surprises on money",
-        "body": "Before confirming, the person posting sees the total and the helper sees what they'll earn, fees included."
+        "body": "Before confirming, the person posting sees the total and the helper sees what they'll get. There are no service fees, and the one fee, on a payment TasksNearMe holds, is shown first."
       },
       "funded": {
         "title": "Paid for before work starts",

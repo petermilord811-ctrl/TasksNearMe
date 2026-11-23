@@ -81,16 +81,16 @@ beforeAll(async () => {
 });
 
 describe('T-16: hourly with a cap', () => {
-  it('$35/h, 4 h cap, 3.5 h worked: $154.00 charged, $19.25 back, $110.25 to the helper', async () => {
+  it('$35/h, 4 h cap, 3.5 h worked: $147.00 charged, $18.37 back, $122.50 to the helper', async () => {
     const bookingId = await bookedCopy('tsk_t16_moving', 'tsk_moving', 'off_moving_jordan');
-    expect((await moneyOf(bookingId)).charged).toEqual([{ purpose: 'booking_funding', amountCents: 15400 }]);
+    expect((await moneyOf(bookingId)).charged).toEqual([{ purpose: 'booking_funding', amountCents: 14700 }]);
 
     const result = await submitCompletion(db, HELPER, bookingId, { hoursWorked: 3.5, photoIds: [workPhoto], note: 'Loaded and strapped.', expenses: [] }, now());
     expect(result).toMatchObject({ ok: true, code: 'submitted' });
     expect(await runBookingAction(db, CLIENT, bookingId, 'approve', now())).toMatchObject({ ok: true });
     const money = await moneyOf(bookingId);
-    expect(money.refunds).toEqual([{ amountCents: 1925, reason: 'unused_cap', status: 'succeeded' }]);
-    expect(money.transfers).toEqual({ earnings: 11025 });
+    expect(money.refunds).toEqual([{ amountCents: 1837, reason: 'unused_cap', status: 'succeeded' }]);
+    expect(money.transfers).toEqual({ earnings: 12250 });
     await expectBalanced(bookingId);
   });
 
@@ -104,29 +104,29 @@ describe('T-16: hourly with a cap', () => {
     const changeId = sent.ok && sent.redirectTo ? sent.redirectTo.split('/').pop()! : '';
     // Proposed is not enough.
     expect(await submitCompletion(db, HELPER, bookingId, over, now())).toMatchObject({ ok: false, code: 'validation_failed' });
-    // Chris accepts the higher total and pays the difference: 5 h at $35 plus the fee is $192.50, $38.50 more.
+    // Chris accepts the higher total and pays the difference: 5 h at $35 plus the hold fee is $183.75, $36.75 more.
     expect(await acceptChange(deps, CLIENT, bookingId, changeId, { payment: card }, now())).toMatchObject({ ok: true, code: 'paid' });
     expect((await moneyOf(bookingId)).charged).toEqual(
       expect.arrayContaining([
-        { purpose: 'booking_funding', amountCents: 15400 },
-        { purpose: 'change_funding', amountCents: 3850 },
+        { purpose: 'booking_funding', amountCents: 14700 },
+        { purpose: 'change_funding', amountCents: 3675 },
       ]),
     );
 
     expect(await submitCompletion(db, HELPER, bookingId, over, now())).toMatchObject({ ok: true, code: 'submitted' });
     expect(await runBookingAction(db, CLIENT, bookingId, 'approve', now())).toMatchObject({ ok: true });
-    // 4.5 h: $157.50 plus $15.75 = $173.25 of the $192.50 charged, so $19.25 back; the helper gets $141.75.
+    // 4.5 h: $157.50 plus $7.88 = $165.38 of the $183.75 charged, so $18.37 back; the helper gets $157.50.
     const money = await moneyOf(bookingId);
-    expect(money.refunds).toEqual([{ amountCents: 1925, reason: 'unused_cap', status: 'succeeded' }]);
-    expect(money.transfers).toEqual({ earnings: 14175 });
+    expect(money.refunds).toEqual([{ amountCents: 1837, reason: 'unused_cap', status: 'succeeded' }]);
+    expect(money.transfers).toEqual({ earnings: 15750 });
     await expectBalanced(bookingId);
   });
 });
 
 describe('T-17: an expense allowance', () => {
-  it('$20 allowance, $8 receipt: $86.00 charged, $8.00 reimbursed apart from the earnings, $12.00 back', async () => {
+  it('$20 allowance, $8 receipt: $83.00 charged, $8.00 reimbursed apart from the earnings, $12.00 back', async () => {
     const bookingId = await bookedCopy('tsk_t17_desk', 'tsk_desk', 'off_jordan', { expenseAllowanceCents: 2000 });
-    expect((await moneyOf(bookingId)).charged).toEqual([{ purpose: 'booking_funding', amountCents: 8600 }]);
+    expect((await moneyOf(bookingId)).charged).toEqual([{ purpose: 'booking_funding', amountCents: 8300 }]);
 
     const receipt = await photo('fil_money_receipt', 'receipt');
     const result = await submitCompletion(
@@ -139,7 +139,7 @@ describe('T-17: an expense allowance', () => {
     expect(result).toMatchObject({ ok: true, code: 'submitted' });
     expect(await runBookingAction(db, CLIENT, bookingId, 'approve', now())).toMatchObject({ ok: true });
     const money = await moneyOf(bookingId);
-    expect(money.transfers).toEqual({ earnings: 5400, reimbursement: 800 });
+    expect(money.transfers).toEqual({ earnings: 6000, reimbursement: 800 });
     expect(money.refunds).toEqual([{ amountCents: 1200, reason: 'unused_allowance', status: 'succeeded' }]);
     await expectBalanced(bookingId);
   });

@@ -20,7 +20,9 @@ export function AppTopRow({ mode, reminder, onAsk, currentPath }: { mode: Mode; 
   const path = splitLocalePath(currentPath ?? pathname)?.path ?? currentPath ?? pathname;
   if (path === HOME) return null;
   const onNeighbors = path === NEIGHBORS || path.startsWith(`${NEIGHBORS}/`);
-  return <div className="relative z-30 flex items-center gap-2.5 sm:gap-3">
+  // No layer of its own: the row scrolls under the pinned bar like the rest of the page (it sat on the bar's layer and
+  // covered it, 2026-11-23); the search lifts itself only while its suggestions are open.
+  return <div className="flex items-center gap-2.5 sm:gap-3">
     <AppSearch mode={mode} onNeighbors={onNeighbors} {...(onAsk ? { onAsk } : {})} />
     {reminder && mode === 'helper' && <VerifiedHelperReminder reminder={reminder} />}
   </div>;

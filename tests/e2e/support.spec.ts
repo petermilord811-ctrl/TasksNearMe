@@ -37,8 +37,10 @@ test('a conversation: report the other person, block and unblock them', async ({
 
   await page.getByRole('button', { name: 'Safety options for Jordan T.' }).click();
   await page.getByRole('menuitem', { name: 'Report' }).click();
-  await page.getByRole('radio', { name: 'Payment outside TasksNearMe' }).check();
-  await page.getByLabel('Details').fill('Asked me to pay the rest in cash.');
+  // Paying a helper directly is allowed since 2026-11-23, so "Payment outside TasksNearMe" is no longer a reason.
+  await expect(page.getByRole('radio', { name: 'Payment outside TasksNearMe' })).toHaveCount(0);
+  await page.getByRole('radio', { name: 'Scam or fraud' }).check();
+  await page.getByLabel('Details').fill('Asked me for a deposit to a different account before the task.');
   await page.getByRole('button', { name: 'Send report' }).click();
   await expect(page.getByText('Thanks. Support will review this.').first()).toBeVisible();
   await page.getByRole('button', { name: 'Done' }).click();

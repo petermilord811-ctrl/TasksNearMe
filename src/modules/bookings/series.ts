@@ -22,6 +22,7 @@ import { getPublishedPolicy } from '@/modules/markets/queries';
 import { ensureThread, seriesThreadLink } from '@/modules/messaging/service';
 import { threads } from '@/modules/messaging/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
+import { waivesHoldFee } from '@/modules/billing/benefits';
 import { paymentMethods, payments } from '@/modules/payments/schema';
 import { getHelperSummaries } from '@/modules/profiles/queries';
 import { rebookProposals } from '@/modules/rebook/schema';
@@ -179,6 +180,8 @@ async function addVisit(db: Db, series: SeriesRow, template: typeof tasks.$infer
   const { id: _id, slug: _slug, createdAt: _created, updatedAt: _updated, publishedAt: _published, expiresAt: _expires, aiGenerationId: _ai, reopenedAt: _reopened, hiddenAt: _hidden, hiddenByUserId: _hiddenBy, hiddenReason: _hiddenWhy, ...copy } = template;
   const taskId = newId('tsk');
   const bookingId = newId('bkg');
+  // Each visit is paid upfront and held by TasksNearMe: the client's hold fee, none while they hold Plus (2026-11-23).
+  const waiveHoldFee = await waivesHoldFee(db, series.posterUserId, now);
   try {
     // A slug that's taken is tried again with another (repeats review #16): it used to read as "this visit is there
     // already", and the visit waited for the next run, or was lost when that came too late to charge.
@@ -221,7 +224,7 @@ async function addVisit(db: Db, series: SeriesRow, template: typeof tasks.$infer
         version: 1,
         ...pricingColumns(pricing),
         expenseAllowanceCents: 0,
-        breakdown: quoteBreakdown(policy.fees, pricing),
+        breakdown: quoteBreakdown(policy.fees, pricing, { waiveHoldFee }),
         scopeText: series.scopeText,
         startAt: start,
         createdAt: now,
@@ -581,7 +584,7 @@ export async function getSeriesPage(db: Db, viewerId: string, seriesId: string, 
       task: { title: template.title, categorySlug: template.slug as CategorySlug, areaName: template.areaName ?? '' },
       schedule: scheduleOf(series, timeZone),
       pricing,
-      breakdown: quoteBreakdown(policy.fees, pricing),
+      breakdown: quoteBreakdown(policy.fees, pricing, { waiveHoldFee: await waivesHoldFee(db, series.posterUserId, now) }),
       ...(role === 'poster' ? { card } : {}),
       ...(series.pausedUntil ? { pausedUntil: series.pausedUntil } : {}),
       ...(series.endsOn ? { endsOn: series.endsOn } : {}),

@@ -43,17 +43,18 @@ describe('InviteCard', () => {
   it('renders exactly the supplied actions in order, plus the helper earnings and market time', () => {
     mount({ ...bookshelfInviteSentHelper, actions: ['counter_invite', 'accept_invite'] });
     expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual(['Counter', 'Accept']);
-    expect(screen.getByText('$40.50')).toBeVisible();
-    expect(screen.queryByText('$49.50')).not.toBeInTheDocument();
+    // Helpers get the whole price (no service fees since 2026-11-23); the client's total with the hold fee isn't theirs to see.
+    expect(screen.getByText("You'll earn").closest('div')).toHaveTextContent('$45.00');
+    expect(screen.queryByText('$47.25')).not.toBeInTheDocument();
     expect(screen.getByText('Sat, Dec 12 · 10:00 am')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Assemble a bookshelf' })).toHaveAttribute('href', routes.app.findWorkTask('tsk_bookshelf'));
   });
 
   it('displays both counter breakdowns, held amount and client actions', () => {
     mount(bookshelfInviteCounteredPoster);
-    expect(screen.getByText('$49.50')).toBeVisible();
-    expect(screen.getByText('$55.00')).toBeVisible();
-    expect(screen.getByText('$49.50 held on your card')).toBeVisible();
+    expect(screen.getByText('$47.25')).toBeVisible();
+    expect(screen.getByText('$52.50')).toBeVisible();
+    expect(screen.getByText('$47.25 held on your card')).toBeVisible();
     expect(screen.getByText(bookshelfInviteCounteredPoster.counter!.message)).toBeVisible();
     expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual(['Accept counter', 'Decline counter', 'Cancel']);
   });
@@ -62,7 +63,7 @@ describe('InviteCard', () => {
     mount(bookshelfInviteAcceptedPoster);
     expect(screen.getByText('Booked')).toBeVisible();
     expect(screen.getByRole('link', { name: 'View booking' })).toHaveAttribute('href', routes.app.booking('bkg_bookshelf'));
-    expect(screen.queryByText('$49.50 held on your card')).not.toBeInTheDocument();
+    expect(screen.queryByText('$47.25 held on your card')).not.toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 

@@ -117,6 +117,7 @@ export async function getAdminMetrics(db: Db, staff: StaffActor, days: MetricsPe
         ...(booking.completedAt ? { completedAt: booking.completedAt } : {}),
         ...(booking.visitIndex ? { visitIndex: booking.visitIndex } : {}),
         breakdown: finalBreakdown ?? breakdown,
+        ...(booking.paymentMode === 'direct' ? { paymentMode: 'direct' as const } : {}),
       }),
     ),
     firstCompletionByPoster: new Map(firstCompletions.map((row) => [row.posterUserId, toDate(row.at)])),

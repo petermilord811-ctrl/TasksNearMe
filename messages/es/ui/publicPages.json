@@ -1,47 +1,141 @@
 {
   "pricing": {
-    "title": "Sabe cuánto vas a pagar. Sabe cuánto vas a ganar.",
-    "description": "Acuerda el precio de la tarea antes de reservar. Verás cada tarifa de servicio y cualquier asignación para gastos antes de confirmar.",
-    "paymentTiming": "Pagas al reservar. Tu ayudante recibe su pago cuando la tarea está terminada.",
-    "feesTitle": "Cómo funcionan las tarifas de servicio",
-    "posterFeeTitle": "Cuando reservas ayuda",
-    "posterFeeAmount": "{percent}% de tarifa de servicio",
-    "posterFeeDescription": "Se suma al precio de la tarea, con un mínimo de {minimum} por reserva.",
-    "helperFeeTitle": "Cuando ayudas",
-    "helperFeeAmount": "{percent}% de tarifa de servicio",
-    "helperFeeDescription": "Se descuenta del precio de la tarea. Verás tus ganancias antes de aceptar.",
-    "fixedIntro": "En una tarea de precio fijo, tú y tu ayudante acuerdan el precio de toda la tarea. Aquí tienes un ejemplo de {price}.",
-    "fixedPosterTitle": "Precio fijo: lo que pagas",
-    "fixedHelperTitle": "Precio fijo: lo que gana tu ayudante",
-    "minimumTitle": "Cuándo se aplica la tarifa mínima",
-    "minimumDescription": "En esta tarea de {price} se aplica la tarifa de servicio mínima de {minimum}. El total aparece abajo.",
-    "minimumBreakdownTitle": "Una tarea más pequeña",
-    "hourlyTitle": "Ayuda por hora, con un límite acordado",
-    "hourlyDescription": "Al reservar, pagas el límite de horas acordado y la tarifa de servicio. Después de la tarea, apruebas las horas trabajadas. Las horas sin usar y su parte de la tarifa se reembolsan. Las horas extra requieren tu acuerdo y tu pago antes.",
-    "hourlyFundedTitle": "Por hora: se paga al reservar",
-    "hourlyFinalTitle": "Por hora: después de la tarea",
-    "expensesTitle": "Los gastos van aparte",
-    "expensesDescription": "Acuerda una asignación para gastos antes de que tu ayudante compre materiales. Tú apruebas los recibos después de la tarea. La asignación sin usar se reembolsa, y ninguna de las dos personas paga tarifa de servicio sobre los gastos reembolsados.",
-    "expensesPosterTitle": "Con una asignación para gastos",
-    "expensesHelperTitle": "Ganancias y reembolso",
-    "cancellationTitle": "Si cambian los planes",
-    "cancellationDescription": "Cancela sin costo al menos {hours} horas antes de que empiece la tarea. Las cancelaciones posteriores cuestan el {percent}% del precio de la tarea o {minimum}, lo que sea mayor, hasta el precio de la tarea. Tu ayudante recibe toda esa tarifa.",
-    "cancellationCaption": "Ejemplo de cancelación para una tarea de {price}",
-    "cancellationScenario": "Cuándo ocurre",
-    "cancellationRefund": "Te devolvemos",
-    "cancellationHelper": "El ayudante recibe",
-    "cancellationEarly": "Cancelas al menos {hours} horas antes del inicio",
-    "cancellationLate": "Cancelas menos de {hours} horas antes del inicio",
-    "cancellationHelperCancels": "Tu ayudante cancela",
-    "fullRefund": "Reembolso completo: {amount}",
-    "noPayment": "Sin pago",
-    "lateFeeExample": "En este ejemplo, el cargo por cancelación tardía es de {fee}. Tu ayudante recibe {received} y a ti te devolvemos {refund}.",
-    "cancellationPolicy": "Lee la política de cancelación",
-    "approvalTitle": "Tiempo para revisar la tarea terminada",
-    "approvalDescription": "Cuando tu ayudante marque la tarea como terminada, tienes {hours} horas para aprobarla o reportar un problema. Después de ese plazo, la tarea se aprueba automáticamente. Al reportar un problema, el pago queda en pausa mientras se revisa.",
-    "inviteTitle": "Invitar directamente a un ayudante",
-    "inviteDescription": "Una invitación pone una retención en tu tarjeta por hasta {hours} horas. Solo se te cobra si el ayudante acepta. La retención se libera si rechaza o no responde a tiempo.",
-    "postTask": "Publicar una tarea"
+    "title": "Sin tarifas de servicio",
+    "description": "Publicar, ofertar, enviar mensajes y reservar es gratis para todos. Paga a tu ayudante directamente, o deja que TasksNearMe retenga el pago hasta que la tarea esté hecha.",
+    "ways": {
+      "direct": {
+        "title": "Pago directo",
+        "price": "$0",
+        "priceNote": "Sin tarifa para ninguno de los dos",
+        "one": "Acuerden el precio y la hora en la app",
+        "two": "Paga a tu ayudante después de la tarea: efectivo, Zelle, Venmo o como acuerden",
+        "three": "La conversación, el precio acordado y las reseñas quedan registrados",
+        "example": "Un escritorio de {price}: le pagas {price} a tu ayudante. Nada pasa por TasksNearMe."
+      },
+      "held": {
+        "title": "Retenido por TasksNearMe",
+        "price": "{percent}%",
+        "priceNote": "tarifa de retención que paga el cliente (mínimo {minimum}); gratis con Plus",
+        "one": "Cuando un ayudante pide el pago por adelantado",
+        "two": "Pagas al reservar; retenemos el dinero hasta que digas que la tarea está hecha",
+        "three": "Tu ayudante recibe el precio completo; si algo sale mal, el dinero espera mientras lo resolvemos",
+        "example": "Un escritorio de {price}: pagas {total} ({price} + {fee} de retención) y tu ayudante recibe {earns}."
+      }
+    },
+    "how": {
+      "title": "Cómo funciona un pago retenido",
+      "book": {
+        "title": "Reserva y paga",
+        "body": "Pagas al reservar. TasksNearMe retiene el dinero; tu ayudante ve que está ahí."
+      },
+      "work": {
+        "title": "Se hace la tarea",
+        "body": "Tu ayudante hace el trabajo y te avisa que terminó, con fotos si quiere."
+      },
+      "done": {
+        "title": "Dices que está hecha",
+        "body": "Aprueba el trabajo o informa un problema. Si no respondes en {hours} horas, cuenta como hecha."
+      },
+      "paid": {
+        "title": "Tu ayudante recibe el pago",
+        "body": "El precio completo va a tu ayudante. No se le descuenta nada."
+      }
+    },
+    "plans": {
+      "title": "Premium, cuando quieras más",
+      "intro": "Todo lo anterior es gratis. Los planes agregan lo que piden los clientes y ayudantes más activos, como LinkedIn Premium: cancela cuando quieras.",
+      "perMonth": "al mes",
+      "free": {
+        "name": "Gratis",
+        "for": "Para todos",
+        "always": "Gratis, siempre",
+        "cta": "Regístrate gratis",
+        "benefits": {
+          "fees": "Publica tareas y envía ofertas sin tarifas de servicio",
+          "direct": "Paga directamente, o retén el pago por un {percent}%",
+          "community": "Vecinos, mensajes, reseñas y perfiles verificados",
+          "ai": "{searches} búsquedas con IA al mes"
+        }
+      },
+      "plus": {
+        "name": "Plus",
+        "for": "Para clientes",
+        "cta": "Obtener Plus",
+        "benefits": {
+          "everything": "Todo lo de Gratis",
+          "hold": "Sin tarifa de retención: retenemos tus pagos por adelantado gratis",
+          "ai": "{searches} búsquedas con IA al mes: describe lo que necesitas y encuentra ayudantes"
+        }
+      },
+      "pro": {
+        "name": "Pro",
+        "for": "Para ayudantes",
+        "cta": "Obtener Pro",
+        "benefits": {
+          "everything": "Todo lo de Gratis",
+          "first": "Tus ofertas aparecen primero a los clientes",
+          "badge": "Una insignia Pro en tus ofertas",
+          "insights": "Datos de las ofertas en cada tarea: cuántas hay y su rango de precios",
+          "ai": "{searches} búsquedas con IA al mes: describe el trabajo que buscas y encuentra tareas"
+        }
+      }
+    },
+    "compare": {
+      "title": "Compara los planes",
+      "feature": "Qué incluye",
+      "yes": "Incluido",
+      "no": "No incluido",
+      "none": "Ninguna",
+      "waived": "Gratis",
+      "holdFee": "{percent}%",
+      "plan": {
+        "free": "Gratis",
+        "plus": "Plus",
+        "pro": "Pro"
+      },
+      "rows": {
+        "serviceFees": "Comisiones de servicio",
+        "direct": "Pagar directamente a tu ayudante",
+        "holdFee": "Tarifa de retención en pagos por adelantado (la paga el cliente)",
+        "offersFirst": "Ofertas mostradas primero",
+        "badge": "Insignia Pro",
+        "insights": "Datos de las ofertas",
+        "ai": "Búsquedas con IA al mes"
+      }
+    },
+    "cancellation": {
+      "title": "Cancelar una reserva con pago retenido",
+      "body": "Cancela gratis hasta {hours} horas antes del inicio y recupera todo. Después, tu ayudante recibe el {percent}% del precio (mínimo {minimum}) por el tiempo que reservó. ¿Pago directo? No se cobra nada, así que no hay nada que reembolsar.",
+      "link": "Política de cancelación"
+    },
+    "faq": {
+      "title": "Preguntas",
+      "why": {
+        "q": "¿Por qué no hay tarifas de servicio?",
+        "a": "TasksNearMe gana dinero con los planes opcionales. Reservar ayuda, y que te reserven, sigue siendo gratis; solo retener dinero por ti cuesta un poco."
+      },
+      "safe": {
+        "q": "¿Es seguro pagar directamente?",
+        "a": "Reserva a través de TasksNearMe para que el precio acordado, la conversación y las reseñas queden registrados. Si prefieres que el dinero espere hasta que el trabajo esté hecho, elige una oferta con pago por adelantado o pídele a tu ayudante que te envíe una."
+      },
+      "when": {
+        "q": "¿Cuándo debería un ayudante pedir el pago por adelantado?",
+        "a": "Para tareas grandes, clientes nuevos o trabajos con materiales que comprar: el dinero está ahí antes de empezar y es tuyo cuando el cliente dice que está hecho."
+      },
+      "fee": {
+        "q": "¿Qué cubre la tarifa de retención?",
+        "a": "Cobrar con tarjeta, retener el dinero de forma segura e intervenir si algo sale mal. Es el {percent}% del precio, la paga el cliente y es gratis con Plus."
+      },
+      "cancelPlan": {
+        "q": "¿Puedo cancelar un plan?",
+        "a": "Cuando quieras, desde Planes en tu cuenta. Sigue funcionando hasta el final del período que pagaste."
+      }
+    },
+    "closing": {
+      "title": "Haz las cosas, sin tarifas",
+      "body": "Publica una tarea en un minuto y elige un ayudante entre las ofertas.",
+      "action": "Publicar una tarea"
+    }
   },
   "becomeHelper": {
     "title": "Gana dinero con trabajos cerca de ti",
@@ -55,7 +149,7 @@
     "backgroundTitle": "Completa una verificación de antecedentes para ayuda en casa",
     "backgroundDescription": "Las categorías en casa requieren una verificación de antecedentes antes de que puedas aceptar reservas en ellas.",
     "earningsTitle": "Un ejemplo de lo que ganarás",
-    "earningsDescription": "El precio de la tarea y la tarifa de servicio se muestran por separado. Los gastos aprobados se reembolsan aparte de tus ganancias.",
+    "earningsDescription": "Recibes el precio completo de la tarea: no hay tarifas para los ayudantes. Los gastos aprobados se reembolsan aparte de tus ganancias.",
     "earningsBreakdownTitle": "Tus ganancias en una tarea",
     "timingTitle": "Cuándo te llega el pago",
     "timingDescription": "Tu pago se envía cuando la tarea se completa y se aprueba, o se aprueba automáticamente. Normalmente llega a tu banco en unos 2 días hábiles.",
@@ -86,7 +180,7 @@
   },
   "shared": {
     "postTask": "Publicar una tarea",
-    "freeToPost": "Publicar es gratis. Pagas al reservar, y tu ayudante cobra cuando el trabajo está terminado.",
+    "freeToPost": "Publicar es gratis y no hay tarifas de servicio. Págale a tu ayudante directamente, o por adelantado cuando lo pida: TasksNearMe lo retiene hasta que el trabajo esté hecho.",
     "trustPoints": {
       "label": "Por qué puedes confiar",
       "verified": "Ayudantes con identidad verificada",
@@ -112,7 +206,7 @@
     "joinWaitlist": "Únete a la lista de espera",
     "trustTitle": "Claridad desde el primer paso",
     "paymentTitle": "Sabe cuándo pagas",
-    "payment": "Pagas al reservar. Tu ayudante recibe su pago cuando la tarea está terminada.",
+    "payment": "Págale a tu ayudante directamente cuando la tarea esté hecha, o por adelantado cuando lo pida: TasksNearMe lo retiene hasta que digas que la tarea está hecha.",
     "privacyTitle": "Tu dirección se mantiene privada",
     "privacy": "Los ayudantes solo ven la zona general. Tu dirección exacta se comparte con tu ayudante después de reservar.",
     "identityTitle": "Ayudantes con identidad verificada",
@@ -145,8 +239,8 @@
     "faqTitle": "Algunas cosas que debes saber",
     "faq": {
       "payment": {
-        "question": "¿Cuándo pago?",
-        "answer": "Pagas al reservar. Tu ayudante recibe su pago cuando la tarea está terminada."
+        "question": "¿Cómo pago?",
+        "answer": "No hay tarifas de servicio. Págale a tu ayudante directamente cuando la tarea esté hecha o, cuando pida el pago por adelantado, al reservar: TasksNearMe lo retiene hasta que digas que la tarea está hecha."
       },
       "address": {
         "question": "¿Quién puede ver mi dirección?",
@@ -176,8 +270,8 @@
       "task": "Habitual en {market}: de {low} a {high} por tarea"
     },
     "minimumHours": "{hours, plural, one {Mínimo de # hora} other {Mínimo de # horas}}",
-    "guidanceNote": "Estos son precios habituales de las tareas. Tu precio acordado y la tarifa de servicio aparecen antes de reservar.",
-    "feesLink": "Ver tarifas y ejemplos",
+    "guidanceNote": "Estos son precios habituales de las tareas. Ves tu precio acordado, y cualquier tarifa, antes de reservar.",
+    "feesLink": "Ver precios y ejemplos",
     "includedTitle": "Qué incluye",
     "excludedTitle": "Qué no incluye",
     "backgroundNote": "Los ayudantes que hacen tareas en casa deben completar una verificación de antecedentes. La insignia muestra la fecha de la verificación; no es una garantía de la calidad del trabajo ni de la seguridad.",
@@ -197,12 +291,11 @@
     "back": "{category} en {market}",
     "typicalTitle": "Precios habituales en {market}",
     "examplesTitle": "Cuánto pagas y cuánto gana tu ayudante",
-    "examplesIntro": "Calculado con las tarifas de servicio vigentes hoy, para {unit, select, item {un artículo} hour {{hours} horas} other {una tarea}}.",
+    "examplesIntro": "Calculado para un pago por adelantado que retiene TasksNearMe, con la tarifa de retención vigente hoy, para {unit, select, item {un artículo} hour {{hours} horas} other {una tarea}}. Si pagas directamente, pagas solo el precio de la tarea.",
     "lowEnd": "Con el precio más bajo: {price}{unit, select, item { por artículo} hour { la hora} other {}}",
     "highEnd": "Con el precio más alto: {price}{unit, select, item { por artículo} hour { la hora} other {}}",
-    "helperEarns": "Cuánto gana tu ayudante con {price}{unit, select, item { por artículo} hour { la hora} other {}}",
-    "feesNote": "Quien publica paga una tarifa de servicio del {posterFeePercent}% (mínimo {posterMinimum}). Los ayudantes pagan el {helperFeePercent}% del precio de la tarea.",
-    "feesLink": "Cómo funcionan las tarifas",
+    "feesNote": "No hay tarifas de servicio, y los ayudantes reciben el precio completo. Una tarifa de retención del {percent}% (mínimo {minimum}) se aplica solo cuando un ayudante pide el pago por adelantado y TasksNearMe retiene el pago. Los miembros de Plus no la pagan.",
+    "feesLink": "Cómo funciona el pago",
     "factorsTitle": "Qué cambia el precio",
     "factors": {
       "furniture-assembly": {
@@ -240,7 +333,7 @@
     "steps": {
       "post": "Publica tu tarea con estos detalles. Publicar es gratis.",
       "offers": "Los ayudantes cerca de ti envían ofertas con su precio, y puedes hacerles preguntas antes.",
-      "book": "Ves la tarifa de servicio y el total antes de reservar, y pagas al reservar."
+      "book": "Ves el total antes de reservar. Págale a tu ayudante directamente cuando la tarea esté hecha o, si pide el pago por adelantado, al reservar."
     }
   },
   "categories": {
@@ -337,7 +430,7 @@
       },
       "three": {
         "title": "Confirma los detalles y reserva",
-        "body": "Revisa el alcance, el horario, el total y las condiciones de cancelación. Paga para confirmar una oferta. Las invitaciones directas ponen una retención en tu tarjeta; se te cobra cuando el ayudante acepta."
+        "body": "Revisa el alcance, el horario y el total. A la mayoría de los ayudantes se les paga directamente cuando la tarea está hecha; cuando un ayudante pide el pago por adelantado, pagas para confirmar y TasksNearMe lo retiene. Las solicitudes directas ponen una retención en tu tarjeta; se te cobra cuando el ayudante acepta."
       },
       "four": {
         "title": "Mantén el trabajo en marcha",
@@ -396,7 +489,7 @@
     "contactMasking": "Los números de teléfono, los correos, los enlaces y los nombres de usuario se ocultan hasta que la reserva esté confirmada.",
     "paymentTitle": "El pago se queda con tu reserva",
     "paymentBody": "Ve el total completo antes de confirmar. Mantén los mensajes, los cambios y los pagos dentro de la app para que soporte pueda revisar la reserva si hay un problema. El soporte de la plataforma y la protección de pagos solo aplican a las reservas hechas y pagadas aquí.",
-    "pricingLink": "Lee sobre tarifas y reembolsos",
+    "pricingLink": "Lee sobre pagos y reembolsos",
     "reviewsTitle": "Los comentarios van en ambos sentidos",
     "reviewsBody": "Después de una reserva completada, tú y tu ayudante pueden reseñarse mutuamente. Las reseñas aparecen cuando ambas se envían o después de 14 días. Las reseñas se pueden reportar, y las calificaciones bajas no se ocultan solo por ser bajas.",
     "reviewRewards": "Las reseñas son opcionales y no se premian. Las recompensas nunca dependen de reseñas ni calificaciones.",
@@ -413,9 +506,9 @@
     "description": "TasksNearMe (tasksnearme.com) es donde reservas a un ayudante verificado de tu zona para una tarea de todos los días, con el precio acordado antes de que nadie se comprometa. Estamos abriendo ciudad por ciudad en todo EE. UU., empezando por Gainesville, Florida.",
     "whatTitle": "Lo que hacemos",
     "whatBody1": "TasksNearMe conecta a quienes necesitan una mano con vecinos que pueden ayudar: armado de muebles, ayuda con mudanzas, limpieza de jardín, limpieza ligera y ayuda con computadoras y teléfonos.",
-    "whatBody2": "Publicas una tarea o reservas el tiempo disponible de un ayudante, acuerdan el precio desde el principio y pagas a través de TasksNearMe. Tu ayudante recibe su pago cuando la tarea está terminada.",
+    "whatBody2": "Publicas una tarea o reservas el tiempo disponible de un ayudante y acuerdan el precio desde el principio. Le pagas a tu ayudante directamente cuando la tarea está hecha o, cuando pide el pago por adelantado, TasksNearMe retiene el pago hasta que esté hecha. No hay tarifas de servicio.",
     "whatBody3": "Los ayudantes son independientes: eligen sus tareas, fijan sus propios precios y horarios, y hacen el trabajo en persona. TasksNearMe se encarga de la reserva y del pago, y nuestro equipo de soporte te ayuda si algo sale mal.",
-    "pricingLink": "Mira cómo funcionan las tarifas",
+    "pricingLink": "Mira cómo funcionan los precios",
     "principlesTitle": "En qué creemos",
     "principles": {
       "task": {
@@ -424,7 +517,7 @@
       },
       "money": {
         "title": "Sin sorpresas con el dinero",
-        "body": "Antes de confirmar, quien publica ve el total y el ayudante ve lo que va a ganar, con las tarifas incluidas."
+        "body": "Antes de confirmar, quien publica ve el total y el ayudante ve lo que va a recibir. No hay tarifas de servicio, y la única tarifa, en un pago que retiene TasksNearMe, se muestra antes."
       },
       "funded": {
         "title": "Pagado antes de empezar",

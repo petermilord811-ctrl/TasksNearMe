@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
-import { PLAN_CODES, PLAN_INTERVALS, routes, type AiSearchAccess, type AiSearchBlock, type ActionResult, type Cents, type PlanCheckoutInput, type PlanCode, type PlanEstimate, type PlanMembership, type PlanPageData } from '@/contracts';
+import { PLAN_CODES, PLAN_INTERVALS, routes, type AiSearchAccess, type AiSearchBlock, type ActionResult, type Cents, type PlanCheckoutInput, type PlanCode, type PlanMembership, type PlanPageData } from '@/contracts';
 import { aiWritingSetUp } from '@/integrations/ai';
 import type { BillingProvider, BillingSubscription } from '@/integrations/billing';
 import { subscriptionFromStripe } from '@/integrations/billing/stripe-billing';
@@ -7,7 +7,6 @@ import { appUrl } from '@/integrations/oauth';
 import type { PaymentProvider } from '@/integrations/payments';
 import { verifyStripeSignature } from '@/integrations/stripe-identity';
 import { users } from '@/modules/accounts/schema';
-import { bookingCompletions, bookings, bookingTerms } from '@/modules/bookings/schema';
 import { earnings } from '@/modules/earnings/schema';
 import { DEFAULT_FEES, DEFAULT_PLANS } from '@/modules/markets/policy-defaults';
 import { getPublishedPolicy } from '@/modules/markets/queries';
@@ -19,16 +18,16 @@ import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { marketDayKey } from '@/shared/format';
-import { aiSearchLimit, bookingRebateCents, estimatedRebateCents, periodEndAfter, planCounts, planOffers, PLAN_PRODUCT_NAMES, subscriptionLive } from './domain';
+import { aiSearchLimit, bookingRebateCents, periodEndAfter, planCounts, planOffers, PLAN_PRODUCT_NAMES, subscriptionLive } from './domain';
 import { aiUsage, billingCustomers, subscriptions } from './schema';
 
 /**
- * Subscription plans (completion plan 9.13; decisions.md 2026-11-18): who holds which plan, what it allows, checkout
- * and the portal, Stripe's subscription events, and the fee rebates paid at completion.
+ * Subscription plans (completion plan 9.13; decisions.md 2026-11-18, LinkedIn-Premium-style since 2026-11-23): who
+ * holds which plan, what it allows (src/modules/billing/benefits.ts), checkout and the portal, Stripe's subscription
+ * events, and the fee rebates still owed on bookings made under a policy from before 2026-11-23.
  */
 
 type SubscriptionRow = typeof subscriptions.$inferSelect;
-const DAY = 86_400_000;
 
 // ---- Policy ---------------------------------------------------------------------------------------------------
 
@@ -419,6 +418,8 @@ export async function helperRebateTerms(db: Db, input: { bookingId: string; help
   const [done] = await db.select({ id: earnings.id }).from(earnings).where(and(eq(earnings.bookingId, input.bookingId), eq(earnings.kind, 'fee_rebate'))).limit(1);
   if (done || !(await activePlans(db, input.helperUserId, now)).has('pro')) return null;
   const plans = await versionPlans(db, input.policyVersionId);
+  // No service fees since 2026-11-23: a booking made under a policy since then has nothing to pay back.
+  if (plans.pro.helperFeeRebateBps <= 0) return null;
   return { rebateBps: plans.pro.helperFeeRebateBps, capCents: plans.pro.rebateMonthlyCapCents, monthStart: marketMonthStart(now, await userTimeZone(db, input.helperUserId)) };
 }
 
@@ -433,38 +434,6 @@ export async function helperRebateAmount(tx: Pick<Db, 'select'>, input: { bookin
 }
 
 // ---- The plan page --------------------------------------------------------------------------------------------
-
-async function rebatedThisMonth(db: Db, userId: string, plan: PlanCode, monthStart: Date): Promise<Cents> {
-  if (plan === 'plus') {
-    const [row] = await db
-      .select({ cents: sql<number>`coalesce(sum(${refunds.amountCents}), 0)::int` })
-      .from(refunds)
-      .innerJoin(payments, eq(payments.id, refunds.paymentId))
-      .where(and(eq(refunds.reason, 'plan_rebate'), eq(refunds.status, 'succeeded'), eq(payments.payerUserId, userId), gte(refunds.createdAt, monthStart)));
-    return row?.cents ?? 0;
-  }
-  const [row] = await db
-    .select({ cents: sql<number>`coalesce(sum(${earnings.amountCents}), 0)::int` })
-    .from(earnings)
-    .where(and(eq(earnings.helperUserId, userId), eq(earnings.kind, 'fee_rebate'), gte(earnings.createdAt, monthStart)));
-  return row?.cents ?? 0;
-}
-
-/** What each plan would have paid back on the bookings the person completed in the last 30 days (cap included). */
-async function estimatesFor(db: Db, userId: string, plans: PlanPolicy, now: Date): Promise<PlanEstimate[]> {
-  const rows = await db
-    .select({ posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId, terms: bookingTerms.breakdown, final: bookingCompletions.finalBreakdown })
-    .from(bookings)
-    .innerJoin(bookingTerms, and(eq(bookingTerms.bookingId, bookings.id), eq(bookingTerms.version, bookings.termsVersion)))
-    .leftJoin(bookingCompletions, eq(bookingCompletions.bookingId, bookings.id))
-    .where(and(eq(bookings.status, 'completed'), gte(bookings.completedAt, new Date(now.getTime() - 30 * DAY)), sql`(${bookings.posterUserId} = ${userId} or ${bookings.helperUserId} = ${userId})`));
-  const asClient = rows.filter((row) => row.posterUserId === userId).map((row) => (row.final ?? row.terms).posterFeeCents);
-  const asHelper = rows.filter((row) => row.helperUserId === userId).map((row) => (row.final ?? row.terms).helperFeeCents);
-  const estimates: PlanEstimate[] = [];
-  if (asClient.length > 0) estimates.push({ plan: 'plus', bookings: asClient.length, savedCents: estimatedRebateCents(asClient, plans.plus.posterFeeRebateBps, plans.plus.rebateMonthlyCapCents) });
-  if (asHelper.length > 0) estimates.push({ plan: 'pro', bookings: asHelper.length, savedCents: estimatedRebateCents(asHelper, plans.pro.helperFeeRebateBps, plans.pro.rebateMonthlyCapCents) });
-  return estimates;
-}
 
 /**
  * `/app/plan`. `returned`: Stripe's return (`checkout=done&plan=…` or `checkout=canceled`); a plan just paid for shows as
@@ -484,35 +453,29 @@ export async function planPageData(
   // without waiting for its webhook, which may be late or, on a server whose endpoint isn't set up yet, never come.
   // Still Stripe's word, never the browser's: the return only says when to ask.
   if (returned.notice === 'subscribed') await mirrorFromProvider(db, provider, userId, now);
-  const [{ plans, fees }, held, live, timeZone, aiSearch, [customer]] = await Promise.all([
+  const [{ plans }, held, live, aiSearch, [customer]] = await Promise.all([
     marketPlans(db, user.marketId),
     activePlans(db, userId, now),
     liveRows(db, userId),
-    userTimeZone(db, userId),
     aiSearchAccess(db, userId, now),
     db.select({ provider: billingCustomers.provider }).from(billingCustomers).where(eq(billingCustomers.userId, userId)).limit(1),
   ]);
-  const monthStart = marketMonthStart(now, timeZone);
   // The plans that count, then any that wait on a payment (unpaid, paused, incomplete): those say so, with Manage.
   const shown = [...held.values()];
   for (const row of live) if (!shown.some((other) => other.plan === row.plan)) shown.push(row);
-  const memberships: PlanMembership[] = await Promise.all(
-    shown.map(async (row) => ({
-      plan: row.plan as PlanCode,
-      interval: row.interval === 'year' ? ('year' as const) : ('month' as const),
-      priceCents: row.priceCents,
-      status: !held.has(row.plan as PlanCode) ? ('unpaid' as const) : row.status === 'past_due' ? ('past_due' as const) : ('active' as const),
-      periodEnd: row.currentPeriodEnd.toISOString(),
-      cancelAtPeriodEnd: row.cancelAtPeriodEnd,
-      rebatedThisMonthCents: await rebatedThisMonth(db, userId, row.plan as PlanCode, monthStart),
-    })),
-  );
+  const memberships: PlanMembership[] = shown.map((row) => ({
+    plan: row.plan as PlanCode,
+    interval: row.interval === 'year' ? ('year' as const) : ('month' as const),
+    priceCents: row.priceCents,
+    status: !held.has(row.plan as PlanCode) ? ('unpaid' as const) : row.status === 'past_due' ? ('past_due' as const) : ('active' as const),
+    periodEnd: row.currentPeriodEnd.toISOString(),
+    cancelAtPeriodEnd: row.cancelAtPeriodEnd,
+  }));
   const notice = returned.notice;
   const confirming = notice === 'subscribed' && isPlan(returned.plan) && !memberships.some((membership) => membership.plan === returned.plan) ? returned.plan : undefined;
   return {
-    offers: planOffers(plans, fees, mode === 'helper' ? 'pro' : 'plus'),
+    offers: planOffers(plans, mode === 'helper' ? 'pro' : 'plus'),
     memberships,
-    estimates: await estimatesFor(db, userId, plans, now),
     freeAiSearchesPerMonth: plans.free.aiSearchesPerMonth,
     aiSearch,
     ...(provider ? {} : { unavailable: true as const }),

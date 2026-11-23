@@ -76,8 +76,16 @@ function outcomeOf(row: Loaded, by: BookingViewerRole | 'no_show' | 'poster_unav
   const charged = row.terms.breakdown.posterChargedCents ?? row.terms.breakdown.posterTotalCents;
   const summary = cancellationSummary(row.policy.cancellation, row.terms.breakdown, row.booking.startAt.toISOString());
   const late = now.getTime() >= Date.parse(summary.freeUntil);
-  if (by === 'helper') return { reason: 'helper' as CancelReason, late, refund: charged, compensation: 0, strike: late ? 'late_cancellation' : null };
-  if (by === 'no_show') return { reason: 'helper_no_show' as CancelReason, late, refund: charged, compensation: 0, strike: 'no_show' };
+  // Held money goes back to the client in full when the helper cancels or doesn't come; a direct booking has none.
+  const back = row.booking.paymentMode === 'direct' ? 0 : charged;
+  if (by === 'helper') return { reason: 'helper' as CancelReason, late, refund: back, compensation: 0, strike: late ? 'late_cancellation' : null };
+  if (by === 'no_show') return { reason: 'helper_no_show' as CancelReason, late, refund: back, compensation: 0, strike: 'no_show' };
+  // Paid directly between the two people (owner, 2026-11-23): nothing was charged, so nothing is refunded or paid to
+  // the helper; who canceled, and how late, still count (the reasons and strikes as for a held booking).
+  if (row.booking.paymentMode === 'direct') {
+    if (by === 'poster_unavailable' || late) return { reason: (by === 'poster_unavailable' ? 'poster_no_show' : 'poster_late') as CancelReason, late: true, refund: 0, compensation: 0, strike: null };
+    return { reason: 'poster_early' as CancelReason, late: false, refund: 0, compensation: 0, strike: null };
+  }
   if (by === 'poster_unavailable' || late) {
     const terms = lateCancellation(row.policy.cancellation, row.terms.breakdown);
     return {
@@ -106,6 +114,7 @@ export async function previewCancellation(db: Db, userId: string, bookingId: str
     helperCompensationCents: outcome.compensation,
     helperStrike: outcome.strike !== null,
     ...(row.booking.status === 'scheduled' ? { nothingCharged: true } : {}),
+    ...(row.booking.paymentMode === 'direct' ? { paidDirectly: true as const } : {}),
   };
 }
 

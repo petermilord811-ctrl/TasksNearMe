@@ -27,7 +27,8 @@ test('the poster reviews offers and books one', async ({ page }, testInfo) => {
   expect(await page.content()).not.toContain('512-555-0134');
 
   await page.goto('/app/tasks/tsk_desk/offers/off_jordan');
-  await expect(page.getByText('$66.00').first()).toBeVisible();
+  // Paid upfront (the seeded offer): $60 and the $3.00 hold fee.
+  await expect(page.getByText('$63.00').first()).toBeVisible();
   await page.getByRole('button', { name: 'Book helper' }).click();
   await expect(page).toHaveURL(/\/app\/tasks\/tsk_desk\/offers\/off_jordan\/confirm$/);
 });

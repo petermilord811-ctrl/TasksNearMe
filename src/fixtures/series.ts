@@ -7,7 +7,7 @@ import { jordan, maya } from './people';
 
 /**
  * Regular visits (blueprint 03 §7): Jordan rakes and bags Maya's backyard leaves every week on Tuesday at 9:00 am,
- * 3 hours, $60 a visit (Maya pays $66.00; Jordan earns $54.00). Seen on Mon Nov 30 at noon in Austin: visits 1 to 3
+ * 3 hours, $60 a visit (Maya pays $63.00; Jordan earns $60.00). Seen on Mon Nov 30 at noon in Austin: visits 1 to 3
  * (Nov 10, 17, 24) are done, visit 4 (Tue Dec 1) is charged 48 h before, and visits 5 to 7 are on the calendar.
  */
 

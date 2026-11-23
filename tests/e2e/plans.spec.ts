@@ -44,12 +44,14 @@ test('a new account subscribes to Plus, cancels it to the period’s end, keeps 
   await expect(page.getByRole('heading', { level: 1, name: 'Plans' })).toBeVisible({ timeout: 30_000 });
   const plus = page.getByRole('region', { name: 'Plus' });
   const pro = page.getByRole('region', { name: 'Pro' });
+  // LinkedIn-Premium-style since 2026-11-23: Plus waives the hold fee, Pro puts offers first with a badge and insights.
   await expect(plus.getByText('$4.99 a month')).toBeVisible();
-  await expect(plus.getByText(/up to \$15 a month/)).toBeVisible();
+  await expect(plus.getByText(/^No hold fee/)).toBeVisible();
   await expect(pro.getByText('$7.99 a month')).toBeVisible();
-  await expect(pro.getByText(/up to \$40 a month/)).toBeVisible();
+  await expect(pro.getByText('Your offers shown first to clients')).toBeVisible();
+  await expect(pro.getByText(/^Offer insights on every task/)).toBeVisible();
   await expect(page.getByText(/^5 AI searches left this month/)).toBeVisible();
-  await expect(page.getByText(/A plan never moves you up in lists or adds a badge/)).toBeVisible();
+  await expect(page.getByText(/A plan never changes reviews, checks or the verified badge/)).toBeVisible();
 
   // Subscribe (the stand-in starts it at once and comes back with the thank-you).
   await expect(async () => {
@@ -59,7 +61,6 @@ test('a new account subscribes to Plus, cancels it to the period’s end, keeps 
   await expect(page.getByRole('status').filter({ hasText: 'Thanks for subscribing' })).toBeVisible();
   await expect(plus.getByText('Your plan')).toBeVisible({ timeout: 15_000 });
   await expect(plus.getByText(/^Renews .+ at \$4\.99\.$/)).toBeVisible();
-  await expect(plus.getByText('Paid back this month: $0 of $15.')).toBeVisible();
   await expect(page.getByText(/^100 AI searches left this month/)).toBeVisible();
   // Pro can still be added; Plus can't be bought twice.
   await expect(plus.getByRole('button', { name: /Subscribe/ })).toHaveCount(0);

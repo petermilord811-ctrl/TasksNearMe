@@ -126,10 +126,12 @@ test.describe('public pages', () => {
     await page.locator('#hero-title').locator('xpath=ancestor::section[1]').getByRole('button', { name: /^Need help/ }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Everyday tasks, done by people nearby.' })).toBeVisible();
     await expect(page.getByRole('link', { name: /Furniture assembly/ }).first()).toBeVisible();
-    // The fee example comes from the fee engine and the published policy (the spoken values are final at once).
-    await expect(page.getByText('A $60.00 task')).toBeAttached();
-    await expect(page.getByText('$66.00', { exact: true }).first()).toBeAttached();
-    await expect(page.getByText('$54.00', { exact: true }).first()).toBeAttached();
+    // The fee example comes from the fee engine and the published policy (the spoken values are final at once): no
+    // service fees, so paid directly (the card's default) the $60 task is $60 for both; "Held by us" adds the hold fee.
+    const pricing = page.locator('#pricing');
+    await expect(pricing.getByText('A $60.00 task')).toBeAttached();
+    await expect(pricing.getByText('$60.00', { exact: true }).first()).toBeAttached();
+    await expect(pricing.getByRole('button', { name: 'Held by us' })).toBeAttached();
     // The welcome gift card, while the program is on.
     await expect(page.getByText('$50.00 gift card')).toBeAttached();
     // The landing is the first city's (Gainesville since 2026-11-17): its featured helpers are its own active helpers,
@@ -309,15 +311,22 @@ test.describe('public pages', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Furniture assembly in Austin' })).toBeVisible();
   });
 
-  test('pricing: every number comes from the fee engine and the published policy', async ({ page }) => {
+  test('pricing: no service fees; the hold fee, both ways to pay and the plans come from the published policy', async ({ page }) => {
     await page.goto('/pricing');
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    // The fees and the fixed example are open; the other examples sit behind a disclosure each (audit M25).
-    await expect(page.getByText('$54.00', { exact: true }).first()).toBeVisible();
-    for (const summary of await page.getByRole('main').locator('details > summary').all()) await summary.click();
-    for (const amount of ['$66.00', '$54.00', '$28.00', '$154.00', '$134.75', '$19.25', '$86.00', '$74.00']) {
-      await expect(page.getByText(amount, { exact: true }).first()).toBeVisible();
-    }
+    await expect(page.getByRole('heading', { level: 1, name: 'No service fees' })).toBeVisible();
+    const direct = page.getByRole('region', { name: 'Pay directly' });
+    await expect(direct.getByText('A $60.00 desk: you pay your helper $60.00. Nothing goes through TasksNearMe.')).toBeVisible();
+    const held = page.getByRole('region', { name: 'Held by TasksNearMe' });
+    await expect(held.getByText('5%', { exact: true })).toBeVisible();
+    await expect(held.getByText('A $60.00 desk: you pay $63.00 ($60.00 + $3.00 hold fee), and your helper gets $60.00.')).toBeVisible();
+    // Free, Plus and Pro, LinkedIn-Premium-style.
+    await expect(page.getByRole('region', { name: 'Plus' }).getByText('No hold fee: we hold your upfront payments for free')).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Pro' }).getByText('Your offers shown first to clients')).toBeVisible();
+    await expect(page.getByRole('table')).toBeVisible();
+    // The questions open one at a time.
+    const question = page.getByRole('main').locator('details > summary').filter({ hasText: 'What does the hold fee pay for?' });
+    await question.click();
+    await expect(page.getByText(/It's 5% of the price, paid by the client, and free with Plus\./)).toBeVisible();
   });
 
   test('become a helper: the welcome gift card for the three checks leads, with no spots to count', async ({ page }) => {
@@ -328,7 +337,8 @@ test.describe('public pages', () => {
     await expect(gift).toBeVisible();
     await expect(gift.getByText('Pass a background check')).toBeVisible();
     await expect(page.getByText(/spots? left/)).toHaveCount(0);
-    await expect(page.getByText('$54.00').first()).toBeVisible();
+    // What a helper keeps from the $60 desk: all of it.
+    await expect(page.getByText('You get the whole task price: there are no helper fees.', { exact: false })).toBeVisible();
   });
 
   test('how it works and trust and safety', async ({ page }) => {

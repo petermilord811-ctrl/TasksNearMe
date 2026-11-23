@@ -34,21 +34,22 @@ describe('ReceiptScreen', () => {
     const rows = activity.getAllByRole('listitem');
     expect(rows).toHaveLength(2);
     expect(within(rows[0]).getByText('Charged')).toBeVisible();
-    expect(within(rows[0]).getByText('$86.00')).toBeVisible();
+    expect(within(rows[0]).getByText('$83.00')).toBeVisible();
     expect(within(rows[0]).getByText('Tue, Nov 17 · 9:02 am')).toBeVisible();
     expect(within(rows[1]).getByText('Refunded')).toBeVisible();
     expect(within(rows[1]).getByText('Unused expense allowance')).toBeVisible();
     expect(within(rows[1]).getByText('$12.00')).toBeVisible();
     expect(within(rows[1]).getByText('Sat, Nov 21 · 1:05 pm')).toBeVisible();
     expect(activity.getAllByText('Visa •••• 1881')).toHaveLength(2);
-    expect(activity.getByText('$74.00')).toBeVisible();
-    expect(screen.getByRole('region', { name: 'Price breakdown' })).toHaveTextContent('Service fee');
+    expect(activity.getByText('$71.00')).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Price breakdown' })).toHaveTextContent('Hold fee');
+    expect(screen.getByRole('region', { name: 'Price breakdown' })).not.toHaveTextContent('Service fee');
     expect(screen.queryByText("You'll earn")).not.toBeInTheDocument();
   });
 
   it('takes the net total directly from the contract instead of deriving it from the lines', () => {
     mount({ ...deskReceiptPageData, netCents: deskSimpleReceiptPageData.netCents });
-    expect(within(screen.getByRole('region', { name: 'Charges and refunds' })).getByText('$66.00')).toBeVisible();
+    expect(within(screen.getByRole('region', { name: 'Charges and refunds' })).getByText('$63.00')).toBeVisible();
   });
 
   it.each([
@@ -72,7 +73,7 @@ describe('ReceiptScreen', () => {
     const activity = within(screen.getByRole('region', { name: 'Charges and refunds' }));
     expect(activity.getAllByRole('listitem')).toHaveLength(1);
     expect(activity.queryByText('Refunded')).not.toBeInTheDocument();
-    expect(activity.getAllByText('$66.00')).toHaveLength(2);
+    expect(activity.getAllByText('$63.00')).toHaveLength(2);
   });
 
   it('opens the browser print dialog from a control excluded from the printed receipt', async () => {

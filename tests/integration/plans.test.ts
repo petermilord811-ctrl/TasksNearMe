@@ -7,9 +7,10 @@ import { users } from '@/modules/accounts/schema';
 import { aiUsage, billingCustomers, subscriptions } from '@/modules/billing/schema';
 import { activePlans, aiSearchAccess, consumeAiSearch, endSubscriptionsOf, openPortal, planPageData, releaseAiSearch, startCheckout, stopRenewalsOf, syncSubscription } from '@/modules/billing/service';
 import { confirmBooking, getBookingConfirmPage } from '@/modules/bookings/confirm';
-import { bookings } from '@/modules/bookings/schema';
+import { bookings, bookingTerms } from '@/modules/bookings/schema';
 import { earnings } from '@/modules/earnings/schema';
 import { getReceiptPage, recordCompletionMoney } from '@/modules/earnings/service';
+import { legacyDeskBreakdown } from '@/fixtures';
 import { DEFAULT_PLANS } from '@/modules/markets/policy-defaults';
 import { marketPolicies } from '@/modules/markets/schema';
 import { offers } from '@/modules/offers/schema';
@@ -17,7 +18,10 @@ import { refunds } from '@/modules/payments/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
 
-/** The optional plans (completion plan 9.13): the stand-in checkout, AI search counts, and the fee rebates. */
+/**
+ * The optional plans (completion plan 9.13; LinkedIn-Premium-style since 2026-11-23): the stand-in checkout, AI search
+ * counts, the Plus hold-fee waiver, and the fee rebates still owed on bookings made under the service fees before.
+ */
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
 const CLIENT = 'usr_tmp_plans_client';
@@ -26,7 +30,7 @@ const billing = createDevBilling();
 const deps = { db, payments: createDevPaymentProvider() };
 const now = new Date();
 let policyVersionId = '';
-let originalPlans: (typeof marketPolicies.$inferSelect)['plans'] = null;
+const LEGACY_POLICY = 'pol_tmp_plans_legacy';
 
 async function copyDesk(taskId: string, offerId: string) {
   const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
@@ -57,7 +61,9 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  if (policyVersionId) await db.update(marketPolicies).set({ plans: originalPlans }).where(eq(marketPolicies.id, policyVersionId));
+  // The legacy policy version goes, its bookings back on the current one.
+  if (policyVersionId) await db.update(bookings).set({ policyVersionId }).where(eq(bookings.policyVersionId, LEGACY_POLICY));
+  await db.delete(marketPolicies).where(eq(marketPolicies.id, LEGACY_POLICY));
   await db.delete(subscriptions).where(inArray(subscriptions.userId, [CLIENT, HELPER]));
   await db.delete(billingCustomers).where(inArray(billingCustomers.userId, [CLIENT, HELPER]));
   await db.delete(aiUsage).where(inArray(aiUsage.userId, [CLIENT, HELPER]));
@@ -72,7 +78,7 @@ describe('plans', () => {
     expect([...(await activePlans(db, CLIENT, now)).keys()]).toEqual(['plus']);
     const page = await planPageData(db, billing, CLIENT, 'client', now);
     expect(page?.offers.map((offer) => offer.plan)).toEqual(['plus', 'pro']);
-    expect(page?.memberships).toEqual([{ plan: 'plus', interval: 'month', priceCents: DEFAULT_PLANS.plus.monthlyCents, status: 'active', periodEnd: expect.any(String), cancelAtPeriodEnd: false, rebatedThisMonthCents: 0 }]);
+    expect(page?.memberships).toEqual([{ plan: 'plus', interval: 'month', priceCents: DEFAULT_PLANS.plus.monthlyCents, status: 'active', periodEnd: expect.any(String), cancelAtPeriodEnd: false }]);
     expect(page?.unavailable).toBeUndefined();
     expect((await planPageData(db, null, CLIENT, 'client', now))?.unavailable).toBe(true);
   });
@@ -99,40 +105,51 @@ describe('plans', () => {
     expect(await aiSearchAccess(db, HELPER, now)).toMatchObject({ allowed: true, remaining: DEFAULT_PLANS.pro.aiSearchesPerMonth - free });
   });
 
-  it('pays half of each side’s fee back at completion, once, and says the cap on the receipt', async () => {
+  it('a Plus member pays no hold fee, and nothing is paid back at completion (no service fees, 2026-11-23)', async () => {
+    // The client holds Plus (the first test), the helper Pro: the desk is held by TasksNearMe, with no fee at all.
     const bookingId = await completedBooking(1);
+    const [terms] = await db.select({ breakdown: bookingTerms.breakdown }).from(bookingTerms).where(eq(bookingTerms.bookingId, bookingId));
+    expect(terms?.breakdown).toMatchObject({ taskPriceCents: 6000, posterFeeCents: 0, helperFeeCents: 0, posterTotalCents: 6000, helperEarningsCents: 6000 });
     await recordCompletionMoney(db, bookingId, now, deps.payments);
-    await recordCompletionMoney(db, bookingId, now, deps.payments);
-    const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
-    expect(booking).toBeTruthy();
-    const back = await db.select().from(refunds).where(and(eq(refunds.bookingId, bookingId), eq(refunds.reason, 'plan_rebate')));
-    expect(back).toHaveLength(1);
-    // The desk task: $60, a $6 client fee and a $6 helper fee.
-    expect(back[0]).toMatchObject({ amountCents: 300, status: 'succeeded', idempotencyKey: `plan_rebate:${bookingId}` });
-    const rebate = await db.select().from(earnings).where(and(eq(earnings.bookingId, bookingId), eq(earnings.kind, 'fee_rebate')));
-    expect(rebate).toHaveLength(1);
-    expect(rebate[0]).toMatchObject({ helperUserId: HELPER, amountCents: 300 });
-    const receipt = await getReceiptPage(db, CLIENT, bookingId);
-    expect(receipt?.lines.find((line) => line.reason === 'plan_rebate')).toMatchObject({ kind: 'refund', amountCents: 300, rebateCapCents: DEFAULT_PLANS.plus.rebateMonthlyCapCents });
+    expect(await db.select().from(refunds).where(and(eq(refunds.bookingId, bookingId), eq(refunds.reason, 'plan_rebate')))).toHaveLength(0);
+    expect(await db.select().from(earnings).where(and(eq(earnings.bookingId, bookingId), eq(earnings.kind, 'fee_rebate')))).toHaveLength(0);
+    // The helper gets the whole price.
+    expect((await db.select().from(earnings).where(and(eq(earnings.bookingId, bookingId), eq(earnings.kind, 'earnings'))))[0]?.amountCents).toBe(6000);
     const page = await planPageData(db, billing, HELPER, 'helper', now);
-    expect(page?.memberships[0]).toMatchObject({ plan: 'pro', rebatedThisMonthCents: 300 });
-    expect(page?.estimates.find((estimate) => estimate.plan === 'pro')).toMatchObject({ bookings: 1, savedCents: 300 });
+    expect(page?.offers.map((offer) => offer.plan)).toEqual(['pro', 'plus']);
+    expect(page?.memberships).toEqual([{ plan: 'pro', interval: 'year', priceCents: expect.any(Number), status: 'active', periodEnd: expect.any(String), cancelAtPeriodEnd: false }]);
+    expect(page).not.toHaveProperty('estimates');
   });
 
-  it('stops at the month’s cap', async () => {
-    // A small cap on this policy version for the test: 400 a month on each side, 300 already paid back.
-    const [policy] = await db.select({ plans: marketPolicies.plans }).from(marketPolicies).where(eq(marketPolicies.id, policyVersionId));
-    originalPlans = policy?.plans ?? null;
-    await db.update(marketPolicies).set({ plans: { ...DEFAULT_PLANS, plus: { ...DEFAULT_PLANS.plus, rebateMonthlyCapCents: 400 }, pro: { ...DEFAULT_PLANS.pro, rebateMonthlyCapCents: 400 } } }).where(eq(marketPolicies.id, policyVersionId));
-    const bookingId = await completedBooking(2);
-    await recordCompletionMoney(db, bookingId, now, deps.payments);
-    expect((await db.select().from(refunds).where(and(eq(refunds.bookingId, bookingId), eq(refunds.reason, 'plan_rebate'))))[0]?.amountCents).toBe(100);
-    expect((await db.select().from(earnings).where(and(eq(earnings.bookingId, bookingId), eq(earnings.kind, 'fee_rebate'))))[0]?.amountCents).toBe(100);
-    // At the cap: nothing more this month.
-    const third = await completedBooking(3);
-    await recordCompletionMoney(db, third, now, deps.payments);
-    expect(await db.select().from(refunds).where(and(eq(refunds.bookingId, third), eq(refunds.reason, 'plan_rebate')))).toHaveLength(0);
-    expect(await db.select().from(earnings).where(and(eq(earnings.bookingId, third), eq(earnings.kind, 'fee_rebate')))).toHaveLength(0);
+  it('still pays back a booking made under the service fees before 2026-11-23, within the month’s cap', async () => {
+    // A policy version from before: 10% each side, half back with a plan, up to $4 a month on each side.
+    const [current] = await db.select().from(marketPolicies).where(eq(marketPolicies.id, policyVersionId));
+    await db.insert(marketPolicies).values({
+      ...current!,
+      id: LEGACY_POLICY,
+      version: 9_000,
+      status: 'retired',
+      fees: { posterBps: 1000, posterMinCents: 300, helperBps: 1000 },
+      plans: { ...DEFAULT_PLANS, plus: { ...DEFAULT_PLANS.plus, posterFeeRebateBps: 5000, rebateMonthlyCapCents: 400 }, pro: { ...DEFAULT_PLANS.pro, helperFeeRebateBps: 5000, rebateMonthlyCapCents: 400 } },
+    });
+    const legacyBooking = async (n: number) => {
+      const bookingId = await completedBooking(n);
+      await db.update(bookings).set({ policyVersionId: LEGACY_POLICY }).where(eq(bookings.id, bookingId));
+      await db.update(bookingTerms).set({ breakdown: legacyDeskBreakdown }).where(eq(bookingTerms.bookingId, bookingId));
+      await recordCompletionMoney(db, bookingId, now, deps.payments);
+      await recordCompletionMoney(db, bookingId, now, deps.payments);
+      const back = await db.select().from(refunds).where(and(eq(refunds.bookingId, bookingId), eq(refunds.reason, 'plan_rebate')));
+      const rebate = await db.select().from(earnings).where(and(eq(earnings.bookingId, bookingId), eq(earnings.kind, 'fee_rebate')));
+      return { bookingId, back: back.map((row) => row.amountCents), rebate: rebate.map((row) => row.amountCents) };
+    };
+    // Half of each $6 fee, once.
+    const first = await legacyBooking(2);
+    expect(first).toMatchObject({ back: [300], rebate: [300] });
+    const receipt = await getReceiptPage(db, CLIENT, first.bookingId);
+    expect(receipt?.lines.find((line) => line.reason === 'plan_rebate')).toMatchObject({ kind: 'refund', amountCents: 300, rebateCapCents: 400 });
+    // Then only what's left of the cap, then nothing this month.
+    expect(await legacyBooking(3)).toMatchObject({ back: [100], rebate: [100] });
+    expect(await legacyBooking(4)).toMatchObject({ back: [], rebate: [] });
   });
 
   it('mirrors Stripe’s subscription from its events, and ignores ones that aren’t ours', async () => {

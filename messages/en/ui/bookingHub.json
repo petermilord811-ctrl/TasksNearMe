@@ -283,5 +283,9 @@
     "title": "Thank {name} on Neighbors",
     "body": "A public thanks helps neighbors find good help, and counts as a recommendation on their profile.",
     "action": "Write a thanks"
+  },
+  "direct": {
+    "poster": "You pay {name} directly after the task (cash, Zelle, Venmo…). Nothing is charged here, and there is no fee.",
+    "helper": "{name} pays you directly after the task (cash, Zelle, Venmo…). Nothing goes through TasksNearMe, and there is no fee."
   }
 }

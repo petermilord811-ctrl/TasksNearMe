@@ -39,21 +39,30 @@ export interface CategoryView {
   priceGuidance: PriceGuidance;
 }
 
+/**
+ * One task price, paid both ways (no service fees since 2026-11-23): `direct`, to the helper after the task, with no
+ * fees; `held`, upfront, which TasksNearMe holds until the client says the task is done (the client's hold fee).
+ */
+export interface FeeExample {
+  direct: PriceBreakdown;
+  held: PriceBreakdown;
+}
+
 export interface HomePageData {
   market: MarketView;
   categories: CategoryView[];
   recentTasks: TaskPublicView[];
   featuredHelpers: HelperSummary[];
   /**
-   * The $60 desk at the market's published fees (the fee engine's numbers): what the client pays and what
-   * the helper earns. The landing page shows it as-is (UI-035); the UI never computes money.
+   * The $60 desk held by TasksNearMe at the market's published fees (the fee engine's numbers): what the client pays
+   * and what the helper gets. The landing page shows it as-is (UI-035); the UI never computes money.
    */
   feeExample: PriceBreakdown;
   /**
-   * A few task prices at the same published fees, lowest first; one of them is `feeExample`. The pricing card
-   * lets the visitor switch between them (the UI picks, the fee engine computed every number).
+   * A few task prices, lowest first, each paid both ways; one of them is `feeExample`'s price. The pricing card lets
+   * the visitor switch prices and ways to pay (the UI picks, the fee engine computed every number).
    */
-  feeExamples: PriceBreakdown[];
+  feeExamples: FeeExample[];
   /**
    * The welcome gift card: every helper whose `checks` pass earns `amountCents` (blueprint 05 §2, 2026-11-14).
    * Absent when the program is off.
@@ -238,40 +247,39 @@ export interface CostGuidePageData {
   /** The page's heading: the question people search, in the page's language. */
   question: string;
   /**
-   * What a poster pays and what a helper earns at the low and the high end of the typical range: one item, one task,
-   * or the category's minimum hours at the hourly rate.
+   * What a client pays at the low and the high end of the typical range when the payment is held by TasksNearMe (the
+   * hold fee; paid directly, it's just the price): one item, one task, or the category's minimum hours at the rate.
+   * Helpers get the whole price either way (no service fees since 2026-11-23).
    */
   examples: { low: PriceBreakdown; high: PriceBreakdown };
   /** The hours the hourly examples are worked out for (the category's minimum); absent for priced-per-item or per-task services. */
   exampleHours?: number;
-  fees: { posterFeePercent: number; posterMinimumCents: Cents; helperFeePercent: number };
+  /** The only fee: on a payment TasksNearMe holds, paid by the client. */
+  holdFee: { percent: number; minimumCents: Cents };
   /** The service's page, the city's open tasks and pricing, in the page's language. */
   related: RelatedLink[];
 }
 
 /** Everything the pricing page shows. Computed by the app's fee engine; the UI only displays it. */
+/**
+ * `/pricing` (rewritten 2026-11-23, owner: "Totally remove service fee feature … Change the pricing page totally … deep
+ * think about subscription plan (as LinkedIn premium)"). No service fees: posting, offers, messages and booking are
+ * free, and a client pays the helper directly unless the helper asks to be paid upfront, when TasksNearMe holds the
+ * money and the client pays the hold fee (none with Plus). Helpers pay nothing. Revenue is the plans.
+ */
 export interface PricingPageData {
-  fees: { posterFeePercent: number; posterMinimumCents: Cents; helperFeePercent: number };
+  /** The only fee: on a held payment, paid by the client. */
+  holdFee: { percent: number; minimumCents: Cents };
+  /** The $60 desk: paid directly (no fee), and held (the price plus the hold fee; the helper gets the whole price). */
+  examples: { direct: PriceBreakdown; held: PriceBreakdown };
+  /** Held bookings only: free to cancel until `freeUntilHours` before the start; later, the helper gets `lateFeePercent`. */
   cancellation: { freeUntilHours: number; lateFeePercent: number; lateFeeMinimumCents: Cents };
-  timers: { autoApproveHours: number; inviteHoldHours: number };
-  /** $60 desk. */
-  fixedExample: PriceBreakdown;
-  /** $25 task where the $3.00 minimum fee applies. */
-  minimumFeeExample: PriceBreakdown;
-  /** Moving help, $35/h with a 4 h cap: what's charged up front, then the final after 3.5 h. */
-  hourlyExample: { funded: PriceBreakdown; final: PriceBreakdown };
-  /** Desk with a $20 allowance and an $8 receipt. */
-  expensesExample: PriceBreakdown;
-  /** The optional plans (completion plan 9.13), Plus first; absent where they aren't open (no Stripe here). */
+  /** A held payment goes to the helper this long after the work is sent, unless the client answers first. */
+  timers: { autoApproveHours: number };
+  /** AI searches a month without a plan. */
+  freeAiSearches: number;
+  /** The plans, Plus first; absent where they aren't open (no Stripe here). */
   plans?: PlanOffer[];
-  lateCancellationExample: {
-    taskPriceCents: Cents;
-    /** What the poster paid for this task (the full refund when canceling in time). */
-    posterPaidCents: Cents;
-    feeCents: Cents;
-    posterRefundCents: Cents;
-    helperReceivesCents: Cents;
-  };
 }
 
 export interface BecomeHelperPageData {

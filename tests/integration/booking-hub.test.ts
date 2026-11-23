@@ -43,7 +43,7 @@ describe('the booking page', () => {
   it('shows the client the address, the charge and the calendar; strangers get nothing', async () => {
     const view = await getBookingView(hub, 'usr_ana', bookingId, new Date());
     expect(view).toMatchObject({ status: 'confirmed', viewerRole: 'poster', addressVisibility: 'visible', exactAddress: { line1: '1234 Example Lane' } });
-    expect(view?.payments).toEqual([expect.objectContaining({ kind: 'charge', amountCents: 6600, status: 'succeeded', method: { brand: 'visa', last4: '4242' } })]);
+    expect(view?.payments).toEqual([expect.objectContaining({ kind: 'charge', amountCents: 6300, status: 'succeeded', method: { brand: 'visa', last4: '4242' } })]);
     expect(view?.actions.map((a) => a.id)).toEqual(['message', 'propose_change', 'add_to_calendar', 'report_no_show', 'safety_report', 'cancel']);
     expect(view?.timeline.map((e) => e.type)).toEqual(['task_posted', 'offer_received', 'booked', 'payment_succeeded']);
     expect(await getBookingView(hub, 'usr_chris', bookingId, new Date())).toBeNull();
@@ -53,10 +53,10 @@ describe('the booking page', () => {
     const view = await getBookingView(hub, 'usr_jordan', bookingId, new Date());
     expect(view).toMatchObject({ viewerRole: 'helper', addressVisibility: 'visible', exactAddress: { line1: '1234 Example Lane' } });
     expect(view?.payments).toBeUndefined();
-    // Money per role (audit M26): the client paid, and the helper sees their own $54.00 held, never the $66.00 total.
+    // Money per role (audit M26): the client paid, and the helper sees their own $60.00 held, never the $63.00 total.
     expect(view?.timeline.map((e) => e.type)).toEqual(['task_posted', 'offer_received', 'booked', 'payment_held']);
-    expect(view?.timeline.at(-1)?.params).toEqual({ amountCents: 5400 });
-    expect(view?.timeline.some((e) => e.params?.amountCents === 6600)).toBe(false);
+    expect(view?.timeline.at(-1)?.params).toEqual({ amountCents: 6000 });
+    expect(view?.timeline.some((e) => e.params?.amountCents === 6300)).toBe(false);
     expect(view?.actions.map((a) => [a.id, a.enabled])).toEqual([
       ['on_my_way', false],
       ['arrived', false],
@@ -101,9 +101,9 @@ describe('the booking page', () => {
 
   it('lists the booking for both people with their own amounts', async () => {
     const ana = await getBookingsPage(db, 'usr_ana', new Date());
-    expect(ana.past.find((row) => row.id === bookingId)).toMatchObject({ viewerRole: 'poster', amountCents: 6600, otherParty: { displayName: 'Jordan T.' } });
+    expect(ana.past.find((row) => row.id === bookingId)).toMatchObject({ viewerRole: 'poster', amountCents: 6300, otherParty: { displayName: 'Jordan T.' } });
     const jordan = await getBookingsPage(db, 'usr_jordan', new Date());
-    expect(jordan.past.find((row) => row.id === bookingId)).toMatchObject({ viewerRole: 'helper', amountCents: 5400, otherParty: { displayName: 'Ana P.' } });
+    expect(jordan.past.find((row) => row.id === bookingId)).toMatchObject({ viewerRole: 'helper', amountCents: 6000, otherParty: { displayName: 'Ana P.' } });
     expect((await getBookingsPage(db, 'usr_chris', new Date())).past.find((row) => row.id === bookingId)).toBeUndefined();
   });
 });

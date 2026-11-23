@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 TasksNearMe conecta a la gente de Gainesville con vecinos verificados para las tareas de todos los días: [armado de muebles](/gainesville/furniture-assembly), [ayuda con mudanzas](/gainesville/moving-help), [limpieza de jardín](/gainesville/yard-cleanup), [limpieza ligera](/gainesville/light-cleaning) y [ayuda con computadoras y teléfonos](/gainesville/computer-help). Describes lo que necesitas, ayudantes cercanos te envían ofertas con su precio y eliges la que mejor te convenga.
 
@@ -16,7 +16,7 @@ El área de servicio es la ciudad y el resto del condado de Alachua a unas 15 mi
 
 ## Precios y pagos
 
-Tú y tu ayudante acuerdan el precio antes de reservar: un precio fijo por el trabajo, o una tarifa por hora con el máximo de horas que quieres pagar. Ves cada tarifa antes de confirmar. Se cobra a tu tarjeta al reservar, y tu ayudante recibe su pago después de terminar la tarea. Cada servicio tiene una guía de costos para Gainesville, como [cuánto cuesta el armado de muebles](/gainesville/furniture-assembly/cost).
+Tú y tu ayudante acuerdan el precio antes de reservar: un precio fijo por el trabajo, o una tarifa por hora con el máximo de horas que quieres pagar. No hay tarifas de servicio: le pagas directamente a tu ayudante cuando termina la tarea, en efectivo o con una app de pagos. Si un ayudante pide el pago por adelantado, se cobra a tu tarjeta al reservar, más una pequeña tarifa de retención, y TasksNearMe retiene el dinero hasta que digas que la tarea está hecha. Cada servicio tiene una guía de costos para Gainesville, como [cuánto cuesta el armado de muebles](/gainesville/furniture-assembly/cost).
 
 ## A quién conoces
 

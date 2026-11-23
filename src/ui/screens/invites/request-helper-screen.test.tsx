@@ -136,8 +136,9 @@ describe('RequestHelperScreen', () => {
     await ready();
     // The quote names the chosen task, so its expense allowance is in the total the hold covers.
     expect(handlers.onQuote).toHaveBeenLastCalledWith({ pricing: { type: 'fixed', priceCents: 5000 }, taskId: 'tsk_bookshelf' });
-    expect(screen.getByText(/We'll place a hold of \$49\.50/)).toBeVisible();
-    expect(screen.queryByText('$55.00')).not.toBeInTheDocument();
+    expect(screen.getByText(/We'll place a hold of \$47\.25/)).toBeVisible();
+    // $50.00 plus a 5% hold fee worked out on the screen: never shown, only the server's total is.
+    expect(screen.queryByText('$52.50')).not.toBeInTheDocument();
     await user.click(terms());
     await user.click(submit());
     await waitFor(() => expect(handlers.onRequest).toHaveBeenCalledExactlyOnceWith({
@@ -180,7 +181,7 @@ describe('RequestHelperScreen', () => {
       taskId: movingPublicTask.id, start: movingTask.windowStart, pricing: movingPublicTask.budget,
       message: undefined, payment: { kind: 'saved', methodId: 'pm_maya_visa' }, acceptTerms: true,
     }));
-    expect(screen.getByText(/We'll place a hold of \$154\.00/)).toBeVisible();
+    expect(screen.getByText(/We'll place a hold of \$147\.00/)).toBeVisible();
   });
 
   it('requires consent and focuses the terms checkbox', async () => {
@@ -238,7 +239,7 @@ describe('RequestHelperScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Update total' }));
     await ready();
     expect(onQuote).toHaveBeenCalledTimes(2);
-    expect(screen.getByText(/We'll place a hold of \$49\.50/)).toBeVisible();
+    expect(screen.getByText(/We'll place a hold of \$47\.25/)).toBeVisible();
   });
 
   it('locks pending controls and prevents duplicate requests through successful navigation', async () => {

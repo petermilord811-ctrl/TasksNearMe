@@ -190,7 +190,7 @@ describe('posting wizard', () => {
     await user.clear(input); await user.type(input, '$60');
     await user.click(screen.getByRole('button', { name: 'Next' }));
     await waitFor(() => expect(handlers.onQuote).toHaveBeenCalledWith({ budget: { type: 'fixed', priceCents: 6000 }, expenseAllowanceCents: 0 }));
-    expect(await screen.findByText('$66.00')).toBeInTheDocument();
+    expect(await screen.findByText('$63.00')).toBeInTheDocument();
   });
 
   it('posts the contract draft, prevents duplicate posts, announces success and follows redirectTo', async () => {

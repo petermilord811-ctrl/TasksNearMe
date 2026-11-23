@@ -196,6 +196,6 @@ test.describe('waitlist, help, and legal', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Terms of service' })).toBeVisible();
     await expect(page.getByText(/not in effect yet/).first()).toBeVisible();
     await page.goto('/legal/cancellation-policy');
-    await expect(page.getByText(/\$54\.00/).first()).toBeVisible();
+    await expect(page.getByText(/\$51\.00/).first()).toBeVisible();
   });
 });

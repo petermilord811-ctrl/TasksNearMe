@@ -51,7 +51,7 @@ describe('HelperTaskScreen', () => {
     expect(screen.getByText(data.description)).toBeVisible();
     expect(screen.getByText('About 2 miles away')).toBeVisible();
     expect(screen.getByText(helperTask.privacy)).toBeVisible();
-    expect(screen.getByRole('region', { name: helperTask.earnings })).toHaveTextContent('$54.00');
+    expect(screen.getByRole('region', { name: helperTask.earnings })).toHaveTextContent('$60.00');
   });
 
   it('opens each task photo in an accessible dialog', async () => {
@@ -106,7 +106,7 @@ describe('HelperTaskScreen', () => {
     const form = screen.getByDisplayValue('60').closest('form')!;
     const submit = form.querySelector<HTMLButtonElement>('button[type="submit"]')!;
     await user.click(submit);
-    expect(handlers.onReviseOffer).toHaveBeenCalledExactlyOnceWith({ pricing: helperDeskWithOffer.myOffer!.pricing, startTime: '10:00', message: helperDeskWithOffer.myOffer!.message, brings: helperDeskWithOffer.myOffer!.brings });
+    expect(handlers.onReviseOffer).toHaveBeenCalledExactlyOnceWith({ pricing: helperDeskWithOffer.myOffer!.pricing, startTime: '10:00', message: helperDeskWithOffer.myOffer!.message, brings: helperDeskWithOffer.myOffer!.brings, paymentMode: helperDeskWithOffer.myOffer!.paymentMode });
     expect(handlers.onSubmitOffer).not.toHaveBeenCalled();
   });
 

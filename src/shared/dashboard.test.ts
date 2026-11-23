@@ -124,8 +124,8 @@ describe('items', () => {
   });
 
   it("makes bookings rows with the client's total or the helper's earnings", () => {
-    expect(mayaBookingItems[0]).toMatchObject({ side: 'client', stage: 'booked', money: { kind: 'total', cents: 6600 }, person: { displayName: 'Jordan T.' } });
-    expect(jordanBookingItems[0]).toMatchObject({ side: 'helper', money: { kind: 'earn', cents: 5400 } });
+    expect(mayaBookingItems[0]).toMatchObject({ side: 'client', stage: 'booked', money: { kind: 'total', cents: 6300 }, person: { displayName: 'Jordan T.' } });
+    expect(jordanBookingItems[0]).toMatchObject({ side: 'helper', money: { kind: 'earn', cents: 6000 } });
     expect(jordanBookingItems.at(-1)).toMatchObject({ stage: 'done' });
   });
 

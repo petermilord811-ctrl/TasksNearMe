@@ -2,7 +2,7 @@
 
 import { useId } from 'react';
 import Link from 'next/link';
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, HandCoins, ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type MessageSegment, type OfferActionId, type OfferView, type TaskOwnerHandlers } from '@/contracts';
 import { useFormat } from '@/ui/lib/format';
@@ -57,6 +57,7 @@ export function OfferCard({ offer, now, selectable, onAction }: OfferCardProps) 
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
+        {offer.pro && <span className="inline-flex items-center gap-1 rounded-full bg-[linear-gradient(135deg,#92400e,#b45309)] px-2.5 py-0.5 text-xs font-bold tracking-wide text-white shadow-sm">{t('pro')}</span>}
         {offer.isNew && <StatusBadge tone="brand" label={t('new')} />}
         {offer.status !== 'pending' && <StatusBadge {...status} />}
       </div>
@@ -67,6 +68,8 @@ export function OfferCard({ offer, now, selectable, onAction }: OfferCardProps) 
       <p className="font-display text-2xl/8 font-semibold tracking-[-0.015em]"><OfferPrice pricing={offer.pricing} /></p>
       <p className="flex items-start gap-2 text-sm tabular-nums"><CalendarDays aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><span><span className="block text-muted-foreground">{t('proposedStart')}</span><time dateTime={offer.proposedStart}>{formatDateTime(offer.proposedStart)}</time></span></p>
     </div>
+    {/* How the helper wants to be paid (2026-11-23): directly after the task, or upfront and held by TasksNearMe. */}
+    <p className="flex items-start gap-2 text-sm">{offer.paymentMode === 'held' ? <ShieldCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" /> : <HandCoins aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" />}<span>{t(`payment.${offer.paymentMode}`, { helper: offer.helper.displayName })}</span></p>
     {/* The clamp sits inside the padding, so a third line never peeks into it. */}
     {hasMessage(offer.message) && <p className="rounded-2xl bg-foreground/[0.035] px-3.5 py-2.5 text-sm leading-6 dark:bg-white/[0.045]"><span className="line-clamp-2"><MaskedText segments={offer.message} /></span></p>}
     {offer.revision > 1 && <p className="text-sm font-medium text-muted-foreground">{t('updated')}</p>}

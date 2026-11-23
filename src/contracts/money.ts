@@ -1,5 +1,15 @@
 import type { Cents } from './common';
 
+/**
+ * How a helper is paid for a booking (owner, 2026-11-23: no service fees). `direct`: the client pays the helper
+ * directly after the task (cash, Zelle, Venmo…), outside TasksNearMe: no fee, and no money held or refunded here.
+ * `held`: the helper asks to be paid upfront, so the client pays when booking and TasksNearMe holds the money until the
+ * client says the task is done (evidence optional); the client pays the hold fee (none with Plus), the helper gets the
+ * whole price. The helper chooses on each offer; `direct` unless they ask.
+ */
+export const PAYMENT_MODES = ['direct', 'held'] as const;
+export type PaymentMode = (typeof PAYMENT_MODES)[number];
+
 /** How a task or offer is priced. */
 export type PricingInput =
   | { type: 'fixed'; priceCents: Cents }

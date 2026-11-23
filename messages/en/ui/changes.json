@@ -13,7 +13,7 @@
     "fieldsHint": "Edit what needs to change. Leave the other details as they are.",
     "price": "Task price (USD)",
     "rate": "Hourly rate (USD)",
-    "moneyHint": "Enter dollars and cents. Service fees are shown below.",
+    "moneyHint": "Enter dollars and cents. Any fee is shown below.",
     "hoursCap": "Hours cap",
     "hoursHint": "The most hours included in the booking, up to 24.",
     "start": "New start ({zone})",

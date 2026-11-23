@@ -24,16 +24,16 @@ import { deskDraft, uploadedTaskPhotos } from './posting';
  * 9:00 am in Austin; the desk is Saturday 10:00 am–1:00 pm.
  */
 
-/** Sam offers $55: poster pays $60.50 (fee $5.50), Sam earns $49.50. Checked against the fee engine. */
+/** Sam offers $55, held: poster pays $57.75 (hold fee $2.75), Sam gets the whole $55.00. Checked against the fee engine. */
 export const deskOfferSamBreakdown: PriceBreakdown = {
   pricingType: 'fixed',
   taskPriceCents: 5500,
-  posterFeeCents: 550,
-  helperFeeCents: 550,
+  posterFeeCents: 275,
+  helperFeeCents: 0,
   expenseAllowanceCents: 0,
-  posterTotalCents: 6050,
-  helperEarningsCents: 4950,
-  platformRevenueCents: 1100,
+  posterTotalCents: 5775,
+  helperEarningsCents: 5500,
+  platformRevenueCents: 275,
 };
 
 /** Lee offers $50 (same lines as the bookshelf counter). */
@@ -46,6 +46,7 @@ const pendingOfferActions: ActionDescriptor<OfferActionId>[] = [
 ];
 
 export const deskOfferJordan: OfferView = {
+  paymentMode: 'held',
   id: 'off_jordan',
   taskId: 'tsk_desk',
   helper: jordan,
@@ -63,6 +64,7 @@ export const deskOfferJordan: OfferView = {
 };
 
 export const deskOfferSam: OfferView = {
+  paymentMode: 'held',
   id: 'off_sam',
   taskId: 'tsk_desk',
   helper: sam,
@@ -81,6 +83,7 @@ export const deskOfferSam: OfferView = {
 
 /** Lee's message tried to share a phone number: it arrives masked. */
 export const deskOfferLee: OfferView = {
+  paymentMode: 'held',
   id: 'off_lee',
   taskId: 'tsk_desk',
   helper: lee,

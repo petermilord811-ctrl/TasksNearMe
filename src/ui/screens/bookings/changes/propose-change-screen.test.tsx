@@ -178,9 +178,10 @@ describe('proposal money preview', () => {
     expect(onQuote).not.toHaveBeenCalled();
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(onQuote).toHaveBeenCalledExactlyOnceWith({ priceCents: 9000, message });
-    expect(screen.getByText('$88.00')).toBeVisible();
-    expect(screen.getByText(/You'd pay \$22.00 more/)).toBeVisible();
-    expect(screen.queryByText('$99.00')).not.toBeInTheDocument();
+    expect(screen.getByText('$84.00')).toBeVisible();
+    expect(screen.getByText(/You'd pay \$21.00 more/)).toBeVisible();
+    // $90.00 plus a 5% hold fee, worked out on the screen: never shown, the server's numbers are.
+    expect(screen.queryByText('$94.50')).not.toBeInTheDocument();
   });
 
   it('ignores an older response after inputs change and announces the pending state', async () => {
@@ -194,10 +195,10 @@ describe('proposal money preview', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(350); });
     expect(onQuote).toHaveBeenCalledTimes(2);
     await act(async () => { resolve[0](deskChairQuote); });
-    expect(screen.queryByText('$88.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('$84.00')).not.toBeInTheDocument();
     expect(container.querySelector('[aria-live="polite"]')).toHaveAttribute('aria-busy', 'true');
     await act(async () => { resolve[1](deskChairQuote); });
-    expect(screen.getByText('$88.00')).toBeVisible();
+    expect(screen.getByText('$84.00')).toBeVisible();
     expect(container.querySelector('[aria-live="polite"]')).toHaveAttribute('aria-busy', 'false');
   });
 });

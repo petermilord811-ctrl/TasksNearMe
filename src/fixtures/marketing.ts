@@ -23,11 +23,11 @@ import type {
 import { crestviewArea, hydeParkArea, muellerArea, remoteLocation } from './locations';
 import {
   deskBreakdown,
-  deskWithExpensesFinalBreakdown,
+  deskDirectBreakdown,
   largeTaskBreakdown,
-  movingFinalBreakdown,
-  movingFundedBreakdown,
+  largeTaskDirectBreakdown,
   smallTaskBreakdown,
+  smallTaskDirectBreakdown,
 } from './money';
 import { jordan, lee, maya, ruth, sam } from './people';
 import { DESK_TIMES } from './timeline';
@@ -252,7 +252,11 @@ export const homePageData: HomePageData = {
   recentTasks: recentPublicTasks,
   featuredHelpers: [sam, lee, jordan],
   feeExample: deskBreakdown,
-  feeExamples: [smallTaskBreakdown, deskBreakdown, largeTaskBreakdown],
+  feeExamples: [
+    { direct: smallTaskDirectBreakdown, held: smallTaskBreakdown },
+    { direct: deskDirectBreakdown, held: deskBreakdown },
+    { direct: largeTaskDirectBreakdown, held: largeTaskBreakdown },
+  ],
   welcomeReward: { amountCents: 5000, checks: ['phone', 'identity', 'background'] },
   map: austinLandingMap,
   aiDraftingEnabled: true,
@@ -312,7 +316,7 @@ export const furnitureCategorySeo: CategorySeoContent = {
     { type: 'list', ordered: false, items: [['Have the boxes in the room where the furniture goes.'], ['Anchoring to the wall needs studs: say so in your task.']] },
   ],
   faq: [
-    { question: 'How much does furniture assembly cost in Austin?', answer: 'In Austin, typical prices are $50.00–$80.00 per item. You agree on the price with your helper before you book, and you see the service fee and your total before you pay.' },
+    { question: 'How much does furniture assembly cost in Austin?', answer: 'In Austin, typical prices are $50.00–$80.00 per item. You agree on the price with your helper before you book. There are no service fees: you pay your helper directly, or TasksNearMe holds the payment for a small fee when they ask to be paid upfront.' },
     { question: 'How are helpers checked?', answer: 'Before sending offers, every helper verifies a government ID with a live selfie and their home address. This service happens in your home, so helpers also need a cleared background check before they can take it.' },
     { question: 'Who sees my address?', answer: 'Only the helper you book, and only after you confirm.' },
   ],
@@ -321,32 +325,32 @@ export const furnitureCategorySeo: CategorySeoContent = {
     { label: 'Moving help', href: '/austin/moving-help' },
     { label: 'Yard cleanup', href: '/austin/yard-cleanup' },
     { label: 'Furniture assembly jobs near you in Austin', href: '/austin/tasks/furniture-assembly' },
-    { label: 'Pricing and fees', href: '/pricing' },
+    { label: 'Pricing', href: '/pricing' },
   ],
 };
 
 /**
- * Cost guides (docs/seo/PLAN.md S5), worked out at the launch fees (poster max(10%, $3.00), helper 10%):
- * furniture assembly at $50 and $80 an item; moving help for its 2 minimum hours at $32 and $40 an hour.
+ * Cost guides (docs/seo/PLAN.md S5), worked out for a payment TasksNearMe holds at the default hold fee (max(5%, $1.00),
+ * no service fees since 2026-11-23): furniture assembly at $50 and $80 an item; moving help for its 2 minimum hours at
+ * $32 and $40 an hour.
  */
 const fixedAt = (priceCents: number): PriceBreakdown => {
-  const fee = Math.max(Math.round(priceCents / 10), 300);
-  const helperFee = Math.round(priceCents / 10);
-  return { pricingType: 'fixed', taskPriceCents: priceCents, posterFeeCents: fee, helperFeeCents: helperFee, expenseAllowanceCents: 0, posterTotalCents: priceCents + fee, helperEarningsCents: priceCents - helperFee, platformRevenueCents: fee + helperFee };
+  const fee = Math.max(Math.round(priceCents / 20), 100);
+  return { pricingType: 'fixed', taskPriceCents: priceCents, posterFeeCents: fee, helperFeeCents: 0, expenseAllowanceCents: 0, posterTotalCents: priceCents + fee, helperEarningsCents: priceCents, platformRevenueCents: fee };
 };
 const hourlyAt = (rateCents: number, hours: number): PriceBreakdown => ({ ...fixedAt(rateCents * hours), pricingType: 'hourly', hourly: { rateCents, hours, basis: 'cap' } });
-const COST_FEES = { posterFeePercent: 10, posterMinimumCents: 300, helperFeePercent: 10 };
+const COST_HOLD_FEE = { percent: 5, minimumCents: 100 };
 
 export const furnitureCostGuideData: CostGuidePageData = {
   market: austinMarket,
   category: categoryViews[0]!,
   question: 'How much does furniture assembly cost in Austin?',
   examples: { low: fixedAt(5000), high: fixedAt(8000) },
-  fees: COST_FEES,
+  holdFee: COST_HOLD_FEE,
   related: [
     { label: 'Furniture assembly near you in Austin', href: '/austin/furniture-assembly' },
     { label: 'Furniture assembly jobs near you in Austin', href: '/austin/tasks/furniture-assembly' },
-    { label: 'Pricing and fees', href: '/pricing' },
+    { label: 'Pricing', href: '/pricing' },
   ],
 };
 
@@ -357,8 +361,8 @@ export const movingCostGuideData: CostGuidePageData = {
   question: 'How much does moving help cost in Austin?',
   examples: { low: hourlyAt(3200, 2), high: hourlyAt(4000, 2) },
   exampleHours: 2,
-  fees: COST_FEES,
-  related: [{ label: 'Moving help near you in Austin', href: '/austin/moving-help' }, { label: 'Pricing and fees', href: '/pricing' }],
+  holdFee: COST_HOLD_FEE,
+  related: [{ label: 'Moving help near you in Austin', href: '/austin/moving-help' }, { label: 'Pricing', href: '/pricing' }],
 };
 
 /** The furniture assembly page with every search section. */
@@ -370,23 +374,29 @@ export const movingCategoryWithSeoEmptyData: CategoryPageData = {
   seo: {
     helperCount: 0,
     openTaskCount: 0,
-    faq: [{ question: 'How much does moving help cost in Austin?', answer: 'In Austin, typical prices are $32.00–$40.00 per hour. You agree on the price with your helper before you book, and you see the service fee and your total before you pay.' }],
-    related: [{ label: 'Furniture assembly', href: '/austin/furniture-assembly' }, { label: 'Pricing and fees', href: '/pricing' }],
+    faq: [{ question: 'How much does moving help cost in Austin?', answer: 'In Austin, typical prices are $32.00–$40.00 per hour. You agree on the price with your helper before you book. There are no service fees: you pay your helper directly, or TasksNearMe holds the payment for a small fee when they ask to be paid upfront.' }],
+    related: [{ label: 'Furniture assembly', href: '/austin/furniture-assembly' }, { label: 'Pricing', href: '/pricing' }],
   },
 };
 
 /** A category page before the first real helper and task: no tasks, no helpers, no counts, no city guide. */
 export const categoryNoListingsData: CategoryPageData = { ...movingCategoryWithSeoEmptyData, topHelpers: [] };
 
+/** /pricing as the default policy gives it (no service fees, 2026-11-23); `pricingWithPlansData` adds the plans. */
 export const pricingPageData: PricingPageData = {
-  fees: { posterFeePercent: 10, posterMinimumCents: 300, helperFeePercent: 10 },
+  holdFee: { percent: 5, minimumCents: 100 },
+  examples: { direct: deskDirectBreakdown, held: deskBreakdown },
   cancellation: { freeUntilHours: 24, lateFeePercent: 20, lateFeeMinimumCents: 1000 },
-  timers: { autoApproveHours: 72, inviteHoldHours: 48 },
-  fixedExample: deskBreakdown,
-  minimumFeeExample: smallTaskBreakdown,
-  hourlyExample: { funded: movingFundedBreakdown, final: movingFinalBreakdown },
-  expensesExample: deskWithExpensesFinalBreakdown,
-  lateCancellationExample: { taskPriceCents: 6000, posterPaidCents: 6600, feeCents: 1200, posterRefundCents: 5400, helperReceivesCents: 1200 },
+  timers: { autoApproveHours: 72 },
+  freeAiSearches: 5,
+};
+
+export const pricingWithPlansData: PricingPageData = {
+  ...pricingPageData,
+  plans: [
+    { plan: 'plus', monthlyCents: 499, yearlyCents: 3999, aiSearchesPerMonth: 100 },
+    { plan: 'pro', monthlyCents: 799, yearlyCents: 5999, aiSearchesPerMonth: 100 },
+  ],
 };
 
 export const becomeHelperPageData: BecomeHelperPageData = {

@@ -59,15 +59,17 @@ describe('AdminBookingScreen', () => {
     expect(screen.getByText(adminBookingSettledData.helper.displayName)).toBeVisible();
     expect(screen.getByText(formatDateTime(adminBookingSettledData.booking.start))).toBeVisible();
     const final = screen.getByRole('region', { name: copy.final });
-    expect(within(final).getByText('$45.00')).toBeVisible();
-    expect(within(final).getByText('$40.50')).toBeVisible();
-    expect(within(final).getByText('$9.00')).toBeVisible();
+    const finalLine = (label: string) => within(final).getByText(label).closest('div');
+    // Settled at $45, held: the helper gets the whole $45.00 and the platform keeps the $2.25 hold fee.
+    expect(finalLine('Task price')).toHaveTextContent('$45.00');
+    expect(finalLine('Helper earnings')).toHaveTextContent('$45.00');
+    expect(finalLine('Platform revenue')).toHaveTextContent('$2.25');
     const history = screen.getByRole('list', { name: copy.refunds });
-    expect(within(history).getByText('$16.50')).toBeVisible();
+    expect(within(history).getByText('$15.75')).toBeVisible();
     expect(within(history).getByText(copy.refundReasons.dispute_settlement)).toBeVisible();
     expect(within(history).getByText(copy.refundStatuses.succeeded)).toBeVisible();
     const earnings = screen.getByRole('list', { name: copy.earnings });
-    expect(within(earnings).getByText('$40.50')).toBeVisible();
+    expect(within(earnings).getByText('$45.00')).toBeVisible();
     expect(within(earnings).getByText(messages.status.earnings.transferred)).toBeVisible();
     expect(within(earnings).getByText(copy.transferred.replace('{at}', formatDateTime(adminBookingSettledData.money.earnings[0]!.transferredAt!)))).toBeVisible();
     expect(screen.getByRole('link', { name: adminBookingSettledData.cases[0]!.subject })).toHaveAttribute('href', routes.admin.case(adminBookingSettledData.cases[0]!.id));
@@ -177,18 +179,18 @@ describe('AdminBookingScreen', () => {
 
   it('blocks amounts above the supplied maximum and requires a note of ten characters', async () => {
     const user = userEvent.setup(); const { handlers } = mount();
-    await fillRefund(user, '66.01', '123456789');
+    await fillRefund(user, '63.01', '123456789');
     expect(screen.getByRole('button', { name: copy.refund.submit })).toBeDisabled();
     expect(screen.getByText(copy.refund.amountTooHigh.replace('{amount}', formatMoney(adminBookingDisputedData.refund!.maxCents)))).toBeVisible();
     fireEvent.submit(screen.getByRole('form', { name: copy.refund.title }));
     expect(handlers.onRefund).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByRole('textbox', { name: copy.refund.amount }), { target: { value: '66.00' } });
+    fireEvent.change(screen.getByRole('textbox', { name: copy.refund.amount }), { target: { value: '63.00' } });
     await user.click(screen.getByRole('button', { name: copy.refund.submit }));
     expect(await screen.findByText(copy.refund.noteTooShort)).toBeVisible();
     expect(handlers.onRefund).not.toHaveBeenCalled();
     fireEvent.change(screen.getByRole('textbox', { name: copy.refund.note }), { target: { value: '1234567890' } });
     await user.click(screen.getByRole('button', { name: copy.refund.submit }));
-    await waitFor(() => expect(handlers.onRefund).toHaveBeenCalledWith({ amountCents: 6600, reason: 'goodwill', note: '1234567890' }));
+    await waitFor(() => expect(handlers.onRefund).toHaveBeenCalledWith({ amountCents: 6300, reason: 'goodwill', note: '1234567890' }));
   });
 
   it.each(['0', '-1', '1.234', 'abc'])('rejects invalid amount %s without sending a refund', async (amount) => {
@@ -222,7 +224,7 @@ describe('AdminBookingScreen', () => {
     await fillRefund(user); await user.click(screen.getByRole('button', { name: copy.refund.submit }));
     const expected = code === 'not_allowed' ? copy.refund.notAllowed : messages.forms.actionErrors[code as keyof typeof messages.forms.actionErrors] ?? messages.feedback.error[code];
     expect(await screen.findByText(expected)).toBeVisible();
-    if (code === 'validation_failed') expect(await screen.findByText(copy.refund.amountTooHigh.replace('{amount}', '$66.00'))).toBeVisible();
+    if (code === 'validation_failed') expect(await screen.findByText(copy.refund.amountTooHigh.replace('{amount}', '$63.00'))).toBeVisible();
     expect(screen.getByRole('textbox', { name: copy.refund.amount })).toHaveValue('16.50');
     expect(screen.getByRole('textbox', { name: copy.refund.note })).toHaveValue(note);
     expect(navigation.refresh).not.toHaveBeenCalled();

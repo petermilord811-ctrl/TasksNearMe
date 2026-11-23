@@ -66,12 +66,12 @@ export const findWorkPageData: FindWorkPageData = {
   query: { when: 'any', remoteOnly: false, sort: 'soonest', page: 1, distance: 'any', saved: false, view: 'list' },
   categories: categoryViews,
   cards: [
-    { task: deskForJordan, myOffer: { id: 'off_jordan', status: 'pending' }, earnings: { type: 'fixed', amountCents: 5400 }, startDay: '2026-11-21', isNew: true, saved: false },
-    { task: movingPublicTask, earnings: { type: 'hourly', rateCents: 3150, capCents: 12600 }, startDay: '2026-11-22', isNew: true, saved: false },
-    { task: remoteComputerPublicTask, blockedReason: 'category_not_offered', earnings: { type: 'fixed', amountCents: 3600 }, startDay: '2026-11-23', isNew: true, saved: false },
-    { task: cleaningForJordan, blockedReason: 'category_not_offered', earnings: { type: 'fixed', amountCents: 9900 }, startDay: '2026-11-25', isNew: true, saved: false },
+    { task: deskForJordan, myOffer: { id: 'off_jordan', status: 'pending' }, earnings: { type: 'fixed', amountCents: 6000 }, startDay: '2026-11-21', isNew: true, saved: false },
+    { task: movingPublicTask, earnings: { type: 'hourly', rateCents: 3500, capCents: 14000 }, startDay: '2026-11-22', isNew: true, saved: false },
+    { task: remoteComputerPublicTask, blockedReason: 'category_not_offered', earnings: { type: 'fixed', amountCents: 4000 }, startDay: '2026-11-23', isNew: true, saved: false },
+    { task: cleaningForJordan, blockedReason: 'category_not_offered', earnings: { type: 'fixed', amountCents: 11000 }, startDay: '2026-11-25', isNew: true, saved: false },
     // Fixed price, open to him, no offer yet: the one-tap offer at Maya's $120.
-    { task: yardForJordan, earnings: { type: 'fixed', amountCents: 10800 }, startDay: '2026-11-28', isNew: false, saved: true, quickOffer: { priceCents: 12000, earningsCents: 10800, proposedStart: '2026-11-28T15:00:00.000Z' } },
+    { task: yardForJordan, earnings: { type: 'fixed', amountCents: 12000 }, startDay: '2026-11-28', isNew: false, saved: true, quickOffer: { priceCents: 12000, earningsCents: 12000, proposedStart: '2026-11-28T15:00:00.000Z' } },
   ],
   totalCount: 5,
   pageCount: 1,
@@ -100,7 +100,7 @@ export const findWorkOfferAgainData: FindWorkPageData = {
   ...findWorkPageData,
   cards: [
     ...findWorkPageData.cards.slice(0, 2),
-    { task: couchForJordan, myOffer: { id: 'off_jordan_couch', status: 'expired' }, earnings: { type: 'hourly', rateCents: 2700, capCents: 5400 }, startDay: '2026-11-22', isNew: false, saved: false },
+    { task: couchForJordan, myOffer: { id: 'off_jordan_couch', status: 'expired' }, earnings: { type: 'hourly', rateCents: 3000, capCents: 6000 }, startDay: '2026-11-22', isNew: false, saved: false },
     ...findWorkPageData.cards.slice(2),
   ],
   totalCount: findWorkPageData.cards.length + 1,
@@ -179,6 +179,7 @@ const ownOfferActions: ActionDescriptor<OfferActionId>[] = [
 ];
 
 export const jordanDeskOffer: HelperOfferView = {
+  paymentMode: 'held',
   id: 'off_jordan',
   status: 'pending',
   pricing: { type: 'fixed', priceCents: 6000 },
@@ -282,7 +283,7 @@ export const myOffersPageData: MyOffersPageData = {
   booked: [],
   closed: [
     {
-      offer: { id: 'off_jordan_yard', status: 'declined', pricing: { type: 'fixed', priceCents: 12000 }, proposedStart: '2026-11-28T15:00:00.000Z', expiresAt: '2026-11-20T15:00:00.000Z', revision: 1, breakdown: { ...deskBreakdown, taskPriceCents: 12000, posterFeeCents: 1200, helperFeeCents: 1200, posterTotalCents: 13200, helperEarningsCents: 10800, platformRevenueCents: 2400 } },
+      offer: { id: 'off_jordan_yard', status: 'declined', pricing: { type: 'fixed', priceCents: 12000 }, proposedStart: '2026-11-28T15:00:00.000Z', expiresAt: '2026-11-20T15:00:00.000Z', revision: 1, breakdown: { ...deskBreakdown, taskPriceCents: 12000, posterFeeCents: 600, helperFeeCents: 0, posterTotalCents: 12600, helperEarningsCents: 12000, platformRevenueCents: 600 } },
       task: yardForJordan,
     },
   ],

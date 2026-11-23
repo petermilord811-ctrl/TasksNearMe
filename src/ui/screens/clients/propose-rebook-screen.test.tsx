@@ -19,6 +19,9 @@ function mount(props: Partial<ProposeRebookScreenProps & ProposeRebookPreviewSta
   return { handlers, ...render(<NextIntlClientProvider locale="en" messages={{ ...messages, clients }}><ProposeRebookContent data={proposeDeskRebookData} handlers={handlers} now={now} initialBreakdown={deskBreakdown} {...props} /></NextIntlClientProvider>) };
 }
 
+/** The helper's line in the earnings breakdown: the whole price since 2026-11-23 (no service fees). */
+const earnings = () => screen.getByText("You'll earn").closest('div');
+
 function chooseStart(date = '2026-12-19', time = '10:00') {
   fireEvent.change(screen.getByLabelText('Date'), { target: { value: date } });
   fireEvent.change(screen.getByLabelText('Start time'), { target: { value: time } });
@@ -31,7 +34,7 @@ describe('propose a booking', () => {
     expect(screen.getByRole('textbox', { name: 'Task price ($)' })).toHaveValue('60');
     expect(screen.getByLabelText('Date')).toHaveValue('');
     expect(screen.getByLabelText('Start time')).toHaveValue('');
-    expect(screen.getByText('$54.00')).toBeInTheDocument();
+    expect(earnings()).toHaveTextContent('$60.00');
     chooseStart();
     await user.type(screen.getByRole('textbox', { name: 'Message (optional)' }), ' Happy to help again. ');
     await user.click(screen.getByRole('button', { name: 'Send proposal' }));
@@ -46,7 +49,7 @@ describe('propose a booking', () => {
     expect(screen.getByRole('textbox', { name: 'Hourly rate ($)' })).toHaveValue('35');
     expect(screen.getByRole('spinbutton', { name: 'Estimated hours' })).toHaveValue(3.5);
     expect(screen.getByRole('spinbutton', { name: 'Hours cap' })).toHaveValue(4);
-    expect(screen.getByText('$126.00')).toBeInTheDocument();
+    expect(earnings()).toHaveTextContent('$140.00');
     chooseStart();
     await user.click(screen.getByRole('button', { name: 'Send proposal' }));
     await waitFor(() => expect(handlers.onPropose).toHaveBeenCalledExactlyOnceWith({ date: '2026-12-19', startTime: '10:00', pricing: movingProposalSentHelper.pricing, message: undefined }));
@@ -75,7 +78,7 @@ describe('propose a booking', () => {
     const onQuote = vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValue(deskBreakdown);
     mount({ handlers: { ...fakeProposeRebookHandlers, onQuote } });
     fireEvent.change(screen.getByRole('textbox', { name: 'Task price ($)' }), { target: { value: '60.50' } });
-    expect(screen.queryByText('$54.00')).not.toBeInTheDocument();
+    expect(screen.queryByText("You'll earn")).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Send proposal' })).toBeDisabled();
     await act(async () => { await vi.advanceTimersByTimeAsync(349); });
     expect(onQuote).not.toHaveBeenCalled();
@@ -84,7 +87,7 @@ describe('propose a booking', () => {
     expect(screen.getByText(clients.form.earningsError)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Update earnings' }));
     await act(async () => { await vi.advanceTimersByTimeAsync(350); });
-    expect(screen.getByText('$54.00')).toBeInTheDocument();
+    expect(earnings()).toHaveTextContent('$60.00');
   });
 
   it('disables pending submissions, prevents duplicate sends, and follows the handler redirect', async () => {

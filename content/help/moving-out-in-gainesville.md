@@ -3,7 +3,7 @@ title: Moving out in Gainesville
 summary: A checklist for move-out week: the City's bulk pickup and yard waste rules, your utilities, cleaning for your deposit, and the tasks a helper can take on.
 topic: guides
 order: 5
-updated: 2026-11-20
+updated: 2026-11-23
 action: post_task
 category: moving-help
 ---
@@ -33,6 +33,6 @@ The City collects yard waste every week on your scheduled day: paper lawn and le
 
 ## What it costs
 
-Each service's price guide shows the typical range in Gainesville and what you'd pay at each end, fees included: [moving help](/gainesville/moving-help/cost), [light cleaning](/gainesville/light-cleaning/cost), [furniture assembly](/gainesville/furniture-assembly/cost) and [yard cleanup](/gainesville/yard-cleanup/cost).
+Each service's price guide shows the typical range in Gainesville and what you'd pay at each end, whether you pay your helper directly or upfront: [moving help](/gainesville/moving-help/cost), [light cleaning](/gainesville/light-cleaning/cost), [furniture assembly](/gainesville/furniture-assembly/cost) and [yard cleanup](/gainesville/yard-cleanup/cost).
 
 The City's and the county's rules change from time to time: their pages have the latest.

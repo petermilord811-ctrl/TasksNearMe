@@ -45,11 +45,11 @@ describe('PaymentsScreen', () => {
     const row = (title: string) => within(screen.getByRole('link', { name: title }).closest('li')!);
     const [allowance, desk, yard] = mayaPaymentsPageData.receipts;
     // What the client paid, and a refund only when there was one (audit L30).
-    expect(row(allowance!.title).getByText('Charged $86.00 · Refunded $12.00')).toBeVisible();
-    expect(row(allowance!.title).getAllByText('$74.00').length).toBeGreaterThan(0);
-    expect(row(desk!.title).getAllByText('$66.00').length).toBeGreaterThan(0);
+    expect(row(allowance!.title).getByText('Charged $83.00 · Refunded $12.00')).toBeVisible();
+    expect(row(allowance!.title).getAllByText('$71.00').length).toBeGreaterThan(0);
+    expect(row(desk!.title).getAllByText('$63.00').length).toBeGreaterThan(0);
     expect(row(desk!.title).queryByText(/Refunded/)).not.toBeInTheDocument();
-    expect(row(yard!.title).getByText('Charged $99.00 · Refunded $99.00')).toBeVisible();
+    expect(row(yard!.title).getByText('Charged $94.50 · Refunded $94.50')).toBeVisible();
     expect(row(yard!.title).getAllByText('$0.00').length).toBeGreaterThan(0);
     for (const receipt of mayaPaymentsPageData.receipts) {
       const link = screen.getByRole('link', { name: receipt.title });
@@ -65,9 +65,9 @@ describe('PaymentsScreen', () => {
   it('renders the supplied net even when a synthetic row does not balance', () => {
     const receipt = { ...mayaPaymentsPageData.receipts[0]!, netCents: 6600 };
     mount({ ...mayaPaymentsPageData, receipts: [receipt] });
-    expect(screen.getByText('Charged $86.00 · Refunded $12.00')).toBeVisible();
+    expect(screen.getByText('Charged $83.00 · Refunded $12.00')).toBeVisible();
     expect(screen.getAllByText('$66.00').length).toBeGreaterThan(0);
-    expect(screen.queryByText('$74.00')).not.toBeInTheDocument();
+    expect(screen.queryByText('$71.00')).not.toBeInTheDocument();
   });
 
   it('puts the saved cards before the receipts and groups receipts by month, the older ones folded', () => {

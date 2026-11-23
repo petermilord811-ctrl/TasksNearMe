@@ -3,7 +3,7 @@ title: Helper agreement
 summary: The extra terms that apply when you offer help on TasksNearMe.
 version: Draft 0.1
 status: draft
-updated: 2026-11-11
+updated: 2026-11-23
 ---
 > [!warning] This is a working draft for review. It has not been reviewed by a lawyer and is not in effect.
 
@@ -19,10 +19,10 @@ To send offers you need an ID check and payout setup. In-home categories also ne
 - Don't take on anything on the [prohibited list](/legal/prohibited-tasks).
 
 ## 4. Getting paid {#payment}
-You receive the task price minus a service fee, shown before you accept. Approved expenses are reimbursed separately without fees. If a poster cancels late, you receive the late-cancellation fee.
+Each offer you send states how you'll be paid. Paid directly, the poster pays you after the task, by any method you agree on; that payment is between you and the poster, and we don't process, hold, or refund it. Paid upfront, we hold the poster's payment and release it to you when the poster confirms the task is done, or automatically 72 hours after you mark it done if they don't respond. Either way you receive the whole task price: we charge helpers no fee. On held bookings, approved expenses are reimbursed separately without fees, and if a poster cancels late, you receive the late-cancellation fee.
 
 ## 5. Cancellations and no-shows {#cancellations}
-If you cancel or don't show up, the poster is refunded in full and your account may get a strike. Repeated strikes can lead to suspension.
+If you cancel or don't show up, your account may get a strike, and on a held booking the poster is refunded in full. Repeated strikes can lead to suspension.
 
 ## 6. Rewards {#rewards}
 Gift card rewards follow the [rewards terms](/legal/rewards-terms). Rewards aren't wages and never depend on reviews or ratings.

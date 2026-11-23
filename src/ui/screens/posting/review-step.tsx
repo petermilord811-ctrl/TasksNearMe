@@ -120,11 +120,12 @@ export function ReviewStep({ data, handlers, values, photos, selectedAddress }: 
       </> : <p>{t('review.remotePrivacy')}</p>}
     </section>
 
+    {/* No service fees (2026-11-23): paid directly it's just the price; the breakdown is the upfront, held case. */}
+    <p className="text-sm leading-6 text-muted-foreground">{t('review.payment')}</p>
     <div aria-live="polite" aria-busy={!currentPrice}>
       {currentPrice?.breakdown ? <PriceBreakdown breakdown={currentPrice.breakdown} variant="poster" title={t('review.priceTitle')} /> : currentPrice?.error ? <div role="alert" className="space-y-3 rounded-[1.375rem] border border-destructive/60 bg-destructive/[0.04] p-4">
         <p>{t('review.priceError')}</p><Button type="button" variant="outline" onClick={() => setAttempt((value) => value + 1)}>{t('review.retryPrice')}</Button>
       </div> : <div className="flex items-center gap-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-5 shadow-card dark:border-white/[0.06]"><Spinner /><span className="text-muted-foreground">{t('review.priceLoading')}</span></div>}
     </div>
-    <p className="text-sm leading-6 text-muted-foreground">{t('review.payment')}</p>
   </div>;
 }

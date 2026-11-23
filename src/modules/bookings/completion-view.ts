@@ -73,6 +73,8 @@ export async function recordMissingCompletionMoney(db: Db, now: Date, limit = 25
     .where(
       and(
         eq(bookings.status, 'completed'),
+        // Paid directly between the two people (2026-11-23): no money of ours to finish.
+        eq(bookings.paymentMode, 'held'),
         lte(bookings.completedAt, settled),
         // Real bookings only: seed and demo rows were written complete, and a payout must never be invented for them.
         realRowsOnly(bookings.id),

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, Check, Clock3, HandHeart, HelpCircle, Lock, Navigation, Repeat } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Check, Clock3, HandCoins, HandHeart, HelpCircle, Lock, Navigation, Repeat } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
   routes, type ActionResult, type BadgeTone, type BookingActionId, type BookingHubHandlers,
@@ -274,11 +274,13 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
         <p className="text-sm text-muted-foreground tabular-nums"><span className="font-medium text-foreground">{t('pricing')}:</span> {terms.pricing.type === 'fixed'
           ? t('fixedPrice', { amount: formatMoney(terms.pricing.priceCents) })
           : t('hourlyPrice', { rate: formatMoney(terms.pricing.rateCents), estimate: formatHours(terms.pricing.estimatedHours), cap: formatHours(terms.pricing.hoursCap) })}</p>
-        {data.completion
+        {/* Paid directly (owner, 2026-11-23): nothing goes through TasksNearMe, so no breakdown or payments, just who pays whom. */}
+        {data.paymentMode === 'direct' ? <p className="flex items-start gap-2.5 rounded-2xl bg-secondary/60 p-3.5 text-sm dark:bg-secondary/30"><HandCoins aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-primary" /><span>{t(data.viewerRole === 'poster' ? 'direct.poster' : 'direct.helper', { name: data.viewerRole === 'poster' ? data.helper.displayName : data.poster.displayName })}</span></p>
+          : data.completion
           ? <PriceBreakdown flat headingLevel={3} breakdown={data.completion.finalBreakdown} variant={data.viewerRole} title={completionCopy(data.viewerRole === 'poster' ? 'finalCost' : 'earnings')} />
           : <PriceBreakdown flat headingLevel={3} breakdown={terms.breakdown} variant={data.viewerRole} posterTotalLabel={t(data.status === 'pending_funding' ? 'totalDue' : 'totalCharged')} />}
-        {data.viewerRole === 'poster' && terms.pricing.type === 'hourly' && <p className={note}>{t('hourlyNote', { hours: terms.pricing.hoursCap })}</p>}
-        {data.viewerRole === 'poster' && data.payments && <section aria-label={t('payments')} className="space-y-3 border-t border-foreground/[0.07] pt-4 dark:border-white/[0.07]">
+        {data.paymentMode !== 'direct' && data.viewerRole === 'poster' && terms.pricing.type === 'hourly' && <p className={note}>{t('hourlyNote', { hours: terms.pricing.hoursCap })}</p>}
+        {data.paymentMode !== 'direct' && data.viewerRole === 'poster' && data.payments && <section aria-label={t('payments')} className="space-y-3 border-t border-foreground/[0.07] pt-4 dark:border-white/[0.07]">
           <h3 className="font-heading text-[1.0625rem]/6 font-semibold tracking-[-0.01em]">{t('payments')}</h3>
           {data.payments.length > 0 ? <ul className="divide-y divide-foreground/[0.07] dark:divide-white/[0.07]">{data.payments.map((payment) => <BookingPayment key={payment.id} payment={payment} />)}</ul> : <p className="text-sm text-muted-foreground">{t('noPayments')}</p>}
         </section>}

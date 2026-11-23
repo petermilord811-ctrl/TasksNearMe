@@ -106,6 +106,12 @@ export const REPORT_REASONS = [
   'other',
 ] as const;
 export type ReportReason = (typeof REPORT_REASONS)[number];
+/**
+ * The reasons a person can pick when reporting someone. Paying a helper directly is how TasksNearMe works since
+ * 2026-11-23 (owner: no service fees; the client pays the helper unless the helper asks to be paid upfront), so
+ * "asked me to pay outside TasksNearMe" is no longer offered; reports made with it before keep it.
+ */
+export const OFFERED_REPORT_REASONS: readonly ReportReason[] = REPORT_REASONS.filter((reason) => reason !== 'off_platform_payment');
 
 export const reportInputSchema = z.object({
   reason: z.enum(REPORT_REASONS, code('required')),

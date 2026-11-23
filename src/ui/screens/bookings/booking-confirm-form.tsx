@@ -58,7 +58,8 @@ export function BookingConfirmForm({ data, handlers, now, initialResult, initial
     resolver: zodResolver(confirmBookingInputSchema),
     defaultValues: {
       offerRevision: data.offer.revision,
-      payment: getDefaultPaymentChoice(data.payment),
+      // Paid directly (2026-11-23): no card.
+      ...(data.paymentMode === 'direct' ? {} : { payment: getDefaultPaymentChoice(data.payment) }),
       acceptTerms: initialPending || Boolean(initialResult && (initialResult.ok || initialResult.code !== 'validation_failed')),
     },
     shouldFocusError: false,
@@ -121,7 +122,7 @@ export function BookingConfirmForm({ data, handlers, now, initialResult, initial
   const lastFailure = data.pending?.lastFailure;
 
   return <>
-    <form ref={formRef} noValidate aria-label={t('title')} aria-busy={pending} className="space-y-6" onSubmit={(event) => {
+    <form ref={formRef} noValidate aria-label={t(data.paymentMode === 'direct' ? 'titleDirect' : 'title')} aria-busy={pending} className="space-y-6" onSubmit={(event) => {
       if (disabled || locked.current) { event.preventDefault(); return; }
       void form.handleSubmit(
         (input) => run(() => handlers.onConfirm(input)),
@@ -136,11 +137,11 @@ export function BookingConfirmForm({ data, handlers, now, initialResult, initial
       </aside>}
       <fieldset disabled={disabled} className="min-w-0 space-y-6">
         <legend className="sr-only">{t('payment')}</legend>
-        <section ref={paymentSection} tabIndex={-1} aria-labelledby={`${id}-payment-title`} className={cn(surface, surfacePad, 'space-y-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring')}>
+        {data.paymentMode !== 'direct' && <section ref={paymentSection} tabIndex={-1} aria-labelledby={`${id}-payment-title`} className={cn(surface, surfacePad, 'space-y-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring')}>
           <h2 id={`${id}-payment-title`} className={sectionTitle}>{t('payment')}</h2>
           <Controller control={form.control} name="payment" render={({ field }) => <PaymentMethodPicker panel={data.payment} onRemoveCard={handlers.onRemoveCard} id={paymentId} disabled={disabled} keepCard={Boolean(data.paysLater)} field={{ ...field, onChange: (choice) => { form.clearErrors('payment'); field.onChange(choice); } }} error={paymentError ? errorText(paymentError) : undefined} />} />
           {paymentFailure && <FormFeedback result={feedback} />}
-        </section>
+        </section>}
         <div className="space-y-2">
           {/* The whole row is the checkbox's label (and its tap target); the links inside still open on their own. */}
           <Controller control={form.control} name="acceptTerms" render={({ field, fieldState }) => <label htmlFor={`${id}-terms`} className={cn(
@@ -168,7 +169,7 @@ export function BookingConfirmForm({ data, handlers, now, initialResult, initial
       </div> : !paymentFailure && <FormFeedback result={feedback} errorMessage={feedback && !feedback.ok && feedback.code === 'not_ready' ? t('errors.not_ready') : undefined} />}
       </div>
       <div ref={submitBar} className={actionTray}>
-        <Button type="submit" disabled={disabled} aria-busy={pending} className="w-full sm:w-auto">{pending && <Spinner />}{t(pending ? 'booking' : data.paysLater ? 'submitLater' : 'submit', { amount: formatMoney(data.breakdown.posterTotalCents) })}</Button>
+        <Button type="submit" disabled={disabled} aria-busy={pending} className="w-full sm:w-auto">{pending && <Spinner />}{t(pending ? 'booking' : data.paymentMode === 'direct' ? 'submitDirect' : data.paysLater ? 'submitLater' : 'submit', { amount: formatMoney(data.breakdown.posterTotalCents), helper: data.offer.helper.displayName })}</Button>
       </div>
     </form>
     {verification && <BankVerificationDialog verification={verification} pending={pending} onDone={(outcome) => { void run(() => handlers.onFinishVerification({ paymentId: verification.paymentId, outcome })); }} />}

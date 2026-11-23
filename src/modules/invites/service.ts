@@ -29,6 +29,7 @@ import { getPublishedPolicy } from '@/modules/markets/queries';
 import { categories } from '@/modules/markets/schema';
 import { loadHelperState } from '@/modules/offers/helper';
 import { quoteBreakdown } from '@/modules/payments/fees';
+import { waivesHoldFee } from '@/modules/billing/benefits';
 import { payments } from '@/modules/payments/schema';
 import { helperProfiles, helperServices } from '@/modules/profiles/schema';
 import { getHelperSummaries } from '@/modules/profiles/queries';
@@ -264,7 +265,8 @@ export async function quoteInvite(db: Db, posterId: string, pricing: PricingInpu
     .where(taskId === undefined ? eq(tasks.posterUserId, posterId) : and(eq(tasks.id, taskId), eq(tasks.posterUserId, posterId)))
     .limit(1);
   const fees = task ? await feesOf(db, task.marketId) : null;
-  return fees ? quoteBreakdown(fees, pricing, { expenseAllowanceCents: taskId === undefined ? 0 : task!.expenseAllowanceCents }) : null;
+  // A request is paid upfront and held by TasksNearMe: the hold fee, none for a Plus member (2026-11-23).
+  return fees ? quoteBreakdown(fees, pricing, { expenseAllowanceCents: taskId === undefined ? 0 : task!.expenseAllowanceCents, waiveHoldFee: await waivesHoldFee(db, posterId, new Date()) }) : null;
 }
 
 /** Sends an invite: the card is authorized for the total (or a bank step comes first). */
@@ -299,7 +301,8 @@ export async function requestHelper(deps: BookingDeps, posterId: string, handle:
   // Risk asked this client to verify their ID first; the amount counts for new accounts.
   // The task's expense allowance is held with the price, as an offer charges it: the booking's terms carry it, and receipts
   // approved against it are paid back to the helper out of what the client paid (before, the platform paid them).
-  const allowance = { expenseAllowanceCents: task.expenseAllowanceCents };
+  // Held by TasksNearMe: the client's hold fee, none for a Plus member (2026-11-23).
+  const allowance = { expenseAllowanceCents: task.expenseAllowanceCents, waiveHoldFee: await waivesHoldFee(db, posterId, now) };
   if (await posterIdentityRequirement(db, posterId, now, quoteBreakdown(fees, parsed.data.pricing, allowance).posterTotalCents)) return { ok: false, code: 'identity_required' };
   const limited = await consumeRateLimit(db, `invites:${posterId}`, REQUEST_RULE, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
@@ -415,7 +418,7 @@ async function requestAgain(
   // The fees in force now, never the past booking's breakdown.
   const fees = await feesOf(db, marketId);
   if (!fees) return { ok: false, code: 'unknown' };
-  const breakdown = quoteBreakdown(fees, input.pricing);
+  const breakdown = quoteBreakdown(fees, input.pricing, { waiveHoldFee: await waivesHoldFee(db, posterId, now) });
   if (await posterIdentityRequirement(db, posterId, now, breakdown.posterTotalCents)) return { ok: false, code: 'identity_required' };
   const limited = await consumeRateLimit(db, `invites:${posterId}`, REQUEST_RULE, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
@@ -798,7 +801,7 @@ export async function counterInvite(db: Db, payments_: PaymentProvider | null, h
   const start = parsed.data.start ? new Date(parsed.data.start) : invite.startAt;
   if (start < task.windowStart || start > task.windowEnd || start.getTime() - now.getTime() < 2 * HOUR) return { ok: false, code: 'validation_failed', fieldErrors: { start: ['invalid'] } };
   // The task's expense allowance stays in the total, as in the first hold.
-  const counterBreakdown = quoteBreakdown(fees, pricing, { expenseAllowanceCents: task.expenseAllowanceCents });
+  const counterBreakdown = quoteBreakdown(fees, pricing, { expenseAllowanceCents: task.expenseAllowanceCents, waiveHoldFee: await waivesHoldFee(db, invite.posterUserId, now) });
   const columns = pricingColumns(pricing);
   const [updated] = await db
     .update(invites)

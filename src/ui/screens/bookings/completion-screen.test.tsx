@@ -254,7 +254,7 @@ describe('CompletionScreen', () => {
     await user.click(boxes[0]!);
     expect(boxes[0]).toBeChecked();
     await act(async () => { resolve(deskBreakdown); });
-    expect(await screen.findByText('$54.00')).toBeVisible();
+    expect((await screen.findByText("You'll earn")).closest('div')).toHaveTextContent('$60.00');
     expect(send()).toBeEnabled();
   });
 
@@ -287,9 +287,9 @@ describe('CompletionEarnings', () => {
     rerender(view(3.5));
     await waitFor(() => expect(onQuote).toHaveBeenLastCalledWith({ hoursWorked: 3.5, expensesCents: 0 }));
     await act(async () => { newResolve(movingFinalBreakdown); });
-    expect(await screen.findByText('$110.25')).toBeVisible();
+    expect((await screen.findByText("You'll earn")).closest('div')).toHaveTextContent('$122.50');
     await act(async () => { oldResolve(deskBreakdown); });
-    expect(screen.getByText('$110.25')).toBeVisible();
-    expect(screen.queryByText('$54.00')).not.toBeInTheDocument();
+    expect(screen.getByText("You'll earn").closest('div')).toHaveTextContent('$122.50');
+    expect(screen.queryAllByText('$60.00')).toHaveLength(0);
   });
 });

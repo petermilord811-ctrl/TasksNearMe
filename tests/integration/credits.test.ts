@@ -54,7 +54,8 @@ describe('client credits', () => {
     await setFlag(true);
     const page = await getBookingConfirmPage(deps, CLIENT, 'tsk_credit_1', 'off_credit_1', now);
     if (page?.kind !== 'page') throw new Error('expected the page');
-    expect(page.data.credit).toEqual({ amountCents: CREDIT_RULES.welcomeCents, expiresAt: expect.any(String) });
+    // What comes back on this booking: at most what the platform earns on it, the $3.00 hold fee (2026-11-23).
+    expect(page.data.credit).toEqual({ amountCents: 300, expiresAt: expect.any(String) });
     // Only one welcome credit, however often the page opens.
     await ensureWelcomeCredit(db, CLIENT, marketId, now);
     expect(await db.select().from(posterCredits).where(eq(posterCredits.userId, CLIENT))).toHaveLength(1);
@@ -70,11 +71,12 @@ describe('client credits', () => {
     await recordCompletionMoney(db, bookingId, now, deps.payments);
     const back = await db.select().from(refunds).where(and(eq(refunds.bookingId, bookingId), eq(refunds.reason, 'poster_credit')));
     expect(back).toHaveLength(1);
-    expect(back[0]).toMatchObject({ amountCents: CREDIT_RULES.welcomeCents, status: 'succeeded', idempotencyKey: `credit:${bookingId}` });
+    // Up to the $3.00 the platform earned (the hold fee); the other $7.00 of the welcome credit stays for later.
+    expect(back[0]).toMatchObject({ amountCents: 300, status: 'succeeded', idempotencyKey: `credit:${bookingId}` });
     const [paid] = await db.select({ status: payments.status }).from(payments).where(eq(payments.bookingId, bookingId));
     expect(paid?.status).toBe('partially_refunded');
-    expect(await db.select({ amount: creditRedemptions.amountCents }).from(creditRedemptions).where(eq(creditRedemptions.bookingId, bookingId))).toEqual([{ amount: CREDIT_RULES.welcomeCents }]);
-    expect(await availableCredit(db, CLIENT, now)).toBeNull();
+    expect(await db.select({ amount: creditRedemptions.amountCents }).from(creditRedemptions).where(eq(creditRedemptions.bookingId, bookingId))).toEqual([{ amount: 300 }]);
+    expect(await availableCredit(db, CLIENT, now)).toMatchObject({ amountCents: CREDIT_RULES.welcomeCents - 300 });
   });
 
   it('gives no second welcome credit once a booking is done', async () => {

@@ -6,7 +6,7 @@ import { routes } from '@/contracts';
 const whenCharged: HelpArticleSummary = {
   slug: 'when-am-i-charged',
   title: 'When am I charged?',
-  summary: 'You pay when you book. Your helper is paid after the task is done.',
+  summary: 'If you pay your helper directly, nothing is charged here. If they ask to be paid upfront, we charge your card when you book.',
 };
 const cancelBooking: HelpArticleSummary = {
   slug: 'cancel-a-booking',
@@ -50,7 +50,7 @@ export const helpCenterData: HelpCenterData = {
     {
       slug: 'payments',
       title: 'Payments and fees',
-      description: 'Charges, refunds, and service fees.',
+      description: 'Paying directly or upfront, refunds, and the hold fee.',
       articles: [whenCharged, cancelBooking],
     },
     {
@@ -77,7 +77,7 @@ export const helpArticleWhenCharged: HelpArticleData = {
     {
       type: 'paragraph',
       content: [
-        'You pay when you book. We place the charge for the task price and the service fee, and your helper is paid ',
+        'When your helper asks to be paid upfront, we charge the task price and the hold fee when you book, and your helper is paid ',
         { text: 'after the task is done', strong: true },
         '.',
       ],
@@ -88,7 +88,7 @@ export const helpArticleWhenCharged: HelpArticleData = {
       ordered: false,
       items: [
         ['The task price you agreed with your helper.'],
-        ['A service fee of 10% (at least $3.00).'],
+        ['A hold fee of 5% of the task price, at least $1.00. With a Plus plan there’s no hold fee.'],
         ['Any expense allowance you agreed on. Unused allowance is refunded.'],
       ],
     },
@@ -115,7 +115,7 @@ export const helpArticleWhenCharged: HelpArticleData = {
       type: 'callout',
       tone: 'warning',
       content: [
-        'Never pay a helper in cash or through another app. Payments outside TasksNearMe aren’t covered if something goes wrong.',
+        'Paying your helper directly? Agree on the price and how you’ll pay before the task. Only payments made upfront are held by TasksNearMe.',
       ],
     },
     {

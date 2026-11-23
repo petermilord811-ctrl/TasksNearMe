@@ -35,8 +35,8 @@ describe("the poster's tasks and offers", () => {
     expect(view!.offers.map((o) => o.id)).toEqual(['off_jordan', 'off_sam', 'off_lee']);
     const [jordan, sam, lee] = view!.offers;
     expect(jordan).toMatchObject({ isNew: true, revision: 1, pricing: { type: 'fixed', priceCents: 6000 } });
-    expect(jordan!.breakdown.posterTotalCents).toBe(6600);
-    expect(sam!.breakdown.posterTotalCents).toBe(6050);
+    expect(jordan!.breakdown.posterTotalCents).toBe(6300);
+    expect(sam!.breakdown.posterTotalCents).toBe(5775);
     expect(lee!.message).toContainEqual({ kind: 'masked', detail: 'phone', hint: '0134' });
     expect(JSON.stringify(lee)).not.toContain('512-555');
     expect(jordan!.actions.map((a) => a.id)).toEqual(['book_offer', 'message_helper', 'decline_offer']);

@@ -94,7 +94,7 @@ test('the review form: Send review never covers the review being typed, or its c
   await devSignIn(page, 'chris@example.test');
   await page.goto(`/app/bookings/${scenario.bookingId}`);
   await page.getByRole('button', { name: 'Approve task' }).filter({ visible: true }).first().click();
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Approve and release payment' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Approve the task' }).click();
   await expect(page.getByRole('button', { name: 'Approve task' }).filter({ visible: true })).toHaveCount(0, { timeout: 30_000 });
   await page.goto(`/app/bookings/${scenario.bookingId}/review`);
   const body = page.getByLabel('Your review (optional)');

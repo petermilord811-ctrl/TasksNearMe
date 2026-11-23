@@ -27,6 +27,12 @@ export const offers = pgTable(
     /** As written by the helper; masked when shown before a booking. */
     message: text('message').notNull().default(''),
     brings: jsonb('brings').$type<string[]>().notNull().default([]),
+    /**
+     * How the helper is paid (owner, 2026-11-23: no service fees): `direct`, by the client after the task, outside
+     * TasksNearMe; `held`, upfront, held by TasksNearMe until the client says the task is done (the client pays the hold
+     * fee). Offers sent before this choice existed were all held.
+     */
+    paymentMode: text('payment_mode').notNull().default('held'), // direct | held
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     revision: integer('revision').notNull().default(1),
     posterSeenAt: timestamp('poster_seen_at', { withTimezone: true }),

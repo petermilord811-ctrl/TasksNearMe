@@ -1,6 +1,8 @@
 {
   "title": "Confirm and pay",
+  "titleDirect": "Confirm your booking",
   "intro": "Review the details, choose a card, and book your helper.",
+  "introDirect": "Review the details and book your helper. You pay them directly once the task is done.",
   "backToOffer": "Back to the offer",
   "backToTask": "Back to the task",
   "summary": "Your task",
@@ -11,7 +13,7 @@
   "localAddress": "{helper} will see your exact address after you book.",
   "remoteAddress": "No address needed. You'll share a meeting link in chat.",
   "totalToday": "Total charged today",
-  "paymentNote": "You pay when you book. Your helper is paid after the task is done.",
+  "paymentNote": "You pay when you book. TasksNearMe holds it and pays your helper after you say the task is done.",
   "credit": "Your TasksNearMe credit: {amount} comes back to your card when this job is done (use it by {date}).",
   "hourlyNote": "You pay for up to {hours, plural, one {# hour} other {# hours}} now. Unused hours are refunded after you approve.",
   "payment": "Payment",
@@ -96,5 +98,12 @@
   },
   "totalLater": "Total, charged before the task",
   "paysLater": "Nothing is charged today. We'll charge your card on {chargeAt}; if that doesn't go through, you can pay on the booking page until {payBy}, or the booking is canceled with no fees.",
-  "submitLater": "Book now, pay {amount} later"
+  "submitLater": "Book now, pay {amount} later",
+  "submitDirect": "Book {helper}",
+  "direct": {
+    "title": "You pay {helper} directly",
+    "hourly": "{rate}/h, up to {hours} h",
+    "body": "After the task, pay {helper} the agreed price yourself: cash, Zelle, Venmo or however you agree. Nothing is charged here, and there is no fee.",
+    "cancel": "You can cancel from the booking. Nothing is charged here, so there's nothing to refund; please cancel as early as you can, since your helper sets the time aside."
+  }
 }

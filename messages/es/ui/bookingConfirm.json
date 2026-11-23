@@ -1,6 +1,8 @@
 {
   "title": "Confirmar y pagar",
+  "titleDirect": "Confirma tu reserva",
   "intro": "Revisa los detalles, elige una tarjeta y reserva a tu ayudante.",
+  "introDirect": "Revisa los detalles y reserva a tu ayudante. Le pagas directamente cuando la tarea esté hecha.",
   "backToOffer": "Volver a la oferta",
   "backToTask": "Volver a la tarea",
   "summary": "Tu tarea",
@@ -11,7 +13,7 @@
   "localAddress": "{helper} verá tu dirección exacta después de que reserves.",
   "remoteAddress": "No se necesita dirección. Compartirás un enlace de reunión en el chat.",
   "totalToday": "Total cobrado hoy",
-  "paymentNote": "Pagas al reservar. Tu ayudante recibe su pago cuando termina la tarea.",
+  "paymentNote": "Pagas al reservar. TasksNearMe lo retiene y le paga a tu ayudante cuando digas que la tarea está hecha.",
   "credit": "Tu crédito de TasksNearMe: {amount} vuelven a tu tarjeta cuando termine este trabajo (úsalo antes del {date}).",
   "hourlyNote": "Ahora pagas hasta {hours, plural, one {# hora} other {# horas}}. Las horas sin usar se reembolsan cuando apruebes.",
   "payment": "Pago",
@@ -96,5 +98,12 @@
   },
   "totalLater": "Total, se cobra antes de la tarea",
   "paysLater": "Hoy no se cobra nada. Cobraremos a tu tarjeta el {chargeAt}; si no se procesa, puedes pagar en la página de la reserva hasta el {payBy}, o la reserva se cancela sin cargos.",
-  "submitLater": "Reservar ahora, pagar {amount} después"
+  "submitLater": "Reservar ahora, pagar {amount} después",
+  "submitDirect": "Reservar a {helper}",
+  "direct": {
+    "title": "Pagas a {helper} directamente",
+    "hourly": "{rate}/h, hasta {hours} h",
+    "body": "Después de la tarea, paga a {helper} el precio acordado tú mismo: efectivo, Zelle, Venmo o como acuerden. Aquí no se cobra nada y no hay ninguna tarifa.",
+    "cancel": "Puedes cancelar desde la reserva. Aquí no se cobra nada, así que no hay nada que reembolsar; cancela lo antes posible, porque tu ayudante reserva ese tiempo."
+  }
 }

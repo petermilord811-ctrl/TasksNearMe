@@ -36,7 +36,7 @@ describe('OfferDetailScreen', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Book helper' }));
     expect(handler).toHaveBeenCalledExactlyOnceWith({ offerId: 'off_jordan', action: 'book_offer' });
     expect(push).toHaveBeenCalledExactlyOnceWith(redirectTo);
-    expect(screen.getByText('$66.00')).toBeVisible();
+    expect(screen.getByText('$63.00')).toBeVisible();
   });
 
   it('disables stale booking with the supplied reason', async () => {

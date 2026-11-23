@@ -7,6 +7,7 @@ import { adminMetricsAgentData, adminMetricsEmptyData, adminMetricsFinanceData }
 import uiMessages from '../../../../messages/en/ui';
 import copy from '../../../../messages/en/ui/adminMetrics.json';
 import { AdminMetricsScreen } from './admin-metrics-screen';
+import { formatMoney } from '@/shared/format';
 
 afterEach(cleanup);
 
@@ -29,11 +30,12 @@ describe('AdminMetricsScreen', () => {
 
     const targets = within(screen.getByRole('region', { name: 'Launch targets' }));
     expect(targets.getAllByRole('listitem')).toHaveLength(METRIC_TARGET_IDS.length);
-    expect(targets.getByText('$7.12')).toBeTruthy();
-    expect(targets.getByText('Target: at least $6.00')).toBeTruthy();
+    // A held booking's contribution (2026-11-23: no service fees; the hold fee alone doesn't cover Stripe's costs).
+    expect(targets.getByText(formatMoney(-45))).toBeTruthy();
+    expect(targets.getByText('Target: at least $0.00')).toBeTruthy();
     // 6 of 217 is over the 2% ceiling.
     expect(targets.getByText('2.8%')).toBeTruthy();
-    expect(targets.getAllByText('Off target')).toHaveLength(2);
+    expect(targets.getAllByText('Off target')).toHaveLength(3);
     expect(targets.getByText('Not counted here')).toBeTruthy();
 
     const rewards = within(screen.getByRole('region', { name: 'Reward spend' }));

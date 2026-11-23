@@ -19,8 +19,8 @@ test('the client proposes a change with a quote, and the helper declines it', as
   await page.getByLabel('Task price (USD)').fill('100');
   // Exact: the chat button's "Messages" (2026-11-22) contains the word too.
   await page.getByLabel('Message', { exact: true }).fill('Could you also hang the soundbar under the TV?');
-  // $80 → $100: the client's total goes from $88.00 to $110.00.
-  await expect(page.getByText('$22.00').first()).toBeVisible({ timeout: 20_000 });
+  // $80 → $100, held: the client's total goes from $84.00 to $105.00.
+  await expect(page.getByText('$21.00').first()).toBeVisible({ timeout: 20_000 });
   await page.getByRole('button', { name: 'Send change' }).click();
   // The form asks first.
   await page.getByRole('alertdialog', { name: 'Send this change?' }).getByRole('button', { name: /Send/ }).click();

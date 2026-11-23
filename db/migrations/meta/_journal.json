@@ -547,6 +547,13 @@
       "when": 1795368060912,
       "tag": "0077_usernames_live_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1795421874338,
+      "tag": "0078_no_service_fees",
+      "breakpoints": true
     }
   ]
 }

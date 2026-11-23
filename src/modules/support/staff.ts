@@ -658,7 +658,8 @@ export async function bookingMoneyFacts(db: Db, bookingId: string): Promise<Book
   // Once the work is submitted, a settlement is measured from the submitted price, not the agreed one (an hourly cap):
   // the submitted numbers already give back the unused hours, so counting from the cap gave them back twice (money
   // review #3). Settled: the client pays P' plus its fee (and approved expenses); the rest comes back.
-  return { fees: policy.fees, priceCents: completion?.final.taskPriceCents ?? terms.breakdown.taskPriceCents, chargedCents, refundedCents: refunded.reduce((sum, item) => sum + item.amountCents, 0) };
+  const waiveHoldFee = terms.breakdown.taskPriceCents > 0 && terms.breakdown.posterFeeCents === 0;
+  return { fees: policy.fees, priceCents: completion?.final.taskPriceCents ?? terms.breakdown.taskPriceCents, chargedCents, refundedCents: refunded.reduce((sum, item) => sum + item.amountCents, 0), ...(waiveHoldFee ? { waiveHoldFee } : {}) };
 }
 
 /** The money a resolution would move on this case's booking, and whether it is within the viewer's refund limit. */

@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, gt, gte, inArray, isNull, lte, or, type SQL } from 'drizzle-orm';
+import { hasPlan } from '@/modules/billing/benefits';
 import { aiDraftingEnabledFor } from '@/modules/assist/availability';
 import type {
   ActionResult,
@@ -61,6 +62,7 @@ import {
 } from './helper-domain';
 import { declinedByCancel } from './closing';
 import { offerPricing } from './owner';
+import { paymentModeOf } from './domain';
 import { offers } from './schema';
 
 /**
@@ -177,7 +179,7 @@ export function parseFindWorkQuery(params: SearchParams): FindWorkPageData['quer
 
 const NEW_FOR_HOURS = 24;
 
-/** What the helper would earn after the service fee (blueprint 04): for the task, or per hour and for the cap. */
+/** What the helper would get (blueprint 04; no helper fee since 2026-11-23, older policies took one): for the task, or per hour and for the cap. */
 function earningsFor(fees: FeeSchedule | null, budget: PricingInput): FindWorkCard['earnings'] {
   if (budget.type === 'fixed') return { type: 'fixed', amountCents: fees ? quoteBreakdown(fees, budget).helperEarningsCents : budget.priceCents };
   const capCents = fees ? quoteBreakdown(fees, budget).helperEarningsCents : Math.round(budget.rateCents * budget.hoursCap);
@@ -383,10 +385,12 @@ function helperOfferView(row: OfferRow, task: TaskRow, fees: FeeSchedule, now: D
     expiresAt: row.expiresAt.toISOString(),
     revision: row.revision,
     submittedAt: row.updatedAt.toISOString(),
-    breakdown: quoteBreakdown(fees, pricing),
+    paymentMode: paymentModeOf(row.paymentMode),
+    breakdown: quoteBreakdown(fees, pricing, { held: row.paymentMode === 'held' }),
     actions: helperOfferActions(row, task, now),
   };
 }
+
 
 /**
  * A task from the helper's side. Bookable helpers see the full description (contact details masked),
@@ -449,6 +453,30 @@ export async function getHelperTaskView(db: Db, userId: string, taskId: string, 
     offerRules: rules,
     offerDefaults: offerDefaultsFor(budgetOfTask(row.task), rules),
     aiDraftingEnabled: await aiDraftingEnabledFor(db, userId),
+    insights: await offerInsightsFor(db, userId, row.task, now),
+  };
+}
+
+/**
+ * Offer insights (Pro, 2026-11-23, like LinkedIn's applicant insights): how many offers the task has now and the range
+ * of their prices (fixed prices, or hourly rates for hourly work), never whose. Without Pro, only that they exist.
+ */
+/**
+ * Pro's offer insights (2026-11-23): how many active offers the task has, and the range of the other helpers' prices,
+ * only once at least two others offered, so no one's exact price shows.
+ */
+async function offerInsightsFor(db: Db, userId: string, task: TaskRow, now: Date): Promise<HelperTaskView['insights']> {
+  if (!(await hasPlan(db, userId, 'pro', now))) return { pro: false };
+  const rows = await db
+    .select({ helperUserId: offers.helperUserId, priceCents: offers.priceCents, rateCents: offers.hourlyRateCents })
+    .from(offers)
+    .where(and(eq(offers.taskId, task.id), inArray(offers.status, ACTIVE)));
+  const others = rows.filter((row) => row.helperUserId !== userId);
+  const prices = others.length >= 2 ? others.map((row) => (task.pricingType === 'hourly' ? row.rateCents : row.priceCents)).filter((cents): cents is number => typeof cents === 'number') : [];
+  return {
+    pro: true,
+    offerCount: rows.length,
+    ...(prices.length > 0 ? { priceRange: { lowCents: Math.min(...prices), highCents: Math.max(...prices), hourly: task.pricingType === 'hourly' } } : {}),
   };
 }
 
@@ -511,6 +539,8 @@ async function prepareOffer(db: Db, userId: string, taskId: string, input: Offer
       proposedStart: new Date(marketLocalToUtc(rules.date, offer.startTime, rules.timeZone)),
       message: offer.message,
       brings: offer.brings,
+      // Paid directly after the task unless the helper asks to be paid upfront (owner, 2026-11-23).
+      paymentMode: offer.paymentMode,
       expiresAt: offerExpiresAt(row.task.windowStart, now),
     },
   };
@@ -520,8 +550,9 @@ async function prepareOffer(db: Db, userId: string, taskId: string, input: Offer
  * The offer this helper already has is the one they sent again (an answer that never arrived; bad connections pass,
  * J-N1): the same price, start, message and brings. Anything else is a second offer, which the offer page edits instead.
  */
-function sameOffer(existing: typeof offers.$inferSelect, values: ReturnType<typeof pricingColumns> & { proposedStart: Date; message?: string | null; brings?: string[] }): boolean {
+function sameOffer(existing: typeof offers.$inferSelect, values: ReturnType<typeof pricingColumns> & { proposedStart: Date; message?: string | null; brings?: string[]; paymentMode?: string }): boolean {
   return (
+    existing.paymentMode === (values.paymentMode ?? existing.paymentMode) &&
     existing.pricingType === values.pricingType &&
     existing.priceCents === values.priceCents &&
     existing.hourlyRateCents === values.hourlyRateCents &&
@@ -719,7 +750,7 @@ export async function getMyOffers(db: Db, userId: string, now: Date): Promise<My
         proposedStart: row.proposedStart.toISOString(),
         expiresAt: row.expiresAt.toISOString(),
         revision: row.revision,
-        breakdown: quoteBreakdown(fees, pricing),
+        breakdown: quoteBreakdown(fees, pricing, { held: row.paymentMode === 'held' }),
         ...(canceled.has(row.id) ? { taskCanceled: true } : {}),
       },
       task: found.view,

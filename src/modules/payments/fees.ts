@@ -3,7 +3,9 @@ import type { CancellationPolicy, FeeSchedule } from '@/modules/markets/schema';
 
 /**
  * The fee engine (docs/blueprint/04 §3, §6). Pure functions over integer cents.
- * - Poster fee: max(posterBps × P, posterMin). Helper fee: helperBps × P, deducted from earnings.
+ * - Since 2026-11-23 (owner: no service fees) the only fee is the client's hold fee, max(posterBps × P, posterMin), and
+ *   only on a booking paid upfront and held by TasksNearMe (`held`), and not for a Plus member (`waiveHoldFee`). The
+ *   helper fee (helperBps × P, deducted from earnings) is 0 in every policy published since; old versions keep theirs.
  * - Expense allowances and reimbursements carry no fees on either side.
  * - Rounding: half-up to the cent once per line; totals are sums of lines.
  * The policy comes from the market policy version a booking was confirmed under.
@@ -32,9 +34,19 @@ export function hourlyPriceCents(rateCents: Cents, hours: number): Cents {
   return roundHalfUp(rateCents * minutes, 60);
 }
 
-function feeLines(fees: FeeSchedule, taskPriceCents: Cents) {
-  const posterFee = posterFeeCents(fees, taskPriceCents);
-  const helperFee = helperFeeCents(fees, taskPriceCents);
+/**
+ * `held: false`: paid directly between the two people, so no fee on either side. `waiveHoldFee`: a Plus member's held
+ * booking (no hold fee). Both default to the held, fee-charging case every caller had before.
+ */
+export interface FeeOptions {
+  held?: boolean;
+  waiveHoldFee?: boolean;
+}
+
+function feeLines(fees: FeeSchedule, taskPriceCents: Cents, options: FeeOptions = {}) {
+  const held = options.held ?? true;
+  const posterFee = held && !options.waiveHoldFee ? posterFeeCents(fees, taskPriceCents) : 0;
+  const helperFee = held ? helperFeeCents(fees, taskPriceCents) : 0;
   return {
     posterFeeCents: posterFee,
     helperFeeCents: helperFee,
@@ -47,12 +59,12 @@ function feeLines(fees: FeeSchedule, taskPriceCents: Cents) {
 export function quoteBreakdown(
   fees: FeeSchedule,
   pricing: PricingInput,
-  options: { expenseAllowanceCents?: Cents } = {},
+  options: { expenseAllowanceCents?: Cents } & FeeOptions = {},
 ): PriceBreakdown {
   const allowance = options.expenseAllowanceCents ?? 0;
   const taskPriceCents =
     pricing.type === 'fixed' ? pricing.priceCents : hourlyPriceCents(pricing.rateCents, pricing.hoursCap);
-  const lines = feeLines(fees, taskPriceCents);
+  const lines = feeLines(fees, taskPriceCents, options);
   return {
     pricingType: pricing.type,
     taskPriceCents,
@@ -75,6 +87,11 @@ export interface FinalTerms {
   approvedExpensesCents?: Cents;
   /** A settled task price (dispute settlement), capped at the funded price. */
   settledPriceCents?: Cents;
+  /**
+   * False for a booking paid directly (2026-11-23): nothing was charged through TasksNearMe, so no fee applies and
+   * nothing is refunded (no charged or refund lines). Default true.
+   */
+  held?: boolean;
 }
 
 /**
@@ -93,10 +110,12 @@ export function finalBreakdown(fees: FeeSchedule, funded: PriceBreakdown, terms:
     taskPriceCents = Math.min(Math.max(terms.settledPriceCents, 0), taskPriceCents);
   }
   const approvedExpenses = Math.min(Math.max(terms.approvedExpensesCents ?? 0, 0), funded.expenseAllowanceCents);
-  const lines = feeLines(fees, taskPriceCents);
+  // A hold fee waived when the booking was paid (Plus), or none at all (paid directly), stays so at completion.
+  const held = terms.held ?? true;
+  const lines = feeLines(fees, taskPriceCents, { held, waiveHoldFee: funded.taskPriceCents > 0 && funded.posterFeeCents === 0 });
   const posterTotalCents = taskPriceCents + lines.posterFeeCents + approvedExpenses;
   const chargedCents = funded.posterChargedCents ?? funded.posterTotalCents;
-  const refundCents = chargedCents - posterTotalCents;
+  const refundCents = held ? chargedCents - posterTotalCents : 0;
 
   return {
     pricingType: funded.pricingType,

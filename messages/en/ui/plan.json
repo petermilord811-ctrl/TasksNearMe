@@ -3,22 +3,26 @@
   "description": "Optional plans for people who use TasksNearMe often. Everything works without one.",
   "free": {
     "title": "Without a plan",
-    "body": "Posting, offers, booking, messages, safety, saved searches with alerts, and writing help are all free. You also get {count, plural, one {# AI search} other {# AI searches}} a month."
+    "body": "Posting, offers, booking, messages, safety, saved searches with alerts, and writing help are all free, and there are no service fees. You also get {count, plural, one {# AI search} other {# AI searches}} a month."
   },
   "plans": {
     "plus": {
       "name": "Plus",
       "for": "For clients",
-      "rebate": "{share} of the client service fee back on every completed booking, up to {cap} a month",
       "ai": "{count, plural, one {# AI search} other {# AI searches}} a month: describe what you need and get matching helpers and tasks",
-      "breakEven": "Pays for itself when you book about {amount} of tasks a month."
+      "benefits": {
+        "hold": "No hold fee: when a helper asks to be paid upfront, we hold your payment for free"
+      }
     },
     "pro": {
       "name": "Pro",
       "for": "For helpers",
-      "rebate": "{share} of the helper fee back on every completed booking, up to {cap} a month",
       "ai": "{count, plural, one {# AI search} other {# AI searches}} a month: describe the work you want and get matching tasks",
-      "breakEven": "Pays for itself when you earn about {amount} a month."
+      "benefits": {
+        "first": "Your offers shown first to clients",
+        "badge": "A Pro badge on your offers",
+        "insights": "Offer insights on every task: how many offers it has and their price range"
+      }
     }
   },
   "price": {
@@ -36,16 +40,11 @@
     "renews": "Renews {date} at {price}.",
     "ends": "Ends {date} and won't renew.",
     "pastDue": "Your last payment didn't go through. Stripe will try again; update your card in Manage to keep {plan}.",
-    "rebated": "Paid back this month: {amount} of {cap}.",
     "unpaid": "Your {plan} is on hold until a payment goes through. Update your card in Manage to restart it.",
     "confirming": "Confirming your {plan} with Stripe. Refresh the page in a few seconds."
   },
   "manage": "Manage or cancel",
   "manageHint": "Cancel, change your card or see invoices on Stripe's secure page.",
-  "estimate": {
-    "plus": "On your {count, plural, one {# booking} other {# bookings}} in the last 30 days, Plus would have paid back {amount}.",
-    "pro": "On your {count, plural, one {# booking} other {# bookings}} in the last 30 days, Pro would have paid back {amount}."
-  },
   "aiSearch": {
     "remaining": "{count, plural, one {# AI search} other {# AI searches}} left this month. They renew {date}.",
     "used": "No AI searches left this month. They renew {date}.",
@@ -56,8 +55,7 @@
     "cancel": "Cancel anytime. You keep the plan to the end of the period you paid for, and it doesn't renew.",
     "noTrial": "No trial that turns into a charge, and no countdowns.",
     "price": "The price you subscribe at stays until you cancel. A new price applies to new subscriptions only.",
-    "trust": "A plan never moves you up in lists or adds a badge. Reviews, checks and badges are earned the same way by everyone.",
-    "rebates": "Money back is paid when a booking is completed: to your card with Plus, with your earnings with Pro."
+    "trust": "A plan never changes reviews, checks or the verified badge: everyone earns those the same way. Pro puts a helper's offers first and marks them Pro, and clients always see every offer."
   },
   "notices": {
     "subscribed": "Thanks for subscribing. Your plan shows here as soon as Stripe confirms it, usually within a few seconds.",
@@ -65,11 +63,6 @@
   },
   "unavailable": "Plans aren't open yet. Everything on TasksNearMe works without one.",
   "error": "That didn't work. If you already have this plan, refresh the page to see it.",
-  "pricing": {
-    "title": "Optional plans",
-    "intro": "Everything above works without a plan. For people who book or help often, a plan pays part of the fee back each month, up to a cap.",
-    "link": "See plans"
-  },
   "billing": {
     "title": "Billing history",
     "body": "See your invoices and the card on file on Stripe's secure page.",

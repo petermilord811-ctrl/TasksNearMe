@@ -28,14 +28,14 @@ describe('CostGuideScreen', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'How much does furniture assembly cost in Austin?' })).toBeTruthy();
     expect(screen.getByRole('link', { name: /Furniture assembly in Austin/ }).getAttribute('href')).toBe('/austin/furniture-assembly');
 
+    // Held by TasksNearMe: the price plus the 5% hold fee. Helpers get the whole price (no service fees since 2026-11-23).
     const low = screen.getByRole('region', { name: 'At the low end: $50.00 per item' });
-    expect(within(low).getByText('$55.00')).toBeTruthy();
+    expect(within(low).getByText('$52.50')).toBeTruthy();
     const high = screen.getByRole('region', { name: 'At the high end: $80.00 per item' });
-    expect(within(high).getByText('$88.00')).toBeTruthy();
-    const earns = screen.getByRole('region', { name: 'What your helper earns at $50.00 per item' });
-    expect(within(earns).getByText('$45.00')).toBeTruthy();
+    expect(within(high).getByText('$84.00')).toBeTruthy();
+    expect(screen.queryByRole('region', { name: /What your helper earns/ })).toBeNull();
 
-    expect(screen.getByText('Posters pay a service fee of 10% (at least $3.00). Helpers pay 10% of the task price.')).toBeTruthy();
+    expect(screen.getByText(/^There are no service fees, and helpers get the whole price\. A hold fee of 5% \(at least \$1\.00\) applies only when a helper asks to be paid upfront and TasksNearMe holds the payment\. Plus members don't pay it\./)).toBeTruthy();
     const factors = screen.getByRole('region', { name: 'What changes the price' });
     expect(within(factors).getAllByRole('listitem')).toHaveLength(4);
     const steps = screen.getByRole('region', { name: 'How to get an exact price' });
@@ -49,7 +49,7 @@ describe('CostGuideScreen', () => {
 
   it('works out an hourly service for its minimum hours, at its hourly rates', () => {
     renderScreen(<CostGuideScreen data={movingCostGuideData} />);
-    expect(screen.getByText('Worked out with the service fees in effect today, for 2 hours.')).toBeTruthy();
+    expect(screen.getByText("Worked out for an upfront payment TasksNearMe holds, at today's hold fee, for 2 hours. Paid directly, you pay just the task price.")).toBeTruthy();
     expect(screen.getByRole('region', { name: 'At the low end: $32.00 an hour' })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'At the high end: $40.00 an hour' })).toBeTruthy();
   });

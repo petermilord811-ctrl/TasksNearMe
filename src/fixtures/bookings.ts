@@ -50,7 +50,7 @@ import { DESK_TIMES, deskTimelineCompleted, deskTimelineHelper } from './timelin
 
 /**
  * Booking confirmation (UI-010). "Now" for the desk is Tue, Nov 17, 2026, 9:00 am in Austin:
- * Maya books Jordan's $60 offer and pays $66.00. Cancellation values follow blueprint 04 §6:
+ * Maya books Jordan's $60 offer, held by TasksNearMe, and pays $63.00. Cancellation values follow blueprint 04 §6:
  * free until 24 h before the start; later, the helper gets max($10, 20% of the price).
  */
 
@@ -75,8 +75,9 @@ export const noSavedCardsPaymentPanel: PaymentPanelData = { methods: [], newCard
  */
 export const unusableCardPaymentPanel: PaymentPanelData = { methods: [{ ...mayaVisa, unusable: true }, mayaMastercard], newCard: devCards };
 
-/** Maya books Jordan: $60 + $6.00 fee = $66.00 today. Late cancellation: $54.00 back, Jordan gets $12.00. */
+/** Maya books Jordan: $60 + $3.00 hold fee = $63.00 today. Late cancellation: $51.00 back, Jordan gets $12.00. */
 export const deskConfirmData: BookingConfirmPageData = {
+  paymentMode: 'held',
   task: {
     id: deskPublicTask.id,
     title: deskPublicTask.title,
@@ -94,7 +95,7 @@ export const deskConfirmData: BookingConfirmPageData = {
     brings: deskOfferJordan.brings,
   },
   breakdown: deskBreakdown,
-  cancellation: { freeUntil: '2026-11-20T16:00:00.000Z', lateRefundCents: 5400, lateHelperCompensationCents: 1200 },
+  cancellation: { freeUntil: '2026-11-20T16:00:00.000Z', lateRefundCents: 5100, lateHelperCompensationCents: 1200 },
   payment: mayaPaymentPanel,
 };
 
@@ -132,10 +133,11 @@ export const deskConfirmUnavailableData: Record<BookingUnavailableReason, Bookin
 
 /**
  * Chris's move in Crestview (Sun, Nov 22, 9:00 am–1:00 pm), booked with Jordan at $35/h: 3.5 h estimate, 4 h cap.
- * Hourly: Chris pays for the 4 h cap now ($140 + $14.00 = $154.00); unused hours come back after approval.
- * Late cancellation: Jordan gets 20% of $140 = $28.00; Chris gets $126.00 back.
+ * Hourly: Chris pays for the 4 h cap now ($140 + $7.00 = $147.00); unused hours come back after approval.
+ * Late cancellation: Jordan gets 20% of $140 = $28.00; Chris gets $119.00 back.
  */
 export const movingConfirmHourlyData: BookingConfirmPageData = {
+  paymentMode: 'held',
   task: {
     id: movingPublicTask.id,
     title: movingPublicTask.title,
@@ -153,15 +155,16 @@ export const movingConfirmHourlyData: BookingConfirmPageData = {
     brings: ['Moving straps', 'Dolly'],
   },
   breakdown: movingFundedBreakdown,
-  cancellation: { freeUntil: '2026-11-21T15:00:00.000Z', lateRefundCents: 12600, lateHelperCompensationCents: 2800 },
+  cancellation: { freeUntil: '2026-11-21T15:00:00.000Z', lateRefundCents: 11900, lateHelperCompensationCents: 2800 },
   payment: { methods: [], newCard: devCards },
 };
 
 /**
- * Remote: Ruth books Lee's $40 laptop setup ($44.00). No address is shared.
- * Late cancellation: Lee gets the $10.00 minimum; Ruth gets $34.00 back.
+ * Remote: Ruth books Lee's $40 laptop setup ($42.00). No address is shared.
+ * Late cancellation: Lee gets the $10.00 minimum; Ruth gets $32.00 back.
  */
 export const remoteConfirmData: BookingConfirmPageData = {
+  paymentMode: 'held',
   task: {
     id: remoteComputerPublicTask.id,
     title: remoteComputerPublicTask.title,
@@ -179,7 +182,7 @@ export const remoteConfirmData: BookingConfirmPageData = {
     brings: [],
   },
   breakdown: remoteComputerBreakdown,
-  cancellation: { freeUntil: '2026-11-22T16:00:00.000Z', lateRefundCents: 3400, lateHelperCompensationCents: 1000 },
+  cancellation: { freeUntil: '2026-11-22T16:00:00.000Z', lateRefundCents: 3200, lateHelperCompensationCents: 1000 },
   payment: { methods: [], newCard: devCards },
 };
 
@@ -194,7 +197,8 @@ const booked: PaymentAttemptResult = { ok: true, code: 'booked', redirectTo: rou
  */
 export const fakeBookingConfirmHandlers: BookingConfirmHandlers = {
   onConfirm: ({ payment }) => {
-    if (payment.kind !== 'dev_card') return wait(booked);
+    // Paid directly: no card, booked at once (2026-11-23).
+    if (!payment || payment.kind !== 'dev_card') return wait(booked);
     switch (payment.card) {
       case 'declined':
         return wait({ ok: false, code: 'payment_declined' });
@@ -210,7 +214,7 @@ export const fakeBookingConfirmHandlers: BookingConfirmHandlers = {
 };
 
 // ---- The booking page and the bookings list (UI-011) ---------------------------------------------
-// The desk booking: Maya ↔ Jordan, Sat, Nov 21, agreed start 10:30 am (DESK_TIMES), $66.00 charged.
+// The desk booking: Maya ↔ Jordan, Sat, Nov 21, agreed start 10:30 am (DESK_TIMES), $63.00 charged.
 
 const deskBookingTask = {
   id: deskPublicTask.id,
@@ -230,7 +234,7 @@ const deskTerms: BookingTermsView = {
 const deskCharge: BookingPaymentLine = {
   id: 'pay_desk',
   kind: 'charge',
-  amountCents: 6600,
+  amountCents: 6300,
   status: 'succeeded',
   method: { brand: 'visa', last4: '1881' },
   at: DESK_TIMES.booked,
@@ -242,7 +246,7 @@ const action = (
   extra: Partial<ActionDescriptor<BookingActionId>> = {},
 ): ActionDescriptor<BookingActionId> => ({ id, kind, enabled: true, ...extra });
 
-/** Maya's view once booked: her own address, the $66.00 charge. */
+/** Maya's view once booked: her own address, the $63.00 charge. */
 export const deskBookingPosterConfirmed: BookingView = {
   id: 'bkg_desk',
   task: deskBookingTask,
@@ -298,7 +302,7 @@ export const deskBookingPosterPendingFunding: BookingView = {
   deadlines: { pendingFundingExpiresAt: '2026-11-17T15:31:00.000Z' },
   timeline: [
     ...deskTimelineCompleted.slice(0, 2),
-    { id: 'evt_pf', at: '2026-11-17T15:01:00.000Z', actor: 'system', type: 'payment_failed', params: { amountCents: 6600 } },
+    { id: 'evt_pf', at: '2026-11-17T15:01:00.000Z', actor: 'system', type: 'payment_failed', params: { amountCents: 6300 } },
   ],
   payments: [{ ...deskCharge, id: 'pay_desk_1', status: 'failed', at: '2026-11-17T15:01:00.000Z' }],
   actions: [action('pay', 'primary')],
@@ -354,7 +358,7 @@ export const deskBookingHelperCompletedAddressHidden: BookingView = {
   deadlines: {},
 };
 
-/** Maya canceled less than 24 h before: $54.00 back; Jordan receives $12.00. */
+/** Maya canceled less than 24 h before: $51.00 back; Jordan receives $12.00. */
 export const deskBookingPosterCanceledLate: BookingView = {
   ...deskBookingPosterConfirmed,
   status: 'canceled',
@@ -363,9 +367,9 @@ export const deskBookingPosterCanceledLate: BookingView = {
   timeline: [
     ...deskTimelineCompleted.slice(0, 4),
     { id: 'evt_cl', at: '2026-11-20T22:00:00.000Z', actor: 'poster', actorName: 'Maya R.', type: 'canceled' },
-    { id: 'evt_rf', at: '2026-11-20T22:00:00.000Z', actor: 'system', type: 'refund_issued', params: { amountCents: 5400 } },
+    { id: 'evt_rf', at: '2026-11-20T22:00:00.000Z', actor: 'system', type: 'refund_issued', params: { amountCents: 5100 } },
   ],
-  payments: [deskCharge, { id: 'ref_desk', kind: 'refund', amountCents: 5400, status: 'succeeded', at: '2026-11-20T22:00:00.000Z' }],
+  payments: [deskCharge, { id: 'ref_desk', kind: 'refund', amountCents: 5100, status: 'succeeded', at: '2026-11-20T22:00:00.000Z' }],
   actions: [],
 };
 
@@ -376,9 +380,9 @@ export const deskBookingPosterCanceledByHelper: BookingView = {
   timeline: [
     ...deskTimelineCompleted.slice(0, 4),
     { id: 'evt_ch', at: '2026-11-19T18:00:00.000Z', actor: 'helper', actorName: 'Jordan T.', type: 'canceled' },
-    { id: 'evt_rh', at: '2026-11-19T18:00:00.000Z', actor: 'system', type: 'refund_issued', params: { amountCents: 6600 } },
+    { id: 'evt_rh', at: '2026-11-19T18:00:00.000Z', actor: 'system', type: 'refund_issued', params: { amountCents: 6300 } },
   ],
-  payments: [deskCharge, { id: 'ref_desk_h', kind: 'refund', amountCents: 6600, status: 'succeeded', at: '2026-11-19T18:00:00.000Z' }],
+  payments: [deskCharge, { id: 'ref_desk_h', kind: 'refund', amountCents: 6300, status: 'succeeded', at: '2026-11-19T18:00:00.000Z' }],
   actions: [action('find_replacement', 'primary'), action('book_again', 'secondary'), action('message', 'secondary')],
 };
 
@@ -397,7 +401,7 @@ export const deskBookingHelperNoShowReported: BookingView = {
   actions: [action('contest_no_show', 'secondary'), action('message', 'secondary')],
 };
 
-/** `moving.confirmed` from Chris's side: $35/h, 4 h cap, $154.00 charged; unused hours come back. */
+/** `moving.confirmed` from Chris's side: $35/h, 4 h cap, $147.00 charged; unused hours come back. */
 export const movingBookingPosterConfirmed: BookingView = {
   id: 'bkg_moving',
   task: { id: movingPublicTask.id, title: movingPublicTask.title, categorySlug: movingPublicTask.categorySlug, schedule: movingPublicTask.schedule },
@@ -419,10 +423,10 @@ export const movingBookingPosterConfirmed: BookingView = {
   timeline: [
     { id: 'evt_m1', at: '2026-11-17T12:00:00.000Z', actor: 'poster', actorName: 'Chris D.', type: 'task_posted' },
     { id: 'evt_m2', at: '2026-11-18T14:00:00.000Z', actor: 'poster', actorName: 'Chris D.', type: 'booked' },
-    { id: 'evt_m3', at: '2026-11-18T14:00:00.000Z', actor: 'system', type: 'payment_succeeded', params: { amountCents: 15400 } },
+    { id: 'evt_m3', at: '2026-11-18T14:00:00.000Z', actor: 'system', type: 'payment_succeeded', params: { amountCents: 14700 } },
   ],
   payments: [
-    { id: 'pay_moving', kind: 'charge', amountCents: 15400, status: 'succeeded', method: { brand: 'mastercard', last4: '4444' }, at: '2026-11-18T14:00:00.000Z' },
+    { id: 'pay_moving', kind: 'charge', amountCents: 14700, status: 'succeeded', method: { brand: 'mastercard', last4: '4444' }, at: '2026-11-18T14:00:00.000Z' },
   ],
   actions: [action('message'), action('add_to_calendar')],
 };
@@ -472,7 +476,7 @@ const rowOf = (view: BookingView, amountCents: number, nextStep?: BookingListRow
   ...(nextStep ? { nextStep } : {}),
 });
 
-/** Maya's earlier yard booking with Sam (Oct 2026): $90 + $9.00. */
+/** Maya's earlier yard booking with Sam (Oct 2026): $90 + $4.50 hold fee. */
 const mayaYardRow: BookingListRow = {
   id: 'bkg_yard_oct',
   title: 'Rake the backyard and bag the leaves',
@@ -482,28 +486,28 @@ const mayaYardRow: BookingListRow = {
   otherParty: sam,
   start: '2026-10-24T14:00:00.000Z',
   location: muellerArea,
-  amountCents: 9900,
+  amountCents: 9450,
   needsAction: false,
 };
 
 /** Maya: the desk is coming up; the yard is done. */
 export const mayaBookingsPageData: BookingsPageData = {
   needsAction: [],
-  upcoming: [rowOf(deskBookingPosterConfirmed, 6600)],
+  upcoming: [rowOf(deskBookingPosterConfirmed, 6300)],
   past: [mayaYardRow],
 };
 
 /** Maya after Jordan submitted the work: approving is waiting on her. */
 export const mayaBookingsNeedsActionData: BookingsPageData = {
-  needsAction: [rowOf(deskBookingPosterCompletionSubmitted, 6600, { kind: 'review_work', dueAt: DESK_TIMES.approvalDue })],
-  upcoming: [rowOf(deskBookingPosterCompletionSubmitted, 6600, { kind: 'review_work', dueAt: DESK_TIMES.approvalDue })],
+  needsAction: [rowOf(deskBookingPosterCompletionSubmitted, 6300, { kind: 'review_work', dueAt: DESK_TIMES.approvalDue })],
+  upcoming: [rowOf(deskBookingPosterCompletionSubmitted, 6300, { kind: 'review_work', dueAt: DESK_TIMES.approvalDue })],
   past: [mayaYardRow],
 };
 
 /** Jordan: the desk (Maya) and the move (Chris), as earnings; an older booking Jordan canceled. */
 export const jordanBookingsPageData: BookingsPageData = {
   needsAction: [],
-  upcoming: [rowOf(deskBookingHelperConfirmed, 5400), rowOf({ ...movingBookingPosterConfirmed, viewerRole: 'helper' }, 12600)],
+  upcoming: [rowOf(deskBookingHelperConfirmed, 6000), rowOf({ ...movingBookingPosterConfirmed, viewerRole: 'helper' }, 14000)],
   past: [rowOf({ ...deskBookingPosterCanceledByHelper, viewerRole: 'helper', id: 'bkg_old' }, 0)],
 };
 
@@ -595,20 +599,20 @@ export const yardVisitScheduledPoster: BookingView = {
   timeline: deskTimelineCompleted.slice(0, 2),
   payments: [],
   series: { id: 'srs_yard_sam', cadence: 'weekly', index: 3 },
-  scheduledPayment: { chargeAt: YARD_VISIT_TIMES.chargeAt, payBy: YARD_VISIT_TIMES.payBy, amountCents: 6600, card: { brand: 'visa', last4: '1881' }, payment: mayaPaymentPanel },
+  scheduledPayment: { chargeAt: YARD_VISIT_TIMES.chargeAt, payBy: YARD_VISIT_TIMES.payBy, amountCents: 6300, card: { brand: 'visa', last4: '1881' }, payment: mayaPaymentPanel },
   actions: [action('message'), action('add_to_calendar'), action('skip_visit', 'destructive', { confirm: true })],
 };
 
 /** Her card was declined on Sunday: tried again at 9:00 pm, and she can pay until Monday 9:00 pm. */
 export const yardVisitPaymentDuePoster: BookingView = {
   ...yardVisitScheduledPoster,
-  scheduledPayment: { chargeAt: YARD_VISIT_TIMES.retryAt, payBy: YARD_VISIT_TIMES.payBy, failure: 'payment_declined', amountCents: 6600, card: { brand: 'visa', last4: '1881' }, payment: mayaPaymentPanel },
+  scheduledPayment: { chargeAt: YARD_VISIT_TIMES.retryAt, payBy: YARD_VISIT_TIMES.payBy, failure: 'payment_declined', amountCents: 6300, card: { brand: 'visa', last4: '1881' }, payment: mayaPaymentPanel },
 };
 
 /** The card on the series was removed, and no try is left: only her own payment keeps the visit. */
 export const yardVisitNoCardPoster: BookingView = {
   ...yardVisitScheduledPoster,
-  scheduledPayment: { payBy: YARD_VISIT_TIMES.payBy, failure: 'no_card', amountCents: 6600, payment: mayaPaymentPanel },
+  scheduledPayment: { payBy: YARD_VISIT_TIMES.payBy, failure: 'no_card', amountCents: 6300, payment: mayaPaymentPanel },
 };
 
 /** Sam's view of visit 3: no address until it's paid; he can still skip it (more than 48 h ahead). */
@@ -618,13 +622,13 @@ export const yardVisitScheduledHelper: BookingView = {
   exactAddress: undefined,
   addressVisibility: 'after_confirmation',
   payments: undefined,
-  scheduledPayment: { chargeAt: YARD_VISIT_TIMES.chargeAt, payBy: YARD_VISIT_TIMES.payBy, amountCents: 6600 },
+  scheduledPayment: { chargeAt: YARD_VISIT_TIMES.chargeAt, payBy: YARD_VISIT_TIMES.payBy, amountCents: 6300 },
 };
 
 /** Sam after Maya's card was declined: waiting for her payment. */
 export const yardVisitPaymentDueHelper: BookingView = {
   ...yardVisitScheduledHelper,
-  scheduledPayment: { chargeAt: YARD_VISIT_TIMES.retryAt, payBy: YARD_VISIT_TIMES.payBy, failure: 'payment_declined', amountCents: 6600 },
+  scheduledPayment: { chargeAt: YARD_VISIT_TIMES.retryAt, payBy: YARD_VISIT_TIMES.payBy, failure: 'payment_declined', amountCents: 6300 },
   actions: [action('message'), action('add_to_calendar')],
 };
 
@@ -636,7 +640,7 @@ export const deskBookingPosterScheduled: BookingView = {
   terms: { ...deskTerms, start: DESK_FAR_TIMES.start },
   deadlines: {},
   payments: [],
-  scheduledPayment: { chargeAt: DESK_FAR_TIMES.chargeAt, payBy: DESK_FAR_TIMES.payBy, amountCents: 6600, card: { brand: 'visa', last4: '1881' }, payment: mayaPaymentPanel },
+  scheduledPayment: { chargeAt: DESK_FAR_TIMES.chargeAt, payBy: DESK_FAR_TIMES.payBy, amountCents: 6300, card: { brand: 'visa', last4: '1881' }, payment: mayaPaymentPanel },
   actions: [action('message'), action('add_to_calendar'), action('cancel', 'destructive')],
 };
 
@@ -762,7 +766,7 @@ export const deskWithExpensesCompletionView: CompletionView = {
   finalBreakdown: deskWithExpensesFinalBreakdown,
 };
 
-/** The move: 3.5 of the 4 capped hours; Chris gets $19.25 back. */
+/** The move: 3.5 of the 4 capped hours; Chris gets $18.37 back. */
 export const movingCompletionView: CompletionView = {
   submittedAt: '2026-11-22T18:40:00.000Z',
   photos: [],
@@ -799,8 +803,8 @@ export const movingBookingHelperCompletionHourly: BookingView = {
   ...movingBookingPosterCompletionHourly,
   viewerRole: 'helper',
   payments: undefined,
-  // Chris paid; Sam's own earnings on the 4 h cap ($126.00) are what's held (audit M26).
-  timeline: movingBookingPosterCompletionHourly.timeline.map((event) => (event.type === 'payment_succeeded' ? { ...event, type: 'payment_held' as const, params: { amountCents: 12600 } } : event)),
+  // Chris paid; Sam's own earnings on the 4 h cap ($140.00) are what's held (audit M26).
+  timeline: movingBookingPosterCompletionHourly.timeline.map((event) => (event.type === 'payment_succeeded' ? { ...event, type: 'payment_held' as const, params: { amountCents: 14000 } } : event)),
   actions: [action('message')],
 };
 
@@ -853,13 +857,13 @@ export const deskCancelPreviewPosterEarly: CancellationPreview = {
   by: 'poster',
   late: false,
   freeUntil: deskFreeUntil,
-  posterRefundCents: 6600,
+  posterRefundCents: 6300,
   helperCompensationCents: 0,
   helperStrike: false,
 };
 
-/** Maya cancels on Friday evening: $54.00 back; Jordan receives $12.00. */
-export const deskCancelPreviewPosterLate: CancellationPreview = { ...deskCancelPreviewPosterEarly, late: true, posterRefundCents: 5400, helperCompensationCents: 1200 };
+/** Maya cancels on Friday evening: $51.00 back; Jordan receives $12.00. */
+export const deskCancelPreviewPosterLate: CancellationPreview = { ...deskCancelPreviewPosterEarly, late: true, posterRefundCents: 5100, helperCompensationCents: 1200 };
 
 /** Jordan cancels early: Maya gets everything back; no strike. */
 export const deskCancelPreviewHelperEarly: CancellationPreview = { ...deskCancelPreviewPosterEarly, by: 'helper' };
@@ -962,29 +966,29 @@ export const deskBookingHelperDisputedContacted: BookingView = {
 
 const settled = { type: 'settle' as const, summary: 'Settled at $45 because the drawers were left unfinished.', at: '2026-11-24T17:00:00.000Z' };
 
-/** Settled at $45: Maya got $16.50 back (the refund shows in her payment history; the final numbers on the work). */
+/** Settled at $45: Maya got $15.75 back (the refund shows in her payment history; the final numbers on the work). */
 export const deskBookingPosterSettled: BookingView = {
   ...deskBookingPosterCompleted,
   completedVia: 'settlement',
   completion: { ...deskCompletionView, finalBreakdown: deskSettledBreakdown },
-  payments: [deskCharge, { id: 'ref_desk_settle', kind: 'refund', amountCents: 1650, status: 'succeeded', at: '2026-11-24T17:00:00.000Z' }],
-  dispute: { ...deskDispute, status: 'resolved', canOpenCase: true, resolution: { ...settled, refundCents: 1650 } },
+  payments: [deskCharge, { id: 'ref_desk_settle', kind: 'refund', amountCents: 1575, status: 'succeeded', at: '2026-11-24T17:00:00.000Z' }],
+  dispute: { ...deskDispute, status: 'resolved', canOpenCase: true, resolution: { ...settled, refundCents: 1575 } },
 };
 
-/** Settled at $45: Jordan receives $40.50 (the final numbers on the work). */
+/** Settled at $45: Jordan receives $45.00 (the final numbers on the work). */
 export const deskBookingHelperSettled: BookingView = {
   ...deskBookingHelperCompleted,
   completedVia: 'settlement',
   completion: { ...deskCompletionView, finalBreakdown: deskSettledBreakdown },
-  dispute: { ...deskDispute, status: 'resolved', canOpenCase: true, resolution: { ...settled, receivesCents: 4050 } },
+  dispute: { ...deskDispute, status: 'resolved', canOpenCase: true, resolution: { ...settled, receivesCents: 4500 } },
 };
 
 // ---- Change requests on the booking page (UI-027) -----------------------------------------------------
 
-/** Maya proposed adding the chair: the page points to it (she'd pay $22.00 more). */
+/** Maya proposed adding the chair: the page points to it (she'd pay $21.00 more). */
 export const deskBookingPosterWithOpenChange: BookingView = {
   ...deskBookingPosterConfirmed,
-  openChange: { id: 'chg_desk_chair', status: 'proposed', fromMe: true, differenceCents: 2200 },
+  openChange: { id: 'chg_desk_chair', status: 'proposed', fromMe: true, differenceCents: 2100 },
 };
 
 /** Jordan sees Maya's proposal waiting for an answer. */

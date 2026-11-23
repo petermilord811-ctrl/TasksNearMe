@@ -157,7 +157,8 @@ test('keyboard only: post a task, a helper offers, the client books and pays, th
   await chooseRadio(page, page.getByRole('radio', { name: 'Fixed price' }));
   await typeInto(page, page.getByLabel('Task price ($)'), '60');
   await press(page, next);
-  await expect(page.getByText('$66.00').first()).toBeVisible({ timeout: 20_000 });
+  // The upfront case: $60 and the $3.00 hold fee.
+  await expect(page.getByText('$63.00').first()).toBeVisible({ timeout: 20_000 });
   await auditPage(page, testInfo.project.name);
   await press(page, page.getByRole('button', { name: 'Post task' }));
   await expect(page).toHaveURL(/\/app\/tasks\/tsk_[0-9a-f]+$/, { timeout: 30_000 });
@@ -173,7 +174,7 @@ test('keyboard only: post a task, a helper offers, the client books and pays, th
   await press(page, page.getByRole('button', { name: 'Send offer' }));
   await expect(page.getByRole('heading', { name: 'Your offer' })).toBeVisible({ timeout: 30_000 });
 
-  // The client books it and pays with the test card.
+  // The client books it: paid directly (the offer form's default), so no payment step.
   await devSignIn(page, 'maya@example.test');
   await page.goto(`/app/tasks/${taskId}`);
   const offerLink = page.locator(`a[href*="/app/tasks/${taskId}/offers/off_"]`).first();
@@ -182,12 +183,12 @@ test('keyboard only: post a task, a helper offers, the client books and pays, th
   await expect(page).toHaveURL(new RegExp(`/app/tasks/${taskId}/offers/off_`), { timeout: 30_000 });
   await auditPage(page, testInfo.project.name);
   await press(page, page.getByRole('button', { name: 'Book helper' }));
-  await expect(page.getByRole('heading', { level: 1, name: 'Confirm and pay' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('heading', { level: 1, name: 'Confirm your booking' })).toBeVisible({ timeout: 30_000 });
   await auditPage(page, testInfo.project.name);
   const success = page.getByRole('radio', { name: 'Success' });
   if (await success.count()) await chooseRadio(page, success);
   await tick(page, page.getByRole('checkbox', { name: /I agree to the/ }));
-  await press(page, page.getByRole('button', { name: /^Book and pay/ }));
+  await press(page, page.getByRole('button', { name: /^Book Jordan/ }));
   await expect(page).toHaveURL(/\/app\/bookings\/bkg_/, { timeout: 45_000 });
   await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
   await auditPage(page, testInfo.project.name);
@@ -224,7 +225,7 @@ test('keyboard only: the client approves and reviews, with focus back on the but
   await expect(dialog).toBeVisible();
   // The dialog says what approving does (journeys on a phone, J-C5).
   await expect(dialog.getByRole('heading', { name: 'Approve the completed task?' })).toBeVisible();
-  await press(page, dialog.getByRole('button', { name: 'Approve and release payment' }));
+  await press(page, dialog.getByRole('button', { name: 'Approve the task' }));
   // While the dialog is open the page behind it is hidden from the accessibility tree, so wait for it to close.
   await expect(dialog).toHaveCount(0, { timeout: 45_000 });
   await expect(page.getByText('Needs your approval')).toHaveCount(0, { timeout: 30_000 });
@@ -278,7 +279,7 @@ test('keyboard only: the client reports a problem and staff resolve the case', a
   await chooseRadio(page, resolve.getByRole('radio', { name: 'Settle at a lower price' }));
   await typeInto(page, resolve.getByLabel('New task price (USD)'), '45');
   await typeInto(page, resolve.getByLabel('Resolution summary'), 'Settled at $45 because two drawers still stick.');
-  await expect(resolve.getByText('$16.50').first()).toBeVisible({ timeout: 20_000 });
+  await expect(resolve.getByText('$15.75').first()).toBeVisible({ timeout: 20_000 });
   await press(page, resolve.getByRole('button', { name: 'Save resolution' }));
   await expect(page.getByText('Resolution saved.').first()).toBeVisible({ timeout: 30_000 });
 });

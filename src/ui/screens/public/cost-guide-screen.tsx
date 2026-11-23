@@ -13,13 +13,14 @@ import { CategoryNextStep } from './category-next-step';
 
 /**
  * A city's cost guide for one service (docs/seo/PLAN.md S5): the question people search as the heading, the typical
- * range (the same numbers as the category page), what a poster pays and a helper earns at each end of it (worked
- * out by the app's fee engine), what changes the price, and how to get an exact one.
+ * range (the same numbers as the category page), what a client pays at each end of it when TasksNearMe holds the
+ * payment (worked out by the app's fee engine; no service fees, helpers get the whole price), what changes the price,
+ * and how to get an exact one.
  */
 export function CostGuideScreen({ data }: { data: CostGuidePageData }) {
   const t = useTranslations('publicPages');
   const categoryName = useTranslations('helperCard.categories');
-  const { market, category, examples, fees } = data;
+  const { market, category, examples, holdFee } = data;
   const { lowCents, highCents, unit } = category.priceGuidance;
   const factors = Object.keys(t.raw(`costGuide.factors.${category.slug}`) as Record<string, string>);
   const at = (cents: number) => ({ price: formatMoney(cents), unit });
@@ -45,9 +46,8 @@ export function CostGuideScreen({ data }: { data: CostGuidePageData }) {
         <PriceBreakdown breakdown={examples.low} variant="poster" title={t('costGuide.lowEnd', at(lowCents))} headingLevel={3} />
         <PriceBreakdown breakdown={examples.high} variant="poster" title={t('costGuide.highEnd', at(highCents))} headingLevel={3} />
       </div>
-      <PriceBreakdown breakdown={examples.low} variant="helper" title={t('costGuide.helperEarns', at(lowCents))} headingLevel={3} />
       <p className="text-sm text-muted-foreground tabular-nums">
-        {t('costGuide.feesNote', { posterFeePercent: fees.posterFeePercent, posterMinimum: formatMoney(fees.posterMinimumCents), helperFeePercent: fees.helperFeePercent })}{' '}
+        {t('costGuide.feesNote', { percent: holdFee.percent, minimum: formatMoney(holdFee.minimumCents) })}{' '}
         <Link href={routes.pricing()} className="inline-flex min-h-11 items-center font-medium text-primary underline-offset-4 hover:underline">{t('costGuide.feesLink')}</Link>
       </p>
     </Section>

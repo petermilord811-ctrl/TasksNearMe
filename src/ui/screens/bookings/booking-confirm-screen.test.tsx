@@ -19,6 +19,7 @@ import {
   deskConfirmNewCardData,
   deskConfirmPaysLaterData,
   deskConfirmUnavailableData,
+  deskDirectBreakdown,
   fakeHandler,
   movingConfirmHourlyData,
   remoteConfirmData,
@@ -66,7 +67,19 @@ describe('BookingConfirmScreen', () => {
     expect(screen.getByText(messages.bookingConfirm.totalLater)).toBeInTheDocument();
     expect(screen.getByText(`Nothing is charged today. We'll charge your card on ${formatDateTime(deskConfirmPaysLaterData.paysLater!.chargeAt, 'en', 'America/Chicago')}; if that doesn't go through, you can pay on the booking page until ${formatDateTime(deskConfirmPaysLaterData.paysLater!.payBy, 'en', 'America/Chicago')}, or the booking is canceled with no fees.`)).toBeInTheDocument();
     expect(screen.queryByText(messages.bookingConfirm.paymentNote)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Book now, pay $66.00 later' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Book now, pay $63.00 later' })).toBeInTheDocument();
+  });
+
+  it('books an offer paid directly with no card and nothing charged (2026-11-23)', async () => {
+    const user = userEvent.setup();
+    const { handlers } = mount({ ...deskConfirmData, paymentMode: 'direct', breakdown: deskDirectBreakdown });
+    expect(screen.getByRole('heading', { level: 1, name: 'Confirm your booking' })).toBeInTheDocument();
+    expect(screen.getByText('You pay Jordan T. directly')).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /Visa.*1881/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(messages.bookingConfirm.totalToday)).not.toBeInTheDocument();
+    await user.click(terms());
+    await user.click(screen.getByRole('button', { name: 'Book Jordan T.' }));
+    await waitFor(() => expect(handlers.onConfirm).toHaveBeenCalledExactlyOnceWith({ offerRevision: 1, acceptTerms: true }));
   });
 
   it('books the default saved card with the unchanged offer revision and follows redirectTo', async () => {
@@ -75,7 +88,7 @@ describe('BookingConfirmScreen', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByRole('radio', { name: /Visa.*1881/ })).toBeChecked();
     expect(terms()).not.toBeChecked();
-    expect(submit()).toHaveAccessibleName('Book and pay $66.00');
+    expect(submit()).toHaveAccessibleName('Book and pay $63.00');
     await acceptAndSubmit(user);
     await waitFor(() => expect(handlers.onConfirm).toHaveBeenCalledExactlyOnceWith({
       offerRevision: 1,
@@ -324,7 +337,7 @@ describe('BookingConfirmScreen', () => {
   it('uses the hourly cap amount and sends its supplied revision unchanged', async () => {
     const user = userEvent.setup();
     const { handlers } = mount(movingConfirmHourlyData);
-    expect(submit()).toHaveAccessibleName('Book and pay $154.00');
+    expect(submit()).toHaveAccessibleName('Book and pay $147.00');
     expect(screen.getByText(/You pay for up to 4 hours now/)).toBeVisible();
     await acceptAndSubmit(user);
     await waitFor(() => expect(handlers.onConfirm).toHaveBeenCalledWith({
@@ -338,6 +351,6 @@ describe('BookingConfirmScreen', () => {
     const { container } = mount(remoteConfirmData);
     expect(screen.getByText(/No address needed.*meeting link in chat/)).toBeVisible();
     expect(container.textContent).not.toContain('Example Lane');
-    expect(submit()).toHaveAccessibleName('Book and pay $44.00');
+    expect(submit()).toHaveAccessibleName('Book and pay $42.00');
   });
 });

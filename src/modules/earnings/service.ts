@@ -106,7 +106,8 @@ export async function recordCompletionMoney(db: Db, bookingId: string, now: Date
     .leftJoin(bookingCompletions, eq(bookingCompletions.bookingId, bookings.id))
     .where(eq(bookings.id, bookingId))
     .limit(1);
-  if (!row || row.booking.status !== 'completed') return;
+  // Paid directly between the two people (owner, 2026-11-23): nothing was held, so nothing is paid out or refunded.
+  if (!row || row.booking.status !== 'completed' || row.booking.paymentMode === 'direct') return;
   const final: PriceBreakdown = row.completion?.finalBreakdown ?? row.terms.breakdown;
   await transfer(db, { bookingId, helperUserId: row.booking.helperUserId, kind: 'earnings', amountCents: final.helperEarningsCents }, now);
   await transfer(db, { bookingId, helperUserId: row.booking.helperUserId, kind: 'reimbursement', amountCents: final.helperReimbursementCents ?? 0 }, now);
@@ -225,7 +226,8 @@ export async function getEarningsPage(db: Db, helperUserId: string, now: Date): 
       .from(bookings)
       .innerJoin(tasks, eq(tasks.id, bookings.taskId))
       .innerJoin(bookingCompletions, eq(bookingCompletions.bookingId, bookings.id))
-      .where(and(eq(bookings.helperUserId, helperUserId), inArray(bookings.status, ['completion_submitted', 'disputed'])))
+      // Only money TasksNearMe holds becomes earnings here: a booking paid directly is between the two (2026-11-23).
+      .where(and(eq(bookings.helperUserId, helperUserId), eq(bookings.paymentMode, 'held'), inArray(bookings.status, ['completion_submitted', 'disputed'])))
       .orderBy(desc(bookings.updatedAt)),
     db.select().from(payouts).where(eq(payouts.helperUserId, helperUserId)),
     db.select().from(payoutAccounts).where(eq(payoutAccounts.userId, helperUserId)).limit(1),

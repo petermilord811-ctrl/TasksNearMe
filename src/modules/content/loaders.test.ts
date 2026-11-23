@@ -106,10 +106,10 @@ describe('legal content', () => {
     }
   });
 
-  it('the cancellation policy agrees with the fee engine example', () => {
+  it('the cancellation policy agrees with the fee engine example (the $60 desk held for $63, 2026-11-23)', () => {
     const text = JSON.stringify(getLegalDoc('cancellation-policy'));
-    expect(text).toContain('$66.00');
-    expect(text).toContain('$54.00');
+    expect(text).toContain('$63.00');
+    expect(text).toContain('$51.00');
     expect(text).toContain('$12.00');
   });
 

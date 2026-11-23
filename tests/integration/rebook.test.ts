@@ -48,7 +48,7 @@ describe('my clients and rebooking', () => {
   it('lists the past client with the booking, and proposes it again', async () => {
     const page = await getMyClientsPage(db, 'usr_sam', now());
     const ana = page.clients.find((row) => row.client.displayName === 'Ana P.');
-    expect(ana).toMatchObject({ completedCount: expect.any(Number), lastBooking: { id: 'bkg_rbk', earnedCents: 8100 }, actions: ['propose_rebook'] });
+    expect(ana).toMatchObject({ completedCount: expect.any(Number), lastBooking: { id: 'bkg_rbk', earnedCents: 9000 }, actions: ['propose_rebook'] });
     expect(await getProposeRebookPage(db, 'usr_sam', 'bkg_rbk', now())).toMatchObject({ booking: { id: 'bkg_rbk', lastPricing: { type: 'fixed', priceCents: 9000 } } });
     expect(await getProposeRebookPage(db, 'usr_lee', 'bkg_rbk', now())).toBeNull();
 
@@ -63,7 +63,7 @@ describe('my clients and rebooking', () => {
   it('shows each side its numbers; the client pays to accept (a declined card first)', async () => {
     const [row] = await db.select().from(rebookProposals).where(and(eq(rebookProposals.fromBookingId, 'bkg_rbk'), eq(rebookProposals.status, 'sent')));
     const client = await getProposalPage(db, pay, cipher, 'usr_ana', row!.id, now());
-    expect(client?.proposal).toMatchObject({ viewerRole: 'poster', actions: ['accept_proposal', 'decline_proposal'], breakdown: { posterTotalCents: 9900 } });
+    expect(client?.proposal).toMatchObject({ viewerRole: 'poster', actions: ['accept_proposal', 'decline_proposal'], breakdown: { posterTotalCents: 9450 } });
     expect(client?.payment).toBeTruthy();
     if (cipher) expect(client?.proposal.exactAddress).toBeTruthy();
     const helper = await getProposalPage(db, pay, cipher, 'usr_sam', row!.id, now());

@@ -37,22 +37,24 @@ Background-only fixtures: Ben (Crestview, open yard task), Ana (Hyde Park, open 
 
 ## 3. Canonical money values (from `docs/blueprint/04-payments-and-fees.md` §3, §6)
 
-Fees: poster service fee = max(10% of price, $3.00); helper service fee = 10% of price; no fees on expenses. Late-cancellation fee = max($10, 20% of price), capped at the price, paid entirely to the helper.
+Since 2026-11-23 there are no service fees. Each offer is paid **directly** (the default: nothing goes through TasksNearMe, no fees) or **held** by TasksNearMe; a held booking costs the client a hold fee = max(5% of price, $1.00), waived for Plus members, and the helper gets the whole price. No fees on expenses. Late-cancellation fee (held bookings) = max($10, 20% of price), capped at the price, paid entirely to the helper. The cases below are held unless they say otherwise; a booking made before 2026-11-23 keeps its 10% fees on each side (`legacyDeskBreakdown`: total 6600, earnings 5400).
 
 | Case | Values |
 |---|---|
-| **Desk, fixed $60** | price 6000 · poster fee 600 · **poster total 6600** · helper fee 600 · **helper earnings 5400** · platform revenue 1200 |
-| Small task $25 | price 2500 · poster fee 300 (minimum) · total 2800 · helper fee 250 · earnings 2250 |
-| Bookshelf rebook $45 | price 4500 · fee 450 · total 4950 (authorized at invite) · earnings 4050 |
-| Bookshelf counter $50 | price 5000 · fee 500 · total 5500 (re-authorized) · earnings 4500 |
-| Desk + chair change (+$20) | new price 8000 · fee 800 · new total 8800 · **difference to pay 2200** · new earnings 7200 |
-| **Moving, $35/h, 4 h cap** | funded 14000 + fee 1400 = **15400** · worked 3.5 h → price 12250 · fee 1225 · final 13475 · **refund 1925** · helper fee 1225 · **earnings 11025** |
-| Moving cap +1 h | price +3500 · fee +350 · **pay 3850 more** · new cap 5 h |
-| Desk + $20 expense allowance | charged 8600 · receipt 800 approved → **reimbursement 800** (separate from earnings) · refund 1200 · poster net 7400 |
-| Late cancellation (desk) | **helper gets 1200** · poster refund 5400 |
-| Early cancellation (desk) | poster refund 6600 · helper 0 |
-| **Dispute settlement at $45** | **poster refund 1650** · helper earnings 4050 · platform 900 |
-| Remote computer help $40 | price 4000 · fee 400 · total 4400 · earnings 3600 |
+| **Desk, fixed $60, held** | price 6000 · hold fee 300 · **poster total 6300** · helper fee 0 · **helper earnings 6000** · platform revenue 300 |
+| Desk, fixed $60, paid directly | price 6000 · no fees · **paid to the helper 6000** · platform revenue 0 |
+| Small task $25 | price 2500 · hold fee 125 · total 2625 · earnings 2500 (the $1.00 minimum applies below $20) |
+| Large task $150 | price 15000 · hold fee 750 · total 15750 · earnings 15000 |
+| Bookshelf rebook $45 | price 4500 · fee 225 · total 4725 (authorized at invite) · earnings 4500 |
+| Bookshelf counter $50 | price 5000 · fee 250 · total 5250 (re-authorized) · earnings 5000 |
+| Desk + chair change (+$20) | new price 8000 · fee 400 · new total 8400 · **difference to pay 2100** · new earnings 8000 |
+| **Moving, $35/h, 4 h cap** | funded 14000 + fee 700 = **14700** · worked 3.5 h → price 12250 · fee 613 · final 12863 · **refund 1837** · **earnings 12250** |
+| Moving cap +1 h | price +3500 · fee +175 · **pay 3675 more** · new cap 5 h |
+| Desk + $20 expense allowance | charged 8300 · receipt 800 approved → **reimbursement 800** (separate from earnings) · refund 1200 · poster net 7100 |
+| Late cancellation (desk) | **helper gets 1200** · poster refund 5100 |
+| Early cancellation (desk) | poster refund 6300 · helper 0 |
+| **Dispute settlement at $45** | **poster refund 1575** · helper earnings 4500 · platform 225 |
+| Remote computer help $40 | price 4000 · fee 200 · total 4200 · earnings 4000 |
 | Rewards | welcome **5000** · repeat **1000** · acceptance 5% of 6000 = 300 (cap 500) · completion 10% of 6000 = 600 (cap 1000) |
 
 `src/modules/payments/domain/fees.ts` must reproduce every row. Its unit tests use this table.

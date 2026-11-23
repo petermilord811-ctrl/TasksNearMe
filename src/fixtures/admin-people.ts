@@ -85,8 +85,8 @@ export const adminUsersEmptyData: AdminUsersPageData = { query: 'nobody', rows: 
 export const adminUserJordanData: AdminUserPageData = {
   user: { ...jordanRow, phone: { last4: '0201', verified: true } },
   bookings: [
-    { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', role: 'helper', status: 'disputed', start: '2026-11-21T16:30:00.000Z', amountCents: 5400 },
-    { id: 'bkg_tv', title: 'Anchor a tall bookshelf to the wall', role: 'helper', status: 'confirmed', start: '2026-11-25T18:00:00.000Z', amountCents: 7200 },
+    { id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', role: 'helper', status: 'disputed', start: '2026-11-21T16:30:00.000Z', amountCents: 6000 },
+    { id: 'bkg_tv', title: 'Anchor a tall bookshelf to the wall', role: 'helper', status: 'confirmed', start: '2026-11-25T18:00:00.000Z', amountCents: 8000 },
   ],
   cases: adminCasesPageData.cases.slice(0, 1),
   rewards: [jordanWelcome],
@@ -108,7 +108,7 @@ export const adminUserJordanData: AdminUserPageData = {
 /** Devon, suspended after the reward review. */
 export const adminUserSuspendedData: AdminUserPageData = {
   user: { ...devonRow, helperStatus: 'suspended' },
-  bookings: [{ id: 'bkg_dana', title: 'Assemble a chair', role: 'helper', status: 'completed', start: '2026-11-19T17:00:00.000Z', amountCents: 3600 }],
+  bookings: [{ id: 'bkg_dana', title: 'Assemble a chair', role: 'helper', status: 'completed', start: '2026-11-19T17:00:00.000Z', amountCents: 4000 }],
   cases: [],
   rewards: [{ ...devonRepeat, status: 'voided', actions: [] }],
   strikes: [{ id: 'stk_devon', bookingId: 'bkg_dana', reason: 'linked_accounts', at: '2026-11-27T16:00:00.000Z' }],

@@ -172,7 +172,9 @@ export function AppSearch({ mode, onAsk, onNeighbors = false, className }: { mod
 
   const showPanel = open && (focused || answer !== null);
   const activeId = active >= 0 && suggestions[active] ? `${id}-option-${active}` : undefined;
-  return <div ref={rootRef} className={cn('relative min-w-0 flex-1', className)}>
+  // While the suggestions are open, above the page's own sticky bars (layer-action) and below the pinned app bar
+  // (layer-navigation) and the page-change veil (#main::after); at rest, no layer, so it scrolls under the bar.
+  return <div ref={rootRef} className={cn('relative min-w-0 flex-1', showPanel && 'z-[calc(var(--layer-navigation)-1)]', className)}>
     <form
       role="search"
       aria-label={t('label')}

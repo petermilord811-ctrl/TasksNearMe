@@ -7,7 +7,7 @@
   {
     "slug": "payments",
     "title": "Payments and fees",
-    "description": "Charges, refunds, and service fees."
+    "description": "Paying directly or upfront, refunds, and the hold fee."
   },
   {
     "slug": "helpers",
@@ -22,6 +22,6 @@
   {
     "slug": "guides",
     "title": "Guides",
-    "description": "Hiring, pricing and earning with local tasks."
+    "description": "Finding help, pricing and earning with local tasks."
   }
 ]

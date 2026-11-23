@@ -49,7 +49,7 @@ const request = (task: { id: string; start: string }, card: 'success' | 'require
 });
 
 describe('direct invites', () => {
-  it('holds $49.50 for a $45 invite, then books at $50 after a counter (authorized again)', async () => {
+  it('holds $47.25 for a $45 invite, then books at $50 after a counter (authorized again)', async () => {
     const task = await openTask('tsk_inv1');
     const page = await getRequestHelperPage(db, pay, 'usr_chris', 'jordan-t', {}, now());
     expect(page?.tasks.map((item) => item.id)).toContain('tsk_inv1');
@@ -58,7 +58,7 @@ describe('direct invites', () => {
     expect(await requestHelper(deps, 'usr_chris', 'jordan-t', request(task), now())).toMatchObject({ ok: true, code: 'sent' });
     expect(await requestHelper(deps, 'usr_chris', 'jordan-t', request(task), now())).toEqual({ ok: false, code: 'not_allowed' });
     const [poster] = await invitesForTask(db, pay, 'usr_chris', 'tsk_inv1', now());
-    expect(poster).toMatchObject({ status: 'sent', authorizedCents: 4950, actions: ['cancel_invite'] });
+    expect(poster).toMatchObject({ status: 'sent', authorizedCents: 4725, actions: ['cancel_invite'] });
     const helperSide = (await invitesForHelper(db, pay, 'usr_jordan', now())).find((invite) => invite.id === poster!.id);
     expect(helperSide).toMatchObject({ actions: ['accept_invite', 'decline_invite', 'counter_invite'] });
     expect(helperSide?.authorizedCents).toBeUndefined();
@@ -66,18 +66,18 @@ describe('direct invites', () => {
     const [firstHold] = await db.select({ paymentId: invites.paymentId }).from(invites).where(eq(invites.id, poster!.id));
     expect(await counterInvite(db, pay, 'usr_jordan', poster!.id, { pricing: { type: 'fixed', priceCents: 5000 }, message: 'This one has a glass door.' }, now())).toEqual({ ok: true, code: 'sent' });
     const [countered] = await invitesForTask(db, pay, 'usr_chris', 'tsk_inv1', now());
-    expect(countered).toMatchObject({ status: 'countered', counter: { breakdown: { posterTotalCents: 5500 } }, actions: ['accept_counter', 'decline_counter', 'cancel_invite'] });
+    expect(countered).toMatchObject({ status: 'countered', counter: { breakdown: { posterTotalCents: 5250 } }, actions: ['accept_counter', 'decline_counter', 'cancel_invite'] });
 
     const booked = await acceptCounter(deps, 'usr_chris', poster!.id, now());
     expect(booked).toMatchObject({ ok: true, code: 'booked' });
     const bookingId = booked.ok ? booked.redirectTo!.split('/').pop()! : '';
     expect((await db.select().from(bookings).where(eq(bookings.id, bookingId)))[0]).toMatchObject({ status: 'confirmed', helperUserId: 'usr_jordan' });
-    expect((await db.select().from(bookingTerms).where(eq(bookingTerms.bookingId, bookingId)))[0]?.breakdown).toMatchObject({ taskPriceCents: 5000, posterTotalCents: 5500 });
+    expect((await db.select().from(bookingTerms).where(eq(bookingTerms.bookingId, bookingId)))[0]?.breakdown).toMatchObject({ taskPriceCents: 5000, posterTotalCents: 5250 });
     expect((await db.select().from(tasks).where(eq(tasks.id, 'tsk_inv1')))[0]?.status).toBe('assigned');
     const charges = await db.select().from(payments).where(eq(payments.bookingId, bookingId));
-    expect(charges.map((row) => [row.purpose, row.status, row.amountCents])).toEqual([['booking_funding', 'succeeded', 5500]]);
+    expect(charges.map((row) => [row.purpose, row.status, row.amountCents])).toEqual([['booking_funding', 'succeeded', 5250]]);
     expect((await db.select().from(invites).where(eq(invites.id, poster!.id)))[0]).toMatchObject({ status: 'accepted', bookingId });
-    // T-07: the first $49.50 hold was released when the counter was authorized for the new total.
+    // T-07: the first $47.25 hold was released when the counter was authorized for the new total.
     const [released] = await db.select().from(payments).where(eq(payments.id, firstHold!.paymentId!));
     expect(released?.status).toBe('canceled');
   });
@@ -86,21 +86,21 @@ describe('direct invites', () => {
     const task = await openTask('tsk_inv_allow');
     await db.update(tasks).set({ expenseAllowanceCents: 2000, expenseAllowanceNote: 'Wall anchors.' }).where(eq(tasks.id, 'tsk_inv_allow'));
     // The quote for that task shows it; without a task, none.
-    expect(await quoteInvite(db, 'usr_chris', { type: 'fixed', priceCents: 4500 }, 'tsk_inv_allow')).toMatchObject({ expenseAllowanceCents: 2000, posterTotalCents: 6950 });
-    expect(await quoteInvite(db, 'usr_chris', { type: 'fixed', priceCents: 4500 })).toMatchObject({ expenseAllowanceCents: 0, posterTotalCents: 4950 });
+    expect(await quoteInvite(db, 'usr_chris', { type: 'fixed', priceCents: 4500 }, 'tsk_inv_allow')).toMatchObject({ expenseAllowanceCents: 2000, posterTotalCents: 6725 });
+    expect(await quoteInvite(db, 'usr_chris', { type: 'fixed', priceCents: 4500 })).toMatchObject({ expenseAllowanceCents: 0, posterTotalCents: 4725 });
     expect(await requestHelper(deps, 'usr_chris', 'jordan-t', request(task), now())).toMatchObject({ ok: true, code: 'sent' });
     const [poster] = await invitesForTask(db, pay, 'usr_chris', 'tsk_inv_allow', now());
-    expect(poster).toMatchObject({ status: 'sent', authorizedCents: 6950 });
+    expect(poster).toMatchObject({ status: 'sent', authorizedCents: 6725 });
     expect(await counterInvite(db, pay, 'usr_jordan', poster!.id, { pricing: { type: 'fixed', priceCents: 5000 }, message: 'The dresser is bigger than it looks.' }, now())).toEqual({ ok: true, code: 'sent' });
     const [countered] = await invitesForTask(db, pay, 'usr_chris', 'tsk_inv_allow', now());
-    expect(countered?.counter?.breakdown).toMatchObject({ expenseAllowanceCents: 2000, posterTotalCents: 7500 });
+    expect(countered?.counter?.breakdown).toMatchObject({ expenseAllowanceCents: 2000, posterTotalCents: 7250 });
     const booked = await acceptCounter(deps, 'usr_chris', poster!.id, now());
     expect(booked).toMatchObject({ ok: true, code: 'booked' });
     const bookingId = booked.ok ? booked.redirectTo!.split('/').pop()! : '';
     // The terms carry the allowance and what was charged covers it: receipts approved against it are the client's money.
     const [terms] = await db.select().from(bookingTerms).where(eq(bookingTerms.bookingId, bookingId));
-    expect(terms).toMatchObject({ expenseAllowanceCents: 2000, breakdown: expect.objectContaining({ expenseAllowanceCents: 2000, posterTotalCents: 7500 }) });
-    expect((await db.select().from(payments).where(eq(payments.bookingId, bookingId))).map((row) => [row.purpose, row.amountCents])).toEqual([['booking_funding', 7500]]);
+    expect(terms).toMatchObject({ expenseAllowanceCents: 2000, breakdown: expect.objectContaining({ expenseAllowanceCents: 2000, posterTotalCents: 7250 }) });
+    expect((await db.select().from(payments).where(eq(payments.bookingId, bookingId))).map((row) => [row.purpose, row.amountCents])).toEqual([['booking_funding', 7250]]);
   });
 
   it('finishes a bank check, then the helper declines and the hold is released', async () => {

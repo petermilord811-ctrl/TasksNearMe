@@ -39,7 +39,7 @@ describe('category page search sections', () => {
       ['Moving help', '/austin/moving-help'],
       ['Yard cleanup', '/austin/yard-cleanup'],
       ['Furniture assembly jobs near you in Austin', '/austin/tasks/furniture-assembly'],
-      ['Pricing and fees', '/pricing'],
+      ['Pricing', '/pricing'],
     ]);
   });
 

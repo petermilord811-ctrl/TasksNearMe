@@ -3,13 +3,14 @@ title: Staying safe
 summary: Simple habits that keep tasks safe for everyone.
 topic: safety
 order: 2
-updated: 2026-11-14
+updated: 2026-11-23
 ---
 Most tasks go smoothly. These habits help keep it that way.
 
 ## For everyone
 
-- Keep messages and payments in TasksNearMe. Payments outside the app aren't covered if something goes wrong.
+- Keep your messages and bookings in TasksNearMe, so what you agreed is on record.
+- Paying your helper directly? Pay once the work is done, never in advance to someone you haven't met. Only payments TasksNearMe holds are protected by us, so if you want that protection, ask for a held payment.
 - Check the profile: badges, reviews, and how long they've been a member.
 - Trust your instincts. You can cancel and report anything that feels wrong.
 

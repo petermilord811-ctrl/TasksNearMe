@@ -283,5 +283,9 @@
     "title": "Agradécele a {name} en Vecinos",
     "body": "Un agradecimiento público ayuda a tus vecinos a encontrar buena ayuda y cuenta como recomendación en su perfil.",
     "action": "Escribir un agradecimiento"
+  },
+  "direct": {
+    "poster": "Pagas a {name} directamente después de la tarea (efectivo, Zelle, Venmo…). Aquí no se cobra nada y no hay ninguna tarifa.",
+    "helper": "{name} te paga directamente después de la tarea (efectivo, Zelle, Venmo…). Nada pasa por TasksNearMe y no hay ninguna tarifa."
   }
 }

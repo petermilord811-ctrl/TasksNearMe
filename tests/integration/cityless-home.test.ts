@@ -52,7 +52,7 @@ describe('the home page while its city is paused', () => {
   });
 
   it('keeps the pricing, become-a-helper and waitlist pages answering, with the paused market’s fees and programs', async () => {
-    expect((await getPricingPageData()).fees.posterFeePercent).toBeGreaterThan(0);
+    expect((await getPricingPageData()).holdFee.percent).toBeGreaterThan(0);
     expect((await getBecomeHelperPageData()).exampleEarnings).toBeDefined();
     expect(Array.isArray((await getWaitlistPageData('real')).comingNext)).toBe(true);
   });

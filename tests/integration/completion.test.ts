@@ -59,22 +59,17 @@ beforeAll(async () => {
 });
 
 describe('completing the work', () => {
-  it('asks the helper for a photo of the finished desk', async () => {
+  it('offers the helper photos of the finished desk, none required (2026-11-23)', async () => {
     const page = await getCompletionPage(hub, 'usr_jordan', first, now());
-    expect(page?.rules).toMatchObject({ photosMin: 1, noteRequired: false });
+    expect(page?.rules).toMatchObject({ photosMin: 0, photosMax: 8, noteRequired: false });
     expect(page?.rules.hours).toBeUndefined();
     expect(page?.rules.checklist).toEqual(DESK_CHECKLIST);
     expect(page?.unavailable).toBeUndefined();
     expect(await getCompletionPage(hub, 'usr_ana', first, now())).toBeNull();
-    expect(await quoteFinal(db, 'usr_jordan', first, { expensesCents: 0 })).toMatchObject({ helperEarningsCents: 5400 });
+    expect(await quoteFinal(db, 'usr_jordan', first, { expensesCents: 0 })).toMatchObject({ helperEarningsCents: 6000 });
   });
 
   it('checks the evidence, then submits it for approval', async () => {
-    expect(await submitCompletion(db, 'usr_jordan', first, { photoIds: [], note: '', expenses: [] }, now())).toEqual({
-      ok: false,
-      code: 'validation_failed',
-      fieldErrors: { photoIds: ['required'] },
-    });
     // Someone else's photo can't be attached.
     expect(await submitCompletion(db, 'usr_jordan', first, { photoIds: ['fil_maya_1'], note: '', expenses: [] }, now())).toEqual({
       ok: false,

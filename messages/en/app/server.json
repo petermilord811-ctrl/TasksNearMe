@@ -34,8 +34,8 @@
       "description": "Earn with your everyday skills. See what you'll earn before you accept a task."
     },
     "pricing": {
-      "title": "Pricing and fees",
-      "description": "What you pay and what helpers earn: service fees, hourly tasks, expenses, and cancellations, with worked examples."
+      "title": "Pricing",
+      "description": "No service fees: pay helpers directly, or have TasksNearMe hold an upfront payment for a small fee. Plus and Pro plans, cancellations, and worked examples."
     },
     "trustSafety": {
       "title": "Trust and safety",
@@ -82,7 +82,7 @@
       "title": "Copy your sign-in code"
     },
     "costGuide": {
-      "description": "In {market}, typical prices are {low}–{high} {unit, select, item {per item} hour {per hour} other {per task}}. See what you pay with the service fee, what your helper earns, and what changes the price."
+      "description": "In {market}, typical prices are {low}–{high} {unit, select, item {per item} hour {per hour} other {per task}}. See what you pay, with no service fees, and what changes the price."
     },
     "categoryNames": {
       "furniture-assembly": "Furniture assembly",
@@ -201,7 +201,7 @@
         "community": "Open Neighbors"
       },
       "next": {
-        "offer_received": "Compare the offers on your task and book the one that fits. You're only charged when you book.",
+        "offer_received": "Compare the offers on your task and book the one that fits. Each offer says whether you pay the helper directly or upfront.",
         "offer_updated": "Check the new price and time before you book.",
         "offer_declined": "Find work has other tasks near you.",
         "task_canceled": "Find work has other tasks near you.",
@@ -556,7 +556,7 @@
       "heading": "TasksNearMe is open in {city}",
       "preheader": "{interest, select, give_help {Get verified and send offers on tasks near you.} both {Post a task, or help with one near you.} other {Post a task and get offers from helpers near you.}}",
       "intro": "You joined our waitlist for {zip}, and we're there now.",
-      "body": "{interest, select, give_help {Set up your helper profile, get verified, and add where your earnings go. Then send offers on tasks near you.} both {Post a task, and helpers near you send offers. Or set up your helper profile, get verified and send offers on tasks nearby.} other {Describe your task and your budget, and helpers near you send offers. You pay when you book. Your helper is paid after the task is done.}}",
+      "body": "{interest, select, give_help {Set up your helper profile, get verified, and add where your earnings go. Then send offers on tasks near you.} both {Post a task, and helpers near you send offers. Or set up your helper profile, get verified and send offers on tasks nearby.} other {Describe your task and your budget, and helpers near you send offers. There are no service fees: pay your helper directly once the task is done.}}",
       "cta": "{interest, select, give_help {Become a helper} other {Post a task}}",
       "secondary": "{interest, select, both {Become a helper} other {See TasksNearMe in {city}}}",
       "why": "You're getting this because {email} joined the TasksNearMe waitlist for {zip}. It's the only email we send about it.",
@@ -576,7 +576,7 @@
         "yard-cleanup": "How much does yard cleanup cost in {market}?",
         "light-cleaning": "How much does light cleaning cost in {market}?",
         "computer-help": "How much does computer and phone help cost in {market}?",
-        "answer": "In {market}, typical prices are {low}–{high} {unit, select, item {per item} hour {per hour} other {per task}}. You agree on the price with your helper before you book, and you see the service fee and your total before you pay."
+        "answer": "In {market}, typical prices are {low}–{high} {unit, select, item {per item} hour {per hour} other {per task}}. You agree on the price with your helper before you book. There are no service fees: you pay your helper directly, or TasksNearMe holds the payment for a small fee when they ask to be paid upfront."
       },
       "checked": {
         "question": "How are helpers checked?",

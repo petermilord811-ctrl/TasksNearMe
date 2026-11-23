@@ -21,11 +21,12 @@ describe('MyClientsScreen', () => {
     const chris = within(screen.getByRole('article', { name: 'Chris D.' }));
     expect(chris.getByText('2 bookings together')).toBeVisible();
     expect(chris.getByText('$35.00/h · about 3.5 h · 4 h cap')).toBeVisible();
-    expect(chris.getByText('$126.00')).toBeVisible();
+    expect(chris.getByText('You earned').nextElementSibling).toHaveTextContent('$140.00');
     const maya = within(screen.getByRole('article', { name: 'Maya R.' }));
     expect(maya.getByText('1 booking together')).toBeVisible();
-    expect(maya.getByText('$60.00')).toBeVisible();
-    expect(maya.getByText('$54.00')).toBeVisible();
+    // The task price and, with no service fees since 2026-11-23, all of it earned.
+    expect(maya.getByText('Task price').nextElementSibling).toHaveTextContent('$60.00');
+    expect(maya.getByText('You earned').nextElementSibling).toHaveTextContent('$60.00');
   });
 
   it('renders only supplied proposal actions and links to the supplied booking', () => {

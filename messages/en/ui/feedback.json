@@ -21,8 +21,8 @@
   "confirmations": {
     "approve": {
       "title": "Approve the completed task?",
-      "description": "Approving releases your payment to your helper, and it can't be undone. If something isn't right, go back and choose Report a problem.",
-      "confirm": "Approve and release payment"
+      "description": "Approving says the work is done, and it can't be undone. If TasksNearMe holds your payment, it goes to your helper now. If something isn't right, go back and choose Report a problem.",
+      "confirm": "Approve the task"
     },
     "decline_offer": {
       "title": "Decline this offer?",

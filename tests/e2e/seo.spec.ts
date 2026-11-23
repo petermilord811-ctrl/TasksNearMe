@@ -221,7 +221,7 @@ test.describe('search engines', () => {
     // Spanish pages link to Spanish pages (SEO plan S7.2).
     const more = page.getByRole('region', { name: 'Más en Austin' });
     await expect(more.getByRole('link', { name: 'Ayuda con mudanzas cerca de ti en Austin' })).toHaveAttribute('href', '/es/austin/moving-help');
-    await expect(more.getByRole('link', { name: 'Precios y tarifas' })).toHaveAttribute('href', '/es/pricing');
+    await expect(more.getByRole('link', { name: 'Precios', exact: true })).toHaveAttribute('href', '/es/pricing');
   });
 
   test('a job hub is the board on one category, with its own title, heading and breadcrumbs', async ({ page, request }) => {

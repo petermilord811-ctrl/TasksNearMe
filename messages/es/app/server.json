@@ -34,8 +34,8 @@
       "description": "Gana dinero con tus habilidades de todos los días. Ve cuánto ganarás antes de aceptar una tarea."
     },
     "pricing": {
-      "title": "Precios y tarifas",
-      "description": "Lo que pagas y lo que ganan los ayudantes: tarifas de servicio, tareas por hora, gastos y cancelaciones, con ejemplos."
+      "title": "Precios",
+      "description": "Sin tarifas de servicio: págales a los ayudantes directamente, o deja que TasksNearMe retenga un pago por adelantado por una pequeña tarifa. Planes Plus y Pro, cancelaciones y ejemplos."
     },
     "trustSafety": {
       "title": "Confianza y seguridad",
@@ -82,7 +82,7 @@
       "title": "Copia tu código para iniciar sesión"
     },
     "costGuide": {
-      "description": "En {market}, los precios habituales van de {low} a {high} {unit, select, item {por artículo} hour {por hora} other {por tarea}}. Mira cuánto pagas con la tarifa de servicio, cuánto gana tu ayudante y qué cambia el precio."
+      "description": "En {market}, los precios habituales van de {low} a {high} {unit, select, item {por artículo} hour {por hora} other {por tarea}}. Mira cuánto pagas, sin tarifas de servicio, y qué cambia el precio."
     },
     "categoryNames": {
       "furniture-assembly": "Armado de muebles",
@@ -201,7 +201,7 @@
         "community": "Abrir Vecinos"
       },
       "next": {
-        "offer_received": "Compara las ofertas de tu tarea y reserva la que mejor te convenga. Solo se te cobra cuando reservas.",
+        "offer_received": "Compara las ofertas de tu tarea y reserva la que mejor te convenga. Cada oferta dice si le pagas al ayudante directamente o por adelantado.",
         "offer_updated": "Revisa el nuevo precio y la nueva hora antes de reservar.",
         "offer_declined": "En Buscar trabajo hay otras tareas cerca de ti.",
         "task_canceled": "En Buscar trabajo hay otras tareas cerca de ti.",
@@ -556,7 +556,7 @@
       "heading": "TasksNearMe ya está en {city}",
       "preheader": "{interest, select, give_help {Verifícate y envía ofertas en tareas cerca de ti.} both {Publica una tarea o ayuda con una cerca de ti.} other {Publica una tarea y recibe ofertas de ayudantes cerca de ti.}}",
       "intro": "Te uniste a nuestra lista de espera para {zip}, y ya llegamos.",
-      "body": "{interest, select, give_help {Crea tu perfil de ayudante, verifícate e indica dónde quieres recibir tus ganancias. Luego envía ofertas en tareas cerca de ti.} both {Publica una tarea y los ayudantes cerca de ti te envían ofertas. O crea tu perfil de ayudante, verifícate y envía ofertas en tareas cercanas.} other {Describe tu tarea y tu presupuesto, y los ayudantes cerca de ti te envían ofertas. Pagas al reservar. A tu ayudante se le paga después de terminar la tarea.}}",
+      "body": "{interest, select, give_help {Crea tu perfil de ayudante, verifícate e indica dónde quieres recibir tus ganancias. Luego envía ofertas en tareas cerca de ti.} both {Publica una tarea y los ayudantes cerca de ti te envían ofertas. O crea tu perfil de ayudante, verifícate y envía ofertas en tareas cercanas.} other {Describe tu tarea y tu presupuesto, y los ayudantes cerca de ti te envían ofertas. No hay tarifas de servicio: le pagas a tu ayudante directamente cuando la tarea esté hecha.}}",
       "cta": "{interest, select, give_help {Hazte ayudante} other {Publicar una tarea}}",
       "secondary": "{interest, select, both {Hazte ayudante} other {Ver TasksNearMe en {city}}}",
       "why": "Recibes esto porque {email} se unió a la lista de espera de TasksNearMe para {zip}. Es el único correo que enviamos sobre esto.",
@@ -576,7 +576,7 @@
         "yard-cleanup": "¿Cuánto cuesta la limpieza de jardín en {market}?",
         "light-cleaning": "¿Cuánto cuesta la limpieza ligera en {market}?",
         "computer-help": "¿Cuánto cuesta la ayuda con computadoras y teléfonos en {market}?",
-        "answer": "En {market}, los precios habituales van de {low} a {high} {unit, select, item {por artículo} hour {por hora} other {por tarea}}. Acuerdas el precio con tu ayudante antes de reservar y ves la tarifa de servicio y el total antes de pagar."
+        "answer": "En {market}, los precios habituales van de {low} a {high} {unit, select, item {por artículo} hour {por hora} other {por tarea}}. Acuerdas el precio con tu ayudante antes de reservar. No hay tarifas de servicio: le pagas a tu ayudante directamente, o TasksNearMe retiene el pago por una pequeña tarifa cuando pide el pago por adelantado."
       },
       "checked": {
         "question": "¿Cómo se verifica a los ayudantes?",

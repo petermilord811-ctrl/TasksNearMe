@@ -59,12 +59,16 @@ async function policyOf(db: Db, policyVersionId: string) {
   return row ?? null;
 }
 
-/** The evidence the category and the terms ask for. */
+/**
+ * The evidence the category and the terms ask for. Photos are always optional (owner, 2026-11-23: "send money to helper
+ * after tasker … says task done: with evidence (it's optional)"): up to 8, none required, whatever the category's
+ * `requiredEvidence.photosMin` says.
+ */
 export function completionRulesFor(ctx: Pick<Context, 'terms' | 'task' | 'category'>): CompletionRules {
   const remote = ctx.task.mode === 'remote';
   const evidence = ctx.category.requiredEvidence;
   return {
-    photosMin: remote ? 0 : evidence.photosMin,
+    photosMin: 0,
     photosMax: 8,
     ...(ctx.terms.pricingType === 'hourly'
       ? { hours: { estimated: ctx.terms.estimatedHours ?? ctx.terms.hoursCap ?? 0, cap: ctx.terms.hoursCap ?? 0 } }
@@ -110,6 +114,7 @@ export async function quoteFinal(db: Db, helperId: string, bookingId: string, in
   return finalBreakdown(policy.fees, ctx.terms.breakdown, {
     ...(hours !== undefined ? { approvedHours: hours } : {}),
     approvedExpensesCents: Math.max(0, Math.round(input.expensesCents)),
+    held: ctx.booking.paymentMode !== 'direct',
   });
 }
 
@@ -144,6 +149,8 @@ export async function submitCompletion(db: Db, helperId: string, bookingId: stri
   const final = finalBreakdown(policy.fees, ctx.terms.breakdown, {
     ...(completion.hoursWorked !== undefined ? { approvedHours: completion.hoursWorked } : {}),
     approvedExpensesCents: expensesCents,
+    // Paid directly: nothing was charged here, so no refund lines.
+    held: ctx.booking.paymentMode !== 'direct',
   });
 
   const updated = await db.transaction(async (tx) => {

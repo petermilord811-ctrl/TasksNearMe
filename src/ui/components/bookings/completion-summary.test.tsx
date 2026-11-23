@@ -57,13 +57,13 @@ describe('CompletionSummary', () => {
     expect(screen.getByText('Refund')).toBeInTheDocument();
     expect(screen.getByText('$12.00')).toBeInTheDocument();
     expect(screen.queryByText('Reimbursed expenses')).not.toBeInTheDocument();
-    expect(screen.queryByText('$54.00')).not.toBeInTheDocument();
+    expect(screen.queryByText("You'll earn")).not.toBeInTheDocument();
   });
 
   it('keeps helper earnings and reimbursement separate and excludes the client refund', () => {
     show(deskWithExpensesCompletionView, 'helper');
     const breakdown = screen.getByRole('region', { name: "What you'll earn" });
-    expect(within(breakdown).getByText('$54.00')).toBeInTheDocument();
+    expect(within(breakdown).getByText("You'll earn").closest('div')).toHaveTextContent('$60.00');
     expect(within(breakdown).getByText('$8.00')).toBeInTheDocument();
     expect(within(breakdown).getByText('Reimbursed expenses')).toBeInTheDocument();
     expect(screen.queryByText('Refund')).not.toBeInTheDocument();
@@ -73,7 +73,7 @@ describe('CompletionSummary', () => {
   it('shows supplied hours against the cap with the hourly refund', () => {
     show(movingCompletionView);
     expect(screen.getByText('Hours worked: 3.5 of up to 4')).toBeInTheDocument();
-    expect(screen.getByText('$19.25')).toBeInTheDocument();
+    expect(screen.getByText('$18.37')).toBeInTheDocument();
     expect(screen.getByText('$35.00 × 3.5 h')).toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Photos of the work' })).not.toBeInTheDocument();
   });

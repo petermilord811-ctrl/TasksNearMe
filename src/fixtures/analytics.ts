@@ -88,7 +88,7 @@ export const adminMetricsFinanceData: AdminMetricsPageData = {
     { id: 'bookings_disputed', area: 'quality', comparison: 'at_most', target: { kind: 'percent', percent: 3 }, value: { kind: 'share', share: share(5, 217) }, status: 'met' },
     { id: 'helper_reliability', area: 'reliability', comparison: 'at_most', target: { kind: 'percent', percent: 2 }, value: { kind: 'share', share: share(6, 217) }, status: 'missed' },
     { id: 'rebook_60d', area: 'retention', comparison: 'at_least', target: { kind: 'percent', percent: 25 }, value: { kind: 'share', share: share(29, 131) }, status: 'missed', maturing: 88 },
-    { id: 'contribution_per_booking', area: 'economics', comparison: 'at_least', target: { kind: 'money', cents: 600 }, value: { kind: 'money_per_booking', cents: 712, bookings: 188 }, status: 'met' },
+    { id: 'contribution_per_booking', area: 'economics', comparison: 'at_least', target: { kind: 'money', cents: 0 }, value: { kind: 'money_per_booking', cents: -45, bookings: 188 }, status: 'missed' },
     { id: 'helpers_id_verified', area: 'trust', comparison: 'at_least', target: { kind: 'percent', percent: 100 }, value: { kind: 'share', share: share(64, 64) }, status: 'met' },
     { id: 'address_incidents', area: 'privacy', comparison: 'at_most', target: { kind: 'count', count: 0 }, status: 'not_measured' },
   ],

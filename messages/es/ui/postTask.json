@@ -362,11 +362,11 @@
     "unit": "Unidad o apartamento",
     "accessNotes": "Notas de acceso",
     "remotePrivacy": "Esta es una tarea remota. No se comparte ninguna dirección.",
-    "priceTitle": "Si reservas a este precio",
+    "priceTitle": "Si un ayudante pide el pago por adelantado",
     "priceLoading": "Obteniendo el desglose del precio…",
-    "priceError": "No pudimos cargar el desglose del precio. Inténtalo de nuevo para ver lo que pagarás al reservar.",
+    "priceError": "No pudimos cargar el desglose del precio. Inténtalo de nuevo para ver lo que pagarías por adelantado.",
     "retryPrice": "Reintentar el desglose del precio",
-    "payment": "Pagas al reservar. Tu ayudante recibe su pago cuando termina la tarea."
+    "payment": "A la mayoría de los ayudantes se les paga directamente cuando la tarea está hecha: pagas solo el precio acordado, sin tarifas. Si un ayudante pide el pago por adelantado, pagas al reservar y TasksNearMe lo retiene hasta que digas que la tarea está hecha."
   },
   "previews": {
     "group": "Publicar una tarea",

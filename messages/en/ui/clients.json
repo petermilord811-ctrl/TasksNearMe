@@ -41,7 +41,7 @@
     "hourly": "Hourly rate",
     "price": "Task price ($)",
     "rate": "Hourly rate ($)",
-    "priceHint": "Enter the task price. Your earnings after the service fee appear below.",
+    "priceHint": "Enter the task price. What you'll get appears below.",
     "rateHint": "Enter your hourly rate. Your earnings below use the hours cap.",
     "estimatedHours": "Estimated hours",
     "estimatedHoursHint": "How long you expect the task to take.",

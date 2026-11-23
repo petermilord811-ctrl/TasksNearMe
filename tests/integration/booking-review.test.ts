@@ -250,7 +250,7 @@ describe('the booking review, third batch', () => {
   });
 
   it('settles or refunds a dispute only if the client’s approval didn’t land first (lifecycle #13)', async () => {
-    const moved = { posterRefundCents: 1650, helperReceivesCents: 4050, platformKeepsCents: 900 };
+    const moved = { posterRefundCents: 1575, helperReceivesCents: 4500, platformKeepsCents: 225 };
     async function submitted(n: number): Promise<string> {
       const bookingId = await bookedDesk(n);
       const booking = await statusOf(bookingId);
@@ -271,16 +271,16 @@ describe('the booking review, third batch', () => {
     expect(await db.select().from(refunds).where(eq(refunds.bookingId, settled))).toHaveLength(0);
 
     const refunded = await submitted(9);
-    const refunding = await racing(approve(refunded), () => applyResolutionMoney(db, deps.payments, { caseId: 'case_tmp_br_9', bookingId: refunded, resolution: 'refund_full', moved: { ...moved, posterRefundCents: 6600 }, now }));
+    const refunding = await racing(approve(refunded), () => applyResolutionMoney(db, deps.payments, { caseId: 'case_tmp_br_9', bookingId: refunded, resolution: 'refund_full', moved: { ...moved, posterRefundCents: 6300 }, now }));
     expect(refunding).toBe(false);
     expect((await statusOf(refunded)).status).toBe('completed');
     expect(await db.select().from(refunds).where(eq(refunds.bookingId, refunded))).toHaveLength(0);
 
     // Unraced, both still work.
     const fine = await submitted(10);
-    expect(await applyResolutionMoney(db, deps.payments, { caseId: 'case_tmp_br_10', bookingId: fine, resolution: 'refund_full', moved: { ...moved, posterRefundCents: 6600 }, now })).toBe(true);
+    expect(await applyResolutionMoney(db, deps.payments, { caseId: 'case_tmp_br_10', bookingId: fine, resolution: 'refund_full', moved: { ...moved, posterRefundCents: 6300 }, now })).toBe(true);
     expect(await statusOf(fine)).toMatchObject({ status: 'canceled', cancelReason: 'refunded_in_dispute' });
-    expect((await db.select().from(refunds).where(eq(refunds.bookingId, fine))).map((row) => row.amountCents)).toEqual([6600]);
+    expect((await db.select().from(refunds).where(eq(refunds.bookingId, fine))).map((row) => row.amountCents)).toEqual([6300]);
   });
 
   it('takes “running late” only on the day, before arriving, and not for remote work (lifecycle #14)', async () => {

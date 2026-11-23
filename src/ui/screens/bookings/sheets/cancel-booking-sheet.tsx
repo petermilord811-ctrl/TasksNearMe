@@ -54,7 +54,11 @@ function CancelBookingContent(props: CancelBookingSheetProps) {
       {loadError ? <><p className="flex items-start gap-2"><CircleAlert aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-destructive" />{t('cancel.loadError')}</p><Button type="button" variant="outline" onClick={() => { request.current = undefined; setLoadError(false); setAttempt((value) => value + 1); }}>{t('cancel.retry')}</Button></> : <><p role="status" className="flex items-center gap-2"><Spinner aria-hidden="true" />{t('cancel.loading')}</p><Skeleton aria-hidden="true" className="h-28 rounded-2xl" /></>}
     </div> : <form id={formId} noValidate aria-label={t('cancel.title')} aria-busy={mutation.pending} className="space-y-5" onSubmit={form.handleSubmit(mutation.submit, mutation.onInvalid)}>
       <div className="space-y-3 rounded-2xl border border-foreground/[0.06] bg-secondary p-4 text-secondary-foreground">
-        {preview.nothingCharged ? <>
+        {preview.paidDirectly ? <>
+          {/* Paid directly (2026-11-23): no money moved here, so no refund or fee lines. */}
+          <p className="font-heading text-xl/7 font-semibold tracking-[-0.015em]">{t('cancel.directTitle')}</p>
+          <p>{preview.by === 'poster' ? t('cancel.directPoster', { helper: props.data.helper.displayName }) : t('cancel.directHelper', { client: props.data.poster.displayName })}</p>
+        </> : preview.nothingCharged ? <>
           <p className="font-heading text-xl/7 font-semibold tracking-[-0.015em]">{t('cancel.nothingChargedTitle')}</p>
           <p>{t(preview.by === 'poster' ? 'cancel.nothingCharged' : 'cancel.nothingChargedHelper', { client: props.data.poster.displayName })}</p>
         </> : preview.by === 'poster' ? <>

@@ -138,7 +138,7 @@ const jordanBase = {
   itemsOf: { offers: jordanOfferItems, bookings: jordanBookingItems, nearby: jordanNearbyItems },
   now: DASHBOARD_HELPER_NOW,
   extra: {
-    earnings: { upcomingCents: 7500, onTheWayCents: 11025 },
+    earnings: { upcomingCents: 8200, onTheWayCents: 12250 },
     map: { styleUrl: findWorkPageData.map.styleUrl, attribution: findWorkPageData.map.attribution, center: findWorkPageData.map.marketCenter, serviceArea: { name: jordanArea.name, center: jordanArea.center, radiusMiles: jordanArea.serviceRadiusMiles } },
   },
 };

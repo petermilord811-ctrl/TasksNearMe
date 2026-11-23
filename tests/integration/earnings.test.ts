@@ -50,9 +50,9 @@ describe("the helper's earnings", () => {
     const mine = page.rows.filter((row) => [completedId, canceledId].includes(row.bookingId));
     expect(mine.map((row) => [row.kind, row.amountCents, row.status]).sort()).toEqual([
       ['cancellation_compensation', 1200, 'transferred'],
-      ['earnings', 5400, 'transferred'],
+      ['earnings', 6000, 'transferred'],
     ]);
-    expect(page.totals.onTheWayCents).toBeGreaterThanOrEqual(6600);
+    expect(page.totals.onTheWayCents).toBeGreaterThanOrEqual(7200);
     expect(page.firstPayoutNotice).toBe(true);
   });
 
@@ -61,7 +61,7 @@ describe("the helper's earnings", () => {
     const later = await getEarningsPage(db, HELPER, new Date(Date.now() + 4 * DAY));
     const row = later.rows.find((r) => r.bookingId === completedId && r.kind === 'earnings');
     expect(row).toMatchObject({ status: 'paid_out', payout: { status: 'paid', bankLast4: '6789' } });
-    expect(later.totals.paidThisYearCents).toBeGreaterThanOrEqual(6600);
+    expect(later.totals.paidThisYearCents).toBeGreaterThanOrEqual(7200);
     expect(later.firstPayoutNotice).toBe(false);
   });
 });
@@ -70,11 +70,11 @@ describe("the client's receipts and cards", () => {
   it('lists receipts with refunds and nets, and shows one receipt to its client only', async () => {
     const page = await getPaymentsPage(db, 'usr_ben');
     const late = page.receipts.find((r) => r.bookingId === canceledId);
-    expect(late).toMatchObject({ chargedCents: 6600, refundedCents: 5400, netCents: 1200, status: 'partially_refunded' });
+    expect(late).toMatchObject({ chargedCents: 6300, refundedCents: 5100, netCents: 1200, status: 'partially_refunded' });
     const receipt = await getReceiptPage(db, 'usr_ben', canceledId);
     expect(receipt?.lines.map((l) => [l.kind, l.amountCents, l.reason ?? null])).toEqual([
-      ['charge', 6600, null],
-      ['refund', 5400, 'cancellation'],
+      ['charge', 6300, null],
+      ['refund', 5100, 'cancellation'],
     ]);
     expect(receipt?.netCents).toBe(1200);
     expect(await getReceiptPage(db, 'usr_maya', canceledId)).toBeNull();

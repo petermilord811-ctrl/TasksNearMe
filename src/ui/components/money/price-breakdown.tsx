@@ -52,6 +52,11 @@ export function PriceBreakdown({ breakdown, variant, title, posterTotalLabel, he
   const showHelper = variant === 'helper' || variant === 'admin';
   const hourly = breakdown.pricingType === 'hourly' ? breakdown.hourly : undefined;
   const hasFinalExpenses = breakdown.approvedExpensesCents !== undefined;
+  // No service fees since 2026-11-23: the client's only fee is the hold fee on a payment TasksNearMe holds (none when
+  // paid directly or waived with Plus), and helpers keep the whole price. A booking made before then still carries a
+  // helper fee: it keeps its service-fee lines.
+  const serviceFees = breakdown.helperFeeCents > 0;
+  const showPosterFee = serviceFees || breakdown.posterFeeCents > 0;
   const titleText = title ?? t('title');
   const Heading = headingLevel === 4 ? 'h4' : headingLevel === 3 ? 'h3' : 'h2';
 
@@ -71,9 +76,11 @@ export function PriceBreakdown({ breakdown, variant, title, posterTotalLabel, he
         )}
         {showPoster && (
           <>
-            <Line label={variant === 'admin' ? t('posterServiceFee') : t('serviceFee')}>
-              <Money cents={breakdown.posterFeeCents} />
-            </Line>
+            {showPosterFee && (
+              <Line label={serviceFees ? t(variant === 'admin' ? 'posterServiceFee' : 'serviceFee') : t(variant === 'admin' ? 'posterHoldFee' : 'holdFee')}>
+                <Money cents={breakdown.posterFeeCents} />
+              </Line>
+            )}
             {breakdown.expenseAllowanceCents > 0 && (
               <Line label={hasFinalExpenses ? t('fundedAllowance') : t('expenseAllowance')} secondary={hasFinalExpenses}>
                 <Money cents={breakdown.expenseAllowanceCents} size={hasFinalExpenses ? 'sm' : 'md'} />
@@ -95,9 +102,11 @@ export function PriceBreakdown({ breakdown, variant, title, posterTotalLabel, he
         )}
         {showHelper && (
           <>
-            <Line label={variant === 'admin' ? t('helperServiceFee') : t('serviceFee')}>
-              <span className="whitespace-nowrap tabular-nums">{t('deduction', { amount: formatMoney(breakdown.helperFeeCents) })}</span>
-            </Line>
+            {serviceFees && (
+              <Line label={variant === 'admin' ? t('helperServiceFee') : t('serviceFee')}>
+                <span className="whitespace-nowrap tabular-nums">{t('deduction', { amount: formatMoney(breakdown.helperFeeCents) })}</span>
+              </Line>
+            )}
             <Line label={variant === 'admin' ? t('helperEarnings') : t('earnings')} total>
               <Money cents={breakdown.helperEarningsCents} size="lg" />
             </Line>

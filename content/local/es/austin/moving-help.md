@@ -1,5 +1,5 @@
 ---
-updated: 2026-11-14
+updated: 2026-11-23
 ---
 La ayuda con mudanzas cubre el trabajo pesado: cargar y descargar el camión o contenedor que tú consigas, mover muebles entre cuartos y empacar. Tu ayudante no lleva vehículo, así que reserva primero tu transporte y planea las horas de ayuda en torno a él.
 
@@ -13,4 +13,4 @@ Muchos edificios piden reservar el elevador de carga o la zona de carga, y algun
 
 ## Cómo funciona el precio
 
-La ayuda con mudanzas se reserva por hora, con un máximo de horas. Pagas el máximo al reservar y el tiempo que no se use se te reembolsa después de aprobar las horas finales. Los pianos, las cajas fuertes y los materiales peligrosos no forman parte de la ayuda con mudanzas.
+La ayuda con mudanzas se reserva por hora, con un máximo de horas. Si le pagas directamente a tu ayudante, pagas las horas trabajadas cuando termina la tarea. Si tu ayudante pide el pago por adelantado, pagas el máximo al reservar y el tiempo que no se use se te reembolsa después de aprobar las horas finales. Los pianos, las cajas fuertes y los materiales peligrosos no forman parte de la ayuda con mudanzas.

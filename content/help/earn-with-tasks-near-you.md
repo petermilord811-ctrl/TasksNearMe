@@ -3,10 +3,10 @@ title: Earning with tasks near you
 summary: Choose the work, set your price, and get paid for tasks close to home.
 topic: guides
 order: 3
-updated: 2026-11-18
+updated: 2026-11-23
 action: become_helper
 ---
-If you're handy, strong or patient with a computer, your neighbors need you. On TasksNearMe you pick the tasks, set your price and get paid through the app.
+If you're handy, strong or patient with a computer, your neighbors need you. On TasksNearMe you pick the tasks, set your price and keep all of it: there are no service fees.
 
 ## Get verified once
 
@@ -24,7 +24,7 @@ Open tasks show what each one pays, when it's needed and the general area. When 
 
 ## Do the work, get paid
 
-After the task, you add what's needed (photos, hours) and the poster approves it. If they don't respond, it's approved automatically after 72 hours. Your earnings are the task price minus a 10% helper fee, and you see that number before you offer. See [when do I get paid](/help/when-do-i-get-paid).
+After the task, you add what's needed (photos, hours) and the poster approves it. If they don't respond, it's approved automatically after 72 hours. In each offer you choose how you're paid: directly by the poster after the task, or upfront, held by TasksNearMe until the poster approves. Either way you earn the whole price, with no helper fee. See [when do I get paid](/help/when-do-i-get-paid).
 
 ## Build your reputation
 

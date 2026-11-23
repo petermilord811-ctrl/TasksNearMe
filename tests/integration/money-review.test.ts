@@ -309,16 +309,17 @@ describe('a staff form sent twice (MO10)', () => {
 });
 
 describe('client credits (MO11)', () => {
-  const credit = (userId: string) => ({ id: `crd_${userId}`, userId, kind: 'welcome', amountCents: 1000, remainingCents: 1000, expiresAt: at(30 * 24 * 60 * MINUTE), createdAt: now, updatedAt: now });
+  const credit = (userId: string, cents = 1000) => ({ id: `crd_${userId}`, userId, kind: 'welcome', amountCents: cents, remainingCents: cents, expiresAt: at(30 * 24 * 60 * MINUTE), createdAt: now, updatedAt: now });
 
   it('are spent once when two bookings complete at the same moment', async () => {
-    await db.insert(posterCredits).values(credit(CLIENT_B));
+    // $4.00 of credit: more than one desk's cap (its $3.00 hold fee, 2026-11-23), less than two; spent once, it's $4.00.
+    await db.insert(posterCredits).values(credit(CLIENT_B, 400));
     const first = await bookedDesk(2, CLIENT_B);
     const second = await bookedDesk(3, CLIENT_B);
     await db.update(bookings).set({ status: 'completed', completedVia: 'poster', completedAt: now }).where(inArray(bookings.id, [first, second]));
     await Promise.all([recordCompletionMoney(db, first, now, pay), recordCompletionMoney(db, second, now, pay)]);
     const used = await db.select({ amountCents: refunds.amountCents }).from(refunds).where(and(inArray(refunds.bookingId, [first, second]), eq(refunds.reason, 'poster_credit')));
-    expect(used.reduce((sum, row) => sum + row.amountCents, 0)).toBe(1000);
+    expect(used.reduce((sum, row) => sum + row.amountCents, 0)).toBe(400);
     expect((await db.select({ remaining: posterCredits.remainingCents }).from(posterCredits).where(eq(posterCredits.userId, CLIENT_B)))[0]?.remaining).toBe(0);
   });
 

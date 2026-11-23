@@ -78,8 +78,8 @@ test('a change is proposed in a dialog over the booking, which then shows it', a
   await expect(page).toHaveURL(new RegExp(`${hub}/changes/new$`));
   await dialog.getByLabel('Task price (USD)').fill('70');
   await dialog.getByLabel('Message').fill('Could you also take the box away?');
-  // $60 → $70: Chris's total goes from $66.00 to $77.00.
-  await expect(dialog.getByText('$11.00').first()).toBeVisible({ timeout: 20_000 });
+  // $60 → $70, held: Chris's total goes from $63.00 to $73.50.
+  await expect(dialog.getByText('$10.50').first()).toBeVisible({ timeout: 20_000 });
   await dialog.getByRole('button', { name: 'Send change' }).click();
   await page.getByRole('alertdialog', { name: 'Send this change?' }).getByRole('button', { name: 'Send change' }).click();
 

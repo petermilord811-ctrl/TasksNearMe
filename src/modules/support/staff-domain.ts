@@ -149,13 +149,15 @@ export interface BookingMoneyFacts {
   /** Captured from the client, and refunded so far. */
   chargedCents: number;
   refundedCents: number;
+  /** The client's hold fee was waived (Plus, 2026-11-23): a settlement keeps it waived. */
+  waiveHoldFee?: boolean;
 }
 
 export type ResolutionMoney = { posterRefundCents: number; helperReceivesCents: number; platformKeepsCents: number };
 
 /**
- * What a money resolution does (blueprint 04 §6; the $60 desk charged $66 settled at $45: client refund $16.50,
- * helper $40.50, platform $9.00). `out_of_range`: a settle price not below the agreed price, or a refund
+ * What a money resolution does (blueprint 04 §6; the $60 desk held for $63 settled at $45: client refund $15.75,
+ * helper $45.00, platform $2.25 of hold fee). `out_of_range`: a settle price not below the agreed price, or a refund
  * larger than what's left. Null: the resolution moves no money.
  */
 export function resolutionMoney(
@@ -164,14 +166,15 @@ export function resolutionMoney(
   input: { settlePriceCents?: number; goodwillCents?: number },
 ): ResolutionMoney | 'out_of_range' | null {
   const left = money.chargedCents - money.refundedCents;
-  const agreed = quoteBreakdown(money.fees, { type: 'fixed', priceCents: money.priceCents });
+  const options = { waiveHoldFee: money.waiveHoldFee === true };
+  const agreed = quoteBreakdown(money.fees, { type: 'fixed', priceCents: money.priceCents }, options);
   switch (resolution) {
     case 'release_full':
       return { posterRefundCents: 0, helperReceivesCents: agreed.helperEarningsCents, platformKeepsCents: agreed.platformRevenueCents };
     case 'settle': {
       const price = input.settlePriceCents ?? 0;
       if (price <= 0 || price >= money.priceCents) return 'out_of_range';
-      const settled = quoteBreakdown(money.fees, { type: 'fixed', priceCents: price });
+      const settled = quoteBreakdown(money.fees, { type: 'fixed', priceCents: price }, options);
       const refund = agreed.posterTotalCents - settled.posterTotalCents;
       if (refund > left) return 'out_of_range';
       return { posterRefundCents: refund, helperReceivesCents: settled.helperEarningsCents, platformKeepsCents: settled.platformRevenueCents };

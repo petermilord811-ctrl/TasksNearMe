@@ -42,12 +42,12 @@ describe('ScheduledPaymentCard', () => {
     const user = userEvent.setup();
     const { handlers } = mount(yardVisitScheduledPoster);
     const card = screen.getByRole('region', { name: copy.title });
-    expect(card).toHaveTextContent(`We'll charge Visa •••• 1881 $66.00 on ${formatDateTime(YARD_VISIT_TIMES.chargeAt)}.`);
+    expect(card).toHaveTextContent(`We'll charge Visa •••• 1881 $63.00 on ${formatDateTime(YARD_VISIT_TIMES.chargeAt)}.`);
     expect(within(card).getByText(copy.nothingYet)).toBeInTheDocument();
     // The form stays closed until asked for.
-    expect(within(card).queryByRole('button', { name: 'Pay $66.00' })).not.toBeInTheDocument();
-    await user.click(within(card).getByRole('button', { name: 'Pay $66.00 now instead' }));
-    await user.click(within(card).getByRole('button', { name: 'Pay $66.00' }));
+    expect(within(card).queryByRole('button', { name: 'Pay $63.00' })).not.toBeInTheDocument();
+    await user.click(within(card).getByRole('button', { name: 'Pay $63.00 now instead' }));
+    await user.click(within(card).getByRole('button', { name: 'Pay $63.00' }));
     await waitFor(() => expect(handlers.onPayNow).toHaveBeenCalledExactlyOnceWith({ payment: visa }));
     expect(await within(card).findByText(copy.paid)).toBeInTheDocument();
     expect(navigation.refresh).toHaveBeenCalledOnce();
@@ -61,7 +61,7 @@ describe('ScheduledPaymentCard', () => {
     expect(within(card).getByText(`Pay by ${formatDateTime(YARD_VISIT_TIMES.payBy)} to keep this visit. Otherwise it's skipped, with no fees.`)).toBeInTheDocument();
     expect(within(card).getByText(`We'll try your card again on ${formatDateTime(YARD_VISIT_TIMES.retryAt)}.`)).toBeInTheDocument();
     // After a failure the form is open at once.
-    await user.click(within(card).getByRole('button', { name: 'Pay $66.00' }));
+    await user.click(within(card).getByRole('button', { name: 'Pay $63.00' }));
     await waitFor(() => expect(handlers.onPayNow).toHaveBeenCalledOnce());
     expect(await within(card).findByRole('status')).toHaveTextContent(/declined/i);
     expect(navigation.refresh).not.toHaveBeenCalled();
@@ -72,7 +72,7 @@ describe('ScheduledPaymentCard', () => {
     const { handlers } = mount(yardVisitPaymentDuePoster, {
       onPayNow: vi.fn().mockResolvedValue({ ok: false, code: 'requires_bank_verification', verification: { paymentId: 'pay_visit', kind: 'dev' } }),
     });
-    await user.click(screen.getByRole('button', { name: 'Pay $66.00' }));
+    await user.click(screen.getByRole('button', { name: 'Pay $63.00' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: messages.payments.verification.approve }));
     await waitFor(() => expect(handlers.onFinishPayVerification).toHaveBeenCalledExactlyOnceWith({ paymentId: 'pay_visit', outcome: 'approved' }));

@@ -178,8 +178,11 @@ async function prepare(db: Db, userId: string, bookingId: string, input: Propose
   const next = proposedTerms(current, parsed.data, allowed, { earliest: new Date(window.earliest.getTime() - WINDOW_GRACE_MS), latest: window.latest });
   if ('fieldErrors' in next) return { ok: false, result: { ok: false, code: 'validation_failed', fieldErrors: next.fieldErrors } };
   const before = loaded.terms.breakdown;
-  const after = quoteBreakdown(policy.fees, pricingOf(next.terms), { expenseAllowanceCents: next.terms.expenseAllowanceCents });
-  return { ok: true, loaded, terms: next.terms, types: next.types, before, after, differenceCents: after.posterTotalCents - before.posterTotalCents };
+  // Paid directly (2026-11-23): the new terms are agreed, and no money moves here (no difference to pay or refund). Held:
+  // a hold fee the booking didn't have (Plus) stays waived.
+  const direct = loaded.booking.paymentMode === 'direct';
+  const after = quoteBreakdown(policy.fees, pricingOf(next.terms), { expenseAllowanceCents: next.terms.expenseAllowanceCents, held: !direct, waiveHoldFee: before.taskPriceCents > 0 && before.posterFeeCents === 0 });
+  return { ok: true, loaded, terms: next.terms, types: next.types, before, after, differenceCents: direct ? 0 : after.posterTotalCents - before.posterTotalCents };
 }
 
 /** The money before and after (the propose page quotes as the person types). */

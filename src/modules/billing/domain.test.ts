@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_FEES, DEFAULT_PLANS } from '@/modules/markets/policy-defaults';
-import { aiSearchLimit, bookingRebateCents, breakEvenMonthlyCents, estimatedRebateCents, feeRebateCents, periodEndAfter, planCounts, planOffers, RENEWAL_GRACE_MS, subscriptionLive } from './domain';
+import { DEFAULT_PLANS } from '@/modules/markets/policy-defaults';
+import { aiSearchLimit, bookingRebateCents, feeRebateCents, periodEndAfter, planCounts, planOffers, RENEWAL_GRACE_MS, subscriptionLive } from './domain';
 
 const now = new Date('2026-11-18T15:00:00.000Z');
 const later = new Date('2026-12-18T15:00:00.000Z');
@@ -27,24 +27,17 @@ describe('plans (completion plan 9.13)', () => {
     expect(bookingRebateCents({ ...base, platformRoomCents: -40 })).toBe(0);
   });
 
-  it('estimates a month’s money back from real fees, with the cap', () => {
-    expect(estimatedRebateCents([600, 400], 5000, 1500)).toBe(500);
-    expect(estimatedRebateCents([6000, 4000], 5000, 1500)).toBe(1500);
-    expect(estimatedRebateCents([], 5000, 1500)).toBe(0);
-  });
-
-  it('says where each plan pays for itself, rounded up to $10', () => {
-    // 10% fee, half back: 5% of $100 is $5 ≥ $4.99; of $160, $8 ≥ $7.99.
-    expect(breakEvenMonthlyCents(499, 1000, 5000)).toBe(10_000);
-    expect(breakEvenMonthlyCents(799, 1000, 5000)).toBe(16_000);
-    expect(breakEvenMonthlyCents(499, 0, 5000)).toBe(0);
+  it('pays nothing back under the policies since 2026-11-23 (no service fees)', () => {
+    expect(DEFAULT_PLANS.plus.posterFeeRebateBps).toBe(0);
+    expect(DEFAULT_PLANS.pro.helperFeeRebateBps).toBe(0);
+    expect(bookingRebateCents({ feeCents: 300, rebateBps: DEFAULT_PLANS.plus.posterFeeRebateBps, capCents: DEFAULT_PLANS.plus.rebateMonthlyCapCents, rebatedThisMonthCents: 0, platformRoomCents: 300 })).toBe(0);
   });
 
   it('offers the viewer’s side first, at the policy’s prices', () => {
-    const helperFirst = planOffers(DEFAULT_PLANS, DEFAULT_FEES, 'pro');
+    const helperFirst = planOffers(DEFAULT_PLANS, 'pro');
     expect(helperFirst.map((offer) => offer.plan)).toEqual(['pro', 'plus']);
-    expect(helperFirst[0]).toEqual({ plan: 'pro', monthlyCents: 799, yearlyCents: 5999, rebateBps: 5000, rebateMonthlyCapCents: 4000, aiSearchesPerMonth: 100, breakEvenMonthlyCents: 16_000 });
-    expect(planOffers(DEFAULT_PLANS, DEFAULT_FEES, 'plus')[0]).toMatchObject({ plan: 'plus', monthlyCents: 499, yearlyCents: 3999, rebateMonthlyCapCents: 1500, breakEvenMonthlyCents: 10_000 });
+    expect(helperFirst[0]).toEqual({ plan: 'pro', monthlyCents: 799, yearlyCents: 5999, aiSearchesPerMonth: 100 });
+    expect(planOffers(DEFAULT_PLANS, 'plus')[0]).toEqual({ plan: 'plus', monthlyCents: 499, yearlyCents: 3999, aiSearchesPerMonth: 100 });
   });
 
   it('gives 5 AI searches a month without a plan and 100 with one', () => {

@@ -34,7 +34,18 @@
     "sending": "Sending…",
     "cancel": "Keep current offer",
     "aiDraft": "Write it for me",
-    "aiDraftHint": "Drafts a message from the task and your profile. Anything you've typed above is used as notes."
+    "aiDraftHint": "Drafts a message from the task and your profile. Anything you've typed above is used as notes.",
+    "payment": {
+      "legend": "How you get paid",
+      "direct": {
+        "label": "Directly by the client",
+        "hint": "After the task, the client pays you directly (cash, Zelle, Venmo…). No fee for either of you."
+      },
+      "held": {
+        "label": "Upfront, held by TasksNearMe",
+        "hint": "The client pays when booking. We hold it and send it to you when they say the task is done. You get the whole price; the client pays a small hold fee."
+      }
+    }
   },
   "back": "Find work",
   "budget": "Client's budget",
@@ -91,5 +102,14 @@
     "offerDrafted": "Offer message drafted with \"Write it for me\""
   },
   "when": "When",
-  "where": "Where it is"
+  "where": "Where it is",
+  "insights": {
+    "title": "Offer insights",
+    "pro": "Pro",
+    "offers": "{count, plural, =0 {No offers yet: yours would be the first} one {# offer so far} other {# offers so far}}",
+    "range": "from {low} to {high}",
+    "rangeHourly": "from {low} to {high} an hour",
+    "teaser": "See how many offers this task has and their price range before you offer.",
+    "seePro": "Get Pro"
+  }
 }

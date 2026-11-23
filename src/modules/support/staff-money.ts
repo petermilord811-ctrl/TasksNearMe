@@ -127,7 +127,7 @@ export async function applyResolutionMoney(
         const money = await bookingMoneyFacts(db, bookingId);
         if (!money) return false;
         const base: PriceBreakdown = row.completion.finalBreakdown;
-        const settled = quoteBreakdown(money.fees, { type: 'fixed', priceCents: input.settlePriceCents ?? base.taskPriceCents });
+        const settled = quoteBreakdown(money.fees, { type: 'fixed', priceCents: input.settlePriceCents ?? base.taskPriceCents }, { waiveHoldFee: money.waiveHoldFee === true });
         const finalBreakdown: PriceBreakdown = {
           ...base,
           taskPriceCents: settled.taskPriceCents,

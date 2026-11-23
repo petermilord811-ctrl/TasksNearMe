@@ -57,7 +57,7 @@ export function OfferDetailScreen({ data, handlers, now }: OfferDetailScreenProp
       {open && <OfferExpiry offer={offer} now={now} />}
     </section>
     {open && <PriceBreakdown breakdown={offer.breakdown} variant="poster" title={t('breakdownTitle')} />}
-    {open && <p className="text-sm text-muted-foreground">{t('paymentNote')}</p>}
+    {open && <p className="text-sm text-muted-foreground">{offer.paymentMode === 'direct' ? t('paymentNoteDirect', { helper: offer.helper.displayName }) : t('paymentNote')}</p>}
     {data.otherPendingOffers > 0 && <Link href={`${routes.app.task(task.id)}#compare`} className="group/compare inline-flex min-h-11 items-center gap-1.5 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline">{t('compareOthers', { count: data.otherPendingOffers })}<ArrowRight aria-hidden="true" className="size-4 transition-transform duration-300 ease-[var(--ease-out)] group-hover/compare:translate-x-0.5" /></Link>}
     <ActionBar actions={offer.actions} onAction={(action) => handlers.onOfferAction({ offerId: offer.id, action: action as OfferActionId })} sticky />
   </div>;

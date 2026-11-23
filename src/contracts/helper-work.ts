@@ -5,7 +5,7 @@ import type { OfferActionId } from './action-ids';
 import type { CategorySlug, Cents, ISODateTime, Photo, TimeZone } from './common';
 import type { InviteView } from './invites';
 import type { CategoryView } from './marketing';
-import type { PriceBreakdown, PricingInput } from './money';
+import { PAYMENT_MODES, type PaymentMode, type PriceBreakdown, type PricingInput } from './money';
 import type { OnboardingStep } from './routes';
 import type { OfferStatus } from './status';
 import type { TaskDetailsValue } from './posting';
@@ -163,7 +163,9 @@ export interface HelperOfferView {
   expiresAt: ISODateTime;
   revision: number;
   submittedAt: ISODateTime;
-  /** Helper variant: price, service fee, what you'll earn. */
+  /** Paid directly after the task, or upfront and held by TasksNearMe (2026-11-23). */
+  paymentMode: PaymentMode;
+  /** Helper variant: the price and what you'll earn (the whole price: helpers pay no fee). */
   breakdown: PriceBreakdown;
   /** From the domain: revise, withdraw, reconfirm (stale), message. */
   actions: ActionDescriptor<OfferActionId>[];
@@ -191,6 +193,12 @@ export interface HelperTaskView {
   aiDraftingEnabled: boolean;
   /** The bot check before sending a new offer (contracts/bot-check.ts, action `offer`). Absent: none is set up. */
   botCheck?: BotCheckConfig;
+  /**
+   * Offer insights (Pro, 2026-11-23): with Pro, how many offers the task has and the other helpers' price range (hourly
+   * rates for hourly work; only once at least two others offered, so no one's exact price shows), never whose; without,
+   * `{ pro: false }` (the page says what Pro shows). Absent in older fixtures.
+   */
+  insights?: { pro: false } | { pro: true; offerCount: number; priceRange?: { lowCents: Cents; highCents: Cents; hourly: boolean } };
 }
 
 export interface OfferRules {
@@ -229,6 +237,8 @@ export function createOfferInputSchema(rules: OfferRules) {
       startTime: z.string(code('required')).regex(/^([01]\d|2[0-3]):[0-5]\d$/, code('required')),
       message: z.string(code('required')).trim().max(rules.messageMaxLength, code('too_long')),
       brings: z.array(z.string().trim().min(2, code('too_short')).max(40, code('too_long'))).max(10, code('too_long')),
+      /** Paid directly by the client after the task (the default), or upfront and held by TasksNearMe (money.ts). */
+      paymentMode: z.enum(PAYMENT_MODES, code('invalid')).default('direct'),
     })
     .superRefine((offer, ctx) => {
       const issue = (path: (string | number)[], message: FieldErrorCode) => ctx.addIssue({ code: 'custom', path, message });

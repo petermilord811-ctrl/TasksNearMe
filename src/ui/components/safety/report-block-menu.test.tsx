@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
-import { ACTION_ERROR_CODES, REPORT_REASONS, routes, type ActionResult, type ReportHandlers, type ReportInput } from '@/contracts';
+import { ACTION_ERROR_CODES, OFFERED_REPORT_REASONS, REPORT_REASONS, routes, type ActionResult, type ReportHandlers, type ReportInput } from '@/contracts';
 import { blockedReportSubject, fakeHandler, jordanReportSubject } from '@/fixtures';
 import baseMessages from '../../../../messages/en/ui';
 import safety from '../../../../messages/en/ui/safety.json';
@@ -35,15 +35,15 @@ describe('Reporting and blocking', () => {
     expect(screen.getByText(safety.detailsTooShort)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByRole('radio', { name: safety.reasons.harassment })).toHaveFocus());
     expect(onReport).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('radio', { name: safety.reasons.off_platform_payment }));
+    await user.click(screen.getByRole('radio', { name: safety.reasons.scam_or_fraud }));
     await user.type(screen.getByRole('textbox', { name: safety.details }), 'too short');
     await user.click(screen.getByRole('button', { name: safety.send }));
     expect(onReport).not.toHaveBeenCalled();
     const details = screen.getByRole('textbox', { name: safety.details });
     await user.clear(details);
-    await user.type(details, '  Asked me to pay outside TasksNearMe.  ');
+    await user.type(details, '  Asked me for a deposit before the task.  ');
     await user.click(screen.getByRole('button', { name: safety.send }));
-    await waitFor(() => expect(onReport).toHaveBeenCalledExactlyOnceWith({ reason: 'off_platform_payment', details: 'Asked me to pay outside TasksNearMe.' }));
+    await waitFor(() => expect(onReport).toHaveBeenCalledExactlyOnceWith({ reason: 'scam_or_fraud', details: 'Asked me for a deposit before the task.' }));
     expect(await screen.findByText(safety.submitted)).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
@@ -145,5 +145,12 @@ describe('Reporting and blocking', () => {
 
   it('has copy for every report reason', () => {
     REPORT_REASONS.forEach((reason) => expect(safety.reasons[reason]).toEqual(expect.any(String)));
+  });
+
+  it('no longer offers "Payment outside TasksNearMe": paying a helper directly is how it works since 2026-11-23', () => {
+    mountDialog();
+    expect(screen.queryByRole('radio', { name: safety.reasons.off_platform_payment })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('radio').map((radio) => radio.getAttribute('value'))).toEqual([...OFFERED_REPORT_REASONS]);
+    expect(OFFERED_REPORT_REASONS).not.toContain('off_platform_payment');
   });
 });

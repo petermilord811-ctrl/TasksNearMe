@@ -19,7 +19,8 @@
   "helper": "Your helper",
   "offer": "The offer",
   "breakdownTitle": "What you'll pay if you book",
-  "paymentNote": "You pay when you book. Your helper is paid after the task is done.",
+  "paymentNote": "You pay when you book. TasksNearMe holds it and pays your helper when you say the task is done.",
+  "paymentNoteDirect": "You pay {helper} directly once the task is done: cash, Zelle, Venmo or however you agree. Nothing is charged here, and there is no fee.",
   "closedNotice": {
     "expired": "This offer expired {relative}. You can still request {helper} directly, with your own price and time.",
     "declined": "You declined this offer.",
@@ -29,7 +30,7 @@
   },
   "compareOthers": "Compare with {count, plural, one {# other offer} other {# other offers}}",
   "comparison": "Compare offers",
-  "comparisonDescription": "Review the details side by side. The total includes your service fee and any expense allowance.",
+  "comparisonDescription": "Review the details side by side. Each offer says how the helper is paid; a total held by TasksNearMe includes the hold fee and any expense allowance.",
   "comparisonFeature": "Offer details",
   "total": "What you'd pay",
   "rating": "Rating",
@@ -54,5 +55,10 @@
     "error": "Offer action error: {code}",
     "reliable": "A reliable helper's offer",
     "detailLoading": "An offer · loading"
+  },
+  "pro": "Pro",
+  "payment": {
+    "direct": "Pay {helper} directly after the task. No fee.",
+    "held": "Paid upfront: TasksNearMe holds it until you say the task is done."
   }
 }

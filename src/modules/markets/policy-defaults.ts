@@ -5,17 +5,22 @@ import type { CancellationPolicy, FeeSchedule, PlanPolicy, PolicyTimers } from '
  * Bookings snapshot the policy version they were confirmed under, so changing these later
  * never re-prices existing bookings.
  */
-export const DEFAULT_FEES: FeeSchedule = { posterBps: 1000, posterMinCents: 300, helperBps: 1000 };
+/**
+ * No service fees (owner, 2026-11-23): nothing from helpers, and from clients only the hold fee, 5% (at least $1), when
+ * the helper asks to be paid upfront and TasksNearMe holds the money until the client says the task is done. A booking
+ * paid directly costs nothing (`quoteBreakdown`'s `held: false`). Migration 0078 published these for every market.
+ */
+export const DEFAULT_FEES: FeeSchedule = { posterBps: 500, posterMinCents: 100, helperBps: 0 };
 
 /**
- * The optional plans (completion plan 9.13, decisions.md 2026-11-18): Plus for clients, Pro for helpers. A rebate is
- * the share of that side's service fee paid back on each booking completed while subscribed (5,000 bps: half), up to a
- * cap per calendar month (the same cap on yearly plans): without it the busiest people's rebates would cut most of
- * the platform's fee (9c's review: an uncapped half-fee rebate is 5% of a subscriber's volume).
+ * The optional plans (completion plan 9.13; LinkedIn-Premium-style since 2026-11-23, decisions.md): Plus for clients,
+ * Pro for helpers. With no service fees nothing is paid back any more (the rebate shares are 0, so the old rebate code
+ * computes nothing): Plus waives the hold fee at payment (`plusWaivesHoldFee`), Pro puts a helper's offers first with
+ * a badge and shows offer insights; both raise the month's AI searches.
  */
 export const DEFAULT_PLANS: PlanPolicy = {
-  plus: { monthlyCents: 499, yearlyCents: 3999, posterFeeRebateBps: 5000, rebateMonthlyCapCents: 1500, aiSearchesPerMonth: 100 },
-  pro: { monthlyCents: 799, yearlyCents: 5999, helperFeeRebateBps: 5000, rebateMonthlyCapCents: 4000, aiSearchesPerMonth: 100 },
+  plus: { monthlyCents: 499, yearlyCents: 3999, posterFeeRebateBps: 0, rebateMonthlyCapCents: 0, aiSearchesPerMonth: 100 },
+  pro: { monthlyCents: 799, yearlyCents: 5999, helperFeeRebateBps: 0, rebateMonthlyCapCents: 0, aiSearchesPerMonth: 100 },
   free: { aiSearchesPerMonth: 5 },
 };
 

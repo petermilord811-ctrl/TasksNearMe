@@ -45,7 +45,7 @@ async function refundsOf(bookingId: string) {
 describe('cancelling', () => {
   it('refunds everything when the client cancels early', async () => {
     const { bookingId } = await booked('tsk_sh_early', 3 * 24 * HOUR);
-    expect(await previewCancellation(db, 'usr_ben', bookingId, new Date())).toMatchObject({ by: 'poster', late: false, posterRefundCents: 6600, helperCompensationCents: 0 });
+    expect(await previewCancellation(db, 'usr_ben', bookingId, new Date())).toMatchObject({ by: 'poster', late: false, posterRefundCents: 6300, helperCompensationCents: 0 });
     expect(await cancelBookingBy(deps, 'usr_ben', bookingId, { reason: 'unavailable', note: '' }, new Date())).toEqual({
       ok: false,
       code: 'validation_failed',
@@ -54,23 +54,23 @@ describe('cancelling', () => {
     expect(await cancelBookingBy(deps, 'usr_ben', bookingId, { reason: 'plans_changed', note: '' }, new Date())).toEqual({ ok: true, code: 'canceled' });
     const [row] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
     expect(row).toMatchObject({ status: 'canceled', cancelReason: 'poster_early', canceledBy: 'poster', cancelChoice: 'plans_changed' });
-    expect(await refundsOf(bookingId)).toEqual([{ amount: 6600, status: 'succeeded' }]);
+    expect(await refundsOf(bookingId)).toEqual([{ amount: 6300, status: 'succeeded' }]);
     const [charge] = await db.select({ status: payments.status }).from(payments).where(eq(payments.bookingId, bookingId));
     expect(charge?.status).toBe('refunded');
   });
 
   it('keeps the late compensation for the helper when the client cancels within 24 h', async () => {
     const { bookingId } = await booked('tsk_sh_late', 5 * HOUR);
-    expect(await previewCancellation(db, 'usr_ben', bookingId, new Date())).toMatchObject({ late: true, posterRefundCents: 5400, helperCompensationCents: 1200 });
+    expect(await previewCancellation(db, 'usr_ben', bookingId, new Date())).toMatchObject({ late: true, posterRefundCents: 5100, helperCompensationCents: 1200 });
     await cancelBookingBy(deps, 'usr_ben', bookingId, { reason: 'plans_changed', note: 'Sorry!' }, new Date());
-    expect(await refundsOf(bookingId)).toEqual([{ amount: 5400, status: 'succeeded' }]);
+    expect(await refundsOf(bookingId)).toEqual([{ amount: 5100, status: 'succeeded' }]);
   });
 
   it('refunds in full and adds a strike when the helper cancels late', async () => {
     const { bookingId } = await booked('tsk_sh_helper', 5 * HOUR);
-    expect(await previewCancellation(db, 'usr_jordan', bookingId, new Date())).toMatchObject({ by: 'helper', posterRefundCents: 6600, helperStrike: true });
+    expect(await previewCancellation(db, 'usr_jordan', bookingId, new Date())).toMatchObject({ by: 'helper', posterRefundCents: 6300, helperStrike: true });
     expect(await cancelBookingBy(deps, 'usr_jordan', bookingId, { reason: 'illness', note: '' }, new Date())).toEqual({ ok: true, code: 'canceled' });
-    expect(await refundsOf(bookingId)).toEqual([{ amount: 6600, status: 'succeeded' }]);
+    expect(await refundsOf(bookingId)).toEqual([{ amount: 6300, status: 'succeeded' }]);
     const strikes = await db.select().from(helperStrikes).where(eq(helperStrikes.bookingId, bookingId));
     expect(strikes.map((s) => s.reason)).toEqual(['late_cancellation']);
     expect(await cancelBookingBy(deps, 'usr_jordan', bookingId, { reason: 'illness', note: '' }, new Date())).toEqual({ ok: false, code: 'not_allowed' });
@@ -87,7 +87,7 @@ describe('the day of the task', () => {
     expect(await reportNoShow(deps, 'usr_ben', bookingId, { note: '' }, new Date(start.getTime() + 40 * 60_000))).toEqual({ ok: true, code: 'canceled' });
     const [row] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
     expect(row?.cancelReason).toBe('helper_no_show');
-    expect(await refundsOf(bookingId)).toEqual([{ amount: 6600, status: 'succeeded' }]);
+    expect(await refundsOf(bookingId)).toEqual([{ amount: 6300, status: 'succeeded' }]);
   });
 
   it("cancels as a client no-show when nobody answers a can't-access report; the helper gets $12.00", async () => {
@@ -103,7 +103,7 @@ describe('the day of the task', () => {
     await expireCantAccess(db, at(51), { bookingId }, deps.payments);
     const [row] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
     expect(row).toMatchObject({ status: 'canceled', cancelReason: 'poster_no_show' });
-    expect(await refundsOf(bookingId)).toEqual([{ amount: 5400, status: 'succeeded' }]);
+    expect(await refundsOf(bookingId)).toEqual([{ amount: 5100, status: 'succeeded' }]);
     const compensation = await db.select().from(earnings).where(and(eq(earnings.bookingId, bookingId), eq(earnings.kind, 'cancellation_compensation')));
     expect(compensation.map((transfer) => transfer.amountCents)).toEqual([1200]);
   });

@@ -41,7 +41,7 @@
     "hourly": "Tarifa por hora",
     "price": "Precio de la tarea ($)",
     "rate": "Tarifa por hora ($)",
-    "priceHint": "Escribe el precio de la tarea. Abajo aparecen tus ganancias después de la tarifa de servicio.",
+    "priceHint": "Escribe el precio de la tarea. Abajo aparece lo que recibirás.",
     "rateHint": "Escribe tu tarifa por hora. Tus ganancias de abajo usan el límite de horas.",
     "estimatedHours": "Horas estimadas",
     "estimatedHoursHint": "Cuánto esperas que dure la tarea.",

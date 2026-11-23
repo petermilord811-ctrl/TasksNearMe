@@ -63,7 +63,10 @@
     },
     "nothingChargedTitle": "Canceling is free",
     "nothingCharged": "Nothing has been charged yet, so there's nothing to refund and no fee.",
-    "nothingChargedHelper": "{client} hasn't been charged yet, so canceling now is free and doesn't count against you."
+    "nothingChargedHelper": "{client} hasn't been charged yet, so canceling now is free and doesn't count against you.",
+    "directTitle": "Nothing to refund",
+    "directPoster": "You pay {helper} directly, so nothing was charged here. Let them know as early as you can: they set the time aside for you.",
+    "directHelper": "{client} pays you directly, so nothing was charged here and there's nothing to refund."
   },
   "late": {
     "title": "How late will you be?",

@@ -13,10 +13,10 @@ const bookcase = { id: 'bkg_bookcase', title: 'Assemble a bookcase' };
 const tv = { id: 'bkg_tv', title: 'Anchor a tall bookshelf to the wall' };
 
 const exceptionRows: AdminMoneyRow[] = [
-  { id: 'ref_failed_desk', kind: 'refund', amountCents: 1650, status: 'failed', at: '2026-11-23T14:40:00.000Z', person: person(maya), booking: desk, reference: 'devre_7f3a', detail: 'dispute_settlement', exception: 'refund_failed' },
-  { id: 'po_failed_jordan', kind: 'payout', amountCents: 10800, status: 'failed', at: '2026-11-22T12:00:00.000Z', person: person(jordan), reference: 'devpo_91c2', detail: '6789', exception: 'payout_failed' },
-  { id: 'bkg_bookcase', kind: 'transfer', amountCents: 6300, status: 'pending', at: '2026-11-19T20:00:00.000Z', person: person(jordan), booking: bookcase, detail: 'earnings', exception: 'transfer_missing' },
-  { id: 'pay_tv_canceled', kind: 'charge', amountCents: 8800, status: 'succeeded', at: '2026-11-18T15:00:00.000Z', person: person(ben), booking: tv, reference: 'devpi_44d1', detail: 'booking_funding', exception: 'canceled_not_refunded' },
+  { id: 'ref_failed_desk', kind: 'refund', amountCents: 1575, status: 'failed', at: '2026-11-23T14:40:00.000Z', person: person(maya), booking: desk, reference: 'devre_7f3a', detail: 'dispute_settlement', exception: 'refund_failed' },
+  { id: 'po_failed_jordan', kind: 'payout', amountCents: 12000, status: 'failed', at: '2026-11-22T12:00:00.000Z', person: person(jordan), reference: 'devpo_91c2', detail: '6789', exception: 'payout_failed' },
+  { id: 'bkg_bookcase', kind: 'transfer', amountCents: 7000, status: 'pending', at: '2026-11-19T20:00:00.000Z', person: person(jordan), booking: bookcase, detail: 'earnings', exception: 'transfer_missing' },
+  { id: 'pay_tv_canceled', kind: 'charge', amountCents: 8400, status: 'succeeded', at: '2026-11-18T15:00:00.000Z', person: person(ben), booking: tv, reference: 'devpi_44d1', detail: 'booking_funding', exception: 'canceled_not_refunded' },
 ];
 
 const totals = { chargedCents: 184300, refundedCents: 23650, transferredCents: 142500, paidOutCents: 118200 };
@@ -29,10 +29,10 @@ export const adminPaymentsChargesData: AdminPaymentsPageData = {
   tab: 'charges',
   query: '',
   rows: [
-    { id: 'pay_desk', kind: 'charge', amountCents: 6600, status: 'partially_refunded', at: '2026-11-17T18:00:00.000Z', person: person(maya), booking: desk, reference: 'devpi_desk', detail: 'booking_funding' },
-    { id: 'pay_bookcase', kind: 'charge', amountCents: 7700, status: 'succeeded', at: '2026-11-16T15:00:00.000Z', person: person(ruth), booking: bookcase, reference: 'devpi_bookcase', detail: 'booking_funding' },
-    { id: 'pay_tv', kind: 'charge', amountCents: 8800, status: 'succeeded', at: '2026-11-15T20:00:00.000Z', person: person(ben), booking: tv, reference: 'devpi_tv', detail: 'booking_funding' },
-    { id: 'pay_desk_change', kind: 'charge', amountCents: 2200, status: 'failed', at: '2026-11-14T16:00:00.000Z', person: person(maya), booking: desk, reference: 'devpi_change', detail: 'change_funding' },
+    { id: 'pay_desk', kind: 'charge', amountCents: 6300, status: 'partially_refunded', at: '2026-11-17T18:00:00.000Z', person: person(maya), booking: desk, reference: 'devpi_desk', detail: 'booking_funding' },
+    { id: 'pay_bookcase', kind: 'charge', amountCents: 7350, status: 'succeeded', at: '2026-11-16T15:00:00.000Z', person: person(ruth), booking: bookcase, reference: 'devpi_bookcase', detail: 'booking_funding' },
+    { id: 'pay_tv', kind: 'charge', amountCents: 8400, status: 'succeeded', at: '2026-11-15T20:00:00.000Z', person: person(ben), booking: tv, reference: 'devpi_tv', detail: 'booking_funding' },
+    { id: 'pay_desk_change', kind: 'charge', amountCents: 2100, status: 'failed', at: '2026-11-14T16:00:00.000Z', person: person(maya), booking: desk, reference: 'devpi_change', detail: 'change_funding' },
   ],
   counts,
   totals,
@@ -42,9 +42,9 @@ export const adminPaymentsPayoutsData: AdminPaymentsPageData = {
   tab: 'payouts',
   query: '',
   rows: [
-    { id: 'po_failed_jordan', kind: 'payout', amountCents: 10800, status: 'failed', at: '2026-11-22T12:00:00.000Z', person: person(jordan), reference: 'devpo_91c2', detail: '6789' },
-    { id: 'po_paid_jordan', kind: 'payout', amountCents: 5400, status: 'paid', at: '2026-11-19T12:00:00.000Z', person: person(jordan), reference: 'devpo_77aa', detail: '6789' },
-    { id: 'po_transit_jordan', kind: 'payout', amountCents: 7200, status: 'in_transit', at: '2026-11-23T12:00:00.000Z', person: person(jordan), reference: 'devpo_12bc', detail: '6789' },
+    { id: 'po_failed_jordan', kind: 'payout', amountCents: 12000, status: 'failed', at: '2026-11-22T12:00:00.000Z', person: person(jordan), reference: 'devpo_91c2', detail: '6789' },
+    { id: 'po_paid_jordan', kind: 'payout', amountCents: 6000, status: 'paid', at: '2026-11-19T12:00:00.000Z', person: person(jordan), reference: 'devpo_77aa', detail: '6789' },
+    { id: 'po_transit_jordan', kind: 'payout', amountCents: 8000, status: 'in_transit', at: '2026-11-23T12:00:00.000Z', person: person(jordan), reference: 'devpo_12bc', detail: '6789' },
   ],
   counts,
   totals,

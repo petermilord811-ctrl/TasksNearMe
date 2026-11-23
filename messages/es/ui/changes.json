@@ -13,7 +13,7 @@
     "fieldsHint": "Edita lo que haya que cambiar. Deja los demás detalles como están.",
     "price": "Precio de la tarea (USD)",
     "rate": "Tarifa por hora (USD)",
-    "moneyHint": "Escribe dólares y centavos. Las tarifas de servicio se muestran abajo.",
+    "moneyHint": "Escribe dólares y centavos. Cualquier tarifa se muestra abajo.",
     "hoursCap": "Límite de horas",
     "hoursHint": "El máximo de horas incluidas en la reserva, hasta 24.",
     "start": "Nuevo inicio ({zone})",

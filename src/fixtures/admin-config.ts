@@ -2,6 +2,7 @@ import type { AdminConfigHandlers, AdminConfigPageData, AdminMarketRow, AdminMar
 
 /** Staff tools, part 7 (UI-038): Austin's config, as Riley (an admin) sees it. */
 
+/** The launch policy: service fees of 10% on each side (the client's at least $3); retired on 2026-11-23. */
 const launch: AdminPolicyValues = {
   posterBps: 1000,
   posterMinCents: 300,
@@ -17,6 +18,9 @@ const launch: AdminPolicyValues = {
   maxLeadDays: 14,
   minLeadHours: 3,
 };
+
+/** In use since 2026-11-23 (no service fees, migration 0078): the client's hold fee, 5% (at least $1), and no helper fee. */
+const noFees: AdminPolicyValues = { ...launch, posterBps: 500, posterMinCents: 100, helperBps: 0 };
 
 /**
  * The Markets section (completion plan 8.2), as Riley (an admin) sees it: Austin in pre-launch, Gainesville paused with
@@ -77,10 +81,11 @@ export const adminConfigData: AdminConfigPageData = {
   outage: { paused: false, changed: { at: '2026-11-02T14:05:00.000Z', by: 'Riley N.', reason: 'Stripe confirmed the charge errors are fixed; charges are going through again.' } },
   // Search engines: never changed, the site's default (site pages only), as on the live site before launch.
   searchIndexing: { setting: 'site', isDefault: true, effective: 'site' },
-  current: { id: 'pol_austin_1', version: 1, status: 'published', publishedAt: '2026-10-15T15:00:00.000Z', publishedBy: 'Riley N.', values: launch },
+  current: { id: 'pol_mkt_austin_v3_nofees', version: 3, status: 'published', publishedAt: '2026-11-23T17:00:00.000Z', publishedBy: 'TasksNearMe', values: noFees },
   history: [
-    { id: 'pol_austin_2', version: 2, status: 'draft', values: { ...launch, lateFeeMinCents: 1200 } },
-    { id: 'pol_austin_1', version: 1, status: 'published', publishedAt: '2026-10-15T15:00:00.000Z', publishedBy: 'Riley N.', values: launch },
+    { id: 'pol_mkt_austin_v3_nofees', version: 3, status: 'published', publishedAt: '2026-11-23T17:00:00.000Z', publishedBy: 'TasksNearMe', values: noFees },
+    { id: 'pol_austin_2', version: 2, status: 'retired', values: { ...launch, lateFeeMinCents: 1200 } },
+    { id: 'pol_austin_1', version: 1, status: 'retired', publishedAt: '2026-10-15T15:00:00.000Z', publishedBy: 'Riley N.', values: launch },
   ],
   flags: [
     { key: 'ai_drafting', description: 'Writing help: Help me describe this when posting, Write it for me on helper profiles and offers', enabled: true },

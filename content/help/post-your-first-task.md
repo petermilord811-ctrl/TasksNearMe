@@ -3,10 +3,10 @@ title: Posting your first task
 summary: What to include so helpers can make a clear offer.
 topic: getting-started
 order: 1
-updated: 2026-11-11
+updated: 2026-11-23
 action: post_task
 ---
-Posting is free. You only pay when you book a helper.
+Posting is free, and there are no service fees. You pay for a task only once you book a helper.
 
 ## What to include
 

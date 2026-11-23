@@ -55,8 +55,8 @@ describe('OfferCard and OfferComparison', () => {
   it('compares supplied totals and details in a semantic table without addresses', () => {
     const { container } = render(<NextIntlClientProvider locale="en" messages={{ ...messages, offers }}><OfferComparison offers={deskOwnerView.offers} now={now} /></NextIntlClientProvider>);
     const table = within(screen.getByRole('table', { name: 'Compare offers' }));
-    expect(table.getByText('$66.00')).toBeInTheDocument();
-    expect(table.getByText('$60.50')).toBeInTheDocument();
+    expect(table.getByText('$63.00')).toBeInTheDocument();
+    expect(table.getByText('$57.75')).toBeInTheDocument();
     expect(table.getByRole('rowheader', { name: "What you'd pay" })).toBeInTheDocument();
     expect(table.getByText('Nothing listed')).toBeInTheDocument();
     expect(container.textContent).not.toContain('1234 Example Lane');

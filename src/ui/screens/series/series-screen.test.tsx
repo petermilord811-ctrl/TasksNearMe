@@ -68,7 +68,7 @@ describe('SeriesScreen', () => {
     const actions = screen.getByRole('region', { name: seriesCopy.actionsLabel });
     expect(within(actions).getAllByRole('button').map((button) => button.textContent)).toEqual(['Pause', 'Change card', 'Stop regular visits', 'Message Jordan T.']);
     // Each visit's numbers for the client.
-    expect(screen.getByRole('region', { name: seriesCopy.perVisitTotal })).toHaveTextContent('$66.00');
+    expect(screen.getByRole('region', { name: seriesCopy.perVisitTotal })).toHaveTextContent('$63.00');
     expect(screen.getByRole('region', { name: seriesCopy.past })).toBeVisible();
   });
 
@@ -108,7 +108,7 @@ describe('SeriesScreen', () => {
     const { handlers } = mount(seriesHelperActiveData);
     expect(screen.queryByText(/Visa/)).not.toBeInTheDocument();
     expect(screen.getByText("Maya R.'s card is charged 2 days before each visit. You'll see the address once a visit is paid.")).toBeVisible();
-    expect(screen.getByRole('region', { name: seriesCopy.perVisitEarnings })).toHaveTextContent('$54.00');
+    expect(screen.getByRole('region', { name: seriesCopy.perVisitEarnings })).toHaveTextContent('$60.00');
     expect(visitItems()[1]).toHaveTextContent("Maya R.'s card is charged");
     const actions = screen.getByRole('region', { name: seriesCopy.actionsLabel });
     expect(within(actions).getAllByRole('button').map((button) => button.textContent)).toEqual(['End regular visits', 'Message Maya R.']);

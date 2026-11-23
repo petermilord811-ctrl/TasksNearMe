@@ -22,8 +22,9 @@ describe('MyOffersScreen', () => {
     renderOffers(myOffersBookedChangedData, 'booked');
     expect(screen.getByText(/Your price \$80\.00/)).toBeVisible();
     expect(screen.getByText('· was $60.00')).toBeVisible();
-    expect(screen.getAllByText(/\$72\.00/).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/\$54\.00/)).not.toBeInTheDocument();
+    // What he earns as the booking stands (the whole $80.00: no service fees since 2026-11-23), not the offer's $60.00.
+    expect(screen.getAllByText(/You earn \$80\.00/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/You earn \$60\.00/)).not.toBeInTheDocument();
   });
 
   it('opens the requested invite in a sheet, retains supplied order, and restores focus', async () => {
@@ -54,7 +55,8 @@ describe('MyOffersScreen', () => {
     expect(row.getByText('Waiting for client')).toBeVisible();
     expect(row.getByText('Your price $60.00')).toBeVisible();
     // What the helper earns: on the right from 640 px, in the details line on phones.
-    expect(row.getAllByText('$54.00').length).toBeGreaterThan(0);
+    expect(row.getAllByText('$60.00').length).toBeGreaterThan(0);
+    expect(row.getAllByText('You earn $60.00').length).toBeGreaterThan(0);
     expect(row.getByText('Expires in 3 days')).toBeVisible();
     expect(screen.queryByText('Updated offer')).not.toBeInTheDocument();
   });

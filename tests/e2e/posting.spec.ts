@@ -59,10 +59,10 @@ test('a poster posts a task with the wizard and finds it on the board', async ({
   await page.getByLabel('Task price ($)').fill('60');
   await next();
 
-  // Review: nothing is posted until "Post task" (UI-024); the quote comes from the fee engine ($60 + $6 fee)
+  // Review: nothing is posted until "Post task" (UI-024); the quote comes from the fee engine (paid upfront: $60 + the $3 hold fee)
   await expect(page.getByText('Step 7 of 7', { exact: false })).toBeVisible();
   await expect(page).toHaveURL(/\/app\/tasks\/new(\?step=[a-z]+)?$/);
-  await expect(page.getByText('$66.00').first()).toBeVisible();
+  await expect(page.getByText('$63.00').first()).toBeVisible();
   await page.getByRole('button', { name: 'Post task' }).click();
   // The new task's management page: no offers yet.
   await expect(page).toHaveURL(/\/app\/tasks\/tsk_[0-9a-f]+$/);

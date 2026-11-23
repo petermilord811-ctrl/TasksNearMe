@@ -9,8 +9,8 @@ import { jordan, maya } from './people';
 
 /**
  * Direct invites (UI-025; ui-contract scenarios `invite.*`): three weeks after the desk, Maya books Jordan
- * again for a bookshelf at $45 ($49.50 held on her card, until Thu Dec 10, 10:00 am). Jordan counters at
- * $50 (Maya would authorize $55.00).
+ * again for a bookshelf at $45 ($47.25 held on her card with the hold fee, until Thu Dec 10, 10:00 am). Jordan
+ * counters at $50 (Maya would authorize $52.50).
  */
 
 const bookshelfTask = { id: 'tsk_bookshelf', title: 'Assemble a bookshelf', categorySlug: 'furniture-assembly' as const };
@@ -59,7 +59,7 @@ const sent: InviteView = {
   helper: jordan,
   terms: { pricing: { type: 'fixed', priceCents: 4500 }, start: START, message: 'Same as the desk last time: a flat-pack bookshelf.' },
   breakdown: bookshelfBreakdown,
-  authorizedCents: 4950,
+  authorizedCents: 4725,
   expiresAt: '2026-12-10T16:00:00.000Z',
   sentAt: '2026-12-08T16:00:00.000Z',
   actions: ['cancel_invite'],

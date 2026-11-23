@@ -16,6 +16,6 @@ it('labels every timeline event and displays supplied money in order', () => {
   const events = screen.getAllByRole('listitem');
   expect(events).toHaveLength(deskTimelineCompleted.length);
   expect(events[0]).toHaveTextContent('Task posted');
-  expect(screen.getByText('Payment received · $66.00')).toBeVisible();
-  expect(events.at(-1)).toHaveTextContent('Earnings transferred · $54.00');
+  expect(screen.getByText('Payment received · $63.00')).toBeVisible();
+  expect(events.at(-1)).toHaveTextContent('Earnings transferred · $60.00');
 });

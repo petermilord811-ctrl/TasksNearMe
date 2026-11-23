@@ -9,15 +9,16 @@ const now = new Date('2026-02-12T18:00:00.000Z');
 const at = (iso: string) => new Date(iso);
 
 /** The $60 booking of blueprint 04 §8: 10% from each side. */
+/** The $60 desk held by TasksNearMe (no service fees since 2026-11-23): $63.00 charged, the $3.00 hold fee kept. */
 const sixty: PriceBreakdown = {
   pricingType: 'fixed',
   taskPriceCents: 6000,
-  posterFeeCents: 600,
-  helperFeeCents: 600,
+  posterFeeCents: 300,
+  helperFeeCents: 0,
   expenseAllowanceCents: 0,
-  posterTotalCents: 6600,
-  helperEarningsCents: 5400,
-  platformRevenueCents: 1200,
+  posterTotalCents: 6300,
+  helperEarningsCents: 6000,
+  platformRevenueCents: 300,
 };
 
 const AUSTIN = 'America/Chicago';
@@ -175,14 +176,20 @@ describe('booking again', () => {
 });
 
 describe('money', () => {
-  it('reproduces the conservative $6.97 contribution of a $60 booking (blueprint 04 §8)', () => {
-    expect(contributionOf([booking('one', { status: 'completed', completedAt: at('2026-02-11T20:00:00.000Z') })], AUSTIN)).toEqual({ cents: 697, bookings: 1 });
+  it('reproduces the conservative −$1.94 contribution of a held $60 booking (blueprint 04 §8)', () => {
+    expect(contributionOf([booking('one', { status: 'completed', completedAt: at('2026-02-11T20:00:00.000Z') })], AUSTIN)).toEqual({ cents: -194, bookings: 1 });
   });
 
   it('splits the payout account’s $2 a month over the helper’s bookings that month', () => {
     const two = ['x', 'y'].map((id) => booking(id, { status: 'completed', completedAt: at('2026-02-11T20:00:00.000Z') }));
     // $1 of account fee each instead of $2.
-    expect(contributionOf(two, AUSTIN)).toEqual({ cents: 797, bookings: 2 });
+    expect(contributionOf(two, AUSTIN)).toEqual({ cents: -94, bookings: 2 });
+  });
+
+  it('leaves out bookings paid directly: no money moved through TasksNearMe (2026-11-23)', () => {
+    const direct = booking('direct', { status: 'completed', completedAt: at('2026-02-11T20:00:00.000Z'), paymentMode: 'direct', breakdown: { ...sixty, posterFeeCents: 0, posterTotalCents: 6000, platformRevenueCents: 0 } });
+    expect(contributionOf([direct], AUSTIN)).toBeUndefined();
+    expect(contributionOf([direct, booking('held', { status: 'completed', completedAt: at('2026-02-11T20:00:00.000Z') })], AUSTIN)).toEqual({ cents: -194, bookings: 1 });
   });
 
   it('is left out for roles without money, and shown to finance', () => {
@@ -197,12 +204,12 @@ describe('money', () => {
     const agent = computeMetrics(facts({ bookings: [completed], grants: [] }), metricsPeriod(7, now, AUSTIN), false);
     expect(agent.canSeeMoney).toBe(false);
     expect(agent.rewards).toBeUndefined();
-    expect(targetOf(agent.targets, 'contribution_per_booking')).toEqual({ id: 'contribution_per_booking', area: 'economics', comparison: 'at_least', target: { kind: 'money', cents: 600 }, status: 'restricted' });
+    expect(targetOf(agent.targets, 'contribution_per_booking')).toEqual({ id: 'contribution_per_booking', area: 'economics', comparison: 'at_least', target: { kind: 'money', cents: 0 }, status: 'restricted' });
     expect(agent.daily.every((day) => day.rewardsDeliveredCents === undefined)).toBe(true);
     expect(agent.totals.rewardsDeliveredCents).toBeUndefined();
 
     const finance = computeMetrics(facts({ bookings: [completed], grants }), metricsPeriod(7, now, AUSTIN), true);
-    expect(targetOf(finance.targets, 'contribution_per_booking')).toMatchObject({ status: 'met', value: { kind: 'money_per_booking', cents: 697, bookings: 1 } });
+    expect(targetOf(finance.targets, 'contribution_per_booking')).toMatchObject({ status: 'missed', value: { kind: 'money_per_booking', cents: -194, bookings: 1 } });
     expect(finance.rewards!.programs.map((program) => program.program)).toEqual(['welcome', 'repeat', 'recurring_month']);
     expect(finance.rewards!.programs[0]).toMatchObject({ budgetCents: 500_000, budgetPeriod: 'month', releasedThisMonthCents: 5000, committedCents: 5000, deliveredCents: 5000, remainingCents: 495_000, budgetUsedPercent: 1, periodGrantedCents: 5000, periodDeliveredCents: 5000 });
     expect(finance.rewards!.programs[1]).toMatchObject({ committedCents: 1000, inReview: 1, periodVoided: 1, periodGrants: 1 });

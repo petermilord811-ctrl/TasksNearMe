@@ -13,6 +13,8 @@ vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.clearAllMocks(); window.sessionStorage.clear(); });
 
 const desk = { ...helperDeskWithOffer, myOffer: undefined };
+/** One line of the earnings breakdown: its label and amount. */
+const line = (label: string) => screen.getByText(label).closest('div');
 function mount(props: Partial<OfferFormProps> = {}) {
   const handlers: HelperWorkHandlers = { ...fakeHelperWorkHandlers, onQuote: vi.fn(async () => deskBreakdown), onSubmitOffer: vi.fn(fakeHandler<OfferInput>({ ok: true, code: 'sent' }, 0)) };
   return { handlers, ...render(<NextIntlClientProvider locale="en" messages={messages}><OfferForm data={desk} handlers={handlers} {...props} /></NextIntlClientProvider>) };
@@ -91,11 +93,36 @@ describe('helper offer form', () => {
     await user.type(screen.getByRole('textbox', { name: "What you'll bring" }), 'Drill{Enter}');
     expect(handlers.onSubmitOffer).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Send offer' }));
-    await waitFor(() => expect(handlers.onSubmitOffer).toHaveBeenCalledExactlyOnceWith({ pricing: { type: 'fixed', priceCents: 6000 }, startTime: '10:30', message: 'I can help.', brings: ['Drill'] }));
+    await waitFor(() => expect(handlers.onSubmitOffer).toHaveBeenCalledExactlyOnceWith({ pricing: { type: 'fixed', priceCents: 6000 }, startTime: '10:30', message: 'I can help.', brings: ['Drill'], paymentMode: 'direct' }));
     expect(await screen.findByText(messages.feedback.success.sent)).toBeInTheDocument();
   });
 
-  it('debounces pricing requests and displays the supplied $54.00 earnings', async () => {
+  it('sends paymentMode direct by default, and held when the helper asks to be paid upfront (2026-11-23)', async () => {
+    const user = userEvent.setup();
+    const first = mount();
+    expect(screen.getByRole('radio', { name: 'Directly by the client' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'Upfront, held by TasksNearMe' })).not.toBeChecked();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Proposed start' }), '10:30');
+    await user.click(screen.getByRole('button', { name: 'Send offer' }));
+    await waitFor(() => expect(first.handlers.onSubmitOffer).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ paymentMode: 'direct' })));
+    first.unmount();
+    window.sessionStorage.clear();
+
+    const { handlers } = mount();
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Proposed start' }), '10:30');
+    await user.click(screen.getByRole('radio', { name: 'Upfront, held by TasksNearMe' }));
+    expect(screen.getByRole('radio', { name: 'Upfront, held by TasksNearMe' })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: 'Send offer' }));
+    await waitFor(() => expect(handlers.onSubmitOffer).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ pricing: { type: 'fixed', priceCents: 6000 }, startTime: '10:30', paymentMode: 'held' })));
+  });
+
+  it('revising an offer starts from the way it asked to be paid', () => {
+    mount({ data: helperDeskWithOffer, revising: true });
+    expect(helperDeskWithOffer.myOffer?.paymentMode).toBe('held');
+    expect(screen.getByRole('radio', { name: 'Upfront, held by TasksNearMe' })).toBeChecked();
+  });
+
+  it('debounces pricing requests and displays the supplied $60.00 earnings', async () => {
     vi.useFakeTimers();
     const { handlers } = mount();
     const price = screen.getByRole('textbox', { name: 'Task price ($)' });
@@ -106,7 +133,7 @@ describe('helper offer form', () => {
     expect(handlers.onQuote).not.toHaveBeenCalled();
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(handlers.onQuote).toHaveBeenCalledExactlyOnceWith({ pricing: { type: 'fixed', priceCents: 6000 } });
-    expect(screen.getByText('$54.00')).toBeInTheDocument();
+    expect(line("You'll earn")).toHaveTextContent('$60.00');
   });
 
   it('puts what you’ll earn under the form’s heading, a level below it (accessibility pass, J-A4)', async () => {
@@ -125,12 +152,13 @@ describe('helper offer form', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(350); });
     fireEvent.change(screen.getByRole('textbox', { name: 'Task price ($)' }), { target: { value: '70' } });
     await act(async () => resolveFirst(deskBreakdown));
-    expect(screen.queryByText('$54.00')).not.toBeInTheDocument();
+    expect(screen.queryAllByText('$60.00')).toHaveLength(0);
+    expect(screen.queryByText("You'll earn")).not.toBeInTheDocument();
     await act(async () => { await vi.advanceTimersByTimeAsync(350); });
     expect(screen.getByText(messages.helperTask.form.earningsError)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
     await act(async () => { await vi.advanceTimersByTimeAsync(350); });
-    expect(screen.getByText('$54.00')).toBeInTheDocument();
+    expect(line("You'll earn")).toHaveTextContent('$60.00');
   });
 
   it('uses half-hour steps and the supplied hourly schema', async () => {
@@ -146,7 +174,7 @@ describe('helper offer form', () => {
     expect(onSubmitOffer).not.toHaveBeenCalled();
     fireEvent.change(cap, { target: { value: '4' } });
     await user.click(screen.getByRole('button', { name: 'Send offer' }));
-    await waitFor(() => expect(onSubmitOffer).toHaveBeenCalledExactlyOnceWith(helperMovingHourly.offerDefaults));
+    await waitFor(() => expect(onSubmitOffer).toHaveBeenCalledExactlyOnceWith({ ...helperMovingHourly.offerDefaults, paymentMode: 'direct' }));
   });
 
   it('caps bring chips at ten, removes them and counts the message', async () => {

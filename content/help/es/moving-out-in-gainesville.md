@@ -28,6 +28,6 @@ La ciudad recoge los desechos de jardín cada semana en tu día asignado: en bol
 
 ## Cuánto cuesta
 
-La guía de precios de cada servicio muestra el rango habitual en Gainesville y lo que pagarías en cada extremo, con las tarifas incluidas: [ayuda con mudanzas](/gainesville/moving-help/cost), [limpieza ligera](/gainesville/light-cleaning/cost), [armado de muebles](/gainesville/furniture-assembly/cost) y [limpieza de jardín](/gainesville/yard-cleanup/cost).
+La guía de precios de cada servicio muestra el rango habitual en Gainesville y lo que pagarías en cada extremo, tanto si le pagas directamente a tu ayudante como si pagas por adelantado: [ayuda con mudanzas](/gainesville/moving-help/cost), [limpieza ligera](/gainesville/light-cleaning/cost), [armado de muebles](/gainesville/furniture-assembly/cost) y [limpieza de jardín](/gainesville/yard-cleanup/cost).
 
 Las reglas de la ciudad y del condado cambian de vez en cuando: sus páginas tienen la información más reciente.

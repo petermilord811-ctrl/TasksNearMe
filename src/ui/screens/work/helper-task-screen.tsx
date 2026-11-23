@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, CircleDollarSign, Flag, Lock } from 'lucide-react';
+import { ArrowLeft, BarChart3, CalendarDays, CircleDollarSign, Flag, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ActionResult, type HelperTaskView, type HelperWorkHandlers, type ISODateTime } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
@@ -76,6 +76,16 @@ export function HelperTaskScreen({ data, handlers, now, initialRevising, initial
       <div className="flex items-center gap-3"><InitialsAvatar initials={task.poster.initials} /><div><p className="font-semibold">{task.poster.displayName}</p><p className="text-sm tabular-nums text-muted-foreground">{t('memberSince', { date: formatMonthYear(task.poster.memberSince) })}</p></div></div>
       {task.poster.phoneVerified && <VerificationBadges badges={{ phoneVerified: task.poster.phoneVerified }} />}
     </section>
+    {/* Offer insights (Pro, 2026-11-23): how many offers and their price range; without Pro, what it would show. */}
+    {data.insights && !data.myOffer && <section aria-labelledby="helper-task-insights" className="flex items-start gap-3 rounded-[1.375rem] border border-amber-500/25 bg-amber-500/[0.06] p-4">
+      <BarChart3 aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+      <div className="min-w-0 space-y-1">
+        <h2 id="helper-task-insights" className="flex items-center gap-2 font-semibold">{t('insights.title')}<span className="rounded-full bg-[linear-gradient(135deg,#92400e,#b45309)] px-2 py-px text-[0.6875rem] font-bold text-white">{t('insights.pro')}</span></h2>
+        {data.insights.pro
+          ? <p className="text-sm tabular-nums">{t('insights.offers', { count: data.insights.offerCount })}{data.insights.priceRange && <> · {t(data.insights.priceRange.hourly ? 'insights.rangeHourly' : 'insights.range', { low: formatMoney(data.insights.priceRange.lowCents), high: formatMoney(data.insights.priceRange.highCents) })}</>}</p>
+          : <p className="text-sm text-muted-foreground">{t('insights.teaser')} <Link href={routes.app.plan()} className="font-medium text-primary underline underline-offset-4">{t('insights.seePro')}</Link></p>}
+      </div>
+    </section>}
     {data.blockedReason ? <section aria-labelledby="helper-task-blocked" className="space-y-3 rounded-xl border bg-secondary p-card text-secondary-foreground"><h2 id="helper-task-blocked" className="font-heading text-xl font-semibold">{t('blockedTitle')}</h2><p>{blocked(`blockedReasons.${data.blockedReason}`)}</p>{data.blockedReason === 'not_bookable' && <Link href={routes.app.helperOnboarding(data.setup.nextOnboardingStep)} className={buttonVariants({ variant: 'outline' })}>{t('finishSetup')}</Link>}</section>
       : <HelperOffer key={`${task.id}-${data.myOffer?.id ?? 'new'}`} data={data} handlers={handlers} now={now} initialRevising={initialRevising} initialResult={initialResult} />}
     <p><Link href={routes.app.report('task', task.id)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"><Flag aria-hidden="true" className="size-4" />{report('links.task')}</Link></p>

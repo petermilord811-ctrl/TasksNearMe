@@ -160,13 +160,13 @@ describe('the header', () => {
   it("shows a helper's earnings at a glance, opening Earnings", () => {
     renderDashboard(jordanDashboardData, { now: DASHBOARD_HELPER_NOW });
     const earnings = region('Earnings at a glance');
-    expect(earnings.getByText('$75.00')).toBeVisible();
-    expect(earnings.getByText('$110.25')).toBeVisible();
+    expect(earnings.getByText('$82.00')).toBeVisible();
+    expect(earnings.getByText('$122.50')).toBeVisible();
     expect(earnings.getByRole('link')).toHaveAttribute('href', routes.app.earnings());
     // Earned work not paid out yet, not "Upcoming", which read as money from the bookings ahead (audit L12).
     const term = earnings.getByText('Earned, not paid out yet');
     expect(term.tagName).toBe('DT');
-    expect(term.nextElementSibling).toHaveTextContent('$75.00');
+    expect(term.nextElementSibling).toHaveTextContent('$82.00');
   });
 
   it('names each glance total as the Earnings page names it, in English and Spanish (audit L12)', () => {

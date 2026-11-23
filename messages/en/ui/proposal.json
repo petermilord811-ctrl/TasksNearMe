@@ -31,7 +31,7 @@
   "total": "Your total",
   "earnings": "Your earnings",
   "payment": "Payment method",
-  "paymentNote": "You pay when you book. Your helper is paid after the task is done.",
+  "paymentNote": "You pay when you book. TasksNearMe holds it and pays your helper when you say the task is done.",
   "chargeNow": "Accepting charges {amount} to your selected payment method now.",
   "hourly": "This covers up to {hours} hours. Unused hours are refunded after completion.",
   "terms": "I agree to the <terms>Terms of service</terms> and <cancellation>Cancellation policy</cancellation>.",

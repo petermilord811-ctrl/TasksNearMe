@@ -82,15 +82,35 @@ describe('HomeScreen (the landing page)', () => {
 
   it('shows the fee example exactly as supplied', () => {
     show();
-    const fee = homePageData.feeExample;
+    // No service fees since 2026-11-23: each price paid directly (the default) and held by TasksNearMe.
+    const { direct, held } = homePageData.feeExamples.find((example) => example.held.taskPriceCents === homePageData.feeExample.taskPriceCents)!;
+    expect(held).toEqual(homePageData.feeExample);
     const pricing = within(section(`${t('pricing.title')} ${t('pricing.titleAccent')}`));
-    expect(pricing.getByText(t('pricing.example', { price: formatMoney(fee.taskPriceCents) }))).toBeInTheDocument();
-    // Shown (it runs to new amounts when another price is picked) and spoken, each final.
-    expect(pricing.getAllByText(`+${formatMoney(fee.posterFeeCents)}`)).toHaveLength(2);
-    expect(pricing.getAllByText(`−${formatMoney(fee.helperFeeCents)}`)).toHaveLength(2);
+    const amount = (label: string) => pricing.getByText(label).nextElementSibling;
+    expect(pricing.getByText(t('pricing.example', { price: formatMoney(held.taskPriceCents) }))).toBeInTheDocument();
+    const directMode = pricing.getByRole('button', { name: t('pricing.modes.direct') });
+    const heldMode = pricing.getByRole('button', { name: t('pricing.modes.held') });
+    expect(directMode).toHaveAttribute('aria-pressed', 'true');
+    expect(heldMode).toHaveAttribute('aria-pressed', 'false');
+    // Paid directly: no service fees and no hold fee; the client pays the price and the helper gets all of it.
+    expect(pricing.getAllByText(t('pricing.none'))).toHaveLength(2);
+    expect(pricing.queryByText(`+${formatMoney(held.posterFeeCents)}`)).not.toBeInTheDocument();
+    expect(amount(t('pricing.clientPays'))).toHaveTextContent(formatMoney(direct.posterTotalCents));
+    expect(amount(t('pricing.helperEarns'))).toHaveTextContent(formatMoney(direct.helperEarningsCents));
+    expect(pricing.getByText(t('pricing.splitNone'))).toBeInTheDocument();
+    expect(pricing.getByText(t('pricing.note.direct'))).toBeInTheDocument();
+
+    fireEvent.click(heldMode);
+    expect(heldMode).toHaveAttribute('aria-pressed', 'true');
+    expect(directMode).toHaveAttribute('aria-pressed', 'false');
+    // Held by us: the hold fee, shown (it runs to new amounts when another price is picked) and spoken, each final.
+    expect(pricing.getAllByText(`+${formatMoney(held.posterFeeCents)}`)).toHaveLength(2);
+    expect(pricing.getAllByText(t('pricing.none'))).toHaveLength(1);
     // With reduced motion the totals never count: the shown value and the spoken one are both final.
-    expect(pricing.getAllByText(formatMoney(fee.posterTotalCents))).toHaveLength(2);
-    expect(pricing.getAllByText(formatMoney(fee.helperEarningsCents))).toHaveLength(2);
+    expect(pricing.getAllByText(formatMoney(held.posterTotalCents))).toHaveLength(2);
+    expect(amount(t('pricing.helperEarns'))).toHaveTextContent(formatMoney(held.helperEarningsCents));
+    expect(pricing.getByText(t('pricing.splitHold', { amount: formatMoney(held.posterFeeCents) }))).toBeInTheDocument();
+    expect(pricing.getByText(t('pricing.note.held'))).toBeInTheDocument();
   });
 
   it('shows the founding helper reward only when there is one', () => {

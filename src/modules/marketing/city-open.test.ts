@@ -18,7 +18,7 @@ describe('the email telling the waitlist its city opened (plan 8.3)', () => {
     expect(email.subject).toBe('TasksNearMe is open in Gainesville');
     expect(email.preheader).toBe('Post a task and get offers from helpers near you.');
     expect(email.text).toContain("You joined our waitlist for 32601, and we're there now.");
-    expect(email.text).toContain('You pay when you book. Your helper is paid after the task is done.');
+    expect(email.text).toContain('There are no service fees: pay your helper directly once the task is done.');
     expect(email.text).toContain('Post a task: https://tasksnearme.test/app/tasks/new');
     expect(email.text).toContain('See TasksNearMe in Gainesville: https://tasksnearme.test/gainesville');
     expect(email.html).toContain('href="https://tasksnearme.test/app/tasks/new"');

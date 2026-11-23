@@ -4,7 +4,7 @@ import { devSignIn } from './support/sign-in';
 /**
  * A problem report end to end on the seeded dispute (Ana's dresser with Jordan, $60 charged $66): Ana sees it on
  * her booking page; support settles it at $45 from the case page (a server preview first); Ana sees the
- * decision and her $16.50 refund (blueprint 04 §6).
+ * decision and her $15.75 refund (blueprint 04 §6).
  */
 
 async function staffSignIn(page: Page) {
@@ -30,14 +30,14 @@ test('a problem report: the client sees it, support settles it, the client sees 
   await dialog.getByRole('radio', { name: 'Settle at a lower price' }).check();
   await dialog.getByLabel('New task price (USD)').fill('45');
   await dialog.getByLabel('Resolution summary').fill('Settled at $45 because two drawers still stick.');
-  // The server's preview: $16.50 back to Ana, $40.50 to Jordan.
-  await expect(dialog.getByText('$16.50').first()).toBeVisible({ timeout: 20_000 });
-  await expect(dialog.getByText('$40.50').first()).toBeVisible();
+  // The server's preview: $15.75 back to Ana, $45.00 to Jordan.
+  await expect(dialog.getByText('$15.75').first()).toBeVisible({ timeout: 20_000 });
+  await expect(dialog.getByText('$45.00').first()).toBeVisible();
   await dialog.getByRole('button', { name: 'Save resolution' }).click();
   await expect(page.getByText('Resolution saved.').first()).toBeVisible({ timeout: 30_000 });
 
   await devSignIn(page, 'ana@example.test');
   await page.goto('/app/bookings/bkg_dresser');
   await expect(page.getByRole('heading', { name: 'Problem resolved' })).toBeVisible();
-  await expect(page.getByText('$16.50 was refunded to your card')).toBeVisible();
+  await expect(page.getByText('$15.75 was refunded to your card')).toBeVisible();
 });

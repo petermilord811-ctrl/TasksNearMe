@@ -29,15 +29,15 @@ const ben: PersonSummary = { id: 'usr_ben', displayName: 'Ben W.', initials: 'BW
 const row = (values: Omit<AdminBookingRow, 'client' | 'helper'> & { client: PersonSummary; helper: PersonSummary }): AdminBookingRow => ({ ...values, client: person(values.client), helper: person(values.helper) });
 
 export const adminBookingRows: AdminBookingRow[] = [
-  row({ id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', categorySlug: 'furniture-assembly', status: 'disputed', start: '2026-11-21T16:30:00.000Z', client: maya, helper: jordan, totalCents: 6600, flags: ['disputed', 'open_case'] }),
-  row({ id: 'bkg_bookcase', title: 'Assemble a bookcase', categorySlug: 'furniture-assembly', status: 'completion_submitted', start: '2026-11-19T15:00:00.000Z', client: ruth, helper: jordan, totalCents: 7700, flags: ['approval_overdue'] }),
-  row({ id: 'bkg_yard', title: 'Rake and bag front-yard leaves', categorySlug: 'yard-cleanup', status: 'pending_funding', start: '2026-11-28T15:00:00.000Z', client: ben, helper: sam, totalCents: 13200, flags: ['payment_failed'] }),
-  row({ id: 'bkg_shelf_oct', title: 'Mount a shelf', categorySlug: 'furniture-assembly', status: 'completed', start: '2026-10-30T15:00:00.000Z', client: ana, helper: jordan, totalCents: 4950, flags: ['funds_held'] }),
+  row({ id: 'bkg_desk', title: 'Assemble a desk (flat-pack, 1 item)', categorySlug: 'furniture-assembly', status: 'disputed', start: '2026-11-21T16:30:00.000Z', client: maya, helper: jordan, totalCents: 6300, flags: ['disputed', 'open_case'] }),
+  row({ id: 'bkg_bookcase', title: 'Assemble a bookcase', categorySlug: 'furniture-assembly', status: 'completion_submitted', start: '2026-11-19T15:00:00.000Z', client: ruth, helper: jordan, totalCents: 7350, flags: ['approval_overdue'] }),
+  row({ id: 'bkg_yard', title: 'Rake and bag front-yard leaves', categorySlug: 'yard-cleanup', status: 'pending_funding', start: '2026-11-28T15:00:00.000Z', client: ben, helper: sam, totalCents: 12600, flags: ['payment_failed'] }),
+  row({ id: 'bkg_shelf_oct', title: 'Mount a shelf', categorySlug: 'furniture-assembly', status: 'completed', start: '2026-10-30T15:00:00.000Z', client: ana, helper: jordan, totalCents: 4725, flags: ['funds_held'] }),
 ];
 
 const upcomingRows: AdminBookingRow[] = [
-  row({ id: 'bkg_tv', title: 'Anchor a tall bookshelf to the wall', categorySlug: 'furniture-assembly', status: 'confirmed', start: '2026-11-25T20:00:00.000Z', client: ben, helper: jordan, totalCents: 8800, flags: [] }),
-  row({ id: 'bkg_moving', title: 'Help loading a moving truck', categorySlug: 'moving-help', status: 'in_progress', start: '2026-11-22T15:00:00.000Z', client: chris, helper: jordan, totalCents: 15400, flags: [] }),
+  row({ id: 'bkg_tv', title: 'Anchor a tall bookshelf to the wall', categorySlug: 'furniture-assembly', status: 'confirmed', start: '2026-11-25T20:00:00.000Z', client: ben, helper: jordan, totalCents: 8400, flags: [] }),
+  row({ id: 'bkg_moving', title: 'Help loading a moving truck', categorySlug: 'moving-help', status: 'in_progress', start: '2026-11-22T15:00:00.000Z', client: chris, helper: jordan, totalCents: 14700, flags: [] }),
 ];
 
 /** `/admin/bookings`: what needs attention first. */
@@ -153,7 +153,7 @@ export const adminAuditData: AdminAuditPageData = {
       reason: 'Settled at $45 because two drawers still stick.',
       details: [
         { key: 'resolution', value: 'settle' },
-        { key: 'refundCents', value: '1650' },
+        { key: 'refundCents', value: '1575' },
       ],
     },
     {

@@ -36,7 +36,7 @@ describe('EarningsScreen', () => {
     const totals = screen.getByLabelText(earnings.totals.label);
     expect(within(totals).getByText('Earned, not paid out yet')).toBeInTheDocument();
     expect(within(totals).queryByText('Upcoming')).not.toBeInTheDocument();
-    expect(screen.getByText('$63.00 of it is on hold while a problem report is reviewed.')).toBeInTheDocument();
+    expect(screen.getByText('$70.00 of it is on hold while a problem report is reviewed.')).toBeInTheDocument();
     cleanup();
     mount(earningsFirstPayoutData);
     expect(screen.queryByText(/on hold while a problem report/)).not.toBeInTheDocument();
@@ -46,9 +46,9 @@ describe('EarningsScreen', () => {
     mount();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     const totals = within(screen.getByLabelText(earnings.totals.label));
-    expect(totals.getByText('$75.00')).toBeVisible();
-    expect(totals.getByText('$110.25')).toBeVisible();
-    expect(totals.getByText('$62.00')).toBeVisible();
+    expect(totals.getByText('$82.00')).toBeVisible();
+    expect(totals.getByText('$122.50')).toBeVisible();
+    expect(totals.getByText('$68.00')).toBeVisible();
     const articles = screen.getAllByRole('article');
     expect(articles).toHaveLength(jordanEarningsPageData.rows.length);
     jordanEarningsPageData.rows.forEach((row, index) => {

@@ -41,11 +41,12 @@ describe('find work', () => {
       expect(card.isNew).toBe(Date.now() - Date.parse(card.task.postedAt) < 24 * 3_600_000);
       if (card.task.budget.type === 'fixed' && card.earnings.type === 'fixed') {
         // The default schedule takes 10% from the helper.
-        expect(card.earnings.amountCents).toBe(card.task.budget.priceCents - Math.round(card.task.budget.priceCents * 0.1));
+        // No helper fee since 2026-11-23: a helper gets the whole price.
+        expect(card.earnings.amountCents).toBe(card.task.budget.priceCents);
       }
     }
     const shelves = await shelvesIn();
-    expect(shelves?.earnings).toEqual({ type: 'fixed', amountCents: 4500 });
+    expect(shelves?.earnings).toEqual({ type: 'fixed', amountCents: 5000 });
     expect(data!.today).toBe(marketDayKey(now(), 'America/Chicago'));
     // The map: tiles and Jordan's own area (a neighborhood center), never an address.
     expect(data!.map).toMatchObject({ styleUrl: expect.stringContaining('http'), area: { name: 'East Austin', serviceRadiusMiles: 5 } });

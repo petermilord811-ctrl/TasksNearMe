@@ -98,16 +98,16 @@ describe('AdminConfigScreen', () => {
     const user = userEvent.setup();
     const handlers = mount();
     const form = within(screen.getByRole('form', { name: copy.publishTitle }));
-    expect(form.getByLabelText(copy.fields.posterBps)).toHaveValue('10');
-    expect(form.getByLabelText(copy.fields.posterMinCents)).toHaveValue('3.00');
+    expect(form.getByLabelText(copy.fields.posterBps)).toHaveValue('5');
+    expect(form.getByLabelText(copy.fields.posterMinCents)).toHaveValue('1.00');
     await user.clear(form.getByLabelText(copy.fields.posterBps));
     await user.type(form.getByLabelText(copy.fields.posterBps), '12.5');
-    await user.click(form.getByRole('button', { name: 'Publish version 3' }));
+    await user.click(form.getByRole('button', { name: 'Publish version 4' }));
     expect(await form.findByText(copy.reasonRequired)).toBeInTheDocument();
     expect(handlers.onPublishPolicy).not.toHaveBeenCalled();
     await user.type(form.getByLabelText(copy.reason), 'A small fee change for the holidays.');
-    await user.click(form.getByRole('button', { name: 'Publish version 3' }));
-    await waitFor(() => expect(handlers.onPublishPolicy).toHaveBeenCalledWith(expect.objectContaining({ posterBps: 1250, posterMinCents: 300, helperBps: 1000, autoApproveHours: 72, reason: 'A small fee change for the holidays.' })));
+    await user.click(form.getByRole('button', { name: 'Publish version 4' }));
+    await waitFor(() => expect(handlers.onPublishPolicy).toHaveBeenCalledWith(expect.objectContaining({ posterBps: 1250, posterMinCents: 100, helperBps: 0, autoApproveHours: 72, reason: 'A small fee change for the holidays.' })));
     expect(await form.findByText(copy.published)).toBeInTheDocument();
   });
 
@@ -118,7 +118,7 @@ describe('AdminConfigScreen', () => {
     await user.clear(form.getByLabelText(copy.fields.posterBps));
     await user.type(form.getByLabelText(copy.fields.posterBps), '45');
     await user.type(form.getByLabelText(copy.reason), 'Trying a much higher fee.');
-    await user.click(form.getByRole('button', { name: 'Publish version 3' }));
+    await user.click(form.getByRole('button', { name: 'Publish version 4' }));
     expect(await form.findByText('From 0% to 30%.')).toBeInTheDocument();
     expect(handlers.onPublishPolicy).not.toHaveBeenCalled();
   });

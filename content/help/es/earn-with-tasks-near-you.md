@@ -2,7 +2,7 @@
 title: Cómo ganar dinero con trabajos cerca de ti
 summary: Elige el trabajo, pon tu precio y cobra por tareas cerca de casa.
 ---
-Si eres hábil con las manos, tienes fuerza o paciencia con las computadoras, tus vecinos te necesitan. En TasksNearMe eliges las tareas, pones tu precio y cobras a través de la app.
+Si eres hábil con las manos, tienes fuerza o paciencia con las computadoras, tus vecinos te necesitan. En TasksNearMe eliges las tareas, pones tu precio y te quedas con todo: no hay tarifas de servicio.
 
 ## Verifícate una sola vez
 
@@ -20,7 +20,7 @@ Cada tarea abierta muestra cuánto paga, cuándo se necesita y la zona general. 
 
 ## Haz el trabajo y cobra
 
-Al terminar, agregas lo que haga falta (fotos, horas) y el cliente aprueba el trabajo. Si no responde, se aprueba automáticamente después de 72 horas. Ganas el precio de la tarea menos una tarifa de servicio del 10%, y ves esa cifra antes de ofertar. Consulta [cuándo me pagan](/help/when-do-i-get-paid).
+Al terminar, agregas lo que haga falta (fotos, horas) y el cliente aprueba el trabajo. Si no responde, se aprueba automáticamente después de 72 horas. En cada oferta eliges cómo cobras: directamente del cliente después de la tarea, o por adelantado, con el pago retenido por TasksNearMe hasta que el cliente lo apruebe. De las dos formas ganas el precio completo, sin tarifa para el ayudante. Consulta [cuándo me pagan](/help/when-do-i-get-paid).
 
 ## Construye tu reputación
 

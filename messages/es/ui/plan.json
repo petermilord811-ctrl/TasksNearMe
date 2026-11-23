@@ -3,22 +3,26 @@
   "description": "Planes opcionales para quienes usan TasksNearMe a menudo. Todo funciona sin uno.",
   "free": {
     "title": "Sin plan",
-    "body": "Publicar, enviar ofertas, reservar, los mensajes, la seguridad, las búsquedas guardadas con alertas y la ayuda para redactar son gratis. Además tienes {count, plural, one {# búsqueda con IA} other {# búsquedas con IA}} al mes."
+    "body": "Publicar, enviar ofertas, reservar, los mensajes, la seguridad, las búsquedas guardadas con alertas y la ayuda para redactar son gratis, y no hay tarifas de servicio. Además tienes {count, plural, one {# búsqueda con IA} other {# búsquedas con IA}} al mes."
   },
   "plans": {
     "plus": {
       "name": "Plus",
       "for": "Para clientes",
-      "rebate": "Te devolvemos el {share} de la tarifa de servicio del cliente en cada reserva terminada, hasta {cap} al mes",
       "ai": "{count, plural, one {# búsqueda con IA} other {# búsquedas con IA}} al mes: describe lo que necesitas y encuentra ayudantes y tareas que encajan",
-      "breakEven": "Se paga solo cuando reservas unos {amount} en tareas al mes."
+      "benefits": {
+        "hold": "Sin tarifa de retención: cuando un ayudante pide el pago por adelantado, retenemos tu pago gratis"
+      }
     },
     "pro": {
       "name": "Pro",
       "for": "Para ayudantes",
-      "rebate": "Te devolvemos el {share} de la comisión del ayudante en cada reserva terminada, hasta {cap} al mes",
       "ai": "{count, plural, one {# búsqueda con IA} other {# búsquedas con IA}} al mes: describe el trabajo que buscas y encuentra tareas que encajan",
-      "breakEven": "Se paga solo cuando ganas unos {amount} al mes."
+      "benefits": {
+        "first": "Tus ofertas aparecen primero a los clientes",
+        "badge": "Una insignia Pro en tus ofertas",
+        "insights": "Datos de las ofertas en cada tarea: cuántas tiene y su rango de precios"
+      }
     }
   },
   "price": {
@@ -36,16 +40,11 @@
     "renews": "Se renueva el {date} por {price}.",
     "ends": "Termina el {date} y no se renovará.",
     "pastDue": "Tu último pago no se completó. Stripe lo intentará de nuevo; actualiza tu tarjeta en Administrar para conservar {plan}.",
-    "rebated": "Devuelto este mes: {amount} de {cap}.",
     "unpaid": "Tu {plan} está en pausa hasta que se complete un pago. Actualiza tu tarjeta en Administrar para reactivarlo.",
     "confirming": "Confirmando tu {plan} con Stripe. Actualiza la página en unos segundos."
   },
   "manage": "Administrar o cancelar",
   "manageHint": "Cancela, cambia tu tarjeta o consulta tus facturas en la página segura de Stripe.",
-  "estimate": {
-    "plus": "En {count, plural, one {tu # reserva} other {tus # reservas}} de los últimos 30 días, Plus te habría devuelto {amount}.",
-    "pro": "En {count, plural, one {tu # reserva} other {tus # reservas}} de los últimos 30 días, Pro te habría devuelto {amount}."
-  },
   "aiSearch": {
     "remaining": "Te {count, plural, one {queda # búsqueda con IA} other {quedan # búsquedas con IA}} este mes. Se renuevan el {date}.",
     "used": "No te quedan búsquedas con IA este mes. Se renuevan el {date}.",
@@ -56,8 +55,7 @@
     "cancel": "Cancela cuando quieras. Conservas el plan hasta el final del periodo que pagaste y no se renueva.",
     "noTrial": "Sin pruebas gratis que terminan en un cobro y sin cuentas regresivas.",
     "price": "El precio con el que te suscribes se mantiene hasta que canceles. Un precio nuevo solo aplica a suscripciones nuevas.",
-    "trust": "Un plan nunca te sube en las listas ni te da una insignia. Las reseñas, las verificaciones y las insignias se ganan igual para todos.",
-    "rebates": "El dinero se devuelve cuando se termina una reserva: a tu tarjeta con Plus y con tus ganancias con Pro."
+    "trust": "Un plan nunca cambia las reseñas, las verificaciones ni la insignia de verificado: todos las ganan igual. Pro muestra primero las ofertas de un ayudante y las marca como Pro, y los clientes siempre ven todas las ofertas."
   },
   "notices": {
     "subscribed": "Gracias por suscribirte. Tu plan aparecerá aquí en cuanto Stripe lo confirme, normalmente en unos segundos.",
@@ -65,11 +63,6 @@
   },
   "unavailable": "Los planes aún no están disponibles. Todo en TasksNearMe funciona sin uno.",
   "error": "No funcionó. Si ya tienes este plan, actualiza la página para verlo.",
-  "pricing": {
-    "title": "Planes opcionales",
-    "intro": "Todo lo anterior funciona sin un plan. Para quienes reservan o ayudan a menudo, un plan devuelve parte de la tarifa cada mes, hasta un límite.",
-    "link": "Ver planes"
-  },
   "billing": {
     "title": "Historial de facturación",
     "body": "Consulta tus facturas y la tarjeta registrada en la página segura de Stripe.",

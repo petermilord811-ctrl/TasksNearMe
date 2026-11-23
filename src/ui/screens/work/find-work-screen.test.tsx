@@ -54,8 +54,8 @@ describe('FindWorkScreen', () => {
     const days = within(list()).getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
     expect(days).toHaveLength(5);
     expect(days[0]).toMatch(/Nov 21/);
-    expect(within(list()).getByText("You'd earn $54.00")).toBeVisible();
-    expect(within(list()).getByText("You'd earn $31.50/h")).toBeVisible();
+    expect(within(list()).getByText("You'd earn $60.00")).toBeVisible();
+    expect(within(list()).getByText("You'd earn $35.00/h")).toBeVisible();
     // The two tasks he can't take fold to one line, without "New" (audit M22).
     expect(within(list()).getAllByText('New')).toHaveLength(2);
     expect(within(list()).getByText('You made an offer')).toBeVisible();
@@ -72,7 +72,7 @@ describe('FindWorkScreen', () => {
   it('drops day groups when the list goes by pay', () => {
     renderWork(findWorkByPayData);
     expect(within(list()).queryAllByRole('heading', { level: 2 })).toHaveLength(0);
-    // The move's whole cap ($126 earned) beats the yard ($108).
+    // The move's whole cap ($140 earned) beats the yard ($120).
     expect(within(list()).getAllByRole('article')[0]).toHaveTextContent('Help loading a moving truck');
   });
 

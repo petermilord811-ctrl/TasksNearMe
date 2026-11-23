@@ -42,8 +42,8 @@ test('a helper finds a nearby task, sends an offer, and withdraws it', async ({ 
   await expect(page.getByRole('heading', { level: 1, name: 'Mount two floating shelves' })).toBeVisible();
   // Visible text only: Next keeps the list we came from mounted (hidden) for an instant Back.
   await expect(page.getByText('the wall is drywall').filter({ visible: true })).toBeVisible();
-  // The fee engine's numbers for the $50 budget: Jordan earns $45.00.
-  await expect(page.getByText('$45.00').first()).toBeVisible();
+  // The fee engine's numbers for the $50 budget: no helper fee, so Jordan gets $50.00.
+  await expect(page.getByText('$50.00').first()).toBeVisible();
 
   await page.getByLabel('Message to the client').fill('I can mount both shelves level, and I bring a stud finder.');
   await page.getByRole('button', { name: 'Send offer' }).click();

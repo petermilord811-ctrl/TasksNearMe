@@ -30,6 +30,12 @@ export const bookings = pgTable(
     marketId: text('market_id').notNull(),
     /** The market policy version the booking was made under (fees, cancellation, timers). */
     policyVersionId: text('policy_version_id').notNull(),
+    /**
+     * `held`: paid upfront and held by TasksNearMe until the work is approved (payments, earnings, refunds as before);
+     * `direct` (owner, 2026-11-23): the client pays the helper directly after the task, so no money moves here and the
+     * booking is confirmed without a payment. Copied from the offer.
+     */
+    paymentMode: text('payment_mode').notNull().default('held'), // direct | held
     /** pending_funding | confirmed | in_progress | completion_submitted | disputed | completed | canceled */
     status: text('status').notNull(),
     cancelReason: text('cancel_reason'),

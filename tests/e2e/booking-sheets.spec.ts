@@ -22,7 +22,7 @@ test('the cancel sheet shows the refund from the policy', async ({ page }, testI
   await page.goto('/app/bookings/bkg_tv');
   await openAction(page, 'Cancel booking');
   // Days before the start: everything back.
-  await expect(page.getByText('$88.00').last()).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('$84.00').last()).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Go back' }).first().click();
   await expect(page.getByRole('heading', { level: 1, name: 'Anchor a tall bookshelf to the wall' })).toBeVisible();
 });

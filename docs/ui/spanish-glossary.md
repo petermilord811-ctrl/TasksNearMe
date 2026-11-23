@@ -29,6 +29,8 @@ For anyone writing Spanish copy (`messages/es/**`, the Spanish emails and texts 
 | scope | alcance | |
 | service fee | **tarifa de servicio** | |
 | late cancellation fee | **cargo por cancelación tardía** | a one-off charge, not a rate |
+| hold fee (on a payment TasksNearMe holds, 2026-11-23) | **tarifa de retención** | never *comisión* |
+| paid directly / paid upfront | **pago directo** / **pago por adelantado** | *TasksNearMe lo retiene* |
 | charge / be charged | **cobrar** / se te cobra | a card: *se cobra a tu tarjeta* (not *tu tarjeta se cobra*) |
 | refund | **reembolso**, reembolsar | |
 | payout | **pago** | "Tu pago necesita atención"; the payout account is *cuenta de pagos* |

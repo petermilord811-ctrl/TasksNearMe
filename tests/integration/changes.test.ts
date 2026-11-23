@@ -41,12 +41,12 @@ beforeAll(async () => {
 const termsVersion = async () => (await db.select({ v: bookings.termsVersion }).from(bookings).where(eq(bookings.id, bookingId)))[0]!.v;
 
 describe('change requests', () => {
-  it('quotes and proposes a chair (+$20): the client would pay $22.00 more; strangers see nothing', async () => {
+  it('quotes and proposes a chair (+$20): the client would pay $21.00 more; strangers see nothing', async () => {
     const page = await getProposeChangePage(db, CLIENT, bookingId, now());
     expect(page?.allowedTypes).toEqual(['price', 'scope', 'schedule', 'expense_allowance']);
     expect(await getProposeChangePage(db, 'usr_sam', bookingId, now())).toBeNull();
     const chair = { priceCents: 8000, scopeText: 'Assemble the desk and the matching chair.', message: 'Could you also assemble the matching chair?' };
-    expect(await quoteChange(db, CLIENT, bookingId, chair, now())).toMatchObject({ ok: true, differenceCents: 2200, after: { posterTotalCents: 8800, helperEarningsCents: 7200 } });
+    expect(await quoteChange(db, CLIENT, bookingId, chair, now())).toMatchObject({ ok: true, differenceCents: 2100, after: { posterTotalCents: 8400, helperEarningsCents: 8000 } });
     // The helper's quote shows earnings, not the client's difference.
     expect(await quoteChange(db, 'usr_jordan', bookingId, chair, now())).toMatchObject({ ok: true, differenceCents: 0 });
 
@@ -55,7 +55,7 @@ describe('change requests', () => {
     const changeId = idOf(sent.ok ? sent.redirectTo : undefined);
     expect(await proposeChange(db, 'usr_jordan', bookingId, { priceCents: 7000, message: 'Another change at the same time.' }, now())).toEqual({ ok: false, code: 'not_allowed' });
     expect((await getChangeReviewPage(db, pay, 'usr_jordan', bookingId, changeId, now()))?.change).toMatchObject({ fromMe: false, actions: ['accept_change', 'decline_change'] });
-    expect((await getChangeReviewPage(db, pay, CLIENT, bookingId, changeId, now()))?.change).toMatchObject({ fromMe: true, differenceCents: 2200, actions: ['withdraw_change'] });
+    expect((await getChangeReviewPage(db, pay, CLIENT, bookingId, changeId, now()))?.change).toMatchObject({ fromMe: true, differenceCents: 2100, actions: ['withdraw_change'] });
 
     // Jordan accepts: the change waits for Ruth's payment, then applies.
     expect(await acceptChange(deps, 'usr_jordan', bookingId, changeId, {}, now())).toMatchObject({ ok: true, code: 'updated' });
@@ -66,8 +66,8 @@ describe('change requests', () => {
     expect(await payChangeDifference(deps, CLIENT, bookingId, changeId, { payment: { kind: 'dev_card', card: 'success', save: false } }, now())).toMatchObject({ ok: true, code: 'paid' });
     expect(await termsVersion()).toBe(2);
     const [terms] = await db.select().from(bookingTerms).where(and(eq(bookingTerms.bookingId, bookingId), eq(bookingTerms.version, 2)));
-    expect(terms?.breakdown).toMatchObject({ taskPriceCents: 8000, posterTotalCents: 8800 });
-    expect((await db.select().from(payments).where(and(eq(payments.bookingId, bookingId), eq(payments.purpose, 'change_funding'), eq(payments.status, 'succeeded'))))[0]?.amountCents).toBe(2200);
+    expect(terms?.breakdown).toMatchObject({ taskPriceCents: 8000, posterTotalCents: 8400 });
+    expect((await db.select().from(payments).where(and(eq(payments.bookingId, bookingId), eq(payments.purpose, 'change_funding'), eq(payments.status, 'succeeded'))))[0]?.amountCents).toBe(2100);
   });
 
   it('refunds a lower price at once; declines and withdrawals keep the terms', async () => {
@@ -75,7 +75,7 @@ describe('change requests', () => {
     const lowerId = idOf(lower.ok ? lower.redirectTo : undefined);
     expect(await acceptChange(deps, CLIENT, bookingId, lowerId, {}, now())).toMatchObject({ ok: true, code: 'updated' });
     expect(await termsVersion()).toBe(3);
-    expect((await db.select().from(refunds).where(and(eq(refunds.bookingId, bookingId), eq(refunds.reason, 'change_decrease'))))[0]?.amountCents).toBe(1100);
+    expect((await db.select().from(refunds).where(and(eq(refunds.bookingId, bookingId), eq(refunds.reason, 'change_decrease'))))[0]?.amountCents).toBe(1050);
 
     const later = await proposeChange(db, CLIENT, bookingId, { scopeText: 'Assemble the desk and the chair, and take the boxes out.', message: 'Could you also take the boxes out?' }, now());
     const laterId = idOf(later.ok ? later.redirectTo : undefined);

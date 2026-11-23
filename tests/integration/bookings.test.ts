@@ -54,8 +54,8 @@ describe('booking an offer', () => {
   it('shows the terms, the cancellation terms and the saved cards', async () => {
     const page = await getBookingConfirmPage(deps, 'usr_maya', 'tsk_bk1', 'off_bk1_jordan', now());
     if (page?.kind !== 'page') throw new Error('expected the page');
-    expect(page.data.breakdown).toMatchObject({ posterTotalCents: 6600, helperEarningsCents: 5400 });
-    expect(page.data.cancellation).toMatchObject({ lateRefundCents: 5400, lateHelperCompensationCents: 1200 });
+    expect(page.data.breakdown).toMatchObject({ posterTotalCents: 6300, helperEarningsCents: 6000 });
+    expect(page.data.cancellation).toMatchObject({ lateRefundCents: 5100, lateHelperCompensationCents: 1200 });
     expect(page.data.payment.methods.map((m) => [m.id, m.isDefault])).toEqual([
       ['pm_maya_visa', true],
       ['pm_maya_mc', false],
@@ -115,7 +115,7 @@ describe('booking an offer', () => {
     const [task] = await db.select({ status: tasks.status, offerCount: tasks.offerCount }).from(tasks).where(eq(tasks.id, 'tsk_bk1'));
     expect(task).toEqual({ status: 'assigned', offerCount: 0 });
     const paid = await db.select({ status: payments.status, amount: payments.amountCents }).from(payments).where(eq(payments.bookingId, booking!.id));
-    expect(paid.filter((p) => p.status === 'succeeded')).toEqual([{ status: 'succeeded', amount: 6600 }]);
+    expect(paid.filter((p) => p.status === 'succeeded')).toEqual([{ status: 'succeeded', amount: 6300 }]);
     const saved = await db.select().from(paymentMethods).where(and(eq(paymentMethods.userId, 'usr_maya'), eq(paymentMethods.last4, '3155')));
     expect(saved).toHaveLength(1);
     const events = await db.select({ type: outboxEvents.type }).from(outboxEvents).where(eq(outboxEvents.aggregateId, booking!.id));

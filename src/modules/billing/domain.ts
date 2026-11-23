@@ -1,5 +1,5 @@
 import type { Cents, PlanCode, PlanOffer } from '@/contracts';
-import type { FeeSchedule, PlanPolicy } from '@/modules/markets/schema';
+import type { PlanPolicy } from '@/modules/markets/schema';
 
 /**
  * The plans' rules as pure functions (completion plan 9.13, decisions.md 2026-11-18).
@@ -12,8 +12,8 @@ const LIVE = new Set([...COUNTING, 'unpaid', 'paused', 'incomplete']);
 
 /**
  * A renewing plan keeps counting this long past its period's end: Stripe's renewal event can lag (the webhook inbox
- * retries for up to 12 hours), and a booking completed meanwhile would lose its rebate for good (aa's sweep #2). Not
- * for a plan set to cancel: it ends on time.
+ * retries for up to 12 hours), and a booking made meanwhile would lose the plan's benefits for good (aa's sweep #2; the
+ * hold fee Plus waives since 2026-11-23). Not for a plan set to cancel: it ends on time.
  */
 export const RENEWAL_GRACE_MS = 3 * 86_400_000;
 
@@ -33,7 +33,11 @@ export const PLAN_PRODUCT_NAMES: Record<PlanCode, string> = { plus: 'TasksNearMe
 
 const BPS = 10_000;
 
-/** What one side's fee rebate is worth: `rebateBps` of the fee (rounded half up). */
+/**
+ * What one side's fee rebate is worth: `rebateBps` of the fee (rounded half up). Rebates belong to the service fees
+ * before 2026-11-23: policies since then pay back nothing (0 bps), and only bookings made under an older policy can
+ * still have one.
+ */
 export function feeRebateCents(feeCents: Cents, rebateBps: number): Cents {
   if (feeCents <= 0 || rebateBps <= 0) return 0;
   return Math.floor((feeCents * rebateBps + BPS / 2) / BPS);
@@ -48,44 +52,10 @@ export function bookingRebateCents(input: { feeCents: Cents; rebateBps: number; 
   return Math.max(0, Math.min(feeRebateCents(input.feeCents, input.rebateBps), input.capCents - input.rebatedThisMonthCents, input.platformRoomCents));
 }
 
-/** The money a month's bookings would have brought back: each booking's share, the month's cap at most. */
-export function estimatedRebateCents(feesCents: readonly Cents[], rebateBps: number, capCents: Cents): Cents {
-  return Math.min(
-    capCents,
-    feesCents.reduce((sum, fee) => sum + feeRebateCents(fee, rebateBps), 0),
-  );
-}
-
-/**
- * Booked (Plus) or earned (Pro) in a month at which the money back equals the monthly price, rounded up to $10. The
- * client fee's $3 minimum is left out, so for small tasks the real point comes sooner.
- */
-export function breakEvenMonthlyCents(monthlyCents: Cents, feeBps: number, rebateBps: number): Cents {
-  const share = (feeBps * rebateBps) / (BPS * BPS);
-  if (share <= 0) return 0;
-  return Math.ceil(monthlyCents / share / 1000) * 1000;
-}
-
 /** The plans as offered under a policy, the viewer's side first. */
-export function planOffers(plans: PlanPolicy, fees: FeeSchedule, first: PlanCode): PlanOffer[] {
-  const plus: PlanOffer = {
-    plan: 'plus',
-    monthlyCents: plans.plus.monthlyCents,
-    yearlyCents: plans.plus.yearlyCents,
-    rebateBps: plans.plus.posterFeeRebateBps,
-    rebateMonthlyCapCents: plans.plus.rebateMonthlyCapCents,
-    aiSearchesPerMonth: plans.plus.aiSearchesPerMonth,
-    breakEvenMonthlyCents: breakEvenMonthlyCents(plans.plus.monthlyCents, fees.posterBps, plans.plus.posterFeeRebateBps),
-  };
-  const pro: PlanOffer = {
-    plan: 'pro',
-    monthlyCents: plans.pro.monthlyCents,
-    yearlyCents: plans.pro.yearlyCents,
-    rebateBps: plans.pro.helperFeeRebateBps,
-    rebateMonthlyCapCents: plans.pro.rebateMonthlyCapCents,
-    aiSearchesPerMonth: plans.pro.aiSearchesPerMonth,
-    breakEvenMonthlyCents: breakEvenMonthlyCents(plans.pro.monthlyCents, fees.helperBps, plans.pro.helperFeeRebateBps),
-  };
+export function planOffers(plans: PlanPolicy, first: PlanCode): PlanOffer[] {
+  const plus: PlanOffer = { plan: 'plus', monthlyCents: plans.plus.monthlyCents, yearlyCents: plans.plus.yearlyCents, aiSearchesPerMonth: plans.plus.aiSearchesPerMonth };
+  const pro: PlanOffer = { plan: 'pro', monthlyCents: plans.pro.monthlyCents, yearlyCents: plans.pro.yearlyCents, aiSearchesPerMonth: plans.pro.aiSearchesPerMonth };
   return first === 'pro' ? [pro, plus] : [plus, pro];
 }
 

@@ -67,8 +67,8 @@
         "maturing": "{count, plural, one {# client completed} other {# clients completed}} less than 60 days ago"
       },
       "contribution_per_booking": {
-        "title": "Contribution per booking, before rewards",
-        "detail": "Estimated over {bookings, plural, one {# completed booking} other {# completed bookings}}",
+        "title": "Contribution per held booking, before rewards",
+        "detail": "Estimated over {bookings, plural, one {# completed held booking} other {# completed held bookings}}",
         "restricted": "Money figures are shown to finance and admins."
       },
       "helpers_id_verified": {
@@ -182,7 +182,7 @@
       "cohort": "The funnel and liquidity follow the tasks posted on the board in the period. Book again and regular visits don't post a task, so they count from the booking.",
       "booked": "A booking counts once it's paid, or once it's booked and charged later.",
       "started": "Completion, dispute and reliability rates use the confirmed bookings that were due to start in the period.",
-      "contribution": "Contribution is an estimate from the economics in the payments plan: platform fees, less card processing (2.9% + $0.30 of the charge), the payout fee (0.25% + $0.25), $2 a month per paid helper, $0.10 for notifications and 0.5% for losses."
+      "contribution": "Contribution is an estimate from the economics in the payments plan, on bookings TasksNearMe held the money for (paid directly, none moves through us): the hold fee, less card processing (2.9% + $0.30 of the charge), the payout fee (0.25% + $0.25), $2 a month per paid helper, $0.10 for notifications and 0.5% for losses. Plan revenue isn't counted here."
     }
   },
   "previews": {
