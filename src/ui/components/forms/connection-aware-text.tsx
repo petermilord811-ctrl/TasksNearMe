@@ -4,6 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { routes, type ActionResult } from '@/contracts';
 import { safeNextPath } from '@/shared/next-path';
+import { useSignedInPage } from '@/ui/lib/signed-in-page';
 
 function subscribe(notify: () => void) {
   window.addEventListener('online', notify);
@@ -42,7 +43,8 @@ export function signInAgainHref(): string {
 
 /**
  * The two failures a lost session causes: no answer at all ('unknown': the request met the sign-in redirect) and
- * 'not_allowed' (the cookie was still there, the session wasn't). Only these ask whether the session ended.
+ * 'not_allowed' (the cookie was still there, the session wasn't). Only these ask whether the session ended, and only on a
+ * page opened signed in (useSignedInPage).
  */
 export const mayBeSignedOut = (result: ActionResult) => !result.ok && (result.code === 'unknown' || result.code === 'not_allowed');
 
@@ -55,7 +57,10 @@ export const mayBeSignedOut = (result: ActionResult) => !result.ok && (result.co
 export function ActionFailureText({ result, text, offlineText, signedOutText, signInLabel }: { result: ActionResult; text: string; offlineText: string; signedOutText: string; signInLabel: string }) {
   const offline = useOffline();
   const unknown = !result.ok && result.code === 'unknown';
-  const checkable = mayBeSignedOut(result);
+  // Only a page opened signed in can lose its session: on sign-in and public pages nobody is signed in, so the check would
+  // always answer "signed out" and replace the real words (a suspended account's "This account can't continue.").
+  const signedInPage = useSignedInPage();
+  const checkable = signedInPage && mayBeSignedOut(result);
   const [gone, setGone] = useState<{ result: ActionResult; href: string } | null>(null);
   useEffect(() => {
     if (!checkable || offline) return;

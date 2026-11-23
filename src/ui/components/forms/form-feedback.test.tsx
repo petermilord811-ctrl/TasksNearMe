@@ -3,6 +3,7 @@ import { act, cleanup, render, screen } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ActionErrorCode } from '@/contracts';
+import { SignedInPage } from '@/ui/lib/signed-in-page';
 import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 import messages from '../../../../messages/en/ui';
 import feedback from '../../../../messages/en/ui/feedback.json';
@@ -20,7 +21,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const mount = (code: ActionErrorCode) => render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/New_York"><FormFeedback result={{ ok: false, code }} /></TimeZoneProvider></NextIntlClientProvider>);
+/** A page opened signed in by default (the app's pages, where these words live); `signedInPage: false` is sign-in or a public page. */
+const mount = (code: ActionErrorCode, { signedInPage = true }: { signedInPage?: boolean } = {}) => {
+  const feedbackLine = <FormFeedback result={{ ok: false, code }} />;
+  return render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/New_York">{signedInPage ? <SignedInPage>{feedbackLine}</SignedInPage> : feedbackLine}</TimeZoneProvider></NextIntlClientProvider>);
+};
 
 describe('FormFeedback on a bad connection (bad connections pass, J-N3)', () => {
   it('says the phone is offline when an action got no answer and there is no network', () => {
@@ -75,6 +80,22 @@ describe('FormFeedback after a session ended (bad connections pass, J-N2)', () =
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(screen.getByText(forms.actionErrors.not_allowed)).toBeVisible();
     expect(screen.queryByText(feedback.error.signed_out, { exact: false })).toBeNull();
+  });
+
+  it('never says signed out on a page opened signed out: a refused code on sign-in keeps its own words (2026-11-23)', async () => {
+    // Ship 45109235451: a suspended account's code said "This account can't continue." and, a moment later, "You've been
+    // signed out", because the check always answers signed out on the sign-in page.
+    window.history.pushState({}, '', '/sign-in');
+    const fetched = signedOut();
+    mount('not_allowed', { signedInPage: false });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.getByText(forms.actionErrors.not_allowed)).toBeVisible();
+    expect(screen.queryByText(feedback.error.signed_out, { exact: false })).toBeNull();
+    cleanup();
+    mount('unknown', { signedInPage: false });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(screen.getByText(feedback.error.unknown)).toBeVisible();
+    expect(fetched).not.toHaveBeenCalled();
   });
 
   it('keeps the usual words while signed in, when the check itself fails, and for answers the server gave', async () => {

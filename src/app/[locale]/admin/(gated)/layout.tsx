@@ -8,6 +8,7 @@ import { PageSkeleton } from '@/ui/components';
 import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 import { AdminShell } from '@/ui/shells';
 import { RealtimeProvider } from '@/ui/lib/realtime';
+import { SignedInPage } from '@/ui/lib/signed-in-page';
 import { liveWaitingCount } from '@/modules/support/live-chat';
 import { db } from '@/platform/db/client';
 import { requestNow } from '@/platform/clock';
@@ -39,9 +40,11 @@ async function StaffShell({ children }: { children: React.ReactNode }) {
       {/* Live notices for staff (2026-11-22): live chats asked for, joined and answered refresh the page they're on; this
           stream counts them as support online. */}
       <RealtimeProvider url="/api/realtime?staff=1">
-        <AdminShell viewer={{ ...toStaffViewer(viewer.user), ...(liveWaiting > 0 ? { liveWaiting } : {}) }} handlers={{ onSignOut: signOut }}>
-          {children}
-        </AdminShell>
+        <SignedInPage>
+          <AdminShell viewer={{ ...toStaffViewer(viewer.user), ...(liveWaiting > 0 ? { liveWaiting } : {}) }} handlers={{ onSignOut: signOut }}>
+            {children}
+          </AdminShell>
+        </SignedInPage>
       </RealtimeProvider>
     </TimeZoneProvider>
   );
