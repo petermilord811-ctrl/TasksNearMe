@@ -8,6 +8,7 @@ import type {
   CounterInviteInput,
   InvitableTask,
   InviteActionId,
+  InviteHelpersPageData,
   InviteStatus,
   InviteView,
   PaymentAttemptResult,
@@ -33,6 +34,7 @@ import { waivesHoldFee } from '@/modules/billing/benefits';
 import { payments } from '@/modules/payments/schema';
 import { helperProfiles, helperServices } from '@/modules/profiles/schema';
 import { getHelperSummaries } from '@/modules/profiles/queries';
+import { savedHelpers } from '@/modules/reviews/schema';
 import { withCopySlug } from '@/modules/tasks/copy-slug';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
 import { taskLocations, tasks } from '@/modules/tasks/schema';
@@ -179,13 +181,42 @@ export async function listedPricingOf(db: Db, helperId: string): Promise<Partial
   return listed;
 }
 
-/** `routes.app.requestHelper(handle, { fromBookingId })` (null: no such helper, or the client blocked/was blocked). */
+/**
+ * `routes.app.inviteHelpers(taskId)` (2026-11-23): the client's saved helpers, for one of their open tasks (null for
+ * anyone else's task, or one that isn't open). Each says whether they can be asked for it now: they take its kind of
+ * task, and neither of the two blocked the other.
+ */
+export async function getInviteHelpersPage(db: Db, posterId: string, taskId: string, now: Date): Promise<InviteHelpersPageData | null> {
+  const [task] = await db
+    .select({ id: tasks.id, title: tasks.title })
+    .from(tasks)
+    .where(and(eq(tasks.id, String(taskId)), eq(tasks.posterUserId, posterId), eq(tasks.status, 'open'), isNull(tasks.hiddenAt)))
+    .limit(1);
+  if (!task) return null;
+  const rows = await db.select({ helperUserId: savedHelpers.helperUserId }).from(savedHelpers).where(eq(savedHelpers.userId, posterId)).orderBy(desc(savedHelpers.createdAt));
+  const summaries = await getHelperSummaries(rows.map((row) => row.helperUserId), db);
+  const helpers = await Promise.all(rows.flatMap((row) => {
+    const helper = summaries.get(row.helperUserId);
+    if (!helper) return [];
+    return [(async () => {
+      const blocked = await isBlockedBetween(db, posterId, helper.id);
+      const fits = !blocked && (await invitableTasks(db, posterId, helper.id, now)).some((candidate) => candidate.id === task.id);
+      return { helper, canRequest: fits };
+    })()];
+  }));
+  return { task, helpers };
+}
+
+/**
+ * `routes.app.requestHelper(handle, { fromBookingId })` (null: no such helper, or the client blocked/was blocked).
+ * `taskId`: one of the client's open tasks to start with ("Invite helpers" on it); ignored when the helper can't take it.
+ */
 export async function getRequestHelperPage(
   db: Db,
   payments_: PaymentProvider,
   posterId: string,
   handle: string,
-  options: { fromBookingId?: string; slotId?: string },
+  options: { fromBookingId?: string; slotId?: string; taskId?: string },
   now: Date,
 ): Promise<RequestHelperPageData | null> {
   const helperId = await helperIdOf(db, handle);
@@ -243,6 +274,9 @@ export async function getRequestHelperPage(
   }
   const offered = slot ? tasksFound.filter((task) => fitsSlot(task, slot)) : tasksFound;
   if (slot) suggestion = { ...(offered[0] ? { taskId: offered[0].id } : {}), pricing: slot.pricing };
+  // "Invite helpers" on one of the client's tasks: that task first, at the helper's listed price for its kind of work.
+  const chosen = !slot && !options.fromBookingId && options.taskId ? offered.find((task) => task.id === String(options.taskId)) : undefined;
+  if (chosen) suggestion = { taskId: chosen.id, pricing: listedPricing[chosen.categorySlug] ?? { type: 'fixed', priceCents: 0 } };
   return {
     helper,
     tasks: offered.map(({ marketId: _market, expenseAllowanceCents: _allowance, ...task }) => task),

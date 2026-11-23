@@ -26,7 +26,8 @@ const STATE_ICON: Record<OnboardingStepState, ReactNode> = {
 function actionFor(step: VerificationStepId, state: OnboardingStepState, role: AccountVerification['role']): { href: string; kind: 'start' | 'status' } | null {
   if (state === 'done' || state === 'locked' || state === 'skipped' || state === 'later') return null;
   const kind = state === 'in_review' ? 'status' : 'start';
-  if (role === 'helper') return { href: routes.app.helperOnboarding(step), kind };
+  // The phone and the home address in a dialog over the page (2026-11-23); the other checks on their setup pages.
+  if (role === 'helper') return { href: routes.app.helperCheck(step), kind };
   // A client's ID check (asked for by our team) has its own page; the phone is on this account page.
   return step === 'identity' ? { href: routes.app.verifyIdentity(routes.app.account()), kind } : null;
 }

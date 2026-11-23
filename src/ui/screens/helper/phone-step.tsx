@@ -16,24 +16,26 @@ import { Spinner } from '@/ui/primitives/spinner';
 
 /**
  * The phone step of helper onboarding: the number, a texted 6-digit code, done. The same flow as the
- * account page's phone change; a number that's already verified shows as done.
+ * account page's phone change; a number that's already verified shows as done. `inDialog` (2026-11-23): the check opened
+ * over the page from the verified-helper reminder, under the dialog's own title; the right code closes it there.
  */
-export function PhoneStep({ verification, handlers, initialSentTo }: {
+export function PhoneStep({ verification, handlers, initialSentTo, inDialog = false }: {
   verification: VerificationSummary;
   handlers: Pick<HelperOnboardingHandlers, 'onStartPhone' | 'onConfirmPhone'>;
   /** Previews: start on the code step for this number. */
   initialSentTo?: string;
+  inDialog?: boolean;
 }) {
   const t = useTranslations('verification.phoneStep');
   const [sentTo, setSentTo] = useState(initialSentTo);
   const [changing, setChanging] = useState(false);
   const verified = verification.phone.verified && !changing;
 
-  return <section aria-labelledby="phone-step-title" className="space-y-5 rounded-xl border bg-card p-4 shadow-sm sm:p-6">
-    <div className="flex items-center gap-3">
+  return <section {...(inDialog ? { 'aria-label': t('title') } : { 'aria-labelledby': 'phone-step-title' })} className={inDialog ? 'space-y-5' : 'space-y-5 rounded-xl border bg-card p-4 shadow-sm sm:p-6'}>
+    {!inDialog && <div className="flex items-center gap-3">
       <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground"><Smartphone aria-hidden="true" className="size-5" /></span>
       <h2 id="phone-step-title" className="font-heading text-lg font-semibold">{t('title')}</h2>
-    </div>
+    </div>}
     {verified ? <div className="space-y-4">
       <p className="flex items-start gap-2 rounded-lg bg-badge-success p-3 text-badge-success-foreground"><CheckCircle2 aria-hidden="true" className="mt-0.5 size-5 shrink-0" />{t('verified', { last4: verification.phone.last4 ?? '' })}</p>
       <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setChanging(true)}>{t('change')}</Button>
@@ -73,7 +75,8 @@ function CodeForm({ sentTo, onVerify, onResend, onBack }: {
 }) {
   const t = useTranslations('verification.phoneStep');
   const form = useForm<OneTimeCodeInput>({ resolver: zodResolver(oneTimeCodeInputSchema), defaultValues: { code: '' } });
-  const action = useFormAction(form);
+  // In the check's dialog, the right code closes it (the setup flow's next step is a page of its own): said as a toast.
+  const action = useFormAction(form, { successToast: t('verifiedNow') });
   const [last, setLast] = useState<'verify' | 'resend'>('verify');
   const pending = action.pending || form.formState.isSubmitting;
   const submit = form.handleSubmit(async (input) => {

@@ -218,7 +218,7 @@ describe('the lists', () => {
   it('links every kind of row with the route builders', () => {
     const cases: [DashboardTarget, string][] = [
       [{ kind: 'task', taskId: 't 1' }, routes.app.task('t 1')],
-      [{ kind: 'offer', taskId: 't 1', offerId: 'o 1' }, routes.app.offer('t 1', 'o 1')],
+      [{ kind: 'offer', taskId: 't 1', offerId: 'o 1' }, routes.app.offerView('t 1', 'o 1')],
       [{ kind: 'booking', bookingId: 'b 1' }, routes.app.booking('b 1')],
       [{ kind: 'find_work_task', taskId: 't 1' }, routes.app.findWorkTask('t 1')],
       [{ kind: 'public_task', slug: 'a-desk' }, routes.publicTask('a-desk')],

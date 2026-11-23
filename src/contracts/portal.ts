@@ -1,3 +1,4 @@
+import type { PhoneVerifyHandlers } from './account';
 import type { ActionHandler, ActionResult, QueryHandler } from './actions';
 import type { CategorySlug, ISODateTime, Photo, TimeZone } from './common';
 import type {
@@ -301,7 +302,8 @@ export interface PortalMore {
  *   of the market's).
  * - `onDismissAnnouncement`: close the pinned card for good (plan 10.16). ok `updated`.
  */
-export interface PortalHandlers {
+/** With the account page's phone steps (`PhoneVerifyHandlers`), the composer's "Verify your phone" verifies in a dialog (2026-11-23). */
+export interface PortalHandlers extends Partial<PhoneVerifyHandlers> {
   onReact: ActionHandler<CommunityReactInput>;
   onSavePost: ActionHandler<{ postId: string; saved: boolean }>;
   onSaveTask?: ActionHandler<{ taskId: string; saved: boolean }>;

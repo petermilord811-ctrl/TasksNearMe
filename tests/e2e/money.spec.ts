@@ -9,7 +9,8 @@ test('the client sees the receipt for the booking, and only theirs', async ({ pa
   await expect(page.getByRole('heading', { level: 1, name: 'Payments' })).toBeVisible();
   await page.getByRole('link', { name: 'Anchor a tall bookshelf to the wall' }).first().click();
   await expect(page).toHaveURL(/\/app\/payments\/bkg_tv$/);
-  await expect(page.getByText('$84.00').first()).toBeVisible();
+  // Over the payments list (2026-11-23), whose own rows carry the amount too.
+  await expect(page.getByRole('dialog', { name: 'Receipt' }).getByText('$84.00').first()).toBeVisible({ timeout: 30_000 });
 
   await devSignIn(page, 'maya@example.test');
   await page.goto('/app/payments/bkg_tv');

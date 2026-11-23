@@ -189,6 +189,27 @@ describe('SeriesScreen', () => {
     await waitFor(() => expect(handlers.onChangeCard).toHaveBeenCalledExactlyOnceWith({ methodId: 'pm_maya_mc' }));
   });
 
+  it('adds a card right in the Change-card sheet, and chooses it once the page brings it (2026-11-23)', async () => {
+    const user = userEvent.setup();
+    const added = { ...mayaMastercard, id: 'pm_maya_new', last4: '4242', isDefault: false };
+    const onAddCard = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'saved' }));
+    const data: SeriesPageData = { ...seriesClientActiveData, newCard: { kind: 'dev', testCards: ['success', 'declined'] } };
+    const { handlers, rerender } = mount(data, { onAddCard });
+    await user.click(screen.getByRole('button', { name: 'Change card' }));
+    const sheet = await screen.findByRole('dialog', { name: seriesCopy.changeCard.title });
+    // No trip to the payments page: the form opens in the sheet.
+    expect(within(sheet).queryByRole('link', { name: seriesCopy.changeCard.addCard })).not.toBeInTheDocument();
+    await user.click(within(sheet).getByRole('button', { name: seriesCopy.changeCard.addCard }));
+    await user.click(within(sheet).getByRole('button', { name: messages.paymentsPage.add }));
+    await waitFor(() => expect(onAddCard).toHaveBeenCalledOnce());
+    // The page refreshes with the new card: it's the one chosen.
+    rerender(<NextIntlClientProvider locale="en" messages={messages}><SeriesScreen data={{ ...data, cards: [...data.cards!, added] }} handlers={handlers} now={SERIES_NOW} /></NextIntlClientProvider>);
+    await waitFor(() => expect(within(screen.getByRole('dialog', { name: seriesCopy.changeCard.title })).getByRole('radio', { name: /4242/ })).toBeChecked());
+    expect(screen.getByText(seriesCopy.changeCard.added)).toBeInTheDocument();
+    await user.click(within(screen.getByRole('dialog', { name: seriesCopy.changeCard.title })).getByRole('button', { name: 'Use this card' }));
+    await waitFor(() => expect(handlers.onChangeCard).toHaveBeenCalledExactlyOnceWith({ methodId: 'pm_maya_new' }));
+  });
+
   it("shows a card that can't be used here disabled, never chooses it, and removes it only when asked (J-AB4)", async () => {
     const user = userEvent.setup();
     const asked: { methodId: string }[] = [];

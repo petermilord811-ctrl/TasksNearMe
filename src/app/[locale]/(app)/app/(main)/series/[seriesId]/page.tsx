@@ -13,7 +13,9 @@ import {
   seriesMessageAction,
   skipVisitAction,
 } from '@/modules/bookings/series-actions';
-import { removeCardAction } from '@/modules/earnings/actions';
+import { newCardCollection } from '@/modules/bookings/confirm';
+import { hubDeps } from '@/modules/bookings/server';
+import { addCardAction, removeCardAction } from '@/modules/earnings/actions';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
@@ -42,7 +44,8 @@ async function Series({ params }: Pick<PageProps<'/[locale]/app/series/[seriesId
   if (!data) notFound();
   return (
     <SeriesScreen
-      data={data}
+      // A card can be added inside the Change-card sheet (2026-11-23), collected as the payments page does.
+      data={data.cards ? { ...data, newCard: newCardCollection(hubDeps().payments ?? null) } : data}
       now={now.toISOString()}
       handlers={{
         onSkipVisit: skipVisitAction.bind(null, seriesId),
@@ -53,6 +56,7 @@ async function Series({ params }: Pick<PageProps<'/[locale]/app/series/[seriesId
         onChangeCard: changeSeriesCardAction.bind(null, seriesId),
         onMessage: seriesMessageAction.bind(null, seriesId),
         onRemoveCard: removeCardAction,
+        ...(data.cards ? { onAddCard: addCardAction } : {}),
       }}
     />
   );

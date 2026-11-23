@@ -74,6 +74,17 @@ export interface BookAgainSource {
   startWindow: { start: ISODateTime; end: ISODateTime };
 }
 
+/**
+ * `routes.app.inviteHelpers(taskId)` (2026-11-23, owner: "I hate to redirect to new pages continually"): "Invite helpers"
+ * on one of the client's open tasks, in a dialog over it. Their saved helpers, newest first; Request opens the request
+ * dialog with this task chosen (`routes.app.requestHelper(handle, { taskId })`). `canRequest` false: the helper doesn't
+ * take this kind of task now (or one of the two blocked the other).
+ */
+export interface InviteHelpersPageData {
+  task: { id: string; title: string };
+  helpers: { helper: HelperSummary; canRequest: boolean }[];
+}
+
 /** `routes.app.requestHelper(handle, { fromBookingId })`. */
 export interface RequestHelperPageData {
   helper: HelperSummary;

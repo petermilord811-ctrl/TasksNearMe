@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
 import { Lightbulb, MapPin, Tag } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { ActionHandler, ActionResult, QueryHandler } from '@/contracts/actions';
@@ -97,7 +96,6 @@ export function CommunityPostForm({ data, initialKind, onPost, onUploadPhoto, la
   const sparksMessage = useSparksMessage();
   const dialog = useRouteDialog();
   const { formatDate } = useFormat();
-  const router = useRouter();
   const locale = useLocale();
   const id = useId();
   const titleRef = useRef<HTMLInputElement>(null);
@@ -201,11 +199,12 @@ export function CommunityPostForm({ data, initialKind, onPost, onUploadPhoto, la
         // Nothing kept.
       }
       // In the dialog: it closes over the page it opened on, which refreshes and shows the post; on the full page, the
-      // post's own page opens.
+      // post's own page opens: a full load, since a link to a post from inside the site opens it as a dialog over the
+      // page it's on (2026-11-23), here the emptied form.
       if (dialog) dialog.finish(next, sparksMessage(t('newPost.success'), next.sparks));
       else {
         sparksToast(t('newPost.success'), next.sparks);
-        if (next.redirectTo) router.push(localeHref(next.redirectTo, locale));
+        if (next.redirectTo) window.location.assign(localeHref(next.redirectTo, locale));
       }
     }
   });

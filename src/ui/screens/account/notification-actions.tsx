@@ -10,6 +10,7 @@ import { formatDatePhrase, formatMoney } from '@/shared/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { attentionHref } from '@/ui/lib/attention-href';
 import { useFormat, type Formatters } from '@/ui/lib/format';
+import { OWN_NAVIGATION, useRouteDialog } from '@/ui/lib/route-dialog';
 import { cn } from '@/ui/lib/utils';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -112,6 +113,9 @@ function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
   const format = useFormat();
   const { formatDateTime, formatRelative } = format;
   const router = useRouter();
+  // In the bell's dialog (2026-11-23): the dialog closes, then the notification's page opens (a conversation, on wide
+  // screens, in the chat window).
+  const dialog = useRouteDialog();
   const [pending, setPending] = useState(false);
   const locked = useRef(false);
   const Icon = icons[notification.type];
@@ -133,12 +137,16 @@ function NotificationRow({ notification, onOpen, now, navigationRequestRef }: {
     } finally {
       locked.current = false;
       setPending(false);
-      if (request !== undefined && request === navigationRequestRef.current) router.push(result?.ok && result.redirectTo ? result.redirectTo : href);
+      if (request !== undefined && request === navigationRequestRef.current) {
+        const next = result?.ok && result.redirectTo ? result.redirectTo : href;
+        if (dialog) dialog.follow(next);
+        else router.push(next);
+      }
     }
   }
 
   return <li>
-    <Link href={href} onClick={open} aria-busy={pending} aria-disabled={pending || undefined} className={cn(
+    <Link href={href} onClick={open} aria-busy={pending} aria-disabled={pending || undefined} {...{ [OWN_NAVIGATION]: '' }} className={cn(
       'group flex min-h-11 items-start gap-3 p-4 transition-colors duration-200 hover:bg-foreground/[0.03] focus-visible:relative focus-visible:z-10 focus-visible:outline-offset-[-2px] md:gap-4 md:px-5 md:py-4.5 dark:hover:bg-white/[0.03]',
       unread && 'bg-secondary/40 hover:bg-secondary/55',
     )}>

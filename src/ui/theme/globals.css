@@ -720,6 +720,17 @@ html[data-language-switch] #main::after {
     color: inherit;
     text-decoration: none;
   }
+
+  /* A receipt opened over the payments list (2026-11-23) prints at full length: the dialog and its scrolling body
+     neither clip nor shift it, and the page's scroll lock (a dialog's) doesn't cut it to one sheet. */
+  html body:has([data-print-receipt]),
+  html body:has([data-print-receipt]) *:has([data-print-receipt]) {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    transform: none !important;
+    translate: none !important;
+  }
 }
 
 /* ---- App UI (src/ui/shells, src/ui/primitives) -------------------------------------------------

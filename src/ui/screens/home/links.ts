@@ -4,7 +4,7 @@ import { routes, type DashboardData, type DashboardQuery, type DashboardSeeAll, 
 export function dashboardTargetHref(target: DashboardTarget): string {
   switch (target.kind) {
     case 'task': return routes.app.task(target.taskId);
-    case 'offer': return routes.app.offer(target.taskId, target.offerId);
+    case 'offer': return routes.app.offerView(target.taskId, target.offerId);
     case 'booking': return routes.app.booking(target.bookingId);
     case 'find_work_task': return routes.app.findWorkTask(target.taskId);
     case 'public_task': return routes.publicTask(target.slug);

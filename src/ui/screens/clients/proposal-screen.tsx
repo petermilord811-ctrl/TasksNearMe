@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { routes, type BadgeTone, type ISODateTime, type PaymentAttemptResult, type ProposalHandlers, type ProposalPageData, type RebookProposalStatus } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
+import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
 import { ExactAddressPanel } from '@/ui/components/location/exact-address-panel';
 import { useScheduleWords } from '@/ui/components/series/schedule-words';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
@@ -23,18 +24,17 @@ export function ProposalScreen(props: ProposalScreenProps) {
   return <ProposalContent {...props} />;
 }
 
-/** Seeded action states belong to the preview gallery; app pages use ProposalScreen. */
-export function ProposalContent({ data, handlers, now, initialResult, initialPending }: ProposalScreenProps & {
+type ProposalState = {
   initialResult?: PaymentAttemptResult;
   initialPending?: boolean;
-}) {
-  const { formatDate, formatDateTime, zoneName } = useFormat();
+};
+
+/** Seeded action states belong to the preview gallery; app pages use ProposalScreen. */
+export function ProposalContent({ data, handlers, now, initialResult, initialPending }: ProposalScreenProps & ProposalState) {
   const t = useTranslations('proposal');
-  const categories = useTranslations('helperCard.categories');
   const { proposal } = data;
-  const { viewerRole, task, helper, client } = proposal;
+  const { viewerRole, helper, client } = proposal;
   const poster = viewerRole === 'poster';
-  const scheduleWords = useScheduleWords();
 
   return <div className="mx-auto max-w-reading space-y-6">
     <Link href={poster ? routes.app.home() : routes.app.clients()} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline">
@@ -43,12 +43,55 @@ export function ProposalContent({ data, handlers, now, initialResult, initialPen
     <header className="space-y-3">
       <StatusBadge tone={tones[proposal.status]} label={t(`status.${proposal.status}`)} />
       <h1 className="font-display text-2xl/8 font-semibold md:text-3xl/9.5 tracking-[-0.025em]">{t(`title.${viewerRole}`, { helper: helper.displayName, client: client.displayName })}</h1>
-      <p className="text-muted-foreground">{t(`statusDescription.${proposal.status === 'sent' ? `sent_${viewerRole}` : proposal.status}`, { client: client.displayName })}</p>
-      {proposal.expiresAt && <Deadline at={proposal.expiresAt} now={now} label={t('expires')} />}
-      {proposal.seriesId
-        ? <Link href={routes.app.series(proposal.seriesId)} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('viewSeries')}</Link>
-        : proposal.bookingId && <Link href={routes.app.booking(proposal.bookingId)} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('viewBooking')}</Link>}
+      <ProposalStatusLines data={data} now={now} />
     </header>
+    <ProposalBody data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} />
+  </div>;
+}
+
+/**
+ * The same over the page it was opened from (2026-11-23, owner: "I hate to redirect to new pages continually"; My
+ * clients, the dashboard, a notification). Accepting pays the hold here, the bank's step included (the dialog stays
+ * open meanwhile), then the new booking opens in its place; declining or withdrawing closes it.
+ */
+export function ProposalDialogScreen({ data, handlers, now, initialResult, initialPending }: ProposalScreenProps & ProposalState) {
+  const t = useTranslations('proposal');
+  const { proposal } = data;
+  const { viewerRole, helper, client } = proposal;
+  return <>
+    <RouteDialogHeader title={t(`title.${viewerRole}`, { helper: helper.displayName, client: client.displayName })}>
+      <div className="space-y-3 pt-1 text-sm">
+        <StatusBadge tone={tones[proposal.status]} label={t(`status.${proposal.status}`)} />
+        <ProposalStatusLines data={data} now={now} />
+      </div>
+    </RouteDialogHeader>
+    <RouteDialogBody><ProposalBody data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} /></RouteDialogBody>
+  </>;
+}
+
+/** Where the proposal stands: its status in words, when it expires, and the booking or regular visits it made. */
+function ProposalStatusLines({ data, now }: { data: ProposalPageData; now: ISODateTime }) {
+  const t = useTranslations('proposal');
+  const { proposal } = data;
+  return <>
+    <p className="text-muted-foreground">{t(`statusDescription.${proposal.status === 'sent' ? `sent_${proposal.viewerRole}` : proposal.status}`, { client: proposal.client.displayName })}</p>
+    {proposal.expiresAt && <Deadline at={proposal.expiresAt} now={now} label={t('expires')} />}
+    {proposal.seriesId
+      ? <Link href={routes.app.series(proposal.seriesId)} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('viewSeries')}</Link>
+      : proposal.bookingId && <Link href={routes.app.booking(proposal.bookingId)} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('viewBooking')}</Link>}
+  </>;
+}
+
+/** The task, the place, the helper's message, the money and the actions: on the page and in the dialog. */
+function ProposalBody({ data, handlers, initialResult, initialPending }: Omit<ProposalScreenProps, 'now'> & ProposalState) {
+  const { formatDate, formatDateTime, zoneName } = useFormat();
+  const t = useTranslations('proposal');
+  const categories = useTranslations('helperCard.categories');
+  const { proposal } = data;
+  const { viewerRole, task, helper } = proposal;
+  const poster = viewerRole === 'poster';
+  const scheduleWords = useScheduleWords();
+  return <>
     <section aria-label={t('task')} className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]">
       <div className="space-y-2">
         <p className="text-sm font-medium text-muted-foreground">{categories(task.categorySlug)}</p>
@@ -83,5 +126,5 @@ export function ProposalContent({ data, handlers, now, initialResult, initialPen
       </>}
     </div>
     <ProposalActions key={proposal.id} data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} />
-  </div>;
+  </>;
 }

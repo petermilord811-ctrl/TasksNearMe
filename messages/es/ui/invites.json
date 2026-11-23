@@ -90,5 +90,18 @@
       "unavailable": "Solicitud — proveedor no disponible",
       "unknown": "Solicitud — no se pudo enviar"
     }
+  },
+  "inviteHelpers": {
+    "title": "Invitar ayudantes",
+    "description": "Pídele a un ayudante que guardaste que haga “{task}”. Recibirá tu solicitud y podrá aceptarla, rechazarla o proponer otro precio.",
+    "listLabel": "Tus ayudantes guardados",
+    "request": "Solicitar a {name}",
+    "notAvailable": "{name} no acepta este tipo de tarea por ahora.",
+    "browse": "Buscar más ayudantes",
+    "empty": {
+      "title": "Aún no tienes ayudantes guardados",
+      "body": "Guarda ayudantes desde sus perfiles para pedirles tus tareas aquí. También puedes esperar ofertas para tu tarea.",
+      "action": "Ver ayudantes"
+    }
   }
 }

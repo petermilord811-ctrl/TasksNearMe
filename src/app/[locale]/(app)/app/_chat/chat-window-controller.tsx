@@ -422,7 +422,7 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       if (onMessagesPageRef.current || !window.matchMedia(WIDE).matches) return;
       const anchor = event.target instanceof Element ? event.target.closest('a[href]') : null;
-      if (!anchor || anchor.closest('[data-chat-window]') || anchor.hasAttribute('download') || anchor.getAttribute('target') === '_blank') return;
+      if (!anchor || anchor.closest('[data-chat-window], [data-route-dialog]') || anchor.hasAttribute('download') || anchor.getAttribute('target') === '_blank') return;
       const next = chatViewOfHref(anchor.getAttribute('href') ?? '', window.location.origin);
       if (!next) return;
       // The page's own handlers never see this click: some navigate after their work (a notification marks itself read,

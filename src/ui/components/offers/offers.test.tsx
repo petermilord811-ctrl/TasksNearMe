@@ -27,7 +27,7 @@ describe('OfferCard and OfferComparison', () => {
     expect(screen.getByText('New offer')).toBeVisible();
     expect(screen.getByText('New')).toBeVisible();
     expect(screen.getByText('$60.00')).toBeVisible();
-    expect(screen.getByRole('link', { name: `View ${deskOfferJordan.helper.displayName}'s offer` })).toHaveAttribute('href', '/app/tasks/tsk_desk/offers/off_jordan');
+    expect(screen.getByRole('link', { name: `View ${deskOfferJordan.helper.displayName}'s offer` })).toHaveAttribute('href', '/app/tasks/tsk_desk/offers/off_jordan/view');
     expect(Array.from(container.querySelectorAll('[data-action-id]'), (item) => item.getAttribute('data-action-id'))).toEqual(deskOfferJordan.actions.map((action) => action.id));
     expect(container.textContent).not.toContain('1234 Example Lane');
   });

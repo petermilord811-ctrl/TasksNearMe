@@ -443,7 +443,8 @@ describe("a task's owner actions", () => {
 
     // The owner gets the same actions.
     viewer.id = CLIENT;
-    expect(await taskOwnerAction('tsk_wp_own', { action: 'invite_helpers' })).toEqual({ ok: true, code: 'opened', redirectTo: routes.app.saved() });
+    // Invite helpers opens the client's saved helpers over the task (2026-11-23), not the Saved helpers page.
+    expect(await taskOwnerAction('tsk_wp_own', { action: 'invite_helpers' })).toEqual({ ok: true, code: 'opened', redirectTo: routes.app.inviteHelpers('tsk_wp_own') });
     expect(await taskOwnerAction('tsk_wp_own_done', { action: 'post_again' })).toEqual({ ok: true, code: 'opened', redirectTo: routes.app.newTask({ again: 'tsk_wp_own_done' }) });
     expect(await posterOfferAction({ offerId, action: 'book_offer' })).toEqual({ ok: true, code: 'opened', redirectTo: routes.app.confirmOffer('tsk_wp_own', offerId) });
     viewer.id = '';

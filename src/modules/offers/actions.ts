@@ -78,7 +78,8 @@ export async function taskOwnerAction(taskId: string, input: { action: Exclude<T
     // The wizard opens with this task's draft, its saved address and the next fitting date (plan 4.2).
     return { ok: true, code: 'opened', redirectTo: routes.app.newTask({ again: String(taskId) }) };
   }
-  if (input.action === 'invite_helpers' && task.status === 'open') return { ok: true, code: 'opened', redirectTo: routes.app.saved() };
+  // The client's saved helpers in a dialog over the task (2026-11-23), each with Request for it.
+  if (input.action === 'invite_helpers' && task.status === 'open') return { ok: true, code: 'opened', redirectTo: routes.app.inviteHelpers(String(taskId)) };
   return { ok: false, code: 'not_allowed' };
 }
 

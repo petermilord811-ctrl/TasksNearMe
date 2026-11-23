@@ -39,6 +39,13 @@ describe('routes', () => {
     );
   });
 
+  it('opens the phone and home address checks in place, the other checks on their setup pages (2026-11-23)', () => {
+    expect(routes.app.helperCheck('phone')).toBe('/app/helper/checks/phone');
+    expect(routes.app.helperCheck('address')).toBe('/app/helper/checks/address');
+    expect(routes.app.helperCheck('identity')).toBe(routes.app.helperOnboarding('identity'));
+    expect(routes.app.helperCheck('background')).toBe(routes.app.helperOnboarding('background'));
+  });
+
   it('keeps preview ids as path segments', () => {
     expect(routes.dev.preview('price-breakdown/desk-poster')).toBe('/dev/ui/price-breakdown/desk-poster');
   });

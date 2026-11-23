@@ -9,6 +9,7 @@ import type { ActionErrorCode, ActionHandler, ActionResult, CommunityEditInput, 
 import { EditDialog, type EditTarget } from './edit-dialog';
 import { useLocale } from 'next-intl';
 import { localeHref } from '@/ui/lib/locale-link';
+import { useRouteDialog } from '@/ui/lib/route-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
 import { Button } from '@/ui/primitives/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/ui/primitives/dialog';
@@ -43,6 +44,7 @@ export function CommunityItemActions({ target, id, label, own, pin, onDelete, re
   const t = useTranslations('community');
   const feedback = useTranslations('feedback');
   const router = useRouter();
+  const dialog = useRouteDialog();
   const locale = useLocale();
   const formId = useId();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -59,8 +61,14 @@ export function CommunityItemActions({ target, id, label, own, pin, onDelete, re
       result = { ok: false, code: 'unknown' };
     }
     if (result.ok) {
-      toast.success(success);
       done?.();
+      // A post deleted from its dialog (2026-11-23): the dialog closes over the page it opened on, which refreshes
+      // without it (going to the feed from inside a dialog would leave the dialog open over it).
+      if (dialog && result.redirectTo) {
+        dialog.finish(result, success);
+        return;
+      }
+      toast.success(success);
       if (result.redirectTo) router.push(localeHref(result.redirectTo, locale));
     } else toast.error(errorMessages?.[result.code] ?? (feedback.has(`error.${result.code}`) ? feedback(`error.${result.code}`) : feedback('error.unknown')));
   });

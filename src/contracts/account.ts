@@ -495,6 +495,13 @@ export interface AccountHandlers extends PushHandlers {
   onSaveLanguage?: ActionHandler<LanguageInput>;
 }
 
+/**
+ * The account page's phone steps, where something waits for a verified phone (2026-11-23, owner: "I hate to redirect to
+ * new pages continually … if possible, use dialog"): Neighbors' posting and replies verify the number in a dialog over
+ * the page, so what the person was writing stays. The same actions and results as `AccountHandlers`.
+ */
+export type PhoneVerifyHandlers = Pick<AccountHandlers, 'onStartPhoneChange' | 'onConfirmPhoneChange'>;
+
 // ---- Usernames (2026-11-22, owner: "account id as other platforms @pm11") ------------------------------------------
 
 /** An @username: lowercase letters, digits and underscores, starting with a letter, 3 to 20 long. */

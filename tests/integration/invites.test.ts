@@ -12,6 +12,7 @@ import {
   declineInvite,
   expireDueInvites,
   finishRequestVerification,
+  getInviteHelpersPage,
   getRequestHelperPage,
   invitesForHelper,
   invitesForTask,
@@ -20,6 +21,7 @@ import {
 } from '@/modules/invites/service';
 import { payments } from '@/modules/payments/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
+import { savedHelpers } from '@/modules/reviews/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
 
@@ -146,5 +148,37 @@ describe('direct invites', () => {
     await db.insert(helperProfiles).values({ ...profile!, userId: 'usr_inv_paused', handle: 'pat-q', status: 'paused' });
     expect(await getRequestHelperPage(db, pay, 'usr_chris', 'pat-q', {}, now())).toBeNull();
     expect(await requestHelper(deps, 'usr_chris', 'pat-q', request(task), now())).toEqual({ ok: false, code: 'not_allowed' });
+  });
+});
+
+describe('Invite helpers on a task (2026-11-23)', () => {
+  it("lists the client's saved helpers for one of their open tasks, and a request starts with that task", async () => {
+    const task = await openTask('tsk_inv_saved');
+    // Computer help: Lee takes it, Jordan doesn't.
+    await db.update(tasks).set({ categoryId: 'cat_computer_help' }).where(eq(tasks.id, task.id));
+    const existing = await db.select({ helperUserId: savedHelpers.helperUserId }).from(savedHelpers).where(eq(savedHelpers.userId, 'usr_chris'));
+    const mine = ['usr_jordan', 'usr_lee'].filter((id) => !existing.some((row) => row.helperUserId === id));
+    await db.insert(savedHelpers).values(mine.map((helperUserId, index) => ({ userId: 'usr_chris', helperUserId, createdAt: new Date(Date.now() - 60_000 + index * 1000) })));
+    try {
+      const page = await getInviteHelpersPage(db, 'usr_chris', task.id, now());
+      expect(page?.task.id).toBe(task.id);
+      const shown = page?.helpers.filter(({ helper }) => ['jordan-t', 'lee-m'].includes(helper.handle)).map(({ helper, canRequest }) => [helper.handle, canRequest]);
+      expect(shown).toEqual(expect.arrayContaining([['lee-m', true], ['jordan-t', false]]));
+      // Only the task's own client, and only while it's open.
+      expect(await getInviteHelpersPage(db, 'usr_ruth', task.id, now())).toBeNull();
+
+      // Request (from the list): the task chosen, at Lee's listed price for computer help.
+      const request = await getRequestHelperPage(db, pay, 'usr_chris', 'lee-m', { taskId: task.id }, now());
+      expect(request?.suggestion).toEqual({ taskId: task.id, pricing: { type: 'fixed', priceCents: 4000 } });
+      // A task the helper doesn't take isn't chosen (nor offered).
+      const jordan = await getRequestHelperPage(db, pay, 'usr_chris', 'jordan-t', { taskId: task.id }, now());
+      expect(jordan?.suggestion).toBeUndefined();
+      expect(jordan?.tasks.map((item) => item.id)).not.toContain(task.id);
+
+      await db.update(tasks).set({ status: 'canceled' }).where(eq(tasks.id, task.id));
+      expect(await getInviteHelpersPage(db, 'usr_chris', task.id, now())).toBeNull();
+    } finally {
+      for (const helperUserId of mine) await db.delete(savedHelpers).where(and(eq(savedHelpers.userId, 'usr_chris'), eq(savedHelpers.helperUserId, helperUserId)));
+    }
   });
 });

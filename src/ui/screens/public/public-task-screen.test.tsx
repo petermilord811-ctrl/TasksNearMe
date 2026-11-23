@@ -20,7 +20,7 @@ describe('PublicTaskScreen', () => {
     // The price card's link, and on phones the bar at the bottom of the screen (2026-11-23).
     const offers = screen.getAllByRole('link', { name: 'Make an offer' });
     expect(offers).toHaveLength(2);
-    for (const link of offers) expect(link.getAttribute('href')).toBe('/app/find-work/tsk_desk');
+    for (const link of offers) expect(link.getAttribute('href')).toBe('/app/find-work/tsk_desk/offer');
     expect(screen.getByText('Sign in to see the full details and make an offer.')).toBeDefined();
     expect(container.textContent).not.toMatch(/Example Lane|1234|Apt 2B|Buzz 2B|78723/);
     expect(container.querySelector('img')).toBeNull();

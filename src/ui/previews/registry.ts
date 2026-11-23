@@ -75,6 +75,7 @@ import { adsPreviews } from './ads.preview';
 import { questionPreviews } from './questions.preview';
 import { searchPreviews } from './searches.preview';
 import { routeDialogPreviews } from './route-dialogs.preview';
+import { inPlacePreviews } from './in-place.preview';
 import { rewardsPreviews } from './rewards.preview';
 import { planPreviews } from './plan.preview';
 import { sparksPreviews } from './sparks.preview';
@@ -178,4 +179,5 @@ export const previews: PreviewEntry[] = [
   ...questionPreviews,
   ...searchPreviews,
   ...routeDialogPreviews,
+  ...inPlacePreviews,
 ];

@@ -7,12 +7,15 @@ import { ACTION_ERROR_CODES, REBOOK_ACTION_IDS, REBOOK_PROPOSAL_STATUSES, routes
 import { fakeHandler, proposalAcceptedData, proposalHelperData, proposalPosterData, proposalRepeatAcceptedData, proposalRepeatPosterData } from '@/fixtures';
 import baseMessages from '../../../../messages/en/ui';
 import proposalCopy from '../../../../messages/en/ui/proposal.json';
-import { ProposalScreen } from './proposal-screen';
+import { ProposalDialogScreen, ProposalScreen } from './proposal-screen';
 import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
+import { RouteDialogFrame } from '@/ui/components/layout/route-dialog-frame';
 
 const messages = { ...baseMessages, proposal: proposalCopy };
-const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
+const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn(), back: vi.fn() }));
+const toasts = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
+vi.mock('sonner', () => ({ toast: toasts }));
 beforeEach(() => {
   vi.stubGlobal('ResizeObserver', class { observe = vi.fn(); unobserve = vi.fn(); disconnect = vi.fn(); });
 });
@@ -187,5 +190,46 @@ describe('a repeating proposal', () => {
   it('links to the regular visits once accepted', () => {
     mount(proposalRepeatAcceptedData);
     expect(screen.getByRole('link', { name: proposalCopy.viewSeries })).toHaveAttribute('href', routes.app.series('srs_yard'));
+  });
+});
+
+describe('ProposalDialogScreen (2026-11-23: over the page it was opened from)', () => {
+  function mountDialog(data: ProposalPageData = proposalPosterData, overrides: Partial<ProposalHandlers> = {}) {
+    const handlers: ProposalHandlers = {
+      onAccept: vi.fn(fakeHandler<Parameters<ProposalHandlers['onAccept']>[0]>(booked, 0)),
+      onFinishVerification: vi.fn(fakeHandler<Parameters<ProposalHandlers['onFinishVerification']>[0]>(booked, 0)),
+      onDecline: vi.fn(fakeHandler({ ok: true, code: 'updated' }, 0)), onWithdraw: vi.fn(fakeHandler({ ok: true, code: 'updated' }, 0)),
+      ...overrides,
+    };
+    return { handlers, ...render(<NextIntlClientProvider locale="en" messages={messages}><TimeZoneProvider timeZone="America/Chicago"><RouteDialogFrame><ProposalDialogScreen data={data} handlers={handlers} now={now} /></RouteDialogFrame></TimeZoneProvider></NextIntlClientProvider>) };
+  }
+
+  it('is a dialog named by the proposal, and accepting pays, then opens the new booking in its place', async () => {
+    const user = userEvent.setup();
+    let pay: (result: PaymentAttemptResult) => void = () => {};
+    const { handlers } = mountDialog(proposalPosterData, { onAccept: vi.fn(() => new Promise<PaymentAttemptResult>((resolve) => { pay = resolve; })) });
+    const dialog = screen.getByRole('dialog', { name: 'Jordan T. proposed a booking' });
+    await submit(user);
+    await waitFor(() => expect(handlers.onAccept).toHaveBeenCalledOnce());
+    // While the payment is on its way, it can't be closed (no X).
+    expect(within(dialog).queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
+    await act(async () => { pay(booked); });
+    expect(navigation.back).toHaveBeenCalledTimes(1);
+    expect(navigation.push).not.toHaveBeenCalled();
+    act(() => { window.dispatchEvent(new PopStateEvent('popstate')); });
+    expect(navigation.push).toHaveBeenCalledExactlyOnceWith(booked.redirectTo);
+  });
+
+  it('declining closes it with the words as a toast, and the page under it refreshes', async () => {
+    const user = userEvent.setup();
+    const { handlers } = mountDialog();
+    await user.click(screen.getByRole('button', { name: 'Decline' }));
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Decline' }));
+    await waitFor(() => expect(handlers.onDecline).toHaveBeenCalledOnce());
+    await waitFor(() => expect(navigation.back).toHaveBeenCalledTimes(1));
+    expect(toasts.success).toHaveBeenCalledWith(proposalCopy.success.decline_proposal);
+    act(() => { window.dispatchEvent(new PopStateEvent('popstate')); });
+    expect(navigation.refresh).toHaveBeenCalledTimes(1);
+    expect(navigation.push).not.toHaveBeenCalled();
   });
 });

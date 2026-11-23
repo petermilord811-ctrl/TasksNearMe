@@ -7,12 +7,17 @@ import { useForm } from 'react-hook-form';
 import type { ActionResult } from '@/contracts';
 import messages from '../../../../messages/en/ui';
 import { useFormAction } from '@/ui/lib/use-form-action';
-import { useRouteDialog, type RouteDialogControls } from '@/ui/lib/route-dialog';
+import { OWN_NAVIGATION, useRouteDialog, useWideRouteDialog, type RouteDialogControls } from '@/ui/lib/route-dialog';
+import { OPEN_IN_CHAT_EVENT, type OpenInChatDetail } from '@/ui/lib/chat-window-open';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
+import { ActionBar } from '@/ui/components/actions/action-bar';
+import { NotificationList } from '@/ui/screens/account/notification-actions';
+import { mayaNotificationsData } from '@/fixtures';
 import { RouteDialogFrame } from './route-dialog-frame';
 import { RouteDialogBody, RouteDialogHeader } from './route-dialog';
 
 const navigation = vi.hoisted(() => ({ back: vi.fn(), push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }));
-const toasts = vi.hoisted(() => ({ success: vi.fn() }));
+const toasts = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => navigation }));
 vi.mock('sonner', () => ({ toast: toasts }));
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
@@ -169,6 +174,140 @@ describe('RouteDialogFrame', () => {
     expect(navigation.back).not.toHaveBeenCalled();
     expect(navigation.push).not.toHaveBeenCalled();
     expect(toasts.success).not.toHaveBeenCalled();
+  });
+});
+
+/** The screen's width for `matchMedia` (the chat window docks from 1024 px). */
+function screenWidth(px: number) {
+  vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('min-width: 1024px') ? px >= 1024 : false, media: query, addEventListener: () => {}, removeEventListener: () => {} }));
+}
+
+function grabControls(): RouteDialogControls[] {
+  const grabbed: RouteDialogControls[] = [];
+  function Grab() {
+    const dialog = useRouteDialog();
+    useEffect(() => { if (dialog) grabbed.push(dialog); }, [dialog]);
+    return null;
+  }
+  mount(<Grab />);
+  return grabbed;
+}
+
+describe('following a page from inside a route dialog (2026-11-23)', () => {
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  it('closes first, then opens the page (one with a dialog version opens over the page underneath)', () => {
+    screenWidth(1280);
+    const [controls] = grabControls();
+    act(() => { controls?.follow('/app/tasks/tsk_desk/offers/off_jordan/confirm'); });
+    expect(navigation.back).toHaveBeenCalledTimes(1);
+    expect(navigation.push).not.toHaveBeenCalled();
+    act(() => { window.dispatchEvent(new PopStateEvent('popstate')); });
+    expect(navigation.push).toHaveBeenCalledExactlyOnceWith('/app/tasks/tsk_desk/offers/off_jordan/confirm');
+  });
+
+  it('opens a conversation in the chat window on wide screens, once the page underneath is back', () => {
+    screenWidth(1280);
+    const opened: string[] = [];
+    const chatWindow = (event: Event) => { opened.push((event as CustomEvent<OpenInChatDetail>).detail.href); event.preventDefault(); };
+    window.addEventListener(OPEN_IN_CHAT_EVENT, chatWindow);
+    try {
+      const [controls] = grabControls();
+      act(() => { controls?.follow('/app/messages/thr_1'); });
+      expect(opened).toEqual([]);
+      act(() => { window.dispatchEvent(new PopStateEvent('popstate')); });
+      expect(opened).toEqual(['/app/messages/thr_1']);
+      expect(navigation.push).not.toHaveBeenCalled();
+    } finally {
+      window.removeEventListener(OPEN_IN_CHAT_EVENT, chatWindow);
+    }
+  });
+
+  it('goes to the conversation’s page on phones, or when no chat window takes it', () => {
+    screenWidth(390);
+    const [controls] = grabControls();
+    act(() => { controls?.follow('/app/messages/thr_1'); });
+    act(() => { window.dispatchEvent(new PopStateEvent('popstate')); });
+    expect(navigation.push).toHaveBeenCalledExactlyOnceWith('/app/messages/thr_1');
+  });
+
+  it('leaves a link that goes after its own work to its own click (OWN_NAVIGATION)', () => {
+    mount(<>
+      {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- a plain anchor on purpose: the frame handles any link inside it, Link or not */}
+      <a href="/app/bookings/bkg_tv" {...{ [OWN_NAVIGATION]: '' }} onClick={(event) => event.preventDefault()}>Bookshelf</a>
+    </>);
+    fireEvent.click(screen.getByRole('link', { name: 'Bookshelf' }));
+    expect(navigation.back).not.toHaveBeenCalled();
+  });
+
+  it('opened over a sign-in page (signing in going on to it), it loads as its own page instead', () => {
+    const marker = document.createElement('span');
+    marker.setAttribute('data-auth-page', '');
+    document.body.append(marker);
+    const replace = vi.fn();
+    vi.stubGlobal('location', { ...window.location, href: 'http://localhost/app/payments/bkg_tv', replace });
+    const visible = vi.fn(() => true);
+    Object.defineProperty(HTMLElement.prototype, 'checkVisibility', { value: visible, configurable: true });
+    try {
+      mount(<p>Receipt</p>);
+      expect(replace).toHaveBeenCalledExactlyOnceWith('http://localhost/app/payments/bkg_tv');
+      // A sign-in page kept hidden (Next keeps visited screens) doesn't count.
+      replace.mockClear();
+      cleanup();
+      visible.mockReturnValue(false);
+      mount(<p>Receipt</p>);
+      expect(replace).not.toHaveBeenCalled();
+    } finally {
+      marker.remove();
+      delete (HTMLElement.prototype as { checkVisibility?: unknown }).checkVisibility;
+    }
+  });
+
+  it('is as wide as a reading column while a screen asks for it', () => {
+    function Wide() {
+      useWideRouteDialog();
+      return <p>Offer</p>;
+    }
+    const view = mount(<Wide />);
+    expect(screen.getByRole('dialog')).toHaveClass('sm:max-w-2xl');
+    view.rerender(<NextIntlClientProvider locale="en" messages={messages}>
+      <RouteDialogFrame>
+        <RouteDialogHeader title="Review Jordan T." description="Assemble a desk" />
+        <RouteDialogBody><p>Form</p></RouteDialogBody>
+      </RouteDialogFrame>
+    </NextIntlClientProvider>);
+    expect(screen.getByRole('dialog')).not.toHaveClass('sm:max-w-2xl');
+    expect(screen.getByRole('dialog')).toHaveClass('sm:max-w-xl');
+  });
+
+  it('an action bar in the dialog (an offer\'s Book or Message) follows its answer through the dialog', async () => {
+    screenWidth(390);
+    const onAction = vi.fn(async (): Promise<ActionResult> => ({ ok: true, code: 'opened', redirectTo: '/app/tasks/tsk_desk/offers/off_jordan/confirm' }));
+    mount(<TimeZoneProvider timeZone="America/Chicago"><ActionBar actions={[{ id: 'book_offer', kind: 'primary', enabled: true }]} onAction={onAction} /></TimeZoneProvider>);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Book helper' })); });
+    expect(onAction).toHaveBeenCalledExactlyOnceWith('book_offer');
+    expect(navigation.back).toHaveBeenCalledTimes(1);
+    expect(navigation.push).not.toHaveBeenCalled();
+    act(() => { window.dispatchEvent(new PopStateEvent('popstate')); });
+    expect(navigation.push).toHaveBeenCalledExactlyOnceWith('/app/tasks/tsk_desk/offers/off_jordan/confirm');
+  });
+
+  it('a notification in the bell\'s dialog reads itself, then closes the dialog and opens its page', async () => {
+    screenWidth(390);
+    const [notification] = mayaNotificationsData.notifications;
+    let finishOpen: (result: ActionResult) => void = () => {};
+    const onOpen = vi.fn(() => new Promise<ActionResult>((resolve) => { finishOpen = resolve; }));
+    mount(<TimeZoneProvider timeZone="America/Chicago"><NotificationList notifications={[notification!]} onOpen={onOpen} now="2026-11-21T18:00:00.000Z" /></TimeZoneProvider>);
+    const row = screen.getAllByRole('link')[0]!;
+    const href = row.getAttribute('href');
+    fireEvent.click(row);
+    expect(onOpen).toHaveBeenCalledExactlyOnceWith({ notificationId: notification!.id });
+    // Nothing moves until it's read (the frame leaves the row's click to it).
+    expect(navigation.back).not.toHaveBeenCalled();
+    await act(async () => { finishOpen({ ok: true, code: 'updated' }); });
+    expect(navigation.back).toHaveBeenCalledTimes(1);
+    act(() => { window.dispatchEvent(new PopStateEvent('popstate')); });
+    expect(navigation.push).toHaveBeenCalledExactlyOnceWith(href);
   });
 });
 

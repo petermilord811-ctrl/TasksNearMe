@@ -3,7 +3,8 @@ import type { SeriesActionId, SeriesVisitActionId } from './action-ids';
 import type { ActionHandler, FieldErrorCode } from './actions';
 import type { CategorySlug, ISODateTime, TimeZone } from './common';
 import type { PriceBreakdown, PricingInput } from './money';
-import type { CardBrand, CardRemovalHandlers, SavedPaymentMethod } from './payments';
+import type { AddCardInput } from './earnings';
+import type { CardBrand, CardRemovalHandlers, NewCardCollection, SavedPaymentMethod } from './payments';
 import type { ClientSummary, HelperSummary } from './people';
 
 /**
@@ -117,8 +118,13 @@ export interface SeriesView {
 /** `routes.app.series(seriesId)`. */
 export interface SeriesPageData {
   series: SeriesView;
-  /** Clients: their saved cards, for "Change card" (cards are added on the payments page). */
+  /** Clients: their saved cards, for "Change card". */
   cards?: SavedPaymentMethod[];
+  /**
+   * Clients: how a new card is collected, for "Add a card" inside the Change-card sheet (2026-11-23: it went to the
+   * payments page, out of the sheet and the series).
+   */
+  newCard?: NewCardCollection;
   /** Clients pausing: the resume dates allowed (market dates). */
   pauseLimits?: { firstDate: string; lastDate: string };
   /** Helpers: the last visit date if they end it today. */
@@ -157,8 +163,10 @@ export type ChangeSeriesCardInput = z.input<typeof changeSeriesCardInputSchema>;
  * - `onResume`, `onCancel` (client), `onEnd` (helper): ok `updated`. Errors: `not_allowed`, `unknown`.
  * - `onChangeCard` (client): ok `updated`. Errors: `validation_failed` (`methodId` `invalid`), `not_allowed`.
  * - `onMessage`: ok with `redirectTo` (the conversation).
+ * - `onAddCard` (client, with `newCard`): a card added from the Change-card sheet, as on the payments page (ok `saved`).
  */
 export interface SeriesHandlers extends CardRemovalHandlers {
+  onAddCard?: ActionHandler<AddCardInput>;
   onSkipVisit: ActionHandler<{ visitId: string }>;
   onPause: ActionHandler<PauseSeriesInput>;
   onResume: ActionHandler;

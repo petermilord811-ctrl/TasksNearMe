@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import type { ActionDescriptor, ActionResult, ISODateTime } from '@/contracts';
 import { openInChatWindow } from '@/ui/lib/chat-window-open';
 import { useFormat } from '@/ui/lib/format';
+import { OWN_NAVIGATION, useRouteDialog } from '@/ui/lib/route-dialog';
 import { actionTray, trayGap } from '@/ui/components/bookings/surface';
 import { cn } from '@/ui/lib/utils';
 import { Button, buttonVariants } from '@/ui/primitives/button';
@@ -44,6 +45,13 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
   const reason = useTranslations('actionReasons');
   const feedback = useTranslations('feedback');
   const router = useRouter();
+  // In a route dialog (an offer over its task, 2026-11-23), a page an action opens replaces the dialog: it closes first.
+  const dialog = useRouteDialog();
+  const go = (href: string) => {
+    if (dialog) dialog.follow(href);
+    // A conversation (Message) opens in the chat window on wide screens, the page behind staying (2026-11-23).
+    else if (!openInChatWindow(href)) router.push(href);
+  };
   const id = useId();
   const [pendingId, setPendingId] = useState<string | null>(initialPending ?? null);
   const pendingRef = useRef(Boolean(initialPending));
@@ -105,8 +113,7 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
     setPendingId(null);
     // Only another page opens (the conversation, the review form): nothing changed, so there's nothing to confirm.
     if (result.ok && result.code === 'opened') {
-      // A conversation (Message) opens in the chat window on wide screens, the page behind staying (2026-11-23).
-      if (result.redirectTo && !openInChatWindow(result.redirectTo)) router.push(result.redirectTo);
+      if (result.redirectTo) go(result.redirectTo);
       onResult?.(result);
       return;
     }
@@ -121,7 +128,7 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
     setResult(result);
     if (result.ok) {
       toast.success(text);
-      if (result.redirectTo && !openInChatWindow(result.redirectTo)) router.push(result.redirectTo);
+      if (result.redirectTo) go(result.redirectTo);
     } else {
       toast.error(text);
     }
@@ -166,6 +173,7 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
           aria-describedby={reasonText ? reasonId : undefined}
           tabIndex={disabled ? -1 : undefined}
           data-action-id={action.id}
+          {...{ [OWN_NAVIGATION]: '' }}
           className={cn(buttonVariants({ variant }), 'min-h-11 w-full whitespace-normal px-4 py-2 text-center aria-disabled:pointer-events-none aria-disabled:opacity-50 lg:w-auto', tone)}
           onClick={(event) => {
             if (disabled || pendingRef.current) { event.preventDefault(); return; }
@@ -180,7 +188,8 @@ export function ActionBar({ actions, onAction, sticky = false, mobileFixed = fal
             // the browser's.
             if (!link.download && event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
               event.preventDefault();
-              router.push(link.href);
+              if (dialog) dialog.follow(link.href);
+              else router.push(link.href);
             }
           }}
         >{t(action.id)}</a> : <Button

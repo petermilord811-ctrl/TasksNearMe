@@ -34,5 +34,11 @@
       "label": "Soporte",
       "hint": "Tus casos y formas de contactarnos"
     }
+  },
+  "unavailable": {
+    "title": "Esta página no se puede abrir con tu cuenta",
+    "body": "A tu cuenta le falta algo que esta página necesita, como su ciudad. Ve al inicio o escríbenos y lo resolvemos.",
+    "home": "Ir al inicio",
+    "help": "Escribir a soporte"
   }
 }

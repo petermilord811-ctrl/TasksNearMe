@@ -98,6 +98,12 @@
     "suspended": "Your account can't post right now."
   },
   "verifyPhone": "Verify your phone",
+  "postDialog": {
+    "title": "{name}'s post",
+    "yours": "Your post"
+  },
+  "verifyPhoneTitle": "Verify your phone number",
+  "phoneVerified": "Your phone number is verified. You can post and reply now.",
   "newPost": {
     "title": "New post",
     "back": "Back to Neighbors",
@@ -165,6 +171,9 @@
   },
   "previews": {
     "group": "Community",
+    "verifyPhoneDialog": "Verify your phone, over Neighbors",
+    "postDialogReplyBlocked": "A post over the feed, replies waiting for a verified phone",
+    "postDialog": "A post over the feed",
     "post": "Community · a recommendation request with answers",
     "postStaff": "Community · staff view of a hidden reply",
     "postReplyBlocked": "Post: can’t reply yet (phone first)",

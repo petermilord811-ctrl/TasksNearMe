@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, Check, Clock, ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -23,13 +24,16 @@ function ProgressRing({ done, total, className }: { done: number; total: number;
  * The verified-helper reminder (owner, 2026-11-23: "show 'Finish setting up to start helping' as 'to be verified
  * helper' and show it as reminder type, not full-width bar"): a small pill beside the search bar with the checks done
  * so far, which opens the checks, each one a link, in any order. While the home address isn't verified it says that's
- * what opens helping; after, the rest earns the verified badge.
+ * what opens helping; after, the rest earns the verified badge. The phone and the home address open in a dialog over
+ * the page (2026-11-23, `routes.app.helperCheck`); the other checks are their setup pages.
  */
 export function VerifiedHelperReminder({ reminder, className }: { reminder: HelperSetupReminder; className?: string }) {
   const t = useTranslations('shell.reminder');
   const steps = useTranslations('helperOnboarding.screen.steps');
   const { done, total, canHelp } = reminder;
-  return <Popover>
+  // Closed as a check opens (its dialog, or its page): focus goes back to the pill, for the dialog to return to.
+  const [open, setOpen] = useState(false);
+  return <Popover open={open} onOpenChange={setOpen}>
     <PopoverTrigger asChild>
       <button type="button" className={cn('group/reminder relative flex min-h-12 shrink-0 items-center gap-2.5 rounded-full border border-primary/25 bg-brand-soft/90 py-1.5 pr-4 pl-1.5 text-left shadow-card backdrop-blur-md transition-[translate,box-shadow,background-color] duration-300 ease-[var(--ease-out)] hover:-translate-y-0.5 hover:bg-brand-soft max-sm:size-12 max-sm:justify-center max-sm:p-0', className)}>
         <span className="relative grid size-9 shrink-0 place-items-center">
@@ -58,7 +62,7 @@ export function VerifiedHelperReminder({ reminder, className }: { reminder: Help
           const finished = state === 'done';
           const waiting = state === 'in_review';
           return <li key={step}>
-            <Link href={routes.app.helperOnboarding(step)} className="flex min-h-12 items-center gap-3 rounded-xl px-2.5 py-2 transition-colors hover:bg-accent">
+            <Link href={routes.app.helperCheck(step)} onClick={() => setOpen(false)} className="flex min-h-12 items-center gap-3 rounded-xl px-2.5 py-2 transition-colors hover:bg-accent">
               <span aria-hidden="true" className={cn('grid size-7 shrink-0 place-items-center rounded-full', finished ? 'bg-primary text-primary-foreground' : waiting ? 'bg-info/15 text-info' : 'border border-foreground/15 text-muted-foreground')}>
                 {finished ? <Check className="size-3.5" /> : waiting ? <Clock className="size-3.5" /> : <span className="size-1.5 rounded-full bg-current" />}
               </span>
@@ -73,7 +77,7 @@ export function VerifiedHelperReminder({ reminder, className }: { reminder: Help
       </ul>
       <div className="flex items-center justify-between gap-3 border-t border-foreground/[0.07] p-3 pl-4 dark:border-white/[0.07]">
         <span className="text-xs text-muted-foreground">{t('anyOrder')}</span>
-        <Link href={routes.app.helperOnboarding(reminder.next)} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-transform duration-200 hover:scale-[1.03]">{t('continue')}<ArrowRight aria-hidden="true" className="size-4" /></Link>
+        <Link href={routes.app.helperCheck(reminder.next)} onClick={() => setOpen(false)} className="inline-flex min-h-10 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-transform duration-200 hover:scale-[1.03]">{t('continue')}<ArrowRight aria-hidden="true" className="size-4" /></Link>
       </div>
     </PopoverContent>
   </Popover>;

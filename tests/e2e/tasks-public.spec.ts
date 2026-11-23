@@ -26,7 +26,8 @@ test.describe('public tasks', () => {
     // The price card's link, and on phones also the bar at the bottom of the screen (2026-11-23).
     const offers = page.getByRole('link', { name: 'Make an offer' });
     await expect(offers.first()).toBeVisible();
-    for (const link of await offers.all()) await expect(link).toHaveAttribute('href', '/app/find-work/tsk_desk');
+    // The offer form as a dialog over this page (2026-11-23); loaded on its own, the task's page.
+    for (const link of await offers.all()) await expect(link).toHaveAttribute('href', '/app/find-work/tsk_desk/offer');
     // Signed out: the photos and the whole description wait behind sign-in.
     await expect(page.getByRole('region', { name: 'The full task' })).toBeVisible();
     const html = await page.content();

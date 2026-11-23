@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
 import { routes } from '@/contracts/routes';
+import { confirmPhoneChangeAction, startPhoneChangeAction } from '@/modules/accounts/account-actions';
 import { createCommunityPostAction, uploadCommunityPhotoAction } from '@/modules/community/actions';
 import { communityViewerOf } from '@/modules/community/request-viewer';
 import { getNewCommunityPostPage } from '@/modules/community/service';
@@ -13,6 +14,7 @@ import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { CommunityNewPostScreen } from '@/ui/screens/community/community-new-post-screen';
+import { PageUnavailableScreen } from '@/ui/screens/system/page-unavailable-screen';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('community.newPost');
@@ -36,8 +38,9 @@ async function NewPost({ searchParams }: Pick<PageProps<'/[locale]/app/community
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.newCommunityPost()));
   const [now, locale] = await Promise.all([requestNow(), getLocale()]);
   const data = await getNewCommunityPostPage(db, await communityViewerOf(viewer.user, localeOrDefault(locale)), kind, booking, now);
-  if (!data) redirect(routes.app.home());
-  return <CommunityNewPostScreen data={data} handlers={{ onPost: createCommunityPostAction, onUploadPhoto: uploadCommunityPhotoAction }} />;
+  // Missing what posting needs (its home city): said here, not a silent trip to Home (2026-11-23).
+  if (!data) return <PageUnavailableScreen />;
+  return <CommunityNewPostScreen data={data} handlers={{ onPost: createCommunityPostAction, onUploadPhoto: uploadCommunityPhotoAction, ...(data.postBlocked === 'phone_required' ? { onStartPhoneChange: startPhoneChangeAction, onConfirmPhoneChange: confirmPhoneChangeAction } : {}) }} />;
 }
 
 export default withClientMessages('[locale]/(app)/app/(main)/community/new/page.tsx', NewCommunityPostPage);

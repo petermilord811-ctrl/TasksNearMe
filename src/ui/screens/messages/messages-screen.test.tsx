@@ -100,7 +100,7 @@ describe('ThreadScreen', () => {
     thread(expiredOfferThreadPageData);
     const status = screen.getAllByRole('status').find((element) => element.textContent?.includes('closed'))!;
     expect(status).toHaveTextContent("Lee M.'s offer expired, so this conversation closed.");
-    expect(within(status).getByRole('link', { name: 'Open the offer to request them again' })).toHaveAttribute('href', routes.app.offer('tsk_desk', 'off_lee'));
+    expect(within(status).getByRole('link', { name: 'Open the offer to request them again' })).toHaveAttribute('href', routes.app.offerView('tsk_desk', 'off_lee'));
     expect(screen.queryByRole('form', { name: 'Message' })).not.toBeInTheDocument();
   });
 
@@ -118,7 +118,7 @@ describe('ThreadScreen', () => {
 
   it('says the task was canceled, to the client and to the helper, never "declined" or "chose another offer" (sweep D9)', () => {
     for (const [data, wayOn, href] of [
-      [taskCanceledOfferThreadPageData, 'Open the offer to request them again', routes.app.offer('tsk_desk', 'off_lee')],
+      [taskCanceledOfferThreadPageData, 'Open the offer to request them again', routes.app.offerView('tsk_desk', 'off_lee')],
       [taskCanceledThreadForHelperPageData, 'Open the task', routes.app.findWorkTask('tsk_moving')],
     ] as const) {
       const view = thread(data);
@@ -180,7 +180,7 @@ describe('ThreadScreen', () => {
   });
 
   const subjects: Array<{ subject: ThreadSubject; href: string }> = [
-    { subject: { kind: 'offer_for_client', taskId: 'task with spaces', offerId: 'offer/encoded' }, href: routes.app.offer('task with spaces', 'offer/encoded') },
+    { subject: { kind: 'offer_for_client', taskId: 'task with spaces', offerId: 'offer/encoded' }, href: routes.app.offerView('task with spaces', 'offer/encoded') },
     { subject: { kind: 'task_for_helper', taskId: 'task with spaces' }, href: routes.app.findWorkTask('task with spaces') },
     { subject: { kind: 'booking', bookingId: 'booking/encoded' }, href: routes.app.booking('booking/encoded') },
     { subject: { kind: 'series', seriesId: 'series/encoded' }, href: routes.app.series('series/encoded') },

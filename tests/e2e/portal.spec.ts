@@ -102,14 +102,16 @@ test('a neighbor asks in the composer, then turns the question into a task that 
     await form.getByLabel('Details').fill('A six-foot flat-pack bookshelf, about 30 parts, to anchor to drywall. How long does it take?');
     await form.getByLabel('Service').selectOption({ label: 'Furniture assembly' });
     await form.getByRole('button', { name: 'Post', exact: true }).click();
-    // Posting closes the dialog over the feed, which shows the question; its page has "Ask for help".
+    // Posting closes the dialog over the feed, which shows the question; it opens over the feed (2026-11-23), with
+    // "Ask for help".
     await expect(dialog).toBeHidden({ timeout: 30_000 });
     await page.getByRole('article', { name: title }).filter({ visible: true }).getByRole('link', { name: title, exact: true }).click();
-    await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible({ timeout: 30_000 });
+    const post = page.getByRole('dialog', { name: 'Your post' });
+    await expect(post.getByRole('heading', { level: 2, name: title })).toBeVisible({ timeout: 30_000 });
     const postUrl = new URL(page.url()).pathname;
 
-    // "Ask for help": the wizard starts from the post, its words filled in.
-    await page.getByRole('link', { name: 'Ask for help' }).click();
+    // "Ask for help": the dialog closes and the wizard starts from the post, its words filled in.
+    await post.getByRole('link', { name: 'Ask for help' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Post a task' })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/From your neighborhood post/)).toBeVisible();
     await expect(page.getByLabel('Task title')).toHaveValue(title);

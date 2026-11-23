@@ -84,9 +84,12 @@ test.describe('sign-in and sign-up', () => {
     await page.getByLabel('6-digit code').fill(await latestCode(context, `+1737${exchange}${line}`));
     // The sixth digit sends the code (no Continue click).
     await expect(page).toHaveURL(/\/app\/find-work\/tsk_desk$/);
+    // The task's own page (2026-11-23): a page with a dialog version, landed on from sign-in, is never a dialog over it.
+    await expect(page.getByRole('heading', { level: 1, name: 'Assemble a desk (flat-pack, 1 item)' })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 
-  test('posting asks a signed-in person for their phone inside the app, then opens the wizard (journeys on a phone, J-C2)', async ({ page, context }, testInfo) => {
+  test('posting asks a signed-in person for their phone right on Post a task, then opens the wizard there (journeys on a phone, J-C2; 2026-11-23)', async ({ page, context }, testInfo) => {
     const email = freshEmail(testInfo.project.name);
     const line = String(Math.floor(1000 + Math.random() * 9000));
     const exchange = String(Math.floor(200 + Math.random() * 700));
@@ -101,8 +104,9 @@ test.describe('sign-in and sign-up', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Gainesville opens soon' })).toBeVisible();
     await page.getByLabel('Invite code').fill('SPECCLIENT');
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
-    await expect(page).toHaveURL(/\/app\/verify-phone\?next=%2Fapp%2Ftasks%2Fnew$/, { timeout: 30_000 });
-    await expect(page.getByRole('heading', { level: 1, name: 'Add your phone number' })).toBeVisible();
+    // The phone step on Post a task itself (2026-11-23: no trip through /app/verify-phone).
+    await expect(page.getByRole('heading', { level: 1, name: 'Add your phone number' })).toBeVisible({ timeout: 30_000 });
+    await expect(page).toHaveURL(/\/app\/tasks\/new$/);
     // The app's own frame (the account button with the person's initials), not the public site's, and no sign-in
     // account line.
     await expect(page.getByText('LP', { exact: true }).first()).toBeVisible();

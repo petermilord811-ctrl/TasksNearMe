@@ -10,6 +10,7 @@ import { acceptProposalInputSchema, needsBankVerification, routes, type AcceptPr
 import { formatMoney } from '@/shared/format';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { BankVerificationDialog, getDefaultPaymentChoice, PaymentMethodPicker } from '@/ui/components/payments';
+import { useRouteDialog } from '@/ui/lib/route-dialog';
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
 import { Button } from '@/ui/primitives/button';
 import { Checkbox } from '@/ui/primitives/checkbox';
@@ -27,6 +28,7 @@ export function ProposalActions({ data, handlers, initialResult, initialPending 
   const actions = useTranslations('actions');
   const fieldCopy = useTranslations('forms.fieldErrors');
   const router = useRouter();
+  const dialog = useRouteDialog();
   const id = useId();
   const opener = useRef<HTMLButtonElement | null>(null);
   const feedbackRef = useRef<HTMLDivElement>(null);
@@ -50,6 +52,14 @@ export function ProposalActions({ data, handlers, initialResult, initialPending 
   const { setError, setFocus } = form;
   const disabled = pending || Boolean(verification) || Boolean(result?.ok);
 
+  // In the dialog (2026-11-23): it stays open while the payment is on its way or the bank's step is open, as the
+  // confirm and change dialogs do (RouteDialogControls.setBusy).
+  useEffect(() => {
+    if (!dialog) return;
+    dialog.setBusy(pending || Boolean(verification));
+    return () => dialog.setBusy(false);
+  }, [dialog, pending, verification]);
+
   useEffect(() => {
     if (!result || pending) return;
     const fields: FieldPath<AcceptProposalInput>[] = ['payment.methodId', 'payment.card', 'payment.save', 'payment', 'acceptTerms'];
@@ -68,18 +78,21 @@ export function ProposalActions({ data, handlers, initialResult, initialPending 
     return () => clearTimeout(timer);
   }, [result, pending, setError, setFocus]);
 
-  async function run(action: () => Promise<PaymentAttemptResult>) {
+  async function run(action: RebookActionId, call: () => Promise<PaymentAttemptResult>) {
     if (locked.current) return;
     locked.current = true;
     setPending(true); setResult(undefined); setConfirm(undefined); form.clearErrors();
     let next: PaymentAttemptResult;
-    try { next = await action(); } catch { next = { ok: false, code: 'unknown' }; }
+    try { next = await call(); } catch { next = { ok: false, code: 'unknown' }; }
     locked.current = false; setPending(false);
     if (needsBankVerification(next)) { setVerification(next.verification); return; }
     setVerification(undefined); setResult(next);
     if (next.ok) {
       locked.current = true;
-      if (next.redirectTo) router.push(next.redirectTo);
+      // In the dialog: accepted, the new booking (or regular visits) opens in its place; declined or withdrawn, it
+      // closes with the words as a toast, and the page under it shows the change.
+      if (dialog) dialog.finish(next, action === 'accept_proposal' ? undefined : t(`success.${action}`), { follow: action === 'accept_proposal' });
+      else if (next.redirectTo) router.push(next.redirectTo);
       else router.refresh();
     }
   }
@@ -96,7 +109,7 @@ export function ProposalActions({ data, handlers, initialResult, initialPending 
   return <>
     <form noValidate aria-label={t('actionsLabel')} aria-busy={pending} className="space-y-6" onSubmit={(event) => {
       if (disabled || locked.current || !canAccept || !payment) { event.preventDefault(); return; }
-      void form.handleSubmit((input) => { setActive('accept_proposal'); return run(() => handlers.onAccept(input)); }, (errors) => {
+      void form.handleSubmit((input) => { setActive('accept_proposal'); return run('accept_proposal', () => handlers.onAccept(input)); }, (errors) => {
         if (errors.payment) setFocus('payment'); else if (errors.acceptTerms) setFocus('acceptTerms');
       })(event);
     }}>
@@ -139,11 +152,11 @@ export function ProposalActions({ data, handlers, initialResult, initialPending 
           <Button type="button" variant="destructive" disabled={disabled} onClick={() => {
             if (!confirm || !proposal.actions.includes(confirm)) return;
             setActive(confirm);
-            void run(() => confirm === 'decline_proposal' ? handlers.onDecline() : handlers.onWithdraw());
+            void run(confirm, () => confirm === 'decline_proposal' ? handlers.onDecline() : handlers.onWithdraw());
           }}>{confirm ? actions(confirm) : t('actionsLabel')}</Button>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-    {verification && <BankVerificationDialog verification={verification} pending={pending} onDone={(outcome) => { void run(() => handlers.onFinishVerification({ paymentId: verification.paymentId, outcome })); }} />}
+    {verification && <BankVerificationDialog verification={verification} pending={pending} onDone={(outcome) => { void run('accept_proposal', () => handlers.onFinishVerification({ paymentId: verification.paymentId, outcome })); }} />}
   </>;
 }

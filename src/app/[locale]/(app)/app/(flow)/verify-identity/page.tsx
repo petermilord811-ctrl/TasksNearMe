@@ -10,6 +10,7 @@ import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { PosterIdentityScreen } from '@/ui/screens/verify';
+import { AuthPageMarker } from '@/ui/lib/auth-page';
 import { appPageMetadata } from '@/i18n/metadata';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -33,7 +34,8 @@ async function VerifyIdentity({ searchParams }: { searchParams: Promise<Record<s
   const next = typeof search.next === 'string' ? search.next : undefined;
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.verifyIdentity(next)));
   const data = await getPosterIdentityPage(db, viewer.user.id, next, await requestNow());
-  return <PosterIdentityScreen data={data} handlers={{ onStartIdentity: startPosterIdentityAction, onRefreshStatus: onboardingRefreshStatus }} />;
+  // "Continue" goes on to where the check was asked from: a page with a dialog version loads as its own page.
+  return <><AuthPageMarker /><PosterIdentityScreen data={data} handlers={{ onStartIdentity: startPosterIdentityAction, onRefreshStatus: onboardingRefreshStatus }} /></>;
 }
 
 export default withClientMessages('[locale]/(app)/app/(flow)/verify-identity/page.tsx', VerifyIdentityPage);

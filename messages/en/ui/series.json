@@ -65,6 +65,7 @@
     "pick": "Card",
     "noCards": "You have no saved card yet.",
     "addCard": "Add a card",
+    "added": "Card added. It's chosen below.",
     "submit": "Use this card",
     "pending": "Saving…",
     "success": "The card is changed."
@@ -137,6 +138,7 @@
   "perVisitEarnings": "Each visit: what you earn",
   "previews": {
     "group": "Regular visits",
+    "client-add-card": "Client · adding a card in Change card",
     "client-active": "Client · active",
     "client-payment-due": "Client · a charge failed",
     "client-no-card": "Client · no card on file",

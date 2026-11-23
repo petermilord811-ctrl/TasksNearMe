@@ -17,6 +17,7 @@ import {
   type VerificationSummary,
 } from '@/contracts';
 import { useFormat } from '@/ui/lib/format';
+import { useRouteDialog } from '@/ui/lib/route-dialog';
 import { AddressSearchField } from '@/ui/components/forms/address-search-field';
 import { StatusBadge } from '@/ui/components/status/status-badge';
 import { cn } from '@/ui/lib/utils';
@@ -35,15 +36,17 @@ const checkboxClass = 'size-5 shrink-0 accent-primary focus-visible:outline-2 fo
 /**
  * The home address step: where it stands, and the form for a proof of address (an address from search,
  * the unit, the document's type, a photo or PDF, and the declaration). The app checks and stores it;
- * our team reviews it. Clients never see the address.
+ * our team reviews it. Clients never see the address. `inDialog` (2026-11-23): the check opened over the page from the
+ * verified-helper reminder, under the dialog's own title; sending the proof closes it there.
  */
-export function AddressStep({ verification, handlers, initialSuggestions, initialErrors }: {
+export function AddressStep({ verification, handlers, initialSuggestions, initialErrors, inDialog = false }: {
   verification: VerificationSummary;
   handlers: Pick<HelperOnboardingHandlers, 'onSearchAddresses' | 'onSubmitAddressProof'>;
   /** Previews: the search open with these. */
   initialSuggestions?: AddressSuggestion[];
   /** Previews: errors as the app returns them. */
   initialErrors?: Errors;
+  inDialog?: boolean;
 }) {
   const t = useTranslations('verification.homeAddress');
   const status = verification.address.status;
@@ -52,14 +55,16 @@ export function AddressStep({ verification, handlers, initialSuggestions, initia
   const [formOpen, setFormOpen] = useState(showFormAtFirst);
   const canSubmit = status !== 'in_review' && update?.status !== 'in_review';
 
-  return <section aria-labelledby="address-step-title" className="space-y-5 rounded-xl border bg-card p-4 shadow-sm sm:p-6">
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="flex items-center gap-3">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground"><Home aria-hidden="true" className="size-5" /></span>
-        <h2 id="address-step-title" className="font-heading text-lg font-semibold">{t('title')}</h2>
-      </div>
-      <StatusBadge tone={addressStatusTones[status]} label={t(`statuses.${status}`)} />
-    </div>
+  return <section {...(inDialog ? { 'aria-label': t('title') } : { 'aria-labelledby': 'address-step-title' })} className={inDialog ? 'space-y-5' : 'space-y-5 rounded-xl border bg-card p-4 shadow-sm sm:p-6'}>
+    {inDialog
+      ? <StatusBadge tone={addressStatusTones[status]} label={t(`statuses.${status}`)} />
+      : <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground"><Home aria-hidden="true" className="size-5" /></span>
+          <h2 id="address-step-title" className="font-heading text-lg font-semibold">{t('title')}</h2>
+        </div>
+        <StatusBadge tone={addressStatusTones[status]} label={t(`statuses.${status}`)} />
+      </div>}
 
     <AddressStanding verification={verification} />
 
@@ -99,6 +104,7 @@ function ProofForm({ handlers, initialSuggestions, initialErrors }: {
   const t = useTranslations('verification.homeAddress');
   const fields = useTranslations('forms');
   const router = useRouter();
+  const dialog = useRouteDialog();
   const id = useId();
   const [address, setAddress] = useState<AddressSuggestion>();
   const [unit, setUnit] = useState('');
@@ -158,7 +164,10 @@ function ProofForm({ handlers, initialSuggestions, initialErrors }: {
     setPending(false);
     if (result.ok) {
       setSent(true);
-      if (result.redirectTo) router.push(result.redirectTo);
+      // In the check's dialog (2026-11-23): it closes over the page, which shows the address as sent; on setup's own
+      // page, setup goes on to its next step.
+      if (dialog) dialog.finish(result, t('sent'));
+      else if (result.redirectTo) router.push(result.redirectTo);
       else router.refresh();
       return;
     }

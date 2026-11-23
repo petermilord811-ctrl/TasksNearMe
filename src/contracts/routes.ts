@@ -37,6 +37,19 @@ export type LegalDoc = (typeof LEGAL_DOCS)[number];
 export const ONBOARDING_STEPS = ['profile', 'services', 'area', 'address', 'phone', 'identity', 'payout', 'background', 'done'] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 
+/**
+ * The checks done in a dialog over the page they're opened from (2026-11-23, owner: "I hate to redirect to new pages
+ * continually … if possible, use dialog"): the phone and the home address, from the verified-helper reminder and the
+ * verification checklist (`routes.app.helperCheck`). Their onboarding pages stay for setup's own step-to-step flow; the
+ * ID check, payouts and the background check hand off to their providers from those pages.
+ */
+export const HELPER_CHECK_DIALOG_STEPS = ['phone', 'address'] as const;
+export type HelperCheckDialogStep = (typeof HELPER_CHECK_DIALOG_STEPS)[number];
+
+export function isHelperCheckDialogStep(step: string): step is HelperCheckDialogStep {
+  return (HELPER_CHECK_DIALOG_STEPS as readonly string[]).includes(step);
+}
+
 /** The first city (owner, 2026-11-17: Gainesville, FL; Austin until then, now a later city). */
 const DEFAULT_MARKET = 'gainesville';
 const enc = encodeURIComponent;
@@ -152,17 +165,26 @@ export const routes = {
     newTask: (query: { category?: CategorySlug; title?: string; describe?: string; ai?: boolean; again?: string; template?: string; fromPost?: string; handoff?: string } = {}) =>
       withQuery('/app/tasks/new', { category: query.category, title: query.title, describe: query.describe, ai: query.ai ? '1' : undefined, again: query.again, template: query.template, from: query.fromPost, handoff: query.handoff }),
     task: (taskId: string) => `/app/tasks/${enc(taskId)}`,
+    /** "Invite helpers" on an open task (2026-11-23): the client's saved helpers, to request one for it. */
+    inviteHelpers: (taskId: string) => `/app/tasks/${enc(taskId)}/invite`,
     offer: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}`,
+    /**
+     * The same offer as a dialog over the page it's opened from (2026-11-23): the task, the dashboard, a conversation.
+     * Loaded on its own it's the offer's page (`offer`), which stays a page: checkout opens as a dialog over it.
+     */
+    offerView: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}/view`,
     confirmOffer: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}/confirm`,
     /** Report a task, a helper's profile or a review (B-059). `id` is the task id, the helper's handle or the review id. */
     /** `answer`: the answer on a task question, by the question's id. */
     report: (kind: 'task' | 'helper' | 'review' | 'post' | 'reply' | 'question' | 'answer', id: string) => `/app/report/${kind}/${enc(id)}`,
     /** Browse and search helpers: category, the area they serve, open times this week, name. */
     helpers: (query: HelperBrowseQuery = {}) => withQuery('/app/helpers', { category: query.category, area: query.area, q: query.q, open: query.openTimes ? '1' : undefined }),
-    requestHelper: (handle: string, opts: { fromBookingId?: string; slotId?: string } = {}) =>
+    /** `taskId`: one of the client's open tasks, chosen to start with ("Invite helpers" on that task, 2026-11-23). */
+    requestHelper: (handle: string, opts: { fromBookingId?: string; slotId?: string; taskId?: string } = {}) =>
       withQuery(`/app/helpers/${enc(handle)}/request`, {
         from: opts.fromBookingId ? `booking:${opts.fromBookingId}` : undefined,
         slot: opts.slotId,
+        task: opts.taskId,
       }),
     saved: () => '/app/saved',
     /** Saved searches and their alerts (plan 7.10). */
@@ -190,6 +212,11 @@ export const routes = {
       }),
     /** A task from the helper's side: full details, offer form, or "finish setup to make offers". */
     findWorkTask: (taskId: string) => `/app/find-work/${enc(taskId)}`,
+    /**
+     * The same task, with the offer form, as a dialog over the public task page's "Make an offer" (2026-11-23). Loaded on
+     * its own, and for someone who still has to sign in, it's the task's page (`findWorkTask`).
+     */
+    findWorkOffer: (taskId: string) => `/app/find-work/${enc(taskId)}/offer`,
     offers: (inviteId?: string) => withQuery('/app/offers', { invite: inviteId }),
     availability: () => '/app/availability',
     clients: () => '/app/clients',
@@ -255,10 +282,20 @@ export const routes = {
     /** The person's Sparks (2026-11-21): their score, how it's earned, what levels unlock, and buying more. */
     sparks: (back: { purchase?: string; canceled?: boolean } = {}) => withQuery('/app/sparks', { purchase: back.purchase, canceled: back.canceled ? '1' : undefined }),
     notifications: () => '/app/notifications',
+    /**
+     * The bell (2026-11-23): the notifications as a dialog over the page it's on. Loaded on its own, it's the
+     * notifications page (`notifications`), which stays a page: a notification's own dialog opens over it.
+     */
+    recentNotifications: () => '/app/notifications/recent',
     account: () => '/app/account',
     support: () => '/app/support',
     supportCase: (caseId: string) => `/app/support/${enc(caseId)}`,
     helperOnboarding: (step: OnboardingStep = 'profile') => `/app/helper/onboarding/${step}`,
+    /**
+     * One check outside setup's flow (2026-11-23): the phone and the home address open in a dialog over the page (loaded
+     * directly, the onboarding step's page); the other steps are their onboarding pages.
+     */
+    helperCheck: (step: OnboardingStep) => (isHelperCheckDialogStep(step) ? `/app/helper/checks/${step}` : `/app/helper/onboarding/${step}`),
     helperProfile: () => '/app/helper/profile',
     /** Regular visits (blueprint 03 §7). */
     series: (seriesId: string) => `/app/series/${enc(seriesId)}`,

@@ -22,6 +22,7 @@ import {
   setNeighborsSamplesAction,
   uploadCommunityPhotoAction,
 } from '@/modules/community/actions';
+import { confirmPhoneChangeAction, startPhoneChangeAction } from '@/modules/accounts/account-actions';
 import { getPortal } from '@/modules/community/portal';
 import { communityViewerOf } from '@/modules/community/request-viewer';
 import { localeOrDefault } from '@/contracts';
@@ -31,6 +32,7 @@ import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
 import { PortalSkeleton } from '@/ui/components/portal/portal-skeleton';
 import { PortalScreen } from '@/ui/screens/community/portal-screen';
+import { PageUnavailableScreen } from '@/ui/screens/system/page-unavailable-screen';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('portal');
@@ -54,7 +56,8 @@ async function Portal({ searchParams }: Pick<PageProps<'/[locale]/app/community'
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.community()));
   const [search, now, locale] = await Promise.all([searchParams, requestNow(), getLocale()]);
   const data = await getPortal(db, await communityViewerOf(viewer.user, localeOrDefault(locale)), search, now);
-  if (!data) redirect(routes.app.home());
+  // Missing what Neighbors needs (its home city): said here, not a silent trip to Home (2026-11-23).
+  if (!data) return <PageUnavailableScreen />;
   return (
     <PortalScreen
       data={data}
@@ -75,6 +78,8 @@ async function Portal({ searchParams }: Pick<PageProps<'/[locale]/app/community'
         onSetArea: setCommunityAreaAction,
         onDismissAnnouncement: dismissAnnouncementAction,
         ...(data.samples ? { onShowSamples: setNeighborsSamplesAction } : {}),
+        // "Verify your phone" in a dialog over the page (2026-11-23), while posting waits for it.
+        ...(data.postBlocked === 'phone_required' ? { onStartPhoneChange: startPhoneChangeAction, onConfirmPhoneChange: confirmPhoneChangeAction } : {}),
       }}
     />
   );

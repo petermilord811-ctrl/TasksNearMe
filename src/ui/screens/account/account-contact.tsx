@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode, type RefObject } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useForm } from 'react-hook-form';
@@ -20,6 +20,7 @@ import {
   type FieldErrorCode,
   type OneTimeCodeInput,
   type PhoneInput,
+  type PhoneVerifyHandlers,
 } from '@/contracts';
 import { CodeFormField } from '@/ui/components/forms/code-input';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
@@ -120,10 +121,20 @@ export function AccountContact({ email, phone, held = false, texts = true, handl
   );
 }
 
-function ChangeDialog({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
+function ChangeDialog({ open, onClose, title, returnFocusTo, children }: {
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  /** Opened by state, with no trigger of its own: where focus goes back to when it closes (Radix would leave it on the page). */
+  returnFocusTo?: RefObject<HTMLElement | null>;
+  children: ReactNode;
+}) {
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
+      <DialogContent
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md"
+        {...(returnFocusTo ? { onCloseAutoFocus: (event: Event) => { if (returnFocusTo.current?.isConnected) { event.preventDefault(); returnFocusTo.current.focus({ preventScroll: true }); } } } : {})}
+      >
         <DialogHeader className="text-left">
           <DialogTitle className="leading-7">{title}</DialogTitle>
         </DialogHeader>
@@ -131,6 +142,32 @@ function ChangeDialog({ open, onClose, title, children }: { open: boolean; onClo
       </DialogContent>
     </Dialog>
   );
+}
+
+/**
+ * The phone steps in a dialog of their own, opened where something waits for a verified phone (2026-11-23, Neighbors'
+ * posting and replies): the same number and code steps as the account page's, over the page, so what the person was
+ * writing stays. Each opening starts at the number.
+ */
+export function PhoneVerifyDialog({ open, onOpenChange, title, handlers, onVerified, returnFocusTo }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  handlers: PhoneVerifyHandlers;
+  /** The code was right: the number is verified (the actions refresh the page underneath). */
+  onVerified: () => void;
+  returnFocusTo?: RefObject<HTMLElement | null>;
+}) {
+  const [opening, setOpening] = useState(0);
+  const [shown, setShown] = useState(open);
+  // Adjusted while rendering (React's pattern for state that follows a prop): each opening gets fresh steps.
+  if (open !== shown) {
+    setShown(open);
+    if (open) setOpening((count) => count + 1);
+  }
+  return <ChangeDialog open={open} onClose={() => onOpenChange(false)} title={title} {...(returnFocusTo ? { returnFocusTo } : {})}>
+    <PhoneChange key={opening} adding handlers={handlers} onDone={onVerified} />
+  </ChangeDialog>;
 }
 
 /** Step 1 and 2 of changing the email. A field error on the address after the code (it was taken meanwhile) goes back to step 1. */
@@ -171,7 +208,7 @@ function EmailChange({ handlers, sentTo, onDone }: { handlers: ContactHandlers; 
   );
 }
 
-function PhoneChange({ adding, handlers, sentTo, onDone }: { adding: boolean; handlers: ContactHandlers; sentTo?: string; onDone: () => void }) {
+function PhoneChange({ adding, handlers, sentTo, onDone }: { adding: boolean; handlers: PhoneVerifyHandlers; sentTo?: string; onDone: () => void }) {
   const t = useTranslations('account.contact');
   const [target, setTarget] = useState(sentTo);
   const [typed, setTyped] = useState(sentTo ?? '');

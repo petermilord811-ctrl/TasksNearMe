@@ -34,5 +34,11 @@
       "label": "Support",
       "hint": "Your cases, and ways to reach us"
     }
+  },
+  "unavailable": {
+    "title": "This page can't open for your account",
+    "body": "Your account is missing something this page needs, such as its home city. Go to Home, or ask us and we'll sort it out.",
+    "home": "Go to Home",
+    "help": "Ask support"
   }
 }

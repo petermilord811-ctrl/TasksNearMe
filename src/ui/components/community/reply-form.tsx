@@ -23,7 +23,7 @@ export function CommunityReplyForm({ data, onReply, onUploadPhoto }: { data: Pic
   const t = useTranslations('community.replyForm');
   const fieldCopy = useTranslations('forms.fieldErrors');
   const sparksToast = useSparksToast();
-  const { target, setTarget } = useReplyTarget();
+  const { target, setTarget, form: formRef } = useReplyTarget();
   const id = useId();
   const [body, setBody] = useState('');
   const [recommend, setRecommend] = useState('');
@@ -59,7 +59,7 @@ export function CommunityReplyForm({ data, onReply, onUploadPhoto }: { data: Pic
     } else if (next.fieldErrors?.body && !isKindnessReminder(next)) input.current?.focus();
   });
 
-  return <form id={REPLY_FORM_ID} noValidate aria-label={t('label')} className="scroll-mt-28 space-y-3" onSubmit={(event) => { event.preventDefault(); if (!pending && body.trim().length >= 2) submit(); }}>
+  return <form ref={formRef} id={REPLY_FORM_ID} noValidate aria-label={t('label')} className="scroll-mt-28 space-y-3" onSubmit={(event) => { event.preventDefault(); if (!pending && body.trim().length >= 2) submit(); }}>
     <label htmlFor={`${id}-body`} className="text-sm font-semibold">{t('label')}</label>
     {target && <p className="flex flex-wrap items-center gap-2 text-sm">
       <span className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-brand-soft px-3 font-medium text-primary"><CornerDownRight aria-hidden="true" className="size-3.5" />{t('replyingTo', { name: target.authorName })}</span>

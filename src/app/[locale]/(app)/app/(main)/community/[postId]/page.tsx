@@ -17,6 +17,7 @@ import {
   translateCommunityItemAction,
   uploadCommunityPhotoAction,
 } from '@/modules/community/actions';
+import { confirmPhoneChangeAction, startPhoneChangeAction } from '@/modules/accounts/account-actions';
 import { communityViewerOf } from '@/modules/community/request-viewer';
 import { getCommunityPost } from '@/modules/community/service';
 import { localeOrDefault } from '@/contracts';
@@ -64,6 +65,7 @@ async function Post({ params }: Pick<PageProps<'/[locale]/app/community/[postId]
         onUploadPhoto: uploadCommunityPhotoAction,
         onLoadReactors: loadCommunityReactorsAction,
         ...(data.canTranslate ? { onTranslate: translateCommunityItemAction } : {}),
+        ...(data.viewer.replyBlocked === 'phone_required' ? { onStartPhoneChange: startPhoneChangeAction, onConfirmPhoneChange: confirmPhoneChangeAction } : {}),
       }}
     />
   );

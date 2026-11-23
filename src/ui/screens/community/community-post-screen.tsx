@@ -8,6 +8,8 @@ import { RepliesSinceVisit } from '@/ui/components/community/new-since-visit';
 import { ThreadRecommendations } from '@/ui/components/community/post-card';
 import { PostPageCard } from '@/ui/components/community/post-page-card';
 import { CommunityReplyForm } from '@/ui/components/community/reply-form';
+import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
+import { VerifyPhoneButton } from '@/ui/components/community/verify-phone-button';
 import { ReplyTargetProvider } from '@/ui/components/community/reply-target';
 import { ThreadReplies } from '@/ui/components/community/thread-replies';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
@@ -64,7 +66,7 @@ export function CommunityPostScreen({ data, handlers, now }: CommunityPostScreen
           {viewer.canReply
             ? <CommunityReplyForm data={data} onReply={handlers.onReply} {...(handlers.onUploadPhoto ? { onUploadPhoto: handlers.onUploadPhoto } : {})} />
             : viewer.replyBlocked
-              ? <p role="status" className="rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-sm">{t(`postBlocked.${viewer.replyBlocked}`)} {viewer.replyBlocked === 'phone_required' && <Link href={routes.app.account()} className="font-semibold text-primary underline underline-offset-4">{t('verifyPhone')}</Link>}</p>
+              ? <p role="status" className="rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-sm">{t(`postBlocked.${viewer.replyBlocked}`)} {viewer.replyBlocked === 'phone_required' && <VerifyPhoneButton handlers={handlers} />}</p>
               : <p className="text-sm text-muted-foreground">{t('replyForm.closed')}</p>}
           <p className="text-xs text-muted-foreground">{t('guidelines')} <Link href={routes.legal('community-guidelines')} className="font-medium text-primary underline underline-offset-4">{t('guidelinesLink')}</Link></p>
         </div>
@@ -87,6 +89,49 @@ export function CommunityPostScreen({ data, handlers, now }: CommunityPostScreen
         </section>
       </aside>
     </div>
+  </ReplyTargetProvider>;
+}
+
+/**
+ * A post and its conversation in a dialog over the page it was opened from (2026-11-23, owner: "I hate to redirect to
+ * new pages continually … if possible, use dialog"): a post's title or "View all replies" in the Neighbors feed, a
+ * notification. The feed underneath keeps its place and filters. The same card, named helpers, replies and reply form
+ * as the post's page, without its side column; loaded directly, the post's URL opens that page.
+ */
+export function CommunityPostDialog({ data, handlers, now }: CommunityPostScreenProps) {
+  const t = useTranslations('community');
+  const { post, viewer } = data;
+  const visitKey = `post:${post.id}`;
+  const recommended = post.recommended ?? [];
+  return <ReplyTargetProvider>
+    <RouteDialogHeader title={post.author.isYou ? t('postDialog.yours') : t('postDialog.title', { name: post.author.displayName })} />
+    <RouteDialogBody className="space-y-3.5">
+      <CommunityPostLive postId={post.id} />
+      <PostPageCard post={post} now={now} handlers={handlers} canReply={viewer.canReply} headingLevel={2} actions={<CommunityItemActions
+        target="post"
+        id={post.id}
+        label={post.title}
+        own={viewer.isAuthor}
+        onDelete={handlers.onDelete}
+        {...(!viewer.isAuthor ? { reportHref: routes.app.report('post', post.id) } : {})}
+        {...(viewer.isStaff && handlers.onModerate ? { onModerate: handlers.onModerate, hidden: Boolean(post.moderation) } : {})}
+        {...(handlers.onFollow && post.follow && !post.moderation ? { follow: { postId: post.id, state: post.follow, onFollow: handlers.onFollow } } : {})}
+        {...(handlers.onEdit && post.canEdit ? { edit: { item: { target: 'post', id: post.id, title: post.title, body: post.body, kind: post.kind }, onEdit: handlers.onEdit } } : {})}
+      />} />
+      {recommended.length > 0 && <ThreadRecommendations recommended={recommended} full />}
+      <section aria-label={t('replyCount', { count: data.replies.length })} className="space-y-3">
+        <h3 className="text-[15px] font-semibold">{t('replyCount', { count: data.replies.length })}<RepliesSinceVisit visitKey={visitKey} replies={data.replies.map((reply) => ({ at: reply.createdAt, own: reply.author.isYou }))} /></h3>
+        {data.replies.length > 0 && <ThreadReplies data={data} handlers={handlers} now={now} visitKey={visitKey} />}
+      </section>
+      <div className="space-y-2.5 rounded-2xl border border-border bg-card p-3.5 shadow-card sm:p-4">
+        {viewer.canReply
+          ? <CommunityReplyForm data={data} onReply={handlers.onReply} {...(handlers.onUploadPhoto ? { onUploadPhoto: handlers.onUploadPhoto } : {})} />
+          : viewer.replyBlocked
+            ? <p role="status" className="rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-sm">{t(`postBlocked.${viewer.replyBlocked}`)} {viewer.replyBlocked === 'phone_required' && <VerifyPhoneButton handlers={handlers} />}</p>
+            : <p className="text-sm text-muted-foreground">{t('replyForm.closed')}</p>}
+        <p className="text-xs text-muted-foreground">{t('guidelines')} <Link href={routes.legal('community-guidelines')} className="font-medium text-primary underline underline-offset-4">{t('guidelinesLink')}</Link></p>
+      </div>
+    </RouteDialogBody>
   </ReplyTargetProvider>;
 }
 

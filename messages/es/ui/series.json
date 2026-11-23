@@ -65,6 +65,7 @@
     "pick": "Tarjeta",
     "noCards": "Aún no tienes ninguna tarjeta guardada.",
     "addCard": "Agregar una tarjeta",
+    "added": "Tarjeta agregada. Quedó elegida abajo.",
     "submit": "Usar esta tarjeta",
     "pending": "Guardando…",
     "success": "La tarjeta se cambió."
@@ -137,6 +138,7 @@
   "perVisitEarnings": "Cada visita: lo que ganas",
   "previews": {
     "group": "Visitas regulares",
+    "client-add-card": "Cliente · agregando una tarjeta en Cambiar la tarjeta",
     "client-active": "Cliente · activas",
     "client-payment-due": "Cliente · falló un cobro",
     "client-no-card": "Cliente · sin tarjeta guardada",

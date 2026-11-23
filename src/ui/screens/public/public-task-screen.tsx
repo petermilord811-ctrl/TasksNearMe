@@ -64,7 +64,7 @@ export function PublicTaskScreen({ data, now, liveMap = true }: PublicTaskScreen
     ? <><p className="font-semibold">{t('closed')}</p><Link href={routes.taskBoard(market.slug)} className={buttonVariants({ variant: 'outline', className: 'w-full' })}>{t('backToBoard')}</Link></>
     : viewer === 'poster'
       ? <><p className="text-sm text-muted-foreground">{t('ownTask')}</p><Link href={routes.app.task(task.id)} className={buttonVariants({ className: 'w-full' })}>{t('manage')}<ArrowRight aria-hidden="true" /></Link></>
-      : <><Link href={routes.app.findWorkTask(task.id)} className={buttonVariants({ size: 'lg', className: 'w-full' })}><HandCoins aria-hidden="true" />{t('makeOffer')}</Link><p className="text-sm text-muted-foreground">{t(viewer === 'helper' ? 'offerHintHelper' : 'offerHint')}</p></>;
+      : <><Link href={routes.app.findWorkOffer(task.id)} className={buttonVariants({ size: 'lg', className: 'w-full' })}><HandCoins aria-hidden="true" />{t('makeOffer')}</Link><p className="text-sm text-muted-foreground">{t(viewer === 'helper' ? 'offerHintHelper' : 'offerHint')}</p></>;
 
   const offerOpen = data.acceptingOffers && viewer !== 'poster';
   return <div className={cn('space-y-section', offerOpen && 'max-lg:pb-20')}>
@@ -73,7 +73,7 @@ export function PublicTaskScreen({ data, now, liveMap = true }: PublicTaskScreen
     {offerOpen && <div className="fixed inset-x-0 bottom-0 z-30 border-t border-foreground/[0.08] bg-card/95 px-gutter pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-12px_30px_-20px_rgb(23_18_14/0.35)] backdrop-blur-md lg:hidden dark:border-white/[0.08]">
       <div className="mx-auto flex max-w-content items-center gap-3">
         <div className="min-w-0 flex-1 leading-tight"><p className="font-display text-xl font-semibold tabular-nums">{price}</p><p className="truncate text-xs text-muted-foreground">{priceNote} · {t('offersSoFar', { count: task.offerCount })}</p></div>
-        <Link href={routes.app.findWorkTask(task.id)} className={buttonVariants({ className: 'shrink-0' })}><HandCoins aria-hidden="true" />{t('makeOffer')}</Link>
+        <Link href={routes.app.findWorkOffer(task.id)} className={buttonVariants({ className: 'shrink-0' })}><HandCoins aria-hidden="true" />{t('makeOffer')}</Link>
       </div>
     </div>}
     <div className="space-y-5">

@@ -51,7 +51,7 @@ export function OfferCard({ offer, now, selectable, onAction }: OfferCardProps) 
         <InitialsAvatar initials={offer.helper.initials} photo={offer.helper.photo} />
         <div className="min-w-0">
           <h3 id={`${id}-title`} className="font-display text-[17px]/6 font-semibold tracking-[-0.01em] md:text-lg/6.5">
-            <Link href={routes.app.offer(offer.taskId, offer.id)} aria-label={t('viewOffer', { helper: offer.helper.displayName })} className="inline-flex min-h-11 items-center rounded-md underline-offset-4 transition-colors hover:text-primary hover:underline">{offer.helper.displayName}</Link>
+            <Link href={routes.app.offerView(offer.taskId, offer.id)} aria-label={t('viewOffer', { helper: offer.helper.displayName })} className="inline-flex min-h-11 items-center rounded-md underline-offset-4 transition-colors hover:text-primary hover:underline">{offer.helper.displayName}</Link>
           </h3>
           <RatingStars rating={offer.helper.rating} />
         </div>

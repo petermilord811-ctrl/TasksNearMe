@@ -9,6 +9,7 @@ import { notifications } from '../../../src/modules/notifications/schema';
 import { offers } from '../../../src/modules/offers/schema';
 import { quoteBreakdown } from '../../../src/modules/payments/fees';
 import { payments, refunds } from '../../../src/modules/payments/schema';
+import { savedHelpers } from '../../../src/modules/reviews/schema';
 import { tasks } from '../../../src/modules/tasks/schema';
 import { createDb } from '../../../src/platform/db/connect';
 
@@ -283,3 +284,22 @@ export async function clearOpenInvites(taskId: string): Promise<void> {
   }
 }
 
+/** Saves a helper for a client, as the profile's Save does; false when it was saved already (leave it then). */
+export async function saveHelperFor(userId: string, helperUserId: string): Promise<boolean> {
+  const { db, pool } = database();
+  try {
+    const saved = await db.insert(savedHelpers).values({ userId, helperUserId }).onConflictDoNothing().returning({ userId: savedHelpers.userId });
+    return saved.length > 0;
+  } finally {
+    await pool.end();
+  }
+}
+
+export async function unsaveHelperFor(userId: string, helperUserId: string): Promise<void> {
+  const { db, pool } = database();
+  try {
+    await db.delete(savedHelpers).where(and(eq(savedHelpers.userId, userId), eq(savedHelpers.helperUserId, helperUserId)));
+  } finally {
+    await pool.end();
+  }
+}

@@ -1,9 +1,12 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { ArrowLeft, BarChart3, CalendarDays, CircleDollarSign, Flag, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ActionResult, type HelperTaskView, type HelperWorkHandlers, type ISODateTime } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
+import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
+import { WideRouteDialog } from '@/ui/components/layout/wide-route-dialog';
 import { GeneralArea } from '@/ui/components/location/general-area';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
@@ -25,7 +28,48 @@ export interface HelperTaskScreenProps {
 }
 
 export function HelperTaskScreen({ data, handlers, now, initialRevising, initialResult, liveMap = true }: HelperTaskScreenProps) {
-  const { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTimeRange, dayKey } = useFormat();
+  const t = useTranslations('helperTask');
+  return <div className="mx-auto min-w-0 max-w-reading space-y-6">
+    <header className="space-y-3">
+      <Link href={routes.app.findWork()} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-primary hover:underline"><ArrowLeft aria-hidden="true" className="size-4" />{t('back')}</Link>
+      <TaskKind data={data} now={now} />
+      <h1 className="font-display text-[1.75rem]/9 font-semibold tracking-[-0.02em] text-balance [overflow-wrap:anywhere] md:text-[2rem]/10">{data.task.title}</h1>
+    </header>
+    <HelperTaskBody data={data} handlers={handlers} now={now} initialRevising={initialRevising} initialResult={initialResult} liveMap={liveMap} />
+  </div>;
+}
+
+/**
+ * The same over the public task page its "Make an offer" was pressed on (2026-11-23, owner: "I hate to redirect to new
+ * pages continually"; `routes.app.findWorkOffer`): a second page about the same task was the redirect. The offer goes
+ * from here, and the task's questions and its Neighbors post follow it (`children`). The area's drawn map: a live one
+ * in a dialog would take the scroll from it.
+ */
+export function HelperTaskDialogScreen({ data, handlers, now, initialRevising, initialResult, children }: Omit<HelperTaskScreenProps, 'liveMap'> & { children?: ReactNode }) {
+  return <>
+    <WideRouteDialog />
+    <RouteDialogHeader title={data.task.title}><TaskKind data={data} now={now} /></RouteDialogHeader>
+    <RouteDialogBody>
+      <HelperTaskBody data={data} handlers={handlers} now={now} initialRevising={initialRevising} initialResult={initialResult} liveMap={false} />
+      {children}
+    </RouteDialogBody>
+  </>;
+}
+
+/** The task's kind of work and when it was posted. */
+function TaskKind({ data, now }: { data: HelperTaskView; now: ISODateTime }) {
+  const { formatDateTime, formatRelative } = useFormat();
+  const card = useTranslations('taskCard');
+  const { task } = data;
+  return <div className="flex flex-wrap items-center gap-2 text-sm">
+    <span className="inline-flex items-center rounded-full px-3 py-1 font-medium" style={{ background: `color-mix(in oklab, var(--cat-${task.categorySlug}) 12%, transparent)` }}>{card(`categories.${task.categorySlug}`)}</span>
+    <time dateTime={task.postedAt} title={formatDateTime(task.postedAt)} className="text-muted-foreground tabular-nums">{card('posted', { relative: formatRelative(task.postedAt, now) })}</time>
+  </div>;
+}
+
+/** What decides an offer, the photos, the task in the client's words, the area, the client, then the offer. */
+function HelperTaskBody({ data, handlers, now, initialRevising, initialResult, liveMap = true }: HelperTaskScreenProps) {
+  const { formatDate, formatMonthYear, formatTimeRange, dayKey } = useFormat();
   const t = useTranslations('helperTask');
   const report = useTranslations('report');
   const card = useTranslations('taskCard');
@@ -44,15 +88,7 @@ export function HelperTaskScreen({ data, handlers, now, initialRevising, initial
 
   // 2026-11-23 (the structured task page): the title and what decides an offer first, then the photos as a carousel, the
   // task in the client's words, its answers as a spec sheet, the area and the client, then the offer.
-  return <div className="mx-auto min-w-0 max-w-reading space-y-6">
-    <header className="space-y-3">
-      <Link href={routes.app.findWork()} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-primary hover:underline"><ArrowLeft aria-hidden="true" className="size-4" />{t('back')}</Link>
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="inline-flex items-center rounded-full px-3 py-1 font-medium" style={{ background: `color-mix(in oklab, var(--cat-${task.categorySlug}) 12%, transparent)` }}>{card(`categories.${task.categorySlug}`)}</span>
-        <time dateTime={task.postedAt} title={formatDateTime(task.postedAt)} className="text-muted-foreground tabular-nums">{card('posted', { relative: formatRelative(task.postedAt, now) })}</time>
-      </div>
-      <h1 className="font-display text-[1.75rem]/9 font-semibold tracking-[-0.02em] text-balance [overflow-wrap:anywhere] md:text-[2rem]/10">{task.title}</h1>
-    </header>
+  return <>
     <dl className="grid gap-2.5 sm:grid-cols-2">
       {facts.map(({ key, Icon, label, value }) => <div key={key} className="relative min-w-0 rounded-2xl border border-foreground/[0.07] bg-card py-3.5 pr-3.5 pl-[3.75rem] shadow-card dark:border-white/[0.06]">
         <dt className="text-sm text-muted-foreground"><span aria-hidden="true" className="absolute top-3.5 left-3.5 grid size-9 place-items-center rounded-xl bg-brand-soft text-primary"><Icon className="size-[1.125rem]" /></span>{label}</dt>
@@ -89,5 +125,5 @@ export function HelperTaskScreen({ data, handlers, now, initialRevising, initial
     {data.blockedReason ? <section aria-labelledby="helper-task-blocked" className="space-y-3 rounded-xl border bg-secondary p-card text-secondary-foreground"><h2 id="helper-task-blocked" className="font-heading text-xl font-semibold">{t('blockedTitle')}</h2><p>{blocked(`blockedReasons.${data.blockedReason}`)}</p>{data.blockedReason === 'not_bookable' && <Link href={routes.app.helperOnboarding(data.setup.nextOnboardingStep)} className={buttonVariants({ variant: 'outline' })}>{t('finishSetup')}</Link>}</section>
       : <HelperOffer key={`${task.id}-${data.myOffer?.id ?? 'new'}`} data={data} handlers={handlers} now={now} initialRevising={initialRevising} initialResult={initialResult} />}
     <p><Link href={routes.app.report('task', task.id)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"><Flag aria-hidden="true" className="size-4" />{report('links.task')}</Link></p>
-  </div>;
+  </>;
 }

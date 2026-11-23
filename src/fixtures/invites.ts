@@ -1,11 +1,11 @@
-import type { InviteHandlers, InviteView, MyOffersPageData, RequestHelperHandlers, RequestHelperPageData, TaskOwnerView } from '@/contracts';
+import type { InviteHandlers, InviteHelpersPageData, InviteView, MyOffersPageData, RequestHelperHandlers, RequestHelperPageData, TaskOwnerView } from '@/contracts';
 import { compactTaskDetails, routes } from '@/contracts';
 import { mayaPaymentPanel } from './bookings';
 import { myOffersPageData } from './helper-work';
 import { bookshelfBreakdown, bookshelfCounterBreakdown } from './money';
 import { deskOwnerNoOffersView } from './offers';
 import { muellerArea } from './locations';
-import { jordan, maya } from './people';
+import { jordan, lee, maya, sam } from './people';
 
 /**
  * Direct invites (UI-025; ui-contract scenarios `invite.*`): three weeks after the desk, Maya books Jordan
@@ -28,6 +28,18 @@ export const requestJordanData: RequestHelperPageData = {
 
 /** No open task in Jordan's categories yet: the page points to posting one. */
 export const requestNoTasksData: RequestHelperPageData = { ...requestJordanData, tasks: [], suggestion: undefined };
+
+/**
+ * "Invite helpers" on the bookshelf (2026-11-23): Maya's saved helpers, Jordan and Sam to request for it; Lee doesn't
+ * take furniture assembly now.
+ */
+export const inviteHelpersBookshelfData: InviteHelpersPageData = {
+  task: { id: bookshelfTask.id, title: bookshelfTask.title },
+  helpers: [{ helper: jordan, canRequest: true }, { helper: sam, canRequest: true }, { helper: lee, canRequest: false }],
+};
+
+/** No saved helpers yet: browse helpers, or wait for offers. */
+export const inviteHelpersEmptyData: InviteHelpersPageData = { ...inviteHelpersBookshelfData, helpers: [] };
 
 /**
  * Book again from the desk (J-C7): the desk again, as a request of its own, offered first beside the open bookshelf;

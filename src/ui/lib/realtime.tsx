@@ -36,6 +36,24 @@ interface RealtimeContextValue {
 
 const RealtimeContext = createContext<RealtimeContextValue | null>(null);
 
+/**
+ * The tab's provider, for what renders outside it (2026-11-23): the route dialogs live in the root layout's @modal slot,
+ * beside the signed-in app rather than inside it, so a Neighbors post opened as a dialog follows its replies through
+ * the app's one stream instead of opening a second one (a person has a few at most).
+ */
+let shared: RealtimeContextValue | null = null;
+const sharedListeners = new Set<() => void>();
+function setShared(next: RealtimeContextValue | null) {
+  shared = next;
+  for (const listener of sharedListeners) listener();
+}
+function subscribeShared(listener: () => void) {
+  sharedListeners.add(listener);
+  return () => {
+    sharedListeners.delete(listener);
+  };
+}
+
 /** Notice types that only ever update what's on screen through a refresh. */
 const REFRESH_TYPES = new Set(['message', 'read', 'update']);
 const HIDDEN_CLOSE_MS = 120_000;
@@ -82,6 +100,12 @@ export function RealtimeProvider({ children, url = '/api/realtime' }: { children
   const router = useRouter();
   // Made once and never replaced: the context value stays the same object for the provider's whole life.
   const [value] = useState(createContextValue);
+  useEffect(() => {
+    setShared(value);
+    return () => {
+      if (shared === value) setShared(null);
+    };
+  }, [value]);
 
   useEffect(() => {
     if (typeof window === 'undefined' || typeof EventSource === 'undefined') return;
@@ -178,9 +202,14 @@ export function RealtimeProvider({ children, url = '/api/realtime' }: { children
   return <RealtimeContext.Provider value={value}>{children}</RealtimeContext.Provider>;
 }
 
-/** Calls `handler` for each notice of `type` (outside a provider, in previews and tests, it never fires). */
+/**
+ * Calls `handler` for each notice of `type`. Outside a provider: the tab's provider when it has one (a route dialog),
+ * else it never fires (previews and tests).
+ */
 export function useRealtime(type: string, handler: Handler): void {
-  const context = useContext(RealtimeContext);
+  const own = useContext(RealtimeContext);
+  const tab = useSyncExternalStore(subscribeShared, () => shared, () => null);
+  const context = own ?? tab;
   const latest = useRef(handler);
   useEffect(() => {
     latest.current = handler;

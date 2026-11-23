@@ -201,7 +201,7 @@ describe('AppShell', () => {
 
   it('announces the notification count; Messages is the chat button, not a tab (2026-11-22)', () => {
     show(<AppShell viewer={mayaShell} handlers={handlers} chat={<button type="button">Messages, 2 unread</button>}><h1>Home</h1></AppShell>);
-    expect(screen.getByRole('link', { name: 'Notifications, 3 unread notifications' })).toHaveAttribute('href', routes.app.notifications());
+    expect(screen.getByRole('link', { name: 'Notifications, 3 unread notifications' })).toHaveAttribute('href', routes.app.recentNotifications());
     for (const label of ['Main navigation', 'App navigation']) {
       const nav = within(screen.getByRole('navigation', { name: label }));
       expect(nav.queryByRole('link', { name: /^Messages/ })).toBeNull();
@@ -218,10 +218,12 @@ describe('AppShell', () => {
     expect(screen.queryByRole('link', { name: 'Finish setting up to start helping' })).not.toBeInTheDocument();
     const reminder = screen.getByRole('button', { name: 'Become a verified helper 1 of 5 checks' });
     await userEvent.click(reminder);
-    expect(await screen.findByRole('link', { name: /Home address/ })).toHaveAttribute('href', routes.app.helperOnboarding('address'));
+    // The phone and the home address open over the page (2026-11-23); the other checks are their setup pages.
+    expect(await screen.findByRole('link', { name: /Home address/ })).toHaveAttribute('href', '/app/helper/checks/address');
+    expect(screen.getByRole('link', { name: /^Phone/ })).toHaveAttribute('href', '/app/helper/checks/phone');
     expect(screen.getByRole('link', { name: /Background check/ })).toHaveAttribute('href', routes.app.helperOnboarding('background'));
-    expect(screen.getByRole('link', { name: 'Continue' })).toHaveAttribute('href', routes.app.helperOnboarding('address'));
-    expect(screen.getByRole('link', { name: 'Notifications' })).toHaveAttribute('href', routes.app.notifications());
+    expect(screen.getByRole('link', { name: 'Continue' })).toHaveAttribute('href', routes.app.helperCheck('address'));
+    expect(screen.getByRole('link', { name: 'Notifications' })).toHaveAttribute('href', routes.app.recentNotifications());
   });
 
   it('keeps flow pages focused: no search bar or reminder (posting, a booking, helper setup)', () => {

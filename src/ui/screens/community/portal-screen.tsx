@@ -38,7 +38,7 @@ export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
     <div className="max-sm:hidden"><AreaStrip data={data} {...(handlers.onSetArea ? { onSetArea: handlers.onSetArea } : {})} /></div>
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_17.5rem] xl:gap-x-5 2xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:gap-x-6">
       <div className="min-w-0 space-y-3">
-        <PortalComposer data={data} />
+        <PortalComposer data={data} handlers={handlers} />
         {data.announcement && <AnnouncementCard announcement={data.announcement} {...(handlers.onDismissAnnouncement ? { onDismiss: handlers.onDismissAnnouncement } : {})} />}
         {data.askArea && handlers.onSetArea && <AskAreaCard areas={data.areas} marketName={data.market.name} onSetArea={handlers.onSetArea} />}
         <YourStuffStrip rail={data.rail} query={query} />

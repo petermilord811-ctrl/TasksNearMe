@@ -32,7 +32,8 @@ async function startBooking(page: Page, taskId: string, paymentLine: string) {
   const offer = page.locator(`a[href*="/app/tasks/${taskId}/offers/off_"]`).first();
   await offer.click();
   await expect(page).toHaveURL(new RegExp(`/app/tasks/${taskId}/offers/off_`), { timeout: 30_000 });
-  await page.getByRole('button', { name: 'Book helper' }).click();
+  // The offer opens over the task (2026-11-23), whose own offer card has a Book button too.
+  await page.getByRole('dialog', { name: /^Offer from / }).getByRole('button', { name: 'Book helper' }).click();
   await expect(page).toHaveURL(new RegExp(`/app/tasks/${taskId}/offers/off_[^/]+/confirm$`), { timeout: 30_000 });
 }
 
@@ -70,9 +71,10 @@ test('an offer paid upfront: the client pays the price and the hold fee, held by
     await startBooking(page, task.taskId, 'Paid upfront: TasksNearMe holds it until you say the task is done.');
     const dialog = page.getByRole('dialog', { name: 'Confirm and pay' });
     await expect(dialog).toBeVisible({ timeout: 30_000 });
-    // $60 and the 5% hold fee; Jordan gets the whole $60.
-    await expect(dialog.getByText('Hold fee')).toBeVisible();
-    await expect(dialog.getByText('$3.00').first()).toBeVisible();
+    // $60 and the 5% hold fee; Jordan gets the whole $60. On screen only: the offer's dialog it came from may be kept,
+    // hidden, in the same frame (Next keeps visited screens).
+    await expect(dialog.getByText('Hold fee').filter({ visible: true })).toBeVisible();
+    await expect(dialog.getByText('$3.00').filter({ visible: true }).first()).toBeVisible();
     const pay = dialog.getByRole('button', { name: 'Book and pay $63.00' });
     await expect(pay).toBeVisible();
     const success = dialog.getByRole('radio', { name: 'Success' });

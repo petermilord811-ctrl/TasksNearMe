@@ -238,6 +238,15 @@
       "todo": "Pendiente",
       "opens": "Con esto empiezas a ayudar"
     },
+    "checkTitles": {
+      "phone": "Verifica tu teléfono",
+      "address": "Verifica tu domicilio"
+    },
+    "checkDescriptions": {
+      "phone": "Un código por mensaje de texto confirma tu número. Los clientes nunca lo ven.",
+      "address": "Envía un documento que muestre tu domicilio. Nuestro equipo lo revisa y con eso empiezas a ayudar."
+    },
+    "elsewhere": "Primero falta otro paso de la configuración.",
     "anyOrder": "Empieza por cualquiera",
     "continue": "Continuar"
   }

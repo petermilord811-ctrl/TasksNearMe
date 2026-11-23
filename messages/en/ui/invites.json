@@ -90,5 +90,18 @@
       "unavailable": "Request — provider unavailable",
       "unknown": "Request — couldn't send"
     }
+  },
+  "inviteHelpers": {
+    "title": "Invite helpers",
+    "description": "Ask a helper you saved to do “{task}”. They get your request and can accept it, decline it or suggest another price.",
+    "listLabel": "Your saved helpers",
+    "request": "Request {name}",
+    "notAvailable": "{name} doesn't take this kind of task right now.",
+    "browse": "Find more helpers",
+    "empty": {
+      "title": "No saved helpers yet",
+      "body": "Save helpers from their profiles to ask them for your tasks here. You can also wait for offers on your task.",
+      "action": "Browse helpers"
+    }
   }
 }

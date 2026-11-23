@@ -49,9 +49,9 @@ test('neighbors ask, answer, recommend a helper and pin the answer, live', async
     await expect(posted).toBeVisible({ timeout: 30_000 });
     await expect(posted).toContainText('[hidden]');
     await expect(posted).not.toContainText('512-555-0142');
-    // Its page, where Maya waits for an answer.
+    // Its conversation, over the feed (2026-11-23: a dialog, so the feed keeps its place), where Maya waits for an answer.
     await posted.getByRole('link', { name: title, exact: true }).click();
-    await expect(maya.getByRole('heading', { level: 1, name: title })).toBeVisible({ timeout: 30_000 });
+    await expect(maya.getByRole('dialog', { name: 'Your post' }).getByRole('heading', { level: 2, name: title })).toBeVisible({ timeout: 30_000 });
     const postUrl = maya.url();
 
     // Lee's open portal announces it without moving; Show brings it in.
@@ -60,7 +60,7 @@ test('neighbors ask, answer, recommend a helper and pin the answer, live', async
     await pill.click();
     // Exact: the rail's "Waiting for an answer" lists it too, its row named with the service and place after the title.
     await lee.getByRole('link', { name: title, exact: true }).click();
-    await expect(lee.getByRole('heading', { level: 1, name: title })).toBeVisible();
+    await expect(lee.getByRole('dialog', { name: "Maya R.'s post" }).getByRole('heading', { level: 2, name: title })).toBeVisible({ timeout: 30_000 });
 
     // Lee answers and names himself (a self-tag).
     await lee.getByRole('textbox', { name: 'Your reply' }).fill('I anchor tall shelves most weekends. Saturday works.');
@@ -71,7 +71,7 @@ test('neighbors ask, answer, recommend a helper and pin the answer, live', async
     await expect(leeReply.getByText('I anchor tall shelves most weekends. Saturday works.')).toBeVisible({ timeout: 15_000 });
     await expect(leeReply.getByText('Recommended themself')).toBeVisible();
 
-    // Maya's page shows it without a reload; she pins it.
+    // Maya's dialog shows it without a reload (the app's live stream reaches the dialogs too); she pins it.
     await maya.evaluate(() => {
       (window as unknown as { liveMarker: boolean }).liveMarker = true;
     });

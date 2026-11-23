@@ -64,7 +64,7 @@ export function AppShell({ viewer, handlers, children, currentPath, layout, noti
           <span aria-hidden="true" className="mx-1 hidden h-7 w-px bg-foreground/10 sm:block" />
           <LanguageSwitch label={t('footer.language')} onSwitch={handlers.onSwitchLanguage} className="hidden lg:block" />
           <ThemeToggle className="hidden sm:inline-flex" />
-          <Link href={routes.app.notifications()} className={buttonVariants({ variant: 'ghost', size: 'icon', className: 'relative rounded-full text-foreground/80' })} aria-label={viewer.unreadNotifications > 0 ? t('unreadNotifications', { count: viewer.unreadNotifications }) : t('notifications')}>
+          <Link href={routes.app.recentNotifications()} className={buttonVariants({ variant: 'ghost', size: 'icon', className: 'relative rounded-full text-foreground/80' })} aria-label={viewer.unreadNotifications > 0 ? t('unreadNotifications', { count: viewer.unreadNotifications }) : t('notifications')}>
             <Bell aria-hidden="true" className="size-5" />
             {viewer.unreadNotifications > 0 && <span aria-hidden="true" className="absolute top-1 right-0.5 min-w-5 rounded-full bg-primary px-1.5 text-center text-[0.6875rem] leading-5 font-semibold text-primary-foreground tabular-nums ring-2 ring-background">{viewer.unreadNotifications}</span>}
           </Link>

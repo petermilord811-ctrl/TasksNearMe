@@ -144,8 +144,11 @@ export interface PostCardProps {
   onSavePost?: ActionHandler<{ postId: string; saved: boolean }>;
   /** The portal's filters (plan 9.10): the service and neighborhood become links that filter by them. */
   linkBase?: PortalQuery;
-  /** The heading level in the feed (the portal's cards sit under an h2 for the list). */
-  headingLevel?: 2 | 3;
+  /**
+   * The heading level: in the feed the portal's cards sit under an h2 for the list (2, 3); on the post's page its title
+   * is the page's h1, and in its dialog an h2 under the dialog's own (2026-11-23).
+   */
+  headingLevel?: 1 | 2 | 3;
   /** A card's reply box (plan 10.3): the portal's Server Action, called with the post named. */
   onReplyInline?: (postId: string, input: CommunityReplyInput) => Promise<ActionResult>;
   /** The viewer, beside the reply box. */
@@ -170,11 +173,11 @@ export interface PostCardProps {
  * in the feed its pinned answer or latest replies with a reply box. A general post has no title: its words come first
  * (the title the server made from them names it for screen readers).
  */
-export function PostCard({ post, now, onReact, mode = 'feed', actions, onSavePost, linkBase, headingLevel = 2, onReplyInline, me, onLoadReactors, onFollow, onEdit, onDelete, onReplyClick, bodyFooter }: PostCardProps) {
+export function PostCard({ post, now, onReact, mode = 'feed', actions, onSavePost, linkBase, headingLevel = mode === 'page' ? 1 : 2, onReplyInline, me, onLoadReactors, onFollow, onEdit, onDelete, onReplyClick, bodyFooter }: PostCardProps) {
   const t = useTranslations('community');
   const card = useTranslations('taskCard');
   const href = routes.app.communityPost(post.id);
-  const Heading = mode === 'page' ? 'h1' : headingLevel === 3 ? 'h3' : 'h2';
+  const Heading = headingLevel === 1 ? 'h1' : headingLevel === 3 ? 'h3' : 'h2';
   const untitled = post.kind === 'general';
   const portal = (change: PortalQuery) => routes.app.community({ ...linkBase, ...change, page: undefined });
   // A search's words, marked in the card (plan 10.23).

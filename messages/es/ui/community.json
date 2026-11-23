@@ -98,6 +98,12 @@
     "suspended": "Tu cuenta no puede publicar por ahora."
   },
   "verifyPhone": "Verificar tu teléfono",
+  "postDialog": {
+    "title": "Publicación de {name}",
+    "yours": "Tu publicación"
+  },
+  "verifyPhoneTitle": "Verifica tu número de teléfono",
+  "phoneVerified": "Tu número de teléfono está verificado. Ya puedes publicar y responder.",
   "newPost": {
     "title": "Nueva publicación",
     "back": "Volver a Vecinos",
@@ -165,6 +171,9 @@
   },
   "previews": {
     "group": "Comunidad",
+    "verifyPhoneDialog": "Verifica tu teléfono, sobre Vecinos",
+    "postDialogReplyBlocked": "Una publicación sobre el feed, respuestas a la espera de un teléfono verificado",
+    "postDialog": "Una publicación sobre el feed",
     "post": "Comunidad · publicación pidiendo una recomendación, con respuestas",
     "postStaff": "Comunidad · vista del equipo de una respuesta oculta",
     "postReplyBlocked": "Publicación: aún no puede responder (primero el teléfono)",

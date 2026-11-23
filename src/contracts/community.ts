@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { PhoneVerifyHandlers } from './account';
 import type { ActionHandler, FieldErrorCode, QueryHandler } from './actions';
 import type { BadgeView } from './badges';
 import type { CategorySlug, ISODateTime, Photo } from './common';
@@ -378,7 +379,8 @@ export type CommunityModerationInput = z.input<typeof communityModerationInputSc
  *   `photoIds`), `rate_limited`, `not_allowed`.
  * - `onUploadPhoto`: a photo for the post (plan 10.1), re-encoded with its metadata dropped; attach its id.
  */
-export interface CommunityNewPostHandlers {
+/** With the account page's phone steps (`PhoneVerifyHandlers`), "Verify your phone" verifies right there (2026-11-23). */
+export interface CommunityNewPostHandlers extends Partial<PhoneVerifyHandlers> {
   onPost: ActionHandler<CommunityPostInput>;
   onUploadPhoto?: QueryHandler<FormData, PhotoUploadResult>;
 }
@@ -398,8 +400,10 @@ export interface CommunityNewPostHandlers {
  * - `onLoadReactors`: who found it helpful or said thanks, for the list behind the counts (plan 10.2); `null` when the
  *   viewer can't read it.
  * - `onTranslate`: the post or a reply in the viewer's language (plan 10.23); `null` when it can't be translated now.
+ * - `onStartPhoneChange`, `onConfirmPhoneChange`: "Verify your phone" when replies wait for it, in a dialog over the page
+ *   (`PhoneVerifyHandlers`, 2026-11-23).
  */
-export interface CommunityPostHandlers {
+export interface CommunityPostHandlers extends Partial<PhoneVerifyHandlers> {
   onReact: ActionHandler<CommunityReactInput>;
   onReply: ActionHandler<CommunityReplyInput>;
   onPin: ActionHandler<{ replyId: string | null }>;

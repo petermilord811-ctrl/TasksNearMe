@@ -12,6 +12,7 @@ import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { PlanScreen } from '@/ui/screens/billing/plan-screen';
+import { PageUnavailableScreen } from '@/ui/screens/system/page-unavailable-screen';
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('plan');
@@ -34,7 +35,8 @@ async function Plan({ searchParams }: { searchParams: Promise<Record<string, str
   const notice: PlanPageData['notice'] = checkout === 'done' ? 'subscribed' : checkout === 'canceled' ? 'checkout_canceled' : undefined;
   const returned = { ...(notice ? { notice } : {}), ...(typeof plan === 'string' ? { plan } : {}) };
   const data = await planPageData(db, createBillingProvider(), viewer.user.id, await requestNow(), returned);
-  if (!data) redirect(routes.app.home());
+  // Said here, not a silent trip to Home (2026-11-23).
+  if (!data) return <PageUnavailableScreen />;
   return <PlanScreen data={data} handlers={{ onSubscribe: subscribeToPlanAction, onManage: managePlanAction }} />;
 }
 

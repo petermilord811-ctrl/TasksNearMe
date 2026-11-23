@@ -1,5 +1,5 @@
 import type { SeriesHandlers, SeriesPageData, SeriesVisitView, SeriesView } from '@/contracts';
-import { routes } from '@/contracts';
+import { DEV_TEST_CARDS, routes } from '@/contracts';
 import { fakeHandler } from './actions';
 import { mayaMastercard, mayaVisa } from './bookings';
 import { deskBreakdown } from './money';
@@ -81,6 +81,12 @@ export const seriesClientNoCardData: SeriesPageData = {
     ],
   },
 };
+
+/**
+ * No saved card at all (2026-11-23): Change card opens with the add-a-card form right in the sheet, collected as on the
+ * payments page (development's test cards here).
+ */
+export const seriesClientNoSavedCardsData: SeriesPageData = { ...seriesClientNoCardData, cards: [], newCard: { kind: 'dev', testCards: DEV_TEST_CARDS } };
 
 /** Paused until Mon Dec 21: Dec 8 and Dec 15 are skipped; Dec 1 was paid and stays; Dec 22 is on the calendar. */
 export const seriesClientPausedData: SeriesPageData = {
@@ -173,4 +179,5 @@ export const fakeSeriesHandlers: SeriesHandlers = {
   onEnd: fakeHandler({ ok: true, code: 'updated' }),
   onChangeCard: fakeHandler({ ok: true, code: 'updated' }),
   onMessage: fakeHandler({ ok: true, code: 'updated', redirectTo: routes.app.thread('thr_leaves') }),
+  onAddCard: fakeHandler({ ok: true, code: 'saved' }),
 };

@@ -33,7 +33,7 @@ export function OfferComparison({ offers, now }: OfferComparisonProps) {
         <thead className="bg-foreground/[0.03] dark:bg-white/[0.04]">
           <tr>
             <th scope="col" className="w-36 p-4 font-semibold">{t('comparisonFeature')}</th>
-            {offers.map((offer) => <th key={offer.id} scope="col" className="p-4 align-top font-semibold"><Link href={routes.app.offer(offer.taskId, offer.id)} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">{offer.helper.displayName}</Link></th>)}
+            {offers.map((offer) => <th key={offer.id} scope="col" className="p-4 align-top font-semibold"><Link href={routes.app.offerView(offer.taskId, offer.id)} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">{offer.helper.displayName}</Link></th>)}
           </tr>
         </thead>
         <tbody>{rows.map((row) => <tr key={row.key} className="border-t border-foreground/[0.07] transition-colors duration-200 hover:bg-foreground/[0.02] dark:border-white/[0.06]">
@@ -43,7 +43,7 @@ export function OfferComparison({ offers, now }: OfferComparisonProps) {
       </table>
     </div>
     <div className="space-y-4 md:hidden">{offers.map((offer) => <article key={offer.id} className="rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card dark:border-white/[0.06]">
-      <div className="mb-4 flex items-center gap-3"><InitialsAvatar initials={offer.helper.initials} photo={offer.helper.photo} /><h3 className="text-[17px]/6 font-semibold"><Link href={routes.app.offer(offer.taskId, offer.id)} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">{offer.helper.displayName}</Link></h3></div>
+      <div className="mb-4 flex items-center gap-3"><InitialsAvatar initials={offer.helper.initials} photo={offer.helper.photo} /><h3 className="text-[17px]/6 font-semibold"><Link href={routes.app.offerView(offer.taskId, offer.id)} className="inline-flex min-h-11 items-center rounded-md hover:text-primary hover:underline underline-offset-4">{offer.helper.displayName}</Link></h3></div>
       <dl className="divide-y divide-foreground/[0.07] dark:divide-white/[0.06]">{rows.map((row) => <div key={row.key} className="space-y-2 py-3"><dt className="text-sm text-muted-foreground">{row.label}</dt><dd className="text-sm">{row.render(offer)}</dd></div>)}</dl>
     </article>)}</div>
   </div>;

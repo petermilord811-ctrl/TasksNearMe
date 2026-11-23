@@ -31,7 +31,7 @@ export interface ThreadScreenProps {
 /** Where the conversation's subject lives; a direct conversation with someone who isn't a helper has none. */
 export function subjectHref(subject: ThreadSubject): string | undefined {
   switch (subject.kind) {
-    case 'offer_for_client': return routes.app.offer(subject.taskId, subject.offerId);
+    case 'offer_for_client': return routes.app.offerView(subject.taskId, subject.offerId);
     case 'task_for_helper': return routes.app.findWorkTask(subject.taskId);
     case 'booking': return routes.app.booking(subject.bookingId);
     case 'series': return routes.app.series(subject.seriesId);

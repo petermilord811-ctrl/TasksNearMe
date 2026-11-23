@@ -37,7 +37,9 @@ async function RequestHelper({ params, searchParams }: Pick<PageProps<'/[locale]
   const [{ handle }, query, viewer] = await Promise.all([params, searchParams, getViewer()]);
   const from = typeof query.from === 'string' && query.from.startsWith('booking:') ? query.from.slice('booking:'.length) : undefined;
   const slotId = typeof query.slot === 'string' && query.slot ? query.slot : undefined;
-  if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.requestHelper(handle, { fromBookingId: from, slotId })));
+  // "Invite helpers" on one of the client's tasks (2026-11-23): that task, chosen to start with.
+  const taskId = typeof query.task === 'string' && query.task ? query.task : undefined;
+  if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.requestHelper(handle, { fromBookingId: from, slotId, taskId })));
   const deps = bookingDeps();
   if (!deps) notFound();
   // A market opening soon takes clients by invitation, Book again included (J-V8): that step instead of the form.
@@ -45,8 +47,8 @@ async function RequestHelper({ params, searchParams }: Pick<PageProps<'/[locale]
   if (clientInvite) return <ClientInviteScreen data={clientInvite} handlers={{ onRedeem: redeemClientInvite }} />;
   const now = await requestNow();
   // Risk may ask for an ID check before booking (the amount is checked again on sending).
-  await requirePosterIdentity(deps.db, viewer.user.id, now, routes.app.requestHelper(handle, { fromBookingId: from, slotId }));
-  const data = await getRequestHelperPage(deps.db, deps.payments, viewer.user.id, handle, { fromBookingId: from, slotId }, now);
+  await requirePosterIdentity(deps.db, viewer.user.id, now, routes.app.requestHelper(handle, { fromBookingId: from, slotId, taskId }));
+  const data = await getRequestHelperPage(deps.db, deps.payments, viewer.user.id, handle, { fromBookingId: from, slotId, taskId }, now);
   if (!data) notFound();
   return (
     <RequestHelperScreen

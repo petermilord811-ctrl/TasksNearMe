@@ -5,7 +5,9 @@ import { ArrowLeft, ArrowRight, Info } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type OfferActionId, type OfferDetailPageData, type OfferStatus, type TaskOwnerHandlers } from '@/contracts';
 import { useFormat } from '@/ui/lib/format';
+import { useWideRouteDialog } from '@/ui/lib/route-dialog';
 import { ActionBar } from '@/ui/components/actions/action-bar';
+import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
 import { MaskedText } from '@/ui/components/messaging/masked-text';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { hasMessage } from '@/ui/components/offers/offer-card';
@@ -21,12 +23,9 @@ export interface OfferDetailScreenProps {
 }
 
 export function OfferDetailScreen({ data, handlers, now }: OfferDetailScreenProps) {
-  const { formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('offers');
   const { offer, task } = data;
   const status = useOfferStatus(offer.status, 'poster', { taskCanceled: offer.taskCanceled });
-  // What it would cost to book only matters while the offer can be booked (audit M31).
-  const open = offer.status === 'pending' || offer.status === 'stale';
   return <div className="mx-auto max-w-reading space-y-6">
     <Link href={routes.app.task(task.id)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-primary hover:underline underline-offset-4"><ArrowLeft aria-hidden="true" className="size-4" />{t('backToTask')}</Link>
     <header className="space-y-3">
@@ -34,6 +33,37 @@ export function OfferDetailScreen({ data, handlers, now }: OfferDetailScreenProp
       <h1 className="text-2xl/8 font-bold md:text-3xl/9.5">{t('offerFrom', { helper: offer.helper.displayName })}</h1>
       <div className="flex flex-wrap items-center gap-2"><StatusBadge {...status} />{offer.revision > 1 && <StatusBadge tone="neutral" label={t('updated')} />}</div>
     </header>
+    <OfferDetailBody data={data} handlers={handlers} now={now} />
+  </div>;
+}
+
+/**
+ * The same over the task, the dashboard or the conversation it was opened from (2026-11-23, owner: "I hate to redirect
+ * to new pages continually"; src/app/[locale]/@modal). Book goes on to the confirm dialog, Message to the conversation
+ * (the chat window on wide screens), each in place of this one.
+ */
+export function OfferDetailDialogScreen({ data, handlers, now }: OfferDetailScreenProps) {
+  const t = useTranslations('offers');
+  const { offer, task } = data;
+  const status = useOfferStatus(offer.status, 'poster', { taskCanceled: offer.taskCanceled });
+  useWideRouteDialog();
+  return <>
+    <RouteDialogHeader title={t('offerFrom', { helper: offer.helper.displayName })} description={task.title}>
+      <div className="flex flex-wrap items-center gap-2 pt-1"><StatusBadge {...status} />{offer.revision > 1 && <StatusBadge tone="neutral" label={t('updated')} />}</div>
+    </RouteDialogHeader>
+    {/* The actions at the end of the dialog, not a sticky bar over the helper's card (the dialog scrolls itself). */}
+    <RouteDialogBody><OfferDetailBody data={data} handlers={handlers} now={now} stickyActions={false} /></RouteDialogBody>
+  </>;
+}
+
+/** The helper, their offer, what booking it costs and its actions: on the page and in the dialog. */
+function OfferDetailBody({ data, handlers, now, stickyActions = true }: OfferDetailScreenProps & { stickyActions?: boolean }) {
+  const { formatDateTime, formatRelative } = useFormat();
+  const t = useTranslations('offers');
+  const { offer, task } = data;
+  // What it would cost to book only matters while the offer can be booked (audit M31).
+  const open = offer.status === 'pending' || offer.status === 'stale';
+  return <>
     {!open && <p className="flex items-start gap-2.5 rounded-2xl bg-secondary/70 px-4 py-3.5 text-sm text-secondary-foreground">
       <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
       {/* Declined by the task's cancellation, not by the client (sweep D9). */}
@@ -59,6 +89,6 @@ export function OfferDetailScreen({ data, handlers, now }: OfferDetailScreenProp
     {open && <PriceBreakdown breakdown={offer.breakdown} variant="poster" title={t('breakdownTitle')} />}
     {open && <p className="text-sm text-muted-foreground">{offer.paymentMode === 'direct' ? t('paymentNoteDirect', { helper: offer.helper.displayName }) : t('paymentNote')}</p>}
     {data.otherPendingOffers > 0 && <Link href={`${routes.app.task(task.id)}#compare`} className="group/compare inline-flex min-h-11 items-center gap-1.5 rounded-md text-sm font-medium text-primary underline-offset-4 hover:underline">{t('compareOthers', { count: data.otherPendingOffers })}<ArrowRight aria-hidden="true" className="size-4 transition-transform duration-300 ease-[var(--ease-out)] group-hover/compare:translate-x-0.5" /></Link>}
-    <ActionBar actions={offer.actions} onAction={(action) => handlers.onOfferAction({ offerId: offer.id, action: action as OfferActionId })} sticky />
-  </div>;
+    <ActionBar actions={offer.actions} onAction={(action) => handlers.onOfferAction({ offerId: offer.id, action: action as OfferActionId })} sticky={stickyActions} />
+  </>;
 }

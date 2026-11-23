@@ -3,12 +3,13 @@ import type React from 'react';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { CommunityPostPageData, CommunityReactInput, PortalHandlers, PortalPageData } from '@/contracts';
+import type { CommunityPostHandlers, CommunityPostPageData, CommunityReactInput, PortalHandlers, PortalPageData } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { communityPostHelperViewData, communityPostPageData, communityPostReplyBlockedData, fakeHandler, portalBlockedData, portalEmptyData, portalFeedData, portalFilteredEmptyData, portalHelperData, portalListData, portalLongThreadData, portalPostWithTaskData, portalSavedData, portalTasksData } from '@/fixtures';
 import { resetLastVisits } from '@/ui/lib/last-visit';
 import messages from '../../../../messages/en/ui';
-import { CommunityPostScreen } from './community-post-screen';
+import { RouteDialogFrame } from '@/ui/components/layout/route-dialog-frame';
+import { CommunityPostDialog, CommunityPostScreen } from './community-post-screen';
 import { PortalScreen } from './portal-screen';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
@@ -152,6 +153,13 @@ describe('PortalScreen', () => {
     portal(portalBlockedData);
     expect(within(screen.getByRole('region', { name: 'Start a post' })).getByRole('status').textContent).toContain('Verify your phone number to post and reply.');
   });
+
+  it('verifies the phone right there when the page brings the phone steps (2026-11-23)', () => {
+    portal(portalBlockedData, { onStartPhoneChange: fakeHandler({ ok: true, code: 'sent' }), onConfirmPhoneChange: fakeHandler({ ok: true, code: 'updated' }) });
+    const composer = within(screen.getByRole('region', { name: 'Start a post' }));
+    expect(composer.getByRole('button', { name: 'Verify your phone' })).toBeDefined();
+    expect(composer.queryByRole('link', { name: 'Verify your phone' })).toBeNull();
+  });
 });
 
 describe('CommunityPostScreen', () => {
@@ -223,6 +231,22 @@ describe('CommunityPostScreen', () => {
     expect(replies.getAllByRole('article')).toHaveLength(10);
     fireEvent.click(screen.getByRole('button', { name: 'Show 20 more replies' }));
     expect(replies.getAllByRole('article')).toHaveLength(30);
+  });
+
+  it('opens over the page as a dialog named for its author, the post titled under it, without the side column (2026-11-23)', () => {
+    const handlers: CommunityPostHandlers = { onReact: fakeHandler({ ok: true, code: 'updated' }), onReply: fakeHandler({ ok: true, code: 'sent' }), onPin: fakeHandler({ ok: true, code: 'updated' }), onDelete: fakeHandler({ ok: true, code: 'updated' }) };
+    wrap(<RouteDialogFrame><CommunityPostDialog data={communityPostPageData} handlers={handlers} now={now} /></RouteDialogFrame>);
+    // Maya's own post: "Your post"; someone else's is named for them (the reply-blocked one below is Maya's, read by Lee).
+    const dialog = screen.getByRole('dialog', { name: 'Your post' });
+    expect(within(dialog).getByRole('heading', { level: 2, name: /Who do you recommend/ })).toBeDefined();
+    expect(within(dialog).queryByRole('heading', { level: 1, name: /Who do you recommend/ })).toBeNull();
+    expect(within(dialog).getByRole('region', { name: '4 replies' })).toBeDefined();
+    expect(within(dialog).queryByRole('complementary')).toBeNull();
+    expect(within(dialog).queryByRole('link', { name: messages.community.back })).toBeNull();
+    cleanup();
+    wrap(<RouteDialogFrame><CommunityPostDialog data={communityPostReplyBlockedData} handlers={{ ...handlers, onStartPhoneChange: fakeHandler({ ok: true, code: 'sent' }), onConfirmPhoneChange: fakeHandler({ ok: true, code: 'updated' }) }} now={now} /></RouteDialogFrame>);
+    expect(screen.getByRole('dialog', { name: "Maya R.'s post" })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Verify your phone' })).toBeDefined();
   });
 
   it('shows the task a post became, and no "Ask for help" any more', () => {

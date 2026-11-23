@@ -115,6 +115,18 @@ test('a helper proposes regular visits; the client pays the first, skips one and
   await expect(page.getByText('Booked and paid', { exact: true }).first()).toBeVisible();
   await expect(page.getByText('On the calendar', { exact: true })).toHaveCount(3);
 
+  // A new card, added right in the Change-card sheet (2026-11-23; it went to the payments page), is the one chosen.
+  await page.getByRole('button', { name: 'Change card' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Change the card' });
+  await sheet.getByRole('button', { name: 'Add a card' }).click();
+  await sheet.getByRole('button', { name: 'Add card', exact: true }).click();
+  await expect(sheet.getByText("Card added. It's chosen below.")).toBeAttached({ timeout: 30_000 });
+  // Listed last (the default card leads), and chosen.
+  await expect(sheet.getByRole('radio').last()).toBeChecked();
+  await sheet.getByRole('button', { name: 'Use this card' }).click();
+  await expect(page.getByText('The card is changed.').first()).toBeVisible({ timeout: 30_000 });
+  await expect(sheet).toBeHidden();
+
   // Skip the second visit (nothing is charged for it).
   await page.getByRole('button', { name: 'Skip' }).first().click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Skip visit' }).click();

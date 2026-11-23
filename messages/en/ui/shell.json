@@ -238,6 +238,15 @@
       "todo": "To do",
       "opens": "Opens helping"
     },
+    "checkTitles": {
+      "phone": "Verify your phone",
+      "address": "Verify your home address"
+    },
+    "checkDescriptions": {
+      "phone": "A texted code confirms your number. Clients never see it.",
+      "address": "Send a document that shows your home address. Our team checks it, and it opens helping."
+    },
+    "elsewhere": "Setup needs another step first.",
     "anyOrder": "Pick any check first",
     "continue": "Continue"
   }

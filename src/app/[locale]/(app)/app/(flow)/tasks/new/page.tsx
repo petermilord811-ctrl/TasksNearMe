@@ -8,6 +8,7 @@ import { findTaskTemplate, isTaskTemplateId, routes, TASK_DESCRIPTION_MAX, TASK_
 import { carriedWords, handoffCode } from '@/modules/tasks/carried-words';
 import { redeemClientInvite } from '@/modules/beta/actions';
 import { clientInviteFor } from '@/modules/beta/server';
+import { resolveCurrentSignIn } from '@/modules/accounts/sign-in/server';
 import { communityPostForTask } from '@/modules/community/service';
 import { getFlags } from '@/modules/markets/queries';
 import {
@@ -27,6 +28,8 @@ import { PageSkeleton } from '@/ui/components';
 import { ClientInviteScreen } from '@/ui/screens/beta';
 import { PostTaskScreen } from '@/ui/screens/posting';
 import { appPageMetadata } from '@/i18n/metadata';
+import { InAppPhoneStep, isPhoneStep } from '../../../_phone/in-app-phone-step';
+import { PageUnavailableScreen } from '@/ui/screens/system/page-unavailable-screen';
 
 export async function generateMetadata(): Promise<Metadata> {
   return appPageMetadata('postTask');
@@ -75,8 +78,14 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
   // A market opening soon takes clients by invitation (J-V8): that step first, before the phone and the form.
   const clientInvite = await clientInviteFor(db, userId);
   if (clientInvite) return <ClientInviteScreen data={clientInvite} handlers={{ onRedeem: redeemClientInvite }} />;
-  // A phone first (only where texts work, plan 9.2): sign-in's phone steps, inside the app (journeys on a phone, J-C2).
-  if (!(await phoneGateOpen(userId))) redirect(routes.app.verifyPhone(here));
+  // A phone first (only where texts work, plan 9.2): sign-in's phone steps, inside the app (journeys on a phone, J-C2),
+  // right here, as the invite step above (2026-11-23, owner: "I hate to redirect to new pages continually"): the code
+  // that verifies it opens the wizard on this same page. Anything else sign-in still waits for: its own page, as before.
+  if (!(await phoneGateOpen(userId))) {
+    const signIn = await resolveCurrentSignIn(here);
+    if (signIn.kind !== 'done' && isPhoneStep(signIn.data)) return <InAppPhoneStep data={signIn.data} />;
+    redirect(routes.app.verifyPhone(here));
+  }
   // Risk may ask for an ID check before posting (blueprint 01 P2); it comes back here once it passes.
   await requirePosterIdentity(db, userId, await requestNow(), here);
 
@@ -86,7 +95,8 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
     again ? taskPosting.repeat(userId, again) : null,
     fromPostId ? communityPostForTask(db, userId, fromPostId) : null,
   ]);
-  if (!data || !marketId) redirect(routes.app.home());
+  // Missing what posting needs (its home city): said here, not a silent trip to Home (2026-11-23).
+  if (!data || !marketId) return <PageUnavailableScreen />;
   const flags = await getFlags(marketId);
   // A per-person key, so a saved draft never shows up for someone else on a shared device. Posting a task again
   // keeps its own draft, so it never picks up (or overwrites) another one in progress.
