@@ -116,6 +116,8 @@ const identityEvents = async (userId: string) =>
     .map((row) => row.payload)
     .filter((payload) => payload.track === 'identity');
 const bookable = async (userId: string, now: Date) => computeOnboarding((await loadOnboardingState(db, userId, now)).facts).progress.bookable;
+/** Every check done (owner, 2026-11-23: the ID makes a verified helper; the verified home address alone opens helping). */
+const verified = async (userId: string, now: Date) => computeOnboarding((await loadOnboardingState(db, userId, now)).facts).complete;
 
 beforeAll(async () => {
   await fs.rm(root, { recursive: true, force: true });
@@ -203,7 +205,7 @@ describe('an ID that runs out', () => {
   const end = new Date('2027-01-01T06:00:00.000Z');
   const before = (days: number) => new Date(end.getTime() - days * DAY);
 
-  it('asks for a new check 30 days before, keeps the helper bookable until the month ends, then pauses them', async () => {
+  it('asks for a new check 30 days before, keeps the ID counting until the month ends, then takes the verified badge away (helping stays open)', async () => {
     await helper(LAPSED);
     await bookableBesidesId(LAPSED);
     await verifiedWithId(LAPSED, { month: 12, year: 2026 }, at(-100));
@@ -226,11 +228,13 @@ describe('an ID that runs out', () => {
     await runVerificationTimers(db, { storage, providers }, before(20), { userIds: [LAPSED] });
     expect(await identityEvents(LAPSED)).toHaveLength(1);
 
-    // The month ends without a new check: told once, and no longer bookable.
+    // The month ends without a new check: told once, and no longer a verified helper. Helping stays open with the verified
+    // home address (owner, 2026-11-23: only the location profile gates offers).
     await runVerificationTimers(db, { storage, providers }, end, { userIds: [LAPSED] });
     await runVerificationTimers(db, { storage, providers }, new Date(end.getTime() + DAY), { userIds: [LAPSED] });
     expect((await identityEvents(LAPSED)).map((payload) => payload.outcome)).toEqual(['expiring', 'expired']);
-    expect(await bookable(LAPSED, end)).toBe(false);
+    expect(await verified(LAPSED, end)).toBe(false);
+    expect(await bookable(LAPSED, end)).toBe(true);
     expect((await loadOnboardingState(db, LAPSED, end)).identity).toMatchObject({ cleared: false, requested: 'id_expired' });
     const [after] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, LAPSED));
     expect(after!.idVerifiedAt).toBeNull();
@@ -273,7 +277,9 @@ describe('a legal-name change', () => {
     expect(await saveAccountProfile(db, RENAMED, { firstName: 'Vera', lastName: 'Okafor' }, at(1))).toEqual({ ok: true, code: 'saved' });
     const state = await loadOnboardingState(db, RENAMED, at(1));
     expect(state.identity).toMatchObject({ verified: false, cleared: false, requested: 'name_changed', canCapture: true });
-    expect(await bookable(RENAMED, at(1))).toBe(false);
+    // No longer a verified helper until the new check passes; helping stays open with the verified home address.
+    expect(await verified(RENAMED, at(1))).toBe(false);
+    expect(await bookable(RENAMED, at(1))).toBe(true);
     expect((await identityEvents(RENAMED)).map((payload) => payload.outcome)).toEqual(['action_needed']);
     // Changing it again while the new check is due asks for nothing more.
     await saveAccountProfile(db, RENAMED, { firstName: 'Vera', lastName: 'Okafor-Tester' }, at(2));

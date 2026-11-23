@@ -23,6 +23,41 @@
   "previews": {
     "open": "Tarea pública · abierta",
     "assigned": "Tarea pública · asignada",
-    "remote": "Tarea pública · remota"
+    "remote": "Tarea pública · remota",
+    "helper": "Tarea pública · un ayudante que puede ofertar: fotos, descripción y detalles",
+    "visitorPhotos": "Tarea pública · sin sesión: tres fotos tras iniciar sesión"
+  },
+  "state": {
+    "open": "Recibe ofertas",
+    "booked": "Reservada",
+    "closed": "Cerrada"
+  },
+  "facts": {
+    "where": "Dónde",
+    "when": "Cuándo",
+    "budget": "Presupuesto",
+    "offers": "Ofertas"
+  },
+  "offersSoFar": "{count, plural, =0 {Aún sin ofertas} one {# oferta hasta ahora} other {# ofertas hasta ahora}}",
+  "fixedPrice": "Precio fijo",
+  "hourlyUpTo": "Por hora, hasta {hours}",
+  "details": "Detalles de la tarea",
+  "allowance": "Monto para gastos: {amount}",
+  "whereTitle": "Dónde es",
+  "lockedTitle": "La tarea completa",
+  "lockedVisitor": "Inicia sesión como ayudante para leer toda la descripción y los detalles de la tarea{photos, plural, =0 {} one { y ver su foto} other { y ver sus # fotos}}.",
+  "lockedMember": "Los ayudantes con domicilio verificado ven toda la descripción y los detalles de la tarea{photos, plural, =0 {} one { y su foto} other { y sus # fotos}}.",
+  "photoCount": "{count, plural, one {# foto} other {# fotos}}",
+  "signInToSee": "Inicia sesión para verlo todo",
+  "becomeHelper": "Hazte ayudante",
+  "ownTask": "Esta es tu tarea.",
+  "manage": "Administrar tu tarea",
+  "offerHintHelper": "Tu precio y una nota; el cliente elige.",
+  "summary": "Presupuesto y siguiente paso",
+  "how": {
+    "title": "Cómo funciona",
+    "offer": "Envía una oferta con tu precio y una nota breve.",
+    "book": "El cliente reserva y paga; el dinero espera seguro con nosotros.",
+    "paid": "Haz la tarea y recibes el pago cuando se apruebe."
   }
 }

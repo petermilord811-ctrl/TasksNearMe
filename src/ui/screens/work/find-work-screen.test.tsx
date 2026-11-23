@@ -215,8 +215,8 @@ describe('FindWorkScreen', () => {
 
   it('links the setup banner to the supplied identity step', () => {
     renderWork(findWorkNotBookableData);
-    expect(screen.getByRole('heading', { name: 'Finish setting up to send offers' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Finish setup' })).toHaveAttribute('href', routes.app.helperOnboarding('identity'));
+    expect(screen.getByRole('heading', { name: 'Verify your home address to send offers' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Verify your address' })).toHaveAttribute('href', routes.app.helperOnboarding('identity'));
   });
 
   it('clears every filter from the empty state', () => {

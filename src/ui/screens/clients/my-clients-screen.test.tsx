@@ -46,7 +46,7 @@ describe('MyClientsScreen', () => {
   it('keeps past clients visible with the supplied finish-setup step', () => {
     renderClients({ ...myClientsData, setup: findWorkNotBookableData.setup, clients: myClientsData.clients.map((row) => ({ ...row, actions: [] })) });
     expect(screen.getAllByRole('article')).toHaveLength(myClientsData.clients.length);
-    expect(screen.getByRole('link', { name: 'Finish setup' })).toHaveAttribute('href', routes.app.helperOnboarding('identity'));
+    expect(screen.getByRole('link', { name: 'Verify your address' })).toHaveAttribute('href', routes.app.helperOnboarding('identity'));
     expect(screen.queryByRole('link', { name: 'Propose a booking' })).not.toBeInTheDocument();
   });
 

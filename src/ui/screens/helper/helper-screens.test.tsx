@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { routes, type ActionResult, type HelperOnboardingPageData, type HelperProfileEditorHandlers } from '@/contracts';
-import { fakeOnboardingHandlers, fakeProfileEditorHandlers, onboardingAreaStep, onboardingDone, onboardingDoneAwaitingCity, onboardingDoneAwaitingCityPending, onboardingIdentityStep, onboardingProfileStep, onboardingServicesStep, samProfileEditorData } from '@/fixtures';
+import { fakeOnboardingHandlers, fakeProfileEditorHandlers, onboardingAreaStep, onboardingDone, onboardingDoneHelping, onboardingIdentityStep, onboardingProfileStep, onboardingServicesStep, samProfileEditorData } from '@/fixtures';
 import uiMessages from '../../../../messages/en/ui';
 import esMessages from '../../../../messages/es/ui';
 import { HelperOnboardingScreen } from './helper-onboarding-screen';
@@ -150,23 +150,18 @@ describe('helper onboarding screen', () => {
     expect(screen.getByRole('link', { name: 'Find work' })).toBeVisible();
   });
 
-  it('tells a verified helper outside our cities we will say when their city opens (national, 2026-11-14)', () => {
-    show(<HelperOnboardingScreen data={onboardingDoneAwaitingCity} handlers={fakeOnboardingHandlers} />);
-    expect(screen.getByRole('heading', { name: "You're verified. We'll tell you the moment Dallas opens." })).toBeVisible();
-    expect(screen.queryByRole('heading', { name: 'A few steps left' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Find work' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Get your profile ready' })).toHaveAttribute('href', routes.app.helperProfile());
-    expect(screen.getByRole('link', { name: 'Change your city' })).toHaveAttribute('href', routes.app.helperOnboarding('area'));
-    // The home address waits for the city: it's neither a step to finish nor "not needed".
-    expect(screen.queryByRole('link', { name: /Finish Home address/ })).not.toBeInTheDocument();
-    const navigation = within(screen.getByRole('navigation', { name: 'Helper setup progress' }));
-    expect(navigation.getByText('Home address').closest('li')).toHaveTextContent('When your city opens');
+  it('says helping is open once the home address is verified, and lists the checks for the badge (owner, 2026-11-23)', () => {
+    show(<HelperOnboardingScreen data={onboardingDoneHelping} handlers={fakeOnboardingHandlers} />);
+    expect(screen.getByRole('heading', { name: 'You can make offers now' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Find work' })).toHaveAttribute('href', routes.app.findWork());
+    expect(screen.getByRole('heading', { name: 'Finish these whenever you like to become a verified helper' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Finish Background check' })).toHaveAttribute('href', routes.app.helperOnboarding('background'));
+    expect(screen.queryByText(/When your city opens/)).not.toBeInTheDocument();
   });
 
-  it('lists the checks still to do for a helper waiting for their city', () => {
-    show(<HelperOnboardingScreen data={onboardingDoneAwaitingCityPending} handlers={fakeOnboardingHandlers} />);
-    expect(screen.getByRole('heading', { name: "We're not in Dallas, TX yet" })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Finish Background check' })).toHaveAttribute('href', routes.app.helperOnboarding('background'));
+  it('calls a helper with every check done a verified helper', () => {
+    show(<HelperOnboardingScreen data={{ ...onboardingDone, progress: { ...onboardingDone.progress, verified: true } }} handlers={fakeOnboardingHandlers} />);
+    expect(screen.getByRole('heading', { name: "You're a verified helper" })).toBeVisible();
   });
 
   it.each([onboardingProfileStep, onboardingServicesStep, onboardingAreaStep])('does not collect private provider details in the $step form', (data) => {

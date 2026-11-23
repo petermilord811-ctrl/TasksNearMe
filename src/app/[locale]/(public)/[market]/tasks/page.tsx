@@ -1,9 +1,14 @@
 import { withClientMessages } from '@/i18n/client-messages';
+import { localeOrDefault } from '@/contracts';
+import { neighborsCard } from '@/modules/community/home';
+import { communityViewerOf } from '@/modules/community/request-viewer';
+import { getViewer } from '@/platform/auth/viewer';
+import { db } from '@/platform/db/client';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getTranslations } from 'next-intl/server';
+import { getLocale, getTranslations } from 'next-intl/server';
 import { Suspense } from 'react';
-import { routes } from '@/contracts';
+import { routes } from '@/contracts/routes';
 import { getMarketPageData, getTaskBoardPageData } from '@/modules/marketing/queries';
 import { DEFAULT_MARKET_SLUG, listPublicMarketSlugs } from '@/modules/markets/queries';
 import { JsonLd } from '@/modules/seo/json-ld';
@@ -52,9 +57,12 @@ async function TaskBoardPage({ params, searchParams }: PageProps<'/[locale]/[mar
 }
 
 async function Board({ params, searchParams }: Pick<PageProps<'/[locale]/[market]/tasks'>, 'params' | 'searchParams'>) {
-  const [{ market }, search, rows] = await Promise.all([params, searchParams, requestRows()]);
+  const [{ market }, search, rows, viewer, locale] = await Promise.all([params, searchParams, requestRows(), getViewer(), getLocale()]);
   const page = await getTaskBoardPageData(market, parseTaskBoardQuery(search), rows);
   if (!page) notFound();
+  // Beside Neighbors (2026-11-23): a member sees the newest neighborhood posts near them; never cached with the board.
+  const neighbors = viewer.kind === 'user' ? await neighborsCard(db, await communityViewerOf(viewer.user, localeOrDefault(locale)), new Date(page.now)) : undefined;
+  const data = { ...page.data, viewer: viewer.kind === 'user' ? ('member' as const) : ('visitor' as const), ...(neighbors ? { neighbors } : {}) };
   const [context, t] = await Promise.all([structuredDataContext(), getTranslations('server.meta.taskBoard')]);
   const view = page.data.market;
   return (
@@ -68,7 +76,7 @@ async function Board({ params, searchParams }: Pick<PageProps<'/[locale]/[market
           ]),
         ]}
       />
-      <MarketTime timeZone={page.data.market.timeZone}><TaskBoardScreen data={page.data} now={page.now} /></MarketTime>
+      <MarketTime timeZone={page.data.market.timeZone}><TaskBoardScreen data={data} now={page.now} /></MarketTime>
     </>
   );
 }

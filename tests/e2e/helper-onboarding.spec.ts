@@ -81,7 +81,9 @@ test('a new helper finishes onboarding, staff verify the ID photos and the home 
   await expect(page.getByText('Agree to the Helper agreement and the Community guidelines to continue.')).toBeVisible();
   await page.getByRole('checkbox', { name: /I agree to the Helper agreement/ }).check();
   await page.getByRole('button', { name: 'Save and continue' }).click();
-  // Her phone was verified at sign-up (and without texts there's no phone step), so the ID check is next.
+  // The home address is next (owner, 2026-11-23: it opens helping); the checks come in any order, so the ID goes first here.
+  await expect(page).toHaveURL(/\/onboarding\/address$/);
+  await page.goto('/app/helper/onboarding/identity');
 
   // ID check, stage 1: our own photos, after the Texas biometric notice
   await expect(page).toHaveURL(/\/onboarding\/identity$/);
@@ -170,10 +172,9 @@ test('a new helper finishes onboarding, staff verify the ID photos and the home 
   await page.getByRole('button', { name: 'Complete: payouts active' }).click();
   await expect(page).toHaveURL(/\/onboarding\/payout$/);
 
-  // Not bookable while the address is in review
+  // Not helping yet while the address is in review: the last page waits for it, and sends her back to the address.
   await page.goto('/app/helper/onboarding/done');
-  await expect(page.getByText('A few steps left')).toBeVisible();
-  await page.goto('/app/helper/onboarding/address');
+  await expect(page).toHaveURL(/\/onboarding\/address$/);
   await expect(page.getByText(/We're reviewing your document/)).toBeVisible();
   await expect(page.getByText('1234 Example Lane, Apt 2, Austin, TX 78723')).toBeVisible();
 
@@ -202,7 +203,8 @@ test('a new helper finishes onboarding, staff verify the ID photos and the home 
   await page.context().clearCookies();
   await devSignIn(page, helper.email);
   await page.goto('/app/helper/onboarding/done');
-  await expect(page.getByText('You can make offers now')).toBeVisible();
+  // Every check that applies is done (yard work needs no background check): a verified helper, not only helping.
+  await expect(page.getByRole('heading', { name: "You're a verified helper" })).toBeVisible();
   const response = await page.goto(`/helpers/${helper.handle}`);
   expect(response?.status()).toBe(200);
   await expect(page.getByRole('heading', { level: 1, name: helper.displayName })).toBeVisible();

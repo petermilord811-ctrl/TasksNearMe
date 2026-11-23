@@ -7,7 +7,7 @@ import { sendCityOpenEmails } from '@/modules/marketing/city-open';
 import { waitlistEntries } from '@/modules/marketing/schema';
 import { joinWaitlist } from '@/modules/marketing/waitlist';
 import { getAdminMarkets } from '@/modules/markets/admin-markets';
-import { markets } from '@/modules/markets/schema';
+import { markets, areas } from '@/modules/markets/schema';
 import { setMarketStatus, waitingHelpersFor } from '@/modules/markets/status';
 import { helperProfiles } from '@/modules/profiles/schema';
 import type { StaffActor } from '@/modules/support/staff';
@@ -61,6 +61,8 @@ afterAll(async () => {
   await db.delete(auditLog).where(and(eq(auditLog.action, 'config.market_status'), inArray(auditLog.targetId, [WICHITA, OMAHA])));
   await db.delete(helperProfiles).where(inArray(helperProfiles.userId, [HELPER, OMAHA_HELPER]));
   await db.delete(users).where(inArray(users.id, [HELPER, OMAHA_HELPER]));
+  // Opening a market places the helpers around it in its areas (2026-11-23): those go first.
+  await db.delete(areas).where(inArray(areas.marketId, [WICHITA, OMAHA]));
   await db.delete(markets).where(inArray(markets.id, [WICHITA, OMAHA]));
   await pool.end();
 });

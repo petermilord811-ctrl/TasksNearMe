@@ -34,7 +34,7 @@ export async function getAdminMarkets(db: Db, staff: StaffActor): Promise<AdminM
       .select({ prefix: helperPrefix, homeMarketId: users.homeMarketId, count: sql<number>`count(*)::int` })
       .from(helperProfiles)
       .innerJoin(users, eq(users.id, helperProfiles.userId))
-      .where(and(isNull(helperProfiles.areaId), isNotNull(helperProfiles.homeZip), eq(users.status, 'active')))
+      .where(and(isNotNull(helperProfiles.homeZip), eq(users.status, 'active')))
       .groupBy(helperPrefix, users.homeMarketId),
     db
       .select({

@@ -1,4 +1,5 @@
-import type { CategorySlug, ISODateTime } from './common';
+import type { CategorySlug, ISODateTime, Photo } from './common';
+import type { DashboardNeighbors } from './home';
 import type { CategoryView, MarketView } from './marketing';
 import type { TaskLocation } from './location';
 import type { PricingInput } from './money';
@@ -198,9 +199,20 @@ export interface TaskBoardPageData {
   today: string;
   /** A heading in place of the board's own (b7's /[market]/tasks/[category] hub pages). */
   heading?: { title: string; intro: string };
+  /**
+   * The board beside Neighbors (owner, 2026-11-23: "Craigslist style but have to be smoothly integrated with NextDoor
+   * post feature"): who's looking, so the composer and the Neighbors card speak to them, and for a signed-in member the
+   * newest neighborhood posts near them (the home's "From your neighbors"). Absent in older fixtures (a visitor).
+   */
+  viewer?: 'visitor' | 'member';
+  neighbors?: DashboardNeighbors;
 }
 
-/** `/tasks/[taskSlug]`: what anyone may see. The full description and photos are for signed-in helpers. */
+/**
+ * `/tasks/[taskSlug]`: what anyone may see, and (2026-11-23, the structured page with a photo carousel) what helpers who
+ * can offer see on it too. Posting says so: everyone sees the title, category, area, time and budget; signed-in helpers
+ * also see the full description, the category's answers and the photos (review step, "Signed-in helpers also see").
+ */
 export interface PublicTaskPageData {
   task: TaskPublicView;
   category: CategoryView;
@@ -209,4 +221,24 @@ export interface PublicTaskPageData {
   acceptingOffers: boolean;
   /** Other open tasks in the same category (may be empty). */
   similarTasks: TaskPublicView[];
+  /** How many photos it has (the photos themselves only in `details`); absent in older fixtures. */
+  photoCount?: number;
+  /**
+   * For a helper who can offer (their home address verified, as Find work decides) and for the poster: the full
+   * description (contact details masked), the category's answers (free text masked), the photos and the expense
+   * allowance. Absent for everyone else, who see the excerpt and how many photos there are.
+   */
+  details?: TaskMemberDetails;
+  /**
+   * Who's looking: `visitor` (signed out), `member` (signed in, not a helper who can offer yet), `helper` (sees the
+   * details), `poster` (their own task). Absent in older fixtures (a visitor).
+   */
+  viewer?: 'visitor' | 'member' | 'helper' | 'poster';
+}
+
+export interface TaskMemberDetails {
+  description: string;
+  answers: Record<string, string | number | boolean>;
+  photos: Photo[];
+  expenseAllowance?: { amountCents: number; description: string };
 }

@@ -1,5 +1,5 @@
 import { pushSetup } from '@/modules/notifications/push';
-import { and, asc, eq, inArray, max, notInArray } from 'drizzle-orm';
+import { and, asc, eq, max, notInArray } from 'drizzle-orm';
 import type {
   ActionResult,
   CategorySlug,
@@ -28,10 +28,10 @@ import { avatarPhoto, MAX_PHOTO_BYTES } from '@/modules/files/photos';
 import { storePhoto } from '@/modules/files/uploads';
 import { aiWritingSetUp } from '@/integrations/ai';
 import { aiDraftingEnabledFor } from '@/modules/assist/availability';
-import { marketForZip, OPEN_MARKET_STATUSES } from '@/modules/markets/coverage';
 import { getFlags, getMarketView, listCategoryViews } from '@/modules/markets/queries';
 import { areas, categories, markets } from '@/modules/markets/schema';
 import { fileUrl, initialsOf } from '@/modules/profiles/queries';
+import { placeByZip, placeWaitingHelper } from './helper-place';
 import { helperProfiles, helperServices, helperWorkSamples } from '@/modules/profiles/schema';
 import { FIRST_PAYOUT_DAYS } from '@/modules/rewards/programs';
 import { welcomeCardFor } from '@/modules/rewards/welcome';
@@ -201,10 +201,9 @@ export async function saveHelperServices(db: Db, userId: string, input: HelperSe
 }
 
 /**
- * The area step: a neighborhood in the helper's market, or (owner, 2026-11-14: national, cities open in turn)
- * a ZIP and city anywhere else in the US. Outside every open market the helper waits for their city: they can
- * finish their checks, and aren't bookable until it opens. A ZIP in another city we're open in moves the
- * helper's market there, and they choose a neighborhood in it next.
+ * The area step: a neighborhood in the helper's market, or (owner, 2026-11-23: "remove 'your area is not in the
+ * list'") a ZIP and city anywhere in the US, which places them in the nearest neighborhood of an open market around
+ * it or else in their city (helper-place.ts). Either way they can verify their home address and start helping.
  */
 export async function saveHelperArea(db: Db, userId: string, input: HelperAreaInput, now: Date): Promise<ActionResult> {
   const parsed = helperAreaInputSchema.safeParse(input);
@@ -218,11 +217,10 @@ export async function saveHelperArea(db: Db, userId: string, input: HelperAreaIn
     if (!zip || !state) return fieldError('homeZip', 'not_supported');
     const city = tidyCityName(parsed.data.homeCity);
     if (!city) return fieldError('homeCity', 'invalid');
-    const open = await db.select({ id: markets.id, status: markets.status, zipPrefixes: markets.zipPrefixes }).from(markets).where(inArray(markets.status, [...OPEN_MARKET_STATUSES]));
-    const covering = marketForZip(open, zip);
-    if (covering && covering.id === marketId) return fieldError('homeZip', 'in_market');
-    if (covering) await db.update(users).set({ homeMarketId: covering.id, updatedAt: now }).where(eq(users.id, userId));
-    place = { areaId: null, homeZip: zip, homeCity: city, homeState: state };
+    const placed = await placeByZip(db, marketId, { zip, city, state });
+    if (!placed) return fieldError('homeZip', 'not_supported');
+    if (placed.marketId !== marketId) await db.update(users).set({ homeMarketId: placed.marketId, updatedAt: now }).where(eq(users.id, userId));
+    place = { areaId: placed.areaId, homeZip: placed.homeZip, homeCity: placed.homeCity, homeState: placed.homeState };
   } else {
     const [area] = await db.select({ id: areas.id }).from(areas).where(and(eq(areas.id, parsed.data.areaId), eq(areas.marketId, marketId ?? ''))).limit(1);
     if (!area) return fieldError('areaId', 'invalid');
@@ -388,9 +386,9 @@ function formValues(state: OnboardingState) {
       })),
     },
     area: {
-      // A helper whose city has since opened chooses a neighborhood in it.
-      where: !profile?.areaId && state.awaitingCity ? ('elsewhere' as const) : ('market' as const),
-      areaId: profile?.areaId ?? '',
+      // Outside the neighborhoods the profile keeps the ZIP and city it was placed by (helper-place.ts).
+      where: profile?.homeZip ? ('elsewhere' as const) : ('market' as const),
+      areaId: profile?.homeZip ? '' : (profile?.areaId ?? ''),
       homeZip: profile?.homeZip ?? '',
       homeCity: profile?.homeCity ?? '',
       serviceRadiusMiles: nearestRadius(profile?.serviceRadiusKm ?? 8),
@@ -399,12 +397,9 @@ function formValues(state: OnboardingState) {
   };
 }
 
-/** Where a helper outside every open market waits, for the screens. */
-function waitingFor(state: OnboardingState) {
-  return state.awaitingCity ? { awaitingCity: { city: state.awaitingCity.city, state: state.awaitingCity.state } } : {};
-}
-
 export async function getOnboardingPageData(db: Db, userId: string, step: OnboardingStep, now: Date): Promise<HelperOnboardingPageData | null> {
+  // A helper who chose a ZIP while helpers outside our cities waited gets their city as their area now.
+  await placeWaitingHelper(db, userId, now);
   const [state, shared, [person]] = await Promise.all([
     loadOnboardingState(db, userId, now),
     sharedPageData(db, userId),
@@ -422,7 +417,6 @@ export async function getOnboardingPageData(db: Db, userId: string, step: Onboar
     categories: shared.categories,
     areas: shared.areas,
     homeMarket: shared.homeMarket,
-    ...waitingFor(state),
     languageOptions: shared.languageOptions,
     values: formValues(state),
     verification: verificationSummary(state, result.backgroundRequired, optionalCipher(), promptSecret()),
@@ -467,6 +461,7 @@ export async function onboardingRedirect(db: Db, userId: string, step: Onboardin
 }
 
 export async function getProfileEditorData(db: Db, userId: string, now: Date): Promise<HelperProfileEditorData | null> {
+  await placeWaitingHelper(db, userId, now);
   const [state, shared, [person]] = await Promise.all([
     loadOnboardingState(db, userId, now),
     sharedPageData(db, userId),
@@ -481,7 +476,6 @@ export async function getProfileEditorData(db: Db, userId: string, now: Date): P
     categories: shared.categories,
     areas: shared.areas,
     homeMarket: shared.homeMarket,
-    ...waitingFor(state),
     languageOptions: shared.languageOptions,
     values: { ...formValues(state), tools: { tools: state.profile.tools } },
     workSamples: await workSampleViews(db, userId),

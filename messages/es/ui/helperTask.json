@@ -50,7 +50,7 @@
   "memberSince": "Miembro desde {date}",
   "privacy": "Verás la dirección exacta cuando se confirme la reserva.",
   "blockedTitle": "Antes de enviar una oferta",
-  "finishSetup": "Terminar la configuración",
+  "finishSetup": "Verificar tu domicilio",
   "yourOffer": "Tu oferta",
   "offerPrice": "Tu precio",
   "hourlyPrice": "{rate}/h · aprox. {estimate} · hasta {cap}",
@@ -73,7 +73,7 @@
     "blocked": "Servicio no ofrecido",
     "stale-offer": "La oferta necesita reconfirmarse",
     "revising": "Editar tu oferta",
-    "not-bookable": "Termina la configuración antes de enviar una oferta",
+    "not-bookable": "Verifica el domicilio antes de enviar una oferta",
     "validation-error": "Errores en los campos de la oferta",
     "not-allowed": "La oferta ya no está permitida",
     "limit-reached": "Límite de ofertas activas",
@@ -89,5 +89,7 @@
     "paused": "Respuesta: reservas en pausa",
     "unknown": "Error inesperado en la oferta",
     "offerDrafted": "Mensaje de la oferta redactado con \"Escríbelo por mí\""
-  }
+  },
+  "when": "Cuándo",
+  "where": "Dónde es"
 }

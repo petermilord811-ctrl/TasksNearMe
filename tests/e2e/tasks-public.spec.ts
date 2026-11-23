@@ -23,7 +23,12 @@ test.describe('public tasks', () => {
     await expect(page).toHaveURL(/\/tasks\/assemble-a-desk-mueller-7f3k$/);
     await expect(page.getByRole('heading', { level: 1, name: 'Assemble a desk (flat-pack, 1 item)' })).toBeVisible();
     await expect(page.getByText('Mueller').first()).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Make an offer' })).toHaveAttribute('href', '/app/find-work/tsk_desk');
+    // The price card's link, and on phones also the bar at the bottom of the screen (2026-11-23).
+    const offers = page.getByRole('link', { name: 'Make an offer' });
+    await expect(offers.first()).toBeVisible();
+    for (const link of await offers.all()) await expect(link).toHaveAttribute('href', '/app/find-work/tsk_desk');
+    // Signed out: the photos and the whole description wait behind sign-in.
+    await expect(page.getByRole('region', { name: 'The full task' })).toBeVisible();
     const html = await page.content();
     for (const secret of ['1234 Example', 'Apt 2B', 'Buzz 2B', 'Rivera']) expect(html).not.toContain(secret);
   });

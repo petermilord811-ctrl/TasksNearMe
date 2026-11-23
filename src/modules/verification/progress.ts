@@ -12,29 +12,33 @@ import { ONBOARDING_STEPS } from '@/contracts';
 import type { PhoneCheck } from '@/modules/accounts/phone-check';
 
 /**
- * Helper onboarding as a pure function (docs/blueprint/06 §1, extended 2026-11-12). Order: profile (with
- * the helper agreement) → services → area → phone → ID → home address → payout → background check (only
- * when an offered category needs it).
+ * Helper onboarding as a pure function (docs/blueprint/06 §1; owner, 2026-11-23: "remove 'You can't post until you
+ * setup profile', only make users can't post when they don't setup location profiles (proof of address)" and "Don't
+ * care certain step, so I can do background first or can do address check first").
+ *
+ * Two levels:
+ * - **Helping** (`progress.bookable`): the profile basics (the profile with the helper agreement, services, area)
+ *   and a verified home address, the location profile. Then the helper sends offers, posts open times, gets task
+ *   alerts and can be booked, in every category they offer, except that in-home categories still need a clear (or
+ *   approved) and current background check (blueprint 06 D7).
+ * - **Verified helper** (`complete`, `progress.verified`): every check is done as well: the phone (where texts work),
+ *   the ID (both stages, its name matched or confirmed), payouts and, when an offered category needs it, the
+ *   background check.
+ *
+ * Order: none among the checks. Once the basics are saved, the home address, phone, ID, payouts and background check
+ * each open, in any order. Payouts are needed to be paid, not to be booked: earnings wait for an active account
+ * (payments/connect.ts transfers only to one).
  *
  * The ID step has two stages (owner, 2026-11-13): our own photos and selfie, which our team compares, then
  * the provider's double check; the provider's result is what verifies.
  *
- * Locks: the phone opens once the profile basics are saved; the ID check after the phone; the home
- * address and payouts (side by side) once the ID photos are with our team (ab, 2026-11-21: the helper uses the wait,
- * up to a day; before, they waited for the verified ID); the background check once the ID is verified and payouts are
- * active. A helper is bookable in a category once the agreement, phone, ID (with its name matched or
- * confirmed), home address and payouts are done and, for in-home categories, a background check is
- * clear (or approved) and current.
- *
- * A helper outside every city we're open in (`awaitingCity`, owner 2026-11-14: national, cities open in turn)
- * gave a ZIP instead of a neighborhood. The area counts as set, so they can finish the phone, ID, payouts and
- * background check; the home address waits (`later`) because we verify addresses only where we're open. They're
- * never bookable until their city opens and they choose a neighborhood; with everything else done, setup is
- * complete and the done step says we'll tell them when their city opens.
+ * Where: anywhere in the US (owner, 2026-11-23: "remove the limit of Location totally"). A helper outside the
+ * market's neighborhoods helps from their city (an area of their market, made on first use), so nobody waits for
+ * their city any more.
  *
  * The phone counts only where texts work (`phoneCheck`, plan 9.2): without an SMS provider (`off`) it isn't a step
- * at all, and nothing waits for it; in the grace (`asked`: the helper started their ID check before texts worked)
- * it stays a step to do but locks nothing and isn't needed to be bookable.
+ * at all; in the grace (`asked`: the helper started their ID check before texts worked) it stays a step to do but
+ * isn't needed to be a verified helper.
  */
 
 export interface OnboardingFacts {
@@ -43,8 +47,6 @@ export interface OnboardingFacts {
   agreementAccepted: boolean;
   services: { categorySlug: CategorySlug; requiresBackgroundCheck: boolean }[];
   areaSet: boolean;
-  /** Outside every open market: the area is a ZIP and city, the home address waits, nothing is bookable. */
-  awaitingCity?: boolean;
   phoneVerified: boolean;
   /** Whether the phone is asked for or needed (plan 9.2, `phone-check.ts`). Default `required`. */
   phoneCheck?: PhoneCheck;
@@ -61,20 +63,20 @@ export interface OnboardingFacts {
 
 export interface OnboardingResult {
   progress: OnboardingProgress;
-  /** The first step still to do, or `done`. */
+  /** The step to suggest next, or `done`: the home address first while helping isn't open, then the rest in order. */
   firstIncomplete: OnboardingStep;
   backgroundRequired: boolean;
-  /** Every required step is done. */
+  /** Every check is done: a verified helper. */
   complete: boolean;
 }
 
+/** The checks a verified helper passes, in the stepper's order (the reminder counts the ones that apply). */
+export const VERIFIED_HELPER_CHECKS = ['address', 'phone', 'identity', 'payout', 'background'] as const satisfies readonly OnboardingStep[];
+
 export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingStep): OnboardingResult {
   const backgroundRequired = facts.services.some((service) => service.requiresBackgroundCheck);
-  const waiting = facts.awaitingCity === true;
-  // A renewal's earlier check still counts, so the steps after it stay open.
+  // A renewal's earlier check still counts.
   const identityVerified = facts.identity.status === 'verified' || facts.identity.cleared;
-  // The ID under way: the photos with our team or approved, or the provider's check running (or done).
-  const identityUnderway = identityVerified || facts.identity.captureInReview === true || facts.identity.captureApproved === true || facts.identity.status === 'processing';
   const done: Record<OnboardingStep, boolean> = {
     profile: facts.profileComplete && facts.agreementAccepted,
     services: facts.services.length > 0,
@@ -95,39 +97,42 @@ export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingSt
   };
   const basics = done.profile && done.services && done.area;
   const phoneCheck = facts.phoneCheck ?? 'required';
-  // What the phone gates may go ahead: a verified phone, or no texts here, or the grace.
+  // The phone counts where it's needed: a verified phone, or no texts here, or the grace.
   const phoneOk = done.phone || phoneCheck !== 'required';
   // No texts and no verified phone: the step isn't shown.
   const phoneShown = phoneCheck !== 'off' || done.phone;
+  // Helping opens with the basics and the location profile (the verified home address).
+  const helping = basics && done.address;
   const locked: Record<OnboardingStep, boolean> = {
     profile: false,
     services: false,
     area: false,
+    address: !basics,
     phone: !basics,
-    identity: !basics || !phoneOk,
-    address: !basics || !phoneOk || !identityUnderway,
-    payout: !basics || !phoneOk || !identityUnderway,
-    background: !basics || !phoneOk || !identityVerified || !done.payout,
-    done: !(basics && phoneOk && identityVerified && done.payout),
+    identity: !basics,
+    payout: !basics,
+    background: !basics,
+    // The last page says what helping opens and what's left for the badge.
+    done: !helping,
   };
-  const ready = done.profile && phoneOk && done.identity && done.address && done.payout && !waiting;
-  // Waiting for their city: everything we can check now is done; the address comes when the city opens.
-  const complete = basics && done.background && (ready || (waiting && done.profile && phoneOk && done.identity && done.payout));
+  const complete = helping && phoneOk && done.identity && done.payout && done.background;
   done.done = complete;
-  const later = (step: OnboardingStep) => waiting && step === 'address' && !done.address;
 
-  const bookableCategories = ready
+  const bookableCategories = helping
     ? facts.services.filter((service) => !service.requiresBackgroundCheck || facts.background.eligible).map((service) => service.categorySlug)
     : [];
 
-  const firstIncomplete =
-    ONBOARDING_STEPS.find(
-      (step) => step !== 'done' && !done[step] && !later(step) && !(step === 'background' && !backgroundRequired) && !(step === 'phone' && phoneCheck !== 'required'),
-    ) ?? 'done';
+  /** A step that still needs the helper (the phone only where it's needed, the background check only when it applies). */
+  const toDo = (step: OnboardingStep) =>
+    step !== 'done' && !done[step] && !(step === 'background' && !backgroundRequired) && !(step === 'phone' && phoneCheck !== 'required');
+  // The location profile first, since it opens helping; while it's with our team, the rest in order.
+  const firstIncomplete: OnboardingStep =
+    basics && toDo('address') && !inReview.address
+      ? 'address'
+      : (ONBOARDING_STEPS.find((step) => toDo(step) && !(basics && step === 'address')) ?? (toDo('address') ? 'address' : 'done'));
 
   const stateOf = (step: OnboardingStep): OnboardingStepState => {
     if (step === 'background' && !backgroundRequired) return 'skipped';
-    if (later(step)) return 'later';
     if (step === viewing) return 'current';
     // Still counting, but a new ID check is due: the step asks for it again.
     if (step === 'identity' && facts.identity.renewal) return inReview.identity ? 'in_review' : 'todo';
@@ -136,11 +141,15 @@ export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingSt
     return inReview[step] ? 'in_review' : 'todo';
   };
 
+  // The checks that apply: the phone where it's needed (or already verified), the background check when it applies.
+  const checks = VERIFIED_HELPER_CHECKS.filter((step) => (step !== 'background' || backgroundRequired) && (step !== 'phone' || phoneCheck === 'required' || done.phone));
   return {
     progress: {
       steps: ONBOARDING_STEPS.filter((step) => step !== 'phone' || phoneShown).map((step) => ({ step, state: stateOf(step) })),
       bookable: bookableCategories.length > 0,
       bookableCategories,
+      verified: complete,
+      checks: { done: checks.filter((step) => done[step]).length, total: checks.length },
     },
     firstIncomplete,
     backgroundRequired,
@@ -148,7 +157,7 @@ export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingSt
   };
 }
 
-/** Whether a step may be opened now (locked steps, and ones not shown, send people to the first step still to do). */
+/** Whether a step may be opened now (locked steps, and ones not shown, send people to the step to do next). */
 export function canOpenStep(facts: OnboardingFacts, step: OnboardingStep): boolean {
   const { progress } = computeOnboarding(facts);
   const state = progress.steps.find((s) => s.step === step)?.state;

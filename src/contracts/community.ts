@@ -339,7 +339,16 @@ export const communityFollowInputSchema = z.object({
 export type CommunityFollowInput = z.input<typeof communityFollowInputSchema>;
 
 /** The viewer's neighborhood on Neighbors (plan 10.15): an area's slug in their market, or empty to forget it. */
-export const communityAreaInputSchema = z.object({ areaSlug: z.string().trim().max(60, code('invalid')) });
+/**
+ * Your neighborhood on Neighbors: one of the market's (`areaSlug`), none (`''`), or (owner, 2026-11-23: "remove 'your area
+ * is not in the list'") a ZIP code and city anywhere in the US, which places you in the nearest neighborhood or your
+ * city's area. `fieldErrors.zip: ['not_supported']` for a ZIP that can't be placed.
+ */
+export const communityAreaInputSchema = z.object({
+  areaSlug: z.string().trim().max(60, code('invalid')),
+  zip: z.string().trim().max(10, code('invalid')).optional(),
+  city: z.string().trim().max(60, code('too_long')).optional(),
+});
 export type CommunityAreaInput = z.input<typeof communityAreaInputSchema>;
 
 export interface CommunityReactInput {

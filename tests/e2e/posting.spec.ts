@@ -104,14 +104,15 @@ test('a formatted description, an address outside our cities and a price under t
   await page.getByLabel('Number of items', { exact: true }).fill('1');
   await next();
 
-  // Where: Waco is outside Austin's service area, and can be posted; helpers see the city.
+  // Where: Waco is outside Austin's service area and posts like any address (owner, 2026-11-23: no limit of location);
+  // helpers see the city, and nothing warns about it.
   await page.getByRole('radio', { name: 'In person' }).check();
   await page.getByRole('combobox', { name: 'Search your address' }).fill('100 example road');
   const waco = page.getByRole('option', { name: /100 Example Road/ });
-  await expect(waco).toContainText('Outside our cities for now');
+  await expect(waco).toContainText('Helpers see: Waco, TX.');
   await waco.click();
   await expect(page.getByText('Helpers see: Waco, TX.')).toBeVisible();
-  await expect(page.getByText(/We're not open in Waco yet/)).toBeVisible();
+  await expect(page.getByText(/not open/i)).toHaveCount(0);
   await next();
 
   await page.getByLabel('Date').fill(marketDate(5));

@@ -30,7 +30,7 @@
   "clearFilters": "Borrar filtros",
   "noTasksTitle": "No hay tareas abiertas por ahora",
   "noTasksBody": "Las tareas locales aparecen aquí cuando alguien necesita ayuda. ¿Tienes algo que resolver? Publica una tarea para empezar.",
-  "hubEmptyBody": "Las tareas aparecen aquí cuando la gente cercana las publica. Crea tu perfil de ayudante ahora, para que puedas enviar una oferta en cuanto aparezca una.",
+  "hubEmptyBody": "Las tareas aparecen aquí cuando la gente cercana las publica. Verifica tu domicilio ahora, para que puedas enviar una oferta en cuanto aparezca una.",
   "postTask": "Publicar una tarea",
   "privacy": "Las direcciones exactas solo se comparten con el ayudante reservado",
   "becomeHelper": "Hazte ayudante",
@@ -46,7 +46,8 @@
     "byDay": "Tablero de tareas · por día",
     "cards": "Tablero de tareas · tarjetas",
     "filtered": "Tablero de tareas · con filtros",
-    "hub": "Tablero de tareas · página de categoría"
+    "hub": "Tablero de tareas · página de categoría",
+    "member": "Tablero · un miembro con sesión junto a Vecinos"
   },
   "panel": {
     "toggle": "Filtros"
@@ -146,5 +147,30 @@
     "label": "Tipos de tarea populares",
     "open": "{count, plural, =0 {ninguna abierta ahora} one {# abierta} other {# abiertas}}",
     "range": "{low}–{high}"
+  },
+  "composer": {
+    "title": "Publica en {market}",
+    "label": "¿Con qué necesitas ayuda?",
+    "placeholder": "¿Qué necesitas hacer en {market}?",
+    "post": "Publicar una tarea",
+    "soundsLike": "Parece {category}. Puedes cambiarlo después.",
+    "orAsk": "O pregunta a tus vecinos:",
+    "kinds": {
+      "recommendation": "¿A quién recomiendan?",
+      "question": "Hacer una pregunta",
+      "tip": "Compartir un consejo"
+    }
+  },
+  "neighbors": {
+    "title": "Vecinos en {market}",
+    "body": "Pregunta en quién confía la gente cercana, recibe respuestas antes de reservar y agradece a un ayudante que hizo un gran trabajo. Gratis con tu cuenta.",
+    "bodyMember": "Pregunta en quién confía la gente cercana, responde a un vecino o agradece a un ayudante.",
+    "join": "Unirte a Vecinos",
+    "open": "Abrir Vecinos"
+  },
+  "tabs": {
+    "label": "Tareas abiertas y Vecinos",
+    "tasks": "Tareas abiertas",
+    "neighbors": "Vecinos"
   }
 }

@@ -50,7 +50,7 @@
   "memberSince": "Member since {date}",
   "privacy": "You'll see the exact address after the booking is confirmed.",
   "blockedTitle": "Before you send an offer",
-  "finishSetup": "Finish setup",
+  "finishSetup": "Verify your address",
   "yourOffer": "Your offer",
   "offerPrice": "Your price",
   "hourlyPrice": "{rate}/h · about {estimate} · up to {cap}",
@@ -73,7 +73,7 @@
     "blocked": "Service not offered",
     "stale-offer": "Offer needs re-confirmation",
     "revising": "Edit your offer",
-    "not-bookable": "Finish setup before sending an offer",
+    "not-bookable": "Verify the home address before sending an offer",
     "validation-error": "Offer field errors",
     "not-allowed": "Offer no longer allowed",
     "limit-reached": "Active offer limit",
@@ -89,5 +89,7 @@
     "paused": "Bookings paused response",
     "unknown": "Unexpected offer error",
     "offerDrafted": "Offer message drafted with \"Write it for me\""
-  }
+  },
+  "when": "When",
+  "where": "Where it is"
 }

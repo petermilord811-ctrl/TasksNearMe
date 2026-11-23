@@ -8,7 +8,7 @@ import { useTranslations } from 'next-intl';
 import { MapPinned, Plus, Sparkles, Trash2 } from 'lucide-react';
 import {
   createHelperServicesSchema, helperAreaInputSchema, helperProfileInputSchema, helperToolsInputSchema, hourlyMinimum,
-  SERVICE_RADIUS_MILES, type ActionHandler, type AwaitingCity, type CategoryView, type HelperAreaInput, type HelperHomeMarket,
+  SERVICE_RADIUS_MILES, type ActionHandler, type CategoryView, type HelperAreaInput, type HelperHomeMarket,
   type HelperOnboardingPageData, type HelperProfileInput, type HelperServicesInput, type HelperToolsInput,
   type ProfileDraftInput, type ProfileDraftResult, type QueryHandler, routes,
 } from '@/contracts';
@@ -295,22 +295,19 @@ export function HelperServicesForm({ values, categories, onSave, submitLabel }: 
 
 /**
  * Where the helper helps (the area's fields): a neighborhood in the market with the radius and the map, or with
- * `homeMarket`, somewhere else in the US by ZIP and city. The editor's area form and helper setup's Where you help
- * (plan 9.11) share them.
+ * `homeMarket`, anywhere else in the US by ZIP and city (owner, 2026-11-23: no list to be on; they help from their
+ * city right away). The editor's area form and helper setup's Where you help (plan 9.11) share them.
  */
-export function AreaFields({ form, areas, remoteAllowed, liveMap = true, homeMarket, awaitingCity }: { form: UseFormReturn<HelperAreaInput>; areas: HelperOnboardingPageData['areas']; remoteAllowed: boolean; liveMap?: boolean; homeMarket?: HelperHomeMarket; awaitingCity?: AwaitingCity }) {
+export function AreaFields({ form, areas, remoteAllowed, liveMap = true, homeMarket }: { form: UseFormReturn<HelperAreaInput>; areas: HelperOnboardingPageData['areas']; remoteAllowed: boolean; liveMap?: boolean; homeMarket?: HelperHomeMarket }) {
   const t = useTranslations('helperOnboarding');
   const id = useId();
   const tiles = useMapTiles();
   const where = useWatch({ control: form.control, name: 'where' }) ?? 'market';
   const areaId = useWatch({ control: form.control, name: 'areaId' });
   const radius = useWatch({ control: form.control, name: 'serviceRadiusMiles' });
-  const zip = useWatch({ control: form.control, name: 'homeZip' }) ?? '';
   const chosenArea = areas.find((area) => area.id === areaId);
   const errors = form.formState.errors;
   const elsewhere = homeMarket !== undefined && where === 'elsewhere';
-  // A ZIP the market already covers: say so before saving (the server answers `in_market` too).
-  const zipInMarket = elsewhere && /^\d{5}$/.test(zip.trim()) && homeMarket.zipPrefixes.includes(zip.trim().slice(0, 3));
   const zipError = errors.homeZip?.message;
   return <>
       {homeMarket && <fieldset className="space-y-2">
@@ -324,14 +321,14 @@ export function AreaFields({ form, areas, remoteAllowed, liveMap = true, homeMar
       </fieldset>}
       {elsewhere ? <div className="space-y-5">
         <div className="grid gap-5 sm:grid-cols-[minmax(0,9rem)_minmax(0,1fr)]">
-          <HelperField id={`${id}-zip`} label={t('forms.area.zip')} hint={t('forms.area.zipHint')} error={zipError ?? (zipInMarket ? 'in_market' : undefined)} errorText={zipError === 'in_market' || (!zipError && zipInMarket) ? t('forms.area.zipInMarket', { market: homeMarket.name }) : zipError === 'not_supported' ? t('forms.area.zipNotSupported') : undefined}>
-            <Input {...form.register('homeZip')} id={`${id}-zip`} autoComplete="postal-code" inputMode="numeric" maxLength={10} aria-invalid={!!zipError || zipInMarket} aria-describedby={`${id}-zip-hint${zipError || zipInMarket ? ` ${id}-zip-error` : ''}`} />
+          <HelperField id={`${id}-zip`} label={t('forms.area.zip')} hint={t('forms.area.zipHint')} error={zipError} errorText={zipError === 'not_supported' ? t('forms.area.zipNotSupported') : undefined}>
+            <Input {...form.register('homeZip')} id={`${id}-zip`} autoComplete="postal-code" inputMode="numeric" maxLength={10} aria-invalid={!!zipError} aria-describedby={`${id}-zip-hint${zipError ? ` ${id}-zip-error` : ''}`} />
           </HelperField>
           <HelperField id={`${id}-city`} label={t('forms.area.city')} hint={t('forms.area.cityHint')} error={errors.homeCity?.message}>
             <Input {...form.register('homeCity')} id={`${id}-city`} autoComplete="address-level2" maxLength={60} aria-invalid={!!errors.homeCity} aria-describedby={`${id}-city-hint${errors.homeCity ? ` ${id}-city-error` : ''}`} />
           </HelperField>
         </div>
-        <p className="flex gap-3 rounded-2xl bg-secondary/70 p-4 text-sm text-secondary-foreground dark:bg-secondary/40"><MapPinned aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" /><span>{awaitingCity ? t('forms.area.waiting', { city: awaitingCity.city, state: awaitingCity.state }) : t('forms.area.elsewhereNote')}</span></p>
+        <p className="flex gap-3 rounded-2xl bg-secondary/70 p-4 text-sm text-secondary-foreground dark:bg-secondary/40"><MapPinned aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" /><span>{t('forms.area.elsewhereNote')}</span></p>
       </div> : <HelperField id={`${id}-area`} label={t('forms.area.homeArea')} hint={t('forms.area.homeAreaHint')} error={errors.areaId?.message}>
         <select {...form.register('areaId')} id={`${id}-area`} aria-invalid={!!errors.areaId} aria-describedby={`${id}-area-hint${errors.areaId ? ` ${id}-area-error` : ''}`} className={selectClass}><option value="">{t('forms.area.chooseArea')}</option>{areas.map((area) => <option key={area.id} value={area.id}>{area.name}</option>)}</select>
       </HelperField>}
@@ -347,11 +344,10 @@ export function AreaFields({ form, areas, remoteAllowed, liveMap = true, homeMar
 }
 
 /**
- * Where the helper helps. With `homeMarket`, two choices (owner, 2026-11-14: national, cities open in turn): a
- * neighborhood in the market, or somewhere else in the US by ZIP and city; a helper elsewhere finishes their checks
- * now and chooses a neighborhood when their city opens. Without it, the neighborhood only (older callers).
+ * Where the helper helps. With `homeMarket`, two choices: a neighborhood in the market, or anywhere else in the US by
+ * ZIP and city, where they help from their city (owner, 2026-11-23). Without it, the neighborhood only (older callers).
  */
-export function HelperAreaForm({ values, areas, remoteAllowed, onSave, submitLabel, liveMap = true, homeMarket, awaitingCity }: { values: HelperAreaInput; areas: HelperOnboardingPageData['areas']; remoteAllowed: boolean; onSave: ActionHandler<HelperAreaInput>; submitLabel?: string; liveMap?: boolean; homeMarket?: HelperHomeMarket; awaitingCity?: AwaitingCity }) {
+export function HelperAreaForm({ values, areas, remoteAllowed, onSave, submitLabel, liveMap = true, homeMarket }: { values: HelperAreaInput; areas: HelperOnboardingPageData['areas']; remoteAllowed: boolean; onSave: ActionHandler<HelperAreaInput>; submitLabel?: string; liveMap?: boolean; homeMarket?: HelperHomeMarket }) {
   const t = useTranslations('helperOnboarding');
   const form = useForm<HelperAreaInput>({ resolver: zodResolver(helperAreaInputSchema), defaultValues: { where: 'market', homeZip: '', homeCity: '', ...values } });
   const action = useHelperFormAction(form);
@@ -359,7 +355,7 @@ export function HelperAreaForm({ values, areas, remoteAllowed, onSave, submitLab
   return <form noValidate onSubmit={form.handleSubmit(async (input) => { await action.run(onSave, input); })} aria-busy={pending} className="space-y-6">
     <fieldset disabled={pending} className="space-y-6">
       <legend className="sr-only">{t('forms.area.title')}</legend>
-      <AreaFields form={form} areas={areas} remoteAllowed={remoteAllowed} liveMap={liveMap} homeMarket={homeMarket} awaitingCity={awaitingCity} />
+      <AreaFields form={form} areas={areas} remoteAllowed={remoteAllowed} liveMap={liveMap} homeMarket={homeMarket} />
     </fieldset>
     <FormFeedback result={action.result} successMessage={t('forms.saved')} />
     <SaveButton pending={pending} label={submitLabel} />

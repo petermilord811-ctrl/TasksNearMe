@@ -10,6 +10,7 @@ import {
   taskBoardFilteredEmptyData,
   taskBoardHubData,
   taskBoardHubNoListingsData,
+  taskBoardMemberData,
   taskBoardNoListingsData,
   taskBoardNoTasksData,
   taskBoardPageData,
@@ -36,8 +37,10 @@ describe('TaskBoardScreen', () => {
     expect(links.length).toBeGreaterThan(0);
     for (const link of links) expect(hrefOf(link)).toBe(routes.app.newTask({ category: 'furniture-assembly' }));
     cleanup();
+    // The board itself posts from its composer (2026-11-23): the wizard, with nothing chosen.
     renderBoard(taskBoardPageData);
-    for (const link of screen.getAllByRole('link', { name: 'Post a task' })) expect(hrefOf(link)).toBe(routes.app.newTask());
+    for (const link of screen.queryAllByRole('link', { name: 'Post a task' })) expect(hrefOf(link)).toBe(routes.app.newTask());
+    expect(screen.getByRole('region', { name: 'Post in Austin' }).querySelector('form')!.getAttribute('action')).toBe(routes.app.newTask());
   });
 
   it('shows a category’s task types as tiles, busiest first, with what their tasks offer (plan 7.5)', () => {
@@ -90,7 +93,8 @@ describe('TaskBoardScreen', () => {
 
     // A section with all its tasks shown has no "See all"; remote work comes last.
     expect(within(screen.getByRole('region', { name: /^Crestview/ })).queryByRole('link', { name: /See all/ })).toBeNull();
-    const regions = screen.getAllByRole('region').map((region) => region.getAttribute('aria-labelledby'));
+    // The list's own sections (the composer and Neighbors sit around it since 2026-11-23).
+    const regions = within(document.getElementById('board-list')!).getAllByRole('region').map((region) => region.getAttribute('aria-labelledby'));
     expect(regions.at(-1)).toBe('board-remote');
   });
 
@@ -146,7 +150,7 @@ describe('TaskBoardScreen', () => {
     expect(hrefOf(chips.getByRole('link', { name: 'Remove Furniture assembly' }))).toBe(board(taskBoardFilteredData, { category: undefined, type: undefined }));
     expect(hrefOf(chips.getByRole('link', { name: 'Clear all' }))).toBe(routes.taskBoard('austin'));
     // One neighborhood: one list, with the neighborhood named in each row.
-    expect(screen.queryAllByRole('region')).toHaveLength(0);
+    expect(within(document.getElementById('board-list')!).queryAllByRole('region')).toHaveLength(0);
     expect(screen.getAllByText('Mueller', { selector: 'p span' }).length).toBe(taskBoardFilteredData.tasks.length);
   });
 
@@ -160,10 +164,26 @@ describe('TaskBoardScreen', () => {
 
   it('groups by day with Today and Tomorrow first', () => {
     renderBoard(taskBoardByDayData);
-    const days = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.firstChild?.textContent);
+    const days = within(document.getElementById('board-list')!).getAllByRole('heading', { level: 2 }).map((heading) => heading.firstChild?.textContent);
     expect(days.slice(0, 2)).toEqual(['Today', 'Tomorrow']);
     expect(new Set(days).size).toBe(days.length);
     expect(within(screen.getByRole('navigation', { name: 'Group' })).getByRole('link', { name: /By day/ }).getAttribute('aria-current')).toBe('true');
+  });
+
+  it('sits beside Neighbors: a composer that posts the words as a task, neighborhood asks, and the switch (owner, 2026-11-23)', () => {
+    renderBoard(taskBoardPageData);
+    const composer = screen.getByRole('region', { name: 'Post in Austin' });
+    const form = composer.querySelector('form')!;
+    expect(form.getAttribute('action')).toBe(routes.app.newTask());
+    expect(form.getAttribute('method')).toBe('get');
+    expect(within(composer).getByRole('textbox', { name: 'What do you need help with?' })).toHaveAttribute('name', 'describe');
+    expect(hrefOf(within(composer).getByRole('link', { name: /Who do you recommend/ }))).toBe(routes.app.newCommunityPost('recommendation'));
+    expect(hrefOf(within(screen.getByRole('navigation', { name: 'Open tasks and Neighbors' })).getByRole('link', { name: 'Neighbors' }))).toBe(routes.app.community());
+    // A visitor: what Neighbors is for, and the way in; a member: the newest posts near them.
+    expect(screen.getByRole('region', { name: 'Neighbors in Austin' })).toHaveTextContent('Join Neighbors');
+    cleanup();
+    renderBoard(taskBoardMemberData);
+    expect(screen.getByRole('link', { name: /Anyone used a helper for a crib/ })).toBeInTheDocument();
   });
 
   it('saves the current view, filters and all, for alerts (completion plan 7.10)', () => {
@@ -175,7 +195,7 @@ describe('TaskBoardScreen', () => {
   it('shows cards without the grouping control', () => {
     renderBoard(taskBoardCardsData);
     expect(screen.queryByRole('navigation', { name: 'Group' })).toBeNull();
-    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(taskBoardCardsData.tasks.length);
+    expect(within(document.getElementById('board-list')!).getAllByRole('heading', { level: 2 })).toHaveLength(taskBoardCardsData.tasks.length);
     expect(hrefOf(within(screen.getByRole('navigation', { name: 'View' })).getByRole('link', { name: 'List' }))).toBe(board(taskBoardCardsData, { view: 'list' }));
   });
 

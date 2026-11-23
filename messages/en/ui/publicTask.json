@@ -20,5 +20,44 @@
   "backToBoard": "Browse open tasks",
   "similarTasks": "Similar tasks",
   "postSimilar": "Need something similar? Post a task",
-  "previews": { "open": "Public task · open", "assigned": "Public task · assigned", "remote": "Public task · remote" }
+  "previews": {
+    "open": "Public task · open",
+    "assigned": "Public task · assigned",
+    "remote": "Public task · remote",
+    "helper": "Public task · a helper who can offer: photos, description and details",
+    "visitorPhotos": "Public task · signed out: three photos behind sign-in"
+  },
+  "state": {
+    "open": "Taking offers",
+    "booked": "Booked",
+    "closed": "Closed"
+  },
+  "facts": {
+    "where": "Where",
+    "when": "When",
+    "budget": "Budget",
+    "offers": "Offers"
+  },
+  "offersSoFar": "{count, plural, =0 {No offers yet} one {# offer so far} other {# offers so far}}",
+  "fixedPrice": "Fixed price",
+  "hourlyUpTo": "Per hour, up to {hours}",
+  "details": "Task details",
+  "allowance": "Expense allowance: {amount}",
+  "whereTitle": "Where it is",
+  "lockedTitle": "The full task",
+  "lockedVisitor": "Sign in as a helper to read the whole description and the task details{photos, plural, =0 {} one { and see its photo} other { and see its # photos}}.",
+  "lockedMember": "Helpers with a verified home address see the whole description and the task details{photos, plural, =0 {} one { and its photo} other { and its # photos}}.",
+  "photoCount": "{count, plural, one {# photo} other {# photos}}",
+  "signInToSee": "Sign in to see it all",
+  "becomeHelper": "Become a helper",
+  "ownTask": "This is your task.",
+  "manage": "Manage your task",
+  "offerHintHelper": "Your price and a note; the client chooses.",
+  "summary": "Budget and next step",
+  "how": {
+    "title": "How it works",
+    "offer": "Send an offer with your price and a short note.",
+    "book": "The client books and pays; the money waits safely with us.",
+    "paid": "Do the task, and you're paid once it's approved."
+  }
 }

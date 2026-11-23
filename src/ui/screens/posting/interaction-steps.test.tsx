@@ -137,7 +137,7 @@ describe('posting address combobox', () => {
     expect(onAddressChange).not.toHaveBeenCalled();
   });
 
-  it('waits for three characters and 300 ms, takes an address outside our cities, and selects a result with the keyboard', async () => {
+  it('waits for three characters and 300 ms, takes an address in another city like any other, and selects a result with the keyboard', async () => {
     vi.useFakeTimers();
     const onSearchAddresses = vi.fn(async () => [addressSuggestions[0]!, outOfAreaSuggestion]);
     render(<Harness><LocationHarness handlers={{ ...fakePostTaskHandlers, onSearchAddresses }} /></Harness>);
@@ -151,13 +151,15 @@ describe('posting address combobox', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(1); });
     expect(onSearchAddresses).toHaveBeenCalledWith({ query: '123' });
     const outside = screen.getByRole('option', { name: /100 Example Road/ });
-    // Any address can be posted (owner, 2026-11-21): outside our cities it says so, and helpers see the city.
+    // Any US address is posted the same way (owner, 2026-11-23: "remove the limit of Location totally"): each result
+    // says what helpers will see, and nothing warns about the city.
     expect(outside).not.toHaveAttribute('aria-disabled');
-    expect(outside).toHaveTextContent(messages.postTask.location.outsideOption);
+    expect(outside).toHaveTextContent('Helpers see: Waco, TX.');
+    expect(screen.getByRole('option', { name: /Mueller, Austin/ })).toBeInTheDocument();
     fireEvent.click(outside);
     expect(draft().location).toMatchObject({ mode: 'local', placeId: outOfAreaSuggestion.placeId });
     expect(screen.getByText('Helpers see: Waco, TX.')).toBeInTheDocument();
-    expect(screen.getByText(/We're not open in Waco yet/)).toBeInTheDocument();
+    expect(screen.queryByText(/not open/i)).not.toBeInTheDocument();
     fireEvent.keyDown(search, { key: 'ArrowDown' });
     fireEvent.keyDown(search, { key: 'Enter' });
     expect(draft().location).toMatchObject({ mode: 'local', placeId: addressSuggestions[0]!.placeId });

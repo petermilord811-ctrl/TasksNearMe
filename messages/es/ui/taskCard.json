@@ -59,5 +59,18 @@
     }
   },
   "perHour": "/h",
-  "upToHours": "hasta {hours}"
+  "upToHours": "hasta {hours}",
+  "gallery": {
+    "label": "{count, plural, one {Foto} other {# fotos}}",
+    "carousel": "carrusel",
+    "slide": "diapositiva",
+    "position": "Foto {number} de {total}",
+    "counter": "{number} / {total}",
+    "open": "Abrir la foto {number} de {total}",
+    "show": "Mostrar la foto {number} de {total}",
+    "previous": "Foto anterior",
+    "next": "Foto siguiente",
+    "thumbnails": "Todas las fotos",
+    "alt": "Foto {number} de {total} de {name}"
+  }
 }

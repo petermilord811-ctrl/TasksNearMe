@@ -35,6 +35,7 @@ import { areas as areaTable, markets as marketTable } from '@/modules/markets/sc
 import { helperProfiles } from '@/modules/profiles/schema';
 import { countPublicHelpers, getHelperProfile, listActiveHelperHandles, listPublicHelpers } from '@/modules/profiles/queries';
 import { countOpenTasks, findPublicTask, listRecentOpenTasks } from '@/modules/tasks/queries';
+import { taskPhotos } from '@/modules/tasks/schema';
 import { loadTaskBoard } from '@/modules/tasks/board';
 import { taskDrafter } from '@/modules/tasks/server';
 import { db } from '@/platform/db/client';
@@ -388,7 +389,7 @@ export async function getPublicTaskPageData(slug: string, rows: RowScope): Promi
   if (!found) return null;
   const market = await findPublicMarket(found.marketSlug);
   if (!market) return null;
-  const [view, categories, similarTasks] = await Promise.all([
+  const [view, categories, similarTasks, [photos]] = await Promise.all([
     getMarketView(market),
     listCategoryViews(market.id),
     listRecentOpenTasks(db, {
@@ -399,11 +400,13 @@ export async function getPublicTaskPageData(slug: string, rows: RowScope): Promi
       excludeTaskId: found.task.id,
       rows,
     }),
+    // How many photos only: the photos are for helpers who can offer (`publicTaskDetailsFor`).
+    db.select({ n: count() }).from(taskPhotos).where(eq(taskPhotos.taskId, found.task.id)),
   ]);
   const category = categories.find((c) => c.slug === found.task.categorySlug);
   if (!category) return null;
   return {
-    data: { task: found.task, category, market: view, acceptingOffers: found.acceptingOffers, similarTasks },
+    data: { task: found.task, category, market: view, acceptingOffers: found.acceptingOffers, similarTasks, photoCount: Number(photos?.n ?? 0) },
     now: now.toISOString(),
   };
 }

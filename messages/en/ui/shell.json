@@ -20,7 +20,6 @@
   "notifications": "Notifications",
   "unreadNotifications": "Notifications, {count, plural, one {# unread notification} other {# unread notifications}}",
   "unreadMessages": "{count, plural, one {# unread message} other {# unread messages}}",
-  "helperSetup": "Finish setting up to start helping",
   "quickAction": {
     "postTask": "Post a task",
     "findWork": "Find work"
@@ -155,7 +154,7 @@
     "publicStaff": "Public · staff",
     "appPoster": "App · I need help",
     "appHelper": "App · I can help",
-    "appHelperNotReady": "App · finish helper setup",
+    "appHelperNotReady": "App · helper not verified yet (search and reminder)",
     "appBookingsPaused": "App · bookings paused (outage switch)",
     "appModeRedirect": "Mode switch · onboarding redirect",
     "detailPage": "Detail · sticky action",
@@ -187,5 +186,59 @@
     "toDark": "Switch to dark mode"
   },
   "neighborsNew": "New posts",
-  "navCount": ", {count} waiting"
+  "navCount": ", {count} waiting",
+  "search": {
+    "label": "Search TasksNearMe",
+    "hint": "Type what you need or what you're looking for. Suggestions appear below; Ask AI finds real helpers and tasks.",
+    "placeholderFocused": "Describe a task, a helper or a question…",
+    "examples": {
+      "poster": {
+        "wardrobe": "Assemble an IKEA wardrobe this Saturday",
+        "couch": "Who can help me move a couch?",
+        "leaves": "Rake the leaves in my front yard",
+        "laptop": "Set up my new laptop and printer"
+      },
+      "helper": {
+        "assembly": "Furniture assembly near me this weekend",
+        "moving": "Moving help that pays over $100",
+        "yard": "Yard work I can do today",
+        "remote": "Remote computer help"
+      }
+    },
+    "askAi": "Ask AI",
+    "askAiHint": "Finds real helpers and tasks for what you typed",
+    "postTask": "Post a task: {title}",
+    "postTaskHint": "{category} · get offers from helpers nearby",
+    "postTaskHintAny": "Get offers from helpers nearby",
+    "findWork": "Find tasks: “{words}”",
+    "findWorkCategory": "{category} tasks near you",
+    "findWorkHint": "Open tasks you can offer on",
+    "findHelpers": "Find helpers: “{words}”",
+    "findHelpersCategory": "{category} helpers near you",
+    "findHelpersHint": "People nearby, with their checks and reviews",
+    "neighbors": "Search Neighbors for “{words}”",
+    "neighborsHint": "Posts and tasks around you",
+    "page": "Go to page",
+    "suggestions": "Suggestions",
+    "tryAsking": "Try asking",
+    "jumpTo": "Jump to",
+    "enter": "Enter",
+    "clear": "Clear the search",
+    "submit": "Search",
+    "keepTyping": "Keep typing…"
+  },
+  "reminder": {
+    "title": "Become a verified helper",
+    "count": "{done} of {total} checks",
+    "bodyStart": "Verify your home address first: it opens helping. Do the other checks whenever you like; together they make you a verified helper.",
+    "bodyVerified": "You can send offers now. Finish the rest whenever you like, for the verified badge clients look for.",
+    "states": {
+      "done": "Done",
+      "in_review": "In review",
+      "todo": "To do",
+      "opens": "Opens helping"
+    },
+    "anyOrder": "Pick any check first",
+    "continue": "Continue"
+  }
 }

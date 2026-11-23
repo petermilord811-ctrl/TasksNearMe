@@ -1,9 +1,9 @@
 {
   "title": "Find work",
   "description": "Find a task that fits your skills, area, and schedule.",
-  "setupTitle": "Finish setting up to send offers",
-  "setupBody": "You can browse tasks while you finish your helper profile.",
-  "finishSetup": "Finish setup",
+  "setupTitle": "Verify your home address to send offers",
+  "setupBody": "You can browse tasks now. Offers open as soon as your home address is verified; the other checks, whenever you like, make you a verified helper.",
+  "finishSetup": "Verify your address",
   "filters": "Filter open tasks",
   "category": "Category",
   "allCategories": "All",
@@ -50,7 +50,7 @@
   "offerAgainLabel": "Send a new offer: {title}",
   "noLiveOffers": "No live offers",
   "blockedReasons": {
-    "not_bookable": "Finish setting up to send offers",
+    "not_bookable": "Verify your home address to send offers",
     "needs_background_check": "Needs a background check",
     "category_not_offered": "You don't offer this service",
     "outside_area": "Outside your service area",
@@ -60,7 +60,7 @@
   "previews": {
     "group": "Find work",
     "default": "Find work · nearby tasks",
-    "notBookable": "Find work · finish setup",
+    "notBookable": "Find work · home address not verified yet",
     "empty": "Find work · no matches",
     "blockedReasons": "Find work · blocked reasons",
     "map": "Find work · map (phones)",

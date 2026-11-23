@@ -46,10 +46,17 @@ export type OnboardingStepState = 'done' | 'current' | 'todo' | 'skipped' | 'loc
 
 export interface OnboardingProgress {
   steps: { step: OnboardingStep; state: OnboardingStepState }[];
-  /** Can send offers in at least one category. */
+  /**
+   * Can help: send offers, post open times and be booked in at least one category. It opens with the profile basics
+   * and a verified home address (owner, 2026-11-23: only the location profile gates posting).
+   */
   bookable: boolean;
-  /** Categories the helper may take now (e.g. yard work while the background check runs). */
+  /** Categories the helper may take now (in-home ones once the background check counts). */
   bookableCategories: CategorySlug[];
+  /** Every check is done (home address, phone where texts work, ID, payouts, background check where needed). */
+  verified?: boolean;
+  /** The verified-helper checks that apply, and how many are done (the reminder's "3 of 5"). */
+  checks?: { done: number; total: number };
 }
 
 export const LANGUAGE_CODES = ['en', 'es', 'vi', 'zh', 'ar', 'ko', 'tl', 'fr', 'de', 'hi'] as const;

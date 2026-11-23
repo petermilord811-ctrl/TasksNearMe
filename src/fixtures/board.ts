@@ -268,6 +268,29 @@ export const publicTaskPageData: PublicTaskPageData = {
   similarTasks: [yardPublicTask, cleaningPublicTask],
 };
 
+/**
+ * The structured page for a helper who can offer (2026-11-23): the full description, the answers as a spec sheet and
+ * three photos in a carousel. Anyone else sees the open page above: the excerpt and how many photos there are.
+ */
+export const publicTaskHelperPageData: PublicTaskPageData = {
+  ...publicTaskPageData,
+  photoCount: 3,
+  viewer: 'helper',
+  details: {
+    description: 'Flat-pack desk from IKEA (MALM), about 40 parts.\n\n## What to know\n- Second floor, no elevator\n- I have a screwdriver, but no drill\n- The box is in the living room, the desk goes in the corner by the window',
+    answers: { itemType: 'desk', itemCount: 1, brand: 'IKEA MALM', floor: 2, elevator: false, wallAnchoring: true, toolsOnSite: false },
+    photos: [
+      { id: 'ph_box', src: '/samples/work-desk.svg', alt: 'The desk box in the living room', width: 800, height: 600 },
+      { id: 'ph_room', src: '/samples/work-bookshelf.svg', alt: 'The corner where the desk will go', width: 800, height: 600 },
+      { id: 'ph_wide', src: '/samples/photo-wide.svg', alt: 'The room from the door', width: 1200, height: 600 },
+    ],
+    expenseAllowance: { amountCents: 1500, description: 'Wall anchors if the kit has none' },
+  },
+};
+
+/** A signed-out visitor: the excerpt, and the photos and answers behind sign-in. */
+export const publicTaskVisitorPageData: PublicTaskPageData = { ...publicTaskPageData, photoCount: 3, viewer: 'visitor' };
+
 /** Booked already: no offer button, a closed notice instead. */
 export const publicTaskAssignedPageData: PublicTaskPageData = {
   ...publicTaskPageData,
@@ -281,4 +304,18 @@ export const publicRemoteTaskPageData: PublicTaskPageData = {
   market: austinMarket,
   acceptingOffers: true,
   similarTasks: [],
+};
+
+/** The board for a signed-in member, beside Neighbors (2026-11-23): the newest neighborhood posts near them under the list. */
+export const taskBoardMemberData: TaskBoardPageData = {
+  ...taskBoardPageData,
+  viewer: 'member',
+  neighbors: {
+    place: { kind: 'nearby', name: 'Mueller' },
+    posts: [
+      { id: 'cpo_crib', kind: 'question', title: 'Anyone used a helper for a crib and changing table?', authorName: 'Priya S.', areaName: 'Mueller', replyCount: 4, createdAt: '2026-11-17T13:40:00.000Z' },
+      { id: 'cpo_truck_tip', kind: 'tip', title: 'Rent the dolly when you book the truck', authorName: 'Nate O.', replyCount: 0, createdAt: '2026-11-16T18:45:00.000Z' },
+    ],
+    unansweredCount: 2,
+  },
 };

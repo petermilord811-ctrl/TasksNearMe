@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { routes, type PreviewEntry } from '@/contracts';
-import { publicRemoteTaskPageData, publicTaskAssignedPageData, publicTaskPageData, publicViewer, taskBoardByDayData, taskBoardCardsData, taskBoardFilteredData, taskBoardFilteredEmptyData, taskBoardHubData, taskBoardHubNoListingsData, taskBoardNoListingsData, taskBoardNoTasksData, taskBoardPageData, taskBoardPagedData } from '@/fixtures';
+import { publicRemoteTaskPageData, publicTaskAssignedPageData, publicTaskHelperPageData, publicTaskPageData, publicTaskVisitorPageData, publicViewer, taskBoardMemberData, taskBoardByDayData, taskBoardCardsData, taskBoardFilteredData, taskBoardFilteredEmptyData, taskBoardHubData, taskBoardHubNoListingsData, taskBoardNoListingsData, taskBoardNoTasksData, taskBoardPageData, taskBoardPagedData } from '@/fixtures';
 import { PublicShell } from '@/ui/shells/public-shell';
 import { TaskBoardScreen } from '@/ui/screens/public/task-board-screen';
 import { PublicTaskScreen } from '@/ui/screens/public/public-task-screen';
@@ -24,7 +24,10 @@ export const taskPagePreviews: PreviewEntry[] = [
   // Before the first real task: what the public sees (sample tasks are for signed-in testers only).
   page('screen-task-board/no-listings', boardCopy.previews.noListings, routes.taskBoard(taskBoardNoListingsData.market.slug), () => <TaskBoardScreen data={taskBoardNoListingsData} now={now} />),
   page('screen-task-board/hub-no-listings', boardCopy.previews.hubNoListings, routes.taskBoard(taskBoardHubNoListingsData.market.slug, taskBoardHubNoListingsData.query), () => <TaskBoardScreen data={taskBoardHubNoListingsData} now={now} />),
-  page('screen-public-task/open', taskCopy.previews.open, routes.publicTask(publicTaskPageData.task.slug), () => <PublicTaskScreen data={publicTaskPageData} now={now} />),
-  page('screen-public-task/assigned', taskCopy.previews.assigned, routes.publicTask(publicTaskAssignedPageData.task.slug), () => <PublicTaskScreen data={publicTaskAssignedPageData} now={now} />),
-  page('screen-public-task/remote', taskCopy.previews.remote, routes.publicTask(publicRemoteTaskPageData.task.slug), () => <PublicTaskScreen data={publicRemoteTaskPageData} now={now} />),
+  page('screen-task-board/member', boardCopy.previews.member, routes.taskBoard(taskBoardMemberData.market.slug), () => <TaskBoardScreen data={taskBoardMemberData} now={now} />),
+  page('screen-public-task/open', taskCopy.previews.open, routes.publicTask(publicTaskPageData.task.slug), () => <PublicTaskScreen data={publicTaskPageData} now={now} liveMap={false} />),
+  page('screen-public-task/helper', taskCopy.previews.helper, routes.publicTask(publicTaskHelperPageData.task.slug), () => <PublicTaskScreen data={publicTaskHelperPageData} now={now} liveMap={false} />),
+  page('screen-public-task/visitor-photos', taskCopy.previews.visitorPhotos, routes.publicTask(publicTaskVisitorPageData.task.slug), () => <PublicTaskScreen data={publicTaskVisitorPageData} now={now} liveMap={false} />),
+  page('screen-public-task/assigned', taskCopy.previews.assigned, routes.publicTask(publicTaskAssignedPageData.task.slug), () => <PublicTaskScreen data={publicTaskAssignedPageData} now={now} liveMap={false} />),
+  page('screen-public-task/remote', taskCopy.previews.remote, routes.publicTask(publicRemoteTaskPageData.task.slug), () => <PublicTaskScreen data={publicRemoteTaskPageData} now={now} liveMap={false} />),
 ];

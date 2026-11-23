@@ -209,32 +209,44 @@ describe('AppShell', () => {
     expect(screen.getByRole('button', { name: 'Messages, 2 unread' })).toBeInTheDocument();
   });
 
-  it('shows helper setup only for an unfinished helper and omits zero-count badges from names', () => {
+  it('puts the search bar and, for a helper not verified yet, the reminder where the setup bar was (owner, 2026-11-23)', async () => {
     pathname.mockReturnValue(routes.app.findWork());
     show(<AppShell viewer={priyaShell} handlers={handlers}><h1>Find work</h1></AppShell>);
-    expect(screen.getByRole('link', { name: 'Finish setting up to start helping' })).toHaveAttribute('href', routes.app.helperOnboarding());
+    expect(screen.getByRole('search', { name: 'Search TasksNearMe' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Search TasksNearMe' })).toBeInTheDocument();
+    // A reminder, not a full-width link: it opens the checks, each one a link, in any order.
+    expect(screen.queryByRole('link', { name: 'Finish setting up to start helping' })).not.toBeInTheDocument();
+    const reminder = screen.getByRole('button', { name: 'Become a verified helper 1 of 5 checks' });
+    await userEvent.click(reminder);
+    expect(await screen.findByRole('link', { name: /Home address/ })).toHaveAttribute('href', routes.app.helperOnboarding('address'));
+    expect(screen.getByRole('link', { name: /Background check/ })).toHaveAttribute('href', routes.app.helperOnboarding('background'));
+    expect(screen.getByRole('link', { name: 'Continue' })).toHaveAttribute('href', routes.app.helperOnboarding('address'));
     expect(screen.getByRole('link', { name: 'Notifications' })).toHaveAttribute('href', routes.app.notifications());
-    expect(within(screen.getByRole('navigation', { name: 'App navigation' })).getByRole('link', { name: 'Bookings' })).toBeInTheDocument();
   });
 
-  it('omits helper setup on the setup steps themselves (it would lead to the page it sits on)', () => {
+  it('keeps flow pages focused: no search bar or reminder (posting, a booking, helper setup)', () => {
+    layoutSegment.mockReturnValue('(flow)');
     pathname.mockReturnValue(routes.app.helperOnboarding('phone'));
     show(<AppShell viewer={priyaShell} handlers={handlers}><h1>Phone</h1></AppShell>);
-    expect(screen.queryByRole('link', { name: 'Finish setting up to start helping' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('search')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Become a verified helper/ })).not.toBeInTheDocument();
+    layoutSegment.mockReturnValue('(main)');
   });
 
-  it("omits helper setup on Home, whose \"Needs your attention\" starts with that step (plan 9.9)", () => {
+  it('leaves both out on Home, whose own search and "Needs your attention" lead with them (plan 9.9)', () => {
     show(<AppShell viewer={priyaShell} handlers={handlers}><h1>Home</h1></AppShell>);
-    expect(screen.queryByRole('link', { name: 'Finish setting up to start helping' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('search')).not.toBeInTheDocument();
     cleanup();
     pathname.mockReturnValue(`/es${routes.app.home()}`);
     show(<AppShell viewer={priyaShell} handlers={handlers}><h1>Inicio</h1></AppShell>);
-    expect(screen.queryByRole('link', { name: 'Finish setting up to start helping' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('search')).not.toBeInTheDocument();
   });
 
-  it.each([mayaShell, jordanShell])('omits helper setup for $displayName', (viewer) => {
-    show(<AppShell viewer={viewer} handlers={handlers}><h1>Home</h1></AppShell>);
-    expect(screen.queryByRole('link', { name: 'Finish setting up to start helping' })).not.toBeInTheDocument();
+  it.each([mayaShell, jordanShell])('gives $displayName the search bar without a reminder', (viewer) => {
+    pathname.mockReturnValue(routes.app.bookings());
+    show(<AppShell viewer={viewer} handlers={handlers}><h1>Bookings</h1></AppShell>);
+    expect(screen.getByRole('search', { name: 'Search TasksNearMe' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Become a verified helper/ })).not.toBeInTheDocument();
   });
 
   it('says bookings are paused while the outage switch is on, above the page content', () => {

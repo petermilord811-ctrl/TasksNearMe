@@ -1,8 +1,9 @@
-import { and, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull, like, or } from 'drizzle-orm';
 import { marketStatusInputSchema, type ActionResult, type MarketStatusInput } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import type { StaffActor } from '@/modules/support/staff';
+import { placeByZip } from '@/modules/verification/helper-place';
 import { emitVerificationEvent } from '@/modules/verification/state';
 import { validationFailed } from '@/platform/actions/results';
 import { auditLog } from '@/platform/audit/schema';
@@ -11,7 +12,8 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { queueCityOpenEmails } from '@/modules/marketing/city-open';
 import { helpersCoveredBy, isOpenMarketStatus, marketStatusChange, type MarketStatus } from './coverage';
-import { markets } from './schema';
+import { CITY_AREA_PREFIX } from './city-areas';
+import { areas, markets } from './schema';
 
 /**
  * Opening cities in turn (owner, 2026-11-14). An admin moves a market between pre-launch, live and paused, with a
@@ -45,6 +47,10 @@ export async function setMarketStatus(db: Db, staff: StaffActor, marketId: strin
     const covered = isOpenMarketStatus(next) ? (await waitingHelpersFor(tx, { ...market, status: next })).filter((helper) => helper.homeMarketId !== market.id) : [];
     for (const helper of covered) {
       await tx.update(users).set({ homeMarketId: market.id, updatedAt: now }).where(eq(users.id, helper.userId));
+      // Where they help moves into the city now open (2026-11-23): its nearest neighborhood to their ZIP, or their city's
+      // area in it when they live past its service area (helper-place.ts).
+      const placed = helper.homeZip && helper.homeState ? await placeByZip(tx, market.id, { zip: helper.homeZip, city: helper.homeCity ?? '', state: helper.homeState }) : null;
+      if (placed) await tx.update(helperProfiles).set({ areaId: placed.areaId, homeZip: placed.homeZip, homeCity: placed.homeCity, homeState: placed.homeState, updatedAt: now.toISOString() }).where(eq(helperProfiles.userId, helper.userId));
       await emitVerificationEvent(tx, helper.userId, 'helper', 'city_open', { city: market.name });
     }
     const waitlistQueued = next === 'live' ? await queueCityOpenEmails(tx, market, now) : 0;
@@ -68,14 +74,17 @@ export async function setMarketStatus(db: Db, staff: StaffActor, marketId: strin
 }
 
 /**
- * Helpers who wait with a ZIP the market covers (no neighborhood yet), with their home market: those whose home market
- * is already this one came in before (or started here) and aren't brought in again.
+ * Helpers outside the market's neighborhoods with a ZIP the market covers, with their home market: those who help from
+ * their city's area (2026-11-23, helper-place.ts) and those who chose a ZIP while helpers outside our cities waited (no
+ * area yet). Those whose home market is already this one came in before (or started here) and aren't brought in again.
  */
 export async function waitingHelpersFor(db: Pick<Db, 'select'>, market: { id: string; status: string; zipPrefixes: string[] }) {
   const waiting = await db
-    .select({ userId: helperProfiles.userId, homeZip: helperProfiles.homeZip, areaId: helperProfiles.areaId, homeMarketId: users.homeMarketId })
+    .select({ userId: helperProfiles.userId, homeZip: helperProfiles.homeZip, homeCity: helperProfiles.homeCity, homeState: helperProfiles.homeState, areaId: helperProfiles.areaId, homeMarketId: users.homeMarketId })
     .from(helperProfiles)
     .innerJoin(users, eq(users.id, helperProfiles.userId))
-    .where(and(isNull(helperProfiles.areaId), isNotNull(helperProfiles.homeZip), eq(users.status, 'active')));
-  return helpersCoveredBy(market, waiting);
+    .leftJoin(areas, eq(areas.id, helperProfiles.areaId))
+    .where(and(isNotNull(helperProfiles.homeZip), eq(users.status, 'active'), or(isNull(helperProfiles.areaId), like(areas.slug, `${CITY_AREA_PREFIX}%`))));
+  // A city's area isn't a neighborhood: for the market, they're all outside its neighborhoods.
+  return helpersCoveredBy(market, waiting.map((helper) => ({ ...helper, areaId: null })));
 }

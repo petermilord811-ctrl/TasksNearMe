@@ -462,7 +462,7 @@ export function HelperProfileSetup({ data, handlers }: { data: HelperOnboardingP
           <fieldset disabled={pending} className="min-w-0 space-y-6">
             <legend className="sr-only">{t(`parts.${part}`)}</legend>
             {part === 'services' && <SetupServices form={services} categories={data.categories} defaults={data.serviceDefaults} />}
-            {part === 'area' && <AreaFields form={area} areas={data.areas} remoteAllowed={remoteAllowed} homeMarket={data.homeMarket} awaitingCity={data.awaitingCity} />}
+            {part === 'area' && <AreaFields form={area} areas={data.areas} remoteAllowed={remoteAllowed} homeMarket={data.homeMarket} />}
             {part === 'about' && <>
               <ProfilePhotoField initials={data.person.initials} photo={data.person.photo} maxPhotoMegabytes={data.maxPhotoMegabytes} note="helperEditor" onUpload={handlers.onUploadPhoto} onRemove={handlers.onRemovePhoto} />
               {data.profileDraft === 'ai'

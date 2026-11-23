@@ -1,12 +1,15 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import sharp from 'sharp';
 import type { AddressProofResult, AddressSuggestion, FieldErrorCode } from '@/contracts';
 import { ADDRESS_PROOF_RULES, addressProofInputSchema } from '@/contracts';
 import { GeocoderUnavailableError, type GeoPlace, type Geocoder } from '@/integrations/geocoding';
 import type { FileStorage } from '@/integrations/storage';
 import { users } from '@/modules/accounts/schema';
-import { distanceKm, nearestArea } from '@/modules/markets/geo';
+import { cityAreaName, ensureCityArea, neighborhoodsOnly } from '@/modules/markets/city-areas';
+import { inServiceArea, nearestArea } from '@/modules/markets/geo';
 import { areas, markets } from '@/modules/markets/schema';
+import { zipPoint } from '@/modules/markets/zip-points';
+import { helperProfiles } from '@/modules/profiles/schema';
 import { files } from '@/modules/tasks/schema';
 import { auditLog } from '@/platform/audit/schema';
 import type { FieldCipher } from '@/platform/crypto/field-encryption';
@@ -42,25 +45,42 @@ async function marketOf(db: Db, userId: string) {
   return row?.market ?? null;
 }
 
-/** Homes are verified in and around the market: up to twice its service radius from the center (people commute in). */
-function inVerifiedRegion(market: { centerLat: number; centerLng: number; serviceRadiusKm: number }, place: { lat: number; lng: number }): boolean {
-  return distanceKm({ lat: market.centerLat, lng: market.centerLng }, place) <= market.serviceRadiusKm * 2;
+/** Where the address search looks first: around the area the helper helps from, else their market's center. */
+async function searchCenter(db: Db, userId: string, market: { centerLat: number; centerLng: number }) {
+  const [own] = await db.select({ lat: areas.centerLat, lng: areas.centerLng }).from(helperProfiles).innerJoin(areas, eq(areas.id, helperProfiles.areaId)).where(eq(helperProfiles.userId, userId)).limit(1);
+  return own ?? { lat: market.centerLat, lng: market.centerLng };
+}
+
+/**
+ * The area a home belongs to: the market's nearest neighborhood inside its service area, and anywhere else in the US
+ * the city's area (owner, 2026-11-23: homes are verified wherever the helper lives; city-areas.ts). Null when the ZIP
+ * can't be placed.
+ */
+async function homeAreaOf(db: Db, market: { id: string; centerLat: number; centerLng: number; serviceRadiusKm: number }, place: GeoPlace) {
+  if (inServiceArea(market, place)) {
+    const neighborhoods = await db.select().from(areas).where(and(eq(areas.marketId, market.id), neighborhoodsOnly()));
+    const nearest = nearestArea(neighborhoods, place);
+    if (nearest) return nearest;
+  }
+  const point = await zipPoint(place.zip);
+  return point ? ensureCityArea(db, market.id, place, point) : null;
 }
 
 export async function searchHomeAddresses(deps: Pick<AddressProofDeps, 'db' | 'geocoder'>, userId: string, query: string): Promise<AddressSuggestion[]> {
   if (query.trim().length < 3) return [];
   const market = await marketOf(deps.db, userId);
   if (!market) return [];
-  const marketAreas = await deps.db.select().from(areas).where(eq(areas.marketId, market.id));
-  const places = await deps.geocoder.search(query, { near: { lat: market.centerLat, lng: market.centerLng }, withinKm: market.serviceRadiusKm * 2 });
+  const neighborhoods = await deps.db.select().from(areas).where(and(eq(areas.marketId, market.id), neighborhoodsOnly()));
+  const places = await deps.geocoder.search(query, { near: await searchCenter(deps.db, userId, market) });
   return places.map((place) => {
-    const area = distanceKm({ lat: market.centerLat, lng: market.centerLng }, place) <= market.serviceRadiusKm ? nearestArea(marketAreas, place) : null;
+    const area = inServiceArea(market, place) ? nearestArea(neighborhoods, place) : null;
     return {
       placeId: place.placeId,
       line1: place.line1,
       line2: `${place.city}, ${place.state} ${place.zip}`,
-      ...(area ? { areaName: area.name } : {}),
-      inServiceArea: inVerifiedRegion(market, place),
+      areaName: area ? area.name : cityAreaName(place),
+      // Any US home can be verified (owner, 2026-11-23: "remove the limit of Location totally").
+      inServiceArea: true,
     };
   });
 }
@@ -91,8 +111,7 @@ export async function submitAddressProof(deps: AddressProofDeps, userId: string,
   const { db } = deps;
   const state = await loadOnboardingState(db, userId, now);
   const step = computeOnboarding(state.facts).progress.steps.find((s) => s.step === 'address');
-  // `later`: a helper outside the cities we're open in gives their home address when their city opens.
-  if (!step || step.state === 'locked' || step.state === 'later' || !state.address.canSubmit) return { ok: false, code: 'not_allowed' };
+  if (!step || step.state === 'locked' || !state.address.canSubmit) return { ok: false, code: 'not_allowed' };
 
   const line2 = String(form.get('line2') ?? '').trim();
   const parsed = addressProofInputSchema.safeParse({
@@ -128,8 +147,8 @@ export async function submitAddressProof(deps: AddressProofDeps, userId: string,
   }
   if (!place) return invalid({ placeId: ['invalid'] });
   const market = await marketOf(db, userId);
-  if (!market || !inVerifiedRegion(market, place)) return invalid({ placeId: ['not_supported'] });
-  const marketAreas = await db.select().from(areas).where(eq(areas.marketId, market.id));
+  if (!market) return invalid({ placeId: ['not_supported'] });
+  const homeArea = await homeAreaOf(db, market, place);
 
   const document = await prepareDocument(file);
   if (!document.ok) return document.result;
@@ -155,7 +174,7 @@ export async function submitAddressProof(deps: AddressProofDeps, userId: string,
     userId,
     status: 'in_review',
     addressCiphertext: deps.cipher.encrypt(JSON.stringify(address)),
-    areaId: nearestArea(marketAreas, place)?.id ?? null,
+    areaId: homeArea?.id ?? null,
     documentType: parsed.data.documentType,
     documentFileId: fileId,
     submittedAt: now,

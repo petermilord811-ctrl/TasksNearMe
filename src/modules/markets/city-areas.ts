@@ -49,7 +49,7 @@ export function cityAreaSlug(place: CityPlace): string {
 }
 
 /** The city's area in the market, made the first time a task is posted there. */
-export async function ensureCityArea(db: Db, marketId: string, place: CityPlace, center: LatLng) {
+export async function ensureCityArea(db: Pick<Db, 'select' | 'insert'>, marketId: string, place: CityPlace, center: LatLng) {
   const slug = cityAreaSlug(place);
   const find = () => db.select().from(areas).where(and(eq(areas.marketId, marketId), eq(areas.slug, slug))).limit(1);
   const [existing] = await find();

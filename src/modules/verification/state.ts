@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { MARKET_TIME_ZONE } from '@/contracts';
 import type {
   AddressRejectionReason,
@@ -12,8 +12,7 @@ import type {
 import { currentAgreements } from '@/modules/accounts/agreements';
 import { loadPhoneCheck } from '@/modules/accounts/phone-check';
 import { users } from '@/modules/accounts/schema';
-import { awaitingCity, OPEN_MARKET_STATUSES } from '@/modules/markets/coverage';
-import { categories, markets } from '@/modules/markets/schema';
+import { categories } from '@/modules/markets/schema';
 import { helperProfiles, helperServices } from '@/modules/profiles/schema';
 import { marketTimeZone } from '@/modules/markets/time-zone';
 import type { FieldCipher } from '@/platform/crypto/field-encryption';
@@ -52,7 +51,7 @@ export async function emitVerificationEvent(
 }
 
 export async function loadOnboardingState(db: Db, userId: string, now: Date) {
-  const [[user], [profile], serviceRows, identityRows, addressRows, backgroundRows, [payout], agreements, captureRows, openMarkets, phone] = await Promise.all([
+  const [[user], [profile], serviceRows, identityRows, addressRows, backgroundRows, [payout], agreements, captureRows, phone] = await Promise.all([
     db
       .select({ firstName: users.firstName, lastName: users.lastName, phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt, homeMarketId: users.homeMarketId })
       .from(users)
@@ -71,12 +70,9 @@ export async function loadOnboardingState(db: Db, userId: string, now: Date) {
     db.select().from(payoutAccounts).where(eq(payoutAccounts.userId, userId)).limit(1),
     currentAgreements(db, userId),
     db.select().from(identityCaptures).where(eq(identityCaptures.userId, userId)).orderBy(asc(identityCaptures.createdAt)),
-    db.select({ id: markets.id, status: markets.status, zipPrefixes: markets.zipPrefixes }).from(markets).where(inArray(markets.status, [...OPEN_MARKET_STATUSES])),
     // Whether the phone is asked for at all (plan 9.2: only where texts work; asked, not needed, in the grace).
     loadPhoneCheck(db, userId),
   ]);
-  // Outside every city we're open in: the helper gave a ZIP and waits for their city (owner, 2026-11-14).
-  const waitingIn = profile ? awaitingCity(profile, openMarkets) : null;
   const identity = identityStanding(identityRows, now, captureRows, user ? await marketTimeZone(db, user.homeMarketId) : MARKET_TIME_ZONE);
   const address = addressStanding(addressRows);
   const background = backgroundStanding(backgroundRows, now);
@@ -88,8 +84,9 @@ export async function loadOnboardingState(db: Db, userId: string, now: Date) {
       categorySlug: category.slug as CategorySlug,
       requiresBackgroundCheck: category.requiresBackgroundCheck,
     })),
-    areaSet: Boolean(profile?.areaId) || waitingIn !== null,
-    awaitingCity: waitingIn !== null,
+    // A ZIP chosen while helpers outside our cities waited counts too: it's placed the next time setup loads
+    // (helper-place.ts; owner, 2026-11-23: nobody waits for their city).
+    areaSet: Boolean(profile?.areaId) || Boolean(profile?.homeZip),
     phoneVerified: Boolean(user?.phone && user.phoneVerifiedAt),
     phoneCheck: phone.check,
     // Waiting for our team: photos in review, a double check that didn't confirm their approval, or the
@@ -120,8 +117,6 @@ export async function loadOnboardingState(db: Db, userId: string, now: Date) {
     background,
     payout: payout ?? null,
     agreements,
-    /** Where the helper waits for us to open, when they're outside every open market. */
-    awaitingCity: waitingIn,
     facts,
   };
 }

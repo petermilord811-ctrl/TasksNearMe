@@ -35,8 +35,9 @@ test('the board groups tasks by neighborhood, filters by link and searches', asy
   const total = await openCount();
   expect(total).toBeGreaterThan(0);
 
-  // Neighborhood sections: each says how many tasks it has and shows at most five.
-  const sections = page.getByRole('main').getByRole('region');
+  // Neighborhood sections: each says how many tasks it has and shows at most five (the list's own sections: the
+  // composer and Neighbors sit around it since 2026-11-23).
+  const sections = page.locator('#board-list').getByRole('region');
   await expect(sections.first()).toBeVisible();
   const first = sections.first();
   const count = Number((await first.getByRole('heading', { level: 2 }).textContent())!.match(/(\d+) tasks?$/)![1]);
@@ -76,7 +77,7 @@ test('one list sorted by newest, paged, with the day on each row', async ({ page
   // Sort and grouping live in one menu (audit M19, L10).
   await page.getByText('Sort: Newest').click();
   await expect(page.getByRole('navigation', { name: 'Sort' }).getByRole('link', { name: /Newest/ })).toHaveAttribute('aria-current', 'true');
-  await expect(page.getByRole('main').getByRole('region')).toHaveCount(0);
+  await expect(page.locator('#board-list').getByRole('region')).toHaveCount(0);
   const rows = page.getByRole('main').getByRole('article');
   await expect(rows.first()).toBeVisible();
   expect(await rows.count()).toBeLessThanOrEqual(20);

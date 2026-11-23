@@ -217,9 +217,9 @@ export async function recordPayoutStatus(db: Db, userId: string, status: PayoutA
 // ---- Background checks ----------------------------------------------------------------------------
 
 /**
- * Sends the Checkr invitation (valid 7 days). Needs payouts active, an in-home category offered, and the
- * disclosure summary acknowledged (now or before). A renewal can start from 30 days before the current
- * check runs out.
+ * Sends the Checkr invitation (valid 7 days). Needs the profile basics (where the helper works decides the check's
+ * rules), an in-home category offered, and the disclosure summary acknowledged (now or before); nothing else first
+ * (owner, 2026-11-23: "I can do background first"). A renewal can start from 30 days before the current check runs out.
  */
 export async function startBackgroundCheck(
   db: Db,
@@ -229,8 +229,9 @@ export async function startBackgroundCheck(
   options: { acknowledged?: boolean; origin?: RequestOrigin } = {},
 ): Promise<ActionResult> {
   const state = await loadOnboardingState(db, userId, now);
-  const { backgroundRequired } = computeOnboarding(state.facts);
-  if (state.facts.payout !== 'active' || !state.identity.verified || !backgroundRequired || !state.background.canStart) return { ok: false, code: 'not_allowed' };
+  const { backgroundRequired, progress } = computeOnboarding(state.facts);
+  const step = progress.steps.find((entry) => entry.step === 'background');
+  if (!step || step.state === 'locked' || !backgroundRequired || !state.background.canStart) return { ok: false, code: 'not_allowed' };
   if (state.agreements.bg_check_disclosure === undefined) {
     if (options.acknowledged !== true) return fieldError('acknowledged', 'must_accept');
     await recordAgreement(db, userId, 'bg_check_disclosure', options.origin ?? {}, now);

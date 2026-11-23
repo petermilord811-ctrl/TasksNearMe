@@ -1,7 +1,26 @@
 import type { ISODateTime, Mode, Photo, StaffRole } from './common';
-import type { ActionHandler } from './actions';
+import type { ActionHandler, QueryHandler } from './actions';
+import type { AiSearchInput, AiSearchResult } from './home';
 import type { AppLocale } from './locale';
+import type { OnboardingStep } from './routes';
+import type { OnboardingStepState } from './onboarding';
 import type { SparksSummary } from './sparks';
+
+/**
+ * A helper who isn't a verified helper yet (owner, 2026-11-23: "show 'Finish setting up to start helping' as 'to be
+ * verified helper' and show it as reminder type, not full-width bar"): the reminder beside the search bar.
+ * - `canHelp`: their home address is verified, so they already send offers; the rest earns the badge.
+ * - `checks`: the verified-helper checks that apply (home address, phone where texts work, ID, payouts, background
+ *   check for in-home services), each with its state, in any order; `done` of `total`.
+ * - `next`: the step to open first (the home address while helping isn't open).
+ */
+export interface HelperSetupReminder {
+  canHelp: boolean;
+  checks: { step: OnboardingStep; state: OnboardingStepState }[];
+  done: number;
+  total: number;
+  next: OnboardingStep;
+}
 
 /** Who is using the app, as far as the page shells need to know. */
 export type ShellViewer =
@@ -16,6 +35,8 @@ export type ShellViewer =
       mode: Mode;
       /** Helper onboarding is complete enough to use helper mode. */
       helperReady: boolean;
+      /** A helper (with a profile) who isn't a verified helper yet: the reminder's checks. */
+      helperSetup?: HelperSetupReminder;
       unreadMessages: number;
       unreadNotifications: number;
       /** Their @username and Sparks, in the account menu (2026-11-22). */
@@ -71,6 +92,12 @@ export interface AppShellHandlers {
   onCheckPushDevice?: ActionHandler<{ endpoint: string }>;
   /** Signing out takes this browser's subscription off the account first (`onRemovePushSubscription`). */
   onForgetPushDevice?: ActionHandler<{ endpoint: string }>;
+  /**
+   * Ask AI in the search bar at the top of the app's pages (owner, 2026-11-23): the dashboard's AI search
+   * (`DashboardHandlers.onAiSearch`, counted by the plan), run only when the person asks. Without it the bar still
+   * suggests the next step from the words (post them as a task, find helpers or tasks, search Neighbors, a page).
+   */
+  onAskSearch?: QueryHandler<AiSearchInput, AiSearchResult>;
 }
 
 export interface AdminShellHandlers {

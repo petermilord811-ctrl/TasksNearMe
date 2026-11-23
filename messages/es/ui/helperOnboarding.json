@@ -65,16 +65,14 @@
       "where": "¿Dónde vives?",
       "inMarket": "En {market}",
       "inMarketHint": "Elige tu vecindario.",
-      "elsewhere": "En otro lugar de EE. UU.",
-      "elsewhereHint": "Verifícate ahora y empieza cuando abramos en tu ciudad.",
+      "elsewhere": "En cualquier otro lugar de EE. UU.",
+      "elsewhereHint": "Tu código postal y tu ciudad. Ayudas desde allí enseguida.",
       "zip": "Código postal",
       "zipHint": "Cinco dígitos.",
       "city": "Ciudad",
       "cityHint": "Donde vives, como Dallas o Tulsa.",
-      "zipInMarket": "Ese código postal está en {market}. Elige «En {market}» y tu vecindario.",
       "zipNotSupported": "Escribe un código postal de EE. UU.",
-      "elsewhereNote": "Abrimos ciudad por ciudad. Ya puedes completar tus verificaciones. Cuando abramos en tu ciudad, elegirás tu vecindario y agregarás tu domicilio.",
-      "waiting": "Estás en la lista de {city}, {state}. Te avisaremos en cuanto abramos allí."
+      "elsewhereNote": "Ayudas desde tu ciudad: los clientes ven su nombre, nunca tu dirección. Verifica tu domicilio a continuación y podrás empezar a ayudar."
     },
     "tools": {
       "title": "Herramientas",
@@ -87,7 +85,7 @@
   },
   "screen": {
     "title": "Configura tu perfil de ayudante",
-    "description": "Cuéntales a los clientes cómo puedes ayudar y termina tus verificaciones.",
+    "description": "Cuenta a los clientes cómo puedes ayudar y verifica tu domicilio para empezar a ayudar. Las demás verificaciones te hacen ayudante verificado; hazlas cuando quieras.",
     "progressLabel": "Progreso de la configuración de ayudante",
     "steps": {
       "profile": "Perfil",
@@ -172,21 +170,15 @@
       "agreement": "Perfil: acuerdo de ayudantes",
       "backgroundSuspended": "Verificación de antecedentes: Checkr necesita más información",
       "areaElsewhere": "Área: en otro lugar de EE. UU.",
-      "areaAwaiting": "Área: esperando a Dallas",
-      "doneAwaitingCity": "Listo: verificación completa, esperando a Dallas",
-      "doneAwaitingCityPending": "Listo: esperando a Dallas, falta una verificación"
+      "areaAwaiting": "Área: ayuda desde Dallas (código postal y ciudad en cualquier lugar de EE. UU.)",
+      "doneAwaitingCity": "Listo: ayuda en jardinería, aún sin ser ayudante verificado"
     },
     "stepOf": "Paso {number} de {total}: {step}",
     "allSteps": "Todos los pasos",
     "fewerSteps": "Menos pasos",
-    "awaitingCity": {
-      "title": "Todavía no estamos en {city}, {state}",
-      "verifiedTitle": "Tu verificación está completa. Te avisaremos en cuanto abramos en {city}.",
-      "body": "Tus verificaciones valen sin importar dónde vivas. Cuando TasksNearMe abra en {city}, elegirás tu vecindario, agregarás tu domicilio y empezarás a recibir tareas. Mientras tanto, deja tu perfil listo.",
-      "profile": "Deja tu perfil listo",
-      "changeCity": "Cambiar tu ciudad"
-    },
-    "giftStep": "Cuenta para tu tarjeta de regalo de bienvenida"
+    "giftStep": "Cuenta para tu tarjeta de regalo de bienvenida",
+    "doneVerified": "Eres ayudante verificado",
+    "remainingVerified": "Completa esto cuando quieras para ser ayudante verificado"
   },
   "setup": {
     "title": "Tu perfil de ayudante",

@@ -6,7 +6,7 @@ import { sendCityOpenEmails } from '@/modules/marketing/city-open';
 import { waitlistEntries } from '@/modules/marketing/schema';
 import { joinWaitlist } from '@/modules/marketing/waitlist';
 import { getWaitlistUnsubscribePage, readWaitlistUnsubscribeToken, setWaitlistEmailsByToken, waitlistUnsubscribeToken } from '@/modules/marketing/waitlist-unsubscribe';
-import { featureFlags, markets } from '@/modules/markets/schema';
+import { featureFlags, markets, areas } from '@/modules/markets/schema';
 import { setMarketStatus } from '@/modules/markets/status';
 import { emailSuppressions } from '@/modules/notifications/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
@@ -77,6 +77,8 @@ afterAll(async () => {
   await db.delete(auditLog).where(and(eq(auditLog.action, 'config.market_status'), eq(auditLog.targetId, TULSA)));
   await db.delete(helperProfiles).where(eq(helperProfiles.userId, HELPER));
   await db.delete(users).where(inArray(users.id, [HELPER, MEMBER]));
+  // Opening a market places the helpers around it in its areas (2026-11-23): those go first.
+  await db.delete(areas).where(eq(areas.marketId, TULSA));
   await db.delete(markets).where(eq(markets.id, TULSA));
   await pool.end();
 });

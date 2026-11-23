@@ -30,7 +30,7 @@
   "clearFilters": "Clear filters",
   "noTasksTitle": "No open tasks right now",
   "noTasksBody": "Local tasks appear here when someone needs help. Have something to get done? Post a task to get started.",
-  "hubEmptyBody": "Tasks show up here as people nearby post them. Set up your helper profile now, so you're ready to send an offer when one does.",
+  "hubEmptyBody": "Tasks show up here as people nearby post them. Verify your home address now, so you're ready to send an offer when one does.",
   "postTask": "Post a task",
   "privacy": "Exact addresses go only to the booked helper",
   "becomeHelper": "Become a helper",
@@ -46,7 +46,8 @@
     "byDay": "Task board · by day",
     "cards": "Task board · cards",
     "filtered": "Task board · filtered",
-    "hub": "Task board · category page"
+    "hub": "Task board · category page",
+    "member": "Board · a signed-in member beside Neighbors"
   },
   "panel": {
     "toggle": "Filters"
@@ -146,5 +147,30 @@
     "label": "Popular task types",
     "open": "{count, plural, =0 {none open now} one {# open} other {# open}}",
     "range": "{low}–{high}"
+  },
+  "composer": {
+    "title": "Post in {market}",
+    "label": "What do you need help with?",
+    "placeholder": "What do you need done in {market}?",
+    "post": "Post a task",
+    "soundsLike": "Sounds like {category}. You can change it next.",
+    "orAsk": "Or ask your neighbors:",
+    "kinds": {
+      "recommendation": "Who do you recommend?",
+      "question": "Ask a question",
+      "tip": "Share a tip"
+    }
+  },
+  "neighbors": {
+    "title": "Neighbors in {market}",
+    "body": "Ask who people nearby trust, get answers before you book, and thank a helper who did great work. Free with your account.",
+    "bodyMember": "Ask who people nearby trust, answer a neighbor, or thank a helper.",
+    "join": "Join Neighbors",
+    "open": "Open Neighbors"
+  },
+  "tabs": {
+    "label": "Open tasks and Neighbors",
+    "tasks": "Open tasks",
+    "neighbors": "Neighbors"
   }
 }

@@ -219,7 +219,11 @@
     "later": "Ahora no",
     "saved": "Guardado. Cerca de ti empieza desde ahí.",
     "failed": "No se pudo guardar. Intenta de nuevo.",
-    "privacy": "Solo guardamos el vecindario, nunca tu dirección."
+    "privacy": "Solo guardamos el vecindario, nunca tu dirección.",
+    "zipToggle": "¿En otro lugar? Usa tu código postal",
+    "zip": "Código postal",
+    "city": "Ciudad",
+    "zipError": "Escribe un código postal de EE. UU. (cinco dígitos)."
   },
   "samples": {
     "hidden": "Quienes usan la app no ven aquí el mercado de demostración. Puedes mostrártelo.",

@@ -64,8 +64,9 @@ test('people who are not set up as helpers can browse but not offer', async ({ p
   await devSignIn(page, 'chris@example.test');
 
   await page.goto('/app/find-work?category=furniture-assembly');
-  await expect(page.getByRole('heading', { name: 'Finish setting up to send offers' }).first()).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Finish setup' }).first()).toHaveAttribute('href', '/app/helper/onboarding/profile');
+  // Only the location profile opens offers now (owner, 2026-11-23); without a helper profile, setup starts at the profile.
+  await expect(page.getByRole('heading', { name: 'Verify your home address to send offers' }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Verify your address' }).first()).toHaveAttribute('href', '/app/helper/onboarding/profile');
   await expect(page.getByRole('link', { name: 'Rake and bag front-yard leaves' })).toHaveCount(0);
 
   await page.getByRole('link', { name: 'Mount two floating shelves' }).click();

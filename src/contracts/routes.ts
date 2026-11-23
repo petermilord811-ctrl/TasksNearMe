@@ -30,11 +30,11 @@ export const LEGAL_DOCS = [
 export type LegalDoc = (typeof LEGAL_DOCS)[number];
 
 /**
- * Helper onboarding, in order (blueprint 06 §1, extended 2026-11-12): the profile basics, then a verified
- * phone, the ID check, the home address with a proof-of-address document, payouts, and a background check
- * for in-home categories.
+ * Helper onboarding, as the stepper lists it (blueprint 06 §1; owner, 2026-11-23): the profile basics, the home
+ * address with a proof-of-address document (the location profile, which opens helping), then the checks of a
+ * verified helper in any order: a verified phone, the ID check, payouts, and a background check for in-home categories.
  */
-export const ONBOARDING_STEPS = ['profile', 'services', 'area', 'phone', 'identity', 'address', 'payout', 'background', 'done'] as const;
+export const ONBOARDING_STEPS = ['profile', 'services', 'area', 'address', 'phone', 'identity', 'payout', 'background', 'done'] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 
 /** The first city (owner, 2026-11-17: Gainesville, FL; Austin until then, now a later city). */

@@ -20,7 +20,6 @@
   "notifications": "Notificaciones",
   "unreadNotifications": "Notificaciones, {count, plural, one {# notificación sin leer} other {# notificaciones sin leer}}",
   "unreadMessages": "{count, plural, one {# mensaje sin leer} other {# mensajes sin leer}}",
-  "helperSetup": "Termina la configuración para empezar a ayudar",
   "quickAction": {
     "postTask": "Publicar una tarea",
     "findWork": "Buscar trabajo"
@@ -155,7 +154,7 @@
     "publicStaff": "Público · personal",
     "appPoster": "App · Necesito ayuda",
     "appHelper": "App · Puedo ayudar",
-    "appHelperNotReady": "App · terminar la configuración de ayudante",
+    "appHelperNotReady": "App · ayudante aún sin verificar (búsqueda y recordatorio)",
     "appBookingsPaused": "App · reservas en pausa (interruptor de incidentes)",
     "appModeRedirect": "Cambio de modo · redirección al registro",
     "detailPage": "Detalle · acción fija",
@@ -187,5 +186,59 @@
     "toDark": "Cambiar al modo oscuro"
   },
   "neighborsNew": "Publicaciones nuevas",
-  "navCount": ", {count} en espera"
+  "navCount": ", {count} en espera",
+  "search": {
+    "label": "Buscar en TasksNearMe",
+    "hint": "Escribe lo que necesitas o lo que buscas. Abajo aparecen sugerencias; Preguntar a la IA encuentra ayudantes y tareas reales.",
+    "placeholderFocused": "Describe una tarea, un ayudante o una pregunta…",
+    "examples": {
+      "poster": {
+        "wardrobe": "Armar un ropero de IKEA este sábado",
+        "couch": "¿Quién me ayuda a mover un sofá?",
+        "leaves": "Rastrillar las hojas del jardín",
+        "laptop": "Configurar mi laptop y mi impresora nuevas"
+      },
+      "helper": {
+        "assembly": "Armado de muebles cerca de mí este fin de semana",
+        "moving": "Mudanzas que paguen más de $100",
+        "yard": "Trabajo de jardín para hoy",
+        "remote": "Ayuda con computadoras a distancia"
+      }
+    },
+    "askAi": "Preguntar a la IA",
+    "askAiHint": "Encuentra ayudantes y tareas reales para lo que escribiste",
+    "postTask": "Publicar una tarea: {title}",
+    "postTaskHint": "{category} · recibe ofertas de ayudantes cercanos",
+    "postTaskHintAny": "Recibe ofertas de ayudantes cercanos",
+    "findWork": "Buscar tareas: «{words}»",
+    "findWorkCategory": "{category}: tareas cerca de ti",
+    "findWorkHint": "Tareas abiertas en las que puedes ofertar",
+    "findHelpers": "Buscar ayudantes: «{words}»",
+    "findHelpersCategory": "{category}: ayudantes cerca de ti",
+    "findHelpersHint": "Personas cercanas, con sus verificaciones y reseñas",
+    "neighbors": "Buscar «{words}» en Vecinos",
+    "neighborsHint": "Publicaciones y tareas cerca de ti",
+    "page": "Ir a la página",
+    "suggestions": "Sugerencias",
+    "tryAsking": "Prueba con",
+    "jumpTo": "Ir a",
+    "enter": "Intro",
+    "clear": "Borrar la búsqueda",
+    "submit": "Buscar",
+    "keepTyping": "Sigue escribiendo…"
+  },
+  "reminder": {
+    "title": "Hazte ayudante verificado",
+    "count": "{done} de {total} verificaciones",
+    "bodyStart": "Primero verifica tu domicilio: con eso empiezas a ayudar. Haz las demás verificaciones cuando quieras; juntas te hacen ayudante verificado.",
+    "bodyVerified": "Ya puedes enviar ofertas. Completa lo demás cuando quieras, para tener la insignia de verificado que buscan los clientes.",
+    "states": {
+      "done": "Hecho",
+      "in_review": "En revisión",
+      "todo": "Pendiente",
+      "opens": "Con esto empiezas a ayudar"
+    },
+    "anyOrder": "Empieza por cualquiera",
+    "continue": "Continuar"
+  }
 }

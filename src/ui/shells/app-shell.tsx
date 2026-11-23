@@ -13,7 +13,7 @@ import { SkipLink } from './skip-link';
 import { ModeSwitch } from './mode-switch';
 import { AccountMenu } from './account-menu';
 import { LanguageSwitch } from './language-switch';
-import { HelperSetupLink } from './helper-setup-link';
+import { AppTopRow } from './app-top-row';
 import { QuickAction } from './quick-action';
 import { ThemeToggle } from './theme-toggle';
 import { Navigation } from './navigation';
@@ -86,7 +86,9 @@ export function AppShell({ viewer, handlers, children, currentPath, layout, noti
           <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-warning/15 text-warning"><CirclePause className="size-5" /></span>
           <div className="min-w-0 space-y-1"><p id="notice-bookings-paused" className="font-semibold text-foreground">{t('notices.bookingsPaused.title')}</p><p className="text-muted-foreground">{t('notices.bookingsPaused.body')}</p></div>
         </section>}
-        {viewer.mode === 'helper' && !viewer.helperReady && <HelperSetupLink currentPath={currentPath} />}
+        {/* The search bar, and beside it a helper's verified-helper reminder (owner, 2026-11-23: where the full-width
+            setup bar was). The tabs layout only: flow pages (posting, a booking, a conversation) stay focused. */}
+        <TabsOnly layout={layout}><AppTopRow mode={viewer.mode} {...(viewer.helperSetup ? { reminder: viewer.helperSetup } : {})} {...(handlers.onAskSearch ? { onAsk: handlers.onAskSearch } : {})} {...(currentPath ? { currentPath } : {})} /></TabsOnly>
         {children}
       </main>
     </div>

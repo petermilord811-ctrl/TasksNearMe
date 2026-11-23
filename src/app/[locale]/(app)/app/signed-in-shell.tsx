@@ -15,7 +15,10 @@ import { sparksSummaryOf } from '@/modules/sparks/service';
 import { neighborsNewsOf } from '@/modules/community/home';
 import { communityViewerOf } from '@/modules/community/request-viewer';
 import { shellNoticesFor } from '@/modules/markets/outage';
+import { searchWithAi } from '@/modules/home/actions';
+import { helperSetupReminder } from '@/modules/verification/reminder';
 import { dispatchNotifications, unreadNotificationCount } from '@/modules/notifications/service';
+import { aiWritingSetUp } from '@/integrations/ai';
 import { getViewer, toSignedInViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
@@ -53,7 +56,8 @@ async function ViewerShell({ children }: { children: React.ReactNode }) {
   // The chat button counts unread messages and an unread reply from support in the Help conversation (2026-11-22).
   // `neighborsNews`: the dot on the Neighbors item (plan 10.19).
   // `username` and `sparks`: the account menu's @username and score (2026-11-22); someone new gets a username here.
-  const [unreadMessages, unreadNotifications, notices, unreadHelp, neighborsNews, username, sparks] = await Promise.all([
+  // `helperSetup`: the verified-helper reminder beside the search bar, for someone in helper mode (2026-11-23).
+  const [unreadMessages, unreadNotifications, notices, unreadHelp, neighborsNews, username, sparks, helperSetup] = await Promise.all([
     unreadMessageCount(db, viewer.user.id),
     unreadNotificationCount(db, viewer.user.id),
     shellNoticesFor(db, viewer.user.id),
@@ -61,15 +65,16 @@ async function ViewerShell({ children }: { children: React.ReactNode }) {
     communityViewerOf(viewer.user).then((reader) => neighborsNewsOf(db, reader)),
     viewer.user.username ? Promise.resolve(viewer.user.username) : assignUsername(db, viewer.user.id),
     sparksSummaryOf(db, viewer.user.id),
+    viewer.user.mode === 'helper' ? helperSetupReminder(db, viewer.user.id, now) : Promise.resolve(null),
   ]);
   // The person's own market clock for every client component below (completion plan 8.1); server components get it
   // from the request (getViewer set it), and a page about another market names that market's.
   return (
     <TimeZoneProvider timeZone={viewer.user.timeZone}>
       <AppShell
-        viewer={{ ...toSignedInViewer(viewer.user), unreadMessages, unreadNotifications, ...(neighborsNews ? { neighborsNews } : {}), ...(username ? { username } : {}), sparks: sparks ?? { total: 0, bought: 0, level: 'newcomer' } }}
+        viewer={{ ...toSignedInViewer(viewer.user), unreadMessages, unreadNotifications, ...(neighborsNews ? { neighborsNews } : {}), ...(username ? { username } : {}), sparks: sparks ?? { total: 0, bought: 0, level: 'newcomer' }, ...(helperSetup ? { helperSetup } : {}) }}
         notices={notices}
-        handlers={{ onModeChange: setMode, onSignOut: signOut, onSwitchLanguage: switchLanguageAction, onCheckPushDevice: checkPushSubscriptionAction, onForgetPushDevice: removePushSubscriptionAction }}
+        handlers={{ onModeChange: setMode, onSignOut: signOut, onSwitchLanguage: switchLanguageAction, onCheckPushDevice: checkPushSubscriptionAction, onForgetPushDevice: removePushSubscriptionAction, ...(aiWritingSetUp() ? { onAskSearch: searchWithAi } : {}) }}
         // Messages: the chat button and window (2026-11-22). Server Actions only (unbound, called with the conversation's
         // or the case's id), never closures.
         chat={<ChatWindowController viewerId={viewer.user.id} unread={unreadMessages + unreadHelp} actions={{ send: sendFromWindowAction, react: reactFromWindowAction, typing: typingAction, upload: uploadMessagePhoto, saveReply: saveReplyAction, deleteReply: deleteReplyAction, report: reportUserAction, block: blockUserAction, handOff: handOffToSupportAction, reply: replyToHelpCaseAction, requestLive: requestLiveChatAction, typingInCase: typingInHelpCaseAction }} />}

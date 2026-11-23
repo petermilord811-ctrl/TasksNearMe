@@ -219,7 +219,11 @@
     "later": "Not now",
     "saved": "Saved. Near you starts from there now.",
     "failed": "Couldn't save that. Try again.",
-    "privacy": "Only the neighborhood is kept, never your address."
+    "privacy": "Only the neighborhood is kept, never your address.",
+    "zipToggle": "Somewhere else? Use your ZIP code",
+    "zip": "ZIP code",
+    "city": "City",
+    "zipError": "Enter a US ZIP code (five digits)."
   },
   "samples": {
     "hidden": "Members don't see the demo marketplace here. You can show it to yourself.",

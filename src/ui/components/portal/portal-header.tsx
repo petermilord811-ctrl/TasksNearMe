@@ -42,8 +42,9 @@ export function PortalSearch({ data, id, className }: { data: Pick<PortalPageDat
 
 /**
  * The portal's heading (completion plan 9.10; 2026-11-22, lighter): the place as a name (near your neighborhood, one
- * neighborhood, or the whole city), its real numbers (open tasks, posts this week, helpers who work there) on one quiet
- * line, and the search on wider screens (on phones it's in the Filters sheet).
+ * neighborhood, or the whole city) and its real numbers (open tasks, posts this week, helpers who work there) on one
+ * quiet line. The search is the app's search bar above it (2026-11-23), which searches Neighbors first here and keeps
+ * the filters; on phones it's also in the Filters sheet.
  */
 export function PortalHeader({ data }: { data: PortalPageData }) {
   const t = useTranslations('portal');
@@ -59,6 +60,5 @@ export function PortalHeader({ data }: { data: PortalPageData }) {
         <li className="inline-flex items-center gap-1"><Users aria-hidden="true" className="size-3.5 shrink-0" />{t('stats.helpers', { count: stats.helpers })}</li>
       </ul>
     </div>
-    <PortalSearch data={data} id="portal-search" className="hidden w-64 shrink-0 sm:block lg:w-72" />
   </header>;
 }

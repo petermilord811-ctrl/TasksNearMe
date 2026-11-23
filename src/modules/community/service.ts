@@ -1,4 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, ne, notInArray, or, sql, type SQL } from 'drizzle-orm';
+import { placeByZip } from '@/modules/verification/helper-place';
+import { normalizeZip, stateOfZip, tidyCityName } from '@/shared/us-zip';
 import {
   COMMUNITY_POST_KINDS,
   COMMUNITY_POST_PHOTOS_MAX,
@@ -1123,6 +1125,16 @@ export async function setCommunityArea(db: Db, viewer: CommunityViewer, input: C
   if (!parsed.success) return validationFailed(parsed.error);
   const facts = await viewerFacts(db, viewer.id);
   if (!facts) return { ok: false, code: 'not_allowed' };
+  // A ZIP and city anywhere in the US: the nearest neighborhood of an open market around it (their market moves there),
+  // or their city's area (helper-place.ts; owner, 2026-11-23).
+  if (parsed.data.zip) {
+    const zip = normalizeZip(parsed.data.zip);
+    const state = zip ? stateOfZip(zip) : null;
+    const placed = zip && state ? await placeByZip(db, facts.market.id, { zip, city: tidyCityName(parsed.data.city) ?? '', state }) : null;
+    if (!placed) return { ok: false, code: 'validation_failed', fieldErrors: { zip: ['not_supported'] } };
+    await db.update(users).set({ homeAreaId: placed.areaId, ...(placed.marketId !== facts.market.id ? { homeMarketId: placed.marketId } : {}), updatedAt: now }).where(eq(users.id, viewer.id));
+    return { ok: true, code: 'updated' };
+  }
   if (parsed.data.areaSlug === '') {
     await db.update(users).set({ homeAreaId: null, updatedAt: now }).where(eq(users.id, viewer.id));
     return { ok: true, code: 'updated' };

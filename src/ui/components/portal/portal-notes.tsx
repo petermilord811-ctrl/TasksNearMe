@@ -38,15 +38,47 @@ export function AnnouncementCard({ announcement, onDismiss }: { announcement: Co
 const NOT_NOW_KEY = 'tnm:neighbors:ask-area-later';
 
 /**
+ * Your place by ZIP code and city, for anyone outside the market's list of neighborhoods (owner, 2026-11-23: "remove
+ * 'your area is not in the list', anyone can post in their area"): the server places it in the nearest neighborhood or
+ * the city's area. Shown under the list's choice, one tap away.
+ */
+function ZipPlaceForm({ onSetArea, onDone }: { onSetArea: ActionHandler<CommunityAreaInput>; onDone?: () => void }) {
+  const t = useTranslations('portal.askArea');
+  const id = useId();
+  const [zip, setZip] = useState('');
+  const [city, setCity] = useState('');
+  const [error, setError] = useState(false);
+  const [pending, startTransition] = useTransition();
+  return <form className="grid gap-2 sm:grid-cols-[8rem_minmax(0,1fr)_auto] sm:items-end" onSubmit={(event) => {
+    event.preventDefault();
+    if (!/^\d{5}/.test(zip.trim()) || pending) { setError(true); return; }
+    startTransition(async () => {
+      const result = await onSetArea({ areaSlug: '', zip: zip.trim(), city: city.trim() }).catch(() => ({ ok: false as const, code: 'unknown' as const }));
+      if (result.ok) { toast.success(t('saved')); onDone?.(); } else { setError(true); toast.error(t('failed')); }
+    });
+  }}>
+    <label className="grid gap-1 text-[13px] font-medium" htmlFor={`${id}-zip`}>{t('zip')}
+      <input id={`${id}-zip`} value={zip} onChange={(event) => { setZip(event.target.value); setError(false); }} inputMode="numeric" autoComplete="postal-code" maxLength={10} aria-invalid={error} aria-describedby={error ? `${id}-zip-error` : undefined} className="h-10 rounded-xl border border-input bg-card px-3 text-base font-normal sm:text-sm" />
+    </label>
+    <label className="grid gap-1 text-[13px] font-medium" htmlFor={`${id}-city`}>{t('city')}
+      <input id={`${id}-city`} value={city} onChange={(event) => setCity(event.target.value)} autoComplete="address-level2" maxLength={60} className="h-10 rounded-xl border border-input bg-card px-3 text-base font-normal sm:text-sm" />
+    </label>
+    <Button type="submit" disabled={pending} aria-busy={pending}>{pending && <Spinner aria-hidden="true" />}{t('save')}</Button>
+    {error && <p id={`${id}-zip-error`} className="text-[13px] text-destructive sm:col-span-3">{t('zipError')}</p>}
+  </form>;
+}
+
+/**
  * "Which neighborhood are you in?" (plan 10.15): asked above the stream while we don't know it, so "Near you" means
  * something from a member's first visit. The neighborhood only, never an address. "Not now" waits until the next
- * visit (this tab's session).
+ * visit (this tab's session). Outside the list, a ZIP code and city place you (2026-11-23).
  */
 export function AskAreaCard({ areas, marketName, onSetArea }: { areas: PortalArea[]; marketName: string; onSetArea: ActionHandler<CommunityAreaInput> }) {
   const t = useTranslations('portal.askArea');
   const id = useId();
   const [slug, setSlug] = useState('');
   const [later, setLater] = useState(false);
+  const [byZip, setByZip] = useState(false);
   const [pending, startTransition] = useTransition();
   useEffect(() => {
     try {
@@ -80,6 +112,8 @@ export function AskAreaCard({ areas, marketName, onSetArea }: { areas: PortalAre
         <Button type="button" variant="ghost" onClick={() => { try { window.sessionStorage.setItem(NOT_NOW_KEY, '1'); } catch { /* no storage */ } setLater(true); }}>{t('later')}</Button>
       </div>
     </form>
+    {byZip ? <div className="mt-3 border-t border-border/70 pt-3"><ZipPlaceForm onSetArea={onSetArea} /></div>
+      : <button type="button" onClick={() => setByZip(true)} className="mt-2 min-h-9 text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('zipToggle')}</button>}
     <p className="mt-1.5 text-xs text-muted-foreground">{t('privacy')}</p>
   </section>;
 }
@@ -129,5 +163,6 @@ export function YourAreaControl({ areas, yourArea, onSetArea }: { areas: PortalA
       </select>
       <Button type="submit" size="sm" disabled={!slug || pending} aria-busy={pending} className="min-h-10">{pending && <Spinner aria-hidden="true" />}{t('save')}</Button>
     </form>}
+    {open && <ZipPlaceForm onSetArea={onSetArea} onDone={() => setOpen(false)} />}
   </div>;
 }

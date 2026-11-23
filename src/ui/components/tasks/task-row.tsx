@@ -54,6 +54,8 @@ export function TaskRow({ task, now, showArea = true, href = routes.publicTask(t
       </h3>
       <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-muted-foreground">
         <span className="font-display text-sm font-semibold text-foreground tabular-nums sm:hidden">{price}{priceNote && <span className="ml-1 font-sans text-[12px] font-normal text-muted-foreground">{priceNote}</span>}</span>
+        {/* Who's asking, as Neighbors shows it (2026-11-23: the board beside Neighbors). */}
+        <span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="grid size-5 shrink-0 place-items-center rounded-full bg-brand-soft text-[0.5625rem] font-bold text-primary">{task.poster.initials}</span>{task.poster.displayName}</span>
         <span className="inline-flex items-center gap-1"><Icon aria-hidden="true" className="size-3.5 shrink-0" />{task.taskType ? card(`types.${task.categorySlug}.${task.taskType}`) : card(`categories.${task.categorySlug}`)}</span>
         {showArea && <span className="inline-flex items-center gap-1">{task.location.kind === 'remote' ? <><Laptop aria-hidden="true" className="size-3.5 shrink-0" />{t('remote')}</> : <><MapPin aria-hidden="true" className="size-3.5 shrink-0" />{task.location.areaName}</>}</span>}
         <span className="inline-flex items-center gap-1 tabular-nums"><Clock aria-hidden="true" className="size-3.5 shrink-0" />{task.schedule.flexible ? t('anyTime') : formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd)}</span>

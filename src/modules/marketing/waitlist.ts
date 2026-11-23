@@ -1,4 +1,4 @@
-import { and, count, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, count, eq, isNotNull, sql } from 'drizzle-orm';
 import { DEFAULT_LOCALE, type AppLocale, type WaitlistCity, type WaitlistDemand, type WaitlistInterest } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
@@ -40,8 +40,11 @@ export async function joinWaitlist(
     .onConflictDoNothing({ target: waitlistEntries.email });
 }
 
-/** Helpers who gave a ZIP instead of a neighborhood (outside every open market) and whose account is active. */
-const waitingHelper = and(isNull(helperProfiles.areaId), isNotNull(helperProfiles.homeZip), eq(users.status, 'active'));
+/**
+ * Helpers outside every market's neighborhoods (they gave a ZIP and help from their city's area, helper-place.ts; the
+ * profile keeps the ZIP only then) whose account is active.
+ */
+const waitingHelper = and(isNotNull(helperProfiles.homeZip), eq(users.status, 'active'));
 
 /**
  * People waiting near a ZIP: waitlist entries and waiting helpers that share its ZIP3 prefix (about one metro

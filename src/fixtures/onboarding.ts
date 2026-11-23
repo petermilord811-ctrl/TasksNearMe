@@ -238,11 +238,10 @@ export const onboardingAreaElsewhere: HelperOnboardingPageData = {
   values: { ...priyaValues, area: { where: 'elsewhere', areaId: '', homeZip: '', homeCity: '', serviceRadiusMiles: 5, remoteOk: false } },
 };
 
-/** Priya lives in Dallas: her ZIP and city are saved, and she waits for Dallas to open. */
+/** Priya lives in Dallas: her ZIP and city are saved, and she helps from Dallas (owner, 2026-11-23: no city to wait for). */
 const dallasArea: HelperOnboardingPageData['values']['area'] = { where: 'elsewhere', areaId: '', homeZip: '75204', homeCity: 'Dallas', serviceRadiusMiles: 12, remoteOk: false };
-export const onboardingAreaAwaiting: HelperOnboardingPageData = {
+export const onboardingAreaDallas: HelperOnboardingPageData = {
   ...onboardingAreaStep,
-  awaitingCity: { city: 'Dallas', state: 'TX' },
   values: { ...priyaValues, area: dallasArea },
 };
 
@@ -250,7 +249,7 @@ export const onboardingAreaAwaiting: HelperOnboardingPageData = {
 export const onboardingPhoneStep: HelperOnboardingPageData = {
   ...base,
   step: 'phone',
-  progress: progress('phone', { locked: ['identity', 'address', 'payout', 'background', 'done'] }),
+  progress: progress('phone', { locked: ['done'] }),
   values: priyaValues,
   verification: { ...notStarted, background: cleaningNeedsCheck },
 };
@@ -266,7 +265,7 @@ export const onboardingIdentityStep: HelperOnboardingPageData = {
   ...base,
   welcomeReward: { ...welcomeOpenCard, checks: [{ check: 'phone', state: 'done' }, { check: 'identity', state: 'current' }, { check: 'background', state: 'locked' }] },
   step: 'identity',
-  progress: progress('identity', { locked: ['address', 'payout', 'background', 'done'] }),
+  progress: progress('identity', { locked: ['done'] }),
   values: priyaValues,
   verification: { ...notStarted, phone: phoneDone, background: cleaningNeedsCheck },
 };
@@ -333,7 +332,7 @@ export const onboardingIdentityUnder18 = withIdentity({ status: 'not_started', c
 /** Verified, but the ID's name differs from the account's: staff are checking it. */
 export const onboardingIdentityNameCheck: HelperOnboardingPageData = {
   ...onboardingIdentityStep,
-  progress: progress('identity', { locked: ['background', 'done'] }),
+  progress: progress('identity', { locked: ['done'] }),
   verification: { ...onboardingIdentityStep.verification, identity: { ...idVerified, nameCheck: 'in_review' } },
 };
 
@@ -343,7 +342,7 @@ export const onboardingIdentityRequested = withIdentity({ status: 'not_started',
 /** Verified: both stages done. */
 export const onboardingIdentityVerified: HelperOnboardingPageData = {
   ...onboardingIdentityStep,
-  progress: progress('identity', { locked: ['background', 'done'] }),
+  progress: progress('identity', { locked: ['done'] }),
   verification: { ...onboardingIdentityStep.verification, identity: idVerified },
 };
 
@@ -351,7 +350,7 @@ export const onboardingIdentityVerified: HelperOnboardingPageData = {
 export const onboardingAddressStep: HelperOnboardingPageData = {
   ...base,
   step: 'address',
-  progress: progress('address', { locked: ['background', 'done'] }),
+  progress: progress('address', { locked: ['done'] }),
   values: priyaValues,
   verification: { ...notStarted, phone: phoneDone, identity: idVerified, background: cleaningNeedsCheck },
 };
@@ -401,7 +400,7 @@ const readyForPayout: VerificationSummary = { ...notStarted, phone: phoneDone, i
 export const onboardingPayoutStep: HelperOnboardingPageData = {
   ...base,
   step: 'payout',
-  progress: progress('payout', { locked: ['background', 'done'] }),
+  progress: progress('payout', { locked: ['done'] }),
   values: priyaValues,
   verification: readyForPayout,
 };
@@ -480,32 +479,28 @@ export const onboardingDone: HelperOnboardingPageData = {
   },
 };
 
-/** Steps for a helper waiting for their city: everything before `pending` done, the home address `later`. */
-function awaitingProgress(pending: OnboardingStep[] = []): OnboardingProgress {
-  return {
-    steps: ONBOARDING_STEPS.map((step) => ({ step, state: step === 'address' ? 'later' : step === 'done' ? 'current' : pending.includes(step) ? 'todo' : 'done' })),
-    bookable: false,
-    bookableCategories: [],
-  };
-}
-
 /**
- * Done while waiting for Dallas (owner, 2026-11-14): the phone, ID, payouts and background check are done; the
- * home address waits until Dallas opens, and nothing is bookable yet.
+ * Helping open, not verified yet (owner, 2026-11-23): the profile and the verified home address let him send offers in
+ * yard work; the ID is with our team, and payouts and the background check (for in-home work) are still to do.
  */
-export const onboardingDoneAwaitingCity: HelperOnboardingPageData = {
+export const onboardingDoneHelping: HelperOnboardingPageData = {
   ...onboardingDone,
-  progress: awaitingProgress(),
-  awaitingCity: { city: 'Dallas', state: 'TX' },
-  values: { ...onboardingDone.values, area: dallasArea },
-  verification: { ...onboardingDone.verification, address: { status: 'not_started' } },
-};
-
-/** Waiting for Dallas with the background check still to do. */
-export const onboardingDoneAwaitingCityPending: HelperOnboardingPageData = {
-  ...onboardingDoneAwaitingCity,
-  progress: awaitingProgress(['background']),
-  verification: { ...onboardingDoneAwaitingCity.verification, background: { status: 'not_started', requiredFor: ['furniture-assembly', 'moving-help'], disclosureNeeded: true, renewalOpen: false, canStart: true } },
+  progress: {
+    steps: ONBOARDING_STEPS.map((step): { step: OnboardingStep; state: OnboardingStepState } => ({
+      step,
+      state: step === 'done' ? 'current' : step === 'identity' ? 'in_review' : step === 'payout' || step === 'background' ? 'todo' : 'done',
+    })),
+    bookable: true,
+    bookableCategories: ['yard-cleanup'],
+    verified: false,
+    checks: { done: 2, total: 5 },
+  },
+  verification: {
+    ...onboardingDone.verification,
+    identity: { status: 'not_started', consentNeeded: false, capture: { stage: 'in_review', canSubmit: false, prompt: 'look_up', documentType: 'drivers_license', submittedAt: '2026-11-22T15:00:00.000Z' } },
+    payout: { status: 'not_started' },
+    background: { status: 'not_started', requiredFor: ['furniture-assembly', 'moving-help'], disclosureNeeded: true, renewalOpen: false, canStart: true },
+  },
 };
 
 /** The profile photo Sam can add in the editor (previews). */

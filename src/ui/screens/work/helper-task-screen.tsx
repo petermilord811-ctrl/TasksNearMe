@@ -1,16 +1,16 @@
-import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, CalendarDays, Expand, Flag, Lock } from 'lucide-react';
+import { ArrowLeft, CalendarDays, CircleDollarSign, Flag, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { CATEGORY_DETAIL_FIELDS, routes, type ActionResult, type HelperTaskView, type HelperWorkHandlers, type ISODateTime } from '@/contracts';
+import { routes, type ActionResult, type HelperTaskView, type HelperWorkHandlers, type ISODateTime } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { GeneralArea } from '@/ui/components/location/general-area';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
 import { buttonVariants } from '@/ui/primitives/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/ui/primitives/dialog';
 import { RichText } from '@/ui/components/rich-text/rich-text';
+import { TaskPhotoCarousel } from '@/ui/components/tasks/task-photo-carousel';
+import { TaskSpec } from '@/ui/components/tasks/task-spec';
 import { HelperOffer } from './helper-offer';
 
 export interface HelperTaskScreenProps {
@@ -29,7 +29,6 @@ export function HelperTaskScreen({ data, handlers, now, initialRevising, initial
   const t = useTranslations('helperTask');
   const report = useTranslations('report');
   const card = useTranslations('taskCard');
-  const details = useTranslations('postTask');
   const blocked = useTranslations('findWork');
   const { task } = data;
   const schedule = task.schedule.flexible ? card('flexibleSchedule', { date: formatDate(task.schedule.windowStart) })
@@ -37,46 +36,43 @@ export function HelperTaskScreen({ data, handlers, now, initialRevising, initial
       ? card('scheduledWindow', { date: formatDate(task.schedule.windowStart), window: formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd) })
       : formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd);
 
-  return <div className="mx-auto min-w-0 max-w-reading space-y-8">
-    <header className="space-y-4">
+  const facts = [
+    { key: 'budget', Icon: CircleDollarSign, label: t('budget'), value: task.budget.type === 'fixed' ? formatMoney(task.budget.priceCents) : card('hourlyBudget', { rate: formatMoney(task.budget.rateCents), cap: formatHours(task.budget.hoursCap) }) },
+    { key: 'when', Icon: CalendarDays, label: t('when'), value: schedule },
+  ];
+  const answered = Object.values(data.details).some((value) => value !== undefined && value !== '');
+
+  // 2026-11-23 (the structured task page): the title and what decides an offer first, then the photos as a carousel, the
+  // task in the client's words, its answers as a spec sheet, the area and the client, then the offer.
+  return <div className="mx-auto min-w-0 max-w-reading space-y-6">
+    <header className="space-y-3">
       <Link href={routes.app.findWork()} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-primary hover:underline"><ArrowLeft aria-hidden="true" className="size-4" />{t('back')}</Link>
-      <p className="text-sm font-medium text-secondary-foreground">{card(`categories.${task.categorySlug}`)}</p>
-      <h1 className="break-words font-heading text-2xl/8 font-bold md:text-3xl/9.5">{task.title}</h1>
-      <p className="text-sm tabular-nums text-muted-foreground"><time dateTime={task.postedAt} title={formatDateTime(task.postedAt)}>{card('posted', { relative: formatRelative(task.postedAt, now) })}</time></p>
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="inline-flex items-center rounded-full px-3 py-1 font-medium" style={{ background: `color-mix(in oklab, var(--cat-${task.categorySlug}) 12%, transparent)` }}>{card(`categories.${task.categorySlug}`)}</span>
+        <time dateTime={task.postedAt} title={formatDateTime(task.postedAt)} className="text-muted-foreground tabular-nums">{card('posted', { relative: formatRelative(task.postedAt, now) })}</time>
+      </div>
+      <h1 className="font-display text-[1.75rem]/9 font-semibold tracking-[-0.02em] text-balance [overflow-wrap:anywhere] md:text-[2rem]/10">{task.title}</h1>
     </header>
-    {/* Pay and time first, then the area and its map: a phone reads the card in this order (journeys on a phone, ab
-        decided); wider screens show the map first. */}
-    <div className="flex flex-col gap-4 rounded-xl border bg-card p-card shadow-card">
-      <div className="sm:order-1 sm:border-t sm:pt-4"><p className="text-sm text-muted-foreground">{t('budget')}</p><p className="mt-1 text-xl font-semibold tabular-nums">{task.budget.type === 'fixed' ? formatMoney(task.budget.priceCents) : card('hourlyBudget', { rate: formatMoney(task.budget.rateCents), cap: formatHours(task.budget.hoursCap) })}</p></div>
-      <p className="flex items-start gap-2 tabular-nums"><CalendarDays aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" /><span>{schedule}</span></p>
-      <div className="border-t pt-4 sm:order-first sm:border-t-0 sm:pt-0"><GeneralArea location={task.location} showMap liveMap={liveMap} /></div>
-      {task.location.kind === 'local' && <p className="flex items-start gap-2 text-sm text-muted-foreground sm:order-2"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('privacy')}</p>}
-    </div>
-    <section aria-labelledby="helper-task-about" className="space-y-3"><h2 id="helper-task-about" className="font-heading text-xl font-semibold md:text-[22px]/7.5">{t('about')}</h2><RichText text={data.description} headingLevel={3} /></section>
-    <section aria-labelledby="helper-task-details" className="space-y-4 rounded-xl border bg-card p-card shadow-card">
-      <h2 id="helper-task-details" className="font-heading text-xl font-semibold md:text-[22px]/7.5">{t('details')}</h2>
-      <dl className="grid gap-4 sm:grid-cols-2">{CATEGORY_DETAIL_FIELDS[task.categorySlug].map((field) => {
-        const value = data.details[field.key];
-        if (value === undefined || value === '') return null;
-        const display = field.kind === 'choice' && typeof value === 'string' && field.options.includes(value)
-          ? details(`details.${task.categorySlug}.${field.key}.options.${value}`)
-          : typeof value === 'boolean' ? details(value ? 'review.yes' : 'review.no') : String(value);
-        return <div key={field.key} className="space-y-1"><dt className="text-sm text-muted-foreground">{details(`details.${task.categorySlug}.${field.key}.label`)}</dt><dd className="break-words">{display}</dd></div>;
-      })}</dl>
-    </section>
-    {data.photos.length > 0 && <section aria-labelledby="helper-task-photos" className="space-y-4">
-      <h2 id="helper-task-photos" className="font-heading text-xl font-semibold md:text-[22px]/7.5">{t('photos')}</h2>
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">{data.photos.map((photo, index) => {
-        const alt = photo.alt || t('photoAlt', { number: index + 1, total: data.photos.length, name: task.poster.displayName });
-        return <li key={photo.id}><Dialog>
-          <DialogTrigger asChild><button type="button" aria-label={t('openPhoto', { number: index + 1, total: data.photos.length })} className="relative min-h-11 w-full overflow-hidden rounded-lg border"><Image unoptimized src={photo.src} alt={alt} width={photo.width ?? 800} height={photo.height ?? 600} className="aspect-4/3 w-full object-cover" /><span className="absolute right-2 bottom-2 rounded-full bg-card p-2"><Expand aria-hidden="true" className="size-4" /></span></button></DialogTrigger>
-          <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-reading"><DialogHeader><DialogTitle>{t('photoTitle', { number: index + 1, total: data.photos.length })}</DialogTitle><DialogDescription>{alt}</DialogDescription></DialogHeader><Image unoptimized src={photo.src} alt={alt} width={photo.width ?? 800} height={photo.height ?? 600} className="max-h-[65dvh] w-full rounded-lg object-contain" /></DialogContent>
-        </Dialog></li>;
-      })}</ul>
+    <dl className="grid gap-2.5 sm:grid-cols-2">
+      {facts.map(({ key, Icon, label, value }) => <div key={key} className="relative min-w-0 rounded-2xl border border-foreground/[0.07] bg-card py-3.5 pr-3.5 pl-[3.75rem] shadow-card dark:border-white/[0.06]">
+        <dt className="text-sm text-muted-foreground"><span aria-hidden="true" className="absolute top-3.5 left-3.5 grid size-9 place-items-center rounded-xl bg-brand-soft text-primary"><Icon className="size-[1.125rem]" /></span>{label}</dt>
+        <dd className={key === 'budget' ? 'font-display text-xl font-semibold tabular-nums' : 'font-medium tabular-nums'}>{value}</dd>
+      </div>)}
+    </dl>
+    {data.photos.length > 0 && <TaskPhotoCarousel photos={data.photos} posterName={task.poster.displayName} />}
+    <section aria-labelledby="helper-task-about" className="space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]"><h2 id="helper-task-about" className="font-display text-lg font-semibold">{t('about')}</h2><RichText text={data.description} headingLevel={3} /></section>
+    {(answered || data.expenseAllowance) && <section aria-labelledby="helper-task-details" className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
+      <h2 id="helper-task-details" className="font-display text-lg font-semibold">{t('details')}</h2>
+      <TaskSpec category={task.categorySlug} answers={data.details} />
+      <div className="space-y-1 rounded-2xl bg-secondary/60 p-3.5 dark:bg-secondary/30"><p className="text-sm text-muted-foreground">{t('allowance')}</p>{data.expenseAllowance ? <><p className="font-semibold tabular-nums">{formatMoney(data.expenseAllowance.amountCents)}</p><p className="break-words text-sm">{data.expenseAllowance.description}</p></> : <p className="text-sm">{t('noAllowance')}</p>}</div>
     </section>}
-    <section aria-labelledby="helper-task-allowance" className="space-y-2"><h2 id="helper-task-allowance" className="font-heading text-xl font-semibold md:text-[22px]/7.5">{t('allowance')}</h2>{data.expenseAllowance ? <><p className="font-semibold tabular-nums">{formatMoney(data.expenseAllowance.amountCents)}</p><p className="break-words text-sm">{data.expenseAllowance.description}</p></> : <p className="text-sm text-muted-foreground">{t('noAllowance')}</p>}</section>
-    <section aria-labelledby="helper-task-client" className="space-y-4 rounded-xl border bg-card p-card shadow-card">
-      <h2 id="helper-task-client" className="font-heading text-xl font-semibold md:text-[22px]/7.5">{t('posterTitle')}</h2>
+    <section aria-labelledby="helper-task-where" className="space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
+      <h2 id="helper-task-where" className="font-display text-lg font-semibold">{t('where')}</h2>
+      <GeneralArea location={task.location} showMap liveMap={liveMap} />
+      {task.location.kind === 'local' && <p className="flex items-start gap-2 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('privacy')}</p>}
+    </section>
+    <section aria-labelledby="helper-task-client" className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
+      <h2 id="helper-task-client" className="font-display text-lg font-semibold">{t('posterTitle')}</h2>
       <div className="flex items-center gap-3"><InitialsAvatar initials={task.poster.initials} /><div><p className="font-semibold">{task.poster.displayName}</p><p className="text-sm tabular-nums text-muted-foreground">{t('memberSince', { date: formatMonthYear(task.poster.memberSince) })}</p></div></div>
       {task.poster.phoneVerified && <VerificationBadges badges={{ phoneVerified: task.poster.phoneVerified }} />}
     </section>

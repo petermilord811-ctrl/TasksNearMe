@@ -1,4 +1,7 @@
 import { withClientMessages } from '@/i18n/client-messages';
+import { publicTaskDetailsFor } from '@/modules/tasks/public-details';
+import { getViewer } from '@/platform/auth/viewer';
+import { db } from '@/platform/db/client';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
@@ -35,7 +38,8 @@ export async function generateMetadata({ params }: PageProps<'/[locale]/tasks/[t
 }
 
 /**
- * What anyone may see about a task: general area only, never the address or photos. A task nobody may see is a real
+ * What anyone may see about a task: general area only, never the address; the photos, the full description and the
+ * category's answers only for a helper who can offer and for the poster (2026-11-23). A task nobody may see is a real
  * 404 (outside Suspense); the screen is drawn for the visitor inside Suspense, so a sample task answers not found to
  * the public where samples are hidden (src/shared/sample-data.ts).
  */
@@ -66,10 +70,12 @@ async function PublicTaskPage({ params }: PageProps<'/[locale]/tasks/[taskSlug]'
 }
 
 async function PublicTask({ slug }: { slug: string }) {
-  const page = await getPublicTaskPageData(slug, await requestRows());
+  const [page, viewer] = await Promise.all([requestRows().then((rows) => getPublicTaskPageData(slug, rows)), getViewer()]);
   // A sample task for the public. The page is already streaming, so this answers 200 with noindex (Next adds it).
   if (!page) notFound();
-  return <MarketTime timeZone={page.data.market.timeZone}><PublicTaskScreen data={page.data} now={page.now} /></MarketTime>;
+  // The full description, answers and photos for a helper who can offer and for the poster (never cached with the page).
+  const extra = await publicTaskDetailsFor(db, page.data.task.id, viewer.kind === 'user' ? viewer.user.id : null);
+  return <MarketTime timeZone={page.data.market.timeZone}><PublicTaskScreen data={{ ...page.data, ...extra }} now={page.now} /></MarketTime>;
 }
 
 export default withClientMessages('[locale]/(public)/tasks/[taskSlug]/page.tsx', PublicTaskPage);

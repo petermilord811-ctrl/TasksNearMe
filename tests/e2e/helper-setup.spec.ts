@@ -117,8 +117,8 @@ test('a new helper sets up their profile in one flow and goes on to the checks',
   await page.getByRole('checkbox', { name: /I agree to the Helper agreement/ }).check();
   await page.getByRole('button', { name: 'Save and continue' }).click();
 
-  // On to the checks (the phone where texts go out, else the ID check); the profile shows as one done step.
-  await expect(page).toHaveURL(/\/app\/helper\/onboarding\/(phone|identity)$/, { timeout: 30_000 });
+  // On to the home address, which opens helping (owner, 2026-11-23); the profile shows as one done step.
+  await expect(page).toHaveURL(/\/app\/helper\/onboarding\/address$/, { timeout: 30_000 });
   await page.goto('/app/helper/profile');
   await expect(page.getByLabel('Headline')).toHaveValue(headline);
 });

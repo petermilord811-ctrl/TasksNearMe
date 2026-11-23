@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { users } from '@/modules/accounts/schema';
 import { waitlistEntries } from '@/modules/marketing/schema';
 import { citiesComingNext, joinWaitlist, waitlistDemand } from '@/modules/marketing/waitlist';
-import { markets } from '@/modules/markets/schema';
+import { areas, markets } from '@/modules/markets/schema';
 import { setMarketStatus } from '@/modules/markets/status';
 import { getDashboard } from '@/modules/home/service';
 import { getFindWorkPageData } from '@/modules/offers/helper';
@@ -17,8 +17,8 @@ import { createDb } from '@/platform/db/connect';
 import { outboxEvents } from '@/platform/outbox/schema';
 
 /**
- * National, cities open in turn (owner, 2026-11-14): a helper outside every open market gives a ZIP and city and
- * finishes their checks; the waitlist counts demand per ZIP3 and city; opening a market brings its waiting helpers
+ * National (owner, 2026-11-14), and since 2026-11-23 with no limit of location: a helper anywhere gives a ZIP and city and
+ * helps from their city; the waitlist counts demand per ZIP3 and city; opening a market brings the helpers around it
  * in. People and markets made for this file (copies of Jordan, a helper, and of Austin); seeded rows aren't changed.
  */
 
@@ -56,25 +56,32 @@ afterAll(async () => {
   await db.delete(auditLog).where(and(eq(auditLog.action, 'config.market_status'), inArray(auditLog.targetId, [DALLAS, NEW_YORK, ABROAD])));
   await db.delete(helperProfiles).where(inArray(helperProfiles.userId, people));
   await db.delete(users).where(inArray(users.id, people));
+  // The city areas helpers were placed in inside the test markets (Austin's city areas can be shared, so they stay).
+  await db.delete(areas).where(inArray(areas.marketId, [DALLAS, NEW_YORK, ABROAD]));
   await db.delete(markets).where(inArray(markets.id, [DALLAS, NEW_YORK, ABROAD]));
   await db.delete(waitlistEntries).where(like(waitlistEntries.email, 'nat-%@example.test'));
   await pool.end();
 });
 
-describe('a helper outside the cities we are open in', () => {
-  it('saves a ZIP and city, waits for the city, and can do every check but the home address', async () => {
+describe('a helper anywhere in the US (owner, 2026-11-23: "remove the limit of Location totally")', () => {
+  it('saves a ZIP and city and helps from their city: an area of their market, nobody waits, the home address is next', async () => {
     expect(await saveHelperArea(db, DALLAS_HELPER, { where: 'elsewhere', areaId: '', homeZip: '75204', homeCity: '  dallas ', ...area }, now)).toEqual({ ok: true, code: 'saved' });
-    const [profile] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, DALLAS_HELPER));
-    expect(profile).toMatchObject({ areaId: null, homeZip: '75204', homeCity: 'Dallas', homeState: 'TX', status: 'draft' });
+    const [profile] = await db.select({ areaId: helperProfiles.areaId, homeZip: helperProfiles.homeZip, homeCity: helperProfiles.homeCity, homeState: helperProfiles.homeState, status: helperProfiles.status, slug: areas.slug, marketId: areas.marketId })
+      .from(helperProfiles).innerJoin(areas, eq(areas.id, helperProfiles.areaId)).where(eq(helperProfiles.userId, DALLAS_HELPER));
+    // Dallas isn't open: their city's area in their own market (Austin), the ZIP kept for the background check's rules.
+    expect(profile).toMatchObject({ slug: 'city-dallas-tx', marketId: 'mkt_austin', homeZip: '75204', homeCity: 'Dallas', homeState: 'TX', status: 'draft' });
     const state = await loadOnboardingState(db, DALLAS_HELPER, now);
-    expect(state.awaitingCity).toEqual({ zip: '75204', city: 'Dallas', state: 'TX' });
-    expect(state.facts).toMatchObject({ areaSet: true, awaitingCity: true });
+    expect(state.facts.areaSet).toBe(true);
     const steps = Object.fromEntries(computeOnboarding(state.facts).progress.steps.map((step) => [step.step, step.state]));
-    expect(steps).toMatchObject({ area: 'done', address: 'later' });
+    expect(steps.area).toBe('done');
+    expect(steps.address).not.toBe('later');
   });
 
-  it('refuses a ZIP in their own market and one we can’t serve, and a neighborhood clears the ZIP', async () => {
-    expect(await saveHelperArea(db, DENVER_HELPER, { where: 'elsewhere', areaId: '', homeZip: '78723', homeCity: 'Austin', ...area }, now)).toMatchObject({ ok: false, fieldErrors: { homeZip: ['in_market'] } });
+  it('places a ZIP in their own market in its nearest neighborhood, refuses one it can’t place, and a neighborhood clears the ZIP', async () => {
+    expect(await saveHelperArea(db, DENVER_HELPER, { where: 'elsewhere', areaId: '', homeZip: '78723', homeCity: 'Austin', ...area }, now)).toEqual({ ok: true, code: 'saved' });
+    const [inAustin] = await db.select({ slug: areas.slug, homeZip: helperProfiles.homeZip }).from(helperProfiles).innerJoin(areas, eq(areas.id, helperProfiles.areaId)).where(eq(helperProfiles.userId, DENVER_HELPER));
+    expect(inAustin!.slug.startsWith('city-')).toBe(false);
+    expect(inAustin!.homeZip).toBeNull();
     expect(await saveHelperArea(db, DENVER_HELPER, { where: 'elsewhere', areaId: '', homeZip: '09001', homeCity: 'Base', ...area }, now)).toMatchObject({ ok: false, fieldErrors: { homeZip: ['not_supported'] } });
     expect(await saveHelperArea(db, DENVER_HELPER, { where: 'elsewhere', areaId: '', homeZip: '', homeCity: '', ...area }, now)).toMatchObject({ ok: false, code: 'validation_failed' });
 
@@ -82,7 +89,6 @@ describe('a helper outside the cities we are open in', () => {
     await saveHelperArea(db, DENVER_HELPER, { areaId: 'area_mueller', ...area }, now);
     const [profile] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, DENVER_HELPER));
     expect(profile).toMatchObject({ areaId: 'area_mueller', homeZip: null, homeCity: null, homeState: null });
-    expect((await loadOnboardingState(db, DENVER_HELPER, now)).awaitingCity).toBeNull();
     // Back to Denver for the waitlist counts below.
     await saveHelperArea(db, DENVER_HELPER, { where: 'elsewhere', areaId: '', homeZip: '80202', homeCity: 'Denver', ...area }, now);
   });
@@ -101,17 +107,15 @@ describe('the waitlist across the US', () => {
     expect(await waitlistDemand(db, '09001')).toBeNull();
   });
 
-  it('shows a waiting helper "not in their city yet" on find work, never another market’s tasks (plan 8.4)', async () => {
-    const waiting = await getFindWorkPageData(db, DENVER_HELPER, {}, now);
-    expect(waiting?.waitingFor).toEqual({ city: 'Denver', state: 'CO', zip: '80202', waiting: 2, helpersWaiting: 1 });
-    expect(waiting?.cards).toEqual([]);
-    expect(waiting?.totalCount).toBe(0);
-    // The signed-in home says the same, from the same data.
+  it('gives a helper in their city Find work around them, never the market’s tasks far away', async () => {
+    const denver = await getFindWorkPageData(db, DENVER_HELPER, {}, now);
+    expect(denver?.waitingFor).toBeUndefined();
+    // Austin's open tasks are about 770 miles away: only tasks posted around Denver (its city's area) are within reach.
+    expect(denver!.cards.every((card) => card.task.location.kind === 'remote' || card.task.location.areaName.endsWith(', CO'))).toBe(true);
     const home = await getDashboard(db, { id: DENVER_HELPER, firstName: 'Pat', mode: 'helper', timeZone: 'America/Denver' }, {}, now);
-    expect(home.waitingFor).toEqual(waiting?.waitingFor);
+    expect(home.waitingFor).toBeUndefined();
     // A helper with a neighborhood in an open market finds its tasks as before.
     const jordan = await getFindWorkPageData(db, 'usr_jordan', {}, now);
-    expect(jordan?.waitingFor).toBeUndefined();
     expect(jordan!.cards.length).toBeGreaterThan(0);
   });
 
@@ -144,18 +148,16 @@ describe('opening a market', () => {
     expect(await setMarketStatus(db, riley, DALLAS, { status: 'prelaunch', reason: 'Opening Dallas to helpers' }, now)).toEqual({ ok: true, code: 'updated' });
     const [moved] = await db.select({ market: users.homeMarketId }).from(users).where(eq(users.id, DALLAS_HELPER));
     expect(moved!.market).toBe(DALLAS);
-    // Their city is open: find work is theirs again (plan 8.4).
-    expect((await getFindWorkPageData(db, DALLAS_HELPER, {}, now))?.waitingFor).toBeUndefined();
+    // Where they help moved into Dallas: its nearest neighborhood to their ZIP, or their city's area in it.
+    const [placed] = await db.select({ marketId: areas.marketId }).from(helperProfiles).innerJoin(areas, eq(areas.id, helperProfiles.areaId)).where(eq(helperProfiles.userId, DALLAS_HELPER));
+    expect(placed!.marketId).toBe(DALLAS);
     const [stayed] = await db.select({ market: users.homeMarketId }).from(users).where(eq(users.id, DENVER_HELPER));
     expect(stayed!.market).toBe('mkt_austin');
 
     const events = await db.select().from(outboxEvents).where(and(eq(outboxEvents.aggregateId, DALLAS_HELPER), eq(outboxEvents.type, 'verification.updated')));
     expect(events.map((event) => event.payload)).toContainEqual({ userId: DALLAS_HELPER, track: 'helper', outcome: 'city_open', city: 'Dallas' });
 
-    // No longer waiting: the area step asks for a neighborhood in Dallas.
-    const state = await loadOnboardingState(db, DALLAS_HELPER, now);
-    expect(state.awaitingCity).toBeNull();
-    expect(state.facts.areaSet).toBe(false);
+    expect((await loadOnboardingState(db, DALLAS_HELPER, now)).facts.areaSet).toBe(true);
 
     const [audit] = await db.select().from(auditLog).where(and(eq(auditLog.action, 'config.market_status'), eq(auditLog.targetId, DALLAS)));
     expect(audit).toMatchObject({ actorId: 'usr_riley', reason: 'Opening Dallas to helpers', metadata: { from: 'paused', to: 'prelaunch', helpersBroughtIn: 1 } });

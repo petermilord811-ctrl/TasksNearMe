@@ -125,7 +125,7 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
             {suggestions.map((address, index) => <li key={address.placeId} id={`${id}-result-${index}`} role="option" aria-selected={active === index} className={cn('min-h-14 cursor-pointer rounded-lg p-3 text-sm', active === index && 'bg-accent')} onMouseDown={(event) => event.preventDefault()} onClick={() => chooseAddress(address)}>
               <span className="block break-words font-medium">{address.line1}</span>
               <span className="block break-words">{address.line2}</span>
-              {!address.inServiceArea && <span className="mt-1 block text-muted-foreground">{t('location.outsideOption')}</span>}
+              {address.areaName && <span className="mt-1 block text-muted-foreground">{t('location.publicPreviewOutside', { area: address.inServiceArea ? t('review.areaValue', { area: address.areaName, market: data.market.name }) : address.areaName })}</span>}
             </li>)}
           </ul>}
         </div>
@@ -141,7 +141,6 @@ export function LocationStep({ data, handlers, selectedAddress, onAddressChange,
       </div>
       {selectedAddress ? <div className="space-y-3 rounded-2xl bg-secondary/70 p-4 text-foreground dark:bg-secondary/40">
         {selectedAddress.areaName && <p className="flex items-start gap-2 font-medium"><MapPin aria-hidden="true" className="mt-0.5 size-5 shrink-0" />{selectedAddress.inServiceArea ? t('location.publicPreview', { area: selectedAddress.areaName, market: data.market.name }) : t('location.publicPreviewOutside', { area: selectedAddress.areaName })}</p>}
-        {!selectedAddress.inServiceArea && <p className="rounded-xl border border-warning/50 bg-warning/[0.06] p-3 text-sm">{t('location.outsideNotice', { city: selectedAddress.outside?.city ?? selectedAddress.areaName ?? '' })}</p>}
         {selectedAddress.areaName && selectedAddress.areaPoint && <GeneralAreaMap location={{ kind: 'local', marketSlug: data.market.slug, marketName: data.market.name, areaName: selectedAddress.areaName, ...(selectedAddress.inServiceArea ? {} : { outsideMarket: true as const }), publicPoint: selectedAddress.areaPoint, radiusMeters: 1609 }} live={liveMap} className="h-44" />}
         <p className="flex items-start gap-2 text-sm"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('location.privateHint')}</p>
       </div> : location.placeId && <p className="rounded-2xl bg-secondary/70 p-4 text-sm text-foreground dark:bg-secondary/40">{t('location.restoreHint')}</p>}

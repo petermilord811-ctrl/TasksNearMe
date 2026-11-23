@@ -1,9 +1,9 @@
 {
   "title": "Buscar trabajo",
   "description": "Encuentra una tarea que se ajuste a tus habilidades, tu zona y tu horario.",
-  "setupTitle": "Termina la configuración para enviar ofertas",
-  "setupBody": "Puedes ver las tareas mientras terminas tu perfil de ayudante.",
-  "finishSetup": "Terminar configuración",
+  "setupTitle": "Verifica tu domicilio para enviar ofertas",
+  "setupBody": "Ya puedes ver las tareas. Las ofertas se abren en cuanto se verifique tu domicilio; las demás verificaciones, cuando quieras, te hacen ayudante verificado.",
+  "finishSetup": "Verificar tu domicilio",
   "filters": "Filtrar tareas abiertas",
   "category": "Categoría",
   "allCategories": "Todas",
@@ -50,7 +50,7 @@
   "offerAgainLabel": "Enviar una nueva oferta: {title}",
   "noLiveOffers": "Sin ofertas vigentes",
   "blockedReasons": {
-    "not_bookable": "Termina la configuración para enviar ofertas",
+    "not_bookable": "Verifica tu domicilio para enviar ofertas",
     "needs_background_check": "Requiere verificación de antecedentes",
     "category_not_offered": "No ofreces este servicio",
     "outside_area": "Fuera de tu zona de servicio",
@@ -60,7 +60,7 @@
   "previews": {
     "group": "Buscar trabajo",
     "default": "Buscar trabajo · tareas cercanas",
-    "notBookable": "Buscar trabajo · terminar configuración",
+    "notBookable": "Buscar trabajo · domicilio aún sin verificar",
     "empty": "Buscar trabajo · sin coincidencias",
     "blockedReasons": "Buscar trabajo · motivos de bloqueo",
     "map": "Buscar trabajo · mapa (teléfonos)",

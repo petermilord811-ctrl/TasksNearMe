@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, ArrowUpDown, BellRing, Check, ChevronDown, LayoutGrid, List, Lock, Plus, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpDown, BellRing, Check, ChevronDown, ClipboardList, LayoutGrid, List, Lock, MessagesSquare, Plus, UsersRound, X } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { ISODateTime, TaskBoardPageData, TaskBoardQuery, TaskPublicView } from '@/contracts';
 import { routes } from '@/contracts/routes';
@@ -14,6 +14,8 @@ import { TaskTypeTiles } from '@/ui/components/search/task-type-tiles';
 import { PublicTaskCard } from '@/ui/components/tasks/public-task-card';
 import { LastVisitNote } from '@/ui/components/tasks/task-live';
 import { TaskRow } from '@/ui/components/tasks/task-row';
+import { BoardComposer } from '@/ui/components/tasks/board-composer';
+import { NeighborsCard } from '@/ui/screens/home/neighbors-card';
 import { buttonVariants } from '@/ui/primitives/button';
 import { cn } from '@/ui/lib/utils';
 
@@ -68,6 +70,36 @@ const panelHeadClass = 'flex flex-wrap items-baseline justify-between gap-x-3 ga
  * counts (or by day, or one list; or cards), a filter column where every option shows its count, the active
  * filters as removable chips, and the market's real numbers. Every view is a link with its own URL.
  */
+/**
+ * Neighbors beside the board (owner, 2026-11-23): a member sees the newest neighborhood posts near them (the home's
+ * "From your neighbors"); everyone else sees what Neighbors is for and the way in. Posts stay members-only.
+ */
+function BoardNeighbors({ data, now }: { data: TaskBoardPageData; now: ISODateTime }) {
+  const t = useTranslations('taskBoard.neighbors');
+  if (data.neighbors) return <NeighborsCard neighbors={data.neighbors} now={now} />;
+  const member = data.viewer === 'member';
+  return <section aria-labelledby="board-neighbors" className="relative isolate overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
+    <span aria-hidden="true" className="pointer-events-none absolute -right-10 -bottom-16 -z-10 size-48 rounded-full bg-[radial-gradient(closest-side,color-mix(in_oklab,var(--primary)_14%,transparent),transparent)]" />
+    <div className="flex items-start gap-3">
+      <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-brand-soft text-primary"><UsersRound className="size-5" /></span>
+      <div className="min-w-0 space-y-1.5">
+        <h2 id="board-neighbors" className="font-display text-lg leading-7 font-semibold">{t('title', { market: data.market.name })}</h2>
+        <p className="text-sm text-muted-foreground">{t(member ? 'bodyMember' : 'body')}</p>
+        <Link href={routes.app.community()} className="inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline">{t(member ? 'open' : 'join')}<ArrowRight aria-hidden="true" className="size-4" /></Link>
+      </div>
+    </div>
+  </section>;
+}
+
+/** Open tasks and Neighbors as two views of one neighborhood (2026-11-23): this page, and the posts on Neighbors. */
+function BoardTabs() {
+  const t = useTranslations('taskBoard.tabs');
+  return <nav aria-label={t('label')} className="inline-flex rounded-full border border-foreground/[0.08] bg-card/80 p-1 shadow-[0_1px_2px_rgb(23_18_14/0.04)] dark:border-white/[0.08]">
+    <span aria-current="page" className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-foreground px-3.5 text-[13px] font-semibold text-background"><ClipboardList aria-hidden="true" className="size-4" />{t('tasks')}</span>
+    <Link href={routes.app.community()} className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold text-foreground/80 transition-colors hover:bg-accent hover:text-foreground"><MessagesSquare aria-hidden="true" className="size-4" />{t('neighbors')}</Link>
+  </nav>;
+}
+
 export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   const t = useTranslations('taskBoard');
   const card = useTranslations('taskCard');
@@ -162,6 +194,7 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
           : <div className={panelClass}><Rows tasks={data.tasks} now={now} visitKey={visitKey} /></div>;
 
   return <div className="space-y-5">
+    {!data.heading && <BoardTabs />}
     <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
       <div className="min-w-0 max-w-3xl space-y-1.5">
         <h1 className={PAGE_TITLE_CLASS}>{data.heading?.title ?? t('title', { market: market.name })}</h1>
@@ -173,13 +206,15 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
           <LastVisitNote visitKey={visitKey} now={now} />
         </p>
       </div>
-      {hub
-        ? <div className="flex shrink-0 flex-wrap gap-2">
-            <Link href={routes.becomeAHelper()} className={buttonVariants()}>{t('becomeHelper')}</Link>
-            <Link href={routes.app.newTask({ category: query.category })} className={buttonVariants({ variant: 'outline' })}><Plus aria-hidden="true" className="size-4" />{t('postTask')}</Link>
-          </div>
-        : <Link href={routes.app.newTask({ category: query.category })} className={buttonVariants({ className: 'shrink-0' })}><Plus aria-hidden="true" className="size-4" />{t('postTask')}</Link>}
+      {/* The board's own posting is the composer under the heading (2026-11-23); a service's hub keeps its two buttons. */}
+      {hub && <div className="flex shrink-0 flex-wrap gap-2">
+        <Link href={routes.becomeAHelper()} className={buttonVariants()}>{t('becomeHelper')}</Link>
+        <Link href={routes.app.newTask({ category: query.category })} className={buttonVariants({ variant: 'outline' })}><Plus aria-hidden="true" className="size-4" />{t('postTask')}</Link>
+      </div>}
     </header>
+
+    {/* Post right here, as on Neighbors: a task from a line of words, or a neighborhood ask (2026-11-23). */}
+    {!hub && <BoardComposer market={market.name} {...(query.category ? { category: query.category } : {})} />}
 
     <div className={cn('grid items-start gap-5', !nothingYet && 'lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-6')}>
       {/* The rail grows with the page: a nested scroll box cut the neighborhoods off with no hint (audit M19). */}
@@ -223,6 +258,8 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
         </nav>}
 
         <div id="board-list" className="scroll-mt-28">{list}</div>
+
+        {query.page === 1 && !hub && <BoardNeighbors data={data} now={now} />}
 
         {data.pageCount > 1 && <nav aria-label={t('pagination')} className="flex flex-wrap items-center justify-center gap-3 pt-2">
           {query.page > 1 && <Link href={routes.taskBoard(market.slug, { ...query, page: query.page - 1 })} rel="prev" className={buttonVariants({ variant: 'outline' })}><ArrowLeft aria-hidden="true" className="size-4" />{t('previous')}</Link>}

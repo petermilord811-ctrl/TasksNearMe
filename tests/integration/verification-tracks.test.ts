@@ -8,7 +8,7 @@ import { createFakeGeocoder } from '@/integrations/geocoding';
 import { createLocalFileStorage } from '@/integrations/storage';
 import { recordAgreement } from '@/modules/accounts/agreements';
 import { users } from '@/modules/accounts/schema';
-import { categories } from '@/modules/markets/schema';
+import { areas, categories } from '@/modules/markets/schema';
 import { helperProfiles, helperServices } from '@/modules/profiles/schema';
 import { files } from '@/modules/tasks/schema';
 import { canViewFile } from '@/modules/files/access';
@@ -41,7 +41,7 @@ const taylor = { id: 'usr_taylor', roles: ['trust_safety' as const] };
 const alex = { id: 'usr_alex', roles: ['support_agent' as const] };
 const morgan = { id: 'usr_morgan', roles: ['support_lead' as const] };
 const riley = { id: 'usr_riley', roles: ['admin' as const] };
-const PEOPLE = ['usr_vt_address', 'usr_vt_identity', 'usr_vt_background', 'usr_vt_bg_where'];
+const PEOPLE = ['usr_vt_address', 'usr_vt_identity', 'usr_vt_background', 'usr_vt_bg_where', 'usr_vt_address_waco'];
 const param = (url: string, key: string) => new URL(url, 'http://localhost').searchParams.get(key) ?? '';
 const t0 = new Date('2026-11-20T16:00:00.000Z');
 const at = (days: number) => new Date(t0.getTime() + days * DAY);
@@ -95,10 +95,9 @@ describe('proof of address', () => {
   const id = 'usr_vt_address';
   const deps = { db, storage, geocoder, cipher };
 
-  it('opens after the ID check and checks every field and the file', async () => {
+  it('opens with the basics, before the ID check (any order, 2026-11-23), and checks every field and the file', async () => {
     await helper(id);
     const valid = { placeId: 'plc_mueller_1234', documentType: 'utility_bill', declaration: 'true' };
-    expect(await submitAddressProof(deps, id, proofForm(valid, await photoFile()), at(0))).toEqual({ ok: false, code: 'not_allowed' });
     await db.insert(identityVerifications).values({ id: `idv_${id}`, userId: id, provider: 'dev', providerSessionId: `vs_${id}`, status: 'verified', isAdult: true, nameMatches: true, verifiedAt: at(-1), createdAt: at(-1), updatedAt: at(-1) });
 
     expect(await submitAddressProof(deps, id, proofForm({ placeId: '', documentType: 'selfie', declaration: 'false' }), at(0))).toEqual({
@@ -106,8 +105,6 @@ describe('proof of address', () => {
       code: 'validation_failed',
       fieldErrors: { file: ['required'], placeId: ['required'], documentType: ['required'], declaration: ['must_accept'] },
     });
-    // Outside the area we verify (Waco is far from Austin).
-    expect(await submitAddressProof(deps, id, proofForm({ ...valid, placeId: 'plc_waco_100' }, await photoFile()), at(0))).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { placeId: ['not_supported'] } });
     // A forged place id.
     expect(await submitAddressProof(deps, id, proofForm({ ...valid, placeId: 'plc_nowhere' }, await photoFile()), at(0))).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { placeId: ['invalid'] } });
     // A "PDF" that isn't one.
@@ -115,6 +112,14 @@ describe('proof of address', () => {
     expect(await submitAddressProof(deps, id, proofForm(valid, fake), at(0))).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { file: ['invalid'] } });
     const text = new File([new TextEncoder().encode('hello')], 'bill.txt', { type: 'text/plain' });
     expect(await submitAddressProof(deps, id, proofForm(valid, text), at(0))).toEqual({ ok: false, code: 'unsupported_type' });
+  });
+
+  it('verifies a home anywhere in the US: one in Waco belongs to its city\'s area (owner, 2026-11-23)', async () => {
+    const waco = 'usr_vt_address_waco';
+    await helper(waco);
+    expect(await submitAddressProof(deps, waco, proofForm({ placeId: 'plc_waco_100', documentType: 'utility_bill', declaration: 'true' }, await photoFile()), at(0))).toEqual({ ok: true, code: 'submitted' });
+    const [row] = await db.select({ slug: areas.slug }).from(addressVerifications).innerJoin(areas, eq(areas.id, addressVerifications.areaId)).where(eq(addressVerifications.userId, waco));
+    expect(row!.slug).toBe('city-waco-tx');
   });
 
   it('stores the address encrypted and the photo without its metadata, then waits for review', async () => {

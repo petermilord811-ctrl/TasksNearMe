@@ -65,16 +65,14 @@
       "where": "Where do you live?",
       "inMarket": "In {market}",
       "inMarketHint": "Choose your neighborhood.",
-      "elsewhere": "Somewhere else in the US",
-      "elsewhereHint": "Get verified now and start when we open in your city.",
+      "elsewhere": "Anywhere else in the US",
+      "elsewhereHint": "Your ZIP code and city. You help from there right away.",
       "zip": "ZIP code",
       "zipHint": "Five digits.",
       "city": "City",
       "cityHint": "Where you live, like Dallas or Tulsa.",
-      "zipInMarket": "That ZIP is in {market}. Choose “In {market}” and pick your neighborhood.",
       "zipNotSupported": "Enter a US ZIP code.",
-      "elsewhereNote": "We're opening city by city. You can finish your verification checks now. When we open in your city, you'll choose your neighborhood and add your home address.",
-      "waiting": "You're on the list for {city}, {state}. We'll tell you the moment we open there."
+      "elsewhereNote": "You help from your city: clients see its name, never your address. Verify your home address next and you can start helping."
     },
     "tools": {
       "title": "Tools",
@@ -87,7 +85,7 @@
   },
   "screen": {
     "title": "Set up your helper profile",
-    "description": "Tell clients how you can help, then finish your checks.",
+    "description": "Tell clients how you can help and verify your home address to start helping. The other checks make you a verified helper; do them whenever you like.",
     "progressLabel": "Helper setup progress",
     "steps": {
       "profile": "Profile",
@@ -172,21 +170,15 @@
       "agreement": "Profile: helper agreement",
       "backgroundSuspended": "Background check: Checkr needs more information",
       "areaElsewhere": "Area: somewhere else in the US",
-      "areaAwaiting": "Area: waiting for Dallas",
-      "doneAwaitingCity": "Done: verified, waiting for Dallas",
-      "doneAwaitingCityPending": "Done: waiting for Dallas, a check left"
+      "areaAwaiting": "Area: helping from Dallas (a ZIP and city anywhere in the US)",
+      "doneAwaitingCity": "Done: helping in yard work, not a verified helper yet"
     },
     "stepOf": "Step {number} of {total}: {step}",
     "allSteps": "All steps",
     "fewerSteps": "Fewer steps",
-    "awaitingCity": {
-      "title": "We're not in {city}, {state} yet",
-      "verifiedTitle": "You're verified. We'll tell you the moment {city} opens.",
-      "body": "Your checks count wherever you live. When TasksNearMe opens in {city}, you'll choose your neighborhood, add your home address and start taking tasks. Until then, get your profile ready.",
-      "profile": "Get your profile ready",
-      "changeCity": "Change your city"
-    },
-    "giftStep": "Counts toward your welcome gift card"
+    "giftStep": "Counts toward your welcome gift card",
+    "doneVerified": "You're a verified helper",
+    "remainingVerified": "Finish these whenever you like to become a verified helper"
   },
   "setup": {
     "title": "Your helper profile",

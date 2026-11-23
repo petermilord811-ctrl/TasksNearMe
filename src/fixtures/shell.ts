@@ -39,6 +39,20 @@ export const priyaShell: SignedInViewer = {
   helperReady: false,
   unreadMessages: 0,
   unreadNotifications: 0,
+  // Her profile is saved and her ID photos are with our team; the home address (which opens helping) is next.
+  helperSetup: {
+    canHelp: false,
+    checks: [
+      { step: 'address', state: 'todo' },
+      { step: 'phone', state: 'done' },
+      { step: 'identity', state: 'in_review' },
+      { step: 'payout', state: 'todo' },
+      { step: 'background', state: 'todo' },
+    ],
+    done: 1,
+    total: 5,
+    next: 'address',
+  },
 };
 
 export const alexStaff: StaffViewer = {
