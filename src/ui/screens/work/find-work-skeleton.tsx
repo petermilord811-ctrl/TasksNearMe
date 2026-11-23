@@ -1,6 +1,7 @@
 import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/ui/primitives/skeleton';
 import { cn } from '@/ui/lib/utils';
+import { SkeletonReveal } from '@/ui/shells/page-transition';
 
 const TOOLBAR_CHIPS = ['w-24', 'w-20', 'w-28', 'w-24'];
 const CATEGORY_CHIPS = ['w-16', 'w-36', 'w-28', 'w-24', 'w-28', 'w-32'];
@@ -15,6 +16,7 @@ export function FindWorkSkeleton() {
   return (
     <div role="status" aria-busy="true" className="mx-auto w-full max-w-content space-y-4">
       <span className="sr-only">{t('loading')}</span>
+      <SkeletonReveal />
       <div aria-hidden="true" className="space-y-4">
         <div className="space-y-2.5">
           <Skeleton className="h-8 w-40" />

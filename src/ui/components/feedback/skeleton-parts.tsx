@@ -2,6 +2,7 @@ import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import { cn } from '@/ui/lib/utils';
 import { Skeleton } from '@/ui/primitives/skeleton';
+import { SkeletonReveal } from '@/ui/shells/page-transition';
 
 /**
  * Parts for loading skeletons in a page's own shape (plan 9.4b). Each has the size and place of the real part it
@@ -16,6 +17,7 @@ export function SkeletonPage({ children, className }: { children: ReactNode; cla
   return (
     <div role="status" aria-busy="true" className="w-full">
       <span className="sr-only">{t('loading')}</span>
+      <SkeletonReveal />
       <div aria-hidden="true" className={className}>{children}</div>
     </div>
   );

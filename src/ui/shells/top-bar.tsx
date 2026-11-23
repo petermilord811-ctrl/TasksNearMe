@@ -65,7 +65,7 @@ export function TopBar({ logo, nav, actions, menu }: { logo: ReactNode; nav: Rea
 
   return (
     // The page's banner landmark (one per page: the app shell's AppBar is the other shell's).
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-navigation px-3 pt-3 sm:px-5 sm:pt-4">
+    <header data-vt-anchor="site-bar" className="pointer-events-none fixed inset-x-0 top-0 z-navigation px-3 pt-3 sm:px-5 sm:pt-4">
       <div
         ref={ref}
         onFocusCapture={() => showRef.current(true)}

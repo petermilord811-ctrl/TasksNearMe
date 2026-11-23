@@ -62,6 +62,7 @@ export function AppBar({ children, className }: { children: ReactNode; className
   return (
     <header
       ref={ref}
+      data-vt-anchor="app-bar"
       data-scrolled={scrolled ? '' : undefined}
       data-away={away ? '' : undefined}
       className={cn(

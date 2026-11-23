@@ -1,5 +1,6 @@
 import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/ui/primitives/skeleton';
+import { SkeletonReveal } from '@/ui/shells/page-transition';
 
 const card = 'space-y-3 rounded-[1.375rem] border border-border bg-card p-4 shadow-card sm:p-5';
 
@@ -12,6 +13,7 @@ export function PortalSkeleton() {
   const t = useTranslations('portal');
   return <div role="status" aria-busy="true" className="w-full space-y-5">
     <span className="sr-only">{t('loading')}</span>
+    <SkeletonReveal />
     <div aria-hidden="true" className="space-y-5 max-sm:space-y-4">
       <div className="-mx-gutter flex items-center gap-2 border-b border-border/80 px-gutter py-2 sm:hidden"><Skeleton className="h-7 flex-1 rounded-lg" /><Skeleton className="h-10 w-20 rounded-full" /><Skeleton className="size-10 rounded-full" /></div>
       <div className="flex flex-col gap-4 max-sm:hidden sm:flex-row sm:items-end sm:justify-between">

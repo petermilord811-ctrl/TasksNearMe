@@ -1,12 +1,14 @@
 import { useTranslations } from 'next-intl';
 import { Skeleton } from '@/ui/primitives/skeleton';
 import { cn } from '@/ui/lib/utils';
+import { SkeletonReveal } from '@/ui/shells/page-transition';
 
 export function PageSkeleton({ variant }: { variant: 'list' | 'detail' | 'form' | 'cards' }) {
   const t = useTranslations('feedback');
   return (
     <div role="status" aria-busy="true" className="w-full space-y-6">
       <span className="sr-only">{t('loading')}</span>
+      <SkeletonReveal />
       <div aria-hidden="true" className="space-y-6">
         <div className="space-y-3"><Skeleton className="h-8 w-3/5" /><Skeleton className="h-4 w-4/5" /></div>
         <div className={cn('grid gap-4', variant === 'cards' && 'sm:grid-cols-2')}>

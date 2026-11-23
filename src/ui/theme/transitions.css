@@ -1,36 +1,189 @@
-/* Page switches (plan 9.5). Each route group's template (src/app/[locale]/(public)/template.tsx and the app's) wraps
-   its page in React's <ViewTransition enter="page-enter" exit="page-exit" default="none">, so only navigations
-   animate, never updates inside a page (searches, filters, saving) or content streaming in. The page that leaves
-   fades out quickly and the new one fades in as it settles, in under 200 ms. Everything outside the page (the top
-   bar, the tab dock, the footer) swaps at once without moving, so the bars stay put. Browsers without View
-   Transitions switch instantly; so does reduced motion (globals.css turns every view transition off there too).
-   The landing's category cards keep their own icon morph (globals.css, `.category-morph`). */
+/* Page switches (plan 9.5; reworked 2026-11-23, owner: "skeletons appeared on top of the action bar … switching page
+   animation is not good"). Each route group's template, and each section's with pages under it (a booking and its
+   review, Neighbors and a post), wraps its page in PageTransition (src/ui/shells/page-transition.tsx): React's
+   <ViewTransition enter="page-enter" exit="page-exit">, and "page-reveal" while the new page's skeleton shows. So only
+   switches and a skeleton's content arriving animate, never other updates inside a page (searches, filters, saving).
 
-/* Clicks during a switch go to the new page, not the overlay. */
+   - One page at a time: the page that leaves steps out fast (120 ms) and the new one comes in as it goes (from 70 ms),
+     so the two never show half-faded over each other.
+   - From where it lives: a deeper page (a booking from Bookings) comes in from the right while the old one drifts
+     left, going back up the other way, and the same level (the tabs) rises a few pixels. PageTransition marks
+     <html data-page-motion> as the page arrives; only the pseudo-element rules below read it.
+   - A skeleton hands over to its content: it steps out and the content fades up into its place.
+   - The bars stay put, above all of it: the top bar, the tab dock, the search row, the chat button and window, and the
+     toasts are captured apart from the page and drawn over it, so a page never covers them on its way in or out. The
+     dock slides away when a full-screen page (a booking, posting) opens and rises back with the tabs; the chat button
+     glides to its new place.
+   Browsers without View Transitions switch instantly, and so does reduced motion (globals.css turns every view
+   transition off). Back and Forward in the browser switch at once too: Next shows the page it kept without a View
+   Transition, and phones animate their own back gesture. The landing's category cards keep their own icon morph
+   (globals.css, `.category-morph`); the theme switch reveals the whole page itself (globals.css), bars included. */
+
+/* Taps during a switch go to the page underneath, not the overlay. */
 ::view-transition {
   pointer-events: none;
 }
 
-::view-transition-old(.page-exit) {
-  animation: page-exit 110ms var(--ease-out) both;
+/* ---- The bars ------------------------------------------------------------------------------------------------------
+   Named only while a transition runs (a name makes its element a stacking context, which would trap the search's
+   suggestions under a page's sticky bars) and never in the theme switch. The wide screens' chat launcher and window are
+   display: none on phones, the phone's launcher and the dock on wide screens: never two of a name at once. */
+html:active-view-transition:not([data-theme-switch]) :is([data-vt-anchor], [data-mobile-bottom-nav], [data-chat-launcher], [data-chat-window], [data-chat-docked-row], [data-sonner-toaster]) {
+  view-transition-class: shell-bar;
 }
-::view-transition-new(.page-enter) {
-  animation: page-enter 190ms var(--ease-out) both;
+html:active-view-transition:not([data-theme-switch]) [data-vt-anchor="app-bar"] { view-transition-name: app-bar; }
+html:active-view-transition:not([data-theme-switch]) [data-vt-anchor="site-bar"] { view-transition-name: site-bar; }
+html:active-view-transition:not([data-theme-switch]) [data-vt-anchor="app-top-row"] { view-transition-name: app-top-row; }
+html:active-view-transition:not([data-theme-switch]) [data-mobile-bottom-nav] { view-transition-name: app-dock; }
+html:active-view-transition:not([data-theme-switch]) [data-chat-launcher="phone"] { view-transition-name: chat-launcher; }
+html:active-view-transition:not([data-theme-switch]) [data-chat-launcher="window"] { view-transition-name: chat-launcher-wide; }
+html:active-view-transition:not([data-theme-switch]) [data-chat-window] { view-transition-name: chat-window; }
+html:active-view-transition:not([data-theme-switch]) [data-chat-docked-row] { view-transition-name: chat-docked; }
+html:active-view-transition:not([data-theme-switch]) [data-sonner-toaster] { view-transition-name: toasts; }
+
+/* Above the pages, in the order they stack on the page. A bar shows as it is on the new page at once (no cross-fade
+   of its contents; the rules below give the ones that come and go their own way in and out) and glides if it moved:
+   the top bar back into view, the chat button down to where the dock was. */
+::view-transition-group(.shell-bar) {
+  animation-duration: 320ms;
+  animation-timing-function: var(--ease-out);
 }
-/* Each page fades where it is instead of morphing into the other's size and place. */
-::view-transition-group(.page-exit),
-::view-transition-group(.page-enter) {
+::view-transition-old(app-bar),
+::view-transition-old(site-bar),
+::view-transition-old(app-top-row),
+::view-transition-old(app-dock),
+::view-transition-old(chat-launcher),
+::view-transition-old(chat-launcher-wide),
+::view-transition-old(chat-window),
+::view-transition-old(chat-docked),
+::view-transition-old(toasts) {
+  display: none;
+}
+::view-transition-new(app-bar),
+::view-transition-new(site-bar),
+::view-transition-new(app-top-row),
+::view-transition-new(app-dock),
+::view-transition-new(chat-launcher),
+::view-transition-new(chat-launcher-wide),
+::view-transition-new(chat-window),
+::view-transition-new(chat-docked),
+::view-transition-new(toasts) {
   animation: none;
 }
-@keyframes page-exit {
-  to { opacity: 0; }
+/* The browser leaves a bar's live element out of hit testing while its picture shows: a tap there would reach the page
+   under it (a card under the dock). Its picture takes the tap instead, and PageTransition hands it to the bar's
+   control under the finger, so a quick second tap on the dock still switches. */
+::view-transition-group(app-bar),
+::view-transition-group(site-bar),
+::view-transition-group(app-top-row),
+::view-transition-group(app-dock),
+::view-transition-group(chat-launcher),
+::view-transition-group(chat-launcher-wide),
+::view-transition-group(chat-window),
+::view-transition-group(chat-docked),
+::view-transition-group(toasts) {
+  pointer-events: auto;
 }
-@keyframes page-enter {
-  from { opacity: 0; translate: 0 6px; }
+::view-transition-group(app-top-row) { z-index: 30; }
+::view-transition-group(app-dock) { z-index: 40; }
+::view-transition-group(chat-launcher),
+::view-transition-group(chat-launcher-wide),
+::view-transition-group(chat-window),
+::view-transition-group(chat-docked) { z-index: 45; }
+::view-transition-group(app-bar),
+::view-transition-group(site-bar) { z-index: 50; }
+::view-transition-group(toasts) { z-index: 60; }
+
+/* The dock leaves for a full-screen page by sliding down out of sight, and rises back with the tabs. */
+::view-transition-old(app-dock):only-child {
+  display: block;
+  animation: dock-away 200ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+::view-transition-new(app-dock):only-child {
+  animation: dock-back 320ms var(--ease-out) 60ms both;
+}
+@keyframes dock-away {
+  to { translate: 0 calc(100% + 0.75rem); opacity: 0; }
+}
+@keyframes dock-back {
+  from { translate: 0 calc(100% + 0.75rem); opacity: 0; }
 }
 
-/* The rest of the document swaps at once (no cross-fade of the bars, no ghost of the old footer). Not during the
-   theme switch, which animates the whole page itself (globals.css). */
+/* The chat button where it comes and goes (the Messages pages leave it out on phones). */
+::view-transition-old(chat-launcher):only-child,
+::view-transition-old(chat-launcher-wide):only-child {
+  display: block;
+  animation: launcher-away 160ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+::view-transition-new(chat-launcher):only-child,
+::view-transition-new(chat-launcher-wide):only-child {
+  animation: launcher-back 260ms var(--ease-out) 80ms both;
+}
+@keyframes launcher-away {
+  to { opacity: 0; scale: 0.6; }
+}
+@keyframes launcher-back {
+  from { opacity: 0; scale: 0.6; }
+}
+
+/* The search row scrolls with the page: it never glides from where the old page had scrolled it, and it comes and goes
+   with the page (not on Home, nor on full-screen pages). */
+::view-transition-group(app-top-row) {
+  animation: none;
+}
+::view-transition-old(app-top-row):only-child {
+  display: block;
+  animation: page-fade-out 120ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+::view-transition-new(app-top-row):only-child {
+  animation: page-fade-in 230ms var(--ease-out) 70ms both;
+}
+
+/* ---- The pages -----------------------------------------------------------------------------------------------------
+   Each page stays in its own place (no morph between the two pages' boxes), under the bars. */
+::view-transition-group(.page-exit),
+::view-transition-group(.page-enter),
+::view-transition-group(.page-reveal) {
+  animation: none;
+}
+::view-transition-old(.page-exit) {
+  animation: page-fade-out 120ms cubic-bezier(0.4, 0, 1, 1) both, page-drift-out 120ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+::view-transition-new(.page-enter) {
+  animation: page-fade-in 230ms var(--ease-out) 70ms both, page-drift-in 300ms var(--ease-out) both;
+}
+/* Deeper: from the right, the old page drifting left; back up: the other way. The same level rises into place. */
+html[data-page-motion="forward"]::view-transition-old(.page-exit) { --page-out-x: -28px; }
+html[data-page-motion="forward"]::view-transition-new(.page-enter) { --page-in-x: 40px; --page-in-y: 0px; }
+html[data-page-motion="back"]::view-transition-old(.page-exit) { --page-out-x: 28px; }
+html[data-page-motion="back"]::view-transition-new(.page-enter) { --page-in-x: -40px; --page-in-y: 0px; }
+
+/* A skeleton hands over to its content: it steps out, and the content fades up into the places it drew. */
+::view-transition-old(.page-reveal) {
+  animation: page-fade-out 120ms cubic-bezier(0.4, 0, 1, 1) both;
+  mix-blend-mode: normal;
+}
+::view-transition-new(.page-reveal) {
+  --page-in-y: 6px;
+  animation: page-fade-in 200ms var(--ease-out) 40ms both, page-drift-in 260ms var(--ease-out) both;
+  mix-blend-mode: normal;
+}
+
+@keyframes page-fade-out {
+  to { opacity: 0; }
+}
+@keyframes page-fade-in {
+  from { opacity: 0; }
+}
+@keyframes page-drift-out {
+  to { translate: var(--page-out-x, 0px) 0; }
+}
+@keyframes page-drift-in {
+  from { translate: var(--page-in-x, 0px) var(--page-in-y, 10px); }
+}
+
+/* Everything else (the paper, the rail, the footer) swaps at once: no cross-fade, no ghost of the old footer. Not
+   during the theme switch, which animates the whole page itself (globals.css). */
 html:not([data-theme-switch])::view-transition-old(root) {
   display: none;
 }
@@ -63,7 +216,12 @@ html:not([data-theme-switch])::view-transition-new(root) {
 
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(.page-exit),
-  ::view-transition-new(.page-enter) {
+  ::view-transition-new(.page-enter),
+  ::view-transition-old(.page-reveal),
+  ::view-transition-new(.page-reveal),
+  ::view-transition-old(.shell-bar),
+  ::view-transition-new(.shell-bar),
+  ::view-transition-group(.shell-bar) {
     animation: none;
   }
   /* Still there, just not moving. */
