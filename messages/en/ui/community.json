@@ -10,13 +10,15 @@
     "recommendation": "Ask for a recommendation",
     "question": "Ask a question",
     "tip": "Share a tip",
-    "thanks": "Thank a helper"
+    "thanks": "Thank a helper",
+    "general": "Share a post"
   },
   "kindBadge": {
     "recommendation": "Recommendation",
     "question": "Question",
     "tip": "Tip",
-    "thanks": "Thanks"
+    "thanks": "Thanks",
+    "general": "Post"
   },
   "scope": {
     "label": "Where",
@@ -105,7 +107,8 @@
       "recommendation": "Say what you need: “Who do you recommend for assembling a crib?”",
       "question": "Ask it in one line: “How long does a flat-pack wardrobe take?”",
       "tip": "Sum it up: “Rent the dolly when you book the truck”",
-      "thanks": "Say who and what for: “Thank you, Sam, for the wardrobe!”"
+      "thanks": "Say who and what for: “Thank you, Sam, for the wardrobe!”",
+      "general": "What it's about, in a few words"
     },
     "body": "Details",
     "bodyHint": "What would help someone answer: the job, the size, the timing. No addresses or phone numbers.",
@@ -121,7 +124,10 @@
     "submit": "Post",
     "submitting": "Posting…",
     "success": "Posted",
-    "bodyOptional": "Details (optional)"
+    "bodyOptional": "Details (optional)",
+    "generalLabel": "What's on your mind?",
+    "generalPlaceholder": "Share news, a photo or a question with your neighbors",
+    "generalHint": "No addresses or phone numbers."
   },
   "pagination": "Community pages",
   "previous": "Previous",
@@ -164,7 +170,10 @@
     "postReplyBlocked": "Post: can’t reply yet (phone first)",
     "newPost": "Community · new post",
     "newThanks": "Community · thank a helper",
-    "newThanksBooking": "Community · thanks from a finished booking"
+    "newThanksBooking": "Community · thanks from a finished booking",
+    "postGeneral": "A general post (words and a photo, no title)",
+    "newDialog": "New post",
+    "newDialogRecommendation": "New post: a recommendation"
   },
   "sinceVisit": {
     "badge": "New",
@@ -280,7 +289,8 @@
     "save": "Save",
     "saving": "Saving…",
     "saved": "Changes saved",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "postWords": "Your post"
   },
   "follow": {
     "follow": "Follow this post",
@@ -317,5 +327,6 @@
     "rules": "Good to know"
   },
   "replyToPost": "Reply to this post",
-  "replyToPerson": "Reply to {name}"
+  "replyToPerson": "Reply to {name}",
+  "guidelinesShort": "Be kind and keep it local."
 }

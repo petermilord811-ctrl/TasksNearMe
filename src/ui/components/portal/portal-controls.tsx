@@ -30,15 +30,15 @@ export function TypeTabs({ data }: { data: Data }) {
   const tab = (type: PortalQuery['type'], label: string, count: number) => {
     const selected = query.type === type;
     return <li key={type ?? 'all'}><Link href={portalHref(query, { type })} aria-current={selected ? 'page' : undefined} className={cn(
-      'relative inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap px-1 text-[13px] font-semibold transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
+      'relative inline-flex min-h-9 items-center gap-1 whitespace-nowrap px-0.5 text-[13px] font-semibold transition-colors duration-150 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
       'after:absolute after:inset-x-1 after:bottom-0 after:h-0.5 after:rounded-full after:transition-colors',
       selected ? 'text-foreground after:bg-primary' : 'text-muted-foreground after:bg-transparent hover:text-foreground',
     )}>
-      {label}<span className={cn('rounded-full px-1.5 text-[11px] tabular-nums', selected ? 'bg-brand-soft text-primary' : 'bg-muted text-muted-foreground')}>{count}</span>
+      {label}<span className={cn('rounded-full px-1 text-[10.5px] leading-4 tabular-nums', selected ? 'bg-brand-soft text-primary' : 'text-muted-foreground')}>{count}</span>
     </Link></li>;
   };
   return <nav aria-label={t('label')} className="border-b border-border max-sm:-mx-gutter">
-    <ScrollRow bleed={false} currentKey={query.type ?? 'all'} className="gap-4 max-sm:scroll-px-gutter max-sm:px-gutter">
+    <ScrollRow bleed={false} currentKey={query.type ?? 'all'} className="gap-3.5 max-sm:scroll-px-gutter max-sm:px-gutter">
       {tab(undefined, t('all'), facets.types.all)}
       {PORTAL_TYPES.map((type) => tab(type, t(type), facets.types[type]))}
     </ScrollRow>
@@ -57,7 +57,7 @@ function Segmented({ label, children }: { label: string; children: ReactNode }) 
 function Segment({ href, selected, label, icon, phone = 'label' }: { href: string; selected: boolean; label: string; icon?: ReactNode; phone?: 'label' | 'icon' | 'chosen' }) {
   const labelHidden = phone === 'icon' || (phone === 'chosen' && !selected);
   return <li><Link href={href} aria-current={selected ? 'page' : undefined} title={phone === 'icon' ? label : undefined} className={cn(
-    'inline-flex min-h-9 min-w-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[13px] font-semibold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-ring sm:px-3',
+    'inline-flex min-h-8 min-w-8 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-[13px] font-semibold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-ring sm:px-3',
     selected ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
   )}>
     {icon && <span className={cn('inline-flex', phone === 'label' && 'max-sm:hidden')}>{icon}</span>}
@@ -143,7 +143,7 @@ export function PortalFiltersSheet({ data, open, onOpenChange }: { data: Data; o
   </Sheet>;
 }
 
-const filtersButtonClass = 'relative inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-border bg-card text-[13px] font-semibold transition-colors hover:border-foreground/30 focus-visible:outline-2 focus-visible:outline-ring data-[state=open]:border-foreground/40';
+const filtersButtonClass = 'relative inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-full border border-border bg-card text-[13px] font-semibold transition-colors hover:border-foreground/30 focus-visible:outline-2 focus-visible:outline-ring data-[state=open]:border-foreground/40';
 
 /** How many filters are on, on the Filters button. */
 function FilterCount({ count }: { count: number }) {

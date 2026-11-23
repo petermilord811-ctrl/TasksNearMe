@@ -24,6 +24,7 @@ export const communityPhotos = {
   shelf: photo('fil_community_shelf', 'work-bookshelf.svg', 'The bookshelf that needs anchoring'),
   leaves: photo('fil_community_leaves', 'work-yard.svg', 'Leaves covering the front yard'),
   wardrobe: photo('fil_community_wardrobe', 'photo-wide.svg', 'The finished wardrobe against the bedroom wall', 1200, 600),
+  lake: photo('fil_community_lake', 'neighborhood-lake.svg', 'The Mueller lake at sunset'),
 };
 
 const pinnedAnswer: CommunityReplyView = {
@@ -149,14 +150,40 @@ const tip: CommunityPostView = {
   helpfulNames: ['Priya S.', 'Maya R.'],
 };
 
+
+/**
+ * A general post (2026-11-22, any social post): words and a photo, no title of its own. The title is its first line, as
+ * the community service makes it (untitledPostTitle), and names the card for screen readers.
+ */
+const general: CommunityPostView = {
+  id: 'cpo_lake_sunset',
+  kind: 'general',
+  title: 'The sunset over the Mueller lake tonight was something.',
+  body: 'The sunset over the Mueller lake tonight was something.\nThe herons are back on the little island, too. Worth a walk before dinner if you can.',
+  areaName: 'Mueller',
+  author: nate,
+  createdAt: '2026-11-17T14:05:00.000Z',
+  lastActivityAt: '2026-11-17T14:30:00.000Z',
+  replyCount: 1,
+  reactions: { thanks: 3, helpful: 8, mine: [] },
+  photos: [communityPhotos.lake],
+  canReply: true,
+  follow: 'none',
+  helpfulNames: ['Priya S.', 'Ana P.'],
+  previewReplies: [{ id: 'cre_lake_1', author: priya, body: 'We saw them this morning from the playground. Great shot!', createdAt: '2026-11-17T14:30:00.000Z', reactions: { thanks: 0, helpful: 2, mine: [] }, pinned: false }],
+};
+
 /** November's seasonal starters in Austin (plan 10.18), as the composer offers them. */
 export const communityStarters: CommunityStarter[] = [
   { kind: 'recommendation', categorySlug: 'furniture-assembly', title: 'Who do you recommend for putting together a bed frame?' },
   { kind: 'recommendation', categorySlug: 'yard-cleanup', title: "Who's good at a fall leaf cleanup?" },
 ];
 
-/** The community's posts near Maya, liveliest first (the portal's fixtures, src/fixtures/portal.ts, build on them). */
-export const communityFeedPosts: CommunityPostView[] = [recommendation, question, thanks, tip];
+/** The community's posts near Maya, liveliest first (the portal's fixtures, src/fixtures/portal.ts, build on them); the general post last. */
+export const communityFeedPosts: CommunityPostView[] = [recommendation, question, thanks, tip, general];
+
+/** The general post's page (2026-11-22). */
+export const communityGeneralPost = general;
 
 export const communityPostPageData: CommunityPostPageData = {
   market,
@@ -170,6 +197,15 @@ export const communityPostPageData: CommunityPostPageData = {
     { id: 'cpo_thanks_sam', title: 'Thank you, Sam, for the wardrobe!', kind: 'thanks', replyCount: 1, areaName: 'Mueller' },
   ],
   canTranslate: true,
+};
+
+/** Maya reads Nate's general post (2026-11-22): no title of its own, its words first. */
+export const communityGeneralPostPageData: CommunityPostPageData = {
+  ...communityPostPageData,
+  post: { ...general, previewReplies: [] },
+  replies: general.previewReplies,
+  viewer: { canReply: true, canPin: false, isAuthor: false, isStaff: false },
+  related: [{ id: 'cpo_crib', title: 'Anyone used a helper for a crib and changing table?', kind: 'question', replyCount: 4, areaName: 'Mueller' }],
 };
 
 /** Lee reads Maya's request: he can name a helper he booked, or himself. */
@@ -201,7 +237,7 @@ export const communityPostStaffData: CommunityPostPageData = {
 
 export const communityNewPostPageData: CommunityNewPostPageData = {
   market,
-  kind: 'recommendation',
+  kind: 'general',
   categories: [{ slug: 'furniture-assembly' }, { slug: 'moving-help' }, { slug: 'yard-cleanup' }, { slug: 'light-cleaning' }, { slug: 'computer-help' }],
   areas: [
     { slug: 'allandale', name: 'Allandale' },

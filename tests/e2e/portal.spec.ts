@@ -91,17 +91,20 @@ test('a neighbor asks in the composer, then turns the question into a task that 
   const title = `${TITLE_PREFIX} anchor a bookshelf ${Date.now().toString(36)}`;
   try {
     await devSignIn(page, 'maya@example.test');
-    await page.goto('/app/community');
-    // The composer opens in place from its prompt (a tap before the page hydrates opens the same form on its own page
-    // instead), and the kind changes in the form.
-    await page.getByRole('region', { name: 'Start a post' }).getByRole('link', { name: 'Ask your neighbors…' }).click();
-    const form = page.getByRole('form', { name: /^(Start a post|New post)$/ });
-    await form.getByText('Ask a question', { exact: true }).click();
-    await expect(form.getByRole('radio', { name: 'Ask a question' })).toBeChecked();
+    await page.goto('/app/community?area=all&sort=new');
+    // The prompt opens the new-post form in a dialog over the feed (2026-11-22), and the kind changes in the form.
+    await page.getByRole('region', { name: 'Start a post' }).getByRole('link', { name: 'Share something with your neighbors…' }).click();
+    const dialog = page.getByRole('dialog', { name: 'New post' });
+    const form = dialog.getByRole('form', { name: 'New post' });
+    await form.getByText('Question', { exact: true }).click();
+    await expect(form.getByRole('radio', { name: 'Question' })).toBeChecked();
     await form.getByLabel('Title').fill(title);
     await form.getByLabel('Details').fill('A six-foot flat-pack bookshelf, about 30 parts, to anchor to drywall. How long does it take?');
     await form.getByLabel('Service').selectOption({ label: 'Furniture assembly' });
     await form.getByRole('button', { name: 'Post', exact: true }).click();
+    // Posting closes the dialog over the feed, which shows the question; its page has "Ask for help".
+    await expect(dialog).toBeHidden({ timeout: 30_000 });
+    await page.getByRole('article', { name: title }).filter({ visible: true }).getByRole('link', { name: title, exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: title })).toBeVisible({ timeout: 30_000 });
     const postUrl = new URL(page.url()).pathname;
 

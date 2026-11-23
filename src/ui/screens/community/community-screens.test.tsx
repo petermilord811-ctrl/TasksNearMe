@@ -46,12 +46,22 @@ describe('PortalScreen', () => {
     const areas = within(screen.getByRole('navigation', { name: 'Neighborhoods' }));
     expect(areas.getByRole('link', { name: /^Near you/ }).getAttribute('aria-current')).toBe('page');
     expect(areas.getByRole('link', { name: /^All of Austin/ }).getAttribute('href')).toBe(routes.app.community({ area: 'all' }));
+    // One slim line (2026-11-22): the prompt opens the new-post dialog, where the kind is chosen; tasks are posted from
+    // the app's own "Post a task".
     const composer = within(screen.getByRole('region', { name: 'Start a post' }));
-    expect(composer.getByRole('link', { name: 'Thanks' }).getAttribute('href')).toBe(routes.app.newCommunityPost('thanks'));
-    // "Post a task": a chip from `sm`, a + on phones; both open the wizard.
-    const postTask = composer.getAllByRole('link', { name: 'Post a task' });
-    expect(postTask).toHaveLength(2);
-    for (const link of postTask) expect(link.getAttribute('href')).toBe(routes.app.newTask());
+    expect(composer.getByRole('link', { name: 'Share something with your neighbors…' }).getAttribute('href')).toBe(routes.app.newCommunityPost());
+    expect(composer.queryByRole('link', { name: 'Post a task' })).toBeNull();
+  });
+
+  it('shows a general post by its words, named by its first line, with its time as its link (2026-11-22)', () => {
+    portal(portalFeedData);
+    const post = within(screen.getByRole('article', { name: 'The sunset over the Mueller lake tonight was something.' }));
+    // No title of its own: its words, and no title link.
+    expect(post.getByText(/The herons are back on the little island/)).toBeDefined();
+    expect(post.queryByRole('link', { name: /The sunset over the Mueller lake/ })).toBeNull();
+    expect(post.getAllByRole('link').some((link) => link.getAttribute('href') === routes.app.communityPost('cpo_lake_sunset'))).toBe(true);
+    // The Posts tab counts it.
+    expect(within(screen.getByRole('navigation', { name: 'Show' })).getByRole('link', { name: /^Posts/ }).getAttribute('href')).toBe(routes.app.community({ type: 'general' }));
   });
 
   it('shows posts and tasks together, each task opening where it should for the viewer', () => {

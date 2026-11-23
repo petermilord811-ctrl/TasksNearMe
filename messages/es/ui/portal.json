@@ -29,14 +29,7 @@
   },
   "composer": {
     "label": "Empezar una publicación",
-    "prompt": "Pregunta a tus vecinos…",
-    "kinds": {
-      "recommendation": "Recomendación",
-      "question": "Pregunta",
-      "tip": "Consejo",
-      "thanks": "Gracias"
-    },
-    "postTask": "Publicar tarea"
+    "prompt": "Comparte algo con tus vecinos…"
   },
   "types": {
     "label": "Mostrar",
@@ -45,7 +38,8 @@
     "recommendation": "Recomendaciones",
     "question": "Preguntas",
     "tip": "Consejos",
-    "thanks": "Gracias"
+    "thanks": "Gracias",
+    "general": "Publicaciones"
   },
   "sort": {
     "label": "Ordenar",

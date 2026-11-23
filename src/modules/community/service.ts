@@ -64,6 +64,7 @@ import {
   ASK_FOR_HELP_KINDS,
   authorRole,
   bodyFits,
+  untitledPostTitle,
   communityLimits,
   EDIT_RULE,
   helpfulMilestone,
@@ -634,7 +635,8 @@ async function relatedPostsOf(db: Db, viewer: CommunityViewer, facts: ViewerFact
 export async function getNewCommunityPostPage(db: Db, viewer: CommunityViewer, kindParam: string | undefined, bookingParam?: string, now: Date = new Date()): Promise<CommunityNewPostPageData | null> {
   const facts = await viewerFacts(db, viewer.id);
   if (!facts) return null;
-  const kind = oneOf(kindParam, COMMUNITY_POST_KINDS) ?? 'recommendation';
+  // A post is a general one unless the link asks for a kind (an empty state's "Ask for a recommendation", a booking's thanks).
+  const kind = oneOf(kindParam, COMMUNITY_POST_KINDS) ?? (bookingParam ? 'thanks' : 'general');
   const composer = await composerData(db, facts, viewer.locale, now);
   // "Thank Sam on Neighbors" (plan 10.12): the booking, when it's one they can still thank.
   const booking = bookingParam && composer.thankOptions.some((option) => option.bookingId === bookingParam) ? bookingParam : undefined;
@@ -733,7 +735,8 @@ export async function createCommunityPost(db: Db, viewer: CommunityViewer, input
       categorySlug,
       helperUserId,
       bookingId,
-      title: masked(title),
+      // A general post has no title of its own: its first line (masked) names it (untitledPostTitle).
+      title: kind === 'general' ? untitledPostTitle(masked(body)) : masked(title),
       body: masked(body),
       lastActivityAt: now,
       createdAt: now,
@@ -1039,13 +1042,15 @@ export async function editCommunityItem(db: Db, viewer: CommunityViewer, input: 
     const [post] = await db.select().from(communityPosts).where(eq(communityPosts.id, id)).limit(1);
     if (!post || post.status !== 'visible') return { ok: false, code: 'not_found' };
     if (post.authorUserId !== viewer.id) return { ok: false, code: 'not_allowed' };
-    const title = parsed.data.title ?? '';
-    if (title.length < 5) return { ok: false, code: 'validation_failed', fieldErrors: { title: ['too_short'] } };
-    if (!bodyFits(post.kind as CommunityPostKind, body)) return { ok: false, code: 'validation_failed', fieldErrors: { body: ['too_short'] } };
+    // A general post's words are all it has: its title is made from them again (untitledPostTitle).
+    const untitled = post.kind === 'general';
+    const title = untitled ? '' : parsed.data.title ?? '';
+    if (!untitled && title.length < 5) return { ok: false, code: 'validation_failed', fieldErrors: { title: ['too_short'] } };
+    if (!bodyFits(post.kind as CommunityPostKind, body)) return { ok: false, code: 'validation_failed', fieldErrors: { body: [untitled && body.length === 0 ? 'required' : 'too_short'] } };
     if (isSafetyOrCrimePost(`${title}\n${body}`)) return { ok: false, code: 'validation_failed', fieldErrors: { body: ['prohibited'] } };
     if (!parsed.data.kindnessConfirmed && soundsUnkind(`${title}\n${body}`)) return { ok: false, code: 'validation_failed', fieldErrors: { [soundsUnkind(title) ? 'title' : 'body']: ['unkind'] } };
-    const nextTitle = masked(title);
     const nextBody = masked(body);
+    const nextTitle = untitled ? untitledPostTitle(nextBody) : masked(title);
     if (nextTitle === post.title && nextBody === post.body) return { ok: true, code: 'updated' };
     const limited = await consumeRateLimit(db, `community:edit:${viewer.id}`, EDIT_RULE, now);
     if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };

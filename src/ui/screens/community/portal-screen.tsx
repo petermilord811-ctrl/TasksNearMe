@@ -32,17 +32,17 @@ export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
   // A new filter set starts a new stream; a refresh (a reaction, the live pill) keeps what was added.
   const streamKey = JSON.stringify({ ...query, page: undefined });
   const [topAd, pinnedAd] = NEIGHBORS_RAIL_ADS;
-  return <div className="space-y-5 max-sm:space-y-4">
+  return <div className="space-y-3 sm:space-y-4">
     <PortalPhoneBar data={data} {...(handlers.onSetArea ? { onSetArea: handlers.onSetArea } : {})} />
     <div className="max-sm:hidden"><PortalHeader data={data} /></div>
     <div className="max-sm:hidden"><AreaStrip data={data} {...(handlers.onSetArea ? { onSetArea: handlers.onSetArea } : {})} /></div>
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_17.5rem] xl:gap-x-5 2xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:gap-x-6">
-      <div className="min-w-0 space-y-4">
-        <PortalComposer data={data} onPost={handlers.onPost} {...(handlers.onUploadPhoto ? { onUploadPhoto: handlers.onUploadPhoto } : {})} />
+      <div className="min-w-0 space-y-3">
+        <PortalComposer data={data} />
         {data.announcement && <AnnouncementCard announcement={data.announcement} {...(handlers.onDismissAnnouncement ? { onDismiss: handlers.onDismissAnnouncement } : {})} />}
         {data.askArea && handlers.onSetArea && <AskAreaCard areas={data.areas} marketName={data.market.name} onSetArea={handlers.onSetArea} />}
         <YourStuffStrip rail={data.rail} query={query} />
-        <div className="space-y-3">
+        <div className="space-y-2">
           <TypeTabs data={data} />
           <div className="max-sm:hidden"><PortalToolbar data={data} /></div>
           {query.type === 'task' && <MoreTaskFilters boardHref={data.boardHref} className="sm:hidden" />}
@@ -50,7 +50,7 @@ export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
         </div>
         {data.samples && <SamplesNote shown={data.samples.shown} {...(handlers.onShowSamples ? { onShowSamples: handlers.onShowSamples } : {})} />}
         <PortalLive data={data} listId="portal-stream" {...(handlers.onCheckFresh ? { onCheckFresh: handlers.onCheckFresh } : {})} />
-        <div id="portal-stream" className="scroll-mt-28 space-y-3">
+        <div id="portal-stream" className="scroll-mt-28 space-y-2.5">
           {/* One neighborhood (or what's citywide) lists by day only, so there's no grouping to choose (sweep P9). */}
           {query.view === 'list' && data.items.length > 0 && data.place.kind !== 'area' && data.place.kind !== 'citywide' && <ListGroupBar data={data} />}
           {data.items.length === 0

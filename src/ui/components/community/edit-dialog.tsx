@@ -35,18 +35,20 @@ export function EditDialog({ item, open, onOpenChange, onEdit }: { item: EditTar
   const [result, setResult] = useState<ActionResult | undefined>();
   const [pending, startTransition] = useTransition();
   const isPost = item.target === 'post';
+  // A general post is its words: no title to edit (the server makes it again from them).
+  const titled = isPost && item.kind !== 'general';
   const bodyOptional = isPost && item.kind !== undefined && (COMMUNITY_BODY_OPTIONAL_KINDS as readonly string[]).includes(item.kind);
   const reminder = isKindnessReminder(result);
   const errorOf = (field: 'title' | 'body') => {
     const codeOf = result && !result.ok && !reminder ? result.fieldErrors?.[field]?.[0] : undefined;
     return codeOf ? fieldCopy(fieldCopy.has(codeOf) ? codeOf : 'invalid') : undefined;
   };
-  const tooShort = isPost ? title.trim().length < 5 || (!bodyOptional && body.trim().length < 10) : body.trim().length < 2;
+  const tooShort = titled ? title.trim().length < 5 || (!bodyOptional && body.trim().length < 10) : body.trim().length < 2;
 
   const save = (kindnessConfirmed = false) => startTransition(async () => {
     let next: ActionResult;
     try {
-      next = await onEdit({ target: item.target, id: item.id, ...(isPost ? { title } : {}), body, ...(kindnessConfirmed ? { kindnessConfirmed: true } : {}) });
+      next = await onEdit({ target: item.target, id: item.id, ...(titled ? { title } : {}), body, ...(kindnessConfirmed ? { kindnessConfirmed: true } : {}) });
     } catch {
       next = { ok: false, code: 'unknown' };
     }
@@ -64,13 +66,13 @@ export function EditDialog({ item, open, onOpenChange, onEdit }: { item: EditTar
         <DialogDescription>{t('hint')}</DialogDescription>
       </DialogHeader>
       <form id={`${id}-form`} noValidate className="space-y-4" onSubmit={(event) => { event.preventDefault(); if (!pending && !tooShort) save(); }}>
-        {isPost && <div className="space-y-1.5">
+        {titled && <div className="space-y-1.5">
           <label htmlFor={`${id}-title`} className="text-sm font-semibold">{t('titleLabel')}</label>
           <Input id={`${id}-title`} value={title} onChange={(event) => setTitle(event.target.value)} maxLength={COMMUNITY_TITLE_MAX} aria-invalid={Boolean(errorOf('title'))} />
           {errorOf('title') && <p className="text-sm text-destructive">{errorOf('title')}</p>}
         </div>}
         <div className="space-y-1.5">
-          <label htmlFor={`${id}-body`} className="text-sm font-semibold">{isPost ? (bodyOptional ? t('bodyOptional') : t('body')) : t('replyLabel')}</label>
+          <label htmlFor={`${id}-body`} className="text-sm font-semibold">{isPost ? (!titled ? t('postWords') : bodyOptional ? t('bodyOptional') : t('body')) : t('replyLabel')}</label>
           <Textarea ref={bodyRef} id={`${id}-body`} value={body} onChange={(event) => setBody(event.target.value)} maxLength={isPost ? COMMUNITY_BODY_MAX : COMMUNITY_REPLY_MAX} rows={isPost ? 6 : 4} aria-invalid={Boolean(errorOf('body'))} />
           {errorOf('body') && <p className="text-sm text-destructive">{errorOf('body')}</p>}
         </div>

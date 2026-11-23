@@ -29,14 +29,7 @@
   },
   "composer": {
     "label": "Start a post",
-    "prompt": "Ask your neighbors…",
-    "kinds": {
-      "recommendation": "Recommendation",
-      "question": "Question",
-      "tip": "Tip",
-      "thanks": "Thanks"
-    },
-    "postTask": "Post a task"
+    "prompt": "Share something with your neighbors…"
   },
   "types": {
     "label": "Show",
@@ -45,7 +38,8 @@
     "recommendation": "Recommendations",
     "question": "Questions",
     "tip": "Tips",
-    "thanks": "Thanks"
+    "thanks": "Thanks",
+    "general": "Posts"
   },
   "sort": {
     "label": "Sort",

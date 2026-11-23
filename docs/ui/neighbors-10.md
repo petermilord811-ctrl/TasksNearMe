@@ -49,6 +49,15 @@ Migration 0076: `users.home_area_id`, `users.community_digest_at`, `community_po
 
 Notification types: `community_followed_reply`, `community_mention`, `community_recommended`, `community_thanked`, `community_ask_match`, `community_auto_hidden` (topic community: in the app and on devices, email if turned on), `community_task_posted` (task alerts) and `community_digest` (its own topic `neighbors_digest`, email only). Outbox events: `community.posted` now plans thanks and ask alerts; `community.replied` plans the author, the person replied to, a recommended helper and followers; new `community.task_linked`, `community.auto_hidden` and `community.digest`.
 
-## 7. Left out, as before
+## 7. Any social post, a dialog, and lighter (2026-11-22, second round)
+
+The owner, after the first round shipped: "neighbors UI is too complex (unimportant elements size: height or length is big and many paddings) and it's only for task posts. I mean it's not available for any social post. make it possible. and do post with dialog (now you are decollaping and occupying many pages)".
+
+- **General posts.** A new kind, `general`, first and chosen by default: words and photos, no title of its own. Its first line (masked, at most 80 characters, cut at a word) is stored as the title, which names it in notifications, the digest, search and for screen readers; the card shows its words, folded after 5 lines, with no kind badge. A "Posts" tab filters them (`type=general`). Editing one shows only its words. (`untitledPostTitle` in `domain.ts`, `COMMUNITY_UNTITLED_KINDS` in the contract.)
+- **Posting in a dialog.** `@modal/(.)app/community/new` intercepts the new-post page: the composer's line, a booking's "Write a thanks" and Home's links open the form as a sheet on phones and a centered dialog from 640 px, with Post pinned at its bottom. Posting closes it, and the page under it refreshes with the post. The full page stays for a URL loaded directly. (`CommunityNewPostDialog`.)
+- **The composer** is one line: your avatar and "Share something with your neighbors…". The kind, words, photos, service and neighborhood are chosen in the dialog.
+- **Lighter.** Cards with less padding, smaller titles and shorter folds; the service and neighborhood as one line of text; "Recommended in this thread" as one line; replies under a card in two or three lines; "Ask for help" in the action row; lower single photos; a smaller heading, chips, tabs and sticky row; tighter rail and notes; the form's hints on one line. A post's time links to it.
+
+## 8. Left out, as before
 
 Downvotes and net scores, crime and safety posts, for-sale, events and polls, sharing outside the app, search engine indexing, and deeper reply threads.

@@ -2,6 +2,7 @@ import {
   CATEGORY_SLUGS,
   COMMUNITY_BODY_MIN,
   COMMUNITY_BODY_OPTIONAL_KINDS,
+  COMMUNITY_GENERAL_BODY_MIN,
   COMMUNITY_POST_KINDS,
   PORTAL_ALL_AREAS,
   PORTAL_FEED_PAGE_SIZE,
@@ -178,9 +179,26 @@ export function bodyRequired(kind: CommunityPostKind): boolean {
   return !(COMMUNITY_BODY_OPTIONAL_KINDS as readonly string[]).includes(kind);
 }
 
-/** Whether these details are enough for the kind of post. */
+/** Whether these details are enough for the kind of post (a general post is its words: `COMMUNITY_GENERAL_BODY_MIN`). */
 export function bodyFits(kind: CommunityPostKind, body: string): boolean {
+  if (kind === 'general') return body.trim().length >= COMMUNITY_GENERAL_BODY_MIN;
   return !bodyRequired(kind) || body.trim().length >= COMMUNITY_BODY_MIN;
+}
+
+/** How long a general post's title (its first line) can be. */
+export const UNTITLED_TITLE_MAX = 80;
+
+/**
+ * A general post's title (2026-11-22: any social post, words with no title of their own): its first line, cut at a
+ * word before `UNTITLED_TITLE_MAX` characters with an ellipsis. Stored as the post's title, so notifications, the
+ * digest, search and screen readers name it; the card shows the words instead. Made from the masked words.
+ */
+export function untitledPostTitle(body: string): string {
+  const line = (body.split(/\r?\n/).map((part) => part.trim()).find((part) => part.length > 0) ?? '').replace(/\s+/g, ' ');
+  if (line.length <= UNTITLED_TITLE_MAX) return line;
+  const cut = line.slice(0, UNTITLED_TITLE_MAX - 1);
+  const space = cut.lastIndexOf(' ');
+  return `${(space >= UNTITLED_TITLE_MAX / 2 ? cut.slice(0, space) : cut).replace(/[\s,.;:!?-]+$/u, '')}…`;
 }
 
 /**

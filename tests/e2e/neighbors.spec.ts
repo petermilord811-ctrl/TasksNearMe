@@ -1,4 +1,5 @@
 import { randomInt, randomUUID } from 'node:crypto';
+import sharp from 'sharp';
 import { expect, test, type Page } from '@playwright/test';
 import { eq, inArray } from 'drizzle-orm';
 import { PEOPLE, type SeedPerson } from '../../db/seeds/data/people';
@@ -168,4 +169,38 @@ test('the post page keeps the thread’s named helpers beside it on wide screens
   await devSignIn(page, 'lee@example.test');
   await page.goto(`/app/community/${id}`);
   await expect(page.getByRole('complementary', { name: 'About this conversation' })).toBeVisible({ timeout: 30_000 });
+});
+
+test('a neighbor shares a general post with a photo from the dialog, and the feed shows it by its words (2026-11-22)', async ({ page }) => {
+  test.setTimeout(150_000);
+  const words = `Morning walk around the pond ${Date.now().toString(36)}`;
+  try {
+    await devSignIn(page, 'maya@example.test');
+    await page.goto('/app/community?area=all&sort=new');
+    // The prompt opens the form in a dialog over the feed (a sheet on phones); a general post is chosen first.
+    await page.getByRole('region', { name: 'Start a post' }).getByRole('link', { name: 'Share something with your neighbors…' }).click();
+    const dialog = page.getByRole('dialog', { name: 'New post' });
+    const form = dialog.getByRole('form', { name: 'New post' });
+    await expect(form.getByRole('radio', { name: 'Post' })).toBeChecked();
+    // No title of its own: its words and a photo.
+    await expect(form.getByLabel('Title')).toHaveCount(0);
+    await form.getByRole('textbox', { name: "What's on your mind?" }).fill(`${words}\nThe herons were out early.`);
+    const png = await sharp({ create: { width: 900, height: 600, channels: 3, background: { r: 120, g: 160, b: 200 } } }).png().toBuffer();
+    await form.getByLabel(/^Add photos/).setInputFiles({ name: 'pond.png', mimeType: 'image/png', buffer: png });
+    await expect(form.getByRole('button', { name: 'Remove photo 1' })).toBeVisible({ timeout: 30_000 });
+    await form.getByRole('button', { name: 'Post', exact: true }).click();
+    // Posting closes the dialog; the feed under it shows the post, named by its first line, its words and its photo.
+    await expect(dialog).toBeHidden({ timeout: 30_000 });
+    const posted = page.getByRole('article', { name: words }).filter({ visible: true });
+    await expect(posted).toBeVisible({ timeout: 30_000 });
+    await expect(posted.getByText('The herons were out early.')).toBeVisible();
+    await expect(posted.getByRole('button', { name: /^Open photo 1 of 1/ })).toBeVisible();
+  } finally {
+    const { db, pool } = database();
+    try {
+      await db.delete(communityPosts).where(eq(communityPosts.title, words));
+    } finally {
+      await pool.end();
+    }
+  }
 });

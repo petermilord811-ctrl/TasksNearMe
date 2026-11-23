@@ -15,7 +15,7 @@ import { portalHref } from './portal-href';
 /** Neighborhoods the strip shows by name, besides "Near you" and the whole city (the rest are under "More"). */
 const NEARBY_SHOWN = 3;
 
-const chipClass = 'inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 text-[13px] font-semibold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
+const chipClass = 'inline-flex min-h-8 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-[13px] font-semibold transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 const chipOff = 'border-border bg-card text-foreground hover:border-foreground/30';
 const chipOn = 'border-foreground bg-foreground text-background';
 
@@ -55,7 +55,7 @@ export function AreaStrip({ data, onSetArea }: { data: Pick<PortalPageData, 'are
   const pick = () => setOpen(false);
 
   return <nav aria-label={t('label')}>
-    <ScrollRow currentKey={selectedSlug ?? place.kind} className="-my-1 gap-2 py-1 sm:-mx-1 sm:px-1">
+    <ScrollRow currentKey={selectedSlug ?? place.kind} className="-my-1 gap-1.5 py-1 sm:-mx-1 sm:px-1">
       {data.yourArea && <Chip href={href(undefined)} selected={place.kind === 'nearby'} count={data.facets.nearby}>{t('nearby')}</Chip>}
       {strip.map((area) => <Chip key={area.slug} href={href(area.slug)} selected={area.slug === selectedSlug} count={area.count}>
         {area.yours && <House aria-label={t('yours')} role="img" className="size-3.5 shrink-0" />}{area.name}

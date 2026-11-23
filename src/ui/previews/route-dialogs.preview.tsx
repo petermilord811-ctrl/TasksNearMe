@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { routes, type AppShellHandlers, type PreviewEntry, type SignedInViewer } from '@/contracts';
+import { routes, type AppShellHandlers, type CommunityNewPostHandlers, type PreviewEntry, type SignedInViewer } from '@/contracts';
 import {
-  deskChairChangeCounterpartyData, deskCompletionPageData, deskConfirmData, deskProposeChangeData, deskReportProblemPageData,
+  communityNewPostPageData, communityPhotos, deskChairChangeCounterpartyData, deskCompletionPageData, deskConfirmData, deskProposeChangeData, deskReportProblemPageData,
   deskReviewByClientData, editSavedSearchPageData, fakeBookingConfirmHandlers, fakeChangeReviewHandlers, fakeCompletionHandlers,
   fakeHandler, fakeProposeChangeHandlers, fakeProposeRebookHandlers, fakeReportProblemHandlers, fakeRequestHelperHandlers,
   jordanShell, mayaShell, newSavedSearchPageData, proposeDeskRebookData, reportHelperData, requestJordanData,
@@ -11,6 +11,7 @@ import { BookingConfirmDialogScreen, ChangeReviewDialogScreen, CompletionDialogS
 import { RequestHelperDialogScreen } from '@/ui/screens/invites';
 import { ProposeRebookDialogScreen } from '@/ui/screens/clients';
 import { ReviewDialogScreen } from '@/ui/screens/reviews';
+import { CommunityNewPostDialog } from '@/ui/screens/community/community-new-post-screen';
 import { EditSavedSearchDialog } from '@/ui/screens/searches/edit-saved-search-screen';
 import { NewSavedSearchDialog } from '@/ui/screens/searches/new-saved-search-screen';
 import { ReportDialogScreen } from '@/ui/screens/support';
@@ -20,6 +21,7 @@ import bookingConfirm from '../../../messages/en/ui/bookingConfirm.json';
 import changes from '../../../messages/en/ui/changes.json';
 import clients from '../../../messages/en/ui/clients.json';
 import common from '../../../messages/en/ui/common.json';
+import community from '../../../messages/en/ui/community.json';
 import invites from '../../../messages/en/ui/invites.json';
 import report from '../../../messages/en/ui/report.json';
 import reportProblem from '../../../messages/en/ui/reportProblem.json';
@@ -40,7 +42,12 @@ function dialog(id: string, name: string, viewer: SignedInViewer, under: string,
   };
 }
 
+const newPostHandlers: CommunityNewPostHandlers = { onPost: fakeHandler({ ok: true, code: 'sent' }), onUploadPhoto: async () => ({ ok: true, photo: communityPhotos.lake }) };
+
 export const routeDialogPreviews: PreviewEntry[] = [
+  // A new post (2026-11-22): a general post by default, an ask with its title and the season's starters.
+  dialog('new-post', community.previews.newDialog, mayaShell, routes.app.community(), () => <CommunityNewPostDialog data={communityNewPostPageData} handlers={newPostHandlers} />),
+  dialog('new-post-recommendation', community.previews.newDialogRecommendation, mayaShell, routes.app.community(), () => <CommunityNewPostDialog data={{ ...communityNewPostPageData, kind: 'recommendation' }} handlers={newPostHandlers} />),
   dialog('report', report.title.helper, mayaShell, routes.app.home(), () => <ReportDialogScreen data={reportHelperData} handlers={{ onReport: fakeHandler({ ok: true, code: 'submitted' }) }} />),
   dialog('save-search', savedSearches.new.title, mayaShell, routes.app.home(), () => <NewSavedSearchDialog data={newSavedSearchPageData} handlers={{ onSave: fakeHandler({ ok: true, code: 'saved' }) }} />),
   dialog('edit-saved-search', savedSearches.edit.title, jordanShell, routes.app.savedSearches(), () => <EditSavedSearchDialog data={editSavedSearchPageData} handlers={{ onSave: fakeHandler({ ok: true, code: 'saved' }) }} />),

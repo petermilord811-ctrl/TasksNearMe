@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="A lake at sunset with trees on the far shore">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6c79b"/>
+      <stop offset="0.55" stop-color="#f3a87c"/>
+      <stop offset="1" stop-color="#e9906c"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d98a72"/>
+      <stop offset="1" stop-color="#7a8fa3"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#sky)"/>
+  <circle cx="540" cy="300" r="56" fill="#fde6b8"/>
+  <path d="M0 330 Q120 300 230 322 T470 318 T800 312 V360 H0 Z" fill="#5f6f4e"/>
+  <g fill="#4b5a3d">
+    <ellipse cx="90" cy="300" rx="46" ry="58"/>
+    <ellipse cx="160" cy="292" rx="38" ry="64"/>
+    <ellipse cx="700" cy="294" rx="52" ry="60"/>
+    <ellipse cx="640" cy="304" rx="34" ry="46"/>
+  </g>
+  <rect y="352" width="800" height="248" fill="url(#water)"/>
+  <g fill="#fde6b8" opacity="0.55">
+    <rect x="500" y="372" width="80" height="5" rx="2.5"/>
+    <rect x="512" y="392" width="56" height="4" rx="2"/>
+    <rect x="522" y="410" width="36" height="4" rx="2"/>
+  </g>
+  <path d="M0 600 V520 Q160 500 300 528 T560 540 T800 520 V600 Z" fill="#53623f"/>
+  <g fill="#3d4a31">
+    <path d="M250 520 l8 -60 l8 60 z"/>
+    <path d="M272 524 l6 -44 l6 44 z"/>
+  </g>
+</svg>

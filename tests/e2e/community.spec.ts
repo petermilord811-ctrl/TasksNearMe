@@ -6,7 +6,7 @@ import { devSignIn } from './support/sign-in';
 
 /**
  * The community (completion plan 7.7–7.8, in the neighborhood portal since 9.10), two people in two browsers: Maya
- * asks her neighbors for a recommendation in the composer; Lee, with the portal open, sees "1 new · Show", opens
+ * asks her neighbors for a recommendation in the new-post dialog; Lee, with the portal open, sees "1 new · Show", opens
  * it, and answers by naming himself;
  * Maya's page shows the answer without a reload, she pins it, and Lee's answer carries the pin. Contact details
  * stay masked, and a crime report is turned away.
@@ -24,12 +24,15 @@ test('neighbors ask, answer, recommend a helper and pin the answer, live', async
     await expect(lee.getByRole('heading', { level: 1, name: 'All of Austin' })).toBeVisible();
 
     await devSignIn(maya, 'maya@example.test');
-    await maya.goto('/app/community');
-    // The composer opens in place on a recommendation request (a tap before the page hydrates opens the same form on
-    // its own page instead). Phones show only the prompt; wider screens also show each kind.
-    await maya.getByRole('region', { name: 'Start a post' }).getByRole('link', { name: 'Ask your neighbors…' }).click();
-    const composer = maya.getByRole('form', { name: /^(Start a post|New post)$/ });
-    await expect(composer.getByRole('radio', { name: 'Ask for a recommendation' })).toBeChecked();
+    await maya.goto('/app/community?area=all&sort=new');
+    // The prompt opens the new-post form in a dialog over the feed (2026-11-22; its URL alone opens the form's page). A
+    // general post is chosen first; this one asks for a recommendation.
+    await maya.getByRole('region', { name: 'Start a post' }).getByRole('link', { name: 'Share something with your neighbors…' }).click();
+    const dialog = maya.getByRole('dialog', { name: 'New post' });
+    const composer = dialog.getByRole('form', { name: 'New post' });
+    await expect(composer.getByRole('radio', { name: 'Post' })).toBeChecked();
+    await composer.getByText('Recommendation', { exact: true }).click();
+    await expect(composer.getByRole('radio', { name: 'Recommendation' })).toBeChecked();
     // Crime and safety reports belong with the police.
     await composer.getByLabel('Title').fill('Suspicious person on our street');
     await composer.getByLabel('Details').fill('Saw a suspicious man looking into cars last night on Elm.');
@@ -40,12 +43,15 @@ test('neighbors ask, answer, recommend a helper and pin the answer, live', async
     await composer.getByLabel('Title').fill(title);
     await composer.getByLabel('Details').fill('A tall flat-pack bookshelf that needs anchoring. Text me at 512-555-0142.');
     await composer.getByRole('button', { name: 'Post', exact: true }).click();
-    await expect(maya.getByRole('heading', { level: 1, name: title })).toBeVisible({ timeout: 30_000 });
-    // The post shows the number masked. (The form page stays mounted but hidden after the move, typed text and all,
-    // so the check looks inside the post itself.)
-    const posted = maya.getByRole('article', { name: title });
+    // Posting closes the dialog; the feed under it shows the post, the number masked.
+    await expect(dialog).toBeHidden({ timeout: 30_000 });
+    const posted = maya.getByRole('article', { name: title }).filter({ visible: true });
+    await expect(posted).toBeVisible({ timeout: 30_000 });
     await expect(posted).toContainText('[hidden]');
     await expect(posted).not.toContainText('512-555-0142');
+    // Its page, where Maya waits for an answer.
+    await posted.getByRole('link', { name: title, exact: true }).click();
+    await expect(maya.getByRole('heading', { level: 1, name: title })).toBeVisible({ timeout: 30_000 });
     const postUrl = maya.url();
 
     // Lee's open portal announces it without moving; Show brings it in.

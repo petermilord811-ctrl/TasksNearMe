@@ -118,9 +118,9 @@ export function PostEngagement({ target, reactions, own, onReact, helpfulNames =
   </span>;
   const showLine = state.helpful > 0 || state.thanks > 0 || (replies && replies.count > 0);
 
-  const actionClass = 'inline-flex min-h-10 min-w-0 items-center justify-center gap-1 rounded-full px-2 text-[13px] font-semibold text-muted-foreground transition-colors duration-150 hover:bg-foreground/[0.05] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring dark:hover:bg-white/[0.06] sm:gap-1.5 sm:px-3';
-  return <div className="space-y-1">
-    {showLine && <div className="flex min-h-7 items-center justify-between gap-3 text-[13px] text-muted-foreground">
+  const actionClass = 'inline-flex min-h-9 min-w-0 items-center justify-center gap-1 rounded-full px-2 text-[13px] font-semibold text-muted-foreground transition-colors duration-150 hover:bg-foreground/[0.05] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring dark:hover:bg-white/[0.06] sm:gap-1.5 sm:px-3';
+  return <div className="space-y-0.5">
+    {showLine && <div className="flex min-h-6 items-center justify-between gap-3 text-[12.5px] text-muted-foreground">
       {state.helpful > 0 || state.thanks > 0
         ? onLoadReactors
           ? <Popover>
@@ -134,10 +134,11 @@ export function PostEngagement({ target, reactions, own, onReact, helpfulNames =
         ? <Link href={replies.href} className="shrink-0 rounded-sm tabular-nums underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('replyCount', { count: replies.count })}</Link>
         : <span className="shrink-0 tabular-nums">{t('replyCount', { count: replies.count })}</span>)}
     </div>}
-    <div className="flex flex-col gap-1 border-t border-border/70 pt-1 sm:flex-row sm:flex-wrap sm:items-center">
+    {/* One row: the actions, then "Ask for help" on the viewer's own ask (2026-11-22: no line of its own). */}
+    <div className="flex items-center gap-1 border-t border-border/70 pt-0.5">
     {/* Phones: Helpful and Reply share the row with their words; Thanks (named for screen readers) and Save show their
         icons, since four labels in a 360 px card cut each one to a few letters. From `sm` they sit at the start. */}
-    <div role="group" aria-label={t('reactions.label')} className="flex items-center gap-1 sm:flex-wrap">
+    <div role="group" aria-label={t('reactions.label')} className="flex min-w-0 flex-1 items-center gap-1 sm:flex-wrap">
       {!own && (['helpful', 'thanks'] as const).map((kind) => {
         const Icon = icons[kind];
         const pressed = state.mine.includes(kind);
@@ -151,7 +152,7 @@ export function PostEngagement({ target, reactions, own, onReact, helpfulNames =
       </button>}
       {children}
     </div>
-    {trailing && <div className="flex sm:ml-auto">{trailing}</div>}
+    {trailing && <div className="flex shrink-0">{trailing}</div>}
     </div>
   </div>;
 }

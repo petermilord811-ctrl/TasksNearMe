@@ -14,8 +14,8 @@ import { LocaleLink as Link } from '@/ui/lib/locale-link';
 
 export interface CommunityPostScreenProps { data: CommunityPostPageData; handlers: CommunityPostHandlers; now: ISODateTime }
 
-const railCard = 'min-w-0 rounded-[1.375rem] border border-border bg-card p-4 shadow-card';
-const railTitle = 'flex items-center gap-2 text-[13px] font-semibold tracking-wide text-muted-foreground uppercase';
+const railCard = 'min-w-0 rounded-2xl border border-border bg-card p-3.5 shadow-card';
+const railTitle = 'flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase';
 
 /**
  * One community post and its conversation (completion plan 7.7–7.8, 9.10; plan 10): the post (photos, Save, Follow and
@@ -33,10 +33,10 @@ export function CommunityPostScreen({ data, handlers, now }: CommunityPostScreen
   const recommended = post.recommended ?? [];
   const related = data.related ?? [];
   return <ReplyTargetProvider>
-    <div className="mx-auto grid max-w-content items-start gap-6 xl:grid-cols-[minmax(0,42rem)_18rem] xl:justify-center xl:gap-x-6">
-      <div className="min-w-0 space-y-5">
+    <div className="mx-auto grid max-w-content items-start gap-4 xl:grid-cols-[minmax(0,40rem)_17rem] xl:justify-center xl:gap-x-5">
+      <div className="min-w-0 space-y-3.5">
         <CommunityPostLive postId={post.id} />
-        <Link href={routes.app.community()} className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"><ArrowLeft aria-hidden="true" className="size-4" />{t('back')}</Link>
+        <Link href={routes.app.community()} className="inline-flex min-h-9 items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"><ArrowLeft aria-hidden="true" className="size-4" />{t('back')}</Link>
 
         <PostPageCard post={post} now={now} handlers={handlers} canReply={viewer.canReply} actions={<CommunityItemActions
           target="post"
@@ -53,18 +53,18 @@ export function CommunityPostScreen({ data, handlers, now }: CommunityPostScreen
         {/* On phones the thread's named helpers come before the replies; wide screens show them beside. */}
         {recommended.length > 0 && <div className="xl:hidden"><ThreadRecommendations recommended={recommended} full /></div>}
 
-        <section aria-labelledby="community-replies" className="space-y-4">
-          <h2 id="community-replies" className="text-base font-semibold">{t('replyCount', { count: data.replies.length })}<RepliesSinceVisit visitKey={visitKey} replies={data.replies.map((reply) => ({ at: reply.createdAt, own: reply.author.isYou }))} /></h2>
+        <section aria-labelledby="community-replies" className="space-y-3">
+          <h2 id="community-replies" className="text-[15px] font-semibold">{t('replyCount', { count: data.replies.length })}<RepliesSinceVisit visitKey={visitKey} replies={data.replies.map((reply) => ({ at: reply.createdAt, own: reply.author.isYou }))} /></h2>
           {data.replies.length > 0 && <ThreadReplies data={data} handlers={handlers} now={now} visitKey={visitKey} />}
         </section>
 
-        <div className="space-y-3 rounded-[1.375rem] border border-border bg-card p-4 shadow-card sm:p-5">
+        <div className="space-y-2.5 rounded-2xl border border-border bg-card p-3.5 shadow-card sm:p-4">
           {/* An open post this reader can't reply to says why, as a new post does (sweep P3); "Replies are closed" is for
               a post that is. */}
           {viewer.canReply
             ? <CommunityReplyForm data={data} onReply={handlers.onReply} {...(handlers.onUploadPhoto ? { onUploadPhoto: handlers.onUploadPhoto } : {})} />
             : viewer.replyBlocked
-              ? <p role="status" className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm">{t(`postBlocked.${viewer.replyBlocked}`)} {viewer.replyBlocked === 'phone_required' && <Link href={routes.app.account()} className="font-semibold text-primary underline underline-offset-4">{t('verifyPhone')}</Link>}</p>
+              ? <p role="status" className="rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-sm">{t(`postBlocked.${viewer.replyBlocked}`)} {viewer.replyBlocked === 'phone_required' && <Link href={routes.app.account()} className="font-semibold text-primary underline underline-offset-4">{t('verifyPhone')}</Link>}</p>
               : <p className="text-sm text-muted-foreground">{t('replyForm.closed')}</p>}
           <p className="text-xs text-muted-foreground">{t('guidelines')} <Link href={routes.legal('community-guidelines')} className="font-medium text-primary underline underline-offset-4">{t('guidelinesLink')}</Link></p>
         </div>
@@ -75,7 +75,7 @@ export function CommunityPostScreen({ data, handlers, now }: CommunityPostScreen
         </section>}
       </div>
 
-      <aside aria-label={t('related.aside')} className="hidden space-y-4 xl:sticky xl:top-24 xl:block">
+      <aside aria-label={t('related.aside')} className="hidden space-y-3 xl:sticky xl:top-24 xl:block">
         {recommended.length > 0 && <ThreadRecommendations recommended={recommended} full stacked />}
         {related.length > 0 && <section aria-labelledby="community-related" className={railCard}>
           <h2 id="community-related" className={railTitle}><MessagesSquare aria-hidden="true" className="size-4 text-primary" />{t('related.title')}</h2>
@@ -83,7 +83,7 @@ export function CommunityPostScreen({ data, handlers, now }: CommunityPostScreen
         </section>}
         <section aria-labelledby="community-rules" className={railCard}>
           <h2 id="community-rules" className={railTitle}>{t('related.rules')}</h2>
-          <p className="mt-2 text-sm text-muted-foreground">{t('guidelines')}</p>
+          <p className="mt-1.5 text-[13px] text-muted-foreground">{t('guidelines')}</p>
         </section>
       </aside>
     </div>
@@ -93,8 +93,8 @@ export function CommunityPostScreen({ data, handlers, now }: CommunityPostScreen
 function RelatedList({ related }: { related: NonNullable<CommunityPostPageData['related']> }) {
   const t = useTranslations('community');
   return <ul className="mt-2 space-y-0.5">{related.map((post) => <li key={post.id}>
-    <Link href={routes.app.communityPost(post.id)} className="group/row -mx-2 block rounded-xl px-2 py-2 transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">
-      <span className="line-clamp-2 text-sm font-medium group-hover/row:text-primary">{post.title}</span>
+    <Link href={routes.app.communityPost(post.id)} className="group/row -mx-2 block rounded-lg px-2 py-1.5 transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">
+      <span className="line-clamp-2 text-[13.5px] font-medium group-hover/row:text-primary">{post.title}</span>
       <span className="mt-0.5 block text-xs text-muted-foreground tabular-nums">{t(`kindBadge.${post.kind}`)} · {t('replyCount', { count: post.replyCount })}{post.areaName && <> · {post.areaName}</>}</span>
     </Link>
   </li>)}</ul>;

@@ -365,6 +365,30 @@ describe('the home card, the nav dot, the digest and metrics (plan 10.14, 10.19,
   });
 });
 
+describe('any social post (2026-11-22)', () => {
+  it('posts general words with no title, names them by their first line, remakes it on an edit, and filters them', async () => {
+    const first = `Morning at the lake ${unique()}`;
+    const id = await post(maya, { kind: 'general', title: '', body: `${first}\nText me at 512-555-0199 if you want to join.`, areaSlug: '' });
+    const [row] = await db.select({ kind: communityPosts.kind, title: communityPosts.title, body: communityPosts.body }).from(communityPosts).where(eq(communityPosts.id, id));
+    expect(row).toMatchObject({ kind: 'general', title: first });
+    expect(row?.body).not.toContain('512-555-0199');
+    // An edit has only the words; the title follows them.
+    expect(await editCommunityItem(db, maya, { target: 'post', id, body: 'Evening at the lake instead.\nSame plan.' }, now)).toMatchObject({ ok: true });
+    const [edited] = await db.select({ title: communityPosts.title }).from(communityPosts).where(eq(communityPosts.id, id));
+    expect(edited?.title).toBe('Evening at the lake instead.');
+    // The portal's Posts filter shows only general posts, and counts them.
+    const page = await getPortal(db, lee, { area: 'all', type: 'general', sort: 'new' }, now);
+    expect(page?.items.some((item) => item.id === id)).toBe(true);
+    expect(page?.items.every((item) => item.type === 'post' && item.post.kind === 'general')).toBe(true);
+    expect(page?.facets.types.general).toBeGreaterThan(0);
+  });
+
+  it('refuses a general post without words, and asks the others for a title', async () => {
+    expect(await createCommunityPost(db, maya, { kind: 'general', body: '' }, now)).toMatchObject({ ok: false, fieldErrors: { body: ['required'] } });
+    expect(await createCommunityPost(db, maya, { kind: 'question', body: 'Weekend mornings work best for us.' }, now)).toMatchObject({ ok: false, fieldErrors: { title: ['required'] } });
+  });
+});
+
 describe('cleanup', () => {
   it('leaves no photos without a post', async () => {
     const orphans = await db.select({ fileId: communityPhotos.fileId }).from(communityPhotos).leftJoin(communityPosts, eq(communityPosts.id, communityPhotos.postId)).where(sql`${communityPosts.id} is null`);

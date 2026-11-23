@@ -10,13 +10,15 @@
     "recommendation": "Pedir una recomendación",
     "question": "Hacer una pregunta",
     "tip": "Compartir un consejo",
-    "thanks": "Agradecer a un ayudante"
+    "thanks": "Agradecer a un ayudante",
+    "general": "Compartir una publicación"
   },
   "kindBadge": {
     "recommendation": "Recomendación",
     "question": "Pregunta",
     "tip": "Consejo",
-    "thanks": "Agradecimiento"
+    "thanks": "Agradecimiento",
+    "general": "Publicación"
   },
   "scope": {
     "label": "Dónde",
@@ -105,7 +107,8 @@
       "recommendation": "Di qué necesitas: «¿A quién recomiendan para armar una cuna?»",
       "question": "Pregúntalo en una línea: «¿Cuánto tarda armar un clóset?»",
       "tip": "Resúmelo: «Renta la carretilla cuando reserves el camión»",
-      "thanks": "Di a quién y por qué: «¡Gracias, Sam, por el clóset!»"
+      "thanks": "Di a quién y por qué: «¡Gracias, Sam, por el clóset!»",
+      "general": "De qué se trata, en pocas palabras"
     },
     "body": "Detalles",
     "bodyHint": "Lo que ayude a responder: la tarea, el tamaño, cuándo. Sin direcciones ni números de teléfono.",
@@ -121,7 +124,10 @@
     "submit": "Publicar",
     "submitting": "Publicando…",
     "success": "Publicado",
-    "bodyOptional": "Detalles (opcional)"
+    "bodyOptional": "Detalles (opcional)",
+    "generalLabel": "¿Qué quieres compartir?",
+    "generalPlaceholder": "Comparte noticias, una foto o una pregunta con tus vecinos",
+    "generalHint": "Sin direcciones ni números de teléfono."
   },
   "pagination": "Páginas de la comunidad",
   "previous": "Anterior",
@@ -164,7 +170,10 @@
     "postReplyBlocked": "Publicación: aún no puede responder (primero el teléfono)",
     "newPost": "Comunidad · nueva publicación",
     "newThanks": "Comunidad · agradecer a un ayudante",
-    "newThanksBooking": "Comunidad · agradecimiento desde una reserva terminada"
+    "newThanksBooking": "Comunidad · agradecimiento desde una reserva terminada",
+    "postGeneral": "Una publicación general (texto y una foto, sin título)",
+    "newDialog": "Nueva publicación",
+    "newDialogRecommendation": "Nueva publicación: una recomendación"
   },
   "sinceVisit": {
     "badge": "Nueva",
@@ -280,7 +289,8 @@
     "save": "Guardar",
     "saving": "Guardando…",
     "saved": "Cambios guardados",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "postWords": "Tu publicación"
   },
   "follow": {
     "follow": "Seguir esta publicación",
@@ -317,5 +327,6 @@
     "rules": "Bueno saber"
   },
   "replyToPost": "Responder a esta publicación",
-  "replyToPerson": "Responder a {name}"
+  "replyToPerson": "Responder a {name}",
+  "guidelinesShort": "Sé amable y habla de lo que pasa aquí."
 }

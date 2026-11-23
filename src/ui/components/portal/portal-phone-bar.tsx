@@ -52,16 +52,16 @@ export function PortalPhoneBar({ data, onSetArea }: { data: Data; /** Your neigh
   const area = (option: PortalArea) => <AreaLink key={option.slug} href={portalHref(query, { area: option.slug })} label={option.name} count={option.count} selected={option.slug === selectedSlug} yours={option.yours} onPick={pick} />;
   const SortIcon = sortIcons[query.sort];
 
-  return <div className="sticky top-[var(--app-header-offset,4rem)] z-20 -mx-gutter border-b border-border/80 bg-background/95 px-gutter py-2 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 sm:hidden">
+  return <div className="sticky top-[var(--app-header-offset,4rem)] z-20 -mx-gutter border-b border-border/80 bg-background/95 px-gutter py-1.5 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 sm:hidden">
     <div className="flex items-center gap-2">
       <h1 className="min-w-0 flex-1">
-        <button type="button" onClick={() => setPlacesOpen(true)} aria-haspopup="dialog" aria-describedby={hintId} className="flex min-h-11 w-full min-w-0 items-center gap-1 rounded-xl text-left font-display text-[1.25rem]/7 font-semibold tracking-[-0.015em] focus-visible:outline-2 focus-visible:outline-ring">
-          <span className="truncate">{placeName}</span><ChevronDown aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />
+        <button type="button" onClick={() => setPlacesOpen(true)} aria-haspopup="dialog" aria-describedby={hintId} className="flex min-h-10 w-full min-w-0 items-center gap-1 rounded-xl text-left font-display text-[1.0625rem]/6 font-semibold tracking-[-0.01em] focus-visible:outline-2 focus-visible:outline-ring">
+          <span className="truncate">{placeName}</span><ChevronDown aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
         </button>
       </h1>
       <span id={hintId} className="sr-only">{t('phoneBar.changePlace')}</span>
       <Popover open={sortOpen} onOpenChange={setSortOpen}>
-        <PopoverTrigger aria-label={t('phoneBar.sort', { sort: t(`sort.${query.sort}`) })} className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-full border border-border bg-card px-3 text-[13px] font-semibold transition-colors hover:border-foreground/30 focus-visible:outline-2 focus-visible:outline-ring data-[state=open]:border-foreground/40">
+        <PopoverTrigger aria-label={t('phoneBar.sort', { sort: t(`sort.${query.sort}`) })} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full border border-border bg-card px-2.5 text-[13px] font-semibold transition-colors hover:border-foreground/30 focus-visible:outline-2 focus-visible:outline-ring data-[state=open]:border-foreground/40">
           <SortIcon aria-hidden="true" className="size-3.5 text-primary" />{t(`sort.${query.sort}`)}<ArrowDownWideNarrow aria-hidden="true" className="size-3.5 text-muted-foreground" />
         </PopoverTrigger>
         <PopoverContent align="end" className="w-44 p-1.5">
@@ -73,7 +73,7 @@ export function PortalPhoneBar({ data, onSetArea }: { data: Data; /** Your neigh
           })}</ul>
         </PopoverContent>
       </Popover>
-      <button type="button" onClick={() => setFiltersOpen(true)} aria-haspopup="dialog" aria-label={filters > 0 ? t('filters.buttonCount', { count: filters }) : t('filters.button')} className="relative grid size-10 shrink-0 place-items-center rounded-full border border-border bg-card transition-colors hover:border-foreground/30 focus-visible:outline-2 focus-visible:outline-ring">
+      <button type="button" onClick={() => setFiltersOpen(true)} aria-haspopup="dialog" aria-label={filters > 0 ? t('filters.buttonCount', { count: filters }) : t('filters.button')} className="relative grid size-9 shrink-0 place-items-center rounded-full border border-border bg-card transition-colors hover:border-foreground/30 focus-visible:outline-2 focus-visible:outline-ring">
         <SlidersHorizontal aria-hidden="true" className="size-4" />
         {filters > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 min-w-5 rounded-full bg-primary px-1 text-center text-[11px] leading-5 font-semibold text-primary-foreground tabular-nums ring-2 ring-background">{filters}</span>}
       </button>

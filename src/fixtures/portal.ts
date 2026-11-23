@@ -29,7 +29,7 @@ import { remoteComputerPublicTask } from './marketing';
 
 export const PORTAL_NOW = '2026-11-17T15:00:00.000Z';
 
-const [recommendationBase, questionBase, thanksBase, tipBase] = communityFeedPosts as [CommunityPostView, CommunityPostView, CommunityPostView, CommunityPostView];
+const [recommendationBase, questionBase, thanksBase, tipBase, generalBase] = communityFeedPosts as [CommunityPostView, CommunityPostView, CommunityPostView, CommunityPostView, CommunityPostView];
 const boardTask = (id: string): TaskPublicView => {
   const task = taskBoardPageData.tasks.find((candidate) => candidate.id === id);
   if (!task) throw new Error(`board fixture ${id} is missing`);
@@ -81,6 +81,8 @@ const recommendation = portalPost(recommendationBase, { areaSlug: 'mueller', ask
 const question = portalPost(questionBase, { areaSlug: 'windsor-park', saved: true });
 const thanks = portalPost(thanksBase, { areaSlug: 'mueller' });
 const tip = portalPost(tipBase, { saved: true });
+// A general post (2026-11-22, any social post): words and a photo.
+const general = portalPost(generalBase, { areaSlug: 'mueller' });
 /** Priya asked first and then posted it as a task: the post shows the task, and the task the post. */
 const shelfAsk = portalPost({
   ...recommendationBase,
@@ -152,6 +154,7 @@ const forMaya = {
 /** Hot: the liveliest first, posts and tasks together. */
 const hotItems: PortalItem[] = [
   postItem(recommendation),
+  postItem(general),
   taskItem(forMaya.bed),
   postItem(question),
   postItem(fenceTip),
@@ -178,18 +181,18 @@ const areas: PortalArea[] = [
   { slug: 'downtown', name: 'Downtown', count: 0, nearby: false, yours: false },
   { slug: 'east-austin', name: 'East Austin', count: 1, nearby: true, yours: false },
   { slug: 'hyde-park', name: 'Hyde Park', count: 0, nearby: true, yours: false },
-  { slug: 'mueller', name: 'Mueller', count: 7, nearby: true, yours: true },
+  { slug: 'mueller', name: 'Mueller', count: 8, nearby: true, yours: true },
   { slug: 'windsor-park', name: 'Windsor Park', count: 2, nearby: true, yours: false },
   { slug: 'zilker', name: 'Zilker', count: 1, nearby: false, yours: false },
 ];
 
-/** Near Mueller: 13 items (7 tasks and 6 posts; Maya's own task waits in Your stuff), 15 across Austin. */
+/** Near Mueller: 14 items (7 tasks and 7 posts; Maya's own task waits in Your stuff), 16 across Austin. */
 const facets: PortalFacets = {
-  types: { all: 13, task: 7, recommendation: 1, question: 2, tip: 2, thanks: 1 },
-  categories: { 'furniture-assembly': 7, 'moving-help': 2, 'yard-cleanup': 3, 'light-cleaning': 0, 'computer-help': 1, general: 0 },
-  nearby: 13,
-  all: 15,
-  times: { '24h': 6, '7d': 13, '30d': 13 },
+  types: { all: 14, general: 1, task: 7, recommendation: 1, question: 2, tip: 2, thanks: 1 },
+  categories: { 'furniture-assembly': 7, 'moving-help': 2, 'yard-cleanup': 3, 'light-cleaning': 0, 'computer-help': 1, general: 1 },
+  nearby: 14,
+  all: 16,
+  times: { '24h': 7, '7d': 14, '30d': 14 },
   saved: 2,
   unanswered: 1,
 };
@@ -303,7 +306,7 @@ export const portalTasksData: PortalPageData = {
   place: { kind: 'area', slug: 'mueller', name: 'Mueller' },
   items: [taskItem(forMaya.bed), taskItem(forMaya.wardrobe), taskItem(forMaya.bookshelf), taskItem(forMaya.dresser)],
   totalCount: 4,
-  facets: { ...facets, types: { all: 7, task: 4, recommendation: 1, question: 1, tip: 0, thanks: 1 } },
+  facets: { ...facets, types: { all: 7, general: 0, task: 4, recommendation: 1, question: 1, tip: 0, thanks: 1 } },
   live: { areaIds: ['are_mueller'], areaSlugs: ['mueller'], withRemote: false },
   boardHref: routes.taskBoard('austin', { areas: ['mueller'], view: 'cards' }),
 };
@@ -330,7 +333,7 @@ export const portalFilteredEmptyData: PortalPageData = {
 export const portalEmptyData: PortalPageData = {
   ...base,
   areas: areas.map((area) => ({ ...area, count: 0 })),
-  facets: { types: { all: 0, task: 0, recommendation: 0, question: 0, tip: 0, thanks: 0 }, categories: { 'furniture-assembly': 0, 'moving-help': 0, 'yard-cleanup': 0, 'light-cleaning': 0, 'computer-help': 0, general: 0 }, nearby: 0, all: 0, times: { '24h': 0, '7d': 0, '30d': 0 }, saved: 0, unanswered: 0 },
+  facets: { types: { all: 0, general: 0, task: 0, recommendation: 0, question: 0, tip: 0, thanks: 0 }, categories: { 'furniture-assembly': 0, 'moving-help': 0, 'yard-cleanup': 0, 'light-cleaning': 0, 'computer-help': 0, general: 0 }, nearby: 0, all: 0, times: { '24h': 0, '7d': 0, '30d': 0 }, saved: 0, unanswered: 0 },
   items: [],
   totalCount: 0,
   stats: { openTasks: 0, postsThisWeek: 0, helpers: 0 },

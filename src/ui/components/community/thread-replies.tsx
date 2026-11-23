@@ -33,8 +33,8 @@ export function ThreadReplies({ data, handlers, now, visitKey }: { data: Communi
   } : undefined;
   const folded = data.replies.length - THREAD_FOLD;
   return <>
-    <ol className="space-y-4">
-      {data.replies.map((reply, index) => <li key={reply.id} hidden={!open && index >= THREAD_FOLD} className="border-b border-border/70 pb-4 last:border-b-0">
+    <ol className="space-y-3">
+      {data.replies.map((reply, index) => <li key={reply.id} hidden={!open && index >= THREAD_FOLD} className="border-b border-border/70 pb-3 last:border-b-0">
         <ReplyItem reply={reply} now={now} onReact={handlers.onReact} visitKey={visitKey} {...(replyTo ? { onReplyTo: replyTo } : {})} {...(handlers.onTranslate && !reply.moderation ? { footer: <TranslateButton target={{ target: 'reply', id: reply.id }} onTranslate={handlers.onTranslate} /> } : {})} actions={<CommunityItemActions
           target="reply"
           id={reply.id}

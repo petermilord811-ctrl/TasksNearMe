@@ -41,7 +41,7 @@ export function PostPhotos({ photos, label, compact = false, eager = false }: { 
   const grid = compact
     ? <div className="max-w-64 overflow-hidden rounded-2xl border border-foreground/[0.07] dark:border-white/[0.06]">{tile(shown[0]!, 0, 'aspect-4/3 w-full')}</div>
     : <div className={cn('grid gap-0.5 overflow-hidden rounded-2xl border border-foreground/[0.07] dark:border-white/[0.06]', count === 1 ? 'grid-cols-1' : 'grid-cols-2', count === 3 && 'grid-rows-2')}>
-        {count === 1 && tile(shown[0]!, 0, 'aspect-[4/3] max-h-[26rem] w-full sm:aspect-[16/10]')}
+        {count === 1 && tile(shown[0]!, 0, 'aspect-[4/3] max-h-72 w-full sm:aspect-[16/10] sm:max-h-80')}
         {count === 2 && shown.map((photo, index) => tile(photo, index, 'aspect-square w-full sm:aspect-[4/3]'))}
         {count === 3 && <>
           {tile(shown[0]!, 0, 'row-span-2 h-full min-h-48 w-full')}

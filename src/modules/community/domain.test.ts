@@ -21,7 +21,9 @@ import {
   searchWords,
   soundsUnkind,
   startersFor,
+  untitledPostTitle,
 } from './domain';
+import { communityPostInputSchema } from '@/contracts/community';
 import { neighborsRowScope, shownUnder } from './samples';
 
 describe('community rules', () => {
@@ -176,6 +178,37 @@ describe('Neighbors, plan 10', () => {
   it('reads Unanswered from the address', () => {
     expect(parsePortalQuery({ unanswered: '1' }).unanswered).toBe(true);
     expect(parsePortalQuery({}).unanswered).toBe(false);
+  });
+});
+
+describe('any social post (2026-11-22)', () => {
+  it('names a general post by its first line, cut at a word', () => {
+    expect(untitledPostTitle('Sunset over Lake Alice tonight.\nThe cranes are back!')).toBe('Sunset over Lake Alice tonight.');
+    expect(untitledPostTitle('\n\n  Two   spaces  inside  \n')).toBe('Two spaces inside');
+    const long = untitledPostTitle('A very long first line about the sandhill cranes that come back to Paynes Prairie every November, worth a drive.');
+    expect(long.length).toBeLessThanOrEqual(80);
+    expect(long.endsWith('…')).toBe(true);
+    expect(long).toBe('A very long first line about the sandhill cranes that come back to Paynes…');
+  });
+
+  it('takes a general post without a title, and its words are what it needs', () => {
+    expect(communityPostInputSchema.safeParse({ kind: 'general', body: 'Hi neighbors!' }).success).toBe(true);
+    const empty = communityPostInputSchema.safeParse({ kind: 'general', body: '' });
+    expect(empty.success).toBe(false);
+    expect(empty.error?.issues.map((issue) => [issue.path.join('.'), issue.message])).toEqual([['body', 'required']]);
+    expect(communityPostInputSchema.safeParse({ kind: 'general', body: 'x' }).error?.issues[0]?.message).toBe('too_short');
+    expect(bodyFits('general', 'ok')).toBe(true);
+    expect(bodyFits('general', ' ')).toBe(false);
+  });
+
+  it('still asks the other kinds for a title', () => {
+    expect(communityPostInputSchema.safeParse({ kind: 'question', body: '' }).error?.issues.map((issue) => [issue.path.join('.'), issue.message])).toEqual([['title', 'required']]);
+    expect(communityPostInputSchema.safeParse({ kind: 'tip', title: 'Abc', body: 'Ten characters at least.' }).error?.issues[0]?.message).toBe('too_short');
+    expect(communityPostInputSchema.safeParse({ kind: 'question', title: 'Is it weekly?' }).success).toBe(true);
+  });
+
+  it('filters the portal by general posts', () => {
+    expect(parsePortalQuery({ type: 'general' }).type).toBe('general');
   });
 });
 

@@ -32,7 +32,7 @@ export function useTaskPrice(task: TaskPublicView): { price: string; note: strin
     : { price: `${formatMoney(task.budget.rateCents)}${card('perHour')}`, note: card('upToHours', { hours: formatHours(task.budget.hoursCap) }) };
 }
 
-const factClass = 'inline-flex min-h-7 items-center gap-1.5 rounded-full bg-muted px-2.5 text-xs font-medium text-foreground/80';
+const factClass = 'inline-flex min-h-6 items-center gap-1 rounded-full bg-muted px-2 text-xs font-medium text-foreground/80';
 
 /** Offers that ended without a booking: the helper may send a new one (as find work says, audit M21 and M23). */
 const CLOSED_OFFERS = ['expired', 'declined', 'withdrawn'] as const;
@@ -85,7 +85,7 @@ export function TaskFeedCard({ view, now, visitKey, onSaveTask, headingLevel = 2
   const standing = useHelperStanding(view);
   const findWork = useTranslations('findWork');
 
-  if (compact) return <article aria-labelledby={`task-${task.id}`} className="min-w-0 space-y-2 rounded-[1.375rem] border border-border bg-card p-3.5 shadow-card sm:p-4">
+  if (compact) return <article aria-labelledby={`task-${task.id}`} className="min-w-0 space-y-1.5 rounded-2xl border border-border bg-card p-3.5 shadow-card sm:p-4">
     <div className="flex items-start justify-between gap-3">
       <p className="min-w-0 truncate text-xs text-muted-foreground">
         <ClipboardList aria-hidden="true" className="mr-1 inline size-3.5 align-[-2px] text-primary" />
@@ -93,7 +93,7 @@ export function TaskFeedCard({ view, now, visitKey, onSaveTask, headingLevel = 2
       </p>
       <p className="shrink-0 text-right leading-tight"><span className="font-display text-base font-semibold tabular-nums">{price}</span>{note && <span className="block text-[11px] text-muted-foreground tabular-nums">{note}</span>}</p>
     </div>
-    <Heading id={`task-${task.id}`} className="min-w-0 font-display text-[1rem]/6 font-semibold tracking-[-0.01em] [overflow-wrap:anywhere]">
+    <Heading id={`task-${task.id}`} className="min-w-0 font-display text-[15.5px]/[1.35] font-semibold tracking-[-0.01em] [overflow-wrap:anywhere]">
       <Link href={view.href} className="rounded-sm underline-offset-4 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring"><Highlight text={task.title} words={highlight} /></Link>
       <NewSinceBadge postedAt={task.postedAt} recent={recent} visitKey={visitKey} />
     </Heading>
@@ -108,8 +108,8 @@ export function TaskFeedCard({ view, now, visitKey, onSaveTask, headingLevel = 2
       <span className="truncate font-medium">{view.fromPost.title}</span>
     </Link>}
     {view.relation === 'helper' && <HelperStandingNote view={view} closed={standing.closed} size="sm" />}
-    <div className="flex flex-wrap items-center gap-2 pt-0.5">
-      <Link href={view.href} className={buttonVariants({ size: 'sm', variant: standing.primary ? 'default' : 'outline', className: 'min-h-9' })}>{standing.cta}</Link>
+    <div className="flex flex-wrap items-center gap-2">
+      <Link href={view.href} className={buttonVariants({ size: 'sm', variant: standing.primary ? 'default' : 'outline', className: 'min-h-8' })}>{standing.cta}</Link>
       {onSaveTask && view.saved !== undefined && <SaveButton id={task.id} title={task.title} saved={view.saved} target={{ kind: 'task', onSave: onSaveTask }} compact="phone" />}
       <p className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
         {standing.closed && task.offerCount === 0 ? <span className="tabular-nums">{findWork('noLiveOffers')}</span> : <LiveOfferCount taskId={task.id} offerCount={task.offerCount} renderedAt={now} />}
@@ -118,7 +118,7 @@ export function TaskFeedCard({ view, now, visitKey, onSaveTask, headingLevel = 2
     </div>
   </article>;
 
-  return <article aria-labelledby={`task-${task.id}`} className="min-w-0 space-y-3 rounded-[1.375rem] border border-border bg-card p-4 shadow-card sm:p-5">
+  return <article aria-labelledby={`task-${task.id}`} className="min-w-0 space-y-2.5 rounded-2xl border border-border bg-card p-3.5 shadow-card sm:p-4">
     <div className="flex items-start justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2.5">
         <InitialsAvatar initials={task.poster.initials} size="sm" />
@@ -136,16 +136,16 @@ export function TaskFeedCard({ view, now, visitKey, onSaveTask, headingLevel = 2
     {/* The title and the price share a line; the first words use the card's whole width under them. */}
     <div className="space-y-1.5">
       <div className="flex items-start justify-between gap-4">
-        <Heading id={`task-${task.id}`} className="min-w-0 font-display text-[1.0625rem]/6 font-semibold tracking-[-0.01em] [overflow-wrap:anywhere]">
+        <Heading id={`task-${task.id}`} className="min-w-0 font-display text-[15.5px]/[1.35] font-semibold tracking-[-0.01em] [overflow-wrap:anywhere]">
           <Link href={view.href} className="rounded-sm underline-offset-4 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring"><Highlight text={task.title} words={highlight} /></Link>
           <NewSinceBadge postedAt={task.postedAt} recent={recent} visitKey={visitKey} />
         </Heading>
         <p className="shrink-0 text-right leading-tight">
-          <span className="block font-display text-xl font-semibold tracking-[-0.01em] tabular-nums">{price}</span>
+          <span className="block font-display text-[17px] font-semibold tracking-[-0.01em] tabular-nums">{price}</span>
           {note && <span className="mt-0.5 block text-xs text-muted-foreground tabular-nums">{note}</span>}
         </p>
       </div>
-      <p className="line-clamp-2 text-[15px]/6 text-foreground/80 [overflow-wrap:anywhere]">{task.excerpt}</p>
+      <p className="line-clamp-2 text-[14px]/[1.45] text-foreground/80 [overflow-wrap:anywhere]">{task.excerpt}</p>
     </div>
 
     <ul className="flex flex-wrap gap-1.5">
@@ -161,8 +161,8 @@ export function TaskFeedCard({ view, now, visitKey, onSaveTask, headingLevel = 2
 
     {view.relation === 'helper' && <HelperStandingNote view={view} closed={standing.closed} />}
 
-    <div className="flex flex-wrap items-center gap-2 border-t border-border/70 pt-3">
-      <Link href={view.href} className={buttonVariants({ size: 'sm', variant: standing.primary ? 'default' : 'outline', className: 'min-h-9' })}>{standing.cta}</Link>
+    <div className="flex flex-wrap items-center gap-2 border-t border-border/70 pt-2">
+      <Link href={view.href} className={buttonVariants({ size: 'sm', variant: standing.primary ? 'default' : 'outline', className: 'min-h-8' })}>{standing.cta}</Link>
       {onSaveTask && view.saved !== undefined && <SaveButton id={task.id} title={task.title} saved={view.saved} target={{ kind: 'task', onSave: onSaveTask }} compact="phone" />}
       <p className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
         {/* Live offers only: an expired one of the helper's own isn't "no offers yet" (audit M21). */}

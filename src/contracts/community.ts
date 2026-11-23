@@ -15,7 +15,11 @@ import type { SparksSummary } from './sparks';
 
 const code = (value: FieldErrorCode) => value;
 
-export const COMMUNITY_POST_KINDS = ['recommendation', 'question', 'tip', 'thanks'] as const;
+/**
+ * `general`: any social post (owner, 2026-11-22: "it's only for task posts … make it possible"), words and photos with no
+ * title of its own (the server keeps its first line as the title, for notifications, search and screen readers).
+ */
+export const COMMUNITY_POST_KINDS = ['general', 'recommendation', 'question', 'tip', 'thanks'] as const;
 export type CommunityPostKind = (typeof COMMUNITY_POST_KINDS)[number];
 
 export const COMMUNITY_REACTIONS = ['thanks', 'helpful'] as const;
@@ -265,14 +269,19 @@ export const COMMUNITY_REPLY_PHOTOS_MAX = 1;
 export const COMMUNITY_BODY_OPTIONAL_KINDS = ['recommendation', 'question'] as const satisfies readonly CommunityPostKind[];
 /** The shortest details a tip or a thanks takes. */
 export const COMMUNITY_BODY_MIN = 10;
+/** A general post is its words (no title): at least this many. */
+export const COMMUNITY_GENERAL_BODY_MIN = 2;
+/** Kinds without a title of their own: the words come first and the title is made from them. */
+export const COMMUNITY_UNTITLED_KINDS = ['general'] as const satisfies readonly CommunityPostKind[];
 
 const photoIdsSchema = z.array(z.string().trim().min(1).max(80), code('invalid')).max(COMMUNITY_POST_PHOTOS_MAX, code('too_long'));
 
 export const communityPostInputSchema = z
   .object({
     kind: z.enum(COMMUNITY_POST_KINDS, code('required')),
-    title: z.string(code('required')).trim().min(5, code('too_short')).max(COMMUNITY_TITLE_MAX, code('too_long')),
-    /** Optional for an ask (`COMMUNITY_BODY_OPTIONAL_KINDS`); at least `COMMUNITY_BODY_MIN` characters otherwise. */
+    /** 5 characters at least, except a general post's (`COMMUNITY_UNTITLED_KINDS`), which has none. */
+    title: z.string().trim().max(COMMUNITY_TITLE_MAX, code('too_long')).optional().default(''),
+    /** Optional for an ask (`COMMUNITY_BODY_OPTIONAL_KINDS`); at least `COMMUNITY_BODY_MIN` characters otherwise (a general post: `COMMUNITY_GENERAL_BODY_MIN`). */
     body: z.string().trim().max(COMMUNITY_BODY_MAX, code('too_long')).optional().default(''),
     categorySlug: z.string().trim().optional(),
     /** A neighborhood's slug, or empty for the whole market. */
@@ -285,7 +294,11 @@ export const communityPostInputSchema = z
     kindnessConfirmed: z.boolean().optional(),
   })
   .refine((value) => value.kind !== 'thanks' || Boolean(value.bookingId), { path: ['bookingId'], message: code('required') })
-  .refine((value) => (COMMUNITY_BODY_OPTIONAL_KINDS as readonly string[]).includes(value.kind) || value.body.length >= COMMUNITY_BODY_MIN, {
+  .refine((value) => value.kind === 'general' || value.title.length > 0, { path: ['title'], message: code('required') })
+  .refine((value) => value.kind === 'general' || value.title.length === 0 || value.title.length >= 5, { path: ['title'], message: code('too_short') })
+  .refine((value) => value.kind !== 'general' || value.body.length > 0, { path: ['body'], message: code('required') })
+  .refine((value) => value.kind !== 'general' || value.body.length === 0 || value.body.length >= COMMUNITY_GENERAL_BODY_MIN, { path: ['body'], message: code('too_short') })
+  .refine((value) => value.kind === 'general' || (COMMUNITY_BODY_OPTIONAL_KINDS as readonly string[]).includes(value.kind) || value.body.length >= COMMUNITY_BODY_MIN, {
     path: ['body'],
     message: code('too_short'),
   });

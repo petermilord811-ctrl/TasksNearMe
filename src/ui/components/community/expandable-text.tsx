@@ -6,10 +6,13 @@ import { cn } from '@/ui/lib/utils';
 import { Highlight } from './highlight';
 
 /**
- * A card's words, folded after four lines with "More" (plan 10.2: Nextdoor's "See more" instead of a hard cut). The
- * button shows only when the words don't fit, measured in the browser; before that the text is just folded.
+ * A card's words, folded after `lines` lines (four by default) with "More" (plan 10.2: Nextdoor's "See more" instead of
+ * a hard cut). The button shows only when the words don't fit, measured in the browser; before that the text is just
+ * folded.
  */
-export function ExpandableText({ text, className, words = [] }: { text: string; className?: string; /** A search's words, marked. */ words?: readonly string[] }) {
+const CLAMP = { 3: 'line-clamp-3', 4: 'line-clamp-4', 5: 'line-clamp-5' } as const;
+
+export function ExpandableText({ text, className, words = [], lines = 4 }: { text: string; className?: string; /** A search's words, marked. */ words?: readonly string[]; lines?: keyof typeof CLAMP }) {
   const t = useTranslations('community');
   const id = useId();
   const box = useRef<HTMLParagraphElement>(null);
@@ -27,8 +30,8 @@ export function ExpandableText({ text, className, words = [] }: { text: string; 
   }, [text]);
 
   return <div>
-    <p ref={box} id={id} className={cn('whitespace-pre-line [overflow-wrap:anywhere]', !open && 'line-clamp-4', className)}><Highlight text={text} words={words} /></p>
-    {(overflows || open) && <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((value) => !value)} className="mt-0.5 min-h-8 rounded-sm text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
+    <p ref={box} id={id} className={cn('whitespace-pre-line [overflow-wrap:anywhere]', !open && CLAMP[lines], className)}><Highlight text={text} words={words} /></p>
+    {(overflows || open) && <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((value) => !value)} className="min-h-7 rounded-sm text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
       {open ? t('less') : t('moreText')}
     </button>}
   </div>;

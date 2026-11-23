@@ -38,8 +38,8 @@ export type PortalView = (typeof PORTAL_VIEWS)[number];
 export const PORTAL_SORTS = ['hot', 'new', 'top'] as const;
 export type PortalSort = (typeof PORTAL_SORTS)[number];
 
-/** Tasks, or one kind of post. Without one: everything. */
-export const PORTAL_TYPES = ['task', 'recommendation', 'question', 'tip', 'thanks'] as const;
+/** General posts, tasks, or one kind of ask or post. Without one: everything. */
+export const PORTAL_TYPES = ['general', 'task', 'recommendation', 'question', 'tip', 'thanks'] as const;
 export type PortalType = (typeof PORTAL_TYPES)[number];
 
 /** Posted within the last day, week or month. Without one: any time. */

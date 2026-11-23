@@ -8,9 +8,9 @@ import { cn } from '@/ui/lib/utils';
 import { ScrollRow } from '@/ui/components/layout/scroll-row';
 import { savedHref, unansweredHref } from './portal-href';
 
-const cardClass = 'min-w-0 rounded-[1.375rem] border border-border bg-card p-4 shadow-card';
-const cardTitle = 'flex items-center gap-2 text-[13px] font-semibold tracking-wide text-muted-foreground uppercase';
-const rowLink = 'group/row flex min-w-0 items-center justify-between gap-3 rounded-xl px-2 py-2 -mx-2 transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring';
+const cardClass = 'min-w-0 rounded-2xl border border-border bg-card p-3.5 shadow-card';
+const cardTitle = 'flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase';
+const rowLink = 'group/row flex min-w-0 items-center justify-between gap-3 rounded-lg px-2 py-1.5 -mx-2 transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring';
 
 /** A helper's rating and how many neighbors recommend them. */
 function HelperFacts({ helper }: { helper: PortalHelper }) {
@@ -21,7 +21,7 @@ function HelperFacts({ helper }: { helper: PortalHelper }) {
   </p>;
 }
 
-const requestClass = 'inline-flex min-h-9 shrink-0 items-center justify-center rounded-full border border-primary/35 px-3 text-[13px] font-semibold text-primary transition-colors hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-ring';
+const requestClass = 'inline-flex min-h-8 shrink-0 items-center justify-center rounded-full border border-primary/35 px-2.5 text-xs font-semibold text-primary transition-colors hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-ring';
 
 /**
  * One helper who works in the place: their photo, name and checks, rating and neighbors' word, and Request. In the
@@ -36,8 +36,8 @@ function HelperItem({ helper, layout }: { helper: PortalHelper; layout: 'rail' |
   </p>;
   const request = (className?: string) => <Link href={helper.requestHref} aria-label={t('requestLabel', { name: helper.displayName })} className={cn(requestClass, className)}>{t('request')}</Link>;
   if (layout === 'rail') {
-    return <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5">
-      <span className="row-span-2 self-start"><InitialsAvatar initials={helper.initials} photo={helper.photo} size="md" /></span>
+    return <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-2.5 gap-y-0.5">
+      <span className="row-span-2 self-start"><InitialsAvatar initials={helper.initials} photo={helper.photo} size="sm" /></span>
       {name}
       {request()}
       <div className="col-span-2 col-start-2 space-y-0.5 leading-tight">
@@ -124,12 +124,12 @@ export function YourStuffStrip({ rail, query }: { rail: PortalRailData; query: P
   return <nav aria-label={t('inFeed.yourStuff')} className="xl:hidden">
     <ul className="flex gap-2 sm:flex-wrap">
       {waiting.map((task, index) => <li key={task.id} className={cn('min-w-0', index > 0 && 'max-sm:hidden')}>
-        <Link href={task.href} className="inline-flex min-h-10 max-w-[min(18rem,100%)] items-center gap-2 rounded-full border border-border bg-card px-3.5 text-[13px] shadow-card transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-ring">
-          <ClipboardList aria-hidden="true" className="size-4 shrink-0 text-primary" /><span className="truncate font-medium">{task.title}</span>
+        <Link href={task.href} className="inline-flex min-h-8 max-w-[min(18rem,100%)] items-center gap-1.5 rounded-full border border-border bg-card px-3 text-[13px] transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-ring">
+          <ClipboardList aria-hidden="true" className="size-3.5 shrink-0 text-primary" /><span className="truncate font-medium">{task.title}</span>
           <span className="shrink-0 rounded-full bg-primary px-1.5 py-px text-[11px] font-semibold text-primary-foreground tabular-nums">{t('rail.offers', { count: task.offerCount })}</span>
         </Link>
       </li>)}
-      {rail.savedCount > 0 && <li className="shrink-0"><Link href={savedHref(query)} aria-current={query.saved ? 'true' : undefined} className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-card px-3.5 text-[13px] font-medium shadow-card transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-ring aria-[current=true]:border-primary/50 aria-[current=true]:bg-brand-soft">
+      {rail.savedCount > 0 && <li className="shrink-0"><Link href={savedHref(query)} aria-current={query.saved ? 'true' : undefined} className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-[13px] font-medium transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-ring aria-[current=true]:border-primary/50 aria-[current=true]:bg-brand-soft">
         <Bookmark aria-hidden="true" className="size-4 text-primary" />{t('saved.count', { count: rail.savedCount })}
       </Link></li>}
     </ul>
@@ -145,7 +145,7 @@ export function PortalRail({ data }: { data: Pick<PortalPageData, 'rail' | 'quer
   const { rail, query } = data;
   const nothing = rail.yourTasks.length === 0 && rail.yourPosts.length === 0 && rail.savedCount === 0;
   const helpersHref = routes.app.helpers(data.place.kind === 'area' ? { area: data.place.slug } : {});
-  return <aside aria-label={t('label')} className="space-y-4">
+  return <aside aria-label={t('label')} className="space-y-3">
     <section aria-labelledby="portal-your-stuff" className={cardClass}>
       <h2 id="portal-your-stuff" className={cardTitle}><ClipboardList aria-hidden="true" className="size-4 text-primary" />{t('yourStuff')}</h2>
       {nothing
@@ -176,15 +176,15 @@ export function PortalRail({ data }: { data: Pick<PortalPageData, 'rail' | 'quer
       <h2 id="portal-helpers" className={cardTitle}><Users aria-hidden="true" className="size-4 text-primary" />{t('helpers')}</h2>
       {rail.helpers.length === 0
         ? <p className="mt-2 text-sm text-muted-foreground">{t('helpersNone')}</p>
-        : <ul className="mt-3 space-y-3.5">{rail.helpers.map((helper) => <li key={helper.handle}><HelperItem helper={helper} layout="rail" /></li>)}</ul>}
-      <Link href={helpersHref} className="mt-3 inline-flex min-h-9 items-center gap-1 text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('helpersAll')}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>
+        : <ul className="mt-2.5 space-y-3">{rail.helpers.map((helper) => <li key={helper.handle}><HelperItem helper={helper} layout="rail" /></li>)}</ul>}
+      <Link href={helpersHref} className="mt-2 inline-flex min-h-8 items-center gap-1 text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('helpersAll')}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>
     </section>
 
     <UnansweredCard unanswered={rail.unanswered} query={query} />
 
     <TrendingCard trending={rail.trending} />
 
-    <section aria-labelledby="portal-good-to-know" className={cn(cardClass, 'space-y-2 text-sm text-muted-foreground')}>
+    <section aria-labelledby="portal-good-to-know" className={cn(cardClass, 'space-y-1.5 text-[13px] text-muted-foreground')}>
       <h2 id="portal-good-to-know" className={cardTitle}>{t('goodToKnow')}</h2>
       <p>{t('guidelines')}</p>
       <p className="flex items-start gap-2"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('privacy')}</p>
