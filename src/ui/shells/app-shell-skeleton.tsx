@@ -29,7 +29,8 @@ const dock = (
  */
 export function AppShellSkeleton({ layout }: { layout?: 'tabs' | 'flow' }) {
   return (
-    <div data-app-shell-skeleton={layout ?? 'route'} className={cn('paper flex min-h-dvh flex-col', layout === 'tabs' && 'max-lg:pb-24')}>
+    // AppShell's widths (10% wider than the public pages), so nothing shifts when the real shell comes in.
+    <div data-app-shell-skeleton={layout ?? 'route'} className={cn('paper flex min-h-dvh flex-col [--container-admin:99rem] [--container-content:77rem]', layout === 'tabs' && 'max-lg:pb-24')}>
       {/* AppBar's look at the top of the page; not AppBar itself, which owns --app-header-offset while it's mounted. */}
       <div className="app-glass sticky top-0 z-navigation border-b border-transparent">
         <div className="mx-auto flex max-w-admin items-center gap-x-2 px-gutter py-2 sm:gap-x-3 sm:py-2.5">

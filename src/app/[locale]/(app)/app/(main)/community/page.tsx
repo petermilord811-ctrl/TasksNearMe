@@ -1,4 +1,6 @@
 import { withClientMessages } from '@/i18n/client-messages';
+// The rail's sponsored cards (src/ui/components/ads): imported here, not by the component, so only this route loads it.
+import '@/ui/components/ads/ads.css';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getLocale, getTranslations } from 'next-intl/server';

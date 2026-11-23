@@ -71,6 +71,7 @@ import { helpersBrowsePreviews } from './helpers-browse.preview';
 import { reportPreviews } from './report.preview';
 import { communityPreviews } from './community.preview';
 import { portalPreviews } from './portal.preview';
+import { adsPreviews } from './ads.preview';
 import { questionPreviews } from './questions.preview';
 import { searchPreviews } from './searches.preview';
 import { routeDialogPreviews } from './route-dialogs.preview';
@@ -173,6 +174,7 @@ export const previews: PreviewEntry[] = [
   ...reportPreviews,
   ...communityPreviews,
   ...portalPreviews,
+  ...adsPreviews,
   ...questionPreviews,
   ...searchPreviews,
   ...routeDialogPreviews,

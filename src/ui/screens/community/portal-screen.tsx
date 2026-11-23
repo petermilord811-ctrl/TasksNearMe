@@ -1,4 +1,6 @@
 import type { ISODateTime, PortalHandlers, PortalPageData } from '@/contracts';
+import { NEIGHBORS_RAIL_ADS } from '@/contracts/ads';
+import { SponsoredAd } from '@/ui/components/ads/sponsored-ad';
 import { AreaStrip } from '@/ui/components/portal/area-strip';
 import { ActiveFilters, ListGroupBar, MoreTaskFilters, PortalToolbar, TypeTabs } from '@/ui/components/portal/portal-controls';
 import { PortalComposer } from '@/ui/components/portal/portal-composer';
@@ -19,7 +21,9 @@ export interface PortalScreenProps { data: PortalPageData; handlers: PortalHandl
  * Then the composer, staff's pinned card, "which neighborhood are you in?" while we don't know, the types, the toolbar
  * and the stream (the Feed's cards or the List's rows, from the same items under one set of filters in one URL); and
  * on wide screens a rail beside it (your stuff, helpers nearby, the asks waiting for an answer, the week's busiest posts,
- * the rules), whose parts join the stream on smaller ones. New posts and tasks wait in a pill until asked for.
+ * the rules), whose parts join the stream on smaller ones. New posts and tasks wait in a pill until asked for. The rail
+ * also carries two sponsored cards (2026-11-22): one above its cards, one pinned under them while the stream scrolls;
+ * the route imports their styles (ads.css).
  */
 export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
   const { query } = data;
@@ -27,11 +31,12 @@ export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
   const visitKey = `portal:${data.market.slug}`;
   // A new filter set starts a new stream; a refresh (a reaction, the live pill) keeps what was added.
   const streamKey = JSON.stringify({ ...query, page: undefined });
+  const [topAd, pinnedAd] = NEIGHBORS_RAIL_ADS;
   return <div className="space-y-5 max-sm:space-y-4">
     <PortalPhoneBar data={data} {...(handlers.onSetArea ? { onSetArea: handlers.onSetArea } : {})} />
     <div className="max-sm:hidden"><PortalHeader data={data} /></div>
     <div className="max-sm:hidden"><AreaStrip data={data} {...(handlers.onSetArea ? { onSetArea: handlers.onSetArea } : {})} /></div>
-    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_17.5rem] xl:gap-x-5">
+    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_17.5rem] xl:gap-x-5 2xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:gap-x-6">
       <div className="min-w-0 space-y-4">
         <PortalComposer data={data} onPost={handlers.onPost} {...(handlers.onUploadPhoto ? { onUploadPhoto: handlers.onUploadPhoto } : {})} />
         {data.announcement && <AnnouncementCard announcement={data.announcement} {...(handlers.onDismissAnnouncement ? { onDismiss: handlers.onDismissAnnouncement } : {})} />}
@@ -53,8 +58,11 @@ export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
             : <PortalStream key={streamKey} data={data} now={now} visitKey={visitKey} handlers={handlers} />}
         </div>
       </div>
-      <div className="hidden xl:block">
+      {/* As tall as the stream, so the last ad can stay in view while it scrolls. */}
+      <div className="hidden xl:flex xl:flex-col xl:gap-4 xl:self-stretch">
+        <SponsoredAd ad={topAd} />
         <PortalRail data={data} />
+        <div className="sticky top-[calc(var(--app-header-offset,4.25rem)+1.5rem)]"><SponsoredAd ad={pinnedAd} /></div>
       </div>
     </div>
   </div>;

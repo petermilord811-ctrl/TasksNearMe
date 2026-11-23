@@ -392,8 +392,6 @@
   --spacing-card: var(--card-padding);
   --spacing-section: var(--section-gap);
   --container-reading: 45rem;
-  --container-content: 70rem;
-  --container-admin: 90rem;
   --z-index-action: var(--layer-action);
   --z-index-navigation: var(--layer-navigation);
   --z-index-dev: var(--layer-dev);
@@ -401,6 +399,13 @@
   --z-index-toast: var(--layer-toast);
   --default-transition-duration: 200ms;
   --default-transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* The page widths are variables (the theme above inlines its values): the signed-in shell widens its own subtree by
+   10% (app-shell.tsx, 2026-11-22, owner: "make a little full-wide (10% more)"); public pages and staff tools keep these. */
+@theme {
+  --container-content: 70rem;
+  --container-admin: 90rem;
 }
 
 /* The landing page's paper: a warm marble under every section, soft clouds and fine diagonal veins of a few

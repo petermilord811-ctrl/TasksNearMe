@@ -28,6 +28,8 @@ import {
 } from '@/fixtures';
 import { TaskDiscussionLink } from '@/ui/components/community/task-discussion-link';
 import { PortalSkeleton } from '@/ui/components/portal/portal-skeleton';
+// The rail's sponsored cards (the route imports these styles in the app).
+import '@/ui/components/ads/ads.css';
 import { CommunityPostScreen } from '@/ui/screens/community/community-post-screen';
 import { PortalScreen } from '@/ui/screens/community/portal-screen';
 import { AppShell } from '@/ui/shells/app-shell';

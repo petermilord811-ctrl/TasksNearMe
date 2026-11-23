@@ -1,0 +1,68 @@
+{
+  "label": "Sponsored",
+  "badge": "Ad",
+  "learnMore": "Learn more",
+  "linkNote": "Ad: {summary}. Opens in a new tab.",
+  "about": {
+    "button": "About this ad",
+    "title": "About this ad",
+    "body": "These ads are the same for everyone. They don't use your messages, your address or anything you do on TasksNearMe.",
+    "advertiser": "Advertiser: {name} ({domain})"
+  },
+  "humanizeword": {
+    "summary": "an AI humanizer and AI detector. Your words, more you",
+    "tagline": "AI humanizer & AI detector",
+    "heroLine1": "Your words.",
+    "heroLine2": "More you.",
+    "example": "Example rewrite",
+    "original": "Original",
+    "originalText": "“We wish to express our gratitude.”",
+    "rewrite": "Rewrite · Warm & natural",
+    "rewriteText": "“Thanks. It means a lot.”",
+    "tone": "Tone",
+    "tones": {
+      "warm": "Warm",
+      "direct": "Direct",
+      "formal": "Formal"
+    },
+    "endLine1": "Your draft. Your style.",
+    "endLine2": "Clearer.",
+    "endBody": "Choose your tone. Review every change.",
+    "cta": "Humanize your text",
+    "fine": "Free account · No subscription"
+  },
+  "capcue": {
+    "summary": "real-time captions for everything your PC plays. Free to start",
+    "live": "Live",
+    "speaker": "Lecture · Speaker 1",
+    "caption": "So the mitochondria turn glucose into the energy every cell runs on.",
+    "titleLine1": "Real-time captions for",
+    "titleLine2": "everything <accent>your PC plays</accent>",
+    "speakerOne": "S1",
+    "speakerTwo": "S2",
+    "lineOne": "Let’s go over this week’s numbers.",
+    "lineTwo": "Sign-ups are up eight percent.",
+    "latency": "< 1 s",
+    "uses": {
+      "meetings": "Meetings",
+      "lectures": "Lectures",
+      "streams": "Streams",
+      "videos": "Videos"
+    },
+    "endLine1": "Start captioning",
+    "endLine2": "in under a minute.",
+    "endBody": "Meetings, lectures, streams and videos.",
+    "cta": "Get started free",
+    "fine": "Free to start · No credit card · Windows"
+  },
+  "previews": {
+    "group": "Sponsored ads",
+    "humanizeword": "HumanizeWord card (where it rests)",
+    "humanizewordScene": "HumanizeWord, frame 1: the scene",
+    "humanizewordProduct": "HumanizeWord, frame 2: the product",
+    "capcue": "CapCue card (where it rests)",
+    "capcueScene": "CapCue, frame 1: the scene",
+    "capcueProduct": "CapCue, frame 2: the product",
+    "notes": "Reduced motion shows the last frame; the app plays three frames twice once half the card is on screen."
+  }
+}

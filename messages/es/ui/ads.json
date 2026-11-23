@@ -1,0 +1,68 @@
+{
+  "label": "Patrocinado",
+  "badge": "Anuncio",
+  "learnMore": "Ver más",
+  "linkNote": "Anuncio: {summary}. Se abre en una pestaña nueva.",
+  "about": {
+    "button": "Sobre este anuncio",
+    "title": "Sobre este anuncio",
+    "body": "Estos anuncios son los mismos para todos. No usan tus mensajes, tu dirección ni nada de lo que haces en TasksNearMe.",
+    "advertiser": "Anunciante: {name} ({domain})"
+  },
+  "humanizeword": {
+    "summary": "un humanizador y detector de textos de IA. Tus palabras, más tú",
+    "tagline": "Humanizador y detector de IA",
+    "heroLine1": "Tus palabras.",
+    "heroLine2": "Más tú.",
+    "example": "Ejemplo de reescritura",
+    "original": "Original",
+    "originalText": "“Deseamos expresar nuestra gratitud.”",
+    "rewrite": "Reescritura · Cálida y natural",
+    "rewriteText": "“Gracias. Significa mucho.”",
+    "tone": "Tono",
+    "tones": {
+      "warm": "Cálido",
+      "direct": "Directo",
+      "formal": "Formal"
+    },
+    "endLine1": "Tu borrador. Tu estilo.",
+    "endLine2": "Más claro.",
+    "endBody": "Elige tu tono. Revisa cada cambio.",
+    "cta": "Humaniza tu texto",
+    "fine": "Cuenta gratis · Sin suscripción"
+  },
+  "capcue": {
+    "summary": "subtítulos en tiempo real para todo lo que suena en tu PC. Gratis para empezar",
+    "live": "En vivo",
+    "speaker": "Clase · Persona 1",
+    "caption": "Las mitocondrias convierten la glucosa en la energía que usa cada célula.",
+    "titleLine1": "Subtítulos en vivo de",
+    "titleLine2": "<accent>todo lo que suena en tu PC</accent>",
+    "speakerOne": "P1",
+    "speakerTwo": "P2",
+    "lineOne": "Repasemos los números de esta semana.",
+    "lineTwo": "Los registros suben un ocho por ciento.",
+    "latency": "< 1 s",
+    "uses": {
+      "meetings": "Reuniones",
+      "lectures": "Clases",
+      "streams": "Directos",
+      "videos": "Videos"
+    },
+    "endLine1": "Empieza a subtitular",
+    "endLine2": "en menos de un minuto.",
+    "endBody": "Reuniones, clases, directos y videos.",
+    "cta": "Empieza gratis",
+    "fine": "Gratis para empezar · Sin tarjeta · Windows"
+  },
+  "previews": {
+    "group": "Anuncios patrocinados",
+    "humanizeword": "Tarjeta de HumanizeWord (donde se queda)",
+    "humanizewordScene": "HumanizeWord, escena 1: la escena",
+    "humanizewordProduct": "HumanizeWord, escena 2: el producto",
+    "capcue": "Tarjeta de CapCue (donde se queda)",
+    "capcueScene": "CapCue, escena 1: la escena",
+    "capcueProduct": "CapCue, escena 2: el producto",
+    "notes": "Con movimiento reducido se ve la última escena; en la app pasan tres escenas dos veces cuando la mitad de la tarjeta está a la vista."
+  }
+}

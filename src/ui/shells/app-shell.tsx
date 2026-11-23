@@ -47,7 +47,9 @@ export interface AppShellProps {
 export function AppShell({ viewer, handlers, children, currentPath, layout, notices = [], chat }: AppShellProps) {
   const t = useTranslations('shell');
   const nav = getAppNav(viewer.mode);
-  return <AppShellFrame layout={layout} className="paper flex min-h-dvh flex-col [--app-bottom-offset:0px]">
+  // 10% wider than the public pages (2026-11-22, owner: "make a little full-wide (10% more)"): the bar, the rail and
+  // every page's `max-w-content` read these (globals.css). AppShellSkeleton matches them.
+  return <AppShellFrame layout={layout} className="paper flex min-h-dvh flex-col [--app-bottom-offset:0px] [--container-admin:99rem] [--container-content:77rem]">
     <SkipLink />
     <ScrollbarActivity />
     {handlers.onCheckPushDevice && <PushDeviceGuard viewerId={viewer.id} onCheck={handlers.onCheckPushDevice} />}

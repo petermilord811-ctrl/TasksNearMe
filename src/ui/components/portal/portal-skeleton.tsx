@@ -19,7 +19,7 @@ export function PortalSkeleton() {
         <Skeleton className="hidden h-11 w-72 rounded-full sm:block lg:w-80" />
       </div>
       <div className="flex gap-2 overflow-hidden max-sm:hidden">{['w-24', 'w-26', 'w-30', 'w-24', 'w-33', 'w-18'].map((width, index) => <Skeleton key={index} className={`h-10 shrink-0 rounded-full ${width}`} />)}</div>
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_17.5rem] xl:gap-x-5">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_17.5rem] xl:gap-x-5 2xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:gap-x-6">
         <div className="min-w-0 space-y-4">
           <div className="rounded-[1.375rem] border border-border bg-card p-3.5 shadow-card sm:p-4"><div className="flex items-center gap-3"><Skeleton className="size-11 shrink-0 rounded-full" /><Skeleton className="h-11 flex-1 rounded-full" /></div><div className="mt-3 flex gap-2 max-sm:hidden">{['w-28', 'w-24', 'w-18', 'w-22'].map((width, index) => <Skeleton key={index} className={`h-9 rounded-full ${width}`} />)}</div></div>
           <div className="flex gap-5 border-b border-border pb-3">{['w-22', 'w-16', 'w-32', 'w-21'].map((width, index) => <Skeleton key={index} className={`h-5 ${width}`} />)}</div>
@@ -30,7 +30,8 @@ export function PortalSkeleton() {
             <div className="flex gap-2 pt-1"><Skeleton className="h-8 w-24 rounded-full" /><Skeleton className="h-8 w-20 rounded-full" /></div>
           </div>)}
         </div>
-        <div className="hidden space-y-4 xl:block">{['h-40', 'h-56', 'h-44'].map((height, index) => <Skeleton key={index} className={`w-full rounded-[1.375rem] ${height}`} />)}</div>
+        {/* The sponsored card's height first (PortalScreen's rail starts with it), then the rail's cards. */}
+        <div className="hidden space-y-4 xl:block">{['h-[20.25rem] 2xl:h-[22.5rem]', 'h-40', 'h-56', 'h-44'].map((height, index) => <Skeleton key={index} className={`w-full rounded-[1.375rem] ${height}`} />)}</div>
       </div>
     </div>
   </div>;
