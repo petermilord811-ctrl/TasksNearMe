@@ -7,7 +7,7 @@ import { AdFrames } from './ad-frames';
 
 /*
  * The two creatives (ads.css has their looks). Each is three frames in its advertiser's style: a scene (a generated
- * photo), the product at work, and the offer with its button, then it rests on the offer. Their claims are the
+ * photo), the product at work, and the offer with its button, where each round ends. Their claims are the
  * advertisers' own (their sites, 2026-11-22). The photos are generated for these ads; the marks are the advertisers'.
  */
 

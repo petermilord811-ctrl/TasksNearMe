@@ -12,14 +12,16 @@ export interface AdFrame {
 }
 
 export interface AdFramesProps {
-  /** In order; the last is the one the ad rests on, and the only one shown without motion. */
+  /** In order; the last is the one each round ends on, and the only one shown without motion. */
   frames: readonly AdFrame[];
   /** How long each frame stays, in milliseconds. */
   durations: readonly number[];
   /** Until the ad starts: the brand on its color, the way an ad slot looks while its creative loads. */
   placeholder: AdFrame;
-  /** Times through the frames before resting on the last one (two of about 15 s: under the usual 30 s cap). */
+  /** Times through the frames in one round (two of about 15 s, under the usual 30 s cap). */
   loops?: number;
+  /** How much longer the last frame stays at the end of a round, in milliseconds, before the ad plays again. */
+  rest?: number;
   /** Previews: this frame, drawn still. */
   still?: number;
   className?: string;
@@ -32,31 +34,45 @@ const PLACEHOLDER = -1;
 
 interface Play {
   frame: number;
+  /** Times through the frames so far, across rounds. */
   loop: number;
   /** The frame fading out under the new one, if any. */
   leaving: number | null;
-  done: boolean;
+}
+
+/** Keyboard focus only: a click's focus stays on the link after it opens the advertiser's tab. */
+function keyboardFocused(element: Element) {
+  try {
+    return element.matches(':focus-visible');
+  } catch {
+    return false;
+  }
 }
 
 /**
  * Plays a display ad's frames the way ad players do: it starts once half of it is on screen (and the page has
- * hydrated), crossfades from frame to frame, holds while it's out of view or the tab is in the background, and after
- * `loops` rounds it stays on its last frame, whose loops (a button's shine, a live dot) finish too. With reduced
- * motion it shows the last frame and never moves. Server-rendered frames come in as props; each one mounts when it
- * comes up, so its entrance (ads.css) plays every time. The ad is a picture: the link around it carries its name.
+ * hydrated) and crossfades from frame to frame. A round is `loops` times through; then its last frame stays for `rest`
+ * more and the ad plays again, the way an ad slot refreshes, so it never sits still for good (owner, 2026-11-23: "it's
+ * stuck and not animating"; it used to stop after one round until the page was loaded again). It holds while it's out
+ * of view or the tab is in the background, and keeps its frame while the pointer is on it or its link has the keyboard
+ * focus, so it can be read and stopped. With reduced motion it shows the last frame and never moves. Server-rendered
+ * frames come in as props; each one mounts when it comes up, so its entrance (ads.css) plays every time. The ad is a
+ * picture: the link around it carries its name.
  */
-export function AdFrames({ frames, durations, placeholder, loops = 2, still, className }: AdFramesProps) {
+export function AdFrames({ frames, durations, placeholder, loops = 2, rest = 10_000, still, className }: AdFramesProps) {
   const hydrated = useHydrated();
   const reduced = usePrefersReducedMotion();
   const stage = useRef<HTMLDivElement>(null);
   const remaining = useRef<{ key: string; ms: number } | null>(null);
   const [inView, setInView] = useState(false);
   const [pageShown, setPageShown] = useState(true);
+  const [held, setHeld] = useState(false);
   const [started, setStarted] = useState(false);
-  const [play, setPlay] = useState<Play>({ frame: 0, loop: 0, leaving: PLACEHOLDER, done: false });
+  const [play, setPlay] = useState<Play>({ frame: 0, loop: 0, leaving: PLACEHOLDER });
   const last = frames.length - 1;
   const motion = hydrated && !reduced && still === undefined;
-  const running = motion && started && !play.done && inView && pageShown;
+  const shown = inView && pageShown;
+  const running = motion && started && shown && !held;
 
   // Seen means half of it on screen (the usual viewability bar).
   useEffect(() => {
@@ -73,35 +89,57 @@ export function AdFrames({ frames, durations, placeholder, loops = 2, still, cla
     return () => document.removeEventListener('visibilitychange', update);
   }, []);
 
+  // The pointer on the ad, or the keyboard focus on its link, keeps the frame where it is.
+  useEffect(() => {
+    const node = stage.current;
+    const target = node?.closest('a') ?? node;
+    if (!target) return;
+    let pointer = false;
+    let focus = false;
+    const update = () => setHeld(pointer || focus);
+    const enter = () => { pointer = true; update(); };
+    const leave = () => { pointer = false; update(); };
+    const focusIn = () => { focus = keyboardFocused(target); update(); };
+    const focusOut = () => { focus = false; update(); };
+    target.addEventListener('pointerenter', enter);
+    target.addEventListener('pointerleave', leave);
+    target.addEventListener('focusin', focusIn);
+    target.addEventListener('focusout', focusOut);
+    return () => {
+      target.removeEventListener('pointerenter', enter);
+      target.removeEventListener('pointerleave', leave);
+      target.removeEventListener('focusin', focusIn);
+      target.removeEventListener('focusout', focusOut);
+    };
+  }, []);
+
   // The first time it's seen, it starts.
   useEffect(() => {
-    if (!motion || started || !inView || !pageShown) return;
+    if (!motion || started || !shown) return;
     const id = window.setTimeout(() => setStarted(true), 0);
     return () => window.clearTimeout(id);
-  }, [motion, started, inView, pageShown]);
+  }, [motion, started, shown]);
 
-  // Each frame's time; a pause keeps what's left of it for when the ad is back in view.
+  // Each frame's time (the round's last frame stays `rest` longer); a hold keeps what's left of it for later.
   useEffect(() => {
     if (!running) return;
     const key = `${play.loop}-${play.frame}`;
-    const wait = remaining.current?.key === key ? remaining.current.ms : (durations[play.frame] ?? 4000);
+    const roundEnds = play.frame === last && (play.loop + 1) % loops === 0;
+    const wait = remaining.current?.key === key ? remaining.current.ms : (durations[play.frame] ?? 4000) + (roundEnds ? rest : 0);
     remaining.current = null;
     const startedAt = performance.now();
     let fired = false;
     const id = window.setTimeout(() => {
       fired = true;
-      setPlay((current) => {
-        if (current.frame === last && current.loop >= loops - 1) return { ...current, leaving: null, done: true };
-        return current.frame === last
-          ? { frame: 0, loop: current.loop + 1, leaving: current.frame, done: false }
-          : { frame: current.frame + 1, loop: current.loop, leaving: current.frame, done: false };
-      });
+      setPlay((current) => current.frame === last
+        ? { frame: 0, loop: current.loop + 1, leaving: current.frame }
+        : { frame: current.frame + 1, loop: current.loop, leaving: current.frame });
     }, wait);
     return () => {
       window.clearTimeout(id);
       if (!fired) remaining.current = { key, ms: Math.max(0, wait - (performance.now() - startedAt)) };
     };
-  }, [running, play.frame, play.loop, last, loops, durations]);
+  }, [running, play.frame, play.loop, last, loops, rest, durations]);
 
   // The frame (or the placeholder) that faded out leaves.
   useEffect(() => {
@@ -138,8 +176,8 @@ export function AdFrames({ frames, durations, placeholder, loops = 2, still, cla
       aria-hidden="true"
       className={cn('ad-stage', className)}
       data-live={live ? '' : undefined}
-      data-paused={live && !play.done && !(inView && pageShown) ? '' : undefined}
-      data-done={live && play.done ? '' : undefined}
+      data-paused={live && !shown ? '' : undefined}
+      data-held={live && held ? '' : undefined}
     >
       {content}
     </div>

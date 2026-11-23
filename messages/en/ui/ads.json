@@ -57,12 +57,12 @@
   },
   "previews": {
     "group": "Sponsored ads",
-    "humanizeword": "HumanizeWord card (where it rests)",
+    "humanizeword": "HumanizeWord, frame 3: the offer (each round ends on it)",
     "humanizewordScene": "HumanizeWord, frame 1: the scene",
     "humanizewordProduct": "HumanizeWord, frame 2: the product",
-    "capcue": "CapCue card (where it rests)",
+    "capcue": "CapCue, frame 3: the offer (each round ends on it)",
     "capcueScene": "CapCue, frame 1: the scene",
     "capcueProduct": "CapCue, frame 2: the product",
-    "notes": "Reduced motion shows the last frame; the app plays three frames twice once half the card is on screen."
+    "notes": "Reduced motion shows the last frame. In the app the three frames play twice once half the card is on screen, the last one stays 10 s longer, then it plays again; the pointer on the ad holds its frame."
   }
 }

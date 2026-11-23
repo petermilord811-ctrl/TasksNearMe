@@ -57,12 +57,12 @@
   },
   "previews": {
     "group": "Anuncios patrocinados",
-    "humanizeword": "Tarjeta de HumanizeWord (donde se queda)",
+    "humanizeword": "HumanizeWord, escena 3: la oferta (cada vuelta termina en ella)",
     "humanizewordScene": "HumanizeWord, escena 1: la escena",
     "humanizewordProduct": "HumanizeWord, escena 2: el producto",
-    "capcue": "Tarjeta de CapCue (donde se queda)",
+    "capcue": "CapCue, escena 3: la oferta (cada vuelta termina en ella)",
     "capcueScene": "CapCue, escena 1: la escena",
     "capcueProduct": "CapCue, escena 2: el producto",
-    "notes": "Con movimiento reducido se ve la última escena; en la app pasan tres escenas dos veces cuando la mitad de la tarjeta está a la vista."
+    "notes": "Con movimiento reducido se ve la última escena. En la app las tres escenas pasan dos veces cuando la mitad de la tarjeta está a la vista, la última se queda 10 s más y vuelve a empezar; el puntero sobre el anuncio detiene la escena."
   }
 }

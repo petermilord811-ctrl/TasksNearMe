@@ -4,9 +4,10 @@ import { devSignIn } from './support/sign-in';
 /**
  * Sponsored ads in Neighbors' rail, and the signed-in app 10% wider (2026-11-22, owner: "make a little full-wide (10%
  * more), and show some ads on the right"). Wide screens: two sponsored cards, each one link to its advertiser in a new
- * tab with the placement's tags; the first starts once half of it is on screen and moves on to its next frame; "About
- * this ad" says what it is; the second is pinned so it stays in view while the stream scrolls. Phones have no rail,
- * so no ads. Reduced motion: each ad rests on its last frame. Read-only.
+ * tab with the placement's tags; the first starts once half of it is on screen, moves on to its next frame, and keeps
+ * its frame while the pointer is on it (2026-11-23: the ads play again after each round, src/ui/components/ads/
+ * ad-frames.test.tsx); "About this ad" says what it is; the second is pinned so it stays in view while the stream
+ * scrolls. Phones have no rail, so no ads. Reduced motion: each ad rests on its last frame. Read-only.
  */
 
 const ads = (page: Page) => ({
@@ -41,6 +42,11 @@ test('wide screens show two sponsored cards in the rail that link out and play; 
   // In view, the first ad starts (its stage goes live) and, after its first frame, shows the product.
   await expect(humanizeWord.locator('[data-live]')).toHaveCount(1, { timeout: 15_000 });
   await expect(humanizeWord.getByText('Example rewrite')).toBeVisible({ timeout: 15_000 });
+  // The pointer on the ad keeps its frame: it plays again after each round, so this is how to stop it and read it.
+  await humanizeLink.hover();
+  await expect(humanizeWord.locator('[data-held]')).toHaveCount(1);
+  await page.mouse.move(0, 0);
+  await expect(humanizeWord.locator('[data-held]')).toHaveCount(0);
 
   await humanizeWord.getByRole('button', { name: 'About this ad' }).click();
   const about = page.getByRole('dialog');

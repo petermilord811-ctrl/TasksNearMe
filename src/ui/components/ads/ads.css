@@ -2,9 +2,9 @@
  * Sponsored ads on Neighbors (2026-11-22; owner: "show some ads on the right for real looks", HumanizeWord and CapCue,
  * "realistic advertise with normal ads animation"). Each creative is a 300×250-style banner (6:5) in its advertiser's
  * own look, sized by its container (1cqw is 1% of the banner's width, so it scales the way a fixed banner would), and
- * played by AdFrames (ad-frames.tsx): three frames, twice, under 30 s, then it rests on the last one, as display ads
- * do. Nothing moves until the player marks the stage `data-live` (hydrated, half of it in view, motion allowed);
- * without that every frame is drawn in its final state, which is what reduced motion and the previews see.
+ * played by AdFrames (ad-frames.tsx): three frames, twice (under 30 s), then the last one 10 s longer and again, the
+ * way an ad slot refreshes. Nothing moves until the player marks the stage `data-live` (hydrated, half of it in view,
+ * motion allowed); without that every frame is drawn in its final state, as reduced motion and the previews see it.
  * Imported by the Neighbors route and its previews only, like landing.css (a component import loads on every route).
  */
 
@@ -49,9 +49,8 @@
 .ad-stage[data-live] .ad-line > span { animation: ad-line 760ms var(--ad-ease) both; animation-delay: var(--d, 0ms); }
 .ad-stage[data-live] .ad-kenburns { animation: ad-kenburns 7.5s cubic-bezier(0.2, 0.6, 0.35, 1) both; }
 .ad-stage[data-live] .ad-sheen::after { animation: ad-sheen 3s ease-in-out infinite; animation-delay: var(--sheen-delay, 1.6s); }
-/* Out of view or in a background tab: everything holds where it is. Done: the loops finish and stay finished. */
+/* Out of view or in a background tab: everything holds where it is. */
 .ad-stage[data-paused] *, .ad-stage[data-paused] *::before, .ad-stage[data-paused] *::after { animation-play-state: paused !important; }
-.ad-stage[data-done] *, .ad-stage[data-done] *::before, .ad-stage[data-done] *::after { animation-iteration-count: 1 !important; }
 
 @keyframes ad-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes ad-fade-out { from { opacity: 1; } to { opacity: 0; } }
