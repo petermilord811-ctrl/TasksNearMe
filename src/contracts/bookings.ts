@@ -13,6 +13,7 @@ import type { SeriesCadence, SeriesChargeFailure, SeriesSummary } from './series
 import type { BookingStatus, CancelReason, CaseResolution, CaseStatus, CompletedVia, PaymentStatus } from './status';
 import type { TaskPublicView, TaskSchedule } from './tasks';
 import type { TimelineEvent } from './timeline';
+import type { ThanksPanel } from './thanks';
 
 /**
  * Bookings. This file starts with booking an offer: the confirmation and payment page
@@ -239,6 +240,11 @@ export interface BookingView {
    * belong to. Opens the thanks form with this booking chosen (`routes.app.newCommunityPost('thanks', id)`).
    */
   thankOnNeighborsHref?: string;
+  /**
+   * A completed booking's thank-you note (2026-11-24): the client writes, edits or deletes it here; both people see it.
+   * Separate from reviews: it never affects ratings, rewards or Sparks.
+   */
+  thanks?: ThanksPanel;
   /**
    * Clients, on a booking the helper canceled: the task is open for offers again (on its own, or by "Find a
    * replacement"), so the page links to it (`routes.app.task(task.id)`).

@@ -65,4 +65,5 @@ export * from './billing';
 export * from './sparks';
 export * from './routes';
 export * from './peek';
+export * from './thanks';
 export type { PreviewEntry } from './preview';

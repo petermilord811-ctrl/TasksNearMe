@@ -46,6 +46,8 @@ export const TIMELINE_EVENT_TYPES = [
   'client_present',
   /** A helper shared open times in the conversation (2026-11-24); `params.slotIds`. */
   'times_shared',
+  /** The client sent the helper a thank-you note (2026-11-24); `params.noteId`. Its card shows in the conversation. */
+  'thanks_sent',
 ] as const;
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];
 
@@ -70,5 +72,7 @@ export interface TimelineEvent {
     taskId?: string;
     /** "Shared open times" (`times_shared`): the helper's slots. */
     slotIds?: string[];
+    /** A thank-you note (`thanks_sent`). */
+    noteId?: string;
   };
 }

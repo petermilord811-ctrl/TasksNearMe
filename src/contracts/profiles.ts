@@ -4,6 +4,7 @@ import type { AvailabilitySlotView } from './availability';
 import type { HelperSummary, ServiceSummary } from './people';
 import type { BadgeView } from './badges';
 import type { SparksSummary } from './sparks';
+import type { PublicThankYouNote } from './thanks';
 
 /** Tags a client can give a helper in a review. The UI maps each to copy ("On time"). */
 export const HELPER_REVIEW_TAGS = [
@@ -70,6 +71,11 @@ export interface HelperProfilePageData {
   acceptsMessages?: boolean;
   /** Their @username (2026-11-22), under their name. */
   username?: string;
+  /**
+   * "Thank-you notes" (2026-11-24): notes clients sent that the helper chose to show, newest first (at most 6). Apart
+   * from the reviews and the rating.
+   */
+  thanks?: PublicThankYouNote[];
 }
 
 /**

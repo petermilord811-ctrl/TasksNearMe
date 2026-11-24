@@ -176,7 +176,7 @@ export const routes = {
     confirmOffer: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}/confirm`,
     /** Report a task, a helper's profile or a review (B-059). `id` is the task id, the helper's handle or the review id. */
     /** `answer`: the answer on a task question, by the question's id. */
-    report: (kind: 'task' | 'helper' | 'review' | 'post' | 'reply' | 'question' | 'answer', id: string) => `/app/report/${kind}/${enc(id)}`,
+    report: (kind: 'task' | 'helper' | 'review' | 'post' | 'reply' | 'question' | 'answer' | 'thanks', id: string) => `/app/report/${kind}/${enc(id)}`,
     /** Browse and search helpers: category, the area they serve, open times this week, name. */
     helpers: (query: HelperBrowseQuery = {}) => withQuery('/app/helpers', { category: query.category, area: query.area, q: query.q, open: query.openTimes ? '1' : undefined }),
     /** `taskId`: one of the client's open tasks, chosen to start with ("Invite helpers" on that task, 2026-11-23). */

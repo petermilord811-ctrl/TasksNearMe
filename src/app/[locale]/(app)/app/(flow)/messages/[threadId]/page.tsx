@@ -19,6 +19,7 @@ import { requestNow } from '@/platform/clock';
 import { ThreadSkeleton } from '@/ui/screens/messages/thread-skeleton';
 import { appPageMetadata } from '@/i18n/metadata';
 import { acceptInviteAction, cancelInviteAction, declineInviteAction } from '@/modules/invites/actions';
+import { deleteThanksAction, hideThanksNameAction, saveThanksAction, showThanksOnProfileAction } from '@/modules/thanks/actions';
 
 export async function generateMetadata(): Promise<Metadata> {
   return appPageMetadata('conversation');
@@ -86,6 +87,8 @@ async function Thread({ params, searchParams, wide }: Pick<PageProps<'/[locale]/
         // A booking's day-of chips and Share times (2026-11-24).
         onBookingAction: bookingChatAction.bind(null, threadId),
         onShareTimes: shareTimesAction.bind(null, threadId),
+        // A completed booking's thank-you note (2026-11-24).
+        thanks: { onSave: saveThanksAction.bind(null, 'page'), onDelete: deleteThanksAction.bind(null, 'page'), onShowOnProfile: showThanksOnProfileAction.bind(null, 'page'), onHideName: hideThanksNameAction.bind(null, 'page') },
       }}
       {...(subject ? { safety: { subject, handlers: { onReport: reportUserAction.bind(null, threadId), onBlock: blockUserAction.bind(null, threadId) } } } : {})}
     />

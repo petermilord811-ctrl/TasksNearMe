@@ -1,0 +1,62 @@
+{
+  "offer": {
+    "title": "Thank {name} with a note",
+    "body": "A few words just for {name}, apart from your review. {name} can choose to show it on their profile.",
+    "action": "Write a thank-you note"
+  },
+  "dialog": {
+    "newTitle": "A thank-you note to {name}",
+    "editTitle": "Edit your note",
+    "description": "Up to {max} characters. You can edit it for 24 hours and delete it anytime. It doesn't change any rating or reward.",
+    "label": "Your note",
+    "placeholder": "Thanks, {name}, for…",
+    "count": "{count} of {max}",
+    "hideName": "Don't show my name if {name} shows it on their profile",
+    "hideNameHint": "It will say “A client in” and your neighborhood instead.",
+    "send": "Send note",
+    "save": "Save",
+    "pending": "Saving…",
+    "cancel": "Cancel",
+    "required": "Write a few words first.",
+    "tooLong": "Keep it to {max} characters.",
+    "notAllowed": "This note can't be changed anymore."
+  },
+  "card": {
+    "fromYou": "Your thank-you note to {name}",
+    "toYou": "{name} sent you a thank-you note",
+    "sentAt": "Sent {date}",
+    "editableUntil": "You can edit it until {time}",
+    "shown": "{name} shows it on their profile",
+    "notShown": "Not on {name}'s profile",
+    "hidden": "Our team hid this note after a report. You can still delete it.",
+    "hiddenForHelper": "Our team hid this note after a report.",
+    "edit": "Edit",
+    "delete": "Delete",
+    "cancel": "Keep it",
+    "deleteTitle": "Delete your note?",
+    "deleteBody": "It leaves this conversation and {name}'s profile. This can't be undone.",
+    "deleteConfirm": "Delete note",
+    "hideName": "Don't show my name",
+    "hideNameOn": "On a profile it says “A client in” your neighborhood",
+    "hideNameOff": "On a profile it shows your first name and neighborhood",
+    "showOnProfile": "Show on my profile",
+    "showOnProfileOn": "Anyone can read it on your profile",
+    "showOnProfileOff": "Only you and {name} see it",
+    "report": "Report this note",
+    "sent": "Thank-you note sent",
+    "updated": "Done",
+    "failed": "That didn't work. Try again."
+  },
+  "profile": {
+    "title": "Thank-you notes",
+    "description": "What clients wrote to {name}, shown with {name}'s permission. Separate from reviews and ratings.",
+    "from": "{name} in {area}",
+    "anonymous": "A client in {area}",
+    "anonymousNoArea": "A client",
+    "report": "Report",
+    "reportFrom": "Report the note from {from}"
+  },
+  "previews": {
+    "group": "Thank-you notes"
+  }
+}

@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { useSelectedLayoutSegments } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
+  ThankYouHandlers,
   AttachGifInput,
   GifSearchInput,
   GifSearchResult,
@@ -105,6 +106,8 @@ export interface ChatActions {
   /** GIFs (2026-11-24): absent when they're off. */
   searchGifs?: (input: GifSearchInput) => Promise<GifSearchResult>;
   attachGif?: (input: AttachGifInput) => Promise<PhotoUploadResult>;
+  /** A booking's thank-you note (2026-11-24), bound to the window (no page refresh). */
+  thanks: ThankYouHandlers;
 }
 
 const WIDE = '(min-width: 1024px)';
@@ -496,6 +499,16 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
     for (const chat of dockedRef.current) if (!threadId || chat.threadId === threadId) soon(`dock:${chat.threadId}`, () => void loadDocked(chat.threadId));
   }, [loadThread, loadDocked, soon]);
 
+  // The open conversation reads again after a thank-you note's button worked.
+
+  const afterThanks = useCallback((result: ActionResult) => {
+
+    if (result.ok) threadAgain();
+
+    return result;
+
+  }, [threadAgain]);
+
   const threadHandlers = useMemo<ChatThreadHandlers>(
     () => ({
       onSend: actions.send,
@@ -562,8 +575,15 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
         if (result.ok) threadAgain(threadId);
         return result;
       },
+      // A thank-you note's buttons (2026-11-24): the conversation reads again after each.
+      thanks: {
+        onSave: async (input) => afterThanks(await actions.thanks.onSave(input)),
+        onDelete: async (input) => afterThanks(await actions.thanks.onDelete(input)),
+        onShowOnProfile: async (input) => afterThanks(await actions.thanks.onShowOnProfile(input)),
+        onHideName: async (input) => afterThanks(await actions.thanks.onHideName(input)),
+      },
     }),
-    [actions, threadAgain, soon, loadInbox],
+    [actions, threadAgain, soon, loadInbox, afterThanks],
   );
 
   // The rows' menus in the window's list (2026-11-23).

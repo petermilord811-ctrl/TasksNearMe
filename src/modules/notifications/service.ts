@@ -9,7 +9,7 @@ import type {
   NotificationView,
   OnboardingStep,
 } from '@/contracts';
-import { accountProfileInputSchema, BADGE_CODES, CONTACT_SHARING_SETTINGS, DIRECT_MESSAGE_SETTINGS, HELPER_CONTACT_EARNED_MIN, localeOrDefault, NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS, type BadgeCode, type ContactSharingSetting, type DirectMessageSetting } from '@/contracts';
+import { accountProfileInputSchema, BADGE_CODES, CONTACT_SHARING_SETTINGS, DIRECT_MESSAGE_SETTINGS, HELPER_CONTACT_EARNED_MIN, localeOrDefault, NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS, QUIET_HOURS_DEFAULT, type BadgeCode, type ContactSharingSetting, type DirectMessageSetting } from '@/contracts';
 import { smsAvailable } from '@/integrations/sms';
 import { staffRoles, users } from '@/modules/accounts/schema';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
@@ -37,6 +37,7 @@ import { blockedPeopleOf, isBlockedBetween } from '@/modules/trust/blocks';
 import { instantSearchMatches } from '@/modules/searches/service';
 import { reviews } from '@/modules/reviews/schema';
 import { cancelReceiptMoney, cityLiveKey, EMAIL_ONLY_TYPES, isLockedPreference, preferenceOn, TEXTLESS_TOPICS } from './delivery-domain';
+import { quietHoursOf } from './own-quiet-hours';
 import { privacyViewOf } from '@/modules/privacy/requests';
 import { requestIdentityAfterNameChange } from '@/modules/verification/tracks';
 import { computeOnboarding } from '@/modules/verification/progress';
@@ -900,6 +901,8 @@ export async function getAccountPage(db: Db, userId: string, returned: { connect
     ...(pushSetup() ? { push: pushSetup()! } : {}),
     language: localeOrDefault(user.locale),
     activity: { shown: user.showActivity },
+    // Quiet hours of their own (2026-11-24): off, with the suggested times, until they set them.
+    quietHours: (await quietHoursOf(db, [user.id])).get(user.id) ?? QUIET_HOURS_DEFAULT,
     directMessages: { setting: (DIRECT_MESSAGE_SETTINGS as readonly string[]).includes(user.directMessages) ? (user.directMessages as DirectMessageSetting) : 'everyone' },
     // What their helper profile shares with top Sparks levels (2026-11-24): only for someone with a helper profile.
     ...(profile ? { contactSharing: { setting: (CONTACT_SHARING_SETTINGS as readonly string[]).includes(user.contactSharing) ? (user.contactSharing as ContactSharingSetting) : 'none', phoneVerified: user.phoneVerifiedAt !== null && Boolean(user.phone), at: HELPER_CONTACT_EARNED_MIN } } : {}),

@@ -8,7 +8,7 @@ import {
   addCaseNoteAction,
   assignCaseAction,
   closeCaseAction,
-  moderateQuestionAction,
+  moderateQuestionAction, moderateThanksAction,
   moderateReviewAction,
   previewResolutionAction,
   reopenCaseAction,
@@ -62,6 +62,7 @@ async function AdminCase({ params }: Pick<PageProps<'/[locale]/admin/cases/[case
         onPreviewResolution: previewResolutionAction.bind(null, caseId),
         onModerateReview: moderateReviewAction.bind(null, caseId),
         onModerateQuestion: moderateQuestionAction.bind(null, caseId),
+        onModerateThanks: moderateThanksAction.bind(null, caseId),
       }}
     />
   );

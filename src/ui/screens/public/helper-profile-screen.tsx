@@ -16,6 +16,7 @@ import { WorkSampleGallery } from '@/ui/components/people/work-sample-gallery';
 import { ReviewCard } from '@/ui/components/reviews/review-card';
 import { cn } from '@/ui/lib/utils';
 import { buttonVariants } from '@/ui/primitives/button';
+import { PublicThankYouNotes } from '@/ui/components/thanks/public-thank-you-notes';
 
 export interface HelperProfileScreenProps {
   data: HelperProfilePageData;
@@ -66,6 +67,7 @@ export function HelperProfileScreen({ data, contact, onRevealContact, initialCon
   const { formatMonthYear } = useFormat();
   const t = useTranslations('helperProfile');
   const report = useTranslations('report');
+  const thanks = useTranslations('thanks.profile');
   const { helper } = data;
 
   return (
@@ -159,6 +161,14 @@ export function HelperProfileScreen({ data, contact, onRevealContact, initialCon
           ? <ul className="grid gap-4 md:grid-cols-2">{data.reviews.map((review) => <li key={review.id} className="min-w-0"><ReviewCard review={review} reportHref={routes.app.report('review', review.id)} /></li>)}</ul>
           : <div className="space-y-2 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card dark:border-white/[0.06]"><p className="font-medium">{t('noReviews')}</p><p className="text-sm text-muted-foreground">{t('noReviewsDescription')}</p></div>}
       </section>
+      {/* Thank-you notes the helper chose to show (2026-11-24), apart from the reviews and the rating. */}
+      {data.thanks && data.thanks.length > 0 && <section aria-labelledby="helper-thanks-heading" className="space-y-4">
+        <div className="space-y-1">
+          <h2 id="helper-thanks-heading" className="font-display text-xl/7 font-semibold tracking-[-0.015em] md:text-[22px]/7.5">{thanks('title')}</h2>
+          <p className="text-sm text-muted-foreground">{thanks('description', { name: helper.displayName })}</p>
+        </div>
+        <PublicThankYouNotes notes={data.thanks} />
+      </section>}
       <p><Link href={routes.app.report('helper', helper.handle)} className="inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-muted-foreground underline underline-offset-4 hover:text-foreground"><Flag aria-hidden="true" className="size-4" />{report('links.helper')}</Link></p>
       <div className="sticky bottom-3 z-20 flex gap-2 lg:hidden">
         <Link href={routes.app.requestHelper(helper.handle)} className={cn(buttonVariants({ size: 'lg' }), 'h-auto min-h-12 min-w-0 flex-1 whitespace-normal py-2.5 shadow-[0_10px_30px_-10px_var(--primary-glow)]')}>{t('requestBooking', { name: helper.displayName })}</Link>

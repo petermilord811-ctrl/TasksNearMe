@@ -313,6 +313,11 @@ export interface AccountPageData {
    * phone isn't verified, so it can't show yet whatever they choose.
    */
   contactSharing?: { setting: ContactSharingSetting; phoneVerified: boolean; at: number };
+  /**
+   * Their own quiet hours (2026-11-24): off until turned on; the times are on their home city's clock and may cross
+   * midnight. While on, message notifications reach only the app inside them, except a booking's on its day.
+   */
+  quietHours?: QuietHoursSetting;
   /** Their Sparks (2026-11-21), for the card that links to `routes.app.sparks()`. */
   sparks?: SparksSummary;
   /**
@@ -352,6 +357,27 @@ export interface ContactRevertPageData {
 export interface ContactRevertHandlers {
   onConfirm: () => Promise<ActionResult>;
 }
+
+/** A wall-clock time, 24-hour: "21:00". */
+const clockTimeField = z.string('required').regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'invalid');
+
+/**
+ * Quiet hours (2026-11-24): a start and an end on the person's home city's clock; the end may be the next morning. The
+ * two can't be the same time.
+ */
+export const quietHoursInputSchema = z
+  .object({ enabled: z.boolean('required'), startsAt: clockTimeField, endsAt: clockTimeField })
+  .refine((value) => value.startsAt !== value.endsAt, { path: ['endsAt'], message: 'invalid' });
+export type QuietHoursInput = z.input<typeof quietHoursInputSchema>;
+export interface QuietHoursSetting {
+  enabled: boolean;
+  /** "21:00" */
+  startsAt: string;
+  /** "08:00" */
+  endsAt: string;
+}
+/** What the form starts from before they ever set it. */
+export const QUIET_HOURS_DEFAULT: QuietHoursSetting = { enabled: false, startsAt: '21:00', endsAt: '08:00' };
 
 /** The account's language (blueprint 01, P2). */
 export const languageInputSchema = z.object({ locale: z.enum(APP_LOCALES) });
@@ -460,6 +486,8 @@ export interface AccountHandlers extends PushHandlers {
   onSaveDirectMessages?: ActionHandler<{ setting: DirectMessageSetting }>;
   /** What their helper profile shares with top Sparks levels. ok `updated`. Errors: `validation_failed`, `not_allowed` (no helper profile). */
   onSaveContactSharing?: ActionHandler<{ setting: ContactSharingSetting }>;
+  /** Quiet hours on or off, and their times. ok `updated`. Errors: `validation_failed` (`startsAt`, `endsAt`: `invalid`). */
+  onSaveQuietHours?: ActionHandler<QuietHoursInput>;
   onSavePreference: ActionHandler<{ topic: NotificationTopic; channel: NotificationChannel; enabled: boolean }>;
   onRequestExport: () => Promise<ActionResult>;
   onRequestDeletion: () => Promise<ActionResult>;

@@ -207,7 +207,7 @@ export const channelsFor = (type: NotificationType): readonly DeliveryChannel[] 
 export type DeliveryPlan =
   | { action: 'send' }
   | { action: 'hold'; until: Date }
-  | { action: 'skip'; reason: 'preference_off' | 'no_email' | 'no_verified_phone' | 'no_device' | 'email_suppressed' | StaleReason };
+  | { action: 'skip'; reason: 'preference_off' | 'no_email' | 'no_verified_phone' | 'no_device' | 'email_suppressed' | 'own_quiet_hours' | StaleReason };
 
 /** A message notification that's no longer news (sweep MN9): the conversation was read, or one of the two blocked the other. */
 export type StaleReason = 'already_read' | 'blocked';
@@ -224,6 +224,11 @@ export function planDelivery(input: {
   suppressed?: boolean;
   /** A message notification that's no longer news: nothing of it goes out. */
   stale?: StaleReason;
+  /**
+   * Inside the person's own quiet hours, for a message notification that can wait (quiet-hours.ts `quietUntil`): it
+   * stays in the app, and nothing is sent later.
+   */
+  ownQuietHours?: boolean;
   now: Date;
   /** The recipient's market zone (their home market), for quiet hours. */
   timeZone: TimeZone;
@@ -232,6 +237,7 @@ export function planDelivery(input: {
   if (!input.hasAddress) return { action: 'skip', reason: missingAddressReason(input.channel) };
   if (input.channel === 'email' && input.suppressed) return { action: 'skip', reason: 'email_suppressed' };
   if (input.stale) return { action: 'skip', reason: input.stale };
+  if (input.ownQuietHours) return { action: 'skip', reason: 'own_quiet_hours' };
   // Texts and pushes that can wait don't buzz anyone at night.
   if (input.channel !== 'email' && !URGENT_TYPES.has(input.type)) {
     const until = quietHoursEnd(input.now, input.timeZone);

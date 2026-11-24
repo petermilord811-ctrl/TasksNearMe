@@ -8,6 +8,7 @@ import { taskQuestions } from '@/modules/questions/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { reviews } from '@/modules/reviews/schema';
 import { tasks } from '@/modules/tasks/schema';
+import { thankYouNotes } from '@/modules/thanks/schema';
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
@@ -29,7 +30,7 @@ const HIGH_PRIORITY: ReadonlySet<ReportReason> = new Set(['harassment', 'scam_or
 interface Target {
   page: ReportPageData;
   subjectUserId: string;
-  context: { taskId?: string; reviewId?: string; postId?: string; replyId?: string; questionId?: string; answer?: boolean };
+  context: { taskId?: string; reviewId?: string; postId?: string; replyId?: string; questionId?: string; answer?: boolean; thanksId?: string };
 }
 
 async function targetOf(db: Db, userId: string, kind: string, id: string): Promise<Target | null> {
@@ -80,6 +81,22 @@ async function targetOf(db: Db, userId: string, kind: string, id: string): Promi
       .limit(1);
     if (!question || question.status !== 'visible' || !question.answerBody || question.posterUserId === userId) return null;
     return { page: { target: { kind: target, id: question.id, name: question.poster }, backHref: routes.app.findWorkTask(question.taskId) }, subjectUserId: question.posterUserId, context: { taskId: question.taskId, questionId: question.id, answer: true } };
+  }
+  if (target === 'thanks') {
+    // A thank-you note (2026-11-24): its helper can report it, and anyone who reads it on the helper's profile. Never its
+    // author, and not once our team hid it. Named by the helper it was written to (its author may have hidden their name).
+    const [note] = await db
+      .select({ id: thankYouNotes.id, bookingId: thankYouNotes.bookingId, authorUserId: thankYouNotes.authorUserId, helperUserId: thankYouNotes.helperUserId, shown: thankYouNotes.shownOnProfile, hiddenAt: thankYouNotes.hiddenAt, helper: users.name, handle: helperProfiles.handle })
+      .from(thankYouNotes)
+      .innerJoin(users, eq(users.id, thankYouNotes.helperUserId))
+      .leftJoin(helperProfiles, eq(helperProfiles.userId, thankYouNotes.helperUserId))
+      .where(eq(thankYouNotes.id, id))
+      .limit(1);
+    if (!note || note.hiddenAt || note.authorUserId === userId) return null;
+    const isHelper = note.helperUserId === userId;
+    if (!isHelper && !note.shown) return null;
+    const back = isHelper || !note.handle ? routes.app.booking(note.bookingId) : routes.helperProfile(note.handle);
+    return { page: { target: { kind: target, id: note.id, name: note.helper }, backHref: back }, subjectUserId: note.authorUserId, context: { thanksId: note.id } };
   }
   if (target === 'reply') {
     const [reply] = await db

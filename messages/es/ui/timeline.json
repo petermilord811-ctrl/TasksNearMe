@@ -4,7 +4,12 @@
   "previewGroup": "Cronología",
   "previewTitle": "Escritorio · completado",
   "empty": "Las actualizaciones aparecerán aquí a medida que avance la reserva.",
-  "actors": { "poster": "Cliente", "helper": "Ayudante", "support": "Soporte", "system": "TasksNearMe" },
+  "actors": {
+    "poster": "Cliente",
+    "helper": "Ayudante",
+    "support": "Soporte",
+    "system": "TasksNearMe"
+  },
   "task_posted": "Tarea publicada",
   "offer_received": "{hasAmount, select, yes {Oferta recibida · {amount}} other {Oferta recibida}}",
   "offer_updated": "{hasAmount, select, yes {Oferta actualizada · {amount}} other {Oferta actualizada}}",
@@ -39,5 +44,6 @@
   "sample_profile_notice": "Este es un perfil de muestra que enseña cómo funciona TasksNearMe, así que no responderá. Publica una tarea para llegar a ayudantes reales cerca de ti.",
   "offer_requested": "Pidió una oferta",
   "client_present": "El cliente está ahí",
-  "times_shared": "Compartió horarios libres"
+  "times_shared": "Compartió horarios libres",
+  "thanks_sent": "Envió una nota de agradecimiento"
 }

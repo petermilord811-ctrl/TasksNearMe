@@ -304,5 +304,34 @@
       "restoreSubmit": "Restore question"
     },
     "whoCan": "Trust and safety, support leads and admins can hide, remove or restore a question."
+  },
+  "thanks": {
+    "title": "Reported thank-you note",
+    "about": "From {author} to {helper}, sent {date}.",
+    "nameHidden": "The client asked not to show their name on the profile.",
+    "statuses": {
+      "shown": "On the helper's profile",
+      "not_shown": "Not on the profile",
+      "hidden": "Hidden"
+    },
+    "hiddenReason": "Why it was hidden:",
+    "hide": "Hide this note",
+    "show": "Show this note again",
+    "whoCan": "Support leads, trust and safety and admins can hide it.",
+    "dialog": {
+      "hideTitle": "Hide this note?",
+      "showTitle": "Show this note again?",
+      "hideDescription": "It leaves {name}'s profile, and {name} no longer sees its words. The client can still delete it.",
+      "showDescription": "It goes back on {name}'s profile if {name} chose to show it.",
+      "reason": "Reason",
+      "hint": "Kept in the audit log and as an internal note on this case (10 to 1,000 characters).",
+      "required": "Give a reason of at least 10 characters.",
+      "tooLong": "Keep the reason under 1,000 characters.",
+      "notAllowed": "You can't change this note.",
+      "cancel": "Cancel",
+      "pending": "Saving…",
+      "hideSubmit": "Hide note",
+      "showSubmit": "Show note"
+    }
   }
 }

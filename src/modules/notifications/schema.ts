@@ -1,4 +1,4 @@
-import { index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import type { AttentionTarget, NotificationView } from '@/contracts';
 import { users } from '../accounts/schema';
 
@@ -145,3 +145,20 @@ export const pushSubscriptions = pgTable(
   },
   (t) => [uniqueIndex('push_subscriptions_endpoint_idx').on(t.endpoint), index('push_subscriptions_user_idx').on(t.userId)],
 );
+
+/**
+ * A person's own quiet hours (2026-11-24, owner's list: "quiet hours for helpers"): optional, off until they turn it on.
+ * `starts_at` and `ends_at` are wall-clock times ("21:00", "08:00") on their home market's clock (`markets.time_zone`),
+ * so a window may cross midnight. While it's on and the time is inside it, "sent you a message" notifications reach
+ * only the app (no push, text or email) unless the conversation is a booking's on its day or within 12 hours; nothing
+ * held is sent later (delivery.ts, quiet-hours.ts). The times stay when it's turned off, for turning it on again.
+ */
+export const notificationQuietHours = pgTable('notification_quiet_hours', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  enabled: boolean('enabled').notNull().default(false),
+  startsAt: text('starts_at').notNull(),
+  endsAt: text('ends_at').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

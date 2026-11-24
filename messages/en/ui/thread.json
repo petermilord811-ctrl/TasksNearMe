@@ -482,5 +482,6 @@
       "changed": "This booking moved on. Reload to see where it stands.",
       "unknown": "That didn't work. Try again."
     }
-  }
+  },
+  "quietHours": "{name}'s quiet hours: they'll see this after {time}"
 }

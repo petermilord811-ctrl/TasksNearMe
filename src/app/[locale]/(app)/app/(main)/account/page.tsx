@@ -27,6 +27,7 @@ import {
   savePushSubscriptionAction,
   saveAccountProfileAction,
   saveNotificationPreferenceAction,
+  saveQuietHoursAction,
 } from '@/modules/notifications/actions';
 import { cancelAccountDeletionAction, requestAccountDeletionAction, requestDataExportAction } from '@/modules/privacy/actions';
 import { getAccountPage } from '@/modules/notifications/service';
@@ -92,6 +93,7 @@ async function Account({ searchParams }: Pick<PageProps<'/[locale]/app/account'>
         onSaveActivity: saveActivityAction,
         onSaveDirectMessages: saveDirectMessagesAction,
         onSaveContactSharing: saveContactSharingAction,
+        onSaveQuietHours: saveQuietHoursAction,
         onUploadPhoto: uploadProfilePhotoAction,
         onRemovePhoto: removeProfilePhotoAction,
         onStartEmailChange: startEmailChangeAction,

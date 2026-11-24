@@ -18,6 +18,7 @@ import { bookingChangeRequests, bookingCompletionPhotos, bookingCompletions, boo
 import { payments, refunds } from '../../../src/modules/payments/schema';
 import { earnings } from '../../../src/modules/earnings/schema';
 import { reviews, savedHelpers } from '../../../src/modules/reviews/schema';
+import { thankYouNotes } from '../../../src/modules/thanks/schema';
 import { messages, threadParticipants, threads } from '../../../src/modules/messaging/schema';
 import { availabilityPosts } from '../../../src/modules/availability/schema';
 import { notificationDeliveries, notifications } from '../../../src/modules/notifications/schema';
@@ -91,6 +92,8 @@ async function clearDemoActivity(tx: Tx, plan: DemoPlan): Promise<void> {
       await tx.delete(threads).where(inArray(threads.id, bookingThreads));
     }
     await tx.delete(reviews).where(inArray(reviews.bookingId, demoBookingIds));
+    // A thank-you note someone wrote on a sample booking (2026-11-24).
+    await tx.delete(thankYouNotes).where(inArray(thankYouNotes.bookingId, demoBookingIds));
     await tx.delete(earnings).where(inArray(earnings.bookingId, demoBookingIds));
     await tx.delete(refunds).where(inArray(refunds.bookingId, demoBookingIds));
     await tx.delete(payments).where(inArray(payments.bookingId, demoBookingIds));

@@ -14,6 +14,7 @@ import {
 } from '@/modules/bookings/sheet-actions';
 import { getBookingView } from '@/modules/bookings/hub';
 import { finishTipVerificationAction, tipAction } from '@/modules/bookings/tip-actions';
+import { deleteThanksAction, hideThanksNameAction, saveThanksAction, showThanksOnProfileAction } from '@/modules/thanks/actions';
 import { finishScheduledVerificationAction, payScheduledAction } from '@/modules/bookings/series-actions';
 import { removeCardAction } from '@/modules/earnings/actions';
 import { hubDeps } from '@/modules/bookings/server';
@@ -62,6 +63,7 @@ async function Booking({ params }: Pick<PageProps<'/[locale]/app/bookings/[booki
       }}
       tip={{ onTip: tipAction.bind(null, bookingId), onFinishTipVerification: finishTipVerificationAction.bind(null, bookingId), onRemoveCard: removeCardAction }}
       scheduledPayment={{ onPayNow: payScheduledAction.bind(null, bookingId), onFinishPayVerification: finishScheduledVerificationAction.bind(null, bookingId), onRemoveCard: removeCardAction }}
+      thanks={{ onSave: saveThanksAction.bind(null, 'page'), onDelete: deleteThanksAction.bind(null, 'page'), onShowOnProfile: showThanksOnProfileAction.bind(null, 'page'), onHideName: hideThanksNameAction.bind(null, 'page') }}
     />
   );
 }

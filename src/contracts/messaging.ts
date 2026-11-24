@@ -18,6 +18,7 @@ import type { ProposableChangeType } from './changes';
 import type { PricingInput } from './money';
 import type { TaskSchedule } from './tasks';
 import type { ChangeStatus, InviteStatus } from './status';
+import type { ThankYouHandlers, ThankYouNoteView, ThanksPanel } from './thanks';
 
 /**
  * Message text arrives already split into segments. Contact details are detected and masked by the
@@ -295,6 +296,17 @@ export interface ThreadPageData {
    * completion form over the page (`routes.app.bookingComplete`).
    */
   bookingActions?: ActionDescriptor<BookingChatActionId>[];
+  /**
+   * The other person's quiet hours (2026-11-24): they turned them on, and it's inside them now, so a new message reaches
+   * their app but not their phone or email until `until` ("Sam's quiet hours: they'll see this after 8:00 am"). Absent
+   * otherwise, and in a booking's conversation on its day or within 12 hours, whose messages notify as usual.
+   */
+  quietHours?: { until: ISODateTime };
+  /**
+   * A completed booking's thank-you note (2026-11-24), in its conversation: for the client, "Send a thank-you note" while
+   * `canWrite` (a card above the message box). A sent note shows as a card in the log (`cards.thanks`).
+   */
+  thanks?: ThanksPanel;
 }
 
 // ---- Cards in a conversation (2026-11-23, owner: "plan all and implement") ---------------------------------------------
@@ -386,6 +398,8 @@ export interface ConversationCards {
   offerAsks?: Record<string, OfferAskCard>;
   /** By the line's message id (2026-11-24). */
   sharedTimes?: Record<string, SharedTimesCard>;
+  /** Thank-you notes (`thanks_sent` lines), by note id; a deleted note's line shows as the plain line. */
+  thanks?: Record<string, ThankYouNoteView>;
 }
 
 /** An open task to choose in a conversation's "+" menu. */
@@ -607,6 +621,8 @@ export interface ThreadHandlers {
    * `rate_limited`, `unknown`.
    */
   onShareTimes?: ActionHandler<ShareTimesInput>;
+  /** A booking's thank-you note (2026-11-24): write, edit, delete, "Show on my profile", "Don't show my name". */
+  thanks?: ThankYouHandlers;
 }
 
 // ---- Direct conversations (2026-11-21) -----------------------------------------------------------------------
@@ -851,4 +867,6 @@ export interface ChatThreadHandlers {
   /** A booking's day-of chip and Share times (2026-11-24), as on the conversation page. */
   onBookingAction(threadId: string, input: BookingChatActionInput): Promise<ActionResult>;
   onShareTimes(threadId: string, input: ShareTimesInput): Promise<ActionResult>;
+  /** A booking's thank-you note (2026-11-24), as on the conversation page. */
+  thanks?: ThankYouHandlers;
 }

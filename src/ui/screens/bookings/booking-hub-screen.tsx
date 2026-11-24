@@ -4,7 +4,8 @@ import { useTranslations } from 'next-intl';
 import {
   routes, type ActionResult, type BadgeTone, type BookingActionId, type BookingHubHandlers,
   type BookingPaymentLine, type BookingSheetHandlers, type BookingTipHandlers, type BookingView, type ISODateTime,
-  type ScheduledPaymentHandlers, type TaskMapBundle } from '@/contracts';
+  type ScheduledPaymentHandlers, type TaskMapBundle, type ThankYouHandlers,
+} from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { CompletionSummary } from '@/ui/components/bookings/completion-summary';
@@ -30,6 +31,7 @@ import { BookingTipCard, type TipCardPreviewState } from './booking-tip-card';
 import { ScheduledPaymentCard, type ScheduledPaymentPreviewState } from './scheduled-payment-card';
 import { BookingHubWithoutSheetHandlers } from './booking-hub-with-sheets';
 import { RichText } from '@/ui/components/rich-text/rich-text';
+import { ThanksPanelView } from '@/ui/components/thanks/thank-you-note';
 
 export interface BookingHubScreenProps {
   data: BookingView;
@@ -40,6 +42,8 @@ export interface BookingHubScreenProps {
   tip?: BookingTipHandlers;
   /** A booking paid later (`scheduled`): the client pays now. Without it the card only says when it's charged. */
   scheduledPayment?: ScheduledPaymentHandlers;
+  /** A completed booking's thank-you note (2026-11-24). Without it the note shows without its buttons. */
+  thanks?: ThankYouHandlers;
   now: ISODateTime;
   /** The task map (the area, the trip there, the weather for the booking and what's around). */
   map?: TaskMapBundle | null;
@@ -121,7 +125,7 @@ function BookingPayment({ payment }: { payment: BookingPaymentLine }) {
 }
 
 /** Initial result/pending states belong to the preview gallery. App pages use BookingHubScreen. */
-export function BookingHubContent({ data, handlers, sheets, tip, scheduledPayment, now, initialResult, initialPending, tipPreview, scheduledPreview, map }: Omit<BookingHubScreenProps, 'sheets'> & {
+export function BookingHubContent({ data, handlers, sheets, tip, scheduledPayment, thanks, now, initialResult, initialPending, tipPreview, scheduledPreview, map }: Omit<BookingHubScreenProps, 'sheets'> & {
   sheets: BookingSheetHandlers;
   initialResult?: ActionResult;
   initialPending?: BookingActionId;
@@ -172,6 +176,9 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
     <BookingHubActions key={data.id} data={data} handlers={handlers} sheets={sheets} initialResult={initialResult} initialPending={initialPending} now={now} />
 
     <BookingTipCard key={`tip-${data.id}`} data={data} handlers={tip} preview={tipPreview} />
+
+    {/* The thank-you note (2026-11-24): apart from the review, never about ratings or rewards. */}
+    {data.thanks && <ThanksPanelView key={`thanks-${data.id}`} panel={data.thanks} name={data.viewerRole === 'poster' ? helper.displayName : poster.displayName} {...(thanks ? { handlers: thanks } : {})} />}
 
     {/* "Thank Sam on Neighbors" (plan 10.12): a public thanks feeds the helper's "Recommended by". */}
     {data.thankOnNeighborsHref && <section aria-labelledby="booking-thank-neighbors" className={cn(surface, surfacePad, 'flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between')}>

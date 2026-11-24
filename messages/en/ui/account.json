@@ -395,5 +395,22 @@
       "rate_limited": "You changed your username recently. You can choose another on {date}.",
       "unknown": "That didn't save. Try again."
     }
+  },
+  "ownQuietHours": {
+    "title": "Quiet hours",
+    "description": "Keep message notifications off your phone and out of your email at night. Messages still arrive in the app.",
+    "label": "Quiet hours",
+    "onState": "On, {from} to {until}",
+    "off": "Off",
+    "times": "Quiet hours times",
+    "from": "From",
+    "until": "Until",
+    "hint": "On your city's clock. Messages about a booking that's today or in the next 12 hours still reach you, and so does everything about bookings, payments and safety. Nothing held is sent later.",
+    "shared": "People who write to you during these hours see when you'll get their message.",
+    "save": "Save quiet hours",
+    "pending": "Saving…",
+    "saved": "Quiet hours saved",
+    "turnedOff": "Quiet hours turned off",
+    "invalid": "Choose a start and an end that are different."
   }
 }

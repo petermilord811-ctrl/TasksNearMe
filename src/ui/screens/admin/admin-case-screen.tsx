@@ -15,6 +15,7 @@ import { AdminResponseTarget } from './admin-response-target';
 import { AdminCaseControls } from './admin-case-controls';
 import { AdminConversationGate } from './admin-conversation-gate';
 import { AdminReportedQuestion } from './admin-reported-question';
+import { AdminReportedThanks } from './admin-reported-thanks';
 import { AdminReportedReview } from './admin-reported-review';
 
 export interface AdminCaseScreenProps {
@@ -152,6 +153,7 @@ export function AdminCaseContent({ data, handlers, now, initialDialog, replyStat
           {data.context && <AdminConversationGate key={row.id} context={data.context} onRevealConversation={handlers.onRevealConversation} now={now} {...conversationState} />}
           {data.review && <AdminReportedReview key={`${row.id}:${data.review.status}`} data={data.review} onModerate={handlers.onModerateReview} />}
           {data.question && <AdminReportedQuestion key={`${row.id}:${data.question.status}`} data={data.question} onModerate={handlers.onModerateQuestion} />}
+          {data.thanks && <AdminReportedThanks key={`${row.id}:${data.thanks.status}`} data={data.thanks} {...(handlers.onModerateThanks ? { onModerate: handlers.onModerateThanks } : {})} />}
           <section className="space-y-4">
             <h2 className="text-xl font-semibold">{t('details.timeline')}</h2>
             {data.events.length ? <ol aria-label={t('details.timeline')} className="space-y-3">{data.events.map((event) => <CaseEvent key={event.id} event={event} parties={data.parties} contact={data.contact} now={now} />)}</ol> : <p className="rounded-xl border bg-card p-5 text-sm text-muted-foreground">{t('details.emptyTimeline')}</p>}

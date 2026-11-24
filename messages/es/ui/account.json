@@ -395,5 +395,22 @@
       "rate_limited": "Cambiaste tu nombre de usuario hace poco. Podrás elegir otro el {date}.",
       "unknown": "No se guardó. Inténtalo de nuevo."
     }
+  },
+  "ownQuietHours": {
+    "title": "Horas de silencio",
+    "description": "Mantén las notificaciones de mensajes fuera de tu teléfono y de tu correo por la noche. Los mensajes siguen llegando a la app.",
+    "label": "Horas de silencio",
+    "onState": "Activadas, de {from} a {until}",
+    "off": "Desactivadas",
+    "times": "Horario de silencio",
+    "from": "Desde",
+    "until": "Hasta",
+    "hint": "Según el reloj de tu ciudad. Los mensajes sobre una reserva de hoy o de las próximas 12 horas te siguen llegando, igual que todo lo de reservas, pagos y seguridad. Lo que se retiene no se envía después.",
+    "shared": "Quien te escriba en estas horas verá cuándo recibirás su mensaje.",
+    "save": "Guardar horas de silencio",
+    "pending": "Guardando…",
+    "saved": "Horas de silencio guardadas",
+    "turnedOff": "Horas de silencio desactivadas",
+    "invalid": "Elige un inicio y un final distintos."
   }
 }

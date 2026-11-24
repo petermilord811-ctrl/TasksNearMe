@@ -1,0 +1,62 @@
+{
+  "offer": {
+    "title": "Dale las gracias a {name} con una nota",
+    "body": "Unas palabras solo para {name}, aparte de tu reseña. {name} puede elegir mostrarla en su perfil.",
+    "action": "Escribir una nota de agradecimiento"
+  },
+  "dialog": {
+    "newTitle": "Una nota de agradecimiento para {name}",
+    "editTitle": "Editar tu nota",
+    "description": "Hasta {max} caracteres. Puedes editarla durante 24 horas y borrarla cuando quieras. No cambia ninguna calificación ni recompensa.",
+    "label": "Tu nota",
+    "placeholder": "Gracias, {name}, por…",
+    "count": "{count} de {max}",
+    "hideName": "No mostrar mi nombre si {name} la muestra en su perfil",
+    "hideNameHint": "En su lugar dirá «Un cliente en» y tu vecindario.",
+    "send": "Enviar nota",
+    "save": "Guardar",
+    "pending": "Guardando…",
+    "cancel": "Cancelar",
+    "required": "Escribe unas palabras primero.",
+    "tooLong": "Usa como máximo {max} caracteres.",
+    "notAllowed": "Esta nota ya no se puede cambiar."
+  },
+  "card": {
+    "fromYou": "Tu nota de agradecimiento para {name}",
+    "toYou": "{name} te envió una nota de agradecimiento",
+    "sentAt": "Enviada el {date}",
+    "editableUntil": "Puedes editarla hasta {time}",
+    "shown": "{name} la muestra en su perfil",
+    "notShown": "No está en el perfil de {name}",
+    "hidden": "Nuestro equipo ocultó esta nota tras un reporte. Aún puedes borrarla.",
+    "hiddenForHelper": "Nuestro equipo ocultó esta nota tras un reporte.",
+    "edit": "Editar",
+    "delete": "Borrar",
+    "cancel": "Conservarla",
+    "deleteTitle": "¿Borrar tu nota?",
+    "deleteBody": "Desaparece de esta conversación y del perfil de {name}, y no se puede deshacer.",
+    "deleteConfirm": "Borrar nota",
+    "hideName": "No mostrar mi nombre",
+    "hideNameOn": "En un perfil dice «Un cliente en» tu vecindario",
+    "hideNameOff": "En un perfil muestra tu nombre y tu vecindario",
+    "showOnProfile": "Mostrar en mi perfil",
+    "showOnProfileOn": "Cualquiera puede leerla en tu perfil",
+    "showOnProfileOff": "Solo tú y {name} la ven",
+    "report": "Reportar esta nota",
+    "sent": "Nota de agradecimiento enviada",
+    "updated": "Listo",
+    "failed": "No funcionó. Inténtalo de nuevo."
+  },
+  "profile": {
+    "title": "Notas de agradecimiento",
+    "description": "Lo que los clientes le escribieron a {name}, mostrado con su permiso. Aparte de las reseñas y las calificaciones.",
+    "from": "{name} en {area}",
+    "anonymous": "Un cliente en {area}",
+    "anonymousNoArea": "Un cliente",
+    "report": "Reportar",
+    "reportFrom": "Reportar la nota de {from}"
+  },
+  "previews": {
+    "group": "Notas de agradecimiento"
+  }
+}

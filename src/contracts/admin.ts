@@ -8,6 +8,7 @@ import type { Cents, ISODateTime, Photo, StaffRole } from './common';
 import type { AppLocale } from './locale';
 import type { ExactAddress } from './location';
 import type { PriceBreakdown } from './money';
+import type { AdminCaseThanks } from './thanks';
 import type { CommunityModerationInput } from './community';
 import type { PersonSummary } from './people';
 import type { PublicReviewView } from './profiles';
@@ -190,6 +191,8 @@ export interface AdminCasePageData {
   review?: AdminCaseReview;
   /** A reported question on a task, or its answer (sweep QA2): what members read, so it shows without a reason. */
   question?: AdminCaseQuestion;
+  /** A reported thank-you note (2026-11-24), as written. */
+  thanks?: AdminCaseThanks;
   /** What the viewer can do now (pure domain rules; the UI never decides). */
   actions: AdminCaseActionId[];
   /** Where `set_status` can move the case. */
@@ -357,6 +360,8 @@ export interface AdminCaseHandlers {
    * (restoring while its helper has a newer open question on the task: one open question each).
    */
   onModerateQuestion: ActionHandler<CommunityModerationInput>;
+  /** Hide the reported thank-you note, or show it again (`thanks.canModerate`; a reason of 10 to 1,000 characters). ok `updated`. */
+  onModerateThanks?: ActionHandler<ReviewModerationInput>;
 }
 
 // ---- The staff booking page (UI-019) -------------------------------------------------------------------

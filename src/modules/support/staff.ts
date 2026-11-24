@@ -8,6 +8,7 @@ import type {
   AdminCaseParty,
   AdminCaseQuestion,
   AdminCaseReview,
+  AdminCaseThanks,
   AdminCaseRow,
   AdminCasesPageData,
   AdminConversationView,
@@ -94,6 +95,7 @@ import {
   type BookingMoneyFacts,
   type StaffCaseFacts,
 } from './staff-domain';
+import { thankYouNotes } from '@/modules/thanks/schema';
 
 /**
  * Staff working support cases (UI-018; blueprint 03 §9, B-052, B-054): the queues, the case list, a
@@ -404,6 +406,7 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
   const money = ctx.booking ? await bookingMoneyFacts(db, ctx.booking.id) : null;
   const reportedReview = row.context?.reviewId ? await reportedReviewOf(db, staff, row.context.reviewId) : null;
   const reportedQuestion = row.context?.questionId ? await reportedQuestionOf(db, staff, row.context.questionId, row.context.answer === true) : null;
+  const reportedThanks = row.context?.thanksId ? await reportedThanksOf(db, staff, row.context.thanksId) : null;
   // A reported community post or reply: members' public words, read and moderated on the community page.
   const [reportedPost] = row.context?.postId
     ? await db.select({ id: communityPosts.id, title: communityPosts.title }).from(communityPosts).where(eq(communityPosts.id, row.context.postId)).limit(1)
@@ -493,6 +496,7 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
     ...(contextTitle !== undefined ? { context: { kind: 'conversation' as const, title: contextTitle } } : {}),
     ...(reportedReview ? { review: reportedReview } : {}),
     ...(reportedQuestion ? { question: reportedQuestion } : {}),
+    ...(reportedThanks ? { thanks: reportedThanks } : {}),
     ...(reportedPost ? { post: { id: reportedPost.id, title: reportedPost.title, ...(row.context?.replyId ? { replyId: row.context.replyId } : {}) } } : {}),
     actions: staffCaseActions(facts),
     nextStatuses: nextCaseStatuses(facts),
@@ -589,6 +593,51 @@ export async function moderateReportedReview(
   // tier won back announced, as any recompute does).
   if (changed.subjectUserId) await recomputeBadges(db, changed.subjectUserId, now);
   return changed.result;
+}
+
+// ---- A reported thank-you note (2026-11-24) --------------------------------------------------------------
+
+/** The note a report points at, as written, with whether it shows on the helper's profile. Gone once its client deleted it. */
+async function reportedThanksOf(db: Db, staff: StaffActor, noteId: string): Promise<AdminCaseThanks | null> {
+  const [note] = await db.select().from(thankYouNotes).where(eq(thankYouNotes.id, noteId)).limit(1);
+  if (!note) return null;
+  const people = await usersById(db, [note.authorUserId, note.helperUserId]);
+  const status = note.hiddenAt ? 'hidden' : note.shownOnProfile ? 'shown' : 'not_shown';
+  return {
+    note: { id: note.id, body: note.body, author: { displayName: people.get(note.authorUserId)?.name ?? '' }, helper: { displayName: people.get(note.helperUserId)?.name ?? '' }, createdAt: note.createdAt.toISOString(), nameHidden: note.hideName },
+    status,
+    ...(status === 'hidden' && note.hiddenReason ? { hiddenReason: note.hiddenReason } : {}),
+    canModerate: canModerateReviews(staff.roles),
+  };
+}
+
+/**
+ * Hides the case's reported thank-you note (off the helper's profile; the helper's card no longer shows its words), or
+ * shows it again (back on the profile if the helper had chosen to show it). The reason goes in the audit log and, as an
+ * internal note, on the case. Returns the helper's handle when their profile may have changed.
+ */
+export async function moderateReportedThanks(db: Db, staff: StaffActor, caseId: string, input: ReviewModerationInput, now: Date): Promise<ActionResult & { helperHandle?: string }> {
+  const parsed = reviewModerationInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailed(parsed.error);
+  const ctx = await loadCase(db, staff, caseId);
+  const noteId = ctx?.row.context?.thanksId;
+  if (!ctx || !noteId || !canModerateReviews(staff.roles)) return { ok: false, code: 'not_allowed' };
+  const { visible, reason } = parsed.data;
+  return db.transaction(async (tx) => {
+    const [note] = await tx.select().from(thankYouNotes).where(eq(thankYouNotes.id, noteId)).for('update');
+    if (!note) return { ok: false, code: 'not_found' } as const;
+    // Never one they wrote or one written to them.
+    if (note.authorUserId === staff.id || note.helperUserId === staff.id) return { ok: false, code: 'not_allowed' } as const;
+    if (visible === (note.hiddenAt === null)) return { ok: true, code: 'updated' } as const;
+    await tx
+      .update(thankYouNotes)
+      .set(visible ? { hiddenAt: null, hiddenByUserId: null, hiddenReason: null, updatedAt: now } : { hiddenAt: now, hiddenByUserId: staff.id, hiddenReason: reason, updatedAt: now })
+      .where(eq(thankYouNotes.id, note.id));
+    await tx.insert(supportCaseEvents).values({ id: newId('cev'), caseId: ctx.row.id, kind: 'note', authorUserId: staff.id, visibility: 'internal', body: reason, meta: { thanksAction: visible ? 'shown' : 'hidden' }, createdAt: now });
+    await audit(tx, staff, visible ? 'thanks.shown' : 'thanks.hidden', ctx.row.id, now, { reason, targetType: 'thank_you_note', targetId: note.id });
+    const [profile] = await tx.select({ handle: helperProfiles.handle }).from(helperProfiles).where(eq(helperProfiles.userId, note.helperUserId)).limit(1);
+    return { ok: true, code: 'updated', ...(profile?.handle ? { helperHandle: profile.handle } : {}) } as const;
+  });
 }
 
 // ---- A reported question on a task, or its answer (sweep QA2, QA3) ------------------------------------

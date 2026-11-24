@@ -9,6 +9,7 @@ import { helperProfiles } from '@/modules/profiles/schema';
 import { offers } from '@/modules/offers/schema';
 import { tasks } from '@/modules/tasks/schema';
 import type { Db } from '@/platform/db/connect';
+import { thanksCardsFor } from '@/modules/thanks/views';
 import type { messages } from './schema';
 
 /**
@@ -165,17 +166,21 @@ async function sharedTimesCards(db: Db, viewerId: string, otherId: string | unde
 }
 
 export async function cardsFor(db: Db, viewerId: string, rows: readonly Row[], now: Date, otherId?: string): Promise<ConversationCards | undefined> {
-  const [requests, changes, offerAsks, sharedTimes] = await Promise.all([
+  const noteIds = [...new Set(rows.flatMap((row) => (row.kind !== 'text' && row.event?.type === 'thanks_sent' && typeof row.event.params?.noteId === 'string' ? [row.event.params.noteId] : [])))];
+  const [requests, changes, offerAsks, sharedTimes, thanks] = await Promise.all([
     requestCards(db, viewerId, idsOf(rows, 'invite_sent', 'inviteId'), now),
     changeCards(db, viewerId, idsOf(rows, 'change_proposed', 'changeId'), now),
     offerAskCards(db, viewerId, otherId, rows, now),
     sharedTimesCards(db, viewerId, otherId, rows, now),
+    // Thank-you notes (2026-11-24): the note as it is now; a deleted one's line shows as the plain line.
+    thanksCardsFor(db, viewerId, noteIds, now),
   ]);
   const cards: ConversationCards = {
     ...(Object.keys(requests).length ? { requests } : {}),
     ...(Object.keys(changes).length ? { changes } : {}),
     ...(Object.keys(offerAsks).length ? { offerAsks } : {}),
     ...(Object.keys(sharedTimes).length ? { sharedTimes } : {}),
+    ...(Object.keys(thanks).length ? { thanks } : {}),
   };
-  return cards.requests || cards.changes || cards.offerAsks || cards.sharedTimes ? cards : undefined;
+  return cards.requests || cards.changes || cards.offerAsks || cards.sharedTimes || cards.thanks ? cards : undefined;
 }

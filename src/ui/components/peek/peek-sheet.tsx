@@ -19,6 +19,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/ui/primitives/alert';
 import { Button, buttonVariants } from '@/ui/primitives/button';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/ui/primitives/sheet';
 import { Spinner } from '@/ui/primitives/spinner';
+import { PublicThankYouNotes } from '@/ui/components/thanks/public-thank-you-notes';
 
 /** What the sheet has for its target: not asked yet, loading, ready, or failed (`notFound`: nothing there to show). */
 export type PeekLoad = { status: 'idle' } | { status: 'loading' } | { status: 'ready'; data: PeekData } | { status: 'error'; notFound?: boolean };
@@ -77,6 +78,7 @@ function ServiceLine({ service }: { service: HelperServiceDetail }) {
 function HelperPeek({ data, onToggleSaved }: { data: HelperPeekData; onToggleSaved: PeekSheetProps['onToggleSaved'] }) {
   const t = useTranslations('helperProfile');
   const peek = useTranslations('peek');
+  const thanks = useTranslations('thanks.profile');
   const { formatMonthYear } = useFormat();
   const { profile, self } = data;
   const { helper } = profile;
@@ -116,6 +118,11 @@ function HelperPeek({ data, onToggleSaved }: { data: HelperPeekData; onToggleSav
     {latest && <section aria-label={peek('latestReview')} className="space-y-2">
       <h3 className={sectionTitle}>{peek('latestReview')}</h3>
       <ReviewCard review={latest} reportHref={routes.app.report('review', latest.id)} />
+    </section>}
+    {/* Thank-you notes the helper chose to show (2026-11-24), apart from the review. */}
+    {profile.thanks && profile.thanks.length > 0 && <section aria-label={thanks('title')} className="space-y-2">
+      <h3 className={sectionTitle}>{thanks('title')}</h3>
+      <PublicThankYouNotes notes={profile.thanks} compact />
     </section>}
     {!self && <SaveButton helperId={helper.id} saved={data.saved} onToggleSaved={onToggleSaved} />}
   </div>;

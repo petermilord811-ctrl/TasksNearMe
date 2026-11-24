@@ -99,7 +99,8 @@
     "email_suppressed": "Their email bounced or was marked as spam",
     "already_read": "They read the conversation before it went out",
     "blocked": "One of them blocked the other before it went out",
-    "texts_off": "Texts are off on this site (no text provider is set up)"
+    "texts_off": "Texts are off on this site (no text provider is set up)",
+    "own_quiet_hours": "Their own quiet hours (a message, kept to the app)"
   },
   "deliveryAttempts": "{count, plural, one {# try} other {# tries}}",
   "deliveryNextTry": "Next try {time}",

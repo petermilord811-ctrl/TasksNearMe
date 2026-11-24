@@ -3,6 +3,7 @@
 // 360×800 and 1280×800, runs axe, and saves screenshots to artifacts/ui-previews/.
 import type { PreviewEntry } from '@/contracts/preview';
 import { moneyPreviews } from './money.preview';
+import { thanksPreviews } from './thanks.preview';
 import { brandPreviews } from './brand.preview';
 import { statusPreviews } from './status.preview';
 import { deadlinePreviews } from './deadline.preview';
@@ -184,4 +185,5 @@ export const previews: PreviewEntry[] = [
   ...routeDialogPreviews,
   ...inPlacePreviews,
   ...peekPreviews,
+  ...thanksPreviews,
 ];

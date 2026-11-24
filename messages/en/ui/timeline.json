@@ -4,7 +4,12 @@
   "previewGroup": "Timeline",
   "previewTitle": "Desk · completed",
   "empty": "Updates will appear here as the booking moves forward.",
-  "actors": { "poster": "Client", "helper": "Helper", "support": "Support", "system": "TasksNearMe" },
+  "actors": {
+    "poster": "Client",
+    "helper": "Helper",
+    "support": "Support",
+    "system": "TasksNearMe"
+  },
   "task_posted": "Task posted",
   "offer_received": "{hasAmount, select, yes {Offer received · {amount}} other {Offer received}}",
   "offer_updated": "{hasAmount, select, yes {Offer updated · {amount}} other {Offer updated}}",
@@ -39,5 +44,6 @@
   "sample_profile_notice": "This is a sample profile that shows how TasksNearMe works, so it won't reply. Post a task to reach real helpers near you.",
   "offer_requested": "Asked for an offer",
   "client_present": "Client is there",
-  "times_shared": "Shared open times"
+  "times_shared": "Shared open times",
+  "thanks_sent": "Sent a thank-you note"
 }

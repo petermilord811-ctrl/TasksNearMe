@@ -40,6 +40,8 @@ import { ConversationMarks, ConversationMenu, RequestBanner } from './conversati
 import { HelpChat } from './help-chat';
 import { HelpAvatar, HelpRow } from './help-row';
 import { InboxList } from './inbox-list';
+import { QuietHoursNote } from './quiet-hours-note';
+import { ThanksOffer } from '@/ui/components/thanks/thank-you-note';
 import { NewChat } from './new-chat';
 
 export interface ChatWindowProps {
@@ -191,8 +193,10 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
       <Link href={routes.app.requestHelper(requestHandle)} className="inline-flex min-h-9 items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">{t('direct.request')}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>
     </p>}
     <ReplyProvider>
-      <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier), onLoadEarlier: () => onLoadEarlier(data.earlier!.from) } : {})} onRefresh={onRefresh} otherParty={other} now={now} readUpTo={data.readUpTo} firstUnreadId={data.firstUnreadId} focusId={focusId} canReply={composer.canSend} {...(composer.canSend ? { onReact: bound.onReact } : {})} {...(data.assist?.translate ? { onTranslate: bound.onTranslate } : {})} {...(data.cards ? { cards: data.cards } : {})} requestCardHandlers={handlers.requestCards} compact className="min-h-0 flex-1 space-y-4 px-2.5 py-2.5 sm:px-2.5 sm:py-2.5" />
+      <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier), onLoadEarlier: () => onLoadEarlier(data.earlier!.from) } : {})} onRefresh={onRefresh} otherParty={other} now={now} readUpTo={data.readUpTo} firstUnreadId={data.firstUnreadId} focusId={focusId} canReply={composer.canSend} {...(composer.canSend ? { onReact: bound.onReact } : {})} {...(data.assist?.translate ? { onTranslate: bound.onTranslate } : {})} {...(data.cards ? { cards: data.cards } : {})} requestCardHandlers={handlers.requestCards} {...(handlers.thanks ? { thanksHandlers: handlers.thanks } : {})} compact className="min-h-0 flex-1 space-y-4 px-2.5 py-2.5 sm:px-2.5 sm:py-2.5" />
       {composer.disabledReason !== 'blocked' && <RequestBanner thread={thread} name={firstName} handlers={bound} onBlock={(input) => handlers.onBlock(id, input)} onIgnored={onIgnored} compact />}
+      {data.thanks?.canWrite && handlers.thanks && <ThanksOffer bookingId={data.thanks.bookingId} name={firstName} onSave={handlers.thanks.onSave} compact className="border-t border-foreground/[0.07] bg-brand-soft/40 dark:border-white/[0.06]" />}
+      {composer.canSend && data.quietHours && <QuietHoursNote name={firstName} until={data.quietHours.until} compact />}
       {composer.canSend && composer.firstMessagesLeft !== undefined && <p role="note" className="border-t border-foreground/[0.07] bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground dark:border-white/[0.06]">{t('direct.firstMessagesLeft', { count: composer.firstMessagesLeft, name: firstName })}</p>}
       {data.bookingActions && thread.subject.kind === 'booking' && <BookingDayChips actions={data.bookingActions} bookingId={thread.subject.bookingId} onAction={(input) => handlers.onBookingAction(id, input)} onDone={onRefresh} compact />}
       {composer.canSend

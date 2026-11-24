@@ -29,6 +29,7 @@ import { marketTimeZone } from '@/modules/markets/time-zone';
 import { rowScopeCondition, type RowScope } from '@/shared/sample-data';
 import { deletedLabelFor, shownPerson } from '@/modules/accounts/shown-name';
 import { usernamesOf } from '@/modules/accounts/usernames';
+import { publicThanksOf } from '@/modules/thanks/views';
 
 /**
  * Public helper cards. Only active helpers with active accounts appear. Last names, exact
@@ -256,11 +257,14 @@ export async function getHelperProfile(handle: string, database: Db = db, rows: 
   const sparks = await sparksSummaryOf(database, userId);
   // Their @username (2026-11-22), under the name.
   const username = (await usernamesOf(database, [userId])).get(userId);
+  // Thank-you notes they chose to show (2026-11-24), apart from the reviews and the rating.
+  const thanks = await publicThanksOf(database, userId, rows);
   return {
     timeZone,
     ...(sparks ? { sparks } : {}),
     acceptsMessages: row.user.directMessages !== 'nobody',
     ...(username ? { username } : {}),
+    ...(thanks.length > 0 ? { thanks } : {}),
     helper: withRecommended(toHelperSummary(
       row.profile,
       row.user,

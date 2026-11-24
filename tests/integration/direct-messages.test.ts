@@ -25,9 +25,9 @@ beforeAll(async () => {
   const [jordan] = await db.select().from(users).where(eq(users.id, 'usr_jordan'));
   const [profile] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, 'usr_jordan'));
   await db.insert(users).values([
-    { ...maya!, id: CLIENT, email: 'tmp-dm-client@example.test', name: 'Dee M.', firstName: 'Dee', lastName: 'Moss', phone: '+15125550681', directMessages: 'everyone' },
-    { ...jordan!, id: HELPER, email: 'tmp-dm-helper@example.test', name: 'Hank D.', firstName: 'Hank', lastName: 'Dale', phone: '+15125550682', directMessages: 'everyone' },
-    { ...maya!, id: OTHER, email: 'tmp-dm-other@example.test', name: 'Ola O.', firstName: 'Ola', lastName: 'Ortiz', phone: '+15125550683', directMessages: 'everyone' },
+    { ...maya!, id: CLIENT, email: 'tmp-dm-client@example.test', name: 'Dee M.', firstName: 'Dee', lastName: 'Moss', phone: '+15125550941', directMessages: 'everyone' },
+    { ...jordan!, id: HELPER, email: 'tmp-dm-helper@example.test', name: 'Hank D.', firstName: 'Hank', lastName: 'Dale', phone: '+15125550942', directMessages: 'everyone' },
+    { ...maya!, id: OTHER, email: 'tmp-dm-other@example.test', name: 'Ola O.', firstName: 'Ola', lastName: 'Ortiz', phone: '+15125550943', directMessages: 'everyone' },
   ]);
   await db.insert(helperProfiles).values({ ...profile!, userId: HELPER, handle: HANDLE, status: 'active', foundingNumber: null, completedCount: 0 });
 });

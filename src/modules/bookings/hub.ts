@@ -45,6 +45,7 @@ import type { PaymentProvider } from '@/integrations/payments';
 import { clientSummary } from './people';
 import { tipViewOf } from './tips';
 import { thankOnNeighborsHref } from '@/modules/community/thanks';
+import { thanksPanelFor } from '@/modules/thanks/views';
 import { scheduledPaymentViewOf } from './scheduled';
 import { seriesOfBooking, seriesSummaries, skipVisit } from './series';
 import { bookingTerms, bookings } from './schema';
@@ -219,7 +220,7 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     paymentLines.sort((a, b) => a.at.localeCompare(b.at));
   }
 
-  const [dispute, openChange, tip, series, scheduledPayment, thankHref] = await Promise.all([
+  const [dispute, openChange, tip, series, scheduledPayment, thankHref, thanks] = await Promise.all([
     getBookingDispute(db, booking.id, userId, role),
     bookingOpenChange(db, booking.id, userId, role, now),
     tipViewOf(deps, booking, role, completion?.finalBreakdown.taskPriceCents ?? terms.breakdown.taskPriceCents, now),
@@ -227,6 +228,8 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     scheduledPaymentViewOf(deps, booking, role),
     // "Thank Sam on Neighbors" for the client (plan 10.12).
     role === 'poster' ? thankOnNeighborsHref(db, booking) : Promise.resolve(undefined),
+    // The thank-you note (2026-11-24): written here or in the conversation, read by both.
+    thanksPanelFor(db, userId, booking, now),
   ]);
 
   const helperBeforePayment = role === 'helper' && !booking.confirmedAt;
@@ -284,6 +287,7 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     ...(review.theirs ? { theirReview: review.theirs } : {}),
     ...(tip ? { tip } : {}),
     ...(thankHref ? { thankOnNeighborsHref: thankHref } : {}),
+    ...(thanks ? { thanks } : {}),
     ...(series ? { series } : {}),
     // The helper canceled and the task is open for offers again: the client's page links to it.
     ...(role === 'poster' && booking.status === 'canceled' && facts.task?.reopened && facts.task.status === 'open' ? { taskReopened: true } : {}),

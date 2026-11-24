@@ -1,6 +1,6 @@
 import { and, asc, count, eq, gte, inArray, isNull, lt, lte, ne, or } from 'drizzle-orm';
 import { createTranslator } from 'next-intl';
-import type { AppLocale, NotificationTopic, NotificationType, NotificationView, TimeZone } from '@/contracts';
+import type { AppLocale, NotificationTopic, NotificationType, NotificationView, QuietHoursSetting, TimeZone } from '@/contracts';
 import { DEFAULT_LOCALE, localeOrDefault } from '@/contracts';
 import { messagesFor, perLocale } from '@/i18n/catalog';
 import { createEmailProvider, type EmailProvider } from '@/integrations/email';
@@ -17,6 +17,8 @@ import { localizedPath } from '@/shared/locale';
 import { pushSenderFromEnv, type PushMessage, type PushSender } from '@/integrations/push/web-push';
 import { channelsFor, missingAddressReason, NOTIFICATION_TOPIC, planDelivery, preferenceOn, pushOn, RETRY_MINUTES, URGENT_TYPES, type DeliveryChannel } from './delivery-domain';
 import { renderNotificationEmail } from './emails';
+import { quietHoursOf, threadBookingStarts } from './own-quiet-hours';
+import { quietUntil } from './quiet-hours';
 import { notificationPath } from './paths';
 import { shortCodeFor } from './short-links';
 import { emailSuppressions, notificationDeliveries, notificationPreferences, notifications, pushSubscriptions } from './schema';
@@ -178,14 +180,17 @@ interface Person {
   locale: AppLocale;
   /** Their home market's time zone: quiet hours, and the times their notifications name (completion plan 8.1). */
   timeZone: TimeZone;
+  /** Their own quiet hours (2026-11-24), when they ever set them. */
+  quiet?: QuietHoursSetting;
 }
 
 async function peopleOf(db: Db, userIds: string[]): Promise<Map<string, Person>> {
   if (userIds.length === 0) return new Map();
-  const [rows, prefs, devices] = await Promise.all([
+  const [rows, prefs, devices, quiet] = await Promise.all([
     db.select({ id: users.id, email: users.email, phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt, locale: users.locale, homeMarketId: users.homeMarketId }).from(users).where(inArray(users.id, userIds)),
     db.select().from(notificationPreferences).where(inArray(notificationPreferences.userId, userIds)),
     db.select({ userId: pushSubscriptions.userId, devices: count() }).from(pushSubscriptions).where(inArray(pushSubscriptions.userId, userIds)).groupBy(pushSubscriptions.userId),
+    quietHoursOf(db, userIds),
   ]);
   const devicesOf = new Map(devices.map((row) => [row.userId, row.devices]));
   const zones = await marketTimeZones(db, rows.map((row) => row.homeMarketId));
@@ -196,7 +201,7 @@ async function peopleOf(db: Db, userIds: string[]): Promise<Map<string, Person>>
   const people = new Map<string, Person>(
     rows.map((row) => [
       row.id,
-      { email: row.email || null, emailSuppressed: suppressed.has(row.email?.toLowerCase() ?? ''), phone: row.phone, phoneVerified: row.phoneVerifiedAt !== null, preferences: new Map(), pushDevices: devicesOf.get(row.id) ?? 0, locale: localeOrDefault(row.locale), timeZone: zones.get(row.homeMarketId)! },
+      { email: row.email || null, emailSuppressed: suppressed.has(row.email?.toLowerCase() ?? ''), phone: row.phone, phoneVerified: row.phoneVerifiedAt !== null, preferences: new Map(), pushDevices: devicesOf.get(row.id) ?? 0, locale: localeOrDefault(row.locale), timeZone: zones.get(row.homeMarketId)!, ...(quiet.has(row.id) ? { quiet: quiet.get(row.id)! } : {}) },
     ]),
   );
   for (const pref of prefs) people.get(pref.userId)?.preferences.set(`${pref.topic}:${pref.channel}`, pref.enabled === 'true');
@@ -217,6 +222,17 @@ async function staleMessage(db: Db, row: NotificationRow): Promise<'already_read
     .where(and(eq(threadParticipants.threadId, row.target.threadId), ne(threadParticipants.userId, row.userId)))
     .limit(1);
   return other && (await isBlockedBetween(db, row.userId, other.userId)) ? 'blocked' : null;
+}
+
+/**
+ * A message notification inside the person's own quiet hours (2026-11-24): kept to the app, unless its conversation is a
+ * booking's on its day or within 12 hours. The conversation's bookings are looked up only when the time is inside them.
+ */
+async function inOwnQuietHours(db: Db, row: NotificationRow, person: Pick<Person, 'quiet' | 'timeZone'>, now: Date): Promise<boolean> {
+  if (row.type !== 'message_received' || !person.quiet?.enabled) return false;
+  if (!quietUntil({ type: 'message_received', now, quiet: person.quiet, timeZone: person.timeZone })) return false;
+  const bookingStarts = row.target.kind === 'thread' ? await threadBookingStarts(db, row.target.threadId, now) : [];
+  return quietUntil({ type: 'message_received', now, quiet: person.quiet, timeZone: person.timeZone, bookingStarts }) !== null;
 }
 
 const addressOf = (person: Person, channel: DeliveryChannel) =>
@@ -282,6 +298,7 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
     const topic: NotificationTopic | undefined = NOTIFICATION_TOPIC[notification.type as NotificationType];
     if (!topic) continue;
     const stale = await staleMessage(db, notification);
+    const ownQuietHours = await inOwnQuietHours(db, notification, person, now);
     // A receipt goes by email only (no rows for the other channels).
     for (const channel of channelsFor(notification.type as NotificationType)) {
       // Push only where it's set up, texts only where they're on (no rows otherwise).
@@ -295,6 +312,7 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
         hasAddress: to !== null,
         suppressed: person.emailSuppressed,
         ...(stale ? { stale } : {}),
+        ...(ownQuietHours ? { ownQuietHours } : {}),
         now,
         timeZone: person.timeZone,
       });
@@ -345,7 +363,9 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
     const bounced = channel === 'email' && person?.emailSuppressed === true;
     // A text from before texts were turned off (or Twilio's keys removed) is dropped, never counted as a failure.
     const textsOff = channel === 'sms' && !providers.sms;
-    const skipReason = textsOff ? 'texts_off' : !to ? missingAddressReason(channel) : bounced ? 'email_suppressed' : !stillOn ? 'preference_off' : await staleMessage(db, notification);
+    // Held through the night's quiet hours or waiting to retry, a message notification still keeps the person's own quiet
+    // hours when its time comes (2026-11-24): never sent later in a burst.
+    const skipReason = textsOff ? 'texts_off' : !to ? missingAddressReason(channel) : bounced ? 'email_suppressed' : !stillOn ? 'preference_off' : ((await staleMessage(db, notification)) ?? (person && (await inOwnQuietHours(db, notification, person, now)) ? 'own_quiet_hours' : null));
     const [claimed] = await db
       .update(notificationDeliveries)
       .set(skipReason ? { status: 'skipped', reason: skipReason, sendAfter: null, updatedAt: now } : { status: 'sending', updatedAt: now })

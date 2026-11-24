@@ -6,7 +6,7 @@ import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowUp, Check, CheckCheck, Expand, Play } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { ActionHandler, ConversationCards, ISODateTime, MessageReaction, MessageTranslation, MessageView, PersonSummary, Photo, RequestCardHandlers } from '@/contracts';
+import type { ActionHandler, ConversationCards, ISODateTime, MessageReaction, MessageTranslation, MessageView, PersonSummary, Photo, RequestCardHandlers, ThankYouHandlers } from '@/contracts';
 import { ChangeCardView, OfferAskCardView, SharedTimesCardView, TaskRequestCardView } from '@/ui/components/messaging/conversation-cards';
 import { MESSAGE_REACTIONS } from '@/contracts/messaging';
 import { Languages, Reply, SmilePlus } from 'lucide-react';
@@ -24,6 +24,7 @@ import { cn } from '@/ui/lib/utils';
 import { buttonVariants } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/ui/primitives/dialog';
+import { ThankYouNoteCard } from '@/ui/components/thanks/thank-you-note';
 
 function MessagePhoto({ photo, number, count, sender }: { photo: Photo; number: number; count: number; sender: string }) {
   const t = useTranslations('thread');
@@ -134,7 +135,7 @@ function DeliveryTicks({ read }: { read: boolean }) {
   </span>;
 }
 
-export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, otherParty, now, readUpTo, firstUnreadId, focusId, onReact, onTranslate, cards, requestCardHandlers, canReply = false, compact = false, className }: {
+export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, otherParty, now, readUpTo, firstUnreadId, focusId, onReact, onTranslate, cards, requestCardHandlers, thanksHandlers, canReply = false, compact = false, className }: {
   messages: MessageView[];
   /** "Load earlier messages" (sweep MN11): this conversation from 100 messages earlier. */
   earlierHref?: string;
@@ -155,6 +156,8 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
   /** Task requests and booking changes its lines show as cards (2026-11-23), and the request cards' buttons. */
   cards?: ConversationCards;
   requestCardHandlers?: RequestCardHandlers;
+  /** A thank-you note's buttons (2026-11-24): its card in the log, where the note was sent. */
+  thanksHandlers?: ThankYouHandlers;
   /** Reply only where one can be sent: not in a closed or blocked conversation. */
   canReply?: boolean;
   /** The chat window's denser bubbles (2026-11-24, owner: "make live chat components a little compact"). */
@@ -393,7 +396,9 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
           const changeCard = isNotice && message.event?.type === 'change_proposed' && message.event.params?.changeId ? cards?.changes?.[message.event.params.changeId] : undefined;
           const askCard = isNotice && message.event?.type === 'offer_requested' ? cards?.offerAsks?.[message.id] : undefined;
           const timesCard = isNotice && message.event?.type === 'times_shared' ? cards?.sharedTimes?.[message.id] : undefined;
+          const thanksCard = isNotice && message.event?.type === 'thanks_sent' && message.event.params?.noteId ? cards?.thanks?.[message.event.params.noteId] : undefined;
           const firstName = otherParty.displayName.split(' ')[0] ?? otherParty.displayName;
+          if (thanksCard) return <Fragment key={message.id}>{divider}<li data-message-id={message.id} className="flex min-w-0 justify-center"><ThankYouNoteCard note={thanksCard} name={firstName} {...(thanksHandlers ? { handlers: thanksHandlers } : {})} compact={compact} /></li></Fragment>;
           if (requestCard || changeCard || askCard || timesCard) return <Fragment key={message.id}>{divider}<li data-message-id={message.id} className="flex min-w-0 justify-center">
             {requestCard
               ? <TaskRequestCardView card={requestCard} name={firstName} createdAt={message.createdAt} {...(requestCardHandlers ? { handlers: requestCardHandlers } : {})} {...(onRefresh ? { onDone: onRefresh } : {})} />

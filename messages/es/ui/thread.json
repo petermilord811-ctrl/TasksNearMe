@@ -482,5 +482,6 @@
       "changed": "Esta reserva cambió. Recarga para ver cómo va.",
       "unknown": "No funcionó. Inténtalo de nuevo."
     }
-  }
+  },
+  "quietHours": "Horas de silencio de {name}: lo verá después de las {time}"
 }

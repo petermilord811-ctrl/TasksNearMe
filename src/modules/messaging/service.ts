@@ -40,6 +40,8 @@ import { mentionsOf } from './mentions';
 import { noteSampleRecipient } from './samples';
 import { CATCH_UP_UNREAD, chatAssistOffered } from './assist';
 import { cardsFor } from './cards';
+import { recipientQuietUntil } from '@/modules/notifications/own-quiet-hours';
+import { thanksPanelFor } from '@/modules/thanks/views';
 import { requestOptionsFor } from './asks';
 import { shareableSlotsFor } from './times';
 import { bookingChatToolsOf } from '@/modules/bookings/chat-tools';
@@ -557,6 +559,12 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   // A booking that can still change: "Propose a change" from its conversation.
   // Price and scope can change while it's confirmed or under way (bookings/changes-domain.ts); the dialog says what else.
   const [changeable] = thread.kind === 'booking' && !disabledReason ? await db.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, thread.linkedId)).limit(1) : [];
+  // The other person's quiet hours (2026-11-24): a note above the message box while a new message would reach only their
+  // app. Only when they turned them on, and never when the booking is today or within 12 hours (those notify as usual).
+  const quietUntil = !disabledReason ? await recipientQuietUntil(db, found.other.id, thread.id, now) : null;
+  // A completed booking's thank-you note (2026-11-24): the client's "Send a thank-you note" above the message box.
+  const [thanksBooking] = thread.kind === 'booking' && !otherGone ? await db.select({ id: bookings.id, status: bookings.status, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId, confirmedAt: bookings.confirmedAt }).from(bookings).where(eq(bookings.id, thread.linkedId)).limit(1) : [];
+  const thanks = thanksBooking && !blocked ? await thanksPanelFor(db, userId, thanksBooking, now) : null;
   const canProposeChange = changeable ? allowedChangeTypes({ status: changeable.status, pricingType: 'fixed', startAt: now, now }).length > 0 : false;
   // Quotes (a replied-to message may be older than this page) and reactions, then the viewer's saved replies (7.3).
   const quotedIds = [...new Set(rows.flatMap((row) => (row.replyToMessageId ? [row.replyToMessageId] : [])))];
@@ -601,6 +609,8 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
     ...(options ? { requestOptions: options } : {}),
     ...(bookingTools ? { agreement: bookingTools.agreement } : {}),
     ...(bookingTools?.actions.length ? { bookingActions: bookingTools.actions } : {}),
+    ...(quietUntil ? { quietHours: { until: quietUntil.toISOString() } } : {}),
+    ...(thanks ? { thanks } : {}),
     ...(presence ? { presence } : {}),
     ...(mutual && lastMine && theirs?.lastReadAt && theirs.lastReadAt >= lastMine.createdAt ? { seenMessageId: lastMine.id } : {}),
     // Ticks (2026-11-24): how far they've read, under the same rule as "Seen".

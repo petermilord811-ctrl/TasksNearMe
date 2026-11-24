@@ -2,7 +2,8 @@
 
 import { refresh } from 'next/cache';
 import { headers } from 'next/headers';
-import type { AccountProfileInput, ActionResult, NotificationChannel, NotificationTopic, PushSubscriptionInput } from '@/contracts';
+import type { AccountProfileInput, ActionResult, NotificationChannel, NotificationTopic, PushSubscriptionInput, QuietHoursInput } from '@/contracts';
+import { saveQuietHours } from './own-quiet-hours';
 import { refreshPublicProfile } from '@/modules/accounts/profile-photo';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
@@ -26,6 +27,13 @@ async function signedInUserId(): Promise<string | null> {
 function refreshed(result: ActionResult): ActionResult {
   if (result.ok) refresh();
   return result;
+}
+
+/** Quiet hours of their own (2026-11-24): on or off, and the times. */
+export async function saveQuietHoursAction(input: QuietHoursInput): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  return refreshed(await saveQuietHours(db, userId, input, await requestNow()));
 }
 
 export async function markAllNotificationsReadAction(): Promise<ActionResult> {

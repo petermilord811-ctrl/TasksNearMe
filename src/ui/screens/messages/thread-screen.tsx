@@ -17,6 +17,8 @@ import { buttonVariants } from '@/ui/primitives/button';
 import { MessageComposerContent } from './message-composer';
 import { MessageLog } from './message-log';
 import { ChatAssistProvider, type ChatAssistSeed } from './chat-assist';
+import { QuietHoursNote } from '@/ui/components/messaging/quiet-hours-note';
+import { ThanksOffer } from '@/ui/components/thanks/thank-you-note';
 import { ReplyProvider } from './reply-context';
 import { ThreadPresence } from './thread-presence';
 
@@ -149,9 +151,11 @@ export function ThreadContent({ data, handlers, now, safety, composerState, assi
       {/* What we agreed, on top of a booking's messages (2026-11-24). */}
       {data.agreement && <AgreementCard agreement={data.agreement} threadId={thread.id} canProposeChange={Boolean(data.canProposeChange)} />}
       <ReplyProvider>
-      <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier) } : {})} otherParty={other} now={now} readUpTo={data.readUpTo} firstUnreadId={data.firstUnreadId} focusId={focusId} canReply={composer.canSend} {...(composer.canSend && handlers.onReact ? { onReact: handlers.onReact } : {})} {...(data.assist?.translate && handlers.onTranslate ? { onTranslate: handlers.onTranslate } : {})} {...(data.cards ? { cards: data.cards } : {})} {...(handlers.requestCards ? { requestCardHandlers: handlers.requestCards } : {})} className="min-h-0 flex-1" />
+      <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier) } : {})} otherParty={other} now={now} readUpTo={data.readUpTo} firstUnreadId={data.firstUnreadId} focusId={focusId} canReply={composer.canSend} {...(composer.canSend && handlers.onReact ? { onReact: handlers.onReact } : {})} {...(data.assist?.translate && handlers.onTranslate ? { onTranslate: handlers.onTranslate } : {})} {...(data.cards ? { cards: data.cards } : {})} {...(handlers.requestCards ? { requestCardHandlers: handlers.requestCards } : {})} {...(handlers.thanks ? { thanksHandlers: handlers.thanks } : {})} className="min-h-0 flex-1" />
       {/* A stranger's first message (2026-11-23): Accept, Ignore or Block; answering accepts too. */}
       {composer.disabledReason !== 'blocked' && <RequestBanner thread={thread} name={firstName} handlers={handlers} {...(safety ? { onBlock: safety.handlers.onBlock } : {})} />}
+      {data.thanks?.canWrite && handlers.thanks && <ThanksOffer bookingId={data.thanks.bookingId} name={firstName} onSave={handlers.thanks.onSave} compact className="border-t border-foreground/[0.07] bg-brand-soft/40 px-4 dark:border-white/[0.06]" />}
+      {composer.canSend && data.quietHours && <QuietHoursNote name={firstName} until={data.quietHours.until} />}
       {composer.canSend && composer.firstMessagesLeft !== undefined && <p role="note" className="border-t border-foreground/[0.07] bg-muted/40 px-4 py-2 text-xs text-muted-foreground dark:border-white/[0.06]">{t('direct.firstMessagesLeft', { count: composer.firstMessagesLeft, name: firstName })}</p>}
       {/* The booking's day-of updates the app offers now, one tap each (2026-11-24). */}
       {data.bookingActions && thread.subject.kind === 'booking' && <BookingDayChips actions={data.bookingActions} bookingId={thread.subject.bookingId} {...(handlers.onBookingAction ? { onAction: handlers.onBookingAction } : {})} />}
