@@ -10,6 +10,7 @@ import {
   startDirectChatInputSchema,
   type ActionResult,
   type DirectChatAllowance,
+  type DirectChatRefusal,
   type DirectChatStart,
   type DirectChatTarget,
   type DirectMessageSetting,
@@ -160,6 +161,18 @@ async function facts(db: Db, viewerId: string, recipient: Recipient, now: Date) 
     perDay,
   });
   return { refusal, starts, perDay, allowed };
+}
+
+/**
+ * Whether `starterId` may open a conversation with `recipientId` now, by the recipient's "who can message me", a block
+ * and both accounts, without the daily allowance: for a conversation another flow opens (team up's invite, 2026-11-24,
+ * sweep C6). `contacts`: they've talked about a task before, so it isn't a message request.
+ */
+export async function directStartFor(db: Db, starterId: string, recipientId: string, now: Date): Promise<{ refused: DirectChatRefusal | null; contacts: boolean }> {
+  const recipient = await recipientOf(db, { userId: recipientId });
+  if (!recipient || recipient.row.status === 'deleted') return { refused: 'unavailable', contacts: false };
+  const [{ refusal }, contacts] = await Promise.all([facts(db, starterId, recipient, now), taskContactsBetween(db, starterId, recipientId)]);
+  return { refused: refusal === 'limit_reached' ? null : refusal, contacts };
 }
 
 /** Contact details stay masked until the two have a paid booking together. */

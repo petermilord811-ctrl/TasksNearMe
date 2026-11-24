@@ -1,7 +1,7 @@
 import { routes, type AppShellHandlers, type BookingSheetHandlers, type BookingView, type PreviewEntry, type TeamHandlers, type TeamInviteCard, type ThreadHandlers, type ThreadPageData } from '@/contracts';
 import {
   chrisTeamBookingsPageData, fakeBookingHubHandlers, fakeConversationHandlers, fakeHandler, fakeThreadHandlers, jordanShell, mayaShell,
-  movingClientCancelChoiceData, movingClientConfirmData, movingClientPartnerBookingData, movingClientTeamData, movingLeadCanInviteData, movingLeadInvitedData, movingLeadTeamData, movingPartnerBookingData,
+  movingClientCancelChoiceData, movingClientConfirmData, movingClientPartnerBookingData, movingClientTeamData, movingLeadCanInviteData, movingLeadInvitedData, movingLeadTeamData, movingPartnerBookingData, movingPartnerLeadCanceledData,
   teamCardStates, teamClientBarThreadData, teamClientConfirmThreadData, teamPartnerBarThreadData, teamPartnerInviteThreadData,
 } from '@/fixtures';
 import { TeamBarView, TeamInviteCardView } from '@/ui/components/teams/team-card';
@@ -64,6 +64,8 @@ export const teamPreviews: PreviewEntry[] = [
   card('clientRefused', 'Client: said no'),
   card('expired', 'Expired (the job started)'),
   card('clientPartnerCanceled', "Client: the partner's booking was canceled"),
+  card('partnerLeadCanceled', "Partner: the lead's booking was canceled (theirs goes on)"),
+  card('leadCanceledYou', "Lead: their own booking was canceled"),
   { id: 'teams/card-readonly', group, title: 'Read-only (no handlers)', render: () => <div className="flex justify-center"><TeamInviteCardView card={teamCardStates.partnerInvited} createdAt={now} /></div> },
   { id: 'teams/card-failing', group, title: 'Answer fails: expired now', render: () => <div className="flex justify-center"><TeamInviteCardView card={teamCardStates.partnerInvited} handlers={failingTeam} /></div> },
   { id: 'teams/invite-dialog', group, title: "Lead's invite dialog", render: () => <TeamInviteDialog open onOpenChange={() => undefined} onInvite={teamHandlers.onInvite!} /> },
@@ -77,6 +79,7 @@ export const teamPreviews: PreviewEntry[] = [
   page('client-team', "Client's booking with the lead: team booked", movingClientTeamData),
   page('client-cancel-choice', "Client: the lead's booking canceled, keep Sam or cancel both", movingClientCancelChoiceData),
   page('partner', "Partner's booking: Jordan leads", movingPartnerBookingData, true),
+  page('partner-lead-canceled', "Partner's booking: Jordan's was canceled", movingPartnerLeadCanceledData, true),
   page('client-partner', "Client's view of the partner's booking", movingClientPartnerBookingData),
   { id: 'teams/bookings-list', group, title: "Client's bookings: both parts as one team job", layout: 'fullscreen', render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.bookings()} layout="flow"><BookingsScreen data={chrisTeamBookingsPageData} now={now} /></AppShell> },
   { id: 'teams/bar', group, title: 'Team bar (page and compact)', render: () => <div className="max-w-xl space-y-4 rounded-xl border">{teamClientBarThreadData.team && <TeamBarView bar={teamClientBarThreadData.team} />}{teamPartnerBarThreadData.team && <TeamBarView bar={teamPartnerBarThreadData.team} compact />}</div> },

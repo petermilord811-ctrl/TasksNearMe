@@ -49,6 +49,8 @@ import { notificationPreferences, notifications } from './schema';
 import { verificationNotificationFor } from './verification-plan';
 import { helpersToAlert, replacementHelpers } from '@/modules/offers/task-alerts';
 import { reactToEvent } from '@/modules/badges/reactions';
+import { planTeamNotices, teamNoticesForCanceled } from '@/modules/teams/notices';
+import { reactToTeamEvent } from '@/modules/teams/reactions';
 import { reactForOperations } from '@/modules/oncall/reactions';
 import { publishRealtime } from '@/modules/realtime/reactions';
 import { userChannel } from '@/platform/realtime/hub';
@@ -443,7 +445,8 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
           // Not the person who canceled: they did it on screen, and an urgent text or push about it was noise (sweep
           // MN10). A cancel by the system (unpaid, a missed deadline) names nobody and tells both.
           const actor = text(p.actorUserId);
-          const told = [forPoster('booking_canceled'), forHelper('booking_canceled')].filter((item) => item.userId !== actor).concat(forFollowers);
+          // A team job's other helper hears it too (2026-11-24, sweep B5): the lead's booking, or the partner's.
+          const told = [forPoster('booking_canceled'), forHelper('booking_canceled')].filter((item) => item.userId !== actor).concat(forFollowers, await teamNoticesForCanceled(db, booking.id));
           // The one who canceled gets a receipt by email instead (the owner's choice, 2026-11-20): what was canceled, on
           // the booking's clock, and what happens to the money.
           const by = actor === booking.posterUserId ? 'poster' : actor === booking.helperUserId ? 'helper' : null;
@@ -691,6 +694,15 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
         : new Set<string>();
       return recipients.filter((userId) => !muted.has(userId)).map((userId) => ({ userId, type: 'message_received' as const, target: { kind: 'thread', threadId } as AttentionTarget, title, actorName }));
     }
+    // Team up (2026-11-24, sweep C5): the invite, the answers and the client's yes or no (src/modules/teams/notices.ts).
+    case 'team.invited':
+    case 'team.accepted':
+    case 'team.declined':
+    case 'team.confirmed':
+    case 'team.refused':
+    case 'team.canceled':
+    case 'team.withdrawn':
+      return planTeamNotices(db, event);
     default:
       return [];
   }
@@ -804,6 +816,12 @@ export async function dispatchNotifications(db: Db, now: Date, limit = 200): Pro
       await reactToEvent(db, event, now);
     } catch (error) {
       console.error(`[outbox] reacting to ${event.type} ${event.id} failed`, error);
+    }
+    // A team job when one of its bookings is canceled (src/modules/teams/reactions.ts, sweep B5).
+    try {
+      await reactToTeamEvent(db, event, now);
+    } catch (error) {
+      console.error(`[outbox] team reaction to ${event.type} ${event.id} failed`, error);
     }
     // On-call pages and cases for events no screen handles (src/modules/oncall/reactions.ts, completion plan 5.12).
     try {

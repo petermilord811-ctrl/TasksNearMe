@@ -186,7 +186,17 @@
     "followed_arrived": "Followed booking: arrived",
     "followed_completed": "Followed booking: done",
     "followed_canceled": "Followed booking: canceled",
-    "followed_time_changed": "Followed booking: new time"
+    "followed_time_changed": "Followed booking: new time",
+    "team_invited": "Team up: invited",
+    "team_proposed": "Team up: proposed to the client",
+    "team_accepted": "Team up: partner said yes",
+    "team_declined": "Team up: partner said no",
+    "team_confirmed": "Team up: client confirmed",
+    "team_refused": "Team up: client said no",
+    "team_canceled": "Team up: lead canceled the invite",
+    "team_withdrawn": "Team up: partner stepped back",
+    "team_lead_canceled": "Team up: lead's booking canceled",
+    "team_partner_left": "Team up: partner's booking canceled"
   },
   "signIns": {
     "title": "Sign-ins",

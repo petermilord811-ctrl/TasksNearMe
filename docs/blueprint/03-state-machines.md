@@ -98,6 +98,8 @@ The client's yes makes the **partner's part**: a copy of the lead's task with th
 
 A partner's part is never listed on the board, the feeds or the client's own open-task pickers, and its pending offer isn't shown as an offer to review. It isn't an offer of the partner's either: they can't revise, withdraw or re-confirm it, and nobody else can offer on it (sweep 2026-11-24). It books only while its invite is `confirmed` and the lead's booking is `confirmed` and hasn't started (checked under the part's lock).
 
+**Who hears what (sweep 2026-11-24).** Each team moment is a notification too, not only a card: the partner hears the invite; the client the proposal, from the partner's yes on (never before); the lead each answer; both helpers the client's yes or no; the partner a canceled invite (the client too once it had reached them). When one of the two bookings is canceled the other helper hears it, and both read a line in their team conversation; an invite or a part never booked lapses with the lead's booking, and from then on nobody leads the partner's booking (no team bar or tag). The team conversation is the two helpers' direct conversation under the direct message rules: the lead starts it (the partner's message request unless they've worked on a task together), the partner's yes takes it, and a partner whose "who can message me" refuses the lead can't be invited.
+
 ### 5. Change requests (both people must accept)
 
 | State | Proposer can | Counterparty can | System |

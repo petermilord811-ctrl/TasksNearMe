@@ -72,6 +72,7 @@ async function cardOf(db: Db, team: TeamRow, viewerId: string, now: Date, member
     ...(team.note && role !== 'client' ? { note: team.note } : {}),
     ...(actions.includes('book') && team.partnerTaskId && team.partnerOfferId ? { bookHref: routes.app.confirmOffer(team.partnerTaskId, team.partnerOfferId) } : {}),
     ...(partnerBookingId && role !== 'lead' && facts.partnerBooking ? { partnerBooking: { bookingId: partnerBookingId, status: facts.partnerBooking.status } } : {}),
+    ...(lead.booking.status === 'canceled' ? { leadCanceled: true as const } : {}),
     actions,
   };
 }
@@ -119,12 +120,15 @@ export async function bookingTeamFor(db: Db, viewerId: string, booking: BookingR
     if (!team) return undefined;
     const role: TeamViewerRole = viewer === 'client' ? 'client' : 'partner';
     const people = await membersOf(db, [team.leadUserId, team.partnerUserId]);
+    const [lead] = await db.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, team.leadBookingId)).limit(1);
     return {
       viewerRole: role,
       part: 'partner',
       lead: people.get(team.leadUserId) ?? fallback,
       ...(role === 'client' ? { leadBookingId: team.leadBookingId } : {}),
       ...(role === 'partner' && team.teamThreadId ? { teamThreadId: team.teamThreadId } : {}),
+      // Nobody leads it now (sweep B5): the page says so, not "{lead} leads this job".
+      ...(lead?.status === 'canceled' ? { leadCanceled: true as const } : {}),
     };
   }
   const role: TeamViewerRole = viewer === 'client' ? 'client' : 'lead';
@@ -177,6 +181,9 @@ export async function teamBarFor(db: Db, viewerId: string, thread: { id: string;
   if (!role) return undefined;
   const partner = await partnerBookingOf(db, team);
   if (!partner || partner.status === 'canceled') return undefined;
+  // A team job only while both bookings are on (sweep B5): the lead's canceled, there's no team to move between.
+  const [leadRow] = await db.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, team.leadBookingId)).limit(1);
+  if (!leadRow || leadRow.status === 'canceled') return undefined;
   const bookingThreads = await db.select({ id: threads.id, linkedId: threads.linkedId }).from(threads).where(and(eq(threads.kind, 'booking'), inArray(threads.linkedId, [team.leadBookingId, partner.id])));
   const threadOf = (bookingId: string) => bookingThreads.find((row) => row.linkedId === bookingId)?.id;
   const candidates: { kind: 'lead_booking' | 'partner_booking' | 'team'; threadId: string | undefined }[] =
@@ -203,9 +210,11 @@ export async function teamTagsFor(db: Db, rows: readonly Pick<BookingRow, 'id' |
   const people = await membersOf(db, teams.flatMap((team) => [team.leadUserId, team.partnerUserId]));
   for (const team of teams) {
     const tag = { lead: people.get(team.leadUserId)?.displayName ?? '', partner: people.get(team.partnerUserId)?.displayName ?? '' };
-    // Only once the partner's part is booked (and not canceled): the lead's row, and the partner's.
+    // Only once the partner's part is booked, while both bookings are on (sweep B5): the lead's row, and the partner's.
     const partner = await partnerBookingOf(db, team);
     if (!partner || partner.status === 'canceled') continue;
+    const [lead] = await db.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, team.leadBookingId)).limit(1);
+    if (!lead || lead.status === 'canceled') continue;
     out.set(team.leadBookingId, { part: 'lead', ...tag });
     out.set(partner.id, { part: 'partner', ...tag });
   }

@@ -59,9 +59,11 @@ function TeamCard({ card, handlers, onDone, createdAt, embedded }: { card: TeamI
   const names = { lead, partner };
   // The lead never sees the partner's booking: for them a confirmed part reads as on the team.
   const booking = card.status === 'confirmed' && !card.partnerBooking && card.viewerRole !== 'lead';
-  const statusKey = card.partnerBooking?.status === 'canceled' ? 'partnerCanceled' : booking ? 'booking' : card.status;
+  const statusKey = card.leadCanceled ? (card.viewerRole === 'lead' ? 'leadCanceledYou' : 'leadCanceled') : card.partnerBooking?.status === 'canceled' ? 'partnerCanceled' : booking ? 'booking' : card.status;
   const status = card.viewerRole === 'client' ? t(`statusClient.${statusKey}`, names) : t(`status.${statusKey}`, names);
-  const tone = card.status === 'confirmed' ? 'success' : card.status === 'invited' || card.status === 'accepted' ? 'info' : 'neutral';
+  // A canceled booking on a confirmed team reads as news, never as success (sweep B5).
+  const ended = card.leadCanceled || card.partnerBooking?.status === 'canceled';
+  const tone = ended ? 'neutral' : card.status === 'confirmed' ? 'success' : card.status === 'invited' || card.status === 'accepted' ? 'info' : 'neutral';
   const headline = card.viewerRole === 'partner'
     ? t('invitedYou', names)
     : card.viewerRole === 'lead'

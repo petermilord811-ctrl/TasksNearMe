@@ -36,6 +36,13 @@ describe('copy', () => {
       }
       expect(catalog.timeline).toHaveProperty('team_invited');
       expect(catalog.timeline).toHaveProperty('team_proposed');
+      // A team job's canceled booking (sweep B5): the cards, the partner's page and the team conversation's line.
+      for (const key of ['leadCanceled', 'leadCanceledYou', 'partnerCanceled']) expect(catalog.teams.card.status).toHaveProperty(key);
+      expect(catalog.teams.card.statusClient).toHaveProperty('leadCanceled');
+      expect(catalog.teams.panel).toHaveProperty('leadCanceled');
+      expect(catalog.teams.panel).toHaveProperty('leadCanceledClient');
+      expect(catalog.timeline).toHaveProperty('team_lead_canceled');
+      expect(catalog.timeline).toHaveProperty('team_partner_canceled');
     }
   });
 });
@@ -66,6 +73,14 @@ describe('the invite card', () => {
     expect(screen.queryByText(/\$120/)).toBeNull();
     expect(screen.queryByRole('button')).toBeNull();
     expect(screen.getByText('On the team')).toBeTruthy();
+  });
+
+  it("says when the lead's booking was canceled: to the partner by name, to the lead as theirs (sweep B5)", () => {
+    wrap(<TeamInviteCardView card={teamCardStates.partnerLeadCanceled} />);
+    expect(screen.getByText("Jordan's booking was canceled")).toBeTruthy();
+    cleanup();
+    wrap(<TeamInviteCardView card={teamCardStates.leadCanceledYou} />);
+    expect(screen.getByText('Your booking was canceled')).toBeTruthy();
   });
 
   it('says when the invite expired meanwhile', async () => {

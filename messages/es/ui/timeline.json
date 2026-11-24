@@ -50,5 +50,7 @@
   "follower_removed": "{name} ya no sigue esta reserva",
   "follower_left": "{name} dejó de seguir esta reserva",
   "team_invited": "Invitó a un ayudante a formar equipo",
-  "team_proposed": "Un segundo ayudante quiere sumarse a este trabajo"
+  "team_proposed": "Un segundo ayudante quiere sumarse a este trabajo",
+  "team_lead_canceled": "La reserva de {name} se canceló",
+  "team_partner_canceled": "La reserva de {name} se canceló: ya no está en el equipo"
 }

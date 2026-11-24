@@ -36,7 +36,7 @@ const COMMUNITY_EVENTS: Record<string, { event: string; recipient?: string; acto
 };
 
 /** Event types that change what someone sees on a signed-in page: their pages refresh. */
-const UPDATE_PREFIXES = ['offer.', 'invite.', 'booking.', 'change.', 'series.', 'rebook.', 'reviews.', 'earnings.', 'badge.'];
+const UPDATE_PREFIXES = ['offer.', 'invite.', 'booking.', 'change.', 'series.', 'rebook.', 'reviews.', 'earnings.', 'badge.', 'team.'];
 const UPDATE_TYPES = new Set(['task.canceled', 'task.reopened', 'support.replied', 'support.resolved', 'privacy.export_ready']);
 /**
  * Events that change a task's row on its market's board (completion plan 7.6): its offer count, or whether it still

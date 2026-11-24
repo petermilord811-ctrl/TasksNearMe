@@ -1,11 +1,11 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { normalizeUsername, routes, teamInviteInputSchema, USERNAME_PATTERN, type ActionResult, type CategorySlug, type PricingInput, type TeamActionInput, type TeamKeepInput, type TeamInviteInput, type TeamStatus } from '@/contracts';
 import { usernames, users } from '@/modules/accounts/schema';
 import { pricingColumns, pricingColumnsForTask, pricingOf } from '@/modules/bookings/pricing-columns';
 import { bookings } from '@/modules/bookings/schema';
 import { categories } from '@/modules/markets/schema';
 import { directPairKey } from '@/modules/messaging/direct-rules';
-import { postInDirectThread } from '@/modules/messaging/direct';
+import { directStartFor, directThreadBetween, postInDirectThread } from '@/modules/messaging/direct';
 import { threadParticipants, threads } from '@/modules/messaging/schema';
 import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { loadHelperState } from '@/modules/offers/helper';
@@ -17,9 +17,10 @@ import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
 import { isUniqueViolation } from '@/platform/db/errors';
 import { newId } from '@/platform/db/ids';
+import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { canInviteTeam, partnerRefusal, teamActions, teamInPlay, teamStatusNow } from './domain';
-import { teamFactsOf } from './jobs';
+import { partnerSideOf, teamFactsOf } from './jobs';
 import { bookingTeams } from './schema';
 
 /**
@@ -38,6 +39,33 @@ type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 
 class TeamTaken extends Error {}
 
+/**
+ * A team's moment for the outbox (2026-11-24, sweep C5): its notifications (teams/notices.ts) and live notices (the
+ * `…UserId` keys hear it: the lead and the partner always, the client from the partner's yes on; `threadId` is the team
+ * conversation, which the open chat window reads again).
+ */
+async function teamEvent(db: Db | Tx, type: string, team: Pick<TeamRow, 'id' | 'leadBookingId' | 'teamThreadId' | 'leadUserId' | 'partnerUserId' | 'clientUserId'>, actorUserId: string, extra: { fromStatus?: TeamStatus; client?: boolean } = {}): Promise<void> {
+  await db.insert(outboxEvents).values({
+    id: newId('evt'),
+    type,
+    aggregateType: 'team',
+    aggregateId: team.id,
+    payload: {
+      teamId: team.id,
+      leadBookingId: team.leadBookingId,
+      ...(team.teamThreadId ? { threadId: team.teamThreadId } : {}),
+      actorUserId,
+      leadUserId: team.leadUserId,
+      partnerUserId: team.partnerUserId,
+      ...(extra.client ? { clientUserId: team.clientUserId } : {}),
+      ...(extra.fromStatus ? { fromStatus: extra.fromStatus } : {}),
+    },
+  });
+}
+
+/** The event a team's end sends, by who ended it (a lapse sends none: the booking's own cancel tells them). */
+const CLOSING_EVENTS: Partial<Record<TeamStatus, string>> = { canceled: 'team.canceled', refused: 'team.refused', withdrawn: 'team.withdrawn' };
+
 export const teamPricingOf = (team: TeamRow): PricingInput => pricingOf(team);
 
 /** The lead's booking with its task's category and team mark. */
@@ -52,11 +80,17 @@ async function leadBookingOf(db: Db | Tx, bookingId: string) {
   return row ? { ...row, categorySlug: row.categorySlug as CategorySlug } : null;
 }
 
-/** Whether the lead's booking already has a team in play (an invite waiting, or a partner booked or bookable). */
+/**
+ * Whether the lead's booking already has a team in play (an invite waiting, or a partner booked or bookable), or its
+ * task still has a partner booked from an earlier lead's team (sweep B5: a replacement lead, after the client kept the
+ * partner, would have brought a third person).
+ */
 async function inPlayFor(db: Db | Tx, lead: BookingRow, now: Date): Promise<boolean> {
-  const rows = await db.select().from(bookingTeams).where(and(eq(bookingTeams.leadBookingId, lead.id), inArray(bookingTeams.status, ['invited', 'accepted', 'confirmed'])));
+  const rows = await db.select().from(bookingTeams).where(and(or(eq(bookingTeams.leadBookingId, lead.id), eq(bookingTeams.taskId, lead.taskId)), inArray(bookingTeams.status, ['invited', 'accepted', 'confirmed'])));
   for (const team of rows) {
-    if (teamInPlay((await teamFactsOf(db, team, lead)).facts, now)) return true;
+    if (team.leadBookingId === lead.id) {
+      if (teamInPlay((await teamFactsOf(db, team, lead)).facts, now)) return true;
+    } else if ((await partnerSideOf(db, team)).partnerBooking?.status === 'confirmed') return true;
   }
   return false;
 }
@@ -80,18 +114,30 @@ async function userIdByUsername(db: Db, typed: string): Promise<string | null> {
 }
 
 /**
- * The lead and partner's own conversation: their direct one, made for the team when they have none (already accepted
- * on both sides, so it isn't a message request and counts against nobody's allowance).
+ * The lead and partner's own conversation: their direct one, or one the lead starts for the invite under the direct
+ * message rules (sweep C6): the partner's message request unless they've talked about a task before, with the
+ * request's limit on the lead's messages until the partner answers (their yes to the invite takes it:
+ * `acceptTeamThread`). One they already had comes out of both archives, so the invite isn't missed (C5).
  */
-async function teamThread(tx: Tx, leadId: string, partnerId: string, now: Date): Promise<string> {
+async function teamThread(tx: Tx, leadId: string, partnerId: string, contacts: boolean, now: Date): Promise<string> {
   const linkedId = directPairKey(leadId, partnerId);
-  await tx.insert(threads).values({ id: newId('thr'), kind: 'direct', linkedId, taskId: null, startedByUserId: null, createdAt: now, lastMessageAt: now }).onConflictDoNothing({ target: [threads.kind, threads.linkedId] });
+  await tx.insert(threads).values({ id: newId('thr'), kind: 'direct', linkedId, taskId: null, startedByUserId: leadId, createdAt: now, lastMessageAt: now }).onConflictDoNothing({ target: [threads.kind, threads.linkedId] });
   const [thread] = await tx.select({ id: threads.id }).from(threads).where(and(eq(threads.kind, 'direct'), eq(threads.linkedId, linkedId))).limit(1);
   if (!thread) throw new Error('Team thread missing after insert');
-  for (const userId of [leadId, partnerId]) {
-    await tx.insert(threadParticipants).values({ threadId: thread.id, userId, acceptedAt: now }).onConflictDoNothing();
-  }
+  await tx.insert(threadParticipants).values({ threadId: thread.id, userId: leadId, acceptedAt: now, lastReadAt: now }).onConflictDoNothing();
+  await tx.insert(threadParticipants).values({ threadId: thread.id, userId: partnerId, acceptedAt: contacts ? now : null }).onConflictDoNothing();
+  // The lead's invite takes a request the partner had sent them; and nobody's archive hides it.
+  await tx.update(threadParticipants).set({ acceptedAt: now }).where(and(eq(threadParticipants.threadId, thread.id), eq(threadParticipants.userId, leadId), isNull(threadParticipants.acceptedAt)));
+  await tx.update(threadParticipants).set({ archivedAt: null }).where(and(eq(threadParticipants.threadId, thread.id), inArray(threadParticipants.userId, [leadId, partnerId])));
   return thread.id;
+}
+
+/** The partner's yes takes the team conversation too (sweep C6): a request becomes theirs, out of their archive. */
+async function acceptTeamThread(tx: Tx, team: TeamRow, now: Date): Promise<void> {
+  if (!team.teamThreadId) return;
+  const partnerRow = and(eq(threadParticipants.threadId, team.teamThreadId), eq(threadParticipants.userId, team.partnerUserId));
+  await tx.update(threadParticipants).set({ acceptedAt: now }).where(and(partnerRow, isNull(threadParticipants.acceptedAt)));
+  await tx.update(threadParticipants).set({ archivedAt: null }).where(partnerRow);
 }
 
 /**
@@ -119,6 +165,10 @@ export async function inviteTeamPartner(db: Db, leadId: string, bookingId: strin
   if (refusal === 'self') return { ok: false, code: 'validation_failed', fieldErrors: { username: ['prohibited'] } };
   if (refusal === 'not_bookable') return { ok: false, code: 'validation_failed', fieldErrors: { username: ['invalid'] } };
   if (refusal === 'blocked') return { ok: false, code: 'not_allowed' };
+  // Two helpers who don't talk yet (sweep C6): the lead may start it only where the partner takes their messages, and
+  // a partner who doesn't reads like nobody bookable by that name (their setting isn't said).
+  const start = (await directThreadBetween(db, leadId, partnerId)) ? null : await directStartFor(db, leadId, partnerId, now);
+  if (start?.refused) return { ok: false, code: 'validation_failed', fieldErrors: { username: ['invalid'] } };
   const limited = await consumeRateLimit(db, `team-invite:${leadId}`, TEAM_INVITE_RULE, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
 
@@ -130,7 +180,7 @@ export async function inviteTeamPartner(db: Db, leadId: string, bookingId: strin
       const [fresh] = await tx.select().from(bookings).where(eq(bookings.id, lead.id)).limit(1);
       if (!fresh || !canInviteTeam({ status: fresh.status, startAt: fresh.startAt, seriesId: fresh.seriesId, teamPartOf: row.teamPartOf }, false, now)) throw new TeamTaken();
       if (await inPlayFor(tx, fresh, now)) throw new TeamTaken();
-      const threadId = await teamThread(tx, leadId, partnerId, now);
+      const threadId = await teamThread(tx, leadId, partnerId, start?.contacts ?? true, now);
       const note = parsed.data.note?.trim();
       await tx.insert(bookingTeams).values({
         id: teamId,
@@ -147,6 +197,7 @@ export async function inviteTeamPartner(db: Db, leadId: string, bookingId: strin
         updatedAt: now,
       });
       await postInDirectThread(tx, leadId, partnerId, { type: 'team_invited', params: { teamId } }, now, leadId);
+      await teamEvent(tx, 'team.invited', { id: teamId, leadBookingId: lead.id, teamThreadId: threadId, leadUserId: leadId, partnerUserId: partnerId, clientUserId: lead.posterUserId }, leadId);
     });
   } catch (error) {
     if (error instanceof TeamTaken || isUniqueViolation(error)) return { ok: false, code: 'not_allowed' };
@@ -233,14 +284,26 @@ async function closePartnerPart(tx: Tx, team: TeamRow, now: Date): Promise<boole
  * it (its task and offer); one booked meanwhile keeps the team as it is. Locks the team, then the part: confirming a
  * booking takes only the part's lock and reads the team, so the two never wait on each other in a circle.
  */
-async function closeTeam(db: Db, teamId: string, from: TeamStatus[], to: TeamStatus, now: Date): Promise<boolean> {
+async function closeTeam(db: Db, teamId: string, from: TeamStatus[], to: TeamStatus, now: Date, actorUserId: string | null): Promise<boolean> {
   return db.transaction(async (tx) => {
     const [fresh] = await tx.select().from(bookingTeams).where(eq(bookingTeams.id, teamId)).limit(1).for('update');
     const status = fresh?.status as TeamStatus | undefined;
     if (!fresh || !status || !from.includes(status)) return false;
     if (status === 'confirmed' && !(await closePartnerPart(tx, fresh, now))) return false;
-    return move(tx, fresh.id, [status], to, now);
+    if (!(await move(tx, fresh.id, [status], to, now))) return false;
+    // Who hears it: the client too once the invite had reached them (the partner's yes).
+    const type = CLOSING_EVENTS[to];
+    if (type && actorUserId) await teamEvent(tx, type, fresh, actorUserId, { fromStatus: status, client: status === 'accepted' || status === 'confirmed' });
+    return true;
   });
+}
+
+/**
+ * The lead's booking was canceled (teams/reactions.ts, sweep B5/B8): an invite in play, or a part never booked, lapses
+ * with it (no part left open to book); a booked part stays, for the client to keep or cancel. False when nothing moved.
+ */
+export function expireTeam(db: Db, teamId: string, now: Date): Promise<boolean> {
+  return closeTeam(db, teamId, ['invited', 'accepted', 'confirmed'], 'expired', now, null);
 }
 
 const bookPart = (team: TeamRow): ActionResult =>
@@ -264,19 +327,30 @@ export async function runTeamAction(db: Db, userId: string, input: TeamActionInp
 
   switch (action) {
     case 'accept': {
-      if (!(await move(db, team.id, ['invited'], 'accepted', now, { answeredAt: now }))) return { ok: false, code: 'not_allowed' };
-      // The client hears it in the lead's booking conversation, as the card they confirm.
-      await postEvent(db, bookingThreadLink(lead), 'status', { type: 'team_proposed', params: { teamId: team.id } }, now, null);
-      return { ok: true, code: 'updated' };
+      const accepted = await db.transaction(async (tx) => {
+        if (!(await move(tx, team.id, ['invited'], 'accepted', now, { answeredAt: now }))) return false;
+        // The client hears it in the lead's booking conversation, as the card they confirm, and as a notification.
+        await postEvent(tx, bookingThreadLink(lead), 'status', { type: 'team_proposed', params: { teamId: team.id } }, now, null);
+        await acceptTeamThread(tx, team, now);
+        await teamEvent(tx, 'team.accepted', team, userId, { client: true });
+        return true;
+      });
+      return accepted ? { ok: true, code: 'updated' } : { ok: false, code: 'not_allowed' };
     }
-    case 'decline':
-      return (await move(db, team.id, ['invited'], 'declined', now, { answeredAt: now })) ? { ok: true, code: 'updated' } : { ok: false, code: 'not_allowed' };
+    case 'decline': {
+      const declined = await db.transaction(async (tx) => {
+        if (!(await move(tx, team.id, ['invited'], 'declined', now, { answeredAt: now }))) return false;
+        await teamEvent(tx, 'team.declined', team, userId);
+        return true;
+      });
+      return declined ? { ok: true, code: 'updated' } : { ok: false, code: 'not_allowed' };
+    }
     case 'cancel':
-      return (await closeTeam(db, team.id, ['invited', 'accepted', 'confirmed'], 'canceled', now)) ? { ok: true, code: 'canceled' } : { ok: false, code: 'not_allowed' };
+      return (await closeTeam(db, team.id, ['invited', 'accepted', 'confirmed'], 'canceled', now, userId)) ? { ok: true, code: 'canceled' } : { ok: false, code: 'not_allowed' };
     case 'refuse':
-      return (await closeTeam(db, team.id, ['accepted', 'confirmed'], 'refused', now)) ? { ok: true, code: 'updated' } : { ok: false, code: 'not_allowed' };
+      return (await closeTeam(db, team.id, ['accepted', 'confirmed'], 'refused', now, userId)) ? { ok: true, code: 'updated' } : { ok: false, code: 'not_allowed' };
     case 'withdraw':
-      return (await closeTeam(db, team.id, ['accepted', 'confirmed'], 'withdrawn', now)) ? { ok: true, code: 'updated' } : { ok: false, code: 'not_allowed' };
+      return (await closeTeam(db, team.id, ['accepted', 'confirmed'], 'withdrawn', now, userId)) ? { ok: true, code: 'updated' } : { ok: false, code: 'not_allowed' };
     case 'book':
       return bookPart(team);
     case 'confirm':
@@ -303,6 +377,7 @@ async function confirmTeam(db: Db, team: TeamRow, lead: BookingRow, now: Date): 
       if (fresh?.status !== 'accepted') throw new TeamTaken();
       const made = await makePartnerPart(tx, fresh, lead, now);
       await move(tx, team.id, ['accepted'], 'confirmed', now, { partnerTaskId: made.taskId, partnerOfferId: made.offerId, confirmedAt: now });
+      await teamEvent(tx, 'team.confirmed', fresh, team.clientUserId, { client: true });
       return made;
     });
   } catch (error) {

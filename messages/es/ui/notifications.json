@@ -97,7 +97,17 @@
     "followed_arrived": "Sigues: {actorName} llegó para {title}",
     "followed_completed": "Sigues: {title} está terminada",
     "followed_canceled": "Sigues: {title} se canceló",
-    "followed_time_changed": "Sigues: {title} tiene una nueva hora"
+    "followed_time_changed": "Sigues: {title} tiene una nueva hora",
+    "team_invited": "{actorName} te invitó a ayudar con {title}",
+    "team_proposed": "{actorName} quiere sumar un segundo ayudante para {title}",
+    "team_accepted": "{actorName} dijo que sí a ayudar con {title}: ahora confirma el cliente",
+    "team_declined": "{actorName} dijo que no a ayudar con {title}",
+    "team_confirmed": "{actorName} confirmó el equipo para {title}",
+    "team_refused": "{actorName} dijo que no a un segundo ayudante para {title}",
+    "team_canceled": "{actorName} canceló la invitación al equipo para {title}",
+    "team_withdrawn": "{actorName} se retiró de {title}",
+    "team_lead_canceled": "La reserva de {actorName} para {title} se canceló",
+    "team_partner_left": "{actorName} no estará en el equipo para {title}: su reserva se canceló"
   },
   "previews": {
     "group": "Notificaciones",

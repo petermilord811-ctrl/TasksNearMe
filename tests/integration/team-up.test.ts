@@ -2,21 +2,25 @@ import { and, eq, inArray, like, or, sql } from 'drizzle-orm';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { routes } from '@/contracts';
 import { createDevPaymentProvider } from '@/integrations/payments';
-import { usernames } from '@/modules/accounts/schema';
+import { usernames, users } from '@/modules/accounts/schema';
 import { acceptChange, getProposeChangePage, proposeChange } from '@/modules/bookings/changes';
 import { confirmBooking } from '@/modules/bookings/confirm';
 import { getBookingsPage, getBookingView } from '@/modules/bookings/hub';
 import { bookingChangeRequests, bookingTerms, bookings } from '@/modules/bookings/schema';
 import { cancelBookingBy } from '@/modules/bookings/sheets';
-import { blocks, messages, threads } from '@/modules/messaging/schema';
+import { directStartFor } from '@/modules/messaging/direct';
+import { blocks, messages, threadParticipants, threads } from '@/modules/messaging/schema';
 import { bookingThreadLink, ensureThread, getThreadPage } from '@/modules/messaging/service';
+import { planNotifications } from '@/modules/notifications/service';
 import { getMyOffers, helperOfferAction, reviseOffer } from '@/modules/offers/helper';
 import { offers } from '@/modules/offers/schema';
 import { payments } from '@/modules/payments/schema';
 import { openIn } from '@/modules/tasks/queries';
 import { tasks } from '@/modules/tasks/schema';
 import { bookingTeams } from '@/modules/teams/schema';
-import { inviteTeamPartner, keepPartner, runTeamAction } from '@/modules/teams/service';
+import { reactToTeamEvent } from '@/modules/teams/reactions';
+import { canInviteFor, inviteTeamPartner, keepPartner, runTeamAction } from '@/modules/teams/service';
+import { outboxEvents } from '@/platform/outbox/schema';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { createDb } from '@/platform/db/connect';
 import { rateLimits } from '@/platform/rate-limit/schema';
@@ -57,6 +61,18 @@ async function book(team: typeof bookingTeams.$inferSelect): Promise<string> {
   return id;
 }
 
+/** What the newest outbox event of `type` for `aggregateId` plans: who, what, where to. */
+async function planned(aggregateId: string, type: string) {
+  const [event] = await db.select().from(outboxEvents).where(and(eq(outboxEvents.aggregateId, aggregateId), eq(outboxEvents.type, type))).orderBy(sql`${outboxEvents.createdAt} desc`).limit(1);
+  if (!event) throw new Error(`${type} wasn't recorded for ${aggregateId}`);
+  return { event, notices: (await planNotifications(db, event)).map((item) => ({ userId: item.userId, type: item.type, target: item.target })) };
+}
+
+/** Lines of `type` in a conversation. */
+async function linesOf(threadId: string, type: string): Promise<number> {
+  return (await db.select({ id: messages.id }).from(messages).where(and(eq(messages.threadId, threadId), sql`${messages.event}->>'type' = ${type}`))).length;
+}
+
 async function invite() {
   const result = await inviteTeamPartner(db, LEAD, leadId, { username: `@${samName}`, pricing: price, note: 'Bring gloves' }, new Date());
   expect(result).toMatchObject({ ok: true, code: 'sent' });
@@ -88,6 +104,8 @@ afterAll(async () => {
     await db.delete(blocks).where(and(eq(blocks.blockerId, PARTNER), eq(blocks.blockedId, CLIENT)));
     const teamIds = (await db.select({ id: bookingTeams.id }).from(bookingTeams).where(eq(bookingTeams.leadBookingId, leadId))).map((row) => row.id);
     if (teamIds.length) await db.delete(messages).where(inArray(sql`${messages.event}->'params'->>'teamId'`, teamIds));
+    // Their team.* events: never dispatched later by another file's run (notifications to the seeded cast).
+    if (teamIds.length) await db.delete(outboxEvents).where(inArray(outboxEvents.aggregateId, teamIds));
     await db.delete(rateLimits).where(or(like(rateLimits.key, `%team-invite:${LEAD}%`), like(rateLimits.key, `%booking-confirm:${CLIENT}%`)));
   } finally {
     await pool.end();
@@ -139,6 +157,64 @@ describe('who can invite whom', () => {
     expect(await runTeamAction(db, PARTNER, { teamId: again.id, action: 'withdraw' }, now)).toMatchObject({ ok: true });
     const [row] = await db.select({ status: bookingTeams.status }).from(bookingTeams).where(eq(bookingTeams.id, again.id));
     expect(row?.status).toBe('withdrawn');
+  });
+});
+
+describe('who hears what, and the team conversation (sweep 2026-11-24, C5 and C6)', () => {
+  it('each answer reaches the people it concerns; the client nothing before the partner said yes', async () => {
+    await db.delete(rateLimits).where(like(rateLimits.key, `%team-invite:${LEAD}%`));
+    const team = await invite();
+    const onTeam = { kind: 'thread', threadId: team.teamThreadId! };
+    const [leadThread] = await db.select({ id: threads.id }).from(threads).where(and(eq(threads.kind, 'booking'), eq(threads.linkedId, leadId)));
+    const withClient = { kind: 'thread', threadId: leadThread!.id };
+    expect((await planned(team.id, 'team.invited')).notices).toEqual([{ userId: PARTNER, type: 'team_invited', target: onTeam }]);
+    expect(await runTeamAction(db, PARTNER, { teamId: team.id, action: 'accept' }, now)).toMatchObject({ ok: true });
+    expect((await planned(team.id, 'team.accepted')).notices).toEqual([{ userId: CLIENT, type: 'team_proposed', target: withClient }, { userId: LEAD, type: 'team_accepted', target: onTeam }]);
+    expect(await runTeamAction(db, PARTNER, { teamId: team.id, action: 'withdraw' }, now)).toMatchObject({ ok: true });
+    expect((await planned(team.id, 'team.withdrawn')).notices).toEqual([{ userId: LEAD, type: 'team_withdrawn', target: onTeam }, { userId: CLIENT, type: 'team_withdrawn', target: withClient }]);
+
+    // Taken back before the partner answered: the partner hears it; the client never saw it.
+    const second = await invite();
+    expect(await runTeamAction(db, LEAD, { teamId: second.id, action: 'cancel' }, now)).toMatchObject({ ok: true });
+    expect((await planned(second.id, 'team.canceled')).notices).toEqual([{ userId: PARTNER, type: 'team_canceled', target: onTeam }]);
+    const third = await invite();
+    expect(await runTeamAction(db, PARTNER, { teamId: third.id, action: 'decline' }, now)).toMatchObject({ ok: true });
+    expect((await planned(third.id, 'team.declined')).notices).toEqual([{ userId: LEAD, type: 'team_declined', target: onTeam }]);
+
+    // The client's yes and, for a part not booked yet, their no: both helpers hear each.
+    const fourth = await invite();
+    await runTeamAction(db, PARTNER, { teamId: fourth.id, action: 'accept' }, now);
+    expect(await runTeamAction(db, CLIENT, { teamId: fourth.id, action: 'confirm' }, now)).toMatchObject({ ok: true });
+    const [confirmed] = await db.select().from(bookingTeams).where(eq(bookingTeams.id, fourth.id));
+    made.tasks.push(confirmed!.partnerTaskId!);
+    expect((await planned(fourth.id, 'team.confirmed')).notices).toEqual([{ userId: LEAD, type: 'team_confirmed', target: onTeam }, { userId: PARTNER, type: 'team_confirmed', target: onTeam }]);
+    expect(await runTeamAction(db, CLIENT, { teamId: fourth.id, action: 'refuse' }, now)).toMatchObject({ ok: true });
+    expect((await planned(fourth.id, 'team.refused')).notices).toEqual([{ userId: LEAD, type: 'team_refused', target: onTeam }, { userId: PARTNER, type: 'team_refused', target: onTeam }]);
+  });
+
+  it("the team conversation is the partner's message request until their yes takes it, and comes out of their archive", async () => {
+    await db.delete(rateLimits).where(like(rateLimits.key, `%team-invite:${LEAD}%`));
+    const [earlier] = await db.select({ threadId: bookingTeams.teamThreadId }).from(bookingTeams).where(eq(bookingTeams.leadBookingId, leadId)).limit(1);
+    const sams = and(eq(threadParticipants.threadId, earlier!.threadId!), eq(threadParticipants.userId, PARTNER));
+    // As if Sam had never answered Jordan, and had archived the conversation.
+    await db.update(threadParticipants).set({ acceptedAt: null, archivedAt: new Date() }).where(sams);
+    const team = await invite();
+    expect(team.teamThreadId).toBe(earlier!.threadId);
+    expect((await db.select().from(threadParticipants).where(sams))[0]).toMatchObject({ acceptedAt: null, archivedAt: null });
+    expect(await runTeamAction(db, PARTNER, { teamId: team.id, action: 'accept' }, now)).toMatchObject({ ok: true });
+    expect((await db.select().from(threadParticipants).where(sams))[0]?.acceptedAt).not.toBeNull();
+    expect(await runTeamAction(db, PARTNER, { teamId: team.id, action: 'withdraw' }, now)).toMatchObject({ ok: true });
+  });
+
+  it("asks the partner's \"who can message me\" before a new conversation: Nobody refuses it", async () => {
+    const [sam] = await db.select({ directMessages: users.directMessages }).from(users).where(eq(users.id, PARTNER));
+    await db.update(users).set({ directMessages: 'nobody' }).where(eq(users.id, PARTNER));
+    try {
+      expect(await directStartFor(db, LEAD, PARTNER, now)).toMatchObject({ refused: 'not_accepting' });
+    } finally {
+      await db.update(users).set({ directMessages: sam!.directMessages }).where(eq(users.id, PARTNER));
+    }
+    expect((await directStartFor(db, LEAD, PARTNER, now)).refused).toBeNull();
   });
 });
 
@@ -230,6 +306,12 @@ describe("the client's confirm makes an ordinary second booking", () => {
 
   it("the partner canceling leaves the lead's booking untouched, never reopens the part, and frees the lead to invite again", async () => {
     expect(await cancelBookingBy(pay, PARTNER, partnerId, { reason: 'unavailable', note: '' }, new Date())).toMatchObject({ ok: true });
+    // The lead hears it, and both read it in their team conversation, once (sweep B5).
+    const { event, notices } = await planned(partnerId, 'booking.canceled');
+    expect(notices.filter((item) => item.userId === LEAD)).toEqual([{ userId: LEAD, type: 'team_partner_left', target: { kind: 'booking', bookingId: leadId } }]);
+    await reactToTeamEvent(db, event, new Date());
+    await reactToTeamEvent(db, event, new Date());
+    expect(await linesOf(team.teamThreadId!, 'team_partner_canceled')).toBe(1);
     const [lead] = await db.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, leadId));
     expect(lead?.status).toBe('confirmed');
     const [part] = await db.select({ status: tasks.status }).from(tasks).where(eq(tasks.id, team.partnerTaskId!));
@@ -346,6 +428,20 @@ describe("canceling the lead's booking", () => {
     expect(await cancelBookingBy(pay, LEAD, leadId, { reason: 'unavailable', note: '' }, new Date())).toMatchObject({ ok: true });
     const [partner] = await db.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, partnerId));
     expect(partner?.status).toBe('confirmed');
+    // Sam hears it, at their own booking, and both read it in their team conversation once (sweep B5). Sam's booked
+    // part stays (the client decides), nobody leads it now, and it's no team job any more.
+    const { event, notices } = await planned(leadId, 'booking.canceled');
+    expect(notices.filter((item) => item.userId === PARTNER)).toEqual([{ userId: PARTNER, type: 'team_lead_canceled', target: { kind: 'booking', bookingId: partnerId } }]);
+    await reactToTeamEvent(db, event, new Date());
+    await reactToTeamEvent(db, event, new Date());
+    expect(await linesOf(team.teamThreadId!, 'team_lead_canceled')).toBe(1);
+    expect((await db.select({ status: bookingTeams.status }).from(bookingTeams).where(eq(bookingTeams.id, team.id)))[0]?.status).toBe('confirmed');
+    expect((await getBookingView(hub, PARTNER, partnerId, now))?.team).toMatchObject({ part: 'partner', leadCanceled: true });
+    expect((await getBookingsPage(db, CLIENT, now)).upcoming.find((row) => row.id === partnerId)?.team).toBeUndefined();
+    // A replacement lead on the same task can't bring a third person while Sam's booking is on.
+    const [leadRow] = await db.select().from(bookings).where(eq(bookings.id, leadId));
+    const replacement = { ...leadRow!, id: 'bkg_team_replacement', helperUserId: 'usr_lee', status: 'confirmed' };
+    expect(await canInviteFor(db, replacement, null, now)).toBe(false);
     const chris = await getBookingView(hub, CLIENT, leadId, now);
     expect(chris?.team?.cancelChoice).toMatchObject({ partnerBookingId: partnerId });
     expect(await keepPartner(db, STRANGER, { teamId: team.id }, now)).toMatchObject({ ok: false });
@@ -353,5 +449,6 @@ describe("canceling the lead's booking", () => {
     expect((await getBookingView(hub, CLIENT, leadId, now))?.team?.cancelChoice).toBeUndefined();
     // "Cancel both" is the partner booking's own cancel, under the normal rules.
     expect(await cancelBookingBy(pay, CLIENT, partnerId, { reason: 'plans_changed', note: '' }, new Date())).toMatchObject({ ok: true });
+    expect(await canInviteFor(db, replacement, null, now)).toBe(true);
   });
 });

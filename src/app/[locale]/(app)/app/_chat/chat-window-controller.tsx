@@ -418,8 +418,8 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
   useRealtime('read', onThreadNotice);
   useRealtime('update', (notice) => {
     if (!(activeRef.current || dockActiveRef.current) || typeof notice.event !== 'string') return;
-    // A task request or a booking change moved on (2026-11-23): the open conversation's card shows where it stands now.
-    if (notice.event.startsWith('invite.') || notice.event.startsWith('change.')) {
+    // A task request, a booking change or a team (2026-11-24) moved on: the open conversation's card shows it now.
+    if (notice.event.startsWith('invite.') || notice.event.startsWith('change.') || notice.event.startsWith('team.')) {
       const current = viewRef.current;
       if (activeRef.current && current.kind === 'thread') soon('thread', () => void loadThread(current.threadId));
       if (dockActiveRef.current) for (const chat of dockedRef.current) soon(`dock:${chat.threadId}`, () => void loadDocked(chat.threadId));

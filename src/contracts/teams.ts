@@ -75,6 +75,8 @@ export interface TeamInviteCard {
   bookHref?: string;
   /** Once booked: the partner's booking (client and partner only). */
   partnerBooking?: TeamPartnerBooking;
+  /** The lead's booking was canceled (2026-11-24, sweep B5): the card says so; the partner's booking may go on. */
+  leadCanceled?: true;
   actions: TeamActionId[];
 }
 
@@ -101,6 +103,8 @@ export interface BookingTeamView {
   cancelChoice?: { partnerBookingId: string; partner: TeamMember };
   /** The lead and partner's own conversation (`routes.app.thread`), for the two helpers. */
   teamThreadId?: string;
+  /** On the partner's booking: the lead's booking was canceled (2026-11-24, sweep B5), so nobody leads it now. */
+  leadCanceled?: true;
 }
 
 /**

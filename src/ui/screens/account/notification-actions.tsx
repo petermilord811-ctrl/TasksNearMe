@@ -99,6 +99,17 @@ const icons: Record<NotificationType, LucideIcon> = {
   followed_completed: CircleCheck,
   followed_canceled: CalendarX,
   followed_time_changed: CalendarClock,
+  // Team up (2026-11-24): the team's people.
+  team_invited: UsersRound,
+  team_proposed: UsersRound,
+  team_accepted: UsersRound,
+  team_declined: UsersRound,
+  team_confirmed: UsersRound,
+  team_refused: UsersRound,
+  team_canceled: UsersRound,
+  team_withdrawn: UsersRound,
+  team_lead_canceled: CalendarX,
+  team_partner_left: CalendarX,
 };
 
 /**

@@ -370,7 +370,17 @@
       "followed_arrived": "Following: {actorName} has arrived for {title}.",
       "followed_completed": "Following: {title} is done.",
       "followed_canceled": "Following: {title} was canceled.",
-      "followed_time_changed": "Following: {title} has a new time."
+      "followed_time_changed": "Following: {title} has a new time.",
+      "team_invited": "{actorName} invited you to help with {title}.",
+      "team_proposed": "{actorName} wants to bring a second helper for {title}.",
+      "team_accepted": "{actorName} said yes to helping with {title}: the client confirms next.",
+      "team_declined": "{actorName} said no to helping with {title}.",
+      "team_confirmed": "{actorName} confirmed the team for {title}.",
+      "team_refused": "{actorName} said no to a second helper for {title}.",
+      "team_canceled": "{actorName} canceled the team invite for {title}.",
+      "team_withdrawn": "{actorName} stepped back from {title}.",
+      "team_lead_canceled": "{actorName}'s booking for {title} was canceled.",
+      "team_partner_left": "{actorName} won't be on the team for {title}: their booking was canceled."
     },
     "pushTitle": "TasksNearMe",
     "receipt": {

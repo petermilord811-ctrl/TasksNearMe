@@ -53,6 +53,10 @@ export const teamCardExpired: TeamInviteCard = { ...base, status: 'expired', act
 export const teamCardClientPartnerCanceled: TeamInviteCard = { ...teamCardClientBooked, partnerBooking: { bookingId: 'bkg_moving_sam', status: 'canceled' } };
 
 /** Every invite state, by name, for the previews. */
+/** Jordan's booking was canceled (sweep B5): Sam's booking goes on, and both cards say so. */
+export const teamCardPartnerLeadCanceled: TeamInviteCard = { ...teamCardPartnerBooked, leadCanceled: true };
+export const teamCardLeadCanceledYou: TeamInviteCard = { ...teamCardLeadConfirmed, leadCanceled: true };
+
 export const teamCardStates = {
   partnerInvited: teamCardPartnerInvited,
   partnerAccepted: teamCardPartnerAccepted,
@@ -66,6 +70,8 @@ export const teamCardStates = {
   clientRefused: teamCardClientRefused,
   expired: teamCardExpired,
   clientPartnerCanceled: teamCardClientPartnerCanceled,
+  partnerLeadCanceled: teamCardPartnerLeadCanceled,
+  leadCanceledYou: teamCardLeadCanceledYou,
 } as const;
 
 // ---- Booking pages ------------------------------------------------------------------------------------------------
@@ -99,6 +105,8 @@ export const movingPartnerBookingData: BookingView = {
   terms: { ...movingBookingPosterConfirmed.terms, pricing: { type: 'fixed', priceCents: 12000 } },
   team: { viewerRole: 'partner', part: 'partner', lead: teamLead, teamThreadId: 'thr_team_moving' },
 };
+/** Sam's booking once Jordan's was canceled (sweep B5): nobody leads it now; it stays on unless Chris cancels it. */
+export const movingPartnerLeadCanceledData: BookingView = { ...movingPartnerBookingData, team: { ...movingPartnerBookingData.team!, leadCanceled: true } };
 /** Chris's view of Sam's booking: part of Jordan's team job. */
 export const movingClientPartnerBookingData: BookingView = {
   ...movingBookingPosterConfirmed,

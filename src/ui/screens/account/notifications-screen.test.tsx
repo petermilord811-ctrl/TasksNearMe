@@ -110,6 +110,16 @@ const copy: Record<NotificationType, RegExp> = {
   followed_completed: /Following: .* is done/,
   followed_canceled: /Following: .* was canceled/,
   followed_time_changed: /Following: .* has a new time/,
+  team_invited: /invited you to help with/,
+  team_proposed: /wants to bring a second helper for/,
+  team_accepted: /said yes to helping with .*: the client confirms next/,
+  team_declined: /said no to helping with/,
+  team_confirmed: /confirmed the team for/,
+  team_refused: /said no to a second helper for/,
+  team_canceled: /canceled the team invite for/,
+  team_withdrawn: /stepped back from/,
+  team_lead_canceled: /'s booking for .* was canceled/,
+  team_partner_left: /won't be on the team for .*: their booking was canceled/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },

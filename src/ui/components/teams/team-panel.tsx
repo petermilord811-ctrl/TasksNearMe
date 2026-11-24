@@ -48,7 +48,7 @@ export function TeamPanel({ data, team, handlers, partnerSheets, initialDialog =
   if (team.part === 'partner') {
     return <section aria-labelledby="team-panel-title" data-team-panel="partner" className={cn(surface, 'space-y-2')}>
       <h2 id="team-panel-title" className="flex items-center gap-2 font-heading text-lg font-semibold"><UsersRound aria-hidden="true" className="size-5 text-primary" />{t('title')}</h2>
-      <p>{team.viewerRole === 'partner' ? t('leadsThis', { lead: lead?.displayName ?? '' }) : t('partOf', { lead: lead?.displayName ?? '' })}</p>
+      <p>{team.leadCanceled ? t(team.viewerRole === 'partner' ? 'leadCanceled' : 'leadCanceledClient', { lead: lead?.displayName ?? '' }) : team.viewerRole === 'partner' ? t('leadsThis', { lead: lead?.displayName ?? '' }) : t('partOf', { lead: lead?.displayName ?? '' })}</p>
       <div className="flex flex-wrap gap-x-5">
         {team.leadBookingId && <Link href={routes.app.booking(team.leadBookingId)} className={textLink}>{t('leadBooking', { lead: first(lead?.displayName ?? '') })}<ArrowRight aria-hidden="true" className="size-4" /></Link>}
         {team.teamThreadId && <Link href={routes.app.thread(team.teamThreadId)} className={textLink}><MessagesSquare aria-hidden="true" className="size-4" />{t('teamChat')}</Link>}

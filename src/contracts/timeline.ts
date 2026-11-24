@@ -61,6 +61,12 @@ export const TIMELINE_EVENT_TYPES = [
    */
   'team_invited',
   'team_proposed',
+  /**
+   * One of a team job's bookings was canceled (2026-11-24, sweep B5), in the two helpers' conversation; `params.name`:
+   * whose booking (the lead's, `team_lead_canceled`, or the partner's, `team_partner_canceled`), `params.teamId`.
+   */
+  'team_lead_canceled',
+  'team_partner_canceled',
 ] as const;
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];
 
@@ -87,7 +93,7 @@ export interface TimelineEvent {
     slotIds?: string[];
     /** A thank-you note (`thanks_sent`). */
     noteId?: string;
-    /** A family follower's display name (`follower_added`, `follower_removed`, `follower_left`). */
+    /** A family follower's display name (`follower_added`, `follower_removed`, `follower_left`), or a team helper's whose booking was canceled (`team_lead_canceled`, `team_partner_canceled`). */
     name?: string;
     /** A team invite (`team_invited`, `team_proposed`). */
     teamId?: string;

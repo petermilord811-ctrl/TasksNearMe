@@ -197,6 +197,27 @@ export const NOTIFICATION_TYPES = [
   'followed_canceled',
   /** A booking the person follows (`title`) has a new time (`params.at` on the clock of `params.timeZone`). */
   'followed_time_changed',
+  // Team up (2026-11-24; a4's sweep C5, B5): each answer reaches the people it concerns, not only as a card.
+  /** The lead `actorName` invited the person to help with `title` (their team conversation). */
+  'team_invited',
+  /** The lead `actorName` wants to bring a second helper for `title`: the client confirms (their conversation with the lead). */
+  'team_proposed',
+  /** The partner `actorName` said yes to `title`: the client confirms next (to the lead). */
+  'team_accepted',
+  /** The partner `actorName` said no to `title` (to the lead). */
+  'team_declined',
+  /** The client `actorName` confirmed the team for `title` (to the lead and the partner). */
+  'team_confirmed',
+  /** The client `actorName` said no to a second helper for `title` (to the lead and the partner). */
+  'team_refused',
+  /** The lead `actorName` took the team invite for `title` back (to the partner; to the client once it reached them). */
+  'team_canceled',
+  /** The partner `actorName` stepped back from `title` (to the lead; to the client once it reached them). */
+  'team_withdrawn',
+  /** The lead `actorName`'s booking for `title` was canceled (to the partner: theirs stays unless the client cancels it). */
+  'team_lead_canceled',
+  /** The partner `actorName`'s booking for `title` was canceled: they won't be on the team (to the lead). */
+  'team_partner_left',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

@@ -20,7 +20,9 @@
       "canceled": "Invite canceled",
       "refused": "The client said no",
       "expired": "Expired",
-      "partnerCanceled": "{partner}'s booking was canceled"
+      "partnerCanceled": "{partner}'s booking was canceled",
+      "leadCanceled": "{lead}'s booking was canceled",
+      "leadCanceledYou": "Your booking was canceled"
     },
     "statusClient": {
       "accepted": "Waiting for you",
@@ -32,7 +34,8 @@
       "expired": "Expired",
       "invited": "Waiting for {partner}",
       "declined": "{partner} said no",
-      "partnerCanceled": "{partner}'s booking was canceled"
+      "partnerCanceled": "{partner}'s booking was canceled",
+      "leadCanceled": "{lead}'s booking was canceled"
     },
     "actions": {
       "accept": "Accept",
@@ -72,6 +75,8 @@
     "invite": "Team up",
     "leadsThis": "{lead} leads this job. You're the second helper.",
     "partOf": "Part of a team job led by {lead}.",
+    "leadCanceled": "{lead}'s booking was canceled. Yours stays on unless the client cancels it.",
+    "leadCanceledClient": "{lead}'s booking was canceled. This one stays on unless you cancel it.",
     "leadBooking": "View {lead}'s booking",
     "teamChat": "Team chat",
     "choiceTitle": "{partner}'s booking is still on",

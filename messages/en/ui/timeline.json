@@ -50,5 +50,7 @@
   "follower_removed": "{name} no longer follows this booking",
   "follower_left": "{name} stopped following this booking",
   "team_invited": "Invited a helper to team up",
-  "team_proposed": "A second helper wants to join this job"
+  "team_proposed": "A second helper wants to join this job",
+  "team_lead_canceled": "{name}'s booking was canceled",
+  "team_partner_canceled": "{name}'s booking was canceled: they're off the team"
 }

@@ -20,7 +20,9 @@
       "canceled": "Invitación cancelada",
       "refused": "El cliente dijo que no",
       "expired": "Venció",
-      "partnerCanceled": "La reserva de {partner} se canceló"
+      "partnerCanceled": "La reserva de {partner} se canceló",
+      "leadCanceled": "La reserva de {lead} se canceló",
+      "leadCanceledYou": "Tu reserva se canceló"
     },
     "statusClient": {
       "accepted": "Esperando tu respuesta",
@@ -32,7 +34,8 @@
       "expired": "Venció",
       "invited": "Esperando a {partner}",
       "declined": "{partner} dijo que no",
-      "partnerCanceled": "La reserva de {partner} se canceló"
+      "partnerCanceled": "La reserva de {partner} se canceló",
+      "leadCanceled": "La reserva de {lead} se canceló"
     },
     "actions": {
       "accept": "Aceptar",
@@ -72,6 +75,8 @@
     "invite": "Formar equipo",
     "leadsThis": "{lead} está a cargo de este trabajo. Tú eres el segundo ayudante.",
     "partOf": "Parte de un trabajo en equipo a cargo de {lead}.",
+    "leadCanceled": "La reserva de {lead} se canceló. La tuya sigue en pie, salvo que el cliente la cancele.",
+    "leadCanceledClient": "La reserva de {lead} se canceló. Esta sigue en pie, salvo que la canceles.",
     "leadBooking": "Ver la reserva de {lead}",
     "teamChat": "Chat del equipo",
     "choiceTitle": "La reserva de {partner} sigue en pie",
