@@ -84,9 +84,14 @@ async function removeAll(made: Made): Promise<void> {
     const cases = await db.select({ id: supportCases.id }).from(supportCases).where(eq(supportCases.openedByUserId, made.clientId));
     const caseIds = cases.map((row) => row.id);
     if (caseIds.length > 0) {
-      await db.delete(supportCaseEvents).where(inArray(supportCaseEvents.caseId, caseIds));
-      await db.delete(supportCaseReads).where(inArray(supportCaseReads.caseId, caseIds));
-      await db.delete(supportCases).where(inArray(supportCases.id, caseIds));
+      // One transaction, the cases locked first: the page is still open, and marking its case read in between (a new
+      // support_case_reads row) failed the last delete on its foreign key and left the rows (Ship 45463265890).
+      await db.transaction(async (tx) => {
+        await tx.select({ id: supportCases.id }).from(supportCases).where(inArray(supportCases.id, caseIds)).for('update');
+        await tx.delete(supportCaseEvents).where(inArray(supportCaseEvents.caseId, caseIds));
+        await tx.delete(supportCaseReads).where(inArray(supportCaseReads.caseId, caseIds));
+        await tx.delete(supportCases).where(inArray(supportCases.id, caseIds));
+      });
     }
     // The job runner may still be delivering a notification (support's reply): wait for it a little, so removing the
     // notification never races its delivery (a foreign key error in the server's log).
