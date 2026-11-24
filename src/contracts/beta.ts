@@ -39,12 +39,11 @@ export const inviteCodeInputSchema = z.object({ inviteCode: inviteCodeField });
 export type InviteCodeInput = z.input<typeof inviteCodeInputSchema>;
 
 /**
- * Entering an invite (the sign-in `invite_code` step, the helper invite screen, and the client "opens soon" step).
+ * Entering an invite (the sign-in `invite_code` step and the helper invite screen).
  * ok `redeemed`, maybe with `redirectTo`. Errors:
  * - `validation_failed` + `fieldErrors.inviteCode`: `required`; `incorrect` (no such invite here: "Check the
  *   code and try again"); `expired` (expired, used up or withdrawn: "This invite can't be used anymore");
- *   `not_supported` (a client invite on the helper screen: "This invite is for a client account");
- *   `for_helpers` (a helper invite on the client step: "This invite is for helpers").
+ *   `not_supported` (a client invite on the helper screen: "This invite is for a client account").
  * - `rate_limited` + `retryAt` (10 tries in 10 minutes); `not_allowed` (signed out: back to sign-in).
  */
 export type RedeemInviteHandler = ActionHandler<InviteCodeInput>;
@@ -66,23 +65,6 @@ export interface HelperInvitePageData {
 
 export interface HelperInviteHandlers {
   /** ok `redeemed` with `redirectTo` (the first setup step). */
-  onRedeem: RedeemInviteHandler;
-}
-
-/**
- * Booking help in a market that's opening soon (`prelaunch`: helpers join now, the first clients come in by
- * invitation), shown instead of the post form or a request to a helper when the person has no client invite
- * (visitor-to-first-post walk, J-V8). The market going live opens it to everyone.
- */
-export interface ClientInvitePageData {
-  /** "Gainesville opens soon." */
-  marketName: string;
-  /** From an invite link the person opened: fill it in. */
-  code?: string;
-}
-
-export interface ClientInviteHandlers {
-  /** ok `redeemed`: the page shows the form it was holding back. */
   onRedeem: RedeemInviteHandler;
 }
 

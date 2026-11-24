@@ -66,7 +66,7 @@ export async function redeemInvite(
   const code = normalizeInviteCode(input.code);
   const [row] = await db.select().from(betaInviteCodes).where(eq(betaInviteCodes.code, code)).limit(1);
   if (!row || row.marketId !== input.marketId || !isBetaRole(row.role)) return fieldError('inviteCode', 'incorrect');
-  if (!codeFitsUse(row.role, input.use)) return fieldError('inviteCode', input.use === 'client' ? 'for_helpers' : 'not_supported');
+  if (!codeFitsUse(row.role, input.use)) return fieldError('inviteCode', 'not_supported');
   // Already in with this role (say, entering it again from the link): fine, whatever the code's state now.
   const [already] = await db
     .select({ userId: betaAccess.userId })

@@ -66,24 +66,21 @@ test('a visitor drafts a task before having an account, and its words survive si
     await form.getByLabel(/I agree to the Terms of service/).check();
     await form.getByRole('button', { name: 'Create account', exact: true }).click();
     await page.getByLabel('6-digit code').fill(await latestCode(context, email));
-    // The phone, where texts work (inside sign-up, as posting needs it).
+    // The phone, where texts work (inside sign-up, as posting needs it). No invite code after it: anyone can post
+    // while a city opens (2026-11-23).
     const phoneHeading = page.getByRole('heading', { level: 1, name: 'Add your phone number' });
-    const opensSoon = page.getByRole('heading', { level: 1, name: 'Gainesville opens soon' });
-    await expect(phoneHeading.or(opensSoon)).toBeVisible({ timeout: 30_000 });
+    const lastStep = page.getByText('Step 7 of 7', { exact: false }).filter({ visible: true });
+    await expect(phoneHeading.or(lastStep)).toBeVisible({ timeout: 30_000 });
     if (await phoneHeading.isVisible()) {
       const line = String(1000 + (Date.now() % 9000));
       await page.getByLabel('Phone number').fill(`(352) 555-${line}`);
       await page.getByRole('button', { name: 'Continue', exact: true }).click();
       await page.locator('input[autocomplete="one-time-code"]').filter({ visible: true }).first().fill(await latestCode(context, `+1352555${line}`));
     }
-    // Gainesville opens soon: the test world's client code (J-V8).
-    await expect(opensSoon).toBeVisible({ timeout: 30_000 });
-    await hydrated(page);
-    await page.getByLabel('Invite code').fill('SPECCLIENT');
-    await page.getByRole('button', { name: 'Continue', exact: true }).click();
 
     // The same words, on the review step, ready to post.
-    await expect(page.getByText('Step 7 of 7', { exact: false }).filter({ visible: true })).toBeVisible({ timeout: 30_000 });
+    await expect(lastStep).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('heading', { level: 1, name: 'Gainesville opens soon' })).toHaveCount(0);
     // The visible one: the router keeps hidden copies of screens it showed before.
     await expect(page.getByText(title).filter({ visible: true }).first()).toBeVisible();
     await hydrated(page);

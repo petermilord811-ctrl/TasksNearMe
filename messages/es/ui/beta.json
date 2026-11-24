@@ -21,13 +21,6 @@
     "body": "Estamos abriendo lugares para ayudantes poco a poco. Tu código está en el correo o mensaje con el que te llegó la invitación.",
     "submit": "Empezar a configurar mi perfil de ayudante"
   },
-  "client": {
-    "title": "{market} abre pronto",
-    "description": "Los ayudantes de {market} ya se están sumando. Hasta que abramos para todos, reservar ayuda es solo con invitación.",
-    "heading": "¿Tienes una invitación?",
-    "body": "Escribe tu código para publicar una tarea o reservar a un ayudante ya. Está en el correo o mensaje en el que llegó tu invitación.",
-    "submit": "Continuar"
-  },
   "previews": {
     "group": "Beta privada",
     "helper": "Invitación de ayudante",
@@ -35,9 +28,6 @@
     "helper-incorrect": "Invitación de ayudante: código desconocido",
     "helper-expired": "Invitación de ayudante: ya no se puede usar",
     "helper-client-code": "Invitación de ayudante: código de cliente",
-    "client": "Invitación de cliente: un mercado que abre pronto",
-    "client-prefilled": "Invitación de cliente desde un enlace",
-    "client-helper-code": "Invitación de cliente: un código de ayudante",
     "sign-up": "Paso de invitación al registrarte",
     "sign-up-prefilled": "Paso de invitación desde un enlace",
     "sign-up-rate-limited": "Paso de invitación: demasiados intentos",

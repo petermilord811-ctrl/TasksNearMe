@@ -20,7 +20,6 @@ import {
   DEFAULT_TIMERS,
 } from '../../src/modules/markets/policy-defaults';
 import { staffRoles, users } from '../../src/modules/accounts/schema';
-import { betaAccess, betaInviteCodes } from '../../src/modules/beta/schema';
 import { helperProfiles, helperServices } from '../../src/modules/profiles/schema';
 import { AUSTIN, AUSTIN_AREAS, AUSTIN_ZIP_PREFIXES, CATEGORIES } from './data/austin';
 import { AUSTIN_COMMUNITY_PROMPTS, GAINESVILLE_COMMUNITY_PROMPTS } from './data/community-prompts';
@@ -171,8 +170,6 @@ export async function seedDatabase(url: string, options: { testWorld?: boolean }
       }
 
       await upsertPeople(tx, PEOPLE);
-      // The test world's clients came in by invitation, as a market opening soon takes them (J-V8).
-      if (options.testWorld) await seedTestWorldInvites(tx);
 
       await clearSeedBookings(tx);
       await seedTasks(tx);
@@ -197,24 +194,6 @@ export async function seedDatabase(url: string, options: { testWorld?: boolean }
 }
 
 export type Tx = Parameters<Parameters<ReturnType<typeof createDb>['db']['transaction']>[0]>[0];
-
-/** A client invite code for Gainesville the specs' new accounts can use (J-V8): "Gainesville opens soon" lets them in. */
-export const TEST_CLIENT_INVITE_CODE = 'SPECCLIENT';
-
-/**
- * The test world's invitations (J-V8): every seeded person has a client invite in their home market, as the first
- * clients of a market opening soon do, and one client code opens Gainesville for new accounts made in the specs.
- */
-async function seedTestWorldInvites(tx: Tx): Promise<void> {
-  await tx
-    .insert(betaInviteCodes)
-    .values({ id: 'bic_spec_client_gnv', code: TEST_CLIENT_INVITE_CODE, marketId: GAINESVILLE.id, role: 'poster', label: 'Specs: new accounts', maxUses: 1_000_000, createdByUserId: 'usr_taylor' })
-    .onConflictDoNothing();
-  await tx
-    .insert(betaAccess)
-    .values(PEOPLE.map((person) => ({ userId: person.id, marketId: person.homeMarketId ?? AUSTIN.id, role: 'poster', grantedAt: new Date(person.createdAt) })))
-    .onConflictDoNothing();
-}
 
 /**
  * Accounts, staff roles, helper profiles and services, as given (the demo data in db/seeds/demo uses it too).

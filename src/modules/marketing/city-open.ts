@@ -18,8 +18,8 @@ import { waitlistOneClickUrl, waitlistUnsubscribePageUrl } from './waitlist-unsu
 /**
  * Telling the waitlist its city opened (completion plan 8.3; decisions.md, 2026-11-17). When a market goes live (open
  * to everyone, blueprint 10 §7), every waitlist entry whose ZIP it covers and that was never told is queued for it, in
- * the status change's own transaction (`queueCityOpenEmails`). Pre-launch tells nobody on the waitlist: clients come in
- * by invitation then, and waiting helpers hear through `city_open`. The job runner sends the queued emails in batches
+ * the status change's own transaction (`queueCityOpenEmails`). Pre-launch tells nobody on the waitlist (clients can post
+ * then, but the city isn't announced yet), and waiting helpers hear through `city_open`. The job runner sends the queued emails in batches
  * (`sendCityOpenEmails`), one email per entry, ever, in the language they joined in, with copy for what they asked
  * for (help, helping, or both) and an unsubscribe link with the one-click headers.
  *

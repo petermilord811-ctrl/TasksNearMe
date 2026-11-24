@@ -2,8 +2,8 @@ import { stateOfZip, zip3Of } from '@/shared/us-zip';
 
 /**
  * Where we serve (owner, 2026-11-14: national, cities open in turn). The site is for the whole US; a market is a
- * city we've opened (`prelaunch`: helpers join and the first clients come in by invitation; `live`: open to
- * everyone; `paused`: closed for now). Each market lists the ZIP3 prefixes it covers, so a ZIP alone tells
+ * city we've opened (`prelaunch`: helpers join and clients can already post, with no invite since 2026-11-23; `live`:
+ * open, and the waitlist is told; `paused`: closed for now). Each market lists the ZIP3 prefixes it covers, so a ZIP alone tells
  * whether someone is in one of our cities, without a geocoder (src/shared/us-zip.ts).
  */
 

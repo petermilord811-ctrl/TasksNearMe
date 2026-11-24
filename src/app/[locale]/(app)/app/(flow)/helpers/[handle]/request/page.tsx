@@ -4,15 +4,12 @@ import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { bookingDeps } from '@/modules/bookings/server';
-import { redeemClientInvite } from '@/modules/beta/actions';
-import { clientInviteFor } from '@/modules/beta/server';
 import { removeCardAction } from '@/modules/earnings/actions';
 import { finishRequestVerificationAction, quoteInviteAction, requestHelperAction } from '@/modules/invites/actions';
 import { getRequestHelperPage } from '@/modules/invites/service';
 import { requirePosterIdentity } from '@/modules/verification/poster-identity';
 import { getViewer } from '@/platform/auth/viewer';
 import { PageSkeleton } from '@/ui/components';
-import { ClientInviteScreen } from '@/ui/screens/beta';
 import { RequestHelperScreen } from '@/ui/screens/invites';
 import { requestNow } from '@/platform/clock';
 import { appPageMetadata } from '@/i18n/metadata';
@@ -42,9 +39,6 @@ async function RequestHelper({ params, searchParams }: Pick<PageProps<'/[locale]
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.requestHelper(handle, { fromBookingId: from, slotId, taskId })));
   const deps = bookingDeps();
   if (!deps) notFound();
-  // A market opening soon takes clients by invitation, Book again included (J-V8): that step instead of the form.
-  const clientInvite = await clientInviteFor(deps.db, viewer.user.id);
-  if (clientInvite) return <ClientInviteScreen data={clientInvite} handlers={{ onRedeem: redeemClientInvite }} />;
   const now = await requestNow();
   // Risk may ask for an ID check before booking (the amount is checked again on sending).
   await requirePosterIdentity(deps.db, viewer.user.id, now, routes.app.requestHelper(handle, { fromBookingId: from, slotId, taskId }));

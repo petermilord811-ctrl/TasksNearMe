@@ -20,7 +20,6 @@ import {
   requestHelper,
 } from './service';
 import { requestNow } from '@/platform/clock';
-import { clientInviteMarket } from '@/modules/beta/server';
 
 /** Server Actions behind requesting a helper and answering invites (src/contracts/invites.ts). */
 
@@ -45,8 +44,6 @@ export async function requestHelperAction(handle: string, input: RequestHelperIn
   const userId = await signedInUserId();
   const deps = bookingDeps();
   if (!userId || !deps) return { ok: false, code: 'not_allowed' };
-  // A market opening soon takes clients by invitation, Book again included (J-V8): the page shows that step instead.
-  if (await clientInviteMarket(db, userId)) return { ok: false, code: 'not_allowed' };
   const result = await requestHelper(deps, userId, String(handle), input, await requestNow());
   // A requested slot leaves the helper's public profile.
   if (input.slotId && (result.ok || ('code' in result && result.code === 'requires_bank_verification'))) updateTag(`helper:${handle}`);

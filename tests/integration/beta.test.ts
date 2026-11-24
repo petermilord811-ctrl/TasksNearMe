@@ -1,9 +1,8 @@
 import { and, eq, inArray, like } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { staffRoles, users } from '@/modules/accounts/schema';
+import { users } from '@/modules/accounts/schema';
 import { signUpUnfinished } from '@/modules/accounts/sign-up';
 import { betaAccess, betaInviteCodes } from '@/modules/beta/schema';
-import { clientInviteMarket } from '@/modules/beta/server';
 import { betaGatesFor, createInviteCode, getAdminBetaPage, redeemInvite, revokeInviteCode, setBetaGate } from '@/modules/beta/service';
 import { featureFlags, markets } from '@/modules/markets/schema';
 import type { StaffActor } from '@/modules/support/staff';
@@ -21,9 +20,6 @@ const lead: StaffActor = { id: 'usr_morgan', roles: ['support_lead'] };
 const agent: StaffActor = { id: 'usr_alex', roles: ['support_agent'] };
 const admin: StaffActor = { id: 'usr_riley', roles: ['admin'] };
 const PEOPLE = ['usr_tmp_beta_a', 'usr_tmp_beta_b', 'usr_tmp_beta_c', 'usr_tmp_beta_d'];
-/** J-V8's people: a client without an invite, a staff member, and someone whose market is live (its own, below). */
-const [CLIENT, STAFF, LIVE_CLIENT] = ['usr_tmp_beta_client', 'usr_tmp_beta_staff', 'usr_tmp_beta_live'];
-const LIVE_MARKET = 'mkt_tmp_beta_live';
 const LABEL = 'tmp-beta';
 const now = new Date('2026-11-20T18:00:00.000Z');
 const DAY = 24 * 60 * 60 * 1000;
@@ -35,7 +31,7 @@ async function newCode(input: { role: 'poster' | 'helper'; maxUses: number; cust
   return row!;
 }
 
-const redeem = (userId: string, code: string, use: 'sign_up' | 'helper_setup' | 'client' = 'sign_up', at = now) =>
+const redeem = (userId: string, code: string, use: 'sign_up' | 'helper_setup' = 'sign_up', at = now) =>
   redeemInvite(db, { userId, marketId: MARKET, code, use }, at);
 
 async function cleanUp() {
@@ -50,10 +46,6 @@ async function cleanUp() {
   await db.delete(featureFlags).where(and(eq(featureFlags.marketId, MARKET), inArray(featureFlags.key, ['beta.sign_up', 'beta.helpers'])));
   await db.delete(auditLog).where(and(eq(auditLog.action, 'beta.set_gate'), like(auditLog.targetId, `%:${MARKET}`)));
   await db.delete(users).where(inArray(users.id, PEOPLE));
-  await db.delete(betaAccess).where(inArray(betaAccess.userId, [CLIENT, STAFF, LIVE_CLIENT]));
-  await db.delete(staffRoles).where(eq(staffRoles.userId, STAFF));
-  await db.delete(users).where(inArray(users.id, [CLIENT, STAFF, LIVE_CLIENT]));
-  await db.delete(markets).where(eq(markets.id, LIVE_MARKET));
 }
 
 beforeAll(async () => {
@@ -195,44 +187,6 @@ describe('the staff page', () => {
     expect(austin.codes.slice(firstInactive).every((code) => code.status !== 'active')).toBe(true);
     expect(austin.joined.poster).toBeGreaterThanOrEqual(2);
     expect(austin.joined.helper).toBeGreaterThanOrEqual(1);
-  });
-});
-
-describe('booking help in a market opening soon (J-V8)', () => {
-  beforeAll(async () => {
-    // Austin is prelaunch in the test world. A copy of it that's live, for the person who lives there.
-    const [austin] = await db.select().from(markets).where(eq(markets.id, MARKET));
-    await db.insert(markets).values({ ...austin!, id: LIVE_MARKET, slug: 'tmp-beta-live', status: 'live', zipPrefixes: [] });
-    const [chris] = await db.select().from(users).where(eq(users.id, 'usr_chris'));
-    await db.insert(users).values([CLIENT, STAFF, LIVE_CLIENT].map((id) => ({
-      ...chris!,
-      id,
-      email: `${id.replaceAll('_', '-')}@example.test`,
-      phone: null,
-      phoneVerifiedAt: null,
-      homeMarketId: id === LIVE_CLIENT ? LIVE_MARKET : MARKET,
-    })));
-    await db.insert(staffRoles).values({ userId: STAFF, role: 'support_agent', grantedBy: 'test' });
-  });
-
-  it('holds back a client without an invite, until a client code (not a helper one) lets them in', async () => {
-    expect(await clientInviteMarket(db, CLIENT)).toEqual({ id: MARKET, name: 'Austin' });
-    const helperCode = await newCode({ role: 'helper', maxUses: 5, customCode: 'TMPBETAHLPC' });
-    expect(await redeem(CLIENT, helperCode.code, 'client')).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { inviteCode: ['for_helpers'] } });
-    expect(await clientInviteMarket(db, CLIENT)).not.toBeNull();
-    const clientCode = await newCode({ role: 'poster', maxUses: 5, customCode: 'TMPBETACLNT' });
-    expect(await redeem(CLIENT, clientCode.code, 'client')).toEqual({ ok: true, code: 'redeemed' });
-    expect(await clientInviteMarket(db, CLIENT)).toBeNull();
-  });
-
-  it('lets staff through, and everyone where the market is live', async () => {
-    expect(await clientInviteMarket(db, STAFF)).toBeNull();
-    expect(await clientInviteMarket(db, LIVE_CLIENT)).toBeNull();
-  });
-
-  it("gives the test world's cast their client invites, so the specs can post (the seed)", async () => {
-    expect(await clientInviteMarket(db, 'usr_maya')).toBeNull();
-    expect(await clientInviteMarket(db, 'usr_ben')).toBeNull();
   });
 });
 

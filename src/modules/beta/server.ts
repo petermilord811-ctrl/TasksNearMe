@@ -1,12 +1,12 @@
 import 'server-only';
 import { eq } from 'drizzle-orm';
 import { cookies } from 'next/headers';
-import type { ClientInvitePageData, HelperInvitePageData, SignInInvite } from '@/contracts';
-import { staffRoles, users } from '@/modules/accounts/schema';
+import type { HelperInvitePageData, SignInInvite } from '@/contracts';
+import { users } from '@/modules/accounts/schema';
 import { markets } from '@/modules/markets/schema';
 import { helperProfiles } from '@/modules/profiles/schema';
 import type { Db } from '@/platform/db/connect';
-import { clientNeedsInvite, helperSetupNeedsInvite, normalizeInviteCode, signUpNeedsInvite } from './rules';
+import { helperSetupNeedsInvite, normalizeInviteCode, signUpNeedsInvite } from './rules';
 import { accessRoles, betaGatesFor } from './service';
 import { devHelpersOn } from '@/shared/dev-helpers';
 
@@ -67,33 +67,6 @@ export async function helperInviteFor(db: Db, userId: string): Promise<HelperInv
     db.select({ userId: helperProfiles.userId }).from(helperProfiles).where(eq(helperProfiles.userId, userId)).limit(1),
   ]);
   if (!helperSetupNeedsInvite(gates, roles, profile !== undefined)) return null;
-  const code = await invitedCode();
-  return { marketName: market.name, ...(code ? { code } : {}) };
-}
-
-/**
- * The person's market when booking help there waits for a client invite they don't have (posting a task, requesting
- * a helper, Book again: J-V8), otherwise null. Their home market, as posting uses it. The actions' check.
- */
-export async function clientInviteMarket(db: Db, userId: string): Promise<{ id: string; name: string } | null> {
-  const [market] = await db
-    .select({ id: markets.id, name: markets.name, status: markets.status })
-    .from(users)
-    .innerJoin(markets, eq(markets.id, users.homeMarketId))
-    .where(eq(users.id, userId))
-    .limit(1);
-  if (!market || market.status !== 'prelaunch') return null;
-  const [roles, [staff]] = await Promise.all([
-    accessRoles(db, userId, market.id),
-    db.select({ role: staffRoles.role }).from(staffRoles).where(eq(staffRoles.userId, userId)).limit(1),
-  ]);
-  return clientNeedsInvite(market.status, roles, staff !== undefined) ? { id: market.id, name: market.name } : null;
-}
-
-/** The "opens soon" step's data (J-V8) when `clientInviteMarket` holds the person back, with an invite link's code. */
-export async function clientInviteFor(db: Db, userId: string): Promise<ClientInvitePageData | null> {
-  const market = await clientInviteMarket(db, userId);
-  if (!market) return null;
   const code = await invitedCode();
   return { marketName: market.name, ...(code ? { code } : {}) };
 }

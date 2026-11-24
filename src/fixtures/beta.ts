@@ -1,4 +1,4 @@
-import type { ActionResult, AdminBetaHandlers, AdminBetaMarket, AdminBetaPageData, AdminInviteCodeView, ClientInviteHandlers, ClientInvitePageData, HelperInviteHandlers, HelperInvitePageData } from '@/contracts';
+import type { ActionResult, AdminBetaHandlers, AdminBetaMarket, AdminBetaPageData, AdminInviteCodeView, HelperInviteHandlers, HelperInvitePageData } from '@/contracts';
 import { routes } from '@/contracts';
 import { fakeHandler } from './actions';
 import { morganStaffSummary } from './admin';
@@ -26,22 +26,6 @@ export const helperInviteResults = {
 export const fakeHelperInviteHandlers: HelperInviteHandlers = {
   // Previews stay put (only the hash changes).
   onRedeem: fakeHandler({ ok: true, code: 'redeemed', redirectTo: '#helper-setup' }),
-};
-
-/** Posting while Gainesville opens soon, for someone without a client invite (J-V8). */
-export const clientInvite: ClientInvitePageData = { marketName: 'Gainesville' };
-/** The same, after opening an invite link. */
-export const clientInvitePrefilled: ClientInvitePageData = { marketName: 'Gainesville', code: 'GNV4KQ7P' };
-
-export const clientInviteResults = {
-  redeemed: { ok: true, code: 'redeemed' },
-  incorrect: signInResults.inviteIncorrect,
-  expired: signInResults.inviteExpired,
-  forHelpers: { ok: false, code: 'validation_failed', fieldErrors: { inviteCode: ['for_helpers'] } },
-} satisfies Record<string, ActionResult>;
-
-export const fakeClientInviteHandlers: ClientInviteHandlers = {
-  onRedeem: fakeHandler({ ok: true, code: 'redeemed' }),
 };
 
 const invite = (overrides: Partial<AdminInviteCodeView> & Pick<AdminInviteCodeView, 'id' | 'code' | 'label'>): AdminInviteCodeView => ({

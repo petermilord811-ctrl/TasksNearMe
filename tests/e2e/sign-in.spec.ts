@@ -100,11 +100,8 @@ test.describe('sign-in and sign-up', () => {
     await expect(page).toHaveURL(/\/app$/);
 
     await page.goto('/app/tasks/new');
-    // Gainesville opens soon, so a new account needs a client invite first (J-V8): the test world's code lets it in.
-    await expect(page.getByRole('heading', { level: 1, name: 'Gainesville opens soon' })).toBeVisible();
-    await page.getByLabel('Invite code').fill('SPECCLIENT');
-    await page.getByRole('button', { name: 'Continue', exact: true }).click();
-    // The phone step on Post a task itself (2026-11-23: no trip through /app/verify-phone).
+    // The phone step on Post a task itself (2026-11-23: no trip through /app/verify-phone, and no invite code first:
+    // anyone can post while a city opens).
     await expect(page.getByRole('heading', { level: 1, name: 'Add your phone number' })).toBeVisible({ timeout: 30_000 });
     await expect(page).toHaveURL(/\/app\/tasks\/new$/);
     // The app's own frame (the account button with the person's initials), not the public site's, and no sign-in

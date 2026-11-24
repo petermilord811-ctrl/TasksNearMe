@@ -4,7 +4,6 @@ import {
   betaGatesFrom,
   canManageBeta,
   canSwitchBeta,
-  clientNeedsInvite,
   codeFitsUse,
   displayInviteCode,
   generateInviteCode,
@@ -59,21 +58,6 @@ describe('invite codes', () => {
     expect(codeFitsUse('helper', 'sign_up')).toBe(true);
     expect(codeFitsUse('helper', 'helper_setup')).toBe(true);
     expect(codeFitsUse('poster', 'helper_setup')).toBe(false);
-  });
-
-  it('let only a client invite open booking help in a market opening soon (J-V8)', () => {
-    expect(codeFitsUse('poster', 'client')).toBe(true);
-    expect(codeFitsUse('helper', 'client')).toBe(false);
-  });
-
-  it('hold clients back in a market opening soon until they have a client invite, never in a live one, never staff (J-V8)', () => {
-    expect(clientNeedsInvite('prelaunch', [], false)).toBe(true);
-    // A helper invite doesn't open booking help.
-    expect(clientNeedsInvite('prelaunch', ['helper'], false)).toBe(true);
-    expect(clientNeedsInvite('prelaunch', ['poster'], false)).toBe(false);
-    expect(clientNeedsInvite('prelaunch', [], true)).toBe(false);
-    // Going live opens it to everyone, with no other change.
-    expect(clientNeedsInvite('live', [], false)).toBe(false);
   });
 
   it('match however people type them', () => {

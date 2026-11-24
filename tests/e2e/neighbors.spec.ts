@@ -4,7 +4,6 @@ import { expect, test, type Page } from '@playwright/test';
 import { eq, inArray } from 'drizzle-orm';
 import { PEOPLE, type SeedPerson } from '../../db/seeds/data/people';
 import { upsertPeople } from '../../db/seeds/seed';
-import { betaAccess } from '../../src/modules/beta/schema';
 import { communityPosts } from '../../src/modules/community/schema';
 import { createDb } from '../../src/platform/db/connect';
 import { rateLimits } from '../../src/platform/rate-limit/schema';
@@ -68,7 +67,6 @@ async function freshNeighbor(): Promise<string> {
   try {
     await db.transaction(async (tx) => {
       await upsertPeople(tx, [person]);
-      await tx.insert(betaAccess).values({ userId: person.id, marketId: 'mkt_austin', role: 'poster', grantedAt: new Date(person.createdAt) }).onConflictDoNothing();
     });
   } finally {
     await pool.end();

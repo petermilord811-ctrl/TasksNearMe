@@ -7,7 +7,6 @@
     "incorrect": "Ese código no es correcto. Revísalo e inténtalo de nuevo.",
     "expired": "Ese código venció. Envía un código nuevo para continuar.",
     "not_supported": "Usa un número de teléfono de EE. UU. Otros países aún no son compatibles.",
-    "for_helpers": "Esto es para ayudantes.",
     "in_use": "Otra cuenta ya usa ese número. Prueba con otro número o comunícate con soporte.",
     "must_accept": "Marca esta casilla para continuar.",
     "prohibited": "Esto no está permitido en TasksNearMe. Consulta la lista de tareas prohibidas.",
@@ -58,7 +57,6 @@
       "incorrect": "No reconocemos ese código. Revísalo y vuelve a intentarlo.",
       "expired": "Esta invitación ya no se puede usar. Pide una nueva o únete a la lista de espera.",
       "not_supported": "Esta invitación es para una cuenta de cliente. Para configurar tu perfil de ayudante necesitas una invitación de ayudante.",
-      "for_helpers": "Esta invitación es para ayudantes. Para publicar una tarea o reservar a un ayudante necesitas una invitación de cliente.",
       "too_long": "Es más largo que un código de invitación. Revísalo y vuelve a intentarlo."
     },
     "city": {

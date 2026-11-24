@@ -118,8 +118,6 @@ export const FIELD_ERROR_CODES = [
   'expired',
   /** A value we can't serve yet, e.g. a phone number outside the US. */
   'not_supported',
-  /** An invite code for helpers, where booking help needs a client invite (a market opening soon, J-V8). */
-  'for_helpers',
   /** Already used by another account (e.g. a phone number). */
   'in_use',
   /** The same as what's already there (e.g. changing your email to the one you have). */

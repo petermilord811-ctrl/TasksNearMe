@@ -121,7 +121,7 @@
 
 ## 6. Private beta (weeks 16–18)
 
-- **Invite-only:** 30–50 founding-cohort helpers (welcome reward eligible) and 100–150 posters from 2–3 Gainesville neighborhoods (for example Duckpond, Midtown, Haile Plantation), recruited through neighborhood groups and personal networks.
+- **Invite-only:** 30–50 founding-cohort helpers (welcome reward eligible) and 100–150 posters from 2–3 Gainesville neighborhoods (for example Duckpond, Midtown, Haile Plantation), recruited through neighborhood groups and personal networks. Since 2026-11-23 (owner) posting needs no invite while a city opens; staff can still make sign-up or helper setup invite-only with the beta switches (`beta.sign_up`, `beta.helpers`).
 - **Ops cadence:** staff watch every booking; daily money reconciliation review; twice-weekly policy tuning (fees, timers, price guidance) through versioned market policies.
 - **Exit:** ≥ 50 completed paid bookings across at least 4 categories, launch criteria trending green, and no open P0 bugs.
 
@@ -131,7 +131,7 @@ Gainesville launches first (M8; owner, 2026-11-17, in place of Austin, which sta
 
 1. **Demand.** The waitlist page lists the cities people ask for most (waitlist entries plus helpers waiting there, at least 3 people per city), and `/waitlist?zip=` shows the count near a ZIP. Staff pick the next city from these counts and from waiting helpers per category.
 2. **Market data.** A market row with its ZIP3 prefixes, center, radius, neighborhoods (areas), categories with local price guidance, and a published policy, in a seed or staff tool. No code change.
-3. **Pre-launch.** An admin sets the market to pre-launch (`setMarketStatus`, with a reason, audited). Helpers who waited there move to it and are told (`city_open`); they choose a neighborhood and verify their home address. Clients come in by invitation (private beta, as in §6).
+3. **Pre-launch.** An admin sets the market to pre-launch (`setMarketStatus`, with a reason, audited). Helpers who waited there move to it and are told (`city_open`); they choose a neighborhood and verify their home address. Clients can post tasks and book helpers from the start, without an invite (owner, 2026-11-23: the client invite of a market opening soon removed); the waitlist still hears when the city goes live.
 4. **Live.** When the city meets §5's supply and quality criteria, an admin sets it live. Dates follow each market's own time zone (completion plan 8.1, done), so a market in any US time zone can open; the status change refuses a zone outside them. The launch-day steps, rehearsed, are in [docs/runbooks/gainesville-launch.md](../runbooks/gainesville-launch.md).
 5. **Counsel before the first city outside Texas** (blocked.md): the biometric notice for the ID selfie (Illinois BIPA, Washington, others), background-check disclosures (California ICRAA, New York Article 23-A, local fair-chance rules), sales tax on service fees, and each state's worker-classification tests.
 

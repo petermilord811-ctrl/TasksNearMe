@@ -2,7 +2,6 @@ import { randomInt, randomUUID } from 'node:crypto';
 import { and, eq, inArray } from 'drizzle-orm';
 import { PEOPLE, type SeedPerson } from '../../../db/seeds/data/people';
 import { upsertPeople, type Tx } from '../../../db/seeds/seed';
-import { betaAccess } from '../../../src/modules/beta/schema';
 import { helperProfiles, helperServices, helperWorkSamples } from '../../../src/modules/profiles/schema';
 import { files } from '../../../src/modules/tasks/schema';
 import { addressVerifications, backgroundChecks, identityCaptures, identityVerifications, payoutAccounts } from '../../../src/modules/verification/schema';
@@ -57,7 +56,6 @@ export async function freshHelper(): Promise<FreshHelper> {
       try {
         await db.transaction(async (tx) => {
           await upsertPeople(tx, [person]);
-          await tx.insert(betaAccess).values({ userId: person.id, marketId: person.homeMarketId ?? 'mkt_austin', role: 'poster', grantedAt: new Date(person.createdAt) }).onConflictDoNothing();
         });
         return { id: person.id, email: person.email, handle: person.helper!.handle, displayName: `${person.firstName} ${person.lastName.charAt(0)}.` };
       } catch (error) {

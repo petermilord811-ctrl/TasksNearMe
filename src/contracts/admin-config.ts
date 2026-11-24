@@ -104,7 +104,8 @@ export interface AdminSearchIndexing {
 
 /**
  * Where we're open (completion plan 8.2): a market's status (src/modules/markets/coverage.ts). `prelaunch`: helpers
- * join and the first clients come in by invitation; `live`: open to everyone; `paused`: closed for now.
+ * join and clients can already post (no invite since 2026-11-23); `live`: open, and the waitlist is told; `paused`:
+ * closed for now.
  */
 export const ADMIN_MARKET_STATUSES = ['prelaunch', 'live', 'paused'] as const;
 export type AdminMarketStatus = (typeof ADMIN_MARKET_STATUSES)[number];

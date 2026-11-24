@@ -6,8 +6,6 @@ import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { findTaskTemplate, isTaskTemplateId, routes, TASK_DESCRIPTION_MAX, TASK_TITLE_MAX } from '@/contracts';
 import { carriedWords, handoffCode } from '@/modules/tasks/carried-words';
-import { redeemClientInvite } from '@/modules/beta/actions';
-import { clientInviteFor } from '@/modules/beta/server';
 import { resolveCurrentSignIn } from '@/modules/accounts/sign-in/server';
 import { communityPostForTask } from '@/modules/community/service';
 import { getFlags } from '@/modules/markets/queries';
@@ -25,7 +23,6 @@ import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
-import { ClientInviteScreen } from '@/ui/screens/beta';
 import { PostTaskScreen } from '@/ui/screens/posting';
 import { appPageMetadata } from '@/i18n/metadata';
 import { InAppPhoneStep, isPhoneStep } from '../../../_phone/in-app-phone-step';
@@ -75,11 +72,8 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
     redirect(again || fromPostId ? routes.signIn(here) : routes.postTask({ ...(initialCategory ? { category: initialCategory } : {}), ...(title ? { title } : {}), ...(describe ? { describe } : {}), ...(templateId ? { template: templateId } : {}) }));
   }
   const userId = viewer.user.id;
-  // A market opening soon takes clients by invitation (J-V8): that step first, before the phone and the form.
-  const clientInvite = await clientInviteFor(db, userId);
-  if (clientInvite) return <ClientInviteScreen data={clientInvite} handlers={{ onRedeem: redeemClientInvite }} />;
   // A phone first (only where texts work, plan 9.2): sign-in's phone steps, inside the app (journeys on a phone, J-C2),
-  // right here, as the invite step above (2026-11-23, owner: "I hate to redirect to new pages continually"): the code
+  // right here (2026-11-23, owner: "I hate to redirect to new pages continually"): the code
   // that verifies it opens the wizard on this same page. Anything else sign-in still waits for: its own page, as before.
   if (!(await phoneGateOpen(userId))) {
     const signIn = await resolveCurrentSignIn(here);
