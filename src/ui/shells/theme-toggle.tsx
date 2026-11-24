@@ -74,21 +74,35 @@ export function switchTheme(from?: Element | null) {
 
 /**
  * The light/dark switch from the top bar: a small pill with a sliding knob. The choice is saved for next time
- * (theme-script.ts applies it before paint); until someone picks, the system decides.
+ * (theme-script.ts applies it before paint); until someone picks, the system decides. `compact="phones"` (owner,
+ * 2026-11-24: the switch shown by default) is one round button below `sm`, the moon or the sun of the theme it switches
+ * to (from CSS, so nothing flips at hydration), and the pill from `sm` up: only one of the two is ever displayed.
  */
-export function ThemeToggle({ className }: { className?: string }) {
+export function ThemeToggle({ className, compact = 'never' }: { className?: string; compact?: 'never' | 'phones' }) {
   const t = useTranslations('shell.theme');
   const theme = useEffectiveTheme();
   const next: Theme = theme === 'dark' ? 'light' : 'dark';
   const toggle = (event: MouseEvent<HTMLButtonElement>) => switchTheme(event.currentTarget);
+  const label = next === 'dark' ? t('toDark') : t('toLight');
 
-  return (
+  return <>
+    {compact === 'phones' && <button
+      type="button"
+      onClick={toggle}
+      aria-label={label}
+      title={t('label')}
+      data-theme-toggle="compact"
+      className={cn('inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground/80 transition-colors hover:bg-foreground/[0.06] hover:text-foreground sm:hidden', className)}
+    >
+      <Moon aria-hidden="true" className="size-5 dark:hidden" />
+      <Sun aria-hidden="true" className="hidden size-5 dark:block" />
+    </button>}
     <button
       type="button"
       onClick={toggle}
-      aria-label={next === 'dark' ? t('toDark') : t('toLight')}
+      aria-label={label}
       title={t('label')}
-      className={cn('relative inline-flex h-9 w-[4.25rem] shrink-0 items-center justify-between rounded-full bg-foreground/[0.06] px-2 text-muted-foreground transition-colors hover:text-foreground', className)}
+      className={cn('relative inline-flex h-9 w-[4.25rem] shrink-0 items-center justify-between rounded-full bg-foreground/[0.06] px-2 text-muted-foreground transition-colors hover:text-foreground', compact === 'phones' && 'max-sm:hidden', className)}
     >
       <Sun aria-hidden="true" className="relative z-10 size-4" />
       <Moon aria-hidden="true" className="relative z-10 size-4" />
@@ -101,5 +115,5 @@ export function ThemeToggle({ className }: { className?: string }) {
         )}
       />
     </button>
-  );
+  </>;
 }

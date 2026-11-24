@@ -19,8 +19,9 @@ const SLIDING_PILL = {
 
 /**
  * A list of app links. `sidebar`: rows with an icon, the current one raised on a pill that glides between pages.
- * `bottom`: the phone dock's tabs (one column each), icon over label, with the same gliding pill. Messages isn't one of
- * them since 2026-11-22: the chat button carries its unread count (src/ui/components/messaging/chat-launcher.tsx).
+ * `bottom`: the phone dock's tabs (one column each), icon over label, with the same gliding pill; Home, in the middle,
+ * is a raised circle (owner, 2026-11-24) with its own current state. Messages isn't one of them: the phone's top bar
+ * carries it, with its unread count.
  */
 export function Navigation({ items, label, currentPath, variant = 'sidebar', neighborsNews, counts }: {
   items: NavItem[];
@@ -42,6 +43,17 @@ export function Navigation({ items, label, currentPath, variant = 'sidebar', nei
           const Icon = NAV_ICONS[item.id];
           const name = t(`nav.${item.id}`);
           const count = counts?.[item.id] ?? 0;
+          if (bottom && item.id === 'home') {
+            return <li key={item.id} className="min-w-0">
+              <NavLink item={item} currentPath={currentPath} data-nav-circle=""
+                className="group/item relative z-[1] -mt-6 flex min-h-14 min-w-0 flex-col items-center justify-end gap-1 rounded-[1.375rem] px-0.5 pb-1.5 text-[0.6875rem] leading-tight font-semibold text-foreground/75 hover:text-foreground aria-[current=page]:text-foreground">
+                <span aria-hidden="true" className="grid size-[3.25rem] place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_10px_24px_-10px_var(--primary-glow),0_2px_6px_rgb(23_18_14/0.18)] ring-4 ring-secondary transition-[transform,box-shadow] duration-300 ease-[var(--ease-out)] group-hover/item:-translate-y-0.5 group-aria-[current=page]/item:shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_30%,transparent),0_10px_24px_-10px_var(--primary-glow)] motion-reduce:transition-none">
+                  <Icon className="size-6" />
+                </span>
+                <span className="max-w-full text-center break-words">{name}</span>
+              </NavLink>
+            </li>;
+          }
           return <li key={item.id} className="min-w-0">
             <NavLink item={item} currentPath={currentPath}
               className={cn(

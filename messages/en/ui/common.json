@@ -24,6 +24,7 @@
   "errorPreview": "Error and retry",
   "skeletonsPreview": "Loading skeletons",
   "demoPreview": "Demo markers",
+  "pushToastPreview": "App notifications",
   "dialogPreviewsGroup": "Route dialogs",
   "dialogPreviewTitle": "{name}, as a dialog",
   "retryComplete": "Ready to try again.",

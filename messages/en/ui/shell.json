@@ -19,6 +19,8 @@
   "signingOut": "Signing out…",
   "notifications": "Notifications",
   "unreadNotifications": "Notifications, {count, plural, one {# unread notification} other {# unread notifications}}",
+  "messages": "Messages",
+  "messagesUnread": "Messages, {count, plural, one {# unread message} other {# unread messages}}",
   "unreadMessages": "{count, plural, one {# unread message} other {# unread messages}}",
   "quickAction": {
     "postTask": "Post a task",

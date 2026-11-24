@@ -107,7 +107,9 @@ export function HeroCopy({ data, now }: { data: HomePageData; now: ISODateTime }
       <div className={cn('enter mt-5 flex flex-wrap items-center gap-x-4 gap-y-1.5 lg:mt-[clamp(0.625rem,1.8svh,1.5rem)]', WIDE_LINE)} style={{ ['--enter-delay' as string]: '760ms' }}>
         {/* The same slot (and height) for the line of new tasks and the folded assistant: nothing moves. */}
         <LazyMotion features={domMax}>
-          <div className="relative h-9 min-w-[13rem] flex-1 basis-[13rem]">
+          {/* The task's title gets room first (owner, 2026-11-24: "task title is not shown enough"): the chips wrap
+              under the line before it would drop below 24rem. */}
+          <div className="relative h-9 min-w-[min(100%,13rem)] flex-1 basis-[24rem]">
             <AnimatePresence initial={false}>
               <m.div
                 key={assistant.collapsed ? 'summary' : 'activity'}

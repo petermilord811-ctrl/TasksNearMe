@@ -62,11 +62,15 @@ export function getPublicNav(): NavItem[] {
  *   portal, where neighbors' asks and open tasks meet; one name everywhere, audit L15), Tasks, Bookings. A helper's:
  *   Home, Find work, Neighbors, Bookings (docs/ui/portal-9.10.md §10). Messages left them on 2026-11-22: it's the
  *   round chat button at the bottom right of every page (the owner: "Reddit similar chat"), its one place on screen.
- * - `secondary`: the mode's tools, on the rail under the line (wide screens) and in the avatar menu below that width.
+ * - `dock`: the phone's tab dock (owner, 2026-11-24): five, Home raised in the middle as a circle, two on each side.
+ *   A client's: Neighbors, Tasks, Home, Bookings, Find helpers. A helper's: Find work, Neighbors, Home, Bookings,
+ *   Offers. Messages is in the phone's top bar, with its unread count.
+ * - `secondary`: the mode's tools, on the rail under the line (wide screens) and in the avatar menu below that width,
+ *   but for what the dock already holds.
  * - `account`: the account's pages, in the avatar menu at every width.
  * Each destination has one place on a screen.
  */
-export function getAppNav(mode: Mode): { primary: NavItem[]; secondary: NavItem[]; account: NavItem[] } {
+export function getAppNav(mode: Mode): { primary: NavItem[]; dock: NavItem[]; secondary: NavItem[]; account: NavItem[] } {
   const home: NavItem = { id: 'home', href: routes.app.home(), exact: true };
   const neighbors: NavItem = { id: 'community', href: routes.app.community() };
   const last: NavItem[] = [{ id: 'bookings', href: routes.app.bookings() }];
@@ -80,20 +84,26 @@ export function getAppNav(mode: Mode): { primary: NavItem[]; secondary: NavItem[
     { id: 'helpChat', href: routes.app.helpChat() },
     { id: 'support', href: routes.app.support() },
   ];
+  const tasks: NavItem = { id: 'tasks', href: routes.app.tasks() };
+  const helpers: NavItem = { id: 'helpers', href: routes.app.helpers() };
+  const findWork: NavItem = { id: 'findWork', href: routes.app.findWork() };
+  const offers: NavItem = { id: 'offers', href: routes.app.offers() };
   return mode === 'poster'
     ? {
-        primary: [home, neighbors, { id: 'tasks', href: routes.app.tasks() }, ...last],
+        primary: [home, neighbors, tasks, ...last],
+        dock: [neighbors, tasks, home, ...last, helpers],
         secondary: [
-          { id: 'helpers', href: routes.app.helpers() },
+          helpers,
           { id: 'saved', href: routes.app.saved() },
           { id: 'savedSearches', href: routes.app.savedSearches() },
         ],
         account,
       }
     : {
-        primary: [home, { id: 'findWork', href: routes.app.findWork() }, neighbors, ...last],
+        primary: [home, findWork, neighbors, ...last],
+        dock: [findWork, neighbors, home, ...last, offers],
         secondary: [
-          { id: 'offers', href: routes.app.offers() },
+          offers,
           { id: 'availability', href: routes.app.availability() },
           { id: 'earnings', href: routes.app.earnings() },
           { id: 'clients', href: routes.app.clients() },

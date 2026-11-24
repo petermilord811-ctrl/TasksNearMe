@@ -743,7 +743,7 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
 
   const shown = state !== 'closed' && !onMessagesPage;
   return <>
-    <ChatLauncher unread={unread} windowShown={wide && shown} hidden={onMessagesPage} hiddenOnPhones={layout === 'flow'} routeKey={routeKey} onOpen={() => openWith()} />
+    <ChatLauncher unread={unread} windowShown={wide && shown} hidden={onMessagesPage} routeKey={routeKey} onOpen={() => openWith()} />
     {wide && shown && <ChatWindow
       state={state}
       view={view}

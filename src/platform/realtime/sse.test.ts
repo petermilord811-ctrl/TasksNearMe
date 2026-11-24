@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { sseResponse } from './sse';
+import { endOpenStreams, sseResponse } from './sse';
 
 async function readUntil(reader: ReadableStreamDefaultReader<Uint8Array>, needle: string): Promise<string> {
   const decoder = new TextDecoder();
@@ -48,5 +48,22 @@ describe('server-sent event responses', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('ends every open stream when the server stops, each cleanup once, and closes their connections (deploys, 2026-11-24)', async () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    const gone = new AbortController();
+    const responses = [sseResponse(new AbortController().signal, () => first), sseResponse(new AbortController().signal, () => second), sseResponse(gone.signal, () => () => {})];
+    gone.abort();
+    // The connection closes with its stream, so a stopping server doesn't wait out a proxy's idle keep-alive.
+    expect(responses[0]!.headers.get('connection')).toBe('close');
+    expect(endOpenStreams()).toBe(2);
+    expect(first).toHaveBeenCalledOnce();
+    expect(second).toHaveBeenCalledOnce();
+    expect(endOpenStreams()).toBe(0);
+    const reader = responses[0]!.body!.getReader();
+    expect(await readUntil(reader, 'never')).toContain('event: ready');
+    expect((await reader.read()).done).toBe(true);
   });
 });

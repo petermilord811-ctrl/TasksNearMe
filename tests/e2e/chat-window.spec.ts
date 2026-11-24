@@ -253,23 +253,28 @@ test.describe('the chat window (wide screens)', () => {
   });
 });
 
-test.describe('the chat button on a phone', () => {
+test.describe('Messages on a phone', () => {
   test.beforeEach(({}, testInfo) => {
     test.skip(testInfo.project.name !== 'app-mobile', 'phones');
   });
 
-  test('sits above the tab dock and opens Messages, where Help is pinned on top and the assistant answers', async ({ page, context, baseURL }) => {
+  test('is in the top bar with its unread count (nothing floats over the page) and opens Messages, where Help is pinned on top and the assistant answers', async ({ page, context, baseURL }) => {
     test.setTimeout(150_000);
     await standIn(context, baseURL);
     const made = await unreadConversation();
     try {
       await devSignIn(page, made.email);
-      const button = page.getByRole('link', { name: 'Messages, 2 unread' });
+      // Owner, 2026-11-24: "add message button on appbar (if unread message …) … remove app sticky button".
+      const button = page.getByRole('banner').getByRole('link', { name: 'Messages, 2 unread' });
       await expect(button).toBeVisible();
+      await expect(page.locator('[data-chat-launcher="phone"]')).toHaveCount(0);
+      await expect(page.locator('[data-chat-launcher="window"]')).toBeHidden();
+      // The dock: five, Home raised in the middle.
       const dock = page.getByRole('navigation', { name: 'App navigation' });
-      await expect(dock.getByRole('link')).toHaveCount(4);
-      const [buttonBox, dockBox] = [await button.boundingBox(), await dock.boundingBox()];
-      expect(buttonBox!.y + buttonBox!.height).toBeLessThanOrEqual(dockBox!.y + 1);
+      await expect(dock.getByRole('link')).toHaveCount(5);
+      await expect(dock.getByRole('link').nth(2)).toHaveText('Home');
+      const [buttonBox, barBox] = [await button.boundingBox(), await page.getByRole('banner').boundingBox()];
+      expect(buttonBox!.y + buttonBox!.height).toBeLessThanOrEqual(barBox!.y + barBox!.height + 1);
 
       await button.click();
       await expect(page).toHaveURL(/\/app\/messages$/);
@@ -281,9 +286,9 @@ test.describe('the chat button on a phone', () => {
       await page.getByRole('button', { name: 'Send', exact: true }).click();
       await expect(page.getByRole('log').getByRole('link', { name: 'Who sees my address?' })).toBeVisible({ timeout: 30_000 });
 
-      // A page whose own bar owns the bottom of the screen has no chat button.
+      // A page whose own bar owns the bottom of the screen keeps Messages in the top bar, out of its way.
       await page.goto('/app/tasks/new');
-      await expect(page.getByRole('link', { name: /^Messages/ })).toHaveCount(0);
+      await expect(page.getByRole('banner').getByRole('link', { name: /^Messages/ })).toBeVisible({ timeout: 30_000 });
     } finally {
       await removeAll(made);
     }

@@ -209,47 +209,20 @@ describe('DockedChats', () => {
 });
 
 describe('ChatLauncher', () => {
-  it('names the unread count, links to Messages on phones, and opens the window on wide screens', () => {
+  it('names the unread count and opens the window; phones have Messages in the top bar instead (owner, 2026-11-24)', () => {
     const onOpen = vi.fn();
     wrap(<ChatLauncher unread={3} windowShown={false} onOpen={onOpen} />);
-    expect(screen.getByRole('link', { name: 'Messages, 3 unread' }).getAttribute('href')).toBe(routes.app.messages());
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(document.querySelector('[data-chat-launcher="phone"]')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Messages, 3 unread' }));
     expect(onOpen).toHaveBeenCalled();
   });
 
-  it('steps aside on Messages itself, for the window, and on phones where the page owns the bottom', () => {
+  it('steps aside on Messages itself and for the window', () => {
     const { unmount } = wrap(<ChatLauncher unread={0} windowShown={false} hidden onOpen={() => undefined} />);
     expect(screen.queryByRole('button', { name: 'Messages' })).toBeNull();
     unmount();
-    const second = wrap(<ChatLauncher unread={0} windowShown onOpen={() => undefined} />);
+    wrap(<ChatLauncher unread={0} windowShown onOpen={() => undefined} />);
     expect(screen.queryByRole('button', { name: 'Messages' })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Messages' })).toBeDefined();
-    second.unmount();
-    wrap(<ChatLauncher unread={0} windowShown={false} hiddenOnPhones onOpen={() => undefined} />);
-    expect(screen.queryByRole('link', { name: 'Messages' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Messages' })).toBeDefined();
-  });
-
-  it("on phones, steps aside while the page scrolls down and comes back on a scroll up or a new page (sweep 2026-11-24)", async () => {
-    const scrollTo = (y: number) => {
-      Object.defineProperty(window, 'scrollY', { configurable: true, value: y });
-      fireEvent.scroll(window);
-    };
-    const phone = () => document.querySelector('[data-chat-launcher="phone"]')!;
-    try {
-      const view = wrap(<ChatLauncher unread={0} windowShown={false} routeKey="/app/bookings" onOpen={() => undefined} />);
-      expect(phone().getAttribute('aria-hidden')).toBeNull();
-      scrollTo(400);
-      await vi.waitFor(() => expect(phone().getAttribute('aria-hidden')).toBe('true'));
-      scrollTo(380);
-      await vi.waitFor(() => expect(phone().getAttribute('aria-hidden')).toBeNull());
-      scrollTo(800);
-      await vi.waitFor(() => expect(phone().getAttribute('aria-hidden')).toBe('true'));
-      // Another page shows it again at once.
-      view.rerender(<NextIntlClientProvider locale="en" timeZone="America/Chicago" messages={messages}><ChatLauncher unread={0} windowShown={false} routeKey="/app/tasks" onOpen={() => undefined} /></NextIntlClientProvider>);
-      expect(phone().getAttribute('aria-hidden')).toBeNull();
-    } finally {
-      Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 });
-    }
   });
 });

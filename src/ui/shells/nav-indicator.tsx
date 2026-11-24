@@ -18,7 +18,8 @@ export function NavIndicator({ className }: { className?: string }) {
     if (!pill || !box) return;
     let placed = false;
     const place = (glide: boolean) => {
-      const current = box.querySelector<HTMLElement>('[aria-current="page"]');
+      // The dock's raised Home circle shows its own current state: no pill behind it.
+      const current = box.querySelector<HTMLElement>('[aria-current="page"]:not([data-nav-circle])');
       if (!current) {
         pill.style.opacity = '0';
         box.removeAttribute('data-indicator');

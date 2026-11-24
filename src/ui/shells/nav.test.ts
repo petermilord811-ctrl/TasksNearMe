@@ -32,6 +32,19 @@ describe('app navigation (completion plan 9.14)', () => {
     }
   });
 
+  it("puts the phone's dock in its own order: Home in the middle, with the mode's main tool (owner, 2026-11-24)", () => {
+    expect(ids(getAppNav('poster').dock)).toEqual(['community', 'tasks', 'home', 'bookings', 'helpers']);
+    expect(ids(getAppNav('helper').dock)).toEqual(['findWork', 'community', 'home', 'bookings', 'offers']);
+    for (const mode of ['poster', 'helper'] as const) {
+      const nav = getAppNav(mode);
+      // Every everyday place, and one tool, which the avatar menu then leaves out (AccountMenu).
+      expect(nav.primary.every((item) => nav.dock.includes(item))).toBe(true);
+      expect(nav.dock.filter((item) => !nav.primary.includes(item)).every((item) => nav.secondary.includes(item))).toBe(true);
+      expect(nav.dock[2]!.id).toBe('home');
+      expect(nav.dock.some((item) => item.id === 'messages')).toBe(false);
+    }
+  });
+
   it('puts every destination in one place only', () => {
     for (const mode of ['poster', 'helper'] as const) {
       const nav = getAppNav(mode);

@@ -19,6 +19,8 @@
   "signingOut": "Cerrando sesión…",
   "notifications": "Notificaciones",
   "unreadNotifications": "Notificaciones, {count, plural, one {# notificación sin leer} other {# notificaciones sin leer}}",
+  "messages": "Mensajes",
+  "messagesUnread": "Mensajes, {count, plural, one {# mensaje sin leer} other {# mensajes sin leer}}",
   "unreadMessages": "{count, plural, one {# mensaje sin leer} other {# mensajes sin leer}}",
   "quickAction": {
     "postTask": "Publicar una tarea",

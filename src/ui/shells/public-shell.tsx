@@ -70,14 +70,16 @@ export function PublicShell({ viewer, children, currentPath, variant = 'default'
       <SkipLink />
       <ScrollbarActivity />
       <TopBar
-        logo={<><span className="min-[380px]:hidden"><Logo variant="mark" animated /></span><span className="hidden min-[380px]:inline-flex"><Logo animated /></span></>}
+        logo={<Logo animated stack="phones" />}
         nav={links('bar')}
         actions={<>
           {/* Between 1024 and 1280 the nav and three buttons share the bar ("How it works" wrapped): the switch stays, as a
               globe and the other language's code, since it's how a Spanish reader finds the Spanish site. */}
           <LanguageSwitch label={t('footer.language')} onSwitch={onSwitchLanguage} className="hidden md:block lg:hidden xl:block" />
           <LanguageSwitch label={t('footer.language')} onSwitch={onSwitchLanguage} variant="compact" className="hidden lg:block xl:hidden" />
-          <ThemeToggle className="hidden sm:inline-flex" />
+          {/* Shown by default (owner, 2026-11-24: "show light/dark mode switch in default except of landing page"): a
+              round button on phones, but for the landing page, where the menu keeps it; the pill from 640 px. */}
+          <ThemeToggle compact="phones" className="max-sm:group-has-[[data-landing-page]]/site:hidden" />
           <Suspense fallback={<PublicAccountLinks viewer={{ kind: 'public' }} placement="header" />}>
             <PublicAccountLinks viewer={viewer} placement="header" />
           </Suspense>

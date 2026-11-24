@@ -103,12 +103,13 @@ test("a helper's dashboard: jobs first, earnings at a glance, and nearby tasks o
 test('the signed-in navigation (9.14): four everyday places, Messages as the chat button, the tools in one place, the account in the menu', async ({ page }, testInfo) => {
   await devSignIn(page, 'jordan@example.test');
   const desktop = testInfo.project.name === 'app-desktop';
-  // The rail on wide screens, the dock on phones: the same four (a helper's: Find work second). Messages is the round
-  // chat button at the bottom right since 2026-11-22.
+  // The rail on wide screens: the four everyday places (a helper's: Find work second). The phone's dock (owner,
+  // 2026-11-24): five, Home raised in the middle, and the mode's main tool. Messages is the round chat button at the
+  // bottom right on wide screens (2026-11-22), and in the phone's top bar.
   const everyday = page.getByRole('navigation', { name: desktop ? 'Main navigation' : 'App navigation' });
   // The portal (9.10) has one name everywhere: "Neighbors" (audit L15).
-  await expect(everyday.getByRole('link')).toHaveText(['Home', 'Find work', 'Neighbors', 'Bookings']);
-  await expect(desktop ? page.getByRole('button', { name: /^Messages/ }) : page.getByRole('link', { name: /^Messages/ })).toBeVisible();
+  await expect(everyday.getByRole('link')).toHaveText(desktop ? ['Home', 'Find work', 'Neighbors', 'Bookings'] : ['Find work', 'Neighbors', 'Home', 'Bookings', 'Offers']);
+  await expect(desktop ? page.getByRole('button', { name: /^Messages/ }) : page.getByRole('banner').getByRole('link', { name: /^Messages/ })).toBeVisible();
   await expect(everyday.getByRole('link', { name: 'Neighbors' })).toHaveAttribute('href', /\/app\/community$/);
   // Checked before the menu opens: an open menu hides the rest of the page from assistive technology.
   const modeSwitch = page.getByRole('group', { name: 'Choose how to use TasksNearMe' });
@@ -129,7 +130,8 @@ test('the signed-in navigation (9.14): four everyday places, Messages as the cha
     await expect(menu.getByRole('menuitem', { name: 'Switch to “I need help”' })).toBeHidden();
   } else {
     await expect(menu.getByRole('menuitem', { name: 'Earnings' })).toBeVisible();
-    await expect(menu.getByRole('menuitem', { name: 'Offers' })).toHaveAttribute('href', /\/app\/offers$/);
+    // Offers is in the dock instead: one place on a screen.
+    await expect(menu.getByRole('menuitem', { name: 'Offers' })).toHaveCount(0);
     await expect(menu.getByRole('menuitem', { name: 'Switch to “I need help”' })).toBeVisible();
   }
 });

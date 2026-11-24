@@ -138,7 +138,8 @@ export function AccountMenu({ viewer, onSignOut, onSwitchLanguage, onModeChange,
             <DropdownMenuSeparator className="sm:hidden" />
           </>}
           {nav && <>
-            {nav.secondary.map((link) => item(link, 'lg:hidden'))}
+            {/* Below lg, but for what the phone's dock holds (one place on a screen). */}
+            {nav.secondary.filter((link) => !nav.dock.some((docked) => docked.id === link.id)).map((link) => item(link, 'lg:hidden'))}
             <DropdownMenuSeparator className="lg:hidden" />
             {nav.account.map((link) => item(link))}
             <DropdownMenuSeparator />

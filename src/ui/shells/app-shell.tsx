@@ -1,11 +1,10 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { Bell, CirclePause } from 'lucide-react';
+import { Bell, CirclePause, MessagesSquare } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { AppShellHandlers, ShellNotice, SignedInViewer } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { buttonVariants } from '@/ui/primitives/button';
-import { cn } from '@/ui/lib/utils';
 import { AppBar } from './app-bar';
 import { Logo } from './logo';
 import { ScrollbarActivity } from '@/ui/motion/scrollbar-activity';
@@ -40,8 +39,9 @@ export interface AppShellProps {
 /**
  * The signed-in app, in the landing page's language: the paper under everything, a pinned glass bar (the logo, how
  * you're using TasksNearMe, the next step for that mode, the language and theme switches, notifications and your
- * account, whose menu also carries the theme and the language on phones), on wide screens a floating rail of links
- * whose current pill glides between pages, and on phones a glass dock of four tabs; Messages is the chat button (`chat`). `flow` pages (posting a task, a
+ * account, whose menu also carries the language on phones), on wide screens a floating rail of links whose current
+ * pill glides between pages, and on phones a dock of five tabs with Home raised in the middle and Messages in the top
+ * bar (owner, 2026-11-24; wide screens: the chat window's button, `chat`). `flow` pages (posting a task, a
  * booking, a conversation: the `(flow)` route group) keep the dock away; one shell serves both groups. `notices` (the outage switch) sit above every page's content, before the helper setup link.
  */
 export function AppShell({ viewer, handlers, children, currentPath, layout, notices = [], chat }: AppShellProps) {
@@ -55,15 +55,23 @@ export function AppShell({ viewer, handlers, children, currentPath, layout, noti
     {handlers.onCheckPushDevice && <PushDeviceGuard viewerId={viewer.id} onCheck={handlers.onCheckPushDevice} />}
     <AppBar>
       <div className="mx-auto flex max-w-admin flex-wrap items-center gap-x-2 gap-y-2 px-gutter py-2 sm:flex-nowrap sm:gap-x-3 sm:py-2.5">
-        <Logo animated />
+        <Logo animated stack="phones" />
         {/* On phones the avatar menu switches the mode instead, so the bar stays one row (audit M38). */}
         <div className="hidden sm:ml-3 sm:block lg:ml-5"><ModeSwitch mode={viewer.mode} onModeChange={handlers.onModeChange} /></div>
-        <div className="ml-auto flex items-center gap-1 sm:gap-1.5">
+        {/* Phones: five 44 px buttons beside the two-line logo fit 360 px with 2 px between them. */}
+        <div className="ml-auto flex items-center gap-0.5 sm:gap-1.5">
           {/* The next thing to do in this mode, one tap away. */}
           <QuickAction mode={viewer.mode} />
           <span aria-hidden="true" className="mx-1 hidden h-7 w-px bg-foreground/10 sm:block" />
           <LanguageSwitch label={t('footer.language')} onSwitch={handlers.onSwitchLanguage} className="hidden lg:block" />
-          <ThemeToggle className="hidden sm:inline-flex" />
+          {/* Shown by default (owner, 2026-11-24), as one round button on phones. */}
+          <ThemeToggle compact="phones" />
+          {/* Phones and tablets (owner, 2026-11-24): Messages in the bar, with its unread count, where the floating chat
+              button was. Wide screens keep the chat window's button. */}
+          <Link href={routes.app.messages()} data-bar-messages className={buttonVariants({ variant: 'ghost', size: 'icon', className: 'relative rounded-full text-foreground/80 lg:hidden' })} aria-label={viewer.unreadMessages > 0 ? t('messagesUnread', { count: viewer.unreadMessages }) : t('messages')}>
+            <MessagesSquare aria-hidden="true" className="size-5" />
+            {viewer.unreadMessages > 0 && <span aria-hidden="true" className="absolute top-1 right-0.5 min-w-5 rounded-full bg-primary px-1.5 text-center text-[0.6875rem] leading-5 font-semibold text-primary-foreground tabular-nums ring-2 ring-background">{viewer.unreadMessages > 99 ? '99+' : viewer.unreadMessages}</span>}
+          </Link>
           <Link href={routes.app.recentNotifications()} className={buttonVariants({ variant: 'ghost', size: 'icon', className: 'relative rounded-full text-foreground/80' })} aria-label={viewer.unreadNotifications > 0 ? t('unreadNotifications', { count: viewer.unreadNotifications }) : t('notifications')}>
             <Bell aria-hidden="true" className="size-5" />
             {viewer.unreadNotifications > 0 && <span aria-hidden="true" className="absolute top-1 right-0.5 min-w-5 rounded-full bg-primary px-1.5 text-center text-[0.6875rem] leading-5 font-semibold text-primary-foreground tabular-nums ring-2 ring-background">{viewer.unreadNotifications}</span>}
@@ -80,8 +88,7 @@ export function AppShell({ viewer, handlers, children, currentPath, layout, noti
           <Navigation items={nav.secondary} label={t('secondaryNavigation')} currentPath={currentPath} />
         </div>
       </aside>
-      {/* On phones the chat button floats above the dock: room under the last row so it can scroll clear of it. */}
-      <main id="main" tabIndex={-1} className={cn('mx-auto w-full min-w-0 max-w-content space-y-6 px-gutter pt-6 pb-10 outline-none lg:pt-8', chat && 'max-lg:in-data-[app-shell=tabs]:pb-28')}>
+      <main id="main" tabIndex={-1} className="mx-auto w-full min-w-0 max-w-content space-y-6 px-gutter pt-6 pb-10 outline-none lg:pt-8">
         {notices.includes('bookings_paused') && <section aria-labelledby="notice-bookings-paused" className="flex gap-3 rounded-2xl border border-warning/40 bg-card/90 p-4 text-sm shadow-card dark:border-warning/40">
           <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-warning/15 text-warning"><CirclePause className="size-5" /></span>
           <div className="min-w-0 space-y-1"><p id="notice-bookings-paused" className="font-semibold text-foreground">{t('notices.bookingsPaused.title')}</p><p className="text-muted-foreground">{t('notices.bookingsPaused.body')}</p></div>
@@ -94,7 +101,7 @@ export function AppShell({ viewer, handlers, children, currentPath, layout, noti
     </div>
     <TabsOnly layout={layout}>
       <MobileBottomNav>
-        <Navigation items={nav.primary} label={t('mobileNavigation')} currentPath={currentPath} variant="bottom" {...(viewer.neighborsNews ? { neighborsNews: viewer.neighborsNews } : {})} />
+        <Navigation items={nav.dock} label={t('mobileNavigation')} currentPath={currentPath} variant="bottom" {...(viewer.neighborsNews ? { neighborsNews: viewer.neighborsNews } : {})} />
       </MobileBottomNav>
     </TabsOnly>
     {chat}

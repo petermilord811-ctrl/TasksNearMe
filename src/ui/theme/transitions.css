@@ -27,7 +27,7 @@
 /* ---- The bars ------------------------------------------------------------------------------------------------------
    Named only while a transition runs (a name makes its element a stacking context, which would trap the search's
    suggestions under a page's sticky bars) and never in the theme switch. The wide screens' chat launcher and window are
-   display: none on phones, the phone's launcher and the dock on wide screens: never two of a name at once. */
+   display: none on phones, the dock on wide screens: never two of a name at once. */
 html:active-view-transition:not([data-theme-switch]) :is([data-vt-anchor], [data-mobile-bottom-nav], [data-chat-launcher], [data-chat-window], [data-chat-docked-row], [data-sonner-toaster]) {
   view-transition-class: shell-bar;
 }
@@ -35,7 +35,6 @@ html:active-view-transition:not([data-theme-switch]) [data-vt-anchor="app-bar"] 
 html:active-view-transition:not([data-theme-switch]) [data-vt-anchor="site-bar"] { view-transition-name: site-bar; }
 html:active-view-transition:not([data-theme-switch]) [data-vt-anchor="app-top-row"] { view-transition-name: app-top-row; }
 html:active-view-transition:not([data-theme-switch]) [data-mobile-bottom-nav] { view-transition-name: app-dock; }
-html:active-view-transition:not([data-theme-switch]) [data-chat-launcher="phone"] { view-transition-name: chat-launcher; }
 html:active-view-transition:not([data-theme-switch]) [data-chat-launcher="window"] { view-transition-name: chat-launcher-wide; }
 html:active-view-transition:not([data-theme-switch]) [data-chat-window] { view-transition-name: chat-window; }
 html:active-view-transition:not([data-theme-switch]) [data-chat-docked-row] { view-transition-name: chat-docked; }
@@ -43,7 +42,7 @@ html:active-view-transition:not([data-theme-switch]) [data-sonner-toaster] { vie
 
 /* Above the pages, in the order they stack on the page. A bar shows as it is on the new page at once (no cross-fade
    of its contents; the rules below give the ones that come and go their own way in and out) and glides if it moved:
-   the top bar back into view, the chat button down to where the dock was. */
+   the top bar back into view. */
 ::view-transition-group(.shell-bar) {
   animation-duration: 320ms;
   animation-timing-function: var(--ease-out);
@@ -52,7 +51,6 @@ html:active-view-transition:not([data-theme-switch]) [data-sonner-toaster] { vie
 ::view-transition-old(site-bar),
 ::view-transition-old(app-top-row),
 ::view-transition-old(app-dock),
-::view-transition-old(chat-launcher),
 ::view-transition-old(chat-launcher-wide),
 ::view-transition-old(chat-window),
 ::view-transition-old(chat-docked),
@@ -63,7 +61,6 @@ html:active-view-transition:not([data-theme-switch]) [data-sonner-toaster] { vie
 ::view-transition-new(site-bar),
 ::view-transition-new(app-top-row),
 ::view-transition-new(app-dock),
-::view-transition-new(chat-launcher),
 ::view-transition-new(chat-launcher-wide),
 ::view-transition-new(chat-window),
 ::view-transition-new(chat-docked),
@@ -77,7 +74,6 @@ html:active-view-transition:not([data-theme-switch]) [data-sonner-toaster] { vie
 ::view-transition-group(site-bar),
 ::view-transition-group(app-top-row),
 ::view-transition-group(app-dock),
-::view-transition-group(chat-launcher),
 ::view-transition-group(chat-launcher-wide),
 ::view-transition-group(chat-window),
 ::view-transition-group(chat-docked),
@@ -86,7 +82,6 @@ html:active-view-transition:not([data-theme-switch]) [data-sonner-toaster] { vie
 }
 ::view-transition-group(app-top-row) { z-index: 30; }
 ::view-transition-group(app-dock) { z-index: 40; }
-::view-transition-group(chat-launcher),
 ::view-transition-group(chat-launcher-wide),
 ::view-transition-group(chat-window),
 ::view-transition-group(chat-docked) { z-index: 45; }
@@ -109,13 +104,11 @@ html:active-view-transition:not([data-theme-switch]) [data-sonner-toaster] { vie
   from { translate: 0 calc(100% + 0.75rem); opacity: 0; }
 }
 
-/* The chat button where it comes and goes (the Messages pages leave it out on phones). */
-::view-transition-old(chat-launcher):only-child,
+/* The wide screens' chat button where it comes and goes (Messages itself leaves it out). */
 ::view-transition-old(chat-launcher-wide):only-child {
   display: block;
   animation: launcher-away 160ms cubic-bezier(0.4, 0, 1, 1) both;
 }
-::view-transition-new(chat-launcher):only-child,
 ::view-transition-new(chat-launcher-wide):only-child {
   animation: launcher-back 260ms var(--ease-out) 80ms both;
 }

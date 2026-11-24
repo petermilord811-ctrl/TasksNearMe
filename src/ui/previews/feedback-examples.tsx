@@ -8,6 +8,7 @@ import { EmptyState } from '@/ui/components/feedback/empty-state';
 import { ErrorState } from '@/ui/components/feedback/error-state';
 import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { DemoBadge } from '@/ui/components/feedback/demo-badge';
+import { PushToastCard } from '@/ui/components/feedback/push-toasts';
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { Section } from '@/ui/components/layout/section';
 
@@ -24,3 +25,14 @@ export function FeedbackPreview({ variant }: { variant: 'empty' | 'error' | 'ske
   </main>;
 }
 
+/**
+ * Pushes while a page is in front (owner, 2026-11-24), as the toaster shows them: a card in the toaster's frame (its
+ * rounded popover look comes from AppToaster's toast classes), with a long sentence and a short one.
+ */
+export function PushToastExamples() {
+  const frame = 'w-[min(100%,356px)] rounded-2xl border border-foreground/[0.08] bg-popover text-popover-foreground shadow-overlay dark:border-white/[0.08]';
+  return <div className="flex flex-col items-end gap-3">
+    <div className={frame}><PushToastCard push={{ title: 'New message from Maya R.', body: 'Maya R.: Can you come a little earlier, around 2:30? The movers moved our slot and the boxes need to be out of the hall by four.' }} path={routes.app.messages()} onDismiss={() => undefined} /></div>
+    <div className={frame}><PushToastCard push={{ title: 'Booking confirmed', body: '' }} path={routes.app.bookings()} onDismiss={() => undefined} /></div>
+  </div>;
+}

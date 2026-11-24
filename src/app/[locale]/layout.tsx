@@ -4,6 +4,7 @@ import * as rootParams from 'next/root-params';
 import Script from 'next/script';
 import { APP_LOCALES, isAppLocale } from '@/contracts/locale';
 import { AppToaster } from '@/ui/components/feedback/app-toaster';
+import { MouseScrollRows } from '@/ui/lib/mouse-scroll-rows';
 import { BubbleCursor } from '@/ui/components/cursor/bubble-cursor';
 import { MapTilesProvider } from '@/ui/components/map/map-tiles';
 import { mapTiles } from '@/modules/markets/map-tiles';
@@ -91,6 +92,8 @@ export default async function RootLayout({ children, modal }: LayoutProps<'/[loc
           <AppToaster />
           {/* TasksNearMe's own pointer on computers with a mouse (2026-11-24); off with "Use the system pointer". */}
           <BubbleCursor />
+          {/* Rows that scroll sideways without a scrollbar, for a mouse: the wheel and a drag (owner, 2026-11-24). */}
+          <MouseScrollRows />
         </ClientMessages>
       </body>
     </html>

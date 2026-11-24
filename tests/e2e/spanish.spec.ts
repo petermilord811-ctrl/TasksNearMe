@@ -55,20 +55,24 @@ test.describe('a phone at 360 px', () => {
   test.use({ viewport: { width: 360, height: 800 } });
   test.skip(({ isMobile }) => !isMobile, 'a phone matter; one project is enough');
 
-  test('keeps Sign in, the main button and the menu inside the bar, in Spanish and English (Spanish pass, 2026-11-21)', async ({ page }) => {
+  test('keeps Sign in, the main button, the theme switch and the menu inside the bar, in Spanish and English (Spanish pass, 2026-11-21; owner, 2026-11-24)', async ({ page }) => {
     // Spanish's longer words used to push the menu past the bar's edge, out of reach: no navigation, no language switch.
+    // Since 2026-11-24 the logo's words stack in two lines and the theme switch shows (but on the landing page), so
+    // Sign in and the main button are round icons on phones, named with their whole words.
     for (const [path, shell] of [['/es/how-it-works', shellEs], ['/en/how-it-works', shellEn]] as const) {
       await page.goto(path);
       const bar = page.getByRole('banner').locator(':scope > div');
       const menu = bar.getByRole('button', { name: shell.openMenu });
       await expect(menu).toBeVisible();
       await expect(bar.getByRole('link', { name: shell.signIn, exact: true })).toBeVisible();
-      // The words on it are the short form; its name is the whole phrase, which starts with them.
       const post = bar.getByRole('link', { name: shell.postTask, exact: true });
       await expect(post).toBeVisible();
-      await expect(post).toHaveText(shell.postTaskShort, { useInnerText: true });
+      const round = (await post.boundingBox())!;
+      expect(Math.abs(round.width - round.height)).toBeLessThanOrEqual(1);
+      await expect(bar.getByRole('button', { name: shell.theme.toDark })).toBeVisible();
       const [edge, button] = await Promise.all([bar.boundingBox(), menu.boundingBox()]);
       expect(button!.x + button!.width).toBeLessThanOrEqual(Math.min(edge!.x + edge!.width, 360));
+      expect(await bar.evaluate((row) => row.scrollWidth <= row.clientWidth + 1)).toBe(true);
       await menu.click();
       await expect(page.getByRole('dialog', { name: shell.menuTitle })).toBeVisible();
       await page.keyboard.press('Escape');

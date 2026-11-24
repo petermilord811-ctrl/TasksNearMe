@@ -24,6 +24,7 @@
   "errorPreview": "Error y reintento",
   "skeletonsPreview": "Esqueletos de carga",
   "demoPreview": "Marcadores de demostración",
+  "pushToastPreview": "Notificaciones de la app",
   "dialogPreviewsGroup": "Diálogos de página",
   "dialogPreviewTitle": "{name}, como diálogo",
   "retryComplete": "Todo listo para intentarlo de nuevo.",

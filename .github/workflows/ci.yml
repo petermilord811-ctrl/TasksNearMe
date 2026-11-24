@@ -266,6 +266,24 @@ jobs:
             "tnm-preview@$SSH_HOST" "deploy $GITHUB_SHA" < preview-bundle.tgz
           echo "Live: $PREVIEW_URL" >> "$GITHUB_STEP_SUMMARY"
 
+      # The site's own files answer too, not just its pages (2026-11-24: a bundle that nested public/ inside public/
+      # 404ed every image, icon, email logo and the service worker while the pages answered 200). A miss fails the run
+      # before main moves; scripts/preview/bundle.sh stops such a bundle before it ships.
+      - name: Static files answer
+        run: |
+          for path in /sw.js /icons/icon-192.png /ui/brand/icon.svg; do
+            code=000
+            for _ in 1 2 3 4 5 6; do
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "$PREVIEW_URL$path" || true)
+              [ "$code" = 200 ] && break
+              sleep 5
+            done
+            if [ "$code" != 200 ]; then
+              echo "::error title=Static files missing::$path answered $code on $PREVIEW_URL"
+              exit 1
+            fi
+          done
+
       # Only after the deploy passed its health check (a failing release is rolled back on the VPS and fails
       # this run), so main always holds a build that passed e2e, started and served its pages.
       - name: Merge into main

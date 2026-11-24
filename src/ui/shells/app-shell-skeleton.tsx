@@ -8,13 +8,13 @@ import { Logo } from './logo';
 /** The rail's rows: the four everyday places, a divider, then the mode's three tools (Messages is the chat button). */
 const RAIL_ROWS = ['w-20', 'w-24', 'w-16', 'w-20', null, 'w-24', 'w-24', 'w-28'];
 
-/** The phone's tab dock as MobileBottomNav draws it (shapes, no links). */
+/** The phone's tab dock as MobileBottomNav draws it (shapes, no links): five tabs, Home raised in the middle. */
 const dock = (
         <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 bottom-0 z-30 px-2.5 pb-[max(.625rem,env(safe-area-inset-bottom))] lg:hidden">
-          <div className="mx-auto grid max-w-md grid-cols-4 gap-1 rounded-[1.75rem] border border-primary/[0.16] bg-secondary p-1.5 shadow-[0_1px_2px_rgb(23_18_14/0.05),0_18px_40px_-18px_rgb(40_20_5/0.45)] dark:border-white/[0.08] dark:shadow-[0_18px_40px_-16px_rgb(0_0_0/0.8)]">
-            {Array.from({ length: 4 }, (_, index) => (
-              <div key={index} className="flex min-h-14 flex-col items-center justify-center gap-1.5"><Skeleton className="size-5 rounded-md" /><Skeleton className="h-2.5 w-10" /></div>
-            ))}
+          <div className="mx-auto grid max-w-md grid-cols-5 gap-1 rounded-[1.75rem] border border-primary/[0.16] bg-secondary p-1.5 shadow-[0_1px_2px_rgb(23_18_14/0.05),0_18px_40px_-18px_rgb(40_20_5/0.45)] dark:border-white/[0.08] dark:shadow-[0_18px_40px_-16px_rgb(0_0_0/0.8)]">
+            {Array.from({ length: 5 }, (_, index) => index === 2
+              ? <div key={index} className="-mt-6 flex min-h-14 flex-col items-center justify-end gap-1 pb-1.5"><span className="size-[3.25rem] rounded-full bg-primary/70 ring-4 ring-secondary" /><Skeleton className="h-2.5 w-9" /></div>
+              : <div key={index} className="flex min-h-14 flex-col items-center justify-center gap-1.5"><Skeleton className="size-5 rounded-md" /><Skeleton className="h-2.5 w-10" /></div>)}
           </div>
         </div>
 );
@@ -34,14 +34,17 @@ export function AppShellSkeleton({ layout }: { layout?: 'tabs' | 'flow' }) {
       {/* AppBar's look at the top of the page; not AppBar itself, which owns --app-header-offset while it's mounted. */}
       <div className="app-glass sticky top-0 z-navigation border-b border-transparent">
         <div className="mx-auto flex max-w-admin items-center gap-x-2 px-gutter py-2 sm:gap-x-3 sm:py-2.5">
-          <Logo animated />
+          <Logo animated stack="phones" />
           <Skeleton aria-hidden="true" className="hidden h-11 w-56 rounded-full sm:ml-3 sm:block lg:ml-5" />
-          <div aria-hidden="true" className="ml-auto flex items-center gap-1 sm:gap-1.5">
-            {/* The quick action: a round button on phones, a pill from 640 px. */}
-            <Skeleton className="size-10 rounded-full sm:w-28" />
-            <Skeleton className="hidden size-10 rounded-full sm:block" />
-            <Skeleton className="size-10 rounded-full" />
-            <Skeleton className="size-10 rounded-full" />
+          <div aria-hidden="true" className="ml-auto flex items-center gap-0.5 sm:gap-1.5">
+            {/* The quick action: a round button on phones, a pill from 768 px. */}
+            <Skeleton className="size-11 rounded-full md:h-10 md:w-28" />
+            {/* The theme switch: a round button on phones, the pill from 640 px. */}
+            <Skeleton className="size-9 rounded-full sm:w-[4.25rem]" />
+            {/* Messages (below 1024 px), notifications, the account. */}
+            <Skeleton className="size-11 rounded-full lg:hidden" />
+            <Skeleton className="size-11 rounded-full" />
+            <Skeleton className="size-11 rounded-full" />
           </div>
         </div>
       </div>

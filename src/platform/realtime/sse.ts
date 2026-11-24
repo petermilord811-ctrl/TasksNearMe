@@ -12,10 +12,36 @@ export interface SseOut {
 
 const encoder = new TextEncoder();
 
+/**
+ * Every stream open on this server, so a stopping server can end them (d8, 2026-11-24: each deploy answered 502 for
+ * 90 s, the time systemd gives a server to stop, because Next's production server waits for every open connection,
+ * and a stream lasts 15 minutes; landing visitors hold one too). On globalThis: instrumentation and the route handlers
+ * can be bundled with their own copies of this module.
+ */
+const OPEN_STREAMS = Symbol.for('tasksnearme.sse.open');
+
+function openStreams(): Set<() => void> {
+  const holder = globalThis as typeof globalThis & { [OPEN_STREAMS]?: Set<() => void> };
+  return (holder[OPEN_STREAMS] ??= new Set());
+}
+
+/**
+ * Ends every open stream on this server (instrumentation, on SIGTERM). Each runs its cleanup, its connection closes
+ * (SSE_HEADERS), so the server stops at once, and each browser's EventSource reconnects to the server that follows.
+ * Returns how many it ended.
+ */
+export function endOpenStreams(): number {
+  const streams = [...openStreams()];
+  for (const end of streams) end();
+  return streams.length;
+}
+
 export const SSE_HEADERS = {
   'Content-Type': 'text/event-stream; charset=utf-8',
   'Cache-Control': 'no-cache, no-store, no-transform',
-  Connection: 'keep-alive',
+  // The connection closes with its stream: a stopping server would otherwise wait out the proxy's idle keep-alive
+  // before it can exit. EventSource opens a new connection to reconnect anyway.
+  Connection: 'close',
   // nginx and similar proxies must not buffer the stream (Caddy flushes event streams on its own).
   'X-Accel-Buffering': 'no',
   'X-Content-Type-Options': 'nosniff',
@@ -38,9 +64,10 @@ export function sseResponse(signal: AbortSignal, open: (out: SseOut) => () => vo
           finish();
         }
       };
-      finish = () => {
+      const end = () => {
         if (closed) return;
         closed = true;
+        openStreams().delete(end);
         if (pinger) clearInterval(pinger);
         if (ender) clearTimeout(ender);
         try {
@@ -54,6 +81,8 @@ export function sseResponse(signal: AbortSignal, open: (out: SseOut) => () => vo
           // Already closed by the runtime.
         }
       };
+      finish = end;
+      openStreams().add(end);
       const out: SseOut = {
         send: (event, data) => write(`${event ? `event: ${event}\n` : ''}data: ${JSON.stringify(data)}\n\n`),
         close: () => finish(),

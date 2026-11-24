@@ -27,11 +27,13 @@ async function openMenu() {
 
 describe('AccountMenu', () => {
   it.each([
-    { viewer: mayaShell, tools: [['Find helpers', routes.app.helpers()], ['Saved helpers', routes.app.saved()], ['Saved searches', routes.app.savedSearches()]] },
-    { viewer: jordanShell, tools: [['Offers', routes.app.offers()], ['Availability', routes.app.availability()], ['Earnings', routes.app.earnings()], ['My clients', routes.app.clients()], ['Rewards', routes.app.rewards()], ['Saved searches', routes.app.savedSearches()]] },
-  ])('shows the $viewer.mode tools (below the rail’s width) and the account’s pages, once each', async ({ viewer, tools }) => {
+    { viewer: mayaShell, docked: 'Find helpers', tools: [['Saved helpers', routes.app.saved()], ['Saved searches', routes.app.savedSearches()]] },
+    { viewer: jordanShell, docked: 'Offers', tools: [['Availability', routes.app.availability()], ['Earnings', routes.app.earnings()], ['My clients', routes.app.clients()], ['Rewards', routes.app.rewards()], ['Saved searches', routes.app.savedSearches()]] },
+  ])('shows the $viewer.mode tools (below the rail’s width) and the account’s pages, once each', async ({ viewer, docked, tools }) => {
     show(viewer);
     const menu = await openMenu();
+    // The phone's dock has the mode's main tool (owner, 2026-11-24): one place on a screen.
+    expect(within(menu).queryByRole('menuitem', { name: docked })).not.toBeInTheDocument();
     for (const [name, href] of tools) {
       const tool = within(menu).getByRole('menuitem', { name });
       expect(tool).toHaveAttribute('href', href);
