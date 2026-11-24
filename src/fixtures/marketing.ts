@@ -352,7 +352,7 @@ export const furnitureCategorySeo: CategorySeoContent = {
   ],
   faq: [
     { question: 'How much does furniture assembly cost in Austin?', answer: 'In Austin, typical prices are $50.00–$80.00 per item. You agree on the price with your helper before you book. There are no service fees: you pay your helper directly, or TasksNearMe holds the payment for a small fee when they ask to be paid upfront.' },
-    { question: 'How are helpers checked?', answer: 'Before sending offers, every helper verifies a government ID with a live selfie and their home address. This service happens in your home, so helpers also need a cleared background check before they can take it.' },
+    { question: 'How are helpers checked?', answer: 'Before sending offers, every helper verifies their home address. This service happens in your home, so helpers also need a cleared background check before they can take it, and clients see a badge with the date of each check.' },
     { question: 'Who sees my address?', answer: 'Only the helper you book, and only after you confirm.' },
   ],
   related: [

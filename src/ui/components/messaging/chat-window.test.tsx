@@ -1,12 +1,12 @@
 /** @vitest-environment jsdom */
 import type React from 'react';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { routes } from '@/contracts/routes';
 import { chatInboxData, chatInboxEmptyData, chatThreadData, emptyTranscript, fakeChatThreadHandlers, fakeHelpChatHandlers, fakeNewChatHandlers, helpChatAssistantData, newDirectMessageData, newDirectMessageSampleData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
-import { ChatWindow, type ChatWindowProps } from './chat-window';
+import { ChatWindow, DockedChats, type ChatWindowProps } from './chat-window';
 import { ChatLauncher } from './chat-launcher';
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
@@ -193,6 +193,21 @@ describe('ChatWindow', () => {
   });
 });
 
+describe('DockedChats', () => {
+  // Sweep 2026-11-24 C1: a head loaded as if opened marked its conversation read, unseen. Only the conversations that show
+  // as open windows are reported (and loaded as opened), and only once the room beside the chat window is measured.
+  it('reports the conversations showing as open windows, not the heads, once the room is measured', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1600 });
+    const onShown = vi.fn();
+    const noop = () => undefined;
+    wrap(<DockedChats docked={[{ threadId: 'thr_open', minimized: false }, { threadId: 'thr_head', minimized: true }]} mainKey="closed" loads={{}} now={now} handlers={fakeChatThreadHandlers} onMinimize={noop} onRestore={noop} onClose={noop} onRefresh={noop} onLoadEarlier={async () => undefined} onShowInWindow={noop} onShown={onShown} />);
+    // The first render's guess at the room isn't reported.
+    expect(onShown).not.toHaveBeenCalled();
+    await waitFor(() => expect(onShown).toHaveBeenCalled(), { timeout: 3000 });
+    expect(onShown).toHaveBeenLastCalledWith(['thr_open']);
+  });
+});
+
 describe('ChatLauncher', () => {
   it('names the unread count, links to Messages on phones, and opens the window on wide screens', () => {
     const onOpen = vi.fn();
@@ -213,5 +228,28 @@ describe('ChatLauncher', () => {
     wrap(<ChatLauncher unread={0} windowShown={false} hiddenOnPhones onOpen={() => undefined} />);
     expect(screen.queryByRole('link', { name: 'Messages' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Messages' })).toBeDefined();
+  });
+
+  it("on phones, steps aside while the page scrolls down and comes back on a scroll up or a new page (sweep 2026-11-24)", async () => {
+    const scrollTo = (y: number) => {
+      Object.defineProperty(window, 'scrollY', { configurable: true, value: y });
+      fireEvent.scroll(window);
+    };
+    const phone = () => document.querySelector('[data-chat-launcher="phone"]')!;
+    try {
+      const view = wrap(<ChatLauncher unread={0} windowShown={false} routeKey="/app/bookings" onOpen={() => undefined} />);
+      expect(phone().getAttribute('aria-hidden')).toBeNull();
+      scrollTo(400);
+      await vi.waitFor(() => expect(phone().getAttribute('aria-hidden')).toBe('true'));
+      scrollTo(380);
+      await vi.waitFor(() => expect(phone().getAttribute('aria-hidden')).toBeNull());
+      scrollTo(800);
+      await vi.waitFor(() => expect(phone().getAttribute('aria-hidden')).toBe('true'));
+      // Another page shows it again at once.
+      view.rerender(<NextIntlClientProvider locale="en" timeZone="America/Chicago" messages={messages}><ChatLauncher unread={0} windowShown={false} routeKey="/app/tasks" onOpen={() => undefined} /></NextIntlClientProvider>);
+      expect(phone().getAttribute('aria-hidden')).toBeNull();
+    } finally {
+      Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 });
+    }
   });
 });

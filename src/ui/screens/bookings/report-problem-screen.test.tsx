@@ -48,6 +48,12 @@ describe('ReportProblemScreen', () => {
     expect(screen.getByRole('link', { name: messages.reportProblem.backToBooking })).toHaveAttribute('href', routes.app.booking(deskReportProblemPageData.booking.id));
   });
 
+  it("says nothing is held when the helper is paid directly (sweep 2026-11-24, M7)", () => {
+    mount({ ...deskReportProblemPageData, booking: { ...deskReportProblemPageData.booking, paymentMode: 'direct' } });
+    expect(screen.getByText(messages.reportProblem.supportNoteDirect)).toBeInTheDocument();
+    expect(screen.queryByText(messages.reportProblem.supportNote)).not.toBeInTheDocument();
+  });
+
   it('validates and focuses the first invalid field before opening confirmation', async () => {
     const user = userEvent.setup();
     const { handlers } = mount();

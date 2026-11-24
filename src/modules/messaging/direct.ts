@@ -85,9 +85,10 @@ export async function directThreadBetween(db: Db, a: string, b: string): Promise
 /**
  * A line in the two people's direct conversation, when they have one (2026-11-23): a task request one of them sent the
  * other (`invite_sent` with its id) shows there as a card. Nothing when they don't talk directly. `actorUserId`'s own
- * news: it doesn't count as unread for them, unless something else in the conversation still is.
+ * news: it doesn't count as unread for them, unless something else in the conversation still is. Returns the line's
+ * conversation and id: an event about it names the line (sweep C4), since it has no sender of its own.
  */
-export async function postInDirectThread(db: Pick<Db, 'select' | 'insert' | 'update'>, a: string, b: string, event: Pick<TimelineEvent, 'type' | 'params'>, now: Date, actorUserId: string): Promise<string | null> {
+export async function postInDirectThread(db: Pick<Db, 'select' | 'insert' | 'update'>, a: string, b: string, event: Pick<TimelineEvent, 'type' | 'params'>, now: Date, actorUserId: string): Promise<{ threadId: string; lineId: string } | null> {
   const [thread] = await db.select({ id: threads.id }).from(threads).where(and(eq(threads.kind, 'direct'), eq(threads.linkedId, directPairKey(a, b)))).limit(1);
   if (!thread) return null;
   const id = newId('msg');
@@ -95,7 +96,7 @@ export async function postInDirectThread(db: Pick<Db, 'select' | 'insert' | 'upd
   await db.update(threads).set({ lastMessageAt: now }).where(eq(threads.id, thread.id));
   const unreadBefore = sql`exists (select 1 from ${messages} where ${messages.threadId} = ${thread.id} and ${messages.id} <> ${id} and (${messages.senderUserId} is null or ${messages.senderUserId} <> ${actorUserId}) and (${threadParticipants.lastReadAt} is null or ${messages.createdAt} > ${threadParticipants.lastReadAt}))`;
   await db.update(threadParticipants).set({ lastReadAt: now }).where(and(eq(threadParticipants.threadId, thread.id), eq(threadParticipants.userId, actorUserId), sql`not ${unreadBefore}`));
-  return thread.id;
+  return { threadId: thread.id, lineId: id };
 }
 
 /** They've talked about a task before: an offer, invite, booking or regular visits conversation with both in it. */

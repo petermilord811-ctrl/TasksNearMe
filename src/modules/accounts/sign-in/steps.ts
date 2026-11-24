@@ -16,13 +16,15 @@ export const BLOCKED_STATUSES = new Set(['suspended', 'banned', 'deleted']);
 // Where to go after signing in: shared with the UI's "Sign in again" link (bad connections pass, J-N2).
 export { safeNextPath } from '@/shared/next-path';
 
-/** Posting, making offers, and booking need a verified phone (blueprint 06 §1) where texts work (plan 9.2). */
+/**
+ * The phone step comes on the way to what the server holds back without a verified phone, where texts work (plan 9.2):
+ * posting a task (tasks/posting.ts). Offers and bookings no longer need one (sweep 2026-11-24 A10: since 1e27fa8b a
+ * helper offers with a verified home address, and checkout never checked the phone), so a helper opening a task alert's
+ * link signed out isn't asked for a phone that the same helper signed in never is.
+ */
 export function phoneReasonFor(next: string): PhoneReason | null {
   const path = next.split(/[?#]/)[0] ?? '';
   if (path === routes.app.newTask()) return 'post';
-  if (path.startsWith(`${routes.app.findWork()}/`)) return 'offer';
-  if (/^\/app\/tasks\/[^/]+\/offers\/[^/]+\/confirm$/.test(path)) return 'book';
-  if (/^\/app\/helpers\/[^/]+\/request$/.test(path)) return 'book';
   return null;
 }
 

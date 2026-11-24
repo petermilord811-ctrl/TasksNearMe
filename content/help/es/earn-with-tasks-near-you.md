@@ -6,7 +6,7 @@ Si eres hábil con las manos, tienes fuerza o paciencia con las computadoras, tu
 
 ## Verifícate una sola vez
 
-Antes de enviar ofertas, verificas una identificación oficial con una selfie en vivo y tu domicilio, y tu teléfono si te lo pedimos. Los servicios dentro de la casa de alguien también requieren una verificación de antecedentes aprobada. Consulta [cómo verificarte](/help/getting-verified).
+Antes de enviar ofertas, verificas tu domicilio. Los servicios dentro de la casa de alguien también requieren una verificación de antecedentes aprobada. Tu identidad, tu teléfono (si te lo pedimos) y tus pagos te hacen ayudante verificado, cuando quieras. Consulta [cómo verificarte](/help/getting-verified).
 
 Si todavía no estamos en tu ciudad, puedes registrarte y terminar tus verificaciones ya. Te avisaremos cuando abramos en tu ciudad.
 

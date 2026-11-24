@@ -1,10 +1,10 @@
-import { CONTACT_LEVELS, DIRECT_CHATS_PER_DAY, HELPER_CONTACT_EARNED_MIN, normalizeUsername, PLAN_DIRECT_CHATS_PER_DAY, routes, SPARK_LEVEL_THRESHOLDS, SPARK_LEVELS, SPARK_PACK_OFFERS, SPARK_PACKS, SPARK_RULES, SPARK_SOURCES, type NewChatHandlers, type NewDirectMessagePageData, type PeopleSearchData, type SparksPageData, type SparksSummary } from '@/contracts';
+import { CONTACT_LEVELS, DIRECT_CHATS_PER_DAY, HELPER_CONTACT_EARNED_MIN, normalizeUsername, PLAN_DIRECT_CHATS_PER_DAY, routes, SPARK_LEVEL_THRESHOLDS, SPARK_LEVELS, SPARK_PACK_OFFERS, SPARK_PACKS, SPARK_GIVER_RULES, SPARK_RULES, SPARK_SOURCES, type NewChatHandlers, type NewDirectMessagePageData, type PeopleSearchData, type SparksPageData, type SparksSummary } from '@/contracts';
 import { jordan, maya } from './people';
 
 /** Sparks and direct conversations (2026-11-21): the canonical states for the previews and tests. */
 
 const levels = SPARK_LEVELS.map((level) => ({ level, at: SPARK_LEVEL_THRESHOLDS[level], directChatsPerDay: DIRECT_CHATS_PER_DAY[level], ...((CONTACT_LEVELS as readonly string[]).includes(level) ? { helperContact: true as const } : {}) }));
-const rules = SPARK_SOURCES.map((source) => ({ source, points: SPARK_RULES[source].points, ...(SPARK_RULES[source].dailyCap ? { dailyCap: SPARK_RULES[source].dailyCap } : {}) }));
+const rules = SPARK_SOURCES.map((source) => ({ source, points: SPARK_RULES[source].points, ...(SPARK_RULES[source].dailyCap ? { dailyCap: SPARK_RULES[source].dailyCap } : {}), ...(SPARK_RULES[source].perGiver ? { perGiver: SPARK_RULES[source].perGiver } : {}) }));
 const packs = SPARK_PACKS.map((pack) => ({ pack, ...SPARK_PACK_OFFERS[pack] }));
 
 /** Jordan: 312 Sparks, 100 of them bought (Good neighbor). */
@@ -24,6 +24,7 @@ export const sparksNewData: SparksPageData = {
   planDirectChatsPerDay: PLAN_DIRECT_CHATS_PER_DAY,
   hasPlan: false,
   rules,
+  giverMinAccountDays: SPARK_GIVER_RULES.minAccountDays,
   packs,
   purchases: [],
 };

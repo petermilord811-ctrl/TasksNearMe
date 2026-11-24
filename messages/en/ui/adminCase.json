@@ -86,7 +86,9 @@
     "rework": "Rework",
     "goodwill_refund": "Goodwill refund",
     "account_action": "Account action",
-    "reward_action": "Reward action"
+    "reward_action": "Reward action",
+    "closed_done": "Close: the work was done (paid directly)",
+    "closed_not_done": "Close: the work wasn't done (paid directly)"
   },
   "details": {
     "people": "People",

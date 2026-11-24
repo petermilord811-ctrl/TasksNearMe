@@ -4,8 +4,9 @@ import type { AttentionTarget, NotificationType } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
 import { bookings } from '@/modules/bookings/schema';
 import { bookingThreadLink, ensureThread, getThreadPage } from '@/modules/messaging/service';
-import { messages, threadParticipants, threads } from '@/modules/messaging/schema';
+import { blocks, messages, threadParticipants, threads } from '@/modules/messaging/schema';
 import { deliverNotifications, type DeliveryProviders } from '@/modules/notifications/delivery';
+import { dispatchNotifications } from '@/modules/notifications/service';
 import { saveQuietHours } from '@/modules/notifications/own-quiet-hours';
 import { notificationDeliveries, notificationPreferences, notificationQuietHours, notifications } from '@/modules/notifications/schema';
 import { offers } from '@/modules/offers/schema';
@@ -17,6 +18,8 @@ import { reportTarget } from '@/modules/support/target-reports';
 import { tasks } from '@/modules/tasks/schema';
 import { deleteThanks, saveThanks, setThanksNameHidden, setThanksShown } from '@/modules/thanks/service';
 import { thankYouNotes } from '@/modules/thanks/schema';
+import { thanksPanelFor } from '@/modules/thanks/views';
+import { rateLimits } from '@/platform/rate-limit/schema';
 import { publicThanksOf } from '@/modules/thanks/views';
 import { auditLog } from '@/platform/audit/schema';
 import { createDb } from '@/platform/db/connect';
@@ -59,6 +62,7 @@ let bookingThread = '';
 const noteIds: string[] = [];
 
 beforeAll(async () => {
+  await db.delete(rateLimits).where(eq(rateLimits.key, `thanks-note:${BOOKING}`));
   const [maya] = await db.select().from(users).where(eq(users.id, 'usr_maya'));
   const [sam] = await db.select().from(users).where(eq(users.id, 'usr_sam'));
   const [profile] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, 'usr_sam'));
@@ -89,7 +93,10 @@ afterAll(async () => {
     await db.delete(supportCases).where(inArray(supportCases.id, cases));
   }
   await db.delete(thankYouNotes).where(eq(thankYouNotes.bookingId, BOOKING));
+  await db.delete(rateLimits).where(eq(rateLimits.key, `thanks-note:${BOOKING}`));
+  await db.delete(blocks).where(and(eq(blocks.blockerId, HELPER), eq(blocks.blockedId, CLIENT)));
   if (noteIds.length || cases.length) await db.delete(auditLog).where(inArray(auditLog.targetId, [...noteIds, ...cases]));
+  await db.delete(outboxEvents).where(inArray(outboxEvents.aggregateId, [bookingThread, DIRECT_THREAD]));
   await db.delete(messages).where(inArray(messages.threadId, [bookingThread, DIRECT_THREAD]));
   await db.delete(threadParticipants).where(inArray(threadParticipants.threadId, [bookingThread, DIRECT_THREAD]));
   await db.delete(threads).where(inArray(threads.id, [bookingThread, DIRECT_THREAD]));
@@ -189,6 +196,37 @@ describe('quiet hours of their own', () => {
     await quiet(false);
   });
 
+  // Sweep 2026-11-24 C3: the night's entry stayed unread, and every later message joined it, so nothing reached them by
+  // any channel until they opened the conversation.
+  it('a message after their quiet hours end tells them, though the one kept in the app overnight is still unread', async () => {
+    sent = [];
+    await quiet(true);
+    const say = async (at: Date, body: string) => {
+      const n = ++count;
+      await db.insert(messages).values({ id: `msg_tyn_${n}`, threadId: bookingThread, senderUserId: CLIENT, kind: 'text', body, attachmentFileIds: [], createdAt: at });
+      await db.insert(outboxEvents).values({ id: `evt_tyn_msg_${n}`, type: 'message.sent', aggregateType: 'thread', aggregateId: bookingThread, payload: { threadId: bookingThread, taskId: TASK, senderUserId: CLIENT, recipientIds: [HELPER] }, createdAt: at.toISOString() });
+      await dispatchNotifications(db, at, 10_000);
+    };
+    const ofThread = async () => (await db.select().from(notifications).where(and(eq(notifications.userId, HELPER), eq(notifications.type, 'message_received')))).filter((row) => row.target.kind === 'thread' && row.target.threadId === bookingThread);
+    await say(NIGHT, 'Are you still up?');
+    await run(NIGHT);
+    const [night] = (await ofThread()).filter((row) => !row.readAt);
+    expect(await deliveriesOf(night!.id)).toMatchObject({ email: { status: 'skipped', reason: 'own_quiet_hours' } });
+
+    const morning = new Date(EIGHT.getTime() + 30 * 60_000);
+    await say(morning, 'Good morning! Can you come at ten?');
+    const unread = (await ofThread()).filter((row) => !row.readAt);
+    // Still one entry for the conversation in the bell: the new one, which goes out.
+    expect(unread).toHaveLength(1);
+    expect(unread[0]!.id).not.toBe(night!.id);
+    await run(morning);
+    expect(await deliveriesOf(unread[0]!.id)).toMatchObject({ email: { status: 'sent' } });
+    expect(mine().filter((item) => item.channel === 'email')).toHaveLength(1);
+    await db.update(notifications).set({ readAt: morning }).where(eq(notifications.id, unread[0]!.id));
+    await db.update(threadParticipants).set({ lastReadAt: morning }).where(and(eq(threadParticipants.threadId, bookingThread), eq(threadParticipants.userId, HELPER)));
+    await quiet(false);
+  });
+
   it("shows the sender when the recipient's quiet hours end, only while they're on and the booking isn't soon", async () => {
     await quiet(true);
     expect((await getThreadPage(db, CLIENT, bookingThread, NIGHT))?.quietHours).toEqual({ until: '2027-03-03T14:00:00.000Z' });
@@ -266,6 +304,16 @@ describe('thank-you notes', () => {
     await setThanksShown(db, HELPER, noteId, false, NIGHT);
     expect(await publicThanksOf(db, HELPER)).toEqual([]);
     await setThanksShown(db, HELPER, noteId, true, NIGHT);
+    // The helper consented to the words they read (sweep 2026-11-24 A3): the name choice alone keeps it shown, new words
+    // take it off the profile until the helper shows it again.
+    const soon = new Date(NIGHT.getTime() + 3 * HOUR);
+    expect(await saveThanks(db, CLIENT, { bookingId: BOOKING, body: 'Thank you, Hal! Call me at 512-555-0199 anytime.', hideName: false }, soon)).toMatchObject({ ok: true, code: 'saved' });
+    expect((await publicThanksOf(db, HELPER)).map((note) => note.id)).toEqual([noteId]);
+    expect(await saveThanks(db, CLIENT, { bookingId: BOOKING, body: 'Thank you, Hal! Call me at 512-555-0199 anytime. See you in spring.' }, soon)).toMatchObject({ ok: true, code: 'saved' });
+    expect(await publicThanksOf(db, HELPER)).toEqual([]);
+    expect((await db.select({ shown: thankYouNotes.shownOnProfile, shownAt: thankYouNotes.shownAt }).from(thankYouNotes).where(eq(thankYouNotes.id, noteId)))[0]).toEqual({ shown: false, shownAt: null });
+    await setThanksShown(db, HELPER, noteId, true, NIGHT);
+    expect((await publicThanksOf(db, HELPER)).map((note) => note.id)).toEqual([noteId]);
   });
 
   it('can be reported, and staff can hide it (off the profile, and the helper no longer sees its words) and show it again', async () => {
@@ -292,5 +340,33 @@ describe('thank-you notes', () => {
     expect(await publicThanksOf(db, HELPER)).toEqual([]);
     expect((await getThreadPage(db, HELPER, bookingThread, new Date(NIGHT.getTime() + 30 * HOUR)))?.cards?.thanks).toBeUndefined();
     expect((await getThreadPage(db, CLIENT, bookingThread, new Date(NIGHT.getTime() + 30 * HOUR)))?.thanks).toMatchObject({ canWrite: true });
+    // Its line leaves the conversation too, as the delete dialog says (sweep 2026-11-24 A4).
+    const lines = await db.select().from(messages).where(and(eq(messages.threadId, bookingThread), sql`${messages.event}->>'type' = 'thanks_sent'`));
+    expect(lines).toEqual([]);
+  });
+
+  it('is never written across a block, and at most three new notes a booking in 30 days (sweep 2026-11-24 A4)', async () => {
+    const later = new Date(NIGHT.getTime() + 31 * HOUR);
+    const [row] = await db.select({ id: bookings.id, status: bookings.status, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId, confirmedAt: bookings.confirmedAt }).from(bookings).where(eq(bookings.id, BOOKING));
+    await db.insert(blocks).values({ blockerId: HELPER, blockedId: CLIENT });
+    try {
+      expect(await saveThanks(db, CLIENT, { bookingId: BOOKING, body: 'Thanks again, Hal.' }, later)).toMatchObject({ ok: false, code: 'not_allowed' });
+      // Neither the booking page nor the conversation offers it.
+      expect(await thanksPanelFor(db, CLIENT, row!, later)).toBeNull();
+      expect(await thanksPanelFor(db, HELPER, row!, later)).toBeNull();
+    } finally {
+      await db.delete(blocks).where(and(eq(blocks.blockerId, HELPER), eq(blocks.blockedId, CLIENT)));
+    }
+    expect(await thanksPanelFor(db, CLIENT, row!, later)).toMatchObject({ canWrite: true });
+    // The first note counted; two more may be written and deleted, then the next waits for the window.
+    for (const n of [1, 2]) {
+      expect(await saveThanks(db, CLIENT, { bookingId: BOOKING, body: `Thank you, take ${n}.` }, later)).toMatchObject({ ok: true, code: 'sent' });
+      const [note] = await db.select({ id: thankYouNotes.id }).from(thankYouNotes).where(eq(thankYouNotes.bookingId, BOOKING));
+      noteIds.push(note!.id);
+      expect(await deleteThanks(db, CLIENT, note!.id)).toMatchObject({ ok: true, code: 'updated' });
+    }
+    expect(await saveThanks(db, CLIENT, { bookingId: BOOKING, body: 'Thank you, take 3.' }, later)).toMatchObject({ ok: false, code: 'rate_limited', retryAt: expect.any(String) });
+    const lines = await db.select().from(messages).where(and(eq(messages.threadId, bookingThread), sql`${messages.event}->>'type' = 'thanks_sent'`));
+    expect(lines).toEqual([]);
   });
 });

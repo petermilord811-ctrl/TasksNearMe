@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDevBilling, type BillingProvider, type BillingSubscription } from '@/integrations/billing';
 import { subscriptionFromStripe } from '@/integrations/billing/stripe-billing';
@@ -80,8 +80,8 @@ async function termsOf(bookingId: string) {
 
 afterAll(async () => {
   // The legacy policy version goes, its bookings back on the current one.
-  if (policyVersionId) await db.update(bookings).set({ policyVersionId }).where(eq(bookings.policyVersionId, LEGACY_POLICY));
-  await db.delete(marketPolicies).where(eq(marketPolicies.id, LEGACY_POLICY));
+  if (policyVersionId) await db.update(bookings).set({ policyVersionId }).where(inArray(bookings.policyVersionId, [LEGACY_POLICY, `${LEGACY_POLICY}_noplans`]));
+  await db.delete(marketPolicies).where(inArray(marketPolicies.id, [LEGACY_POLICY, `${LEGACY_POLICY}_noplans`]));
   await db.delete(subscriptions).where(inArray(subscriptions.userId, [CLIENT, HELPER, SEARCHER]));
   await db.delete(billingCustomers).where(inArray(billingCustomers.userId, [CLIENT, HELPER, SEARCHER]));
   await db.delete(aiUsage).where(inArray(aiUsage.userId, [CLIENT, HELPER, SEARCHER]));
@@ -206,6 +206,24 @@ describe('plans', () => {
     // Then only what's left of the cap, then nothing this month.
     expect(await legacyBooking(3)).toMatchObject({ back: [100], rebate: [100] });
     expect(await legacyBooking(4)).toMatchObject({ back: [], rebate: [] });
+  });
+
+  it('pays back a booking whose policy version never stored its plans, as versions from before 2026-11-23 didn’t (sweep 2026-11-24, M4)', async () => {
+    // The real old versions: the service fees, and no plans (migration 0065 added the column unfilled). They read the
+    // plans of their time (half back, Plus up to $15 a month), not today's defaults, whose rebates are 0.
+    const [current] = await db.select().from(marketPolicies).where(eq(marketPolicies.id, policyVersionId));
+    // A version number well above every other (another file may publish "the latest + 1" meanwhile).
+    const [{ top }] = await db.select({ top: sql<number>`max(${marketPolicies.version})::int` }).from(marketPolicies).where(eq(marketPolicies.marketId, current!.marketId));
+    await db.insert(marketPolicies).values({ ...current!, id: `${LEGACY_POLICY}_noplans`, version: top + 500, status: 'retired', fees: { posterBps: 1000, posterMinCents: 300, helperBps: 1000 }, plans: null });
+    const bookingId = await completedBooking(6);
+    await db.update(bookings).set({ policyVersionId: `${LEGACY_POLICY}_noplans` }).where(eq(bookings.id, bookingId));
+    await db.update(bookingTerms).set({ breakdown: legacyDeskBreakdown }).where(eq(bookingTerms.bookingId, bookingId));
+    await recordCompletionMoney(db, bookingId, now, deps.payments);
+    const back = await db.select().from(refunds).where(and(eq(refunds.bookingId, bookingId), eq(refunds.reason, 'plan_rebate')));
+    const rebate = await db.select().from(earnings).where(and(eq(earnings.bookingId, bookingId), eq(earnings.kind, 'fee_rebate')));
+    // Half of each $6 fee: the month has used $4 of the $15 (Plus) and $40 (Pro) caps in the case before.
+    expect(back.map((row) => row.amountCents)).toEqual([300]);
+    expect(rebate.map((row) => row.amountCents)).toEqual([300]);
   });
 
   it('mirrors Stripe’s subscription from its events, and ignores ones that aren’t ours', async () => {

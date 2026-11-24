@@ -40,6 +40,7 @@ import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { isUniqueViolation } from '@/platform/db/errors';
 import { cancelIntents } from '@/modules/payments/cancel-intents';
+import { taskCopyFields } from '@/modules/tasks/copy';
 import { withCopySlug } from '@/modules/tasks/copy-slug';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
@@ -425,7 +426,7 @@ export async function acceptProposal(deps: BookingDeps, posterId: string, propos
     let taskId = current.taskId;
     if (!taskId) {
       taskId = newId('tsk');
-      const { id: _id, slug: _slug, createdAt: _created, updatedAt: _updated, publishedAt: _published, expiresAt: _expires, aiGenerationId: _ai, ...copy } = past.task;
+      const copy = taskCopyFields(past.task);
       const copyId = taskId;
       // In a savepoint, so a slug that's taken is tried again with another (repeats review #16).
       await withCopySlug(past.task.slug, (slug) =>

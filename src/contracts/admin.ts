@@ -379,6 +379,8 @@ export const REFUND_REQUEST_REASONS = [...STAFF_REFUND_REASONS, 'case_resolution
 export type RefundRequestReason = (typeof REFUND_REQUEST_REASONS)[number];
 
 export interface AdminBookingMoney {
+  /** How the helper is paid (2026-11-23): `direct` moves no money through TasksNearMe, so nothing is charged or held. */
+  paymentMode: 'direct' | 'held';
   /** The agreed numbers (current terms). */
   breakdown: PriceBreakdown;
   /** The final numbers once completed. */

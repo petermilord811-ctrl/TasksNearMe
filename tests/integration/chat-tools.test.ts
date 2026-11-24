@@ -11,7 +11,8 @@ import { acceptMessageRequest, searchConversation, setConversationFlag } from '@
 import { noteSampleRecipient } from '@/modules/messaging/samples';
 import { messages, threadParticipants, threads } from '@/modules/messaging/schema';
 import { getInbox, getThreadPage, sendMessage, unreadMessageCount } from '@/modules/messaging/service';
-import { planNotifications } from '@/modules/notifications/service';
+import { dispatchNotifications, planNotifications } from '@/modules/notifications/service';
+import { notificationDeliveries, notifications } from '@/modules/notifications/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { rateLimits } from '@/platform/rate-limit/schema';
@@ -31,7 +32,10 @@ const BEN = 'usr_tmp_ct_ben';
 const CAL = 'usr_tmp_ct_cal';
 const STAFF = 'usr_tmp_ct_staff';
 const DEE = 'usr_tmp_ct_dee';
-const PEOPLE = [ANA, BEN, CAL, STAFF, DEE];
+/** A helper and a client who talk only in the sweep's tests below, so each conversation there is their first. */
+const HAL = 'usr_tmp_ct_hal';
+const IVY = 'usr_tmp_ct_ivy';
+const PEOPLE = [ANA, BEN, CAL, STAFF, DEE, HAL, IVY];
 const now = new Date();
 let key = 0;
 const requestKey = () => `00000000-0000-4000-8000-${String(++key).padStart(12, '0')}`;
@@ -53,6 +57,8 @@ beforeAll(async () => {
     { ...maya!, id: CAL, email: 'tmp-ct-cal@example.test', name: 'Cal C.', firstName: 'Cal', lastName: 'Cruz', phone: '+15125550783', directMessages: 'everyone', locale: 'en' },
     { ...maya!, id: STAFF, email: 'tmp-ct-staff@example.test', name: 'Sky S.', firstName: 'Sky', lastName: 'Stone', phone: '+15125550784', directMessages: 'everyone', locale: 'en' },
     { ...maya!, id: DEE, email: 'tmp-ct-dee@example.test', name: 'Dee D.', firstName: 'Dee', lastName: 'Dunn', phone: '+15125550785', directMessages: 'everyone', locale: 'en' },
+    { ...maya!, id: HAL, email: 'tmp-ct-hal@example.test', name: 'Hal H.', firstName: 'Hal', lastName: 'Hart', phone: '+15125550786', directMessages: 'everyone', locale: 'en' },
+    { ...maya!, id: IVY, email: 'tmp-ct-ivy@example.test', name: 'Ivy I.', firstName: 'Ivy', lastName: 'Ives', phone: '+15125550787', directMessages: 'everyone', locale: 'en' },
   ]);
   await db.insert(usernames).values([
     { userId: ANA, username: 'tmpct_ana' },
@@ -70,6 +76,8 @@ afterAll(async () => {
     await db.delete(threadParticipants).where(inArray(threadParticipants.threadId, ids));
     await db.delete(threads).where(inArray(threads.id, ids));
   }
+  await db.delete(notificationDeliveries).where(inArray(notificationDeliveries.userId, PEOPLE));
+  await db.delete(notifications).where(inArray(notifications.userId, PEOPLE));
   await db.delete(invites).where(or(inArray(invites.posterUserId, PEOPLE), inArray(invites.helperUserId, PEOPLE)));
   await db.delete(tasks).where(inArray(tasks.posterUserId, PEOPLE));
   await db.delete(helperProfiles).where(inArray(helperProfiles.userId, PEOPLE));
@@ -228,7 +236,7 @@ describe('task request cards', () => {
       createdAt: now,
       updatedAt: now,
     });
-    expect(await postInDirectThread(db, ANA, CAL, { type: 'invite_sent', params: { inviteId } }, later(1000), ANA)).toBe(id);
+    expect((await postInDirectThread(db, ANA, CAL, { type: 'invite_sent', params: { inviteId } }, later(1000), ANA))?.threadId).toBe(id);
     const rows = await db.select({ id: messages.id, kind: messages.kind, event: messages.event }).from(messages).where(eq(messages.threadId, id));
     const forHelper = await cardsFor(db, CAL, rows, later(2000));
     expect(forHelper?.requests?.[inviteId]).toMatchObject({ viewerRole: 'helper', status: 'sent', actions: ['accept', 'decline'], pricing: { type: 'fixed', priceCents: 6000 }, href: `/app/offers?invite=${inviteId}` });
@@ -272,5 +280,52 @@ describe('the conversation\'s "+": asking for an offer', () => {
     // Cal hears it as a message from Ana.
     const [event] = await db.select({ payload: outboxEvents.payload }).from(outboxEvents).where(and(eq(outboxEvents.aggregateId, id), eq(outboxEvents.type, 'message.sent'))).orderBy(outboxEvents.createdAt);
     expect(event).toBeDefined();
+  });
+});
+
+describe('sweep 2026-11-24: cards and reading', () => {
+  it("tells the helper about an ask for an offer, counts it as the client's answer, and brings the conversation back from Archived (C4, C7, C12)", async () => {
+    const [profile] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, 'usr_jordan'));
+    await db.insert(helperProfiles).values({ ...profile!, userId: HAL, handle: 'tmp-ct-hal', status: 'active', foundingNumber: null, completedCount: 0 });
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    const taskId = 'tsk_tmp_ct_ask_ivy';
+    const day = (ms: number) => later(ms);
+    const windowStart = later(3 * 86_400_000);
+    await db.insert(tasks).values({ ...desk!, id: taskId, slug: `${taskId}-slug`, posterUserId: IVY, status: 'open', offerCount: 0, version: 1, requestKey: null, expiresAt: later(5 * 86_400_000), windowStart, windowEnd: new Date(windowStart.getTime() + 6 * 3_600_000) });
+    // Hal, a helper, writes first: three messages, then he waits for Ivy's answer.
+    const id = await threadOf(HAL, IVY);
+    for (const [index, body] of ['I do desks too.', 'Happy to help this week.'].entries()) expect((await sendMessage(db, HAL, id, { body, attachmentIds: [] }, day(1000 + index))).ok).toBe(true);
+    expect(await sendMessage(db, HAL, id, { body: 'Still there?', attachmentIds: [] }, day(2000))).toMatchObject({ ok: false, code: 'limit_reached' });
+    await setConversationFlag(db, HAL, id, { flag: 'archived', on: true }, day(2500));
+
+    // Ivy answers with the "+": ask Hal for an offer.
+    expect(await askForOffer(db, IVY, id, { taskId }, day(80_000))).toEqual({ ok: true, code: 'sent' });
+    // C7: back in Hal's list, as a message would bring it.
+    expect((await getInbox(db, HAL, day(81_000))).threads.find((thread) => thread.id === id)?.archived).toBeUndefined();
+    // C4: Hal is told ("sent you a message"), though the card's line has no sender of its own.
+    await dispatchNotifications(db, day(82_000), 10_000);
+    const told = await db.select({ id: notifications.id, target: notifications.target }).from(notifications).where(and(eq(notifications.userId, HAL), eq(notifications.type, 'message_received')));
+    expect(told.some((row) => row.target.kind === 'thread' && row.target.threadId === id)).toBe(true);
+    // C7: archived again, the badge leaves it out (the list hides it).
+    const shown = await unreadMessageCount(db, HAL);
+    await setConversationFlag(db, HAL, id, { flag: 'archived', on: true }, day(83_000));
+    expect(await unreadMessageCount(db, HAL)).toBe(shown - 1);
+    await setConversationFlag(db, HAL, id, { flag: 'archived', on: false }, day(83_500));
+    // C12: the ask answered him, so Hal may write again.
+    expect((await getThreadPage(db, HAL, id, day(84_000)))?.composer).toMatchObject({ canSend: true });
+    expect((await sendMessage(db, HAL, id, { body: 'Sending you an offer now.', attachmentIds: [] }, day(85_000))).ok).toBe(true);
+  });
+
+  it('peeks at a conversation without reading it: its unread count stays, and nothing reads as read (C1)', async () => {
+    const id = await threadOf(ANA, IVY);
+    const before = (await db.select({ lastReadAt: threadParticipants.lastReadAt }).from(threadParticipants).where(and(eq(threadParticipants.threadId, id), eq(threadParticipants.userId, IVY))))[0]!;
+    const peeked = await getThreadPage(db, IVY, id, later(90_000), { peek: true });
+    expect(peeked?.thread.unreadCount).toBe(1);
+    const after = (await db.select({ lastReadAt: threadParticipants.lastReadAt }).from(threadParticipants).where(and(eq(threadParticipants.threadId, id), eq(threadParticipants.userId, IVY))))[0]!;
+    expect(after.lastReadAt).toEqual(before.lastReadAt);
+    expect((await getInbox(db, IVY, later(91_000))).threads.find((thread) => thread.id === id)?.unreadCount).toBe(1);
+    // Opened: read.
+    expect((await getThreadPage(db, IVY, id, later(92_000)))?.thread.unreadCount).toBe(0);
+    expect((await getInbox(db, IVY, later(93_000))).threads.find((thread) => thread.id === id)?.unreadCount).toBe(0);
   });
 });

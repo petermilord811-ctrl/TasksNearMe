@@ -138,6 +138,19 @@ describe('deadlines and needing action', () => {
     expect(bookingNextStep({ ...confirmed, remote: true }, 'helper', start)).toBeUndefined();
     expect(bookingNextStep({ ...confirmed, arrivedAt: start }, 'helper', start)).toBeUndefined();
   });
+
+  it("tells the client when the helper hasn't checked in by the no-show time, however long ago (sweep 2026-11-24)", () => {
+    // Nothing before the no-show time (30 min, or the market's own), later by a late update's minutes.
+    expect(bookingNextStep(confirmed, 'poster', at('2026-11-21T16:59:00.000Z'))).toBeUndefined();
+    expect(bookingNextStep(confirmed, 'poster', at('2026-11-21T17:00:00.000Z'))).toEqual({ kind: 'no_show_check', dueAt: start.toISOString() });
+    expect(bookingNextStep({ ...confirmed, noShowMinutes: 45 }, 'poster', at('2026-11-21T17:00:00.000Z'))).toBeUndefined();
+    expect(bookingNextStep({ ...confirmed, lateByMinutes: 20 }, 'poster', at('2026-11-21T17:10:00.000Z'))).toBeUndefined();
+    // Five days later it still asks (it used to sit in Upcoming with nothing to do).
+    expect(bookingNextStep(confirmed, 'poster', at('2026-11-26T16:30:00.000Z'))).toEqual({ kind: 'no_show_check', dueAt: start.toISOString() });
+    // Not once they arrived, nor for remote work.
+    expect(bookingNextStep({ ...confirmed, arrivedAt: at('2026-11-21T16:25:00.000Z') }, 'poster', at('2026-11-21T18:00:00.000Z'))).toBeUndefined();
+    expect(bookingNextStep({ ...confirmed, remote: true }, 'poster', at('2026-11-21T18:00:00.000Z'))).toBeUndefined();
+  });
 });
 
 describe('sheet actions', () => {

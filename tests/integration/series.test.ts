@@ -55,7 +55,9 @@ async function pastYardBooking(): Promise<void> {
   const policy = await getPublishedPolicy('mkt_austin', db);
   if (!yard || !policy) throw new Error('The seeded yard task or the Austin policy is missing');
   const when = new Date(start.getTime() - 21 * DAY);
-  await db.insert(tasks).values({ ...yard, id: PAST_TASK, slug: `${PAST_TASK}-slug`, status: 'completed', windowStart: when, windowEnd: new Date(when.getTime() + 3 * HOUR), offerCount: 0, version: 1 });
+  // A wizard post carries a request key (unique per client): every visit copies the task, so a copy that kept the key
+  // was refused (sweep 2026-11-24, M1).
+  await db.insert(tasks).values({ ...yard, id: PAST_TASK, slug: `${PAST_TASK}-slug`, status: 'completed', windowStart: when, windowEnd: new Date(when.getTime() + 3 * HOUR), offerCount: 0, version: 1, requestKey: `rk_${PAST_TASK}` });
   await db.insert(bookings).values({ id: PAST, taskId: PAST_TASK, posterUserId: 'usr_ben', helperUserId: 'usr_jordan', marketId: 'mkt_austin', policyVersionId: policy.id, status: 'completed', completedVia: 'poster', startAt: when, confirmedAt: when, completedAt: new Date(when.getTime() + 4 * HOUR) });
   const pricing = { type: 'fixed' as const, priceCents: 12_000 };
   await db.insert(bookingTerms).values({ id: 'btm_srs_past', bookingId: PAST, version: 1, pricingType: 'fixed', priceCents: 12_000, breakdown: quoteBreakdown(policy.fees, pricing), scopeText: yard.description, startAt: when });

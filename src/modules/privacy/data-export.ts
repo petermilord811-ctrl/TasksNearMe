@@ -3,7 +3,7 @@ import { createTranslator } from 'next-intl';
 import { localeOrDefault } from '@/contracts';
 import { messagesFor, perLocale } from '@/i18n/catalog';
 import { accounts, agreements, passkeys, sessions, usernames, users } from '@/modules/accounts/schema';
-import { availabilityPosts } from '@/modules/availability/schema';
+import { availabilityPosts, neighborhoodDays } from '@/modules/availability/schema';
 import { bookings } from '@/modules/bookings/schema';
 import { earnings, payouts } from '@/modules/earnings/schema';
 import { invites } from '@/modules/invites/schema';
@@ -16,7 +16,11 @@ import { helperProfiles, helperServices, helperWorkSamples } from '@/modules/pro
 import { reviews, savedHelpers } from '@/modules/reviews/schema';
 import { rewardGrants } from '@/modules/rewards/schema';
 import { supportCases } from '@/modules/support/schema';
-import { communityPosts, communityReplies, neighborGroupMessages, neighborGroups } from '@/modules/community/schema';
+import { communityEdits, communityPosts, communityReplies, communityWelcomes, neighborGroupMembers, neighborGroupMessages, neighborGroups } from '@/modules/community/schema';
+import { bookingFollowers } from '@/modules/followers/schema';
+import { notificationQuietHours } from '@/modules/notifications/schema';
+import { bookingTeams } from '@/modules/teams/schema';
+import { thankYouNotes } from '@/modules/thanks/schema';
 import { taskQuestions } from '@/modules/questions/schema';
 import { savedSearches } from '@/modules/searches/schema';
 import { savedReplies } from '@/modules/messaging/schema';
@@ -213,7 +217,37 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
     db.select().from(savedReplies).where(eq(savedReplies.userId, userId)).orderBy(asc(savedReplies.createdAt)),
   ]);
 
+  // Added since 2026-11-22 (sweep 2026-11-24 A7): thank-you notes both ways, quiet hours, building and street groups,
+  // family follows both ways, team-ups, neighborhood days, earlier wording of their edited posts and replies, and the
+  // move that brought a welcome. Other people's words are masked as everywhere here.
+  const [notesWritten, notesReceived, [quietRow], memberRows, followingRows, followerRows, teamRows, dayRows, editRows, [welcomeRow]] = await Promise.all([
+    db.select().from(thankYouNotes).where(eq(thankYouNotes.authorUserId, userId)).orderBy(asc(thankYouNotes.createdAt)),
+    db.select().from(thankYouNotes).where(eq(thankYouNotes.helperUserId, userId)).orderBy(asc(thankYouNotes.createdAt)),
+    db.select().from(notificationQuietHours).where(eq(notificationQuietHours.userId, userId)).limit(1),
+    db
+      .select({ name: neighborGroups.name, kind: neighborGroups.kind, role: neighborGroupMembers.role, joinedAt: neighborGroupMembers.joinedAt, mutedAt: neighborGroupMembers.mutedAt })
+      .from(neighborGroupMembers)
+      .innerJoin(neighborGroups, eq(neighborGroups.id, neighborGroupMembers.groupId))
+      .where(eq(neighborGroupMembers.userId, userId))
+      .orderBy(asc(neighborGroupMembers.joinedAt)),
+    db.select().from(bookingFollowers).where(eq(bookingFollowers.followerUserId, userId)).orderBy(asc(bookingFollowers.createdAt)),
+    db.select().from(bookingFollowers).where(eq(bookingFollowers.addedByUserId, userId)).orderBy(asc(bookingFollowers.createdAt)),
+    db.select().from(bookingTeams).where(or(eq(bookingTeams.leadUserId, userId), eq(bookingTeams.partnerUserId, userId), eq(bookingTeams.clientUserId, userId))).orderBy(asc(bookingTeams.createdAt)),
+    db.select().from(neighborhoodDays).where(eq(neighborhoodDays.helperUserId, userId)).orderBy(asc(neighborhoodDays.day)),
+    db.select().from(communityEdits).where(eq(communityEdits.editorUserId, userId)).orderBy(asc(communityEdits.createdAt)),
+    db.select().from(communityWelcomes).where(eq(communityWelcomes.userId, userId)).limit(1),
+  ]);
+  const areaIds = [...new Set([user.homeAreaId, welcomeRow?.areaId, ...dayRows.map((row) => row.areaId)].filter((id): id is string => Boolean(id)))];
+  const areaName = new Map(areaIds.length ? (await db.select({ id: areas.id, name: areas.name }).from(areas).where(inArray(areas.id, areaIds))).map((row) => [row.id, row.name]) : []);
+  const teamTaskIds = teamRows.map((row) => row.taskId).filter((id) => !titleOf.has(id));
+  if (teamTaskIds.length) for (const row of await db.select({ id: tasks.id, title: tasks.title }).from(tasks).where(inArray(tasks.id, teamTaskIds))) titleOf.set(row.id, row.title);
+
   await nameOf([
+    ...notesWritten.map((row) => row.helperUserId),
+    ...notesReceived.map((row) => row.authorUserId),
+    ...followingRows.map((row) => row.addedByUserId),
+    ...followerRows.map((row) => row.followerUserId),
+    ...teamRows.flatMap((row) => [row.clientUserId, row.leadUserId, row.partnerUserId]),
     ...offersReceived.map((row) => row.helperUserId),
     ...inviteRows.flatMap((row) => [row.posterUserId, row.helperUserId]),
     ...bookingRows.flatMap((row) => [row.posterUserId, row.helperUserId]),
@@ -246,7 +280,13 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
       termsVersion: user.termsVersion,
       adultAttestedAt: iso(user.adultAttestedAt),
       signInMethods: [{ method: t('emailCode'), since: iso(user.createdAt) }, ...signIns.filter((row) => row.provider !== 'credential').map((row) => ({ method: row.provider, since: iso(row.createdAt) }))],
+      homeNeighborhood: user.homeAreaId ? (areaName.get(user.homeAreaId) ?? null) : null,
+      // Their choices: who may message them, whether "Active today" shows, and what a helper profile shares.
+      directMessages: user.directMessages,
+      showActivity: user.showActivity,
+      contactSharing: user.contactSharing,
     },
+    quietHours: quietRow ? { enabled: quietRow.enabled, startsAt: quietRow.startsAt, endsAt: quietRow.endsAt, updatedAt: iso(quietRow.updatedAt) } : null,
     signedIn: sessionRows.map((row) => ({ browser: row.browser, ip: row.ip, since: iso(row.createdAt), until: iso(row.expiresAt) })),
     passkeys: passkeyRows.map((row) => ({ name: row.name, device: row.deviceType, backedUp: row.backedUp, addedAt: iso(row.createdAt) })),
     notificationDevices: pushRows.map((row) => ({ browser: row.browser, addedAt: iso(row.createdAt), lastSentAt: iso(row.lastSentAt) })),
@@ -272,6 +312,7 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
         }
       : null,
     availability: availabilityRows.map((row) => ({ category: categoryOf.get(row.categoryId) ?? row.categoryId, start: iso(row.startAt), end: iso(row.endAt), pricing: pricingOf(row), status: row.status })),
+    neighborhoodDays: dayRows.map((row) => ({ day: row.day, neighborhood: areaName.get(row.areaId) ?? null, category: categoryOf.get(row.categoryId) ?? row.categoryId, priceCents: row.priceCents, neighborPriceCents: row.neighborPriceCents, status: row.status, openedAt: iso(row.createdAt), canceledAt: iso(row.canceledAt) })),
     verification: {
       identity: identityRows.map((row) => ({ provider: row.provider, status: row.status, failureReason: row.failureReason, verifiedAt: iso(row.verifiedAt), startedAt: iso(row.createdAt) })),
       // Our own ID check (stage 1): what was sent and decided, never the photos or staff notes.
@@ -315,6 +356,21 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
       cancelReason: row.cancelReason,
     })),
     savedAndHiddenTasks: marks.map((row) => ({ task: titleOf.get(row.taskId) ?? row.taskId, mark: row.kind, at: iso(row.createdAt) })),
+    familyFollowing: followingRows.map((row) => ({ booking: row.bookingId, addedBy: who(row.addedByUserId), since: iso(row.createdAt), endedAt: iso(row.endedAt) })),
+    familyFollowers: followerRows.map((row) => ({ booking: row.bookingId, follower: who(row.followerUserId), since: iso(row.createdAt), endedAt: iso(row.endedAt), endedBy: row.endedBy })),
+    teamUps: teamRows.map((row) => ({
+      task: titleOf.get(row.taskId) ?? null,
+      role: row.leadUserId === userId ? 'lead' : row.partnerUserId === userId ? 'partner' : 'client',
+      lead: who(row.leadUserId),
+      partner: who(row.partnerUserId),
+      client: who(row.clientUserId),
+      pricing: pricingOf(row),
+      note: row.leadUserId === userId ? row.note : hide(row.note),
+      status: row.status,
+      invitedAt: iso(row.createdAt),
+      confirmedAt: iso(row.confirmedAt),
+      closedAt: iso(row.closedAt),
+    })),
     payments: paymentRows.map((row) => ({ booking: row.bookingId, purpose: row.purpose, amountCents: row.amountCents, status: row.status, card: row.methodLast4 ? (row.methodBrand ? t('card', { brand: row.methodBrand, last4: row.methodLast4 }) : t('cardWithoutBrand', { last4: row.methodLast4 })) : null, at: iso(row.createdAt) })),
     plans: planRows.map((row) => ({ plan: row.plan, interval: row.interval, priceCents: row.priceCents, status: row.status, periodEnd: iso(row.currentPeriodEnd), cancelAtPeriodEnd: row.cancelAtPeriodEnd, endedAt: iso(row.endedAt), at: iso(row.createdAt) })),
     // Sparks bought (2026-11-21); earned ones are counted from the posts, reactions, bookings and reviews above.
@@ -327,6 +383,9 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
     rewards: rewardRows.map((row) => ({ program: row.program, amountCents: row.amountCents, status: row.status, earnedAt: iso(row.createdAt), deliveredAt: iso(row.deliveredAt) })),
     reviewsWritten: reviewsWritten.map((row) => ({ about: who(row.subjectUserId), booking: row.bookingId, rating: row.rating, tags: row.tags, text: row.body, status: row.status, publishedAt: iso(row.publishedAt), writtenAt: iso(row.createdAt) })),
     reviewsAboutYou: reviewsAbout.map((row) => ({ from: who(row.authorUserId), booking: row.bookingId, rating: row.rating, tags: row.tags, text: hide(row.body), publishedAt: iso(row.publishedAt) })),
+    thankYouNotesWritten: notesWritten.map((row) => ({ to: who(row.helperUserId), booking: row.bookingId, text: row.body, nameHidden: row.hideName, shownOnProfile: row.shownOnProfile, hiddenByUs: row.hiddenAt !== null, writtenAt: iso(row.createdAt) })),
+    // A note our team hid isn't shown to the helper in the app either, so its words stay out here too.
+    thankYouNotesReceived: notesReceived.map((row) => ({ from: who(row.authorUserId), booking: row.bookingId, text: row.hiddenAt ? null : hide(row.body), shownOnProfile: row.shownOnProfile && row.hiddenAt === null, receivedAt: iso(row.createdAt) })),
     savedHelpers: savedRows.map((row) => ({ helper: who(row.helperUserId), savedAt: iso(row.createdAt) })),
     blocked: blockRows.map((row) => ({ person: who(row.blockedId), since: iso(row.createdAt) })),
     messages: messageRows
@@ -338,6 +397,10 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
       posts: postRows.map((row) => ({ kind: row.kind, title: row.title, body: row.body, status: row.status, postedAt: iso(row.createdAt) })),
       replies: replyRows.map((row) => ({ body: row.body, status: row.status, repliedAt: iso(row.createdAt) })),
       groupMessages: groupMessageRows.map((row) => ({ group: row.group, body: row.body, status: row.status, sentAt: iso(row.createdAt) })),
+      groups: memberRows.map((row) => ({ group: row.name, kind: row.kind, role: row.role, joinedAt: iso(row.joinedAt), mutedAt: iso(row.mutedAt) })),
+      // What their posts and replies said before they edited them.
+      earlierWording: editRows.map((row) => ({ kind: row.targetKind, title: row.title, body: row.body, replacedAt: iso(row.createdAt) })),
+      welcome: welcomeRow ? { neighborhood: welcomeRow.areaId ? (areaName.get(welcomeRow.areaId) ?? null) : null, movedAt: iso(welcomeRow.movedAt), dismissedAt: iso(welcomeRow.dismissedAt) } : null,
     },
     taskQuestions: questionRows.map(({ question, title }) => ({ task: title, question: question.body, answer: question.answerBody, status: question.status, askedAt: iso(question.createdAt) })),
     savedSearches: searchRows.map((row) => ({ name: row.name, filters: row.params, alerts: row.alert, savedAt: iso(row.createdAt) })),

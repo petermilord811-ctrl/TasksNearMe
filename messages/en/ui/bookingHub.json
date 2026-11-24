@@ -109,7 +109,9 @@
       "rework": "Follow-up work arranged",
       "goodwill_refund": "Goodwill refund issued",
       "account_action": "Account action taken",
-      "reward_action": "Reward updated"
+      "reward_action": "Reward updated",
+      "closed_done": "Closed: the work counts as done",
+      "closed_not_done": "Closed: the booking was canceled"
     }
   },
   "helper": "Your helper",

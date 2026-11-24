@@ -79,13 +79,15 @@
     "title": "Reportar una ausencia",
     "intro": "{helper} no ha llegado.",
     "terms": "Al reportar una ausencia, esta reserva se cancela. Recibirás un reembolso completo y soporte verá tu reporte.",
-    "submit": "Reportar una ausencia"
+    "submit": "Reportar una ausencia",
+    "termsDirect": "Reportar una ausencia cancela esta reserva, y soporte verá tu reporte. Le pagas a tu ayudante directamente, así que no hay nada que reembolsar: no pagues por un trabajo que no se hizo."
   },
   "cantAccess": {
     "title": "¿No puedes entrar?",
     "intro": "Avisa a {client} que estás esperando para entrar.",
     "terms": "Tu cliente tiene 30 minutos para responder. Si no responde, la reserva se cancela y recibes el monto por cancelación tardía.",
-    "submit": "Reportar que no puedo entrar"
+    "submit": "Reportar que no puedo entrar",
+    "termsDirect": "Tu cliente tiene 30 minutos para responder. Si no responde, la reserva se cancela. Te pagan directamente, así que cualquier pago por el viaje queda entre tú y tu cliente; soporte verá tu reporte."
   },
   "safety": {
     "emergency": "¿Estás en peligro? Llama al 911",

@@ -60,6 +60,8 @@ export interface BookingFacts {
   otherDeleted?: boolean;
   /** Paid directly between the two people (2026-11-23): no money moves here, so no money actions. Default held. */
   paymentMode?: 'direct' | 'held';
+  /** The market's no-show time the booking was made under (minutes after the start); 30 when not read. */
+  noShowMinutes?: number;
 }
 
 /** Actions that move money through TasksNearMe: none for a booking paid directly (owner, 2026-11-23). */
@@ -229,6 +231,11 @@ export function bookingNextStep(booking: BookingFacts, role: BookingViewerRole, 
     // Paid later, and the charge failed: the client pays on the page before the deadline.
     if (booking.status === 'scheduled' && booking.fundingFailure) return { kind: 'pay', ...(booking.fundingExpiresAt ? { dueAt: booking.fundingExpiresAt.toISOString() } : {}) };
     if (booking.status === 'completion_submitted') return { kind: 'review_work', ...(booking.approvalDueAt ? { dueAt: booking.approvalDueAt.toISOString() } : {}) };
+    // The helper hasn't checked in or sent word by the no-show time (a late update moves it): the client hears it here,
+    // where the booking used to sit in Upcoming with nothing to do, however long ago it was due (sweep 2026-11-24).
+    if (booking.status === 'confirmed' && !booking.remote && !booking.arrivedAt && now.getTime() >= booking.startAt.getTime() + ((booking.noShowMinutes ?? 30) + (booking.lateByMinutes ?? 0)) * MINUTE) {
+      return { kind: 'no_show_check', dueAt: booking.startAt.toISOString() };
+    }
     return undefined;
   }
   if (booking.status === 'confirmed' && !booking.remote && !booking.arrivedAt && now.getTime() >= booking.startAt.getTime() - ON_MY_WAY_LEAD_MS) {

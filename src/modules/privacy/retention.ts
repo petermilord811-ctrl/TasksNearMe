@@ -3,6 +3,7 @@ import type { FileStorage } from '@/integrations/storage';
 import { pruneContactReverts } from '@/modules/accounts/contact-revert';
 import { sessions, verifications } from '@/modules/accounts/schema';
 import { bookingCompletionPhotos, bookingExpenses } from '@/modules/bookings/schema';
+import { communityEdits, neighborGroupMessages } from '@/modules/community/schema';
 import { messages } from '@/modules/messaging/schema';
 import { files, taskLocations, taskPhotos } from '@/modules/tasks/schema';
 import { addressVerifications } from '@/modules/verification/schema';
@@ -15,7 +16,9 @@ import { rateLimits } from '@/platform/rate-limit/schema';
  * - exact addresses: deleted 180 days after the last booking there (or after the task closed, when it was
  *   never booked); never while a task or booking there is open, a support case about it is open, or a
  *   rebooking proposal from it waits. The row stays (tasks point at it), without the address;
- * - messages: a conversation's messages and their attachments, 2 years after its last message;
+ * - messages: a conversation's messages and their attachments, 2 years after its last message; a building or street
+ *   group's messages likewise, 2 years after the group's last message (sweep 2026-11-24 A8);
+ * - the earlier wording of an edited community post or reply: 2 years after the edit (sweep 2026-11-24 A8);
  * - completion photos and receipts: 2 years after the booking finished;
  * - task photos (pictures of homes): 2 years after the task closed (ab, 2026-11-21);
  * - a deleted account's verified home address: 2 years after its last booking (ab, 2026-11-21); a banned account's stays;
@@ -28,7 +31,7 @@ import { rateLimits } from '@/platform/rate-limit/schema';
  * backlog clears over a few runs without a long transaction.
  */
 
-export const RETENTION_RULES = { addressDays: 180, messageYears: 2, completionFileYears: 2, taskPhotoYears: 2, deletedAccountAddressYears: 2, auditYears: 7 } as const;
+export const RETENTION_RULES = { addressDays: 180, messageYears: 2, completionFileYears: 2, taskPhotoYears: 2, deletedAccountAddressYears: 2, communityEditYears: 2, auditYears: 7 } as const;
 
 const DAY_MS = 86_400_000;
 const YEAR_MS = 365 * DAY_MS;
@@ -107,6 +110,55 @@ export async function sweepMessages(db: Db, deps: RetentionDeps, now: Date, { li
   await db.delete(messages).where(inArray(messages.threadId, threadIds));
   await deleteFiles(db, deps, attachmentIds);
   return rows.length;
+}
+
+/**
+ * Building and street groups' messages (sweep 2026-11-24 A8: they were kept forever, deleted and removed ones with their
+ * words): every message of a group 2 years after its last one, as with a conversation, never while a case about one of
+ * them is open.
+ */
+export async function sweepGroupMessages(db: Db, now: Date, { limit = 100, only }: { limit?: number; only?: string[] } = {}): Promise<number> {
+  const cutoff = new Date(now.getTime() - RETENTION_RULES.messageYears * YEAR_MS);
+  const groupIds = idsOf(
+    await db.execute(sql`
+      select g.id from neighbor_groups g
+      where exists (select 1 from neighbor_group_messages m where m.group_id = g.id)
+        ${only ? sql`and g.id in ${only}` : sql``}
+        and not exists (select 1 from neighbor_group_messages m where m.group_id = g.id and m.created_at >= ${cutoff})
+        and not exists (
+          select 1 from support_cases c join neighbor_group_messages m on m.id = c.context ->> 'groupMessageId'
+          where m.group_id = g.id and c.status not in ${CLOSED_CASE}
+        )
+      limit ${limit}
+    `),
+  );
+  if (groupIds.length === 0) return 0;
+  const gone = await db.delete(neighborGroupMessages).where(inArray(neighborGroupMessages.groupId, groupIds)).returning({ id: neighborGroupMessages.id });
+  return gone.length;
+}
+
+/**
+ * What a community post or reply said before its author edited it (kept so a report can be read as it was written):
+ * 2 years after the edit, never while a case about that post or reply is open (sweep 2026-11-24 A8).
+ */
+export async function sweepCommunityEdits(db: Db, now: Date, { limit = 200, only }: { limit?: number; only?: string[] } = {}): Promise<number> {
+  const cutoff = new Date(now.getTime() - RETENTION_RULES.communityEditYears * YEAR_MS);
+  const due = idsOf(
+    await db.execute(sql`
+      select e.id from community_edits e
+      where e.created_at < ${cutoff}
+        ${only ? sql`and e.id in ${only}` : sql``}
+        and not exists (
+          select 1 from support_cases c
+          where c.status not in ${CLOSED_CASE}
+            and ((e.target_kind = 'post' and c.context ->> 'postId' = e.target_id) or (e.target_kind = 'reply' and c.context ->> 'replyId' = e.target_id))
+        )
+      limit ${limit}
+    `),
+  );
+  if (due.length === 0) return 0;
+  await db.delete(communityEdits).where(inArray(communityEdits.id, due));
+  return due.length;
 }
 
 /**
@@ -234,6 +286,8 @@ export async function runRetention(db: Db, deps: RetentionDeps, now: Date) {
   return {
     addresses: await sweepAddresses(db, now),
     messages: await sweepMessages(db, deps, now),
+    groupMessages: await sweepGroupMessages(db, now),
+    communityEdits: await sweepCommunityEdits(db, now),
     completionFiles: await sweepCompletionFiles(db, deps, now),
     taskPhotos: await sweepTaskPhotos(db, deps, now),
     deletedAccountAddresses: await sweepDeletedAccountAddresses(db, now),

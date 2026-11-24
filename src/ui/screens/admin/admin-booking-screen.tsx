@@ -87,6 +87,8 @@ export function AdminBookingContent({ data, handlers, now, ...previewState }: Ad
       {data.checklist && <HelperChecklist checklist={data.checklist} />}
       <section className="space-y-4" aria-label={t('money')}>
         <h2 className="font-display text-xl leading-7 font-semibold tracking-[-0.02em]">{t('money')}</h2>
+        {/* Paid directly, the charged and refunded zeros aren't missing money (sweep 2026-11-24, M5). */}
+        {data.money.paymentMode === 'direct' && <p className="rounded-xl border border-callout-border bg-callout px-4 py-3 text-sm text-callout-foreground">{t('paidDirectly')}</p>}
         <dl className="grid grid-cols-2 gap-4 rounded-2xl border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.07]">
           <div className="space-y-1"><dt className="text-sm text-muted-foreground">{t('charged')}</dt><dd className="font-display text-[1.625rem] leading-8 font-semibold tracking-[-0.02em] tabular-nums">{formatMoney(data.money.chargedCents)}</dd></div>
           <div className="space-y-1"><dt className="text-sm text-muted-foreground">{t('refunded')}</dt><dd className="font-display text-[1.625rem] leading-8 font-semibold tracking-[-0.02em] tabular-nums">{formatMoney(data.money.refundedCents)}</dd></div>

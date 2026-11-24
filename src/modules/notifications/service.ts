@@ -45,7 +45,7 @@ import { computeOnboarding } from '@/modules/verification/progress';
 import { loadOnboardingState } from '@/modules/verification/state';
 import { pushSetup } from './push';
 import { flagBlockEvasion } from '@/modules/trust/card-fingerprints';
-import { notificationPreferences, notifications } from './schema';
+import { notificationDeliveries, notificationPreferences, notifications } from './schema';
 import { verificationNotificationFor } from './verification-plan';
 import { helpersToAlert, replacementHelpers } from '@/modules/offers/task-alerts';
 import { reactToEvent } from '@/modules/badges/reactions';
@@ -708,16 +708,31 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
   }
 }
 
-/** Whether the person has a message from someone else in the conversation that they haven't read. */
-async function unreadMessageIn(db: Db, userId: string, threadId: string): Promise<boolean> {
+/**
+ * Whether the person has a message from someone else in the conversation that they haven't read. `lineId`: the event is
+ * about a card someone posted (an ask for an offer, shared times), a line with no sender of its own; that line is what
+ * must still be unread (sweep 2026-11-24 C4: `<>` left those out, so they never notified anyone).
+ */
+async function unreadMessageIn(db: Db, userId: string, threadId: string, lineId?: string): Promise<boolean> {
   const [row] = await db
     .select({ id: messages.id })
     .from(messages)
     .innerJoin(threadParticipants, and(eq(threadParticipants.threadId, messages.threadId), eq(threadParticipants.userId, userId)))
     // `<>` leaves out the system's own lines too (no sender): the notification is about a message someone wrote.
-    .where(and(eq(messages.threadId, threadId), ne(messages.senderUserId, userId), or(isNull(threadParticipants.lastReadAt), gt(messages.createdAt, threadParticipants.lastReadAt))))
+    .where(and(eq(messages.threadId, threadId), lineId ? eq(messages.id, lineId) : ne(messages.senderUserId, userId), or(isNull(threadParticipants.lastReadAt), gt(messages.createdAt, threadParticipants.lastReadAt))))
     .limit(1);
   return row !== undefined;
+}
+
+/**
+ * The person's own quiet hours kept these message notifications to the app (2026-11-24): every channel they planned was
+ * skipped, at least one of them for those hours. Such an entry never told them anything, so a message after the hours end
+ * makes a new one instead of joining it (sweep 2026-11-24 C3: one night-time message silenced the conversation until it
+ * was opened).
+ */
+async function keptInAppForQuietHours(db: Db, notificationIds: readonly string[]): Promise<boolean> {
+  const rows = await db.select({ status: notificationDeliveries.status, reason: notificationDeliveries.reason }).from(notificationDeliveries).where(inArray(notificationDeliveries.notificationId, [...notificationIds]));
+  return rows.length > 0 && rows.every((row) => row.status === 'skipped') && rows.some((row) => row.reason === 'own_quiet_hours');
 }
 
 /** A claim this old belongs to a dispatcher that stopped half-way: the event is taken again (at least once). */
@@ -750,20 +765,26 @@ async function deliver(db: Db, event: EventRow, onlyUserId?: string): Promise<nu
   // address it left behind.
   const people = [...new Set(planned.map((item) => item.userId))];
   const gone = new Set(people.length ? (await db.select({ id: users.id }).from(users).where(and(inArray(users.id, people), eq(users.status, 'deleted')))).map((row) => row.id) : []);
+  // A card's line (an ask for an offer, shared times) names itself: it has no sender to tell it by (sweep C4).
+  const lineId = event.type === 'message.sent' && typeof event.payload.lineId === 'string' ? event.payload.lineId : undefined;
   for (const item of planned) {
     if (onlyUserId && item.userId !== onlyUserId) continue;
     if (gone.has(item.userId)) continue;
     // Several unread messages in one thread make one notification.
+    let replaces: string[] = [];
     if (item.type === 'message_received' && item.target.kind === 'thread') {
       const threadId = item.target.threadId;
       // None if they read the conversation after the message and before this ran (sweep MN13): the entry would sit
       // unread, and the next message would join it instead of telling them.
-      if (!(await unreadMessageIn(db, item.userId, threadId))) continue;
+      if (!(await unreadMessageIn(db, item.userId, threadId, lineId))) continue;
       const unread = await db
         .select({ id: notifications.id, target: notifications.target })
         .from(notifications)
         .where(and(eq(notifications.userId, item.userId), eq(notifications.type, 'message_received'), isNull(notifications.readAt)));
-      if (unread.some((row) => row.target.kind === 'thread' && row.target.threadId === threadId)) continue;
+      const waiting = unread.filter((row) => row.target.kind === 'thread' && row.target.threadId === threadId).map((row) => row.id);
+      // One kept in the app by their quiet hours gives way to this one, which the bell shows instead (sweep C3).
+      if (waiting.length > 0 && !(await keptInAppForQuietHours(db, waiting))) continue;
+      replaces = waiting;
     }
     // Someone who is gone (a deleted account) can't get a notification; one bad event never blocks the rest.
     try {
@@ -785,6 +806,8 @@ async function deliver(db: Db, event: EventRow, onlyUserId?: string): Promise<nu
         .onConflictDoNothing({ target: [notifications.sourceEventId, notifications.userId] })
         .returning({ id: notifications.id });
       made += inserted.length;
+      // Still one entry per conversation in the bell: the one it replaces reads as read.
+      if (inserted.length > 0 && replaces.length > 0) await db.update(notifications).set({ readAt: new Date(event.createdAt) }).where(and(inArray(notifications.id, replaces), isNull(notifications.readAt)));
     } catch (error) {
       if (!isForeignKeyViolation(error)) throw error;
     }
@@ -947,7 +970,8 @@ export async function getAccountPage(db: Db, userId: string, returned: { connect
     quietHours: (await quietHoursOf(db, [user.id])).get(user.id) ?? QUIET_HOURS_DEFAULT,
     directMessages: { setting: (DIRECT_MESSAGE_SETTINGS as readonly string[]).includes(user.directMessages) ? (user.directMessages as DirectMessageSetting) : 'everyone' },
     // What their helper profile shares with top Sparks levels (2026-11-24): only for someone with a helper profile.
-    ...(profile ? { contactSharing: { setting: (CONTACT_SHARING_SETTINGS as readonly string[]).includes(user.contactSharing) ? (user.contactSharing as ContactSharingSetting) : 'none', phoneVerified: user.phoneVerifiedAt !== null && Boolean(user.phone), at: HELPER_CONTACT_EARNED_MIN } } : {}),
+    // Where texts are off, an unverified phone can't be verified, so sharing it can't work (sweep 2026-11-24 A6).
+    ...(profile ? { contactSharing: { setting: (CONTACT_SHARING_SETTINGS as readonly string[]).includes(user.contactSharing) ? (user.contactSharing as ContactSharingSetting) : 'none', phoneVerified: user.phoneVerifiedAt !== null && Boolean(user.phone), at: HELPER_CONTACT_EARNED_MIN, ...(!texts && !(user.phoneVerifiedAt !== null && user.phone) ? { phoneUnavailable: true as const } : {}) } } : {}),
     // A "Not you?" link holds the email, phone and ways to sign in until staff clear it (completion plan 5.23).
     ...(user.contactHoldAt ? { contactChangesHeld: true } : {}),
   };

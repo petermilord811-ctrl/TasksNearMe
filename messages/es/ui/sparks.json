@@ -18,6 +18,7 @@
     "heading": "Cómo ganar Chispas",
     "points": "+{points} cada una",
     "pointsCapped": "+{points} cada una, hasta {cap} al día",
+    "pointsPerGiver": "+{points} cada una, hasta {cap} de cada persona",
     "yours": "{points} hasta ahora",
     "sources": {
       "posts": "Una publicación en la comunidad",
@@ -26,7 +27,8 @@
       "thanks": "Alguien te da las gracias por una publicación o respuesta",
       "bookings": "Una reserva completada, como cliente o como ayudante",
       "reviews": "Una reseña que escribes"
-    }
+    },
+    "giverNote": "Útil y Gracias cuentan de otras personas con la cuenta en regla y con al menos {days, plural, one {# día} other {# días}} de antigüedad cuando reaccionaron."
   },
   "levels": {
     "newcomer": "Primeros pasos",

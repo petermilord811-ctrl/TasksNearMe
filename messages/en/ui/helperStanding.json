@@ -1,7 +1,7 @@
 {
   "checklist": {
     "title": "Your verification",
-    "intro": "Each step helps clients book with confidence. Finish them all to send offers.",
+    "intro": "Your home address opens helping: offers, open times and bookings. The other steps make you a verified helper; do them whenever you like.",
     "count": "{done} of {total} done",
     "steps": {
       "phone": "Phone",

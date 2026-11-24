@@ -1,5 +1,5 @@
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
-import { BadgeCheck, CircleDollarSign, Clock, Gift, ShieldCheck } from 'lucide-react';
+import { BadgeCheck, Clock, Gift, House, ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { BecomeHelperPageData } from '@/contracts';
 import { routes } from '@/contracts/routes';
@@ -51,23 +51,25 @@ export function BecomeHelperScreen({ data }: BecomeHelperScreenProps) {
       </div>
     </section>}
 
+    {/* What opens helping (owner, 2026-11-23): the home address, plus the background check for in-home help. The other
+        checks are the verified-helper badge, done whenever the helper likes (sweep 2026-11-24, A9). */}
     <Section title={t('requirementsTitle')}>
       <ul className="grid gap-4 md:grid-cols-3">
         <li className="rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]">
-          <span aria-hidden="true" className="mb-4 grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-primary"><ShieldCheck className="size-5" /></span>
-          <h3 className="font-display text-[17px] leading-6 font-semibold tracking-[-0.01em] lg:text-lg">{t('identityTitle')}</h3>
-          <p className="mt-2 text-sm text-muted-foreground">{t('identityDescription')}</p>
-        </li>
-        <li className="rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]">
-          <span aria-hidden="true" className="mb-4 grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-primary"><CircleDollarSign className="size-5" /></span>
-          <h3 className="font-display text-[17px] leading-6 font-semibold tracking-[-0.01em] lg:text-lg">{t('payoutTitle')}</h3>
-          <p className="mt-2 text-sm text-muted-foreground">{t('payoutDescription')}</p>
+          <span aria-hidden="true" className="mb-4 grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-primary"><House className="size-5" /></span>
+          <h3 className="font-display text-[17px] leading-6 font-semibold tracking-[-0.01em] lg:text-lg">{t('addressTitle')}</h3>
+          <p className="mt-2 text-sm text-muted-foreground">{t('addressDescription')}</p>
         </li>
         {data.inHomeCategoriesRequireBackgroundCheck && <li className="rounded-[1.375rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-6 dark:border-white/[0.06]">
           <span aria-hidden="true" className="mb-4 grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-primary"><BadgeCheck className="size-5" /></span>
           <h3 className="font-display text-[17px] leading-6 font-semibold tracking-[-0.01em] lg:text-lg">{t('backgroundTitle')}</h3>
           <p className="mt-2 text-sm text-muted-foreground">{t('backgroundDescription')}</p>
         </li>}
+        <li className="rounded-[1.375rem] border border-dashed border-foreground/[0.14] bg-card/60 p-4 sm:p-6 dark:border-white/[0.12]">
+          <span aria-hidden="true" className="mb-4 grid size-11 shrink-0 place-items-center rounded-2xl bg-brand-soft text-primary"><ShieldCheck className="size-5" /></span>
+          <h3 className="font-display text-[17px] leading-6 font-semibold tracking-[-0.01em] lg:text-lg">{t('badgeTitle')}</h3>
+          <p className="mt-2 text-sm text-muted-foreground">{t('badgeDescription')}</p>
+        </li>
       </ul>
     </Section>
 

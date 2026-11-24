@@ -39,5 +39,7 @@
     "not_submitted": "Your helper hasn't submitted the work yet. Return to the booking to see the latest update.",
     "window_passed": "The approval window ended and the booking was approved. Contact support if you still need help.",
     "closed": "This booking is already completed, canceled, or has a problem reported. Return to the booking to see what happens next."
-  }
+  },
+  "supportNoteDirect": "Support will look at what happened and help you both settle it. You pay your helper directly, so hold off paying for the part that isn't right until it's sorted.",
+  "confirmDescriptionDirect": "Support and your helper will receive your report. You pay your helper directly, so nothing is held here."
 }

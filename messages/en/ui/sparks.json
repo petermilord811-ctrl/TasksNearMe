@@ -18,6 +18,7 @@
     "heading": "How to earn Sparks",
     "points": "+{points} each",
     "pointsCapped": "+{points} each, up to {cap} a day",
+    "pointsPerGiver": "+{points} each, up to {cap} from each person",
     "yours": "{points} so far",
     "sources": {
       "posts": "A post in the community",
@@ -26,7 +27,8 @@
       "thanks": "Someone thanks you for a post or reply",
       "bookings": "A completed booking, as a client or a helper",
       "reviews": "A review you write"
-    }
+    },
+    "giverNote": "Helpful and Thanks count from other people whose accounts are in good standing and were at least {days, plural, one {# day} other {# days}} old when they reacted."
   },
   "levels": {
     "newcomer": "Newcomer",

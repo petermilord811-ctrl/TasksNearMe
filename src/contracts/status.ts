@@ -162,6 +162,13 @@ export const CASE_RESOLUTIONS = [
   'goodwill_refund',
   'account_action',
   'reward_action',
+  /**
+   * A booking paid directly (2026-11-23) that the client reported a problem with: no money to release, settle or
+   * refund, so staff close the dispute on what happened. `closed_done`: the work counts as done and the booking
+   * completes; `closed_not_done`: the booking is canceled, with nothing to refund (sweep 2026-11-24, M2).
+   */
+  'closed_done',
+  'closed_not_done',
 ] as const;
 export type CaseResolution = (typeof CASE_RESOLUTIONS)[number];
 

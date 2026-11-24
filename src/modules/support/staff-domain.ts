@@ -60,8 +60,8 @@ export interface StaffCaseFacts {
   assigneeId: string | null;
   /** Which "waiting on" statuses fit: the people staff can write to on this case. */
   waitingOn: { poster: boolean; helper: boolean };
-  /** The booking the case is about, if any: its status and whether it was paid. */
-  booking?: { status: string; paid: boolean };
+  /** The booking the case is about, if any: its status, whether it was paid, and whether it's paid directly. */
+  booking?: { status: string; paid: boolean; direct?: boolean };
 }
 
 export function staffCaseActions(facts: StaffCaseFacts): AdminCaseActionId[] {
@@ -107,7 +107,10 @@ export function caseResolutions(facts: StaffCaseFacts): CaseResolution[] {
   const submitted = facts.booking?.status === 'disputed' || facts.booking?.status === 'completion_submitted';
   const live = paid && ['confirmed', 'in_progress', 'completion_submitted', 'disputed'].includes(facts.booking?.status ?? '');
   const options: CaseResolution[] = [];
-  if (queue === 'disputes' && paid && submitted) options.push('release_full', 'settle', 'refund_full');
+  // Paid directly, no money is held: the dispute closes on what happened (sweep 2026-11-24, M2). "No further action"
+  // isn't offered, since it would leave the booking disputed for good.
+  if (queue === 'disputes' && facts.booking?.direct === true && facts.booking.status === 'disputed') options.push('closed_done', 'closed_not_done');
+  else if (queue === 'disputes' && paid && submitted) options.push('release_full', 'settle', 'refund_full');
   else if (queue === 'disputes' && live) options.push('no_action', 'refund_full');
   else options.push('no_action');
   if (queue === 'requests' && paid) options.push('goodwill_refund');

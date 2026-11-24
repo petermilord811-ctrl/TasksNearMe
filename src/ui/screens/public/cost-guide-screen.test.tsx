@@ -35,7 +35,7 @@ describe('CostGuideScreen', () => {
     expect(within(high).getByText('$84.00')).toBeTruthy();
     expect(screen.queryByRole('region', { name: /What your helper earns/ })).toBeNull();
 
-    expect(screen.getByText(/^There are no service fees, and helpers get the whole price\. A hold fee of 5% \(at least \$1\.00\) applies only when a helper asks to be paid upfront and TasksNearMe holds the payment\. Plus members don't pay it\./)).toBeTruthy();
+    expect(screen.getByText(/^There are no service fees, and helpers get the whole price\. A hold fee of 5% \(at least \$1\.00\) applies only when a helper asks to be paid upfront and TasksNearMe holds the payment\. Pro members don’t pay it\./)).toBeTruthy();
     const factors = screen.getByRole('region', { name: 'What changes the price' });
     expect(within(factors).getAllByRole('listitem')).toHaveLength(4);
     const steps = screen.getByRole('region', { name: 'How to get an exact price' });

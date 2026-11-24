@@ -37,7 +37,9 @@ You can update your details, download your data, or ask us to delete your accoun
 What we keep after you delete your account, and for how long:
 - **Payment, payout and tax records:** 7 years, as the law requires.
 - **Bookings, and reviews you wrote:** as records, shown under "Deleted account".
-- **Messages you sent:** with the people you sent them to, until 2 years after the conversation's last message.
+- **Messages you sent:** with the people you sent them to, until 2 years after the conversation's last message. Messages in a building or street group, until 2 years after the group's last message.
+- **The earlier wording of a post or reply you edited:** 2 years after the edit, so a report can be read as it was written.
+- **Thank-you notes you wrote:** as records, like reviews, shown under "Deleted account" or by neighborhood alone. You can delete a note at any time before then.
 - **Completion photos and receipts:** 2 years after the booking.
 - **A helper's verified home address:** encrypted, until 2 years after your last booking, or longer while a case about one is open. If you had no bookings, it's deleted with your account.
 - **Verification results and their dates.** Background check reports stay with our background check provider, as federal law (the FCRA) requires.

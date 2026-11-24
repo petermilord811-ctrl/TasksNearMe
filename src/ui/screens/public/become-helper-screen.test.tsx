@@ -29,6 +29,15 @@ describe('BecomeHelperScreen', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
   });
 
+  it('lists what opens helping (the home address, and the background check for in-home help) apart from the badge checks (sweep 2026-11-24, A9)', () => {
+    show();
+    const section = screen.getByRole('heading', { name: 'What you need before your first booking' }).closest('section')!;
+    expect(within(section).getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)).toEqual(['Verify your home address', 'Complete a background check for in-home help', 'Become a verified helper']);
+    // ID and payouts aren't needed to be booked any more (owner, 2026-11-23): they're the badge's, not the first booking's.
+    expect(within(section).queryByText(/Verify your identity|Set up your payouts/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Paid directly, your client pays you once the task is done/)).toBeInTheDocument();
+  });
+
   it('does not render either reward card or offer when programs are absent', () => {
     show(becomeHelperNoRewardsData);
     expect(screen.queryByRole('region', { name: 'Welcome gift card' })).not.toBeInTheDocument();

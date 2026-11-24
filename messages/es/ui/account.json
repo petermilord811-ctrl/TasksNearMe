@@ -17,7 +17,7 @@
     }
   },
   "profile": {
-    "title": "Perfil",
+    "title": "Foto y nombre",
     "description": "Tu foto y tu nombre, tal como los ve la gente en TasksNearMe.",
     "nameLegend": "Tu nombre",
     "displayName": "Tu nombre visible: {name}",
@@ -381,6 +381,7 @@
     },
     "hint": "Solo los vecinos que ganaron {at} Chispas (Pilar y Leyenda local) pueden verlos en tu perfil, y guardamos un registro de quién lo hace. Las Chispas compradas no cuentan y nadie más los ve. Puedes dejar de compartirlos cuando quieras, aunque quienes ya los vieron podrían haberlos guardado.",
     "phoneUnverified": "Tu teléfono se mostrará cuando lo verifiques.",
+    "phoneUnavailable": "Para compartir tu teléfono hace falta verificarlo, y aquí todavía no se pueden verificar teléfonos. Tu correo sí se puede compartir ya.",
     "failed": "No se guardó. Inténtalo de nuevo."
   },
   "sparks": {

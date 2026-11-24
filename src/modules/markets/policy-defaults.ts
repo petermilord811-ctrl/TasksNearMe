@@ -26,6 +26,18 @@ export const DEFAULT_PLANS: PlanPolicy = {
   free: { aiSearchesPerMonth: 50, aiSearchesPerDay: 3 },
 };
 
+/**
+ * The plans of the service-fee model, before 2026-11-23: Plus paid half the client's service fee back (up to $15 a
+ * month), Pro half the helper's (up to $40). Policy versions from then never stored their plans (the column came in
+ * migration 0065 unfilled), and a booking keeps the version it was confirmed under, rebate included (decisions.md
+ * 2026-11-23), so those versions read these, not today's defaults, whose rebates are 0 (sweep 2026-11-24, M4).
+ */
+export const LEGACY_PLANS: PlanPolicy = {
+  ...DEFAULT_PLANS,
+  plus: { ...DEFAULT_PLANS.plus, posterFeeRebateBps: 5000, rebateMonthlyCapCents: 1500 },
+  pro: { ...DEFAULT_PLANS.pro, helperFeeRebateBps: 5000, rebateMonthlyCapCents: 4000 },
+};
+
 export const DEFAULT_CANCELLATION: CancellationPolicy = {
   freeUntilHours: 24,
   lateFeeBps: 2000,

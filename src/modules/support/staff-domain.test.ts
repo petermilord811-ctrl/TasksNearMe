@@ -80,6 +80,13 @@ describe('what staff can do on a case', () => {
     expect(caseResolutions(facts({ type: 'report_user' }))).toEqual(['no_action', 'account_action']);
     expect(caseResolutions(facts({ type: 'reward_issue' }))).toEqual(['no_action', 'account_action', 'reward_action']);
   });
+
+  it('closes a dispute over a booking paid directly on what happened, never leaving it disputed (sweep 2026-11-24, M2)', () => {
+    expect(caseResolutions(facts({ booking: { status: 'disputed', paid: false, direct: true } }))).toEqual(['closed_done', 'closed_not_done', 'account_action']);
+    // Before the work was sent there's nothing to dispute this way; other cases about it are as before.
+    expect(caseResolutions(facts({ booking: { status: 'confirmed', paid: false, direct: true } }))).toEqual(['no_action', 'account_action']);
+    expect(caseResolutions(facts({ type: 'payment_issue', booking: { status: 'disputed', paid: false, direct: true } }))).toEqual(['no_action', 'account_action']);
+  });
 });
 
 describe('the money a resolution moves', () => {

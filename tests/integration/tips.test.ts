@@ -160,6 +160,13 @@ describe('tips', () => {
     expect(staff?.money.earnings.filter((line) => line.kind === 'tip')).toEqual([expect.objectContaining({ amountCents: 900 })]);
   });
 
+  it('refuses a tip on a booking paid directly, so no card is charged where no money moves (sweep 2026-11-24, M10)', async () => {
+    const id = await approvedDesk(`tsk_tip_direct${Date.now().toString(36)}`);
+    await db.update(bookings).set({ paymentMode: 'direct' }).where(eq(bookings.id, id));
+    expect(await tipBooking(deps, 'usr_ana', id, { amountCents: 900, payment: card() }, new Date())).toEqual({ ok: false, code: 'not_allowed' });
+    expect(await tipsOf(id)).toEqual([]);
+  });
+
   it('never charges twice for two taps at once', async () => {
     const id = await approvedDesk('tsk_tip_twice');
     const results = await Promise.all([1, 2].map(() => tipBooking(deps, 'usr_ana', id, { amountCents: 600, payment: card() }, new Date())));

@@ -45,13 +45,13 @@ afterAll(() => pool.end());
 
 let made = 0;
 /** Jordan assembled a desk for the client last week: a completed copy of the seeded desk, a booking of its own each time. */
-async function pastBooking(options: { allowanceCents?: number } = {}): Promise<{ bookingId: string; taskId: string; slug: string }> {
+async function pastBooking(options: { allowanceCents?: number; requestKey?: string; teamPartOf?: string } = {}): Promise<{ bookingId: string; taskId: string; slug: string }> {
   made += 1;
   const id = `ba${made}${Date.now().toString(36)}`;
   const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
   const policy = await getPublishedPolicy(desk!.marketId, db);
   const start = new Date(Date.now() - 7 * DAY);
-  await db.insert(tasks).values({ ...desk!, id: `tsk_${id}`, slug: `${id}-desk`, posterUserId: CLIENT, status: 'completed', offerCount: 0, version: 1, windowStart: start, windowEnd: new Date(start.getTime() + 3 * HOUR), publishedAt: start, expenseAllowanceCents: options.allowanceCents ?? 0, expenseAllowanceNote: options.allowanceCents ? 'Wall anchors' : null });
+  await db.insert(tasks).values({ ...desk!, id: `tsk_${id}`, slug: `${id}-desk`, posterUserId: CLIENT, status: 'completed', offerCount: 0, version: 1, windowStart: start, windowEnd: new Date(start.getTime() + 3 * HOUR), publishedAt: start, expenseAllowanceCents: options.allowanceCents ?? 0, expenseAllowanceNote: options.allowanceCents ? 'Wall anchors' : null, requestKey: options.requestKey ?? null, teamPartOf: options.teamPartOf ?? null });
   await db.insert(bookings).values({ id: `bkg_${id}`, taskId: `tsk_${id}`, posterUserId: CLIENT, helperUserId: 'usr_jordan', marketId: desk!.marketId, policyVersionId: policy!.id, status: 'completed', startAt: start, confirmedAt: start, completedAt: new Date(start.getTime() + 2 * HOUR) });
   await db.insert(bookingTerms).values({ id: `btm_${id}`, bookingId: `bkg_${id}`, version: 1, pricingType: 'fixed', priceCents: 6000, breakdown: quoteBreakdown(policy!.fees, { type: 'fixed', priceCents: 6000 }), scopeText: SCOPE, startAt: start });
   return { bookingId: `bkg_${id}`, taskId: `tsk_${id}`, slug: `${id}-desk` };
@@ -112,6 +112,21 @@ describe('Book again (J-C7)', () => {
     const mine = await getMyTasks(db, CLIENT, new Date());
     expect(mine.open.map((row) => [row.id, row.status])).toContainEqual([draft!.id, 'draft']);
     expect(await getTaskOwnerView(owner, CLIENT, draft!.id, new Date())).toMatchObject({ privateRequest: true, offers: [], actions: [] });
+  });
+
+  it("sends a task posted through the wizard again: the draft takes neither its request key nor its team part (sweep 2026-11-24, M1)", async () => {
+    // Every post from the wizard carries a request key, unique per client: a copy that kept it was refused as a
+    // duplicate, and the client read "You already sent Jordan T. this request" with nothing sent.
+    const past = await pastBooking({ requestKey: `rk_${Date.now().toString(36)}`, teamPartOf: 'bkg_some_lead' });
+    const sent = await send(past.bookingId);
+    const { invite, draft } = await stateOf(past.bookingId);
+    expect(sent).toEqual({ ok: true, code: 'sent', redirectTo: routes.app.task(draft!.id) });
+    expect(invite).toMatchObject({ status: 'sent', sourceBookingId: past.bookingId });
+    expect(draft).toMatchObject({ status: 'draft', requestKey: null, teamPartOf: null, posterUserId: CLIENT });
+    // The client's own list shows it (a team part would have been left out of My tasks).
+    const mine = await getMyTasks(db, CLIENT, new Date());
+    expect(mine.open.map((row) => row.id)).toContain(draft!.id);
+    await cancelInvite(db, pay, CLIENT, invite!.id, new Date());
   });
 
   it('makes one draft and one hold for two sends at once, and answers the second one in_use', async () => {

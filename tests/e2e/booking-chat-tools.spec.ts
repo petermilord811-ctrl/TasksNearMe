@@ -45,7 +45,7 @@ async function bookingThread(bookingId: string, taskId: string): Promise<string>
   }
 }
 
-test('a helper sends day-of updates from the booking\'s conversation, under what they agreed', async ({ page }) => {
+test('a helper sends day-of updates from the booking\'s conversation, under what they agreed', async ({ page }, testInfo) => {
   test.setTimeout(150_000);
   const booking = await confirmedBooking('bct', 6000);
   const threadId = await bookingThread(booking.bookingId, booking.taskId);
@@ -56,7 +56,13 @@ test('a helper sends day-of updates from the booking\'s conversation, under what
     await page.goto(`/app/messages/${threadId}`);
     const agreed = page.getByRole('region', { name: 'What we agreed' });
     await expect(agreed).toBeVisible({ timeout: 30_000 });
-    await expect(agreed.getByRole('button', { name: /What we agreed/ })).toHaveAttribute('aria-expanded', 'true');
+    // Open by default on a wide page; folded on a phone, where open it crowded out the messages (sweep 2026-11-24, C10).
+    const toggle = agreed.getByRole('button', { name: /What we agreed/ });
+    if (testInfo.project.name === 'app-mobile') {
+      await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      await toggle.click();
+    }
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
     // Jordan's own money: his $60.00 earnings, never Chris's $63.00 total.
     await expect(agreed.getByText('You earn')).toBeVisible();
     await expect(agreed.getByText('$60.00', { exact: true })).toBeVisible();

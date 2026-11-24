@@ -22,7 +22,8 @@ import { emitVerificationEvent, loadOnboardingState, syncHelperProfile } from '.
  *   (canceled ones, and a deleted account's, at once);
  * - hosted ID sessions nobody finished within 48 hours are closed, so a new one can start;
  * - 30 days before the ID a helper verified with runs out (the end of its expiry month), a new ID check is
- *   asked for and the helper is told; they stay bookable until the month ends, then not until it passes;
+ *   asked for and the helper is told; their ID-verified badge counts until the month ends, then not until it passes
+ *   (being booked doesn't wait on the ID since 2026-11-23: helping opens with the verified home address);
  * - the provider is asked to delete ID images 30 days after a final result (Texas biometric limits);
  * - Checkr invitations nobody used within 7 days expire;
  * - background checks send renewal notices at 30 and 7 days, and pause in-home work when they run out.
@@ -206,8 +207,9 @@ export async function runVerificationTimers(db: Db, deps: VerificationTimerDeps,
 /**
  * The ID behind a helper's verification runs out at the end of its expiry month (we keep only the month
  * and year). 30 days before, an `id_expiring` request row asks for a new check, and the helper is told; the
- * earlier check counts until the month ends (`identityStanding`), so they stay bookable meanwhile. Once
- * it has ended without a new check passing, they're told once more and the profile stops being bookable.
+ * earlier check counts until the month ends (`identityStanding`), so the ID-verified badge stays meanwhile. Once
+ * it has ended without a new check passing, they're told once more and the badge goes (being booked doesn't depend
+ * on the ID since 2026-11-23: helping opens with the verified home address).
  * Returns the new checks asked for.
  */
 async function runIdExpiry(db: Db, deps: VerificationTimerDeps, now: Date, scope: { userIds?: readonly string[] }, touched: Set<string>): Promise<number> {
@@ -255,7 +257,7 @@ async function runIdExpiry(db: Db, deps: VerificationTimerDeps, now: Date, scope
     asked += 1;
   }
 
-  // Renewals whose month has ended without a new check passing: told once, and no longer bookable.
+  // Renewals whose month has ended without a new check passing: told once, and the ID badge goes.
   const renewals = await db
     .select()
     .from(identityVerifications)

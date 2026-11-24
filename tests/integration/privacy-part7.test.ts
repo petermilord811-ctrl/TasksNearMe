@@ -3,7 +3,8 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { EmailProvider } from '@/integrations/email';
 import type { FileStorage } from '@/integrations/storage';
 import { users } from '@/modules/accounts/schema';
-import { communityFollows, communityPhotos, communityPosts, communityReactions, communityReplies } from '@/modules/community/schema';
+import { communityEdits, communityFollows, communityPhotos, communityPosts, communityReactions, communityReplies, communityWelcomes } from '@/modules/community/schema';
+import { notificationQuietHours } from '@/modules/notifications/schema';
 import { files } from '@/modules/tasks/schema';
 import { savedReplies } from '@/modules/messaging/schema';
 import { buildDataExport } from '@/modules/privacy/data-export';
@@ -43,6 +44,10 @@ beforeAll(async () => {
   await db.update(users).set({ homeAreaId: 'area_mueller' }).where(eq(users.id, LEAVER));
   await db.insert(savedSearches).values({ id: `ssr_${theirPost}`, userId: LEAVER, marketId: 'mkt_austin', name: 'Desks', source: 'board', params: { category: 'furniture-assembly' } });
   await db.insert(savedReplies).values({ id: `srp_${theirPost}`, userId: LEAVER, title: 'Hi', body: 'Hi {first_name}!' });
+  // Since 2026-11-22 (sweep 2026-11-24 A7): quiet hours, a post's earlier wording, the move that brought a welcome.
+  await db.insert(notificationQuietHours).values({ userId: LEAVER, enabled: true, startsAt: '22:00', endsAt: '07:00' });
+  await db.insert(communityEdits).values({ id: `ced_${theirPost}`, targetKind: 'post', targetId: theirPost, editorUserId: LEAVER, title: 'Count the bags', body: 'It saves a trip.' });
+  await db.insert(communityWelcomes).values({ userId: LEAVER, marketId: 'mkt_austin', areaId: 'area_mueller', movedAt: now });
 });
 
 afterAll(async () => {
@@ -50,6 +55,9 @@ afterAll(async () => {
   await db.delete(communityReplies).where(inArray(communityReplies.postId, [theirPost, otherPost]));
   await db.delete(communityPosts).where(inArray(communityPosts.id, [theirPost, otherPost]));
   await db.delete(auditLog).where(eq(auditLog.targetId, LEAVER));
+  await db.delete(communityEdits).where(eq(communityEdits.editorUserId, LEAVER));
+  await db.delete(communityWelcomes).where(eq(communityWelcomes.userId, LEAVER));
+  await db.delete(notificationQuietHours).where(eq(notificationQuietHours.userId, LEAVER));
   await db.delete(users).where(eq(users.id, LEAVER));
   await pool.end();
 });
@@ -60,6 +68,11 @@ describe('Part 7 and privacy', () => {
     expect(copy.community).toMatchObject({ posts: [expect.objectContaining({ title: 'Count the hardware bags first' })], replies: [expect.objectContaining({ body: 'Yes, every week on trash day.' })] });
     expect(copy.savedSearches).toEqual([expect.objectContaining({ name: 'Desks', alerts: 'off' })]);
     expect(copy.savedReplies).toEqual([expect.objectContaining({ title: 'Hi' })]);
+    // What came since 2026-11-22 (sweep 2026-11-24 A7).
+    expect(copy.account).toMatchObject({ homeNeighborhood: 'Mueller', directMessages: expect.any(String), showActivity: expect.any(Boolean), contactSharing: 'none' });
+    expect(copy.quietHours).toMatchObject({ enabled: true, startsAt: '22:00', endsAt: '07:00' });
+    expect(copy.community).toMatchObject({ earlierWording: [{ kind: 'post', title: 'Count the bags', body: 'It saves a trip.', replacedAt: expect.any(String) }], welcome: { neighborhood: 'Mueller' }, groups: [] });
+    for (const section of ['thankYouNotesWritten', 'thankYouNotesReceived', 'familyFollowing', 'familyFollowers', 'teamUps', 'neighborhoodDays']) expect(copy[section]).toEqual([]);
   });
 
   it('takes it down on deletion: saved things go, writing is removed, reactions go and counts follow', async () => {

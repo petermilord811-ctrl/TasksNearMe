@@ -2,7 +2,7 @@
 
 import { useId, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { CONTACT_SHARING_SETTINGS, type AccountHandlers, type AccountPageData, type ContactSharingSetting } from '@/contracts';
+import { CONTACT_SHARING_SETTINGS, contactSettingSharesPhone, type AccountHandlers, type AccountPageData, type ContactSharingSetting } from '@/contracts';
 import { cn } from '@/ui/lib/utils';
 import { Spinner } from '@/ui/primitives/spinner';
 
@@ -17,7 +17,10 @@ export function AccountContactSharing({ sharing, onSave }: { sharing: NonNullabl
   const [value, setValue] = useState<ContactSharingSetting>(sharing.setting);
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
-  const phoneWaits = !sharing.phoneVerified && (value === 'phone' || value === 'email_phone');
+  const phoneWaits = !sharing.phoneVerified && contactSettingSharesPhone(value);
+  // Where no phone can be verified (texts off), the phone options aren't offered; one already chosen stays listed so it
+  // can be changed (sweep 2026-11-24 A6).
+  const options = sharing.phoneUnavailable ? CONTACT_SHARING_SETTINGS.filter((option) => !contactSettingSharesPhone(option) || option === sharing.setting) : CONTACT_SHARING_SETTINGS;
 
   async function choose(next: ContactSharingSetting) {
     if (pending || next === value) return;
@@ -39,7 +42,7 @@ export function AccountContactSharing({ sharing, onSave }: { sharing: NonNullabl
   return <fieldset className="space-y-3" aria-describedby={`${id}-hint`} disabled={pending}>
     <legend className="sr-only">{t('legend')}</legend>
     <div className="space-y-2">
-      {CONTACT_SHARING_SETTINGS.map((option) => <label key={option} className={cn('flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring', value === option && 'border-primary bg-brand-soft/40')}>
+      {options.map((option) => <label key={option} className={cn('flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring', value === option && 'border-primary bg-brand-soft/40')}>
         <input type="radio" name={`${id}-setting`} value={option} checked={value === option} onChange={() => void choose(option)} className="mt-1 size-4 accent-[var(--primary)]" />
         <span className="space-y-0.5">
           <span className="block font-medium">{t(`options.${option}.label`)}</span>
@@ -49,7 +52,7 @@ export function AccountContactSharing({ sharing, onSave }: { sharing: NonNullabl
       </label>)}
     </div>
     <p id={`${id}-hint`} className="text-sm text-muted-foreground">{t('hint', { at: sharing.at.toLocaleString(locale === 'es' ? 'es-US' : 'en-US') })}</p>
-    {phoneWaits && <p className="text-sm font-medium">{t('phoneUnverified')}</p>}
+    {sharing.phoneUnavailable ? <p className="text-sm text-muted-foreground">{t('phoneUnavailable')}</p> : phoneWaits && <p className="text-sm font-medium">{t('phoneUnverified')}</p>}
     <p role="alert" aria-live="assertive" className="text-sm text-destructive empty:hidden">{failed ? t('failed') : ''}</p>
   </fieldset>;
 }

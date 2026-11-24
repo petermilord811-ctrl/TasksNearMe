@@ -228,7 +228,7 @@ export async function getReportProblemPage(deps: HubDeps, posterId: string, book
   const unavailable = current ? problemUnavailable(current, now) : 'closed';
   const completion = await completionViewOf(deps.db, bookingId);
   return {
-    booking: { id: view.id, task: view.task, helper: view.helper, terms: view.terms },
+    booking: { id: view.id, task: view.task, helper: view.helper, terms: view.terms, ...(view.paymentMode ? { paymentMode: view.paymentMode } : {}) },
     ...(completion ? { completion } : {}),
     ...(current?.approvalDueAt && current.status === 'completion_submitted' ? { approvalDueAt: current.approvalDueAt.toISOString() } : {}),
     maxPhotoMegabytes: MAX_MEGABYTES,

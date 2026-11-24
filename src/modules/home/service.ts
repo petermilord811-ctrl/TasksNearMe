@@ -12,6 +12,7 @@ import {
   type TimeZone,
 } from '@/contracts';
 import { getBookingsPage } from '@/modules/bookings/hub';
+import { bookingPolicyOf } from '@/modules/bookings/facts';
 import { users } from '@/modules/accounts/schema';
 import { aiSearchAccess } from '@/modules/billing/entitlements';
 import { invites } from '@/modules/invites/schema';
@@ -122,7 +123,13 @@ type MyTasks = Awaited<ReturnType<typeof getMyTasks>>;
 async function clientAttention(db: Db, userId: string, mine: MyTasks, now: Date): Promise<AttentionItem[]> {
   const [rows, counters, proposals] = await Promise.all([bookingRows(db, userId, 'poster'), waitingInvites(db, 'poster', userId, now), waitingProposals(db, userId, now)]);
   const attention: AttentionItem[] = [];
-  for (const { booking, title } of rows) {
+  // Each policy version's no-show time, read once.
+  const noShows = new Map<string, Promise<number>>();
+  const noShowMinutesOf = (id: string) => {
+    if (!noShows.has(id)) noShows.set(id, bookingPolicyOf(db, id).then((policy) => policy.noShowMinutes));
+    return noShows.get(id)!;
+  };
+  for (const { booking, title, mode } of rows) {
     if (booking.status === 'completion_submitted') {
       attention.push({ id: `att_approve_${booking.id}`, kind: 'approve_work', title, ...(booking.approvalDueAt ? { dueAt: booking.approvalDueAt.toISOString() } : {}), target: { kind: 'booking', bookingId: booking.id } });
     } else if (booking.status === 'pending_funding') {
@@ -132,6 +139,9 @@ async function clientAttention(db: Db, userId: string, mine: MyTasks, now: Date)
       attention.push({ id: `att_retry_${booking.id}`, kind: 'retry_payment', title, ...(booking.fundingExpiresAt ? { dueAt: booking.fundingExpiresAt.toISOString() } : {}), target: { kind: 'booking', bookingId: booking.id } });
     } else if (booking.status === 'in_progress' && booking.cantAccessAt && booking.posterResponseDueAt && booking.posterResponseDueAt > now) {
       attention.push({ id: `att_access_${booking.id}`, kind: 'answer_cant_access', title, dueAt: booking.posterResponseDueAt.toISOString(), target: { kind: 'booking', bookingId: booking.id } });
+    } else if (booking.status === 'confirmed' && mode !== 'remote' && !booking.arrivedAt && now.getTime() >= booking.startAt.getTime() + ((await noShowMinutesOf(booking.policyVersionId)) + (booking.lateByMinutes ?? 0)) * 60_000) {
+      // The helper hasn't checked in or sent word by the no-show time: the Bookings list's step, here too (sweep 2026-11-24).
+      attention.push({ id: `att_no_check_in_${booking.id}`, kind: 'helper_not_checked_in', title, dueAt: booking.startAt.toISOString(), target: { kind: 'booking', bookingId: booking.id } });
     }
   }
   // My tasks' own "needs you" (one rule for both pages, plan 9.9): new offers, a choice to make soon, no offers after a
@@ -169,7 +179,8 @@ async function helperAttention(
   for (const { booking, title, mode } of rows) {
     const timeZone = zones.get(booking.marketId)!;
     // Remote work has no trip or check-in: it stays confirmed until it's submitted.
-    if (booking.status === 'confirmed' && mode !== 'remote' && !booking.arrivedAt && marketDayKey(booking.startAt, timeZone) === marketDayKey(now, timeZone)) {
+    // Today's, and any from an earlier day still not checked in (it reads "was due to start"; sweep 2026-11-24).
+    if (booking.status === 'confirmed' && mode !== 'remote' && !booking.arrivedAt && (marketDayKey(booking.startAt, timeZone) === marketDayKey(now, timeZone) || booking.startAt.getTime() < now.getTime())) {
       attention.push({ id: `att_checkin_${booking.id}`, kind: 'check_in_today', title, dueAt: booking.startAt.toISOString(), target: { kind: 'booking', bookingId: booking.id } });
     }
   }

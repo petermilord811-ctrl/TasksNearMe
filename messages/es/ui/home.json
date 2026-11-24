@@ -262,7 +262,8 @@
       "answer_proposal": "Revisa los detalles y luego acepta y paga, o rechaza.",
       "choose_offer": "Empieza pronto. Compara las ofertas y reserva una.",
       "no_offers": "Invita a un ayudante que te guste, o revisa el precio y el horario.",
-      "check_in_late": "Abre la reserva para avisar que vas en camino, o escríbele al cliente."
+      "check_in_late": "Abre la reserva para registrar tu llegada, o escríbele al cliente.",
+      "helper_not_checked_in": "Escríbele o reporta una ausencia en la reserva."
     },
     "deadline": "Vence {deadline}",
     "approvalDeadline": "Aprueba o reporta un problema antes de {deadline}. Después, la tarea se aprueba automáticamente.",
@@ -284,7 +285,8 @@
     "check_in_late": "{title} debía empezar",
     "startedAt": "Debía empezar a las {time} · {date}",
     "more": "Mostrar {count} más",
-    "fewer": "Mostrar menos"
+    "fewer": "Mostrar menos",
+    "helper_not_checked_in": "{title}: tu ayudante no ha registrado su llegada"
   },
   "previews": {
     "group": "Pantallas · Inicio",

@@ -223,23 +223,35 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
   // Conversations docked beside the window (2026-11-23), each with what it loaded.
   const [docked, setDocked] = useState<Docked[]>(initial?.docked ?? []);
   const [dockedLoads, setDockedLoads] = useState<Record<string, ChatLoad<ChatThreadData>>>({});
+  // The docked conversations showing as open windows (the rest are heads), as `DockedChats` measured them; null until it
+  // has. Only these load as opened, which reads them; heads only peek (sweep 2026-11-24 C1).
+  const [shownDocked, setShownDocked] = useState<string[] | null>(null);
   const [now, setNow] = useState(() => new Date().toISOString());
 
   const active = wide && visible && state === 'open' && !onMessagesPage;
   // Docked conversations show whatever the window does (open, minimized or closed), on wide screens away from Messages.
   const dockActive = wide && visible && !onMessagesPage && docked.length > 0;
+  // Away from the dock (a narrow screen, a hidden tab, Messages), what showed is measured again when it's back.
+  const [dockWasActive, setDockWasActive] = useState(dockActive);
+  if (dockActive !== dockWasActive) {
+    setDockWasActive(dockActive);
+    if (!dockActive) setShownDocked(null);
+  }
   const activeRef = useRef(active);
   const dockActiveRef = useRef(dockActive);
   const dockedRef = useRef(docked);
+  const shownDockedRef = useRef<readonly string[]>([]);
   const viewRef = useRef(view);
   const onMessagesPageRef = useRef(onMessagesPage);
   useEffect(() => {
     activeRef.current = active;
     dockActiveRef.current = dockActive;
     dockedRef.current = docked;
+    shownDockedRef.current = shownDocked ?? [];
     viewRef.current = view;
     onMessagesPageRef.current = onMessagesPage;
   });
+  const onDockedShown = useCallback((threadIds: string[]) => setShownDocked((current) => (current && current.join(',') === threadIds.join(',') ? current : threadIds)), []);
 
   useEffect(() => {
     try {
@@ -297,15 +309,19 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
     }
   }, []);
 
-  // A docked conversation (2026-11-23): its own load, from an earlier message on after "Load earlier messages".
+  // A docked conversation (2026-11-23): its own load, from an earlier message on after "Load earlier messages". One that
+  // waits as a head isn't on screen: it peeks (its name, photo and unread count; nothing reads as read, sweep C1).
   const dockTurns = useRef<Record<string, number>>({});
   const dockEarlier = useRef<Record<string, string>>({});
   const loadDocked = useCallback(async (threadId: string, from?: string) => {
     const turn = (dockTurns.current[threadId] = (dockTurns.current[threadId] ?? 0) + 1);
     if (from) dockEarlier.current[threadId] = from;
     const since = from ?? dockEarlier.current[threadId];
+    const query = new URLSearchParams();
+    if (since) query.set('from', since);
+    if (!shownDockedRef.current.includes(threadId)) query.set('peek', '1');
     try {
-      const response = await fetch(`/api/messages/threads/${encodeURIComponent(threadId)}${since ? `?from=${encodeURIComponent(since)}` : ''}`, { cache: 'no-store', credentials: 'same-origin' });
+      const response = await fetch(`/api/messages/threads/${encodeURIComponent(threadId)}${query.size ? `?${query}` : ''}`, { cache: 'no-store', credentials: 'same-origin' });
       if (turn !== dockTurns.current[threadId]) return;
       if (response.status === 404) {
         setDockedLoads((loads) => ({ ...loads, [threadId]: { status: 'error', notFound: true } }));
@@ -385,16 +401,27 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
     return () => clearTimeout(timer);
   }, [active, viewKey, loadInbox, reloadView]);
 
-  // Docked conversations: each once as it docks (and when the tab comes back); their logs ask again on their own while
-  // the live connection is down, as the window's does.
+  // Docked conversations: each once as it docks (and when the tab comes back), once `DockedChats` has measured which show
+  // as windows; after that, a head that becomes a window loads again, as opened (sweep C1). Their logs ask again on their
+  // own while the live connection is down, as the window's does.
   const dockedKey = docked.map((chat) => chat.threadId).join(',');
+  const shownKey = shownDocked ? shownDocked.join(',') : null;
+  const dockLoaded = useRef<{ key: string; shown: readonly string[] } | null>(null);
   useEffect(() => {
-    if (!dockActive) return;
+    if (!dockActive || shownKey === null) {
+      dockLoaded.current = null;
+      return;
+    }
     const timer = setTimeout(() => {
-      for (const chat of dockedRef.current) void loadDocked(chat.threadId);
+      const shown = shownKey ? shownKey.split(',') : [];
+      const before = dockLoaded.current;
+      dockLoaded.current = { key: dockedKey, shown };
+      for (const chat of dockedRef.current) {
+        if (!before || before.key !== dockedKey || (shown.includes(chat.threadId) && !before.shown.includes(chat.threadId))) void loadDocked(chat.threadId);
+      }
     }, 0);
     return () => clearTimeout(timer);
-  }, [dockActive, dockedKey, loadDocked]);
+  }, [dockActive, dockedKey, shownKey, loadDocked]);
 
   // The live connection is down: ask again every 15 s (the conversation's own log does the same for its messages).
   useEffect(() => {
@@ -406,18 +433,35 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
     return () => clearInterval(timer);
   }, [active, live, loadHelp, loadInbox]);
 
-  // Live notices: the window reads again; the page behind refreshes as usual (nothing here says it handled them).
+  // Live notices: the window reads again; the page behind refreshes as usual (nothing here says it handled them). The
+  // reader's own "read" (`mine`) for a conversation on screen is this window's own doing, or another device's: reading it
+  // again would only throw away the first answer, with its "New messages" and "Catch me up" (sweep C11).
   const onThreadNotice = (notice: RealtimeNotice) => {
-    if (dockActiveRef.current) for (const chat of dockedRef.current) if (notice.thread === chat.threadId) soon(`dock:${chat.threadId}`, () => void loadDocked(chat.threadId));
+    const ownRead = notice.type === 'read' && notice.mine === true;
+    if (dockActiveRef.current) {
+      for (const chat of dockedRef.current) {
+        if (notice.thread !== chat.threadId || (ownRead && shownDockedRef.current.includes(chat.threadId))) continue;
+        soon(`dock:${chat.threadId}`, () => void loadDocked(chat.threadId));
+      }
+    }
     if (!activeRef.current) return;
     soon('inbox', () => void loadInbox());
     const current = viewRef.current;
-    if (current.kind === 'thread' && notice.thread === current.threadId) soon('thread', () => void loadThread(current.threadId));
+    if (current.kind === 'thread' && notice.thread === current.threadId && !ownRead) soon('thread', () => void loadThread(current.threadId));
   };
   useRealtime('message', onThreadNotice);
   useRealtime('read', onThreadNotice);
   useRealtime('update', (notice) => {
     if (!(activeRef.current || dockActiveRef.current) || typeof notice.event !== 'string') return;
+    // A reaction (sweep C8): the conversation it's in shows it at once, open in the window or docked beside it.
+    if (notice.event === 'message.reacted') {
+      const threadId = notice.thread;
+      if (typeof threadId !== 'string') return;
+      const current = viewRef.current;
+      if (activeRef.current && current.kind === 'thread' && current.threadId === threadId) soon('thread', () => void loadThread(threadId));
+      if (dockActiveRef.current && dockedRef.current.some((chat) => chat.threadId === threadId)) soon(`dock:${threadId}`, () => void loadDocked(threadId));
+      return;
+    }
     // A task request, a booking change or a team (2026-11-24) moved on: the open conversation's card shows it now.
     if (notice.event.startsWith('invite.') || notice.event.startsWith('change.') || notice.event.startsWith('team.')) {
       const current = viewRef.current;
@@ -748,6 +792,7 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
       onRefresh={(threadId) => void loadDocked(threadId)}
       onLoadEarlier={(threadId, from) => loadDocked(threadId, from)}
       onShowInWindow={showInWindow}
+      onShown={onDockedShown}
     />}
   </>;
 }

@@ -67,25 +67,20 @@ test.describe('sign-in and sign-up', () => {
     await outbox.close();
   });
 
-  test('making an offer asks for a verified phone first', async ({ page, context }, testInfo) => {
+  test("opening a task to offer on goes straight there: offers don't need a phone (sweep 2026-11-24 A10)", async ({ page, context }, testInfo) => {
     const email = freshEmail(testInfo.project.name);
-    const line = String(Math.floor(1000 + Math.random() * 9000));
-    const exchange = String(Math.floor(200 + Math.random() * 700));
     await page.goto(`/sign-in?next=${encodeURIComponent('/app/find-work/tsk_desk')}`);
     await requestCode(page, email);
     await page.getByLabel('6-digit code').fill(await latestCode(context, email));
     // The sixth digit sends the code (no Continue click).
     await completeProfile(page, 'Sky', 'Nguyen');
 
-    await expect(page.getByRole('heading', { level: 1, name: 'Add your phone number' })).toBeVisible();
-    await page.getByLabel('Phone number').fill(`(737) ${exchange}-${line}`);
-    await page.getByRole('button', { name: 'Continue', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 1, name: /Enter the code we texted to \(737\)/ })).toBeVisible();
-    await page.getByLabel('6-digit code').fill(await latestCode(context, `+1737${exchange}${line}`));
-    // The sixth digit sends the code (no Continue click).
+    // No phone step on the way: since 1e27fa8b a helper offers with a verified home address, and no server check asks
+    // for a phone before an offer, so a task alert's link opened signed out doesn't either.
     await expect(page).toHaveURL(/\/app\/find-work\/tsk_desk$/);
     // The task's own page (2026-11-23): a page with a dialog version, landed on from sign-in, is never a dialog over it.
     await expect(page.getByRole('heading', { level: 1, name: 'Assemble a desk (flat-pack, 1 item)' })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('heading', { level: 1, name: 'Add your phone number' })).toHaveCount(0);
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 

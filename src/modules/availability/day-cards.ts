@@ -28,6 +28,12 @@ export interface DayFilter {
   /** Only days that aren't canceled and whose last visit hasn't started. */
   upcoming?: boolean;
   limit?: number;
+  /**
+   * The helper's own page: their days whatever their standing. Everywhere else a day shows only while its helper can be
+   * requested, an active profile on an active account (sweep 2026-11-24 A5: a paused, suspended or banned helper's days
+   * stayed on Neighbors, and every visit opened a 404).
+   */
+  withInactive?: boolean;
 }
 
 /** The database's clock, for cached pages (the profile), as `openSlotsOf` reads it. */
@@ -47,6 +53,7 @@ export async function dayCardsOf(db: Db, filter: DayFilter, now: Date): Promise<
     filter.areaIds ? inArray(neighborhoodDays.areaId, filter.areaIds) : undefined,
     // A day ahead in any zone: yesterday in UTC is early enough; the visits decide the rest.
     filter.upcoming ? and(eq(neighborhoodDays.status, 'open'), gte(neighborhoodDays.day, new Date(now.getTime() - 86_400_000).toISOString().slice(0, 10))) : undefined,
+    filter.withInactive ? undefined : and(eq(helperProfiles.status, 'active'), eq(users.status, 'active')),
   ];
   const rows = await db
     .select({ day: neighborhoodDays, areaName: areas.name, slug: categories.slug, handle: helperProfiles.handle, user: { name: users.name, firstName: users.firstName, lastName: users.lastName, status: users.status, avatarFileId: users.avatarFileId } })
@@ -148,7 +155,7 @@ export async function neighborhoodAreasOf(db: Db, helperId: string): Promise<{ i
 
 /** The helper's days for `/app/availability`: upcoming ones soonest first, then the five latest past or canceled. */
 export async function myNeighborhoodDays(db: Db, helperId: string, now: Date): Promise<NeighborhoodDayFormData> {
-  const [choices, cards] = await Promise.all([neighborhoodAreasOf(db, helperId), dayCardsOf(db, { helperIds: [helperId] }, now)]);
+  const [choices, cards] = await Promise.all([neighborhoodAreasOf(db, helperId), dayCardsOf(db, { helperIds: [helperId], withInactive: true }, now)]);
   const upcoming = cards.filter((card) => card.state !== 'past' && card.state !== 'canceled');
   const done = cards.filter((card) => !upcoming.includes(card)).reverse().slice(0, 5);
   const days = [...upcoming, ...done].map((card): NeighborhoodDayManageView => ({ ...publicCard(card), actions: canCancelDay(card.status, card.visitStatuses, now) ? ['cancel_day'] : [] }));

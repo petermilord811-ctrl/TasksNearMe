@@ -88,6 +88,11 @@ export const ATTENTION_KINDS = [
   'choose_offer',
   /** Client: an open task has had no offers for a day; invite a helper or adjust it (My tasks' "no offers"). */
   'no_offers',
+  /**
+   * Client: the helper hasn't checked in or sent word by the no-show time (`dueAt`: the start); message them or report a
+   * no-show (sweep 2026-11-24: an overdue booking showed nothing).
+   */
+  'helper_not_checked_in',
 ] as const;
 export type AttentionKind = (typeof ATTENTION_KINDS)[number];
 

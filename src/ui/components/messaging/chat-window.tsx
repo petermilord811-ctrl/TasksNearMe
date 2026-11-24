@@ -438,8 +438,9 @@ const EDGE = 24;
  * closed). Measured with offsetWidth, the layout's width: the window's opening zoom made a bounding box 5% narrow, and the
  * first docked window covered its edge (2026-11-23, owner: "beside opened chat is conflicted with main chat window").
  */
-function useDock(mainKey: string): { offset: number; free: number } {
-  const [dock, setDock] = useState({ offset: EDGE + 64 + DOCKED_GAP, free: DOCKED_WIDTH });
+function useDock(mainKey: string): { offset: number; free: number; measured: boolean } {
+  // `measured`: the room was measured, not the first render's guess (which windows show waits for it: sweep C1).
+  const [dock, setDock] = useState({ offset: EDGE + 64 + DOCKED_GAP, free: DOCKED_WIDTH, measured: false });
   useEffect(() => {
     let frame = 0;
     let tries = 0;
@@ -448,7 +449,7 @@ function useDock(mainKey: string): { offset: number; free: number } {
     const measure = () => {
       const main = watched ?? find();
       const offset = EDGE + (main ? main.offsetWidth : 64) + DOCKED_GAP;
-      setDock({ offset, free: window.innerWidth - offset - EDGE });
+      setDock({ offset, free: window.innerWidth - offset - EDGE, measured: true });
     };
     const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
     // The chat window's code may still be loading: look again for a few frames.
@@ -501,7 +502,7 @@ function DockedHead({ name, avatar, unread, onRestore, onClose }: { name: string
  * effectively"). Each window has its messages, composer and live updates. Not modal, as the chat window; Esc in one
  * minimizes it. One `[data-chat-docked-row]` holds them all (page switches lift that one element above the page).
  */
-export function DockedChats({ docked, mainKey, loads, now, handlers, onMinimize, onRestore, onClose, onRefresh, onLoadEarlier, onShowInWindow }: {
+export function DockedChats({ docked, mainKey, loads, now, handlers, onMinimize, onRestore, onClose, onRefresh, onLoadEarlier, onShowInWindow, onShown }: {
   docked: DockedChat[];
   /** What the chat window is now (open, minimized, closed), so the row moves with it. */
   mainKey: string;
@@ -515,17 +516,26 @@ export function DockedChats({ docked, mainKey, loads, now, handlers, onMinimize,
   onLoadEarlier(threadId: string, from: string): Promise<void>;
   /** Back into the chat window (its own pane). */
   onShowInWindow(threadId: string): void;
+  /**
+   * Which conversations show as open windows now (the rest are heads), once the room is measured: only those are on
+   * screen, so only those may read as read (sweep 2026-11-24 C1: a head loaded as if opened marked its messages read).
+   */
+  onShown?(threadIds: string[]): void;
 }) {
   const t = useTranslations('chat.window');
   const person = useShownPerson();
   const opened = docked.filter((chat) => !chat.minimized);
-  const { offset, free } = useDock(mainKey);
-  if (docked.length === 0) return null;
+  const { offset, free, measured } = useDock(mainKey);
   // The newest open ones that fit are windows; any others wait as heads with the minimized ones. The heads' column takes
   // its own room whenever one waits (minimized, or more open than fit).
   const alone = windowsIn(free);
   const room = docked.length > opened.length || opened.length > alone ? windowsIn(free - HEAD - DOCKED_GAP) : alone;
   const shown = opened.slice(0, room);
+  const shownKey = shown.map((chat) => chat.threadId).join(',');
+  useEffect(() => {
+    if (measured) onShown?.(shownKey ? shownKey.split(',') : []);
+  }, [measured, shownKey, onShown]);
+  if (docked.length === 0) return null;
   const shownIds = new Set(shown.map((chat) => chat.threadId));
   const heads = docked.filter((chat) => !shownIds.has(chat.threadId));
   const who = (threadId: string) => {

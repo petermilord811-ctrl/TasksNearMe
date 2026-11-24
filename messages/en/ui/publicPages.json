@@ -43,7 +43,7 @@
     },
     "plans": {
       "title": "Premium, when you want more",
-      "intro": "Starter is free and has everything you need to get help or find work. Plus and Pro add more, like LinkedIn Premium, and each has everything in the one before. Cancel anytime.",
+      "intro": "Starter is free and has everything you need to get help or find work. Plus and Pro add more, and each has everything in the one before. Cancel anytime.",
       "perMonth": "a month",
       "free": {
         "name": "Starter",
@@ -173,18 +173,14 @@
     "title": "Put your everyday skills to work nearby",
     "description": "Choose the tasks that fit your skills and schedule. Agree on the details with your client, and see what you'll earn before you accept.",
     "cta": "Become a helper",
-    "requirementsTitle": "A few checks before your first booking",
-    "identityTitle": "Verify your identity",
-    "identityDescription": "Complete an ID and selfie check so clients can see your ID-verified badge.",
-    "payoutTitle": "Set up your payouts",
-    "payoutDescription": "Add your payout details so payments can reach your bank after completed tasks.",
+    "requirementsTitle": "What you need before your first booking",
     "backgroundTitle": "Complete a background check for in-home help",
     "backgroundDescription": "In-home categories require a background check before you can accept bookings in those categories.",
     "earningsTitle": "An example of what you'll earn",
     "earningsDescription": "You get the whole task price: there are no helper fees. Approved expenses are reimbursed separately from earnings.",
     "earningsBreakdownTitle": "Your earnings on a task",
     "timingTitle": "When payment reaches you",
-    "timingDescription": "Your payment is sent after the task is completed and approved, or approved automatically. It usually reaches your bank in about 2 business days.",
+    "timingDescription": "Paid directly, your client pays you once the task is done, however you agree. Paid upfront, your payment is sent after the task is approved, or approved automatically, and usually reaches your bank in about 2 business days.",
     "firstPayout": "Your first payout can take about {days, plural, one {# day} other {# days}}.",
     "rewardsTitle": "Gift card rewards for helping locally",
     "rewardsDescription": "Gift cards are separate from your task earnings. Available programs and their terms are shown here.",
@@ -208,14 +204,18 @@
     "rewardPolicy": "Rewards never depend on reviews or ratings.",
     "rewardTermsLink": "Read the reward terms",
     "closingTitle": "Ready to help your neighbors?",
-    "closingDescription": "Start with your profile, services, and the areas you cover."
+    "closingDescription": "Start with your profile, services, and the areas you cover.",
+    "addressTitle": "Verify your home address",
+    "addressDescription": "Send a recent document with your name and address; our team checks it, usually within a day. Clients only ever see your neighborhood. Once it’s verified, you can send offers and be booked.",
+    "badgeTitle": "Become a verified helper",
+    "badgeDescription": "Verify your ID and phone and set up payouts, whenever you like. Clients see each check with its date, and payouts let clients pay you upfront through TasksNearMe."
   },
   "shared": {
     "postTask": "Post a task",
     "freeToPost": "Free to post, with no service fees. Pay your helper directly, or upfront when they ask: TasksNearMe holds it until the work is done.",
     "trustPoints": {
       "label": "Why you can trust it",
-      "verified": "ID-verified helpers",
+      "verified": "Address-verified helpers",
       "reviews": "Reviews only from completed bookings",
       "price": "Price agreed before you book"
     },
@@ -241,8 +241,8 @@
     "payment": "Pay your helper directly once the task is done, or upfront when they ask: TasksNearMe holds it until you say the task is done.",
     "privacyTitle": "Your address stays private",
     "privacy": "Helpers see only the general area. Your exact address is shared with your helper after you book.",
-    "identityTitle": "ID-verified helpers",
-    "identity": "Helpers complete an ID check before sending offers. A badge explains what was checked and when."
+    "identityTitle": "Verified helpers",
+    "identity": "Every helper verifies their home address before sending offers. Badges show which other checks, like an ID or a background check, each helper passed, and when."
   },
   "home": {
     "eyebrow": "Local help in {market}, {state}",
@@ -326,7 +326,7 @@
     "examplesIntro": "Worked out for an upfront payment TasksNearMe holds, at today's hold fee, for {unit, select, item {one item} hour {{hours} hours} other {one task}}. Paid directly, you pay just the task price.",
     "lowEnd": "At the low end: {price}{unit, select, item { per item} hour { an hour} other {}}",
     "highEnd": "At the high end: {price}{unit, select, item { per item} hour { an hour} other {}}",
-    "feesNote": "There are no service fees, and helpers get the whole price. A hold fee of {percent}% (at least {minimum}) applies only when a helper asks to be paid upfront and TasksNearMe holds the payment. Plus members don't pay it.",
+    "feesNote": "There are no service fees, and helpers get the whole price. A hold fee of {percent}% (at least {minimum}) applies only when a helper asks to be paid upfront and TasksNearMe holds the payment. Pro members don’t pay it.",
     "feesLink": "How payment works",
     "factorsTitle": "What changes the price",
     "factors": {
@@ -477,7 +477,7 @@
       "title": "Help people nearby",
       "one": {
         "title": "Complete your setup",
-        "body": "Add your services and area, complete an ID check, and set up payouts. In-home tasks also require a background check."
+        "body": "Add your services and area, and verify your home address. In-home tasks also require a background check. Verify your ID and phone and set up payouts to become a verified helper."
       },
       "two": {
         "title": "Find tasks and send offers",
@@ -485,7 +485,7 @@
       },
       "three": {
         "title": "Confirm the booking",
-        "body": "Check the agreed scope and your earnings. You’ll see the exact address after the booking is confirmed. Begin once payment is confirmed in the app."
+        "body": "Check the agreed scope and your earnings. You’ll see the exact address after the booking is confirmed. When you asked to be paid upfront, the app shows the payment is held before you start."
       },
       "four": {
         "title": "Do the task and share the result",
@@ -493,7 +493,7 @@
       },
       "five": {
         "title": "Get paid and build repeat clients",
-        "body": "After approval, earnings go to your payout account. Reimbursed expenses are shown separately. Leave an honest review and arrange the next booking through the app."
+        "body": "Paid directly, your client pays you once the task is done. Paid upfront, your earnings go to your payout account after approval, with reimbursed expenses shown separately. Leave an honest review and arrange the next booking through the app."
       }
     }
   },
@@ -552,8 +552,8 @@
         "body": "Before confirming, the person posting sees the total and the helper sees what they'll get. There are no service fees, and the one fee, on a payment TasksNearMe holds, is shown first."
       },
       "funded": {
-        "title": "Paid for before work starts",
-        "body": "A helper is never asked to start a task that isn't paid for yet."
+        "title": "How the helper is paid, agreed first",
+        "body": "Every booking says up front how the helper is paid: directly once the task is done, or held by TasksNearMe from the moment you book."
       },
       "privacy": {
         "title": "Private by default",

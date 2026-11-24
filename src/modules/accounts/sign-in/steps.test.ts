@@ -40,12 +40,15 @@ describe('safeNextPath', () => {
 });
 
 describe('phoneReasonFor', () => {
-  it('asks for a phone before posting, offering, and booking', () => {
+  it('asks for a phone before posting, the one thing the server holds back without it', () => {
     expect(phoneReasonFor('/app/tasks/new')).toBe('post');
     expect(phoneReasonFor('/app/tasks/new?category=moving-help')).toBe('post');
-    expect(phoneReasonFor('/app/find-work/tsk_desk')).toBe('offer');
-    expect(phoneReasonFor('/app/tasks/tsk_1/offers/off_2/confirm')).toBe('book');
-    expect(phoneReasonFor('/app/helpers/sam-k/request?slot=sl_1')).toBe('book');
+  });
+
+  it("doesn't ask before an offer or a booking, which never needed one (sweep 2026-11-24 A10)", () => {
+    expect(phoneReasonFor('/app/find-work/tsk_desk')).toBeNull();
+    expect(phoneReasonFor('/app/tasks/tsk_1/offers/off_2/confirm')).toBeNull();
+    expect(phoneReasonFor('/app/helpers/sam-k/request?slot=sl_1')).toBeNull();
   });
 
   it('does not ask for browsing', () => {

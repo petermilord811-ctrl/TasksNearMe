@@ -28,6 +28,8 @@ export function ReportProblemForm({ data, handlers, initialResult, initialPendin
   initialPending?: boolean;
 }) {
   const t = useTranslations('reportProblem');
+  // Paid directly (2026-11-23): nothing is held while support looks, so the notes say so (sweep 2026-11-24, M7).
+  const direct = data.booking.paymentMode === 'direct';
   const fieldCopy = useTranslations('forms.fieldErrors');
   const router = useRouter();
   const dialog = useRouteDialog();
@@ -130,7 +132,7 @@ export function ReportProblemForm({ data, handlers, initialResult, initialPendin
           form.setValue('photoIds', next.map((photo) => photo.id), { shouldDirty: true, shouldValidate: true });
         }} onUploadPhoto={handlers.onUploadPhoto} maxPhotos={6} maxPhotoMegabytes={data.maxPhotoMegabytes} disabled={disabled} onBusyChange={setUploading} inputRef={photoInput} error={form.formState.errors.photoIds?.message ? errorText(form.formState.errors.photoIds.message) : undefined} />
       </fieldset>
-      <p className={cn(note, 'flex items-start gap-2')}><ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0" />{t('supportNote')}</p>
+      <p className={cn(note, 'flex items-start gap-2')}><ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0" />{t(direct ? 'supportNoteDirect' : 'supportNote')}</p>
       <div ref={feedback} tabIndex={-1} className="rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
         {specificError ? <div aria-live="polite" aria-atomic="true"><Alert role="status" className="border-destructive/30"><CircleAlert aria-hidden="true" className="text-destructive" /><AlertDescription className="space-y-3 text-foreground">
           <p>{t(`errors.${specificError}`)}</p>
@@ -143,7 +145,7 @@ export function ReportProblemForm({ data, handlers, initialResult, initialPendin
     </form>
     <AlertDialog open={Boolean(confirmation)} onOpenChange={(open) => { if (!open && !pending) setConfirmation(undefined); }}>
       <AlertDialogContent onEscapeKeyDown={(event) => { if (pending) event.preventDefault(); }} onCloseAutoFocus={(event) => { event.preventDefault(); if (!result) submitButton.current?.focus(); }}>
-        <AlertDialogHeader><AlertDialogTitle>{t('confirmTitle')}</AlertDialogTitle><AlertDialogDescription>{t('confirmDescription')}</AlertDialogDescription></AlertDialogHeader>
+        <AlertDialogHeader><AlertDialogTitle>{t('confirmTitle')}</AlertDialogTitle><AlertDialogDescription>{t(direct ? 'confirmDescriptionDirect' : 'confirmDescription')}</AlertDialogDescription></AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>{t('cancel')}</AlertDialogCancel>
           <AlertDialogAction disabled={pending} aria-busy={pending} onClick={(event) => { event.preventDefault(); if (confirmation) void submit(confirmation); }}>{pending && <Spinner aria-hidden="true" />}{t(pending ? 'submitting' : 'confirmSubmit')}</AlertDialogAction>

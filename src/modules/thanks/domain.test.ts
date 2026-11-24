@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { thankYouNoteInputSchema } from '@/contracts';
-import { canEditThanks, canShowOnProfile, canWriteThanks, publicAuthor, showsOnProfile, thanksEditableUntil } from './domain';
+import { canEditThanks, canShowOnProfile, canWriteThanks, publicAuthor, shownAfterEdit, showsOnProfile, thanksEditableUntil, THANKS_NEW_NOTES_PER_BOOKING } from './domain';
 
 const sent = new Date('2026-11-24T15:00:00.000Z');
 
@@ -52,5 +52,16 @@ describe('apart from rewards, Sparks and ranking (blueprint 05, principle 6)', (
     });
     expect(files.length).toBeGreaterThan(3);
     for (const file of files) expect(fs.readFileSync(file, 'utf8'), file).not.toMatch(/modules\/thanks|thank_you_notes|thankYouNotes/);
+  });
+
+  it('takes an edited note off the profile until the helper shows it again (sweep 2026-11-24 A3)', () => {
+    const shown = { body: 'Great job on the desk', shownOnProfile: true, shownAt: sent };
+    expect(shownAfterEdit(shown, 'Great job on the desk')).toEqual({ shownOnProfile: true, shownAt: sent });
+    expect(shownAfterEdit(shown, 'You were rude and late')).toEqual({ shownOnProfile: false, shownAt: null });
+    expect(shownAfterEdit({ ...shown, shownOnProfile: false, shownAt: null }, 'Anything')).toEqual({ shownOnProfile: false, shownAt: null });
+  });
+
+  it('allows three new notes a booking in 30 days, so deleting and rewriting can\'t flood the conversation (A4)', () => {
+    expect(THANKS_NEW_NOTES_PER_BOOKING).toEqual({ limit: 3, windowSeconds: 30 * 86_400 });
   });
 });

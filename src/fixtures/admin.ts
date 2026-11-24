@@ -461,7 +461,7 @@ export const adminBookingDisputedData: AdminBookingPageData = {
   booking: deskBookingSummary,
   poster: person(maya),
   helper: person(jordan),
-  money: { breakdown: deskBreakdown, chargedCents: 6300, refundedCents: 0, refunds: [], earnings: [{ kind: 'earnings', amountCents: 6000, status: 'on_hold' }] },
+  money: { paymentMode: 'held', breakdown: deskBreakdown, chargedCents: 6300, refundedCents: 0, refunds: [], earnings: [{ kind: 'earnings', amountCents: 6000, status: 'on_hold' }] },
   checklist: deskCompletionView.checklist,
   cases: [disputeRow],
   refund: { maxCents: 6300, limitCents: 10000, leftCents: 6300 },
@@ -475,6 +475,7 @@ export const adminBookingSettledData: AdminBookingPageData = {
   poster: person(maya),
   helper: person(jordan),
   money: {
+    paymentMode: 'held',
     breakdown: deskBreakdown,
     finalBreakdown: deskSettledBreakdown,
     chargedCents: 6300,
@@ -487,6 +488,14 @@ export const adminBookingSettledData: AdminBookingPageData = {
   refund: { maxCents: 4725, limitCents: 10000, leftCents: 4725 },
   refundRequests: [],
   actions: ['refund', 'reveal_address', 'reveal_conversation'],
+};
+
+/** The desk paid directly (2026-11-23): nothing charged, refunded or transferred here, so nothing to refund. */
+export const adminBookingDirectData: AdminBookingPageData = {
+  ...adminBookingDisputedData,
+  money: { paymentMode: 'direct', breakdown: deskBreakdown, chargedCents: 0, refundedCents: 0, refunds: [], earnings: [] },
+  refund: undefined,
+  actions: ['reveal_address', 'reveal_conversation'],
 };
 
 /** A $147 move: an agent (limit $100) asked a lead to approve a $120 refund; Morgan can decide. */

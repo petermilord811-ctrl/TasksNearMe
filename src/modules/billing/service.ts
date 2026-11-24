@@ -8,7 +8,7 @@ import type { PaymentProvider } from '@/integrations/payments';
 import { verifyStripeSignature } from '@/integrations/stripe-identity';
 import { users } from '@/modules/accounts/schema';
 import { earnings } from '@/modules/earnings/schema';
-import { DEFAULT_FEES, DEFAULT_PLANS } from '@/modules/markets/policy-defaults';
+import { DEFAULT_FEES, DEFAULT_PLANS, LEGACY_PLANS } from '@/modules/markets/policy-defaults';
 import { getPublishedPolicy } from '@/modules/markets/queries';
 import { marketPolicies, type FeeSchedule, type PlanPolicy } from '@/modules/markets/schema';
 import { userTimeZone } from '@/modules/markets/time-zone';
@@ -37,10 +37,14 @@ export async function marketPlans(db: Db, marketId: string): Promise<{ plans: Pl
   return { plans: policy?.plans ?? DEFAULT_PLANS, fees: policy?.fees ?? DEFAULT_FEES };
 }
 
-/** The plans of the policy version a booking was confirmed under. */
+/**
+ * The plans of the policy version a booking was confirmed under. A version that never stored its plans reads the plans
+ * of its own fee model: one with a helper fee is from before 2026-11-23, when plans paid fees back (`LEGACY_PLANS`).
+ */
 export async function versionPlans(db: Db, policyVersionId: string): Promise<PlanPolicy> {
-  const [row] = await db.select({ plans: marketPolicies.plans }).from(marketPolicies).where(eq(marketPolicies.id, policyVersionId)).limit(1);
-  return row?.plans ?? DEFAULT_PLANS;
+  const [row] = await db.select({ plans: marketPolicies.plans, fees: marketPolicies.fees }).from(marketPolicies).where(eq(marketPolicies.id, policyVersionId)).limit(1);
+  if (row?.plans) return row.plans;
+  return row && row.fees.helperBps > 0 ? LEGACY_PLANS : DEFAULT_PLANS;
 }
 
 // ---- Who holds what -------------------------------------------------------------------------------------------

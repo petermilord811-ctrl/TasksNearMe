@@ -1,12 +1,16 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { thankYouNoteInputSchema, type ActionResult, type ThankYouNoteInput } from '@/contracts';
+import { users } from '@/modules/accounts/schema';
 import { bookings } from '@/modules/bookings/schema';
+import { messages } from '@/modules/messaging/schema';
 import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
+import { isBlockedBetween } from '@/modules/trust/blocks';
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
 import { isUniqueViolation } from '@/platform/db/errors';
 import { newId } from '@/platform/db/ids';
-import { canEditThanks, canShowOnProfile, canWriteThanks } from './domain';
+import { consumeRateLimit } from '@/platform/rate-limit';
+import { canEditThanks, canShowOnProfile, canWriteThanks, shownAfterEdit, THANKS_NEW_NOTES_PER_BOOKING } from './domain';
 import { thankYouNotes } from './schema';
 
 /**
@@ -27,16 +31,20 @@ export async function saveThanks(db: Db, userId: string, input: ThankYouNoteInpu
     .where(eq(bookings.id, parsed.data.bookingId))
     .limit(1);
   if (!booking || booking.posterUserId !== userId) return { ok: false, code: 'not_found' };
+  // Never across a block, either way, nor to a helper whose account is gone (sweep 2026-11-24 A4).
+  if (!(await helperReachable(db, userId, booking.helperUserId))) return { ok: false, code: 'not_allowed' };
   const [existing] = await db.select().from(thankYouNotes).where(eq(thankYouNotes.bookingId, booking.id)).limit(1);
   if (existing) {
     if (!canEditThanks(existing, now)) return { ok: false, code: 'not_allowed' };
     await db
       .update(thankYouNotes)
-      .set({ body: parsed.data.body, ...(parsed.data.hideName !== undefined ? { hideName: parsed.data.hideName } : {}), updatedAt: now })
+      .set({ body: parsed.data.body, ...shownAfterEdit(existing, parsed.data.body), ...(parsed.data.hideName !== undefined ? { hideName: parsed.data.hideName } : {}), updatedAt: now })
       .where(eq(thankYouNotes.id, existing.id));
     return { ok: true, code: 'saved', helperUserId: booking.helperUserId };
   }
   if (!canWriteThanks({ bookingStatus: booking.status, viewerIsClient: true, hasNote: false })) return { ok: false, code: 'not_allowed' };
+  const allowed = await consumeRateLimit(db, `thanks-note:${booking.id}`, THANKS_NEW_NOTES_PER_BOOKING, now);
+  if (!allowed.ok) return { ok: false, code: 'rate_limited', retryAt: allowed.retryAt.toISOString() };
   const id = newId('tyn');
   try {
     await db.transaction(async (tx) => {
@@ -52,13 +60,27 @@ export async function saveThanks(db: Db, userId: string, input: ThankYouNoteInpu
   return { ok: true, code: 'sent', helperUserId: booking.helperUserId };
 }
 
-/** The client deletes the note, at any time: it leaves the conversation's card and the profile. ok `updated`. */
+/**
+ * The client deletes the note, at any time: it leaves the conversation and the profile, as the dialog says (its
+ * `thanks_sent` line goes too, sweep 2026-11-24 A4; it used to stay as a plain line). ok `updated`.
+ */
 export async function deleteThanks(db: Db, userId: string, noteId: string): Promise<Result> {
-  const [gone] = await db
-    .delete(thankYouNotes)
-    .where(and(eq(thankYouNotes.id, String(noteId)), eq(thankYouNotes.authorUserId, userId)))
-    .returning({ helperUserId: thankYouNotes.helperUserId });
-  return gone ? { ok: true, code: 'updated', helperUserId: gone.helperUserId } : { ok: false, code: 'not_found' };
+  return db.transaction(async (tx): Promise<Result> => {
+    const [gone] = await tx
+      .delete(thankYouNotes)
+      .where(and(eq(thankYouNotes.id, String(noteId)), eq(thankYouNotes.authorUserId, userId)))
+      .returning({ id: thankYouNotes.id, helperUserId: thankYouNotes.helperUserId });
+    if (!gone) return { ok: false, code: 'not_found' };
+    await tx.delete(messages).where(and(eq(messages.kind, 'status'), sql`${messages.event}->>'type' = 'thanks_sent'`, sql`${messages.event}->'params'->>'noteId' = ${gone.id}`));
+    return { ok: true, code: 'updated', helperUserId: gone.helperUserId };
+  });
+}
+
+/** The client can still write to this helper: no block either way, and the helper's account isn't deleted. */
+async function helperReachable(db: Db, clientId: string, helperId: string): Promise<boolean> {
+  const [helper] = await db.select({ status: users.status }).from(users).where(eq(users.id, helperId)).limit(1);
+  if (!helper || helper.status === 'deleted') return false;
+  return !(await isBlockedBetween(db, clientId, helperId));
 }
 
 /** The helper shows the note on their profile, or stops (consent, revocable). ok `updated`; `not_allowed` while hidden by our team. */

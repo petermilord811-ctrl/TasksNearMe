@@ -49,7 +49,8 @@ import { thanksPanelFor } from '@/modules/thanks/views';
 import { bookingTeamFor, teamTagsFor } from '@/modules/teams/views';
 import { scheduledPaymentViewOf } from './scheduled';
 import { seriesOfBooking, seriesSummaries, skipVisit } from './series';
-import { bookingTerms, bookings } from './schema';
+import { bookingCompletions, bookingTerms, bookings } from './schema';
+import { rebookProposals } from '@/modules/rebook/schema';
 import { shownPaymentStatus } from '@/modules/payments/shown-status';
 import { familyViewFor } from '@/modules/followers/access';
 import { followedBookingRows } from '@/modules/followers/service';
@@ -337,6 +338,15 @@ export async function getBookingsPage(db: Db, userId: string, now: Date): Promis
       ])
     : [[], [], []];
   const sumFor = (list: { bookingId: string | null; amountCents: number }[], id: string) => list.filter((row) => row.bookingId === id).reduce((sum, row) => sum + row.amountCents, 0);
+  // Paid directly (2026-11-23), nothing moves through TasksNearMe: the row shows the price the client pays the helper,
+  // the final one once the work is approved (hourly hours, say), never a $0.00 charge or the allowance on top (sweep
+  // 2026-11-24, M6).
+  const directDone = rows.filter((row) => row.booking.paymentMode === 'direct' && row.booking.status === 'completed').map((row) => row.booking.id);
+  const directFinal = new Map(
+    directDone.length
+      ? (await db.select({ bookingId: bookingCompletions.bookingId, finalBreakdown: bookingCompletions.finalBreakdown }).from(bookingCompletions).where(inArray(bookingCompletions.bookingId, directDone))).map((row) => [row.bookingId, row.finalBreakdown.taskPriceCents] as const)
+      : [],
+  );
 
   const taskIds = [...new Set(rows.map((row) => row.booking.taskId))];
   const views = new Map((await Promise.all(taskIds.map((id) => findTaskWithPublicView(db, id)))).flatMap((f) => (f ? [[f.view.id, f.view] as const] : [])));
@@ -345,6 +355,8 @@ export async function getBookingsPage(db: Db, userId: string, now: Date): Promis
   const clients = new Map((await Promise.all(clientIds.map((id) => clientSummary(db, id)))).flatMap((c) => (c ? [[c.id, c] as const] : [])));
   // Team jobs (2026-11-24): both parts carry "Team: Jordan (lead) and Sam".
   const teamTags = await teamTagsFor(db, rows.map((row) => row.booking));
+  // Each policy version's no-show time, for the client's "hasn't checked in" step (one read per version).
+  const noShowFor = new Map(await Promise.all([...new Set(rows.map((row) => row.booking.policyVersionId))].map(async (id) => [id, (await policyOf(db, id)).noShowMinutes] as const)));
 
   const list = rows.flatMap(({ booking, terms }): BookingListRow[] => {
     const role = roleOf(booking, userId);
@@ -352,7 +364,7 @@ export async function getBookingsPage(db: Db, userId: string, now: Date): Promis
     const other = role === 'poster' ? helpers.get(booking.helperUserId) : clients.get(booking.posterUserId);
     if (!role || !view || !other) return [];
     const remote = view.location.kind === 'remote';
-    const nextStep = bookingNextStep(factsOf(booking, remote), role, now);
+    const nextStep = bookingNextStep({ ...factsOf(booking, remote), noShowMinutes: noShowFor.get(booking.policyVersionId) ?? 30 }, role, now);
     return [
       {
         id: booking.id,
@@ -364,13 +376,18 @@ export async function getBookingsPage(db: Db, userId: string, now: Date): Promis
         otherParty: { id: other.id, displayName: other.displayName, initials: other.initials, ...(other.photo ? { photo: other.photo } : {}), memberSince: other.memberSince, phoneVerified: other.phoneVerified },
         start: terms.startAt.toISOString(),
         location: view.location,
-        amountCents: FINAL.includes(booking.status)
-          ? role === 'poster'
-            ? sumFor(chargeRows, booking.id) - sumFor(refundRows, booking.id)
-            : sumFor(earningRows, booking.id)
-          : role === 'poster'
-            ? (terms.breakdown.posterChargedCents ?? terms.breakdown.posterTotalCents)
-            : terms.breakdown.helperEarningsCents,
+        amountCents: booking.paymentMode === 'direct'
+          ? booking.status === 'canceled'
+            ? 0
+            : (directFinal.get(booking.id) ?? terms.breakdown.taskPriceCents)
+          : FINAL.includes(booking.status)
+            ? role === 'poster'
+              ? sumFor(chargeRows, booking.id) - sumFor(refundRows, booking.id)
+              : sumFor(earningRows, booking.id)
+            : role === 'poster'
+              ? (terms.breakdown.posterChargedCents ?? terms.breakdown.posterTotalCents)
+              : terms.breakdown.helperEarningsCents,
+        ...(booking.paymentMode === 'direct' ? { paymentMode: 'direct' as const } : {}),
         needsAction: nextStep !== undefined,
         ...(nextStep ? { nextStep } : {}),
         ...(teamTags.has(booking.id) ? { team: teamTags.get(booking.id)! } : {}),
@@ -445,10 +462,13 @@ export async function runBookingAction(
   };
 
   switch (action) {
-    case 'pay':
-      return booking.offerId
-        ? { ok: true, code: 'opened', redirectTo: routes.app.confirmOffer(booking.taskId, booking.offerId) }
-        : { ok: false, code: 'not_allowed' };
+    case 'pay': {
+      if (booking.offerId) return { ok: true, code: 'opened', redirectTo: routes.app.confirmOffer(booking.taskId, booking.offerId) };
+      // No offer behind it (sweep 2026-11-24, B2): a booking from a helper's rebooking proposal is paid on the proposal,
+      // where its bank step is finished or another card tried; one from a request is paid by its hold, being captured.
+      const [proposal] = await db.select({ id: rebookProposals.id }).from(rebookProposals).where(eq(rebookProposals.bookingId, booking.id)).limit(1);
+      return proposal ? { ok: true, code: 'opened', redirectTo: routes.app.proposal(proposal.id) } : { ok: false, code: 'not_ready' };
+    }
     case 'add_to_calendar':
       return { ok: true, code: 'opened', redirectTo: routes.app.bookingCalendar(booking.id) };
     case 'im_here': {

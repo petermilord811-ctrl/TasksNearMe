@@ -118,6 +118,17 @@ describe('What we agreed', () => {
     expect(screen.getByRole('button', { name: /What we agreed/ })).toHaveAttribute('aria-expanded', 'false');
   });
 
+  it('starts folded on a phone-sized page, where open it would crowd out the messages (sweep 2026-11-24, C10)', () => {
+    const matchMedia = window.matchMedia;
+    window.matchMedia = ((query: string) => ({ matches: false, media: query, addEventListener: () => {}, removeEventListener: () => {} })) as unknown as typeof window.matchMedia;
+    try {
+      wrap(<AgreementCard agreement={deskAgreementForClient} threadId="thr_a5" />);
+      expect(screen.getByRole('button', { name: /What we agreed/ })).toHaveAttribute('aria-expanded', 'false');
+    } finally {
+      window.matchMedia = matchMedia;
+    }
+  });
+
   it('starts folded in the chat window', () => {
     wrap(<AgreementCard agreement={deskAgreementForClient} threadId="thr_a4" compact />);
     expect(screen.getByRole('button', { name: /What we agreed/ })).toHaveAttribute('aria-expanded', 'false');

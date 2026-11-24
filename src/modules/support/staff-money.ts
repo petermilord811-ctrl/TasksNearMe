@@ -374,6 +374,7 @@ export async function getAdminBooking(db: Db, staff: StaffActor, bookingId: stri
     poster: personSummaryOf(poster),
     helper: personSummaryOf(helper),
     money: {
+      paymentMode: booking.paymentMode === 'direct' ? 'direct' : 'held',
       breakdown: terms.breakdown,
       ...(completion && booking.status === 'completed' ? { finalBreakdown: completion.finalBreakdown } : {}),
       chargedCents: money?.chargedCents ?? 0,

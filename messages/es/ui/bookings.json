@@ -15,11 +15,13 @@
   "needsAction": "Requiere tu acción",
   "money": {
     "poster": "Total",
-    "helper": "Ganarás"
+    "helper": "Ganarás",
+    "direct": "Pago directo"
   },
   "amount": {
     "poster": "Total {amount}",
-    "helper": "Ganarás {amount}"
+    "helper": "Ganarás {amount}",
+    "direct": "Pago directo {amount}"
   },
   "remote": "Remota",
   "postTask": "Publicar una tarea",
@@ -41,8 +43,9 @@
   "nextStep": {
     "pay": "Paga para confirmar. La retención termina {relative}.",
     "review_work": "Revisa el trabajo antes de {date}, o se aprobará automáticamente.",
-    "on_my_way": "{late, select, yes {Debía empezar {today, select, yes {a las {time}} other {el {date}}}: toca \"En camino\" ahora o escríbele al cliente.} other {Toca \"En camino\" cuando salgas. Empieza {today, select, yes {a las {time}} other {el {date}}}.}}",
-    "check_in": "{late, select, yes {Debía empezar {today, select, yes {a las {time}} other {el {date}}}: toca \"Ya llegué\" cuando llegues o escríbele al cliente.} other {Toca \"Ya llegué\" cuando llegues. Empieza {today, select, yes {a las {time}} other {el {date}}}.}}"
+    "on_my_way": "{late, select, yes {{today, select, yes {Debía empezar a las {time}: toca \"En camino\" ahora o escríbele al cliente.} other {Debía empezar el {date}. Si lo hiciste, toca \"Ya llegué\" y envía el trabajo; si no, escríbele al cliente.}}} other {Toca \"En camino\" cuando salgas. Empieza {today, select, yes {a las {time}} other {el {date}}}.}}",
+    "check_in": "{late, select, yes {{today, select, yes {Debía empezar a las {time}: toca \"Ya llegué\" cuando llegues o escríbele al cliente.} other {Debía empezar el {date}. Si lo hiciste, toca \"Ya llegué\" y envía el trabajo; si no, escríbele al cliente.}}} other {Toca \"Ya llegué\" cuando llegues. Empieza {today, select, yes {a las {time}} other {el {date}}}.}}",
+    "no_show_check": "Tu ayudante no ha registrado su llegada. Debía empezar {today, select, yes {a las {time}} other {el {date}}}: escríbele o reporta una ausencia en la reserva."
   },
   "regular": {
     "title": "Visitas regulares",

@@ -59,7 +59,8 @@ export async function getAdminBookings(db: Db, input: { filter: AdminBookingFilt
 
   const openCase = sql<boolean>`exists (select 1 from ${supportCases} c where c.booking_id = ${bookings.id} and c.status not in ('resolved', 'closed'))`;
   const paymentFailed = sql<boolean>`(${bookings.status} = 'pending_funding' and exists (select 1 from ${payments} p where p.booking_id = ${bookings.id} and p.purpose = 'booking_funding' and p.status = 'failed'))`;
-  const fundsHeld = sql<boolean>`(${bookings.confirmedAt} < ${fundsCutoff} and ${bookings.status} <> 'canceled' and not exists (select 1 from ${earnings} e where e.booking_id = ${bookings.id} and e.kind = 'earnings' and e.status in ('transferred', 'paid_out')))`;
+  // Money TasksNearMe holds only: a booking paid directly never has earnings to move (sweep 2026-11-24, M5).
+  const fundsHeld = sql<boolean>`(${bookings.paymentMode} = 'held' and ${bookings.confirmedAt} < ${fundsCutoff} and ${bookings.status} <> 'canceled' and not exists (select 1 from ${earnings} e where e.booking_id = ${bookings.id} and e.kind = 'earnings' and e.status in ('transferred', 'paid_out')))`;
   const approvalOverdue = sql<boolean>`(${bookings.status} = 'completion_submitted' and ${bookings.approvalDueAt} < ${now})`;
   const refundApproval = sql<boolean>`exists (select 1 from ${refundRequests} r where r.booking_id = ${bookings.id} and r.status = 'pending')`;
 

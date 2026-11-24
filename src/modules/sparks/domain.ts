@@ -47,6 +47,29 @@ export interface SparkCounts {
   reviews: number;
 }
 
+/**
+ * Helpful and Thanks after the per-giver cap (sweep 2026-11-24 A2): `perGiver` holds, for each person who reacted, how
+ * many of each kind they gave this person (posts and replies together), already limited to givers `SPARK_GIVER_RULES`
+ * accepts. Each giver counts at most `SPARK_RULES[kind].perGiver` of each kind.
+ */
+export function cappedReactions(perGiver: Iterable<{ kind: string; count: number }>): { helpful: number; thanks: number } {
+  const out = { helpful: 0, thanks: 0 };
+  for (const { kind, count } of perGiver) {
+    if (kind !== 'helpful' && kind !== 'thanks') continue;
+    const cap = SPARK_RULES[kind].perGiver;
+    out[kind] += Math.max(0, cap === undefined ? count : Math.min(count, cap));
+  }
+  return out;
+}
+
+/** The page's rule rows: what each source earns and its caps, in `SPARK_SOURCES` order. */
+export function sparkRuleRows(): { source: SparkSource; points: number; dailyCap?: number; perGiver?: number }[] {
+  return SPARK_SOURCES.map((source) => {
+    const rule = SPARK_RULES[source];
+    return { source, points: rule.points, ...(rule.dailyCap ? { dailyCap: rule.dailyCap } : {}), ...(rule.perGiver ? { perGiver: rule.perGiver } : {}) };
+  });
+}
+
 const capped = (perDay: readonly number[], cap: number | undefined) => perDay.reduce((sum, count) => sum + Math.max(0, cap === undefined ? count : Math.min(count, cap)), 0);
 
 /** Earned Sparks, with what each source gave, in `SPARK_SOURCES` order. */

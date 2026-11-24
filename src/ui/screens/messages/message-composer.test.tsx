@@ -152,6 +152,21 @@ describe('MessageComposer', () => {
     expect(keys[2]).not.toBe(keys[0]);
   });
 
+  it('sends an edited message with a new key after a failed try, so the server never takes it for the first (sweep C14)', async () => {
+    const user = userEvent.setup();
+    const onSend = vi.fn<ThreadHandlers['onSend']>().mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValue({ ok: true, code: 'sent' });
+    mount({ handlers: { ...fakeThreadHandlers, onSend } });
+    await user.type(input(), 'See you at 10');
+    await user.click(send());
+    await waitFor(() => expect(onSend).toHaveBeenCalledTimes(1));
+    await user.type(input(), ':30');
+    await user.click(send());
+    await waitFor(() => expect(onSend).toHaveBeenCalledTimes(2));
+    const [first, second] = onSend.mock.calls.map(([sent]) => sent);
+    expect(second).toMatchObject({ body: 'See you at 10:30' });
+    expect(second!.requestKey).not.toBe(first!.requestKey);
+  });
+
   it('keeps focus in the message box while sending and after, from a tap on Send or the keyboard (J-C4)', async () => {
     const user = userEvent.setup();
     let finishSend!: (result: ActionResult) => void;

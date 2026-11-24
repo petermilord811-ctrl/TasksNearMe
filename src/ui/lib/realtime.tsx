@@ -9,7 +9,9 @@ import { useRouter } from 'next/navigation';
  * when it handled the notice itself (typing indicators). Anything else that changes data the page shows (a new
  * message, something read, an update to a task or booking) refreshes the page once, shortly after the last
  * notice. A tab hidden for two minutes closes its stream; coming back reopens it and refreshes, so nothing
- * missed in between stays missing.
+ * missed in between stays missing. While the tab is hidden a refresh waits until it's back (sweep 2026-11-24 C2): a
+ * conversation's page reads it as read when it renders, so refreshing a page nobody looks at marked new messages read,
+ * kept their push and email from going out, and showed the sender blue ticks.
  *
  * Hydration (found 2026-11-14 with tasksnearme-d1): the provider sits above every signed-in page, so its context
  * value never changes after mount. A context change above a boundary that hasn't hydrated yet makes React
@@ -114,6 +116,8 @@ export function RealtimeProvider({ children, url = '/api/realtime' }: { children
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let failures = 0;
+    // A refresh that came due while the tab was hidden: it runs once the tab is visible again.
+    let refreshWhenVisible = false;
     let loadedAt = document.readyState === 'complete' ? Date.now() : Number.POSITIVE_INFINITY;
     let lastHref = window.location.href;
     let hrefChangedAt = Date.now();
@@ -133,6 +137,10 @@ export function RealtimeProvider({ children, url = '/api/realtime' }: { children
         const wait = Math.max(loadedAt, hrefChangedAt) + SETTLE_MS - Date.now();
         if (wait > 0) {
           refreshTimer = setTimeout(run, Number.isFinite(wait) ? wait : 500);
+          return;
+        }
+        if (document.visibilityState === 'hidden') {
+          refreshWhenVisible = true;
           return;
         }
         router.refresh();
@@ -187,7 +195,10 @@ export function RealtimeProvider({ children, url = '/api/realtime' }: { children
       if (!source) {
         open();
         scheduleRefresh();
+      } else if (refreshWhenVisible) {
+        scheduleRefresh();
       }
+      refreshWhenVisible = false;
     };
     open();
     document.addEventListener('visibilitychange', onVisibility);

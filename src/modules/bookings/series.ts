@@ -26,6 +26,7 @@ import { waivesHoldFee } from '@/modules/billing/benefits';
 import { paymentMethods, payments } from '@/modules/payments/schema';
 import { getHelperSummaries } from '@/modules/profiles/queries';
 import { rebookProposals } from '@/modules/rebook/schema';
+import { taskCopyFields } from '@/modules/tasks/copy';
 import { withCopySlug } from '@/modules/tasks/copy-slug';
 import { tasks } from '@/modules/tasks/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
@@ -177,7 +178,7 @@ async function addVisit(db: Db, series: SeriesRow, template: typeof tasks.$infer
   // Too close to charge in time: this date is left out.
   if (!chargeAt) return;
   const pricing = pricingOf(series);
-  const { id: _id, slug: _slug, createdAt: _created, updatedAt: _updated, publishedAt: _published, expiresAt: _expires, aiGenerationId: _ai, reopenedAt: _reopened, hiddenAt: _hidden, hiddenByUserId: _hiddenBy, hiddenReason: _hiddenWhy, ...copy } = template;
+  const copy = taskCopyFields(template);
   const taskId = newId('tsk');
   const bookingId = newId('bkg');
   // Each visit is paid upfront and held by TasksNearMe: the client's hold fee, none while they hold Plus (2026-11-23).

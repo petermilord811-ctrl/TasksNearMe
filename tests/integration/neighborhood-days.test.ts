@@ -2,8 +2,9 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { NeighborhoodDayInput } from '@/contracts';
 import { createDevPaymentProvider } from '@/integrations/payments';
+import { users } from '@/modules/accounts/schema';
 import { dayCardsOf, dayTeasersOf, neighborhoodAreasOf, publicCard } from '@/modules/availability/day-cards';
-import { cancelNeighborhoodDay, createNeighborhoodDay } from '@/modules/availability/neighborhood-days';
+import { cancelNeighborhoodDay, cancelOpenNeighborhoodDays, createNeighborhoodDay } from '@/modules/availability/neighborhood-days';
 import { availabilityPosts, neighborhoodDays } from '@/modules/availability/schema';
 import { getMyAvailabilityPage } from '@/modules/availability/service';
 import { openSlotsOf } from '@/modules/availability/slots';
@@ -11,6 +12,7 @@ import { invites } from '@/modules/invites/schema';
 import { getRequestHelperPage, requestHelper } from '@/modules/invites/service';
 import { areas } from '@/modules/markets/schema';
 import { payments } from '@/modules/payments/schema';
+import { helperProfiles } from '@/modules/profiles/schema';
 import { taskLocations, tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
 import { marketDayKey, marketLocalToUtc } from '@/shared/format';
@@ -196,5 +198,42 @@ describe('neighborhood days', () => {
     const page = await getMyAvailabilityPage(db, 'usr_jordan', now());
     expect(page.neighborhood?.days.find((item) => item.id === row.id)).toMatchObject({ state: 'canceled', actions: [] });
     await db.update(availabilityPosts).set({ status: 'canceled' }).where(eq(availabilityPosts.id, visits[2]!.id));
+  });
+
+  it("hides a day whose helper can't be requested, and suspension cancels it (sweep 2026-11-24 A5)", async () => {
+    const date = day(12);
+    expect(await createNeighborhoodDay(db, 'usr_jordan', input(date), now())).toEqual({ ok: true, code: 'saved' });
+    const row = await myDay(date);
+    const onNeighbors = async () => (await dayCardsOf(db, { marketId: 'mkt_austin', upcoming: true }, now())).some((card) => card.id === row.id);
+    expect(await onNeighbors()).toBe(true);
+    // Paused: off Neighbors and Find helpers (each visit there would open a 404), still on the helper's own page.
+    await db.update(helperProfiles).set({ status: 'paused' }).where(eq(helperProfiles.userId, 'usr_jordan'));
+    try {
+      expect(await onNeighbors()).toBe(false);
+      expect((await dayTeasersOf(db, ['usr_jordan'], now())).has('usr_jordan')).toBe(false);
+      const page = await getMyAvailabilityPage(db, 'usr_jordan', now());
+      expect(page.neighborhood?.days.some((item) => item.id === row.id)).toBe(true);
+    } finally {
+      await db.update(helperProfiles).set({ status: 'active' }).where(eq(helperProfiles.userId, 'usr_jordan'));
+    }
+    // A suspended (or banned) account too.
+    await db.update(users).set({ status: 'suspended' }).where(eq(users.id, 'usr_jordan'));
+    try {
+      expect(await onNeighbors()).toBe(false);
+    } finally {
+      await db.update(users).set({ status: 'active' }).where(eq(users.id, 'usr_jordan'));
+    }
+    expect(await onNeighbors()).toBe(true);
+
+    // Suspension closes the day as the helper's own Cancel would: a waiting request is declined and its hold released.
+    const visits = await db.select().from(availabilityPosts).where(eq(availabilityPosts.dayId, row.id)).orderBy(availabilityPosts.startAt);
+    const task = await taskIn('tsk_tmp_nd_suspend', NEAR, home.id, date);
+    expect(await requestHelper(deps, NEAR, 'jordan-t', request(task, at(date, '17:00'), visits[0]!.id), now())).toMatchObject({ ok: true, code: 'sent' });
+    expect(await cancelOpenNeighborhoodDays(db, pay, 'usr_jordan', now())).toBeGreaterThanOrEqual(1);
+    expect((await db.select({ status: neighborhoodDays.status }).from(neighborhoodDays).where(eq(neighborhoodDays.id, row.id)))[0]?.status).toBe('canceled');
+    const [declined] = await db.select().from(invites).where(eq(invites.slotId, visits[0]!.id));
+    expect(declined?.status).toBe('declined');
+    expect((await db.select().from(payments).where(eq(payments.id, declined!.paymentId!)))[0]?.status).toBe('canceled');
+    expect((await db.select({ status: availabilityPosts.status }).from(availabilityPosts).where(eq(availabilityPosts.dayId, row.id))).map((visit) => visit.status)).toEqual(['canceled', 'canceled', 'canceled']);
   });
 });

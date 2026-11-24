@@ -43,7 +43,47 @@ async function disputedDesk(id: string): Promise<{ bookingId: string; caseId: st
   return { bookingId, caseId: found!.id };
 }
 
+/** The same, with Jordan paid directly (2026-11-23): no charge, nothing held. */
+async function disputedDirectDesk(id: string): Promise<{ bookingId: string; caseId: string }> {
+  const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+  const [offer] = await db.select().from(offers).where(eq(offers.id, 'off_jordan'));
+  await db.insert(tasks).values({ ...desk!, id, slug: `${id}-slug`, posterUserId: 'usr_priya', status: 'open', offerCount: 1, version: 1 });
+  await db.insert(offers).values({ ...offer!, id: `off_${id}`, taskId: id, status: 'pending', revision: 1, paymentMode: 'direct', expiresAt: new Date(Date.now() + 86_400_000) });
+  const booked = await confirmBooking({ db, payments: pay }, 'usr_priya', id, `off_${id}`, { offerRevision: 1, acceptTerms: true }, now());
+  if (!booked.ok || !booked.redirectTo) throw new Error(`Booking failed: ${JSON.stringify(booked)}`);
+  const bookingId = booked.redirectTo.split('/').pop()!;
+  await db.update(bookings).set({ status: 'in_progress', arrivedAt: now() }).where(eq(bookings.id, bookingId));
+  await db.insert(files).values({ id: `fil_${id}`, ownerUserId: 'usr_jordan', kind: 'evidence', storageKey: `test/${id}.webp`, contentType: 'image/webp', width: 800, height: 600, bytes: 100 });
+  expect(await submitCompletion(db, 'usr_jordan', bookingId, { photoIds: [`fil_${id}`], note: 'Done.', expenses: [] }, now())).toMatchObject({ ok: true });
+  expect(await reportProblem(db, 'usr_priya', bookingId, { reason: 'not_done', description: 'The drawers were left in the box.', photoIds: [] }, now())).toMatchObject({ ok: true });
+  const [found] = await db.select({ id: supportCases.id }).from(supportCases).where(and(eq(supportCases.bookingId, bookingId), eq(supportCases.type, 'dispute')));
+  return { bookingId, caseId: found!.id };
+}
+
 const versionOf = async (caseId: string) => (await getAdminCase(db, alex, caseId, now()))!.version;
+
+describe('a dispute over a booking paid directly (sweep 2026-11-24, M2)', () => {
+  it('closes as done (the booking completes) or not done (canceled, nothing to refund), never left disputed', async () => {
+    const done = await disputedDirectDesk('tsk_direct_done');
+    const page = await getAdminCase(db, alex, done.caseId, now());
+    expect(page?.data.resolutions).toEqual(['closed_done', 'closed_not_done', 'account_action']);
+    // "No further action" would leave it disputed for good: refused.
+    expect(await resolveCaseWithMoney(db, pay, alex, done.caseId, await versionOf(done.caseId), { resolution: 'no_action', summary: 'Nothing to do here.' }, now())).toEqual({ ok: false, code: 'not_allowed' });
+    expect(await resolveCaseWithMoney(db, pay, alex, done.caseId, await versionOf(done.caseId), { resolution: 'closed_done', summary: 'The photos show the desk built; this counts as done.' }, now())).toEqual({ ok: true, code: 'saved' });
+    expect((await db.select().from(bookings).where(eq(bookings.id, done.bookingId)))[0]).toMatchObject({ status: 'completed', completedVia: 'support' });
+    expect((await db.select().from(tasks).where(eq(tasks.id, 'tsk_direct_done')))[0]?.status).toBe('completed');
+
+    const notDone = await disputedDirectDesk('tsk_direct_not_done');
+    expect(await resolveCaseWithMoney(db, pay, alex, notDone.caseId, await versionOf(notDone.caseId), { resolution: 'closed_not_done', summary: 'The work was not done; the booking is canceled.' }, now())).toEqual({ ok: true, code: 'saved' });
+    expect((await db.select().from(bookings).where(eq(bookings.id, notDone.bookingId)))[0]).toMatchObject({ status: 'canceled', cancelReason: 'admin', canceledBy: 'support' });
+    // No money anywhere: nothing charged, nothing refunded, no earnings.
+    for (const bookingId of [done.bookingId, notDone.bookingId]) {
+      expect(await db.select().from(payments).where(eq(payments.bookingId, bookingId))).toEqual([]);
+      expect(await db.select().from(refunds).where(eq(refunds.bookingId, bookingId))).toEqual([]);
+      expect(await db.select().from(earnings).where(eq(earnings.bookingId, bookingId))).toEqual([]);
+    }
+  });
+});
 
 describe('money resolutions', () => {
   it('settles at $45: $15.75 back to the client, $45.00 to the helper (blueprint 04 §6)', async () => {

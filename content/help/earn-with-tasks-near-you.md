@@ -3,14 +3,14 @@ title: Earning with tasks near you
 summary: Choose the work, set your price, and get paid for tasks close to home.
 topic: guides
 order: 3
-updated: 2026-11-23
+updated: 2026-11-24
 action: become_helper
 ---
 If you're handy, strong or patient with a computer, your neighbors need you. On TasksNearMe you pick the tasks, set your price and keep all of it: there are no service fees.
 
 ## Get verified once
 
-Before you send offers, you verify a government ID with a live selfie and your home address, and your phone if we ask for it. Services in someone's home also need a cleared background check. See [getting verified](/help/getting-verified).
+Before you send offers, you verify your home address. Services in someone's home also need a cleared background check. Your ID, your phone (if we ask for it) and payouts make you a verified helper, whenever you like. See [getting verified](/help/getting-verified).
 
 If we're not in your city yet, you can sign up and finish your checks now. We'll tell you when your city opens.
 

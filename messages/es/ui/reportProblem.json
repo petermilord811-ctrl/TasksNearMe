@@ -39,5 +39,7 @@
     "not_submitted": "Tu ayudante aún no ha entregado el trabajo. Vuelve a la reserva para ver la actualización más reciente.",
     "window_passed": "El plazo de aprobación terminó y la reserva fue aprobada. Contacta a soporte si aún necesitas ayuda.",
     "closed": "Esta reserva ya está completada, cancelada o tiene un problema reportado. Vuelve a la reserva para ver qué sigue."
-  }
+  },
+  "supportNoteDirect": "Soporte revisará lo que pasó y les ayudará a resolverlo. Le pagas a tu ayudante directamente, así que espera a pagar la parte que no está bien hasta que se resuelva.",
+  "confirmDescriptionDirect": "Soporte y tu ayudante recibirán tu reporte. Le pagas a tu ayudante directamente, así que aquí no se retiene nada."
 }

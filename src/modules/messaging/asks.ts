@@ -8,6 +8,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
+import { unarchiveForOthers } from './archive';
 import { postInDirectThread } from './direct';
 import { threadParticipants, threads } from './schema';
 
@@ -75,8 +76,11 @@ export async function askForOffer(db: Db, userId: string, threadId: string, inpu
   if (!task) return { ok: false, code: 'not_allowed' };
   const limited = await consumeRateLimit(db, `messages:ask-offer:${userId}`, ASK_FOR_OFFER_RULE, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
-  await postInDirectThread(db, userId, helperId, { type: 'offer_requested', params: { taskId: task.id } }, now, userId);
+  const line = await postInDirectThread(db, userId, helperId, { type: 'offer_requested', params: { taskId: task.id } }, now, userId);
+  // Like a message, it brings the conversation back from the helper's Archived (sweep C7).
+  await unarchiveForOthers(db, { id: thread.id, kind: thread.kind }, userId);
   // The helper hears it as a message from the client ("sent you a message", push), and the conversation updates live.
-  await db.insert(outboxEvents).values({ id: newId('evt'), type: 'message.sent', aggregateType: 'thread', aggregateId: thread.id, payload: { threadId: thread.id, taskId: task.id, senderUserId: userId, recipientIds: [helperId] } });
+  // The event names its line, which has no sender (sweep C4).
+  await db.insert(outboxEvents).values({ id: newId('evt'), type: 'message.sent', aggregateType: 'thread', aggregateId: thread.id, payload: { threadId: thread.id, taskId: task.id, senderUserId: userId, recipientIds: [helperId], ...(line ? { lineId: line.lineId } : {}) } });
   return { ok: true, code: 'sent' };
 }

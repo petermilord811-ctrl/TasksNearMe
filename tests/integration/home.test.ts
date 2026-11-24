@@ -97,6 +97,32 @@ describe('the dashboard (completion plan 9.9)', () => {
     }
   });
 
+  it("puts a booking whose helper never checked in before both people, however long ago it was due (sweep 2026-11-24)", async () => {
+    const [tv] = await db.select().from(bookings).where(eq(bookings.id, 'bkg_tv'));
+    const [tvTask] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_tv'));
+    const terms = await db.select().from(bookingTerms).where(eq(bookingTerms.bookingId, 'bkg_tv'));
+    if (!tv || !tvTask || terms.length === 0) throw new Error('The seeded TV booking is missing');
+    const start = new Date(Date.now() - 2 * 86_400_000);
+    await db.insert(tasks).values({ ...tvTask, id: 'tsk_home_late', slug: 'home-late-tv', posterUserId: CLIENT, status: 'assigned', mode: 'local', version: 1 });
+    await db.insert(bookings).values({ ...tv, id: 'bkg_home_late', taskId: 'tsk_home_late', posterUserId: CLIENT, status: 'confirmed', startAt: start, onMyWayAt: null, arrivedAt: null, lateByMinutes: null, cantAccessAt: null, posterResponseDueAt: null, completedAt: null });
+    await db.insert(bookingTerms).values(terms.map((row) => ({ ...row, id: `${row.id}_home_late`, bookingId: 'bkg_home_late', startAt: start })));
+    const helper = { id: tv.helperUserId, firstName: 'Helper', mode: 'helper' as const, timeZone: ZONE };
+    try {
+      const now = new Date();
+      const target = { kind: 'booking', bookingId: 'bkg_home_late' };
+      expect((await getDashboard(db, ana, {}, now)).attention).toContainEqual(expect.objectContaining({ kind: 'helper_not_checked_in', dueAt: start.toISOString(), target }));
+      // The helper's side: two days late, still there, as "was due to start".
+      expect((await getDashboard(db, helper, {}, now)).attention).toContainEqual(expect.objectContaining({ kind: 'check_in_today', dueAt: start.toISOString(), target }));
+      // Once they checked in, neither.
+      await db.update(bookings).set({ arrivedAt: new Date(start.getTime() + 60_000) }).where(eq(bookings.id, 'bkg_home_late'));
+      expect((await getDashboard(db, ana, {}, now)).attention.find((item) => item.kind === 'helper_not_checked_in' && item.target.kind === 'booking' && item.target.bookingId === 'bkg_home_late')).toBeUndefined();
+    } finally {
+      await db.delete(bookingTerms).where(eq(bookingTerms.bookingId, 'bkg_home_late'));
+      await db.delete(bookings).where(eq(bookings.id, 'bkg_home_late'));
+      await db.delete(tasks).where(eq(tasks.id, 'tsk_home_late'));
+    }
+  });
+
   it("counts a reopened task's day without offers from when it went up again, and leaves out the earlier offers (sweep 2026-11-18, D11)", async () => {
     const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
     const [offer] = await db.select().from(offers).where(eq(offers.id, 'off_jordan'));

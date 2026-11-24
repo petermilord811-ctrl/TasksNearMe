@@ -155,19 +155,35 @@ function storedOpen(key: string): boolean | null {
     return null;
   }
 }
-function useStoredOpen(key: string, fallback: boolean): [boolean, () => void] {
+/** `null`: not known yet (on the server and while hydrating), when CSS shows the default. */
+function useStoredOpen(key: string, fallback: boolean | null): [boolean | null, () => void] {
   const stored = useSyncExternalStore(subscribe, () => storedOpen(key), () => null);
   const open = stored ?? fallback;
   const toggle = () => {
-    folded.set(key, !open);
+    const next = !(open ?? false);
+    folded.set(key, next);
     try {
-      window.localStorage.setItem(key, open ? 'closed' : 'open');
+      window.localStorage.setItem(key, next ? 'open' : 'closed');
     } catch {
       // Storage off (a private window): it stays as chosen until the page reloads.
     }
     for (const listener of listeners) listener();
   };
   return [open, toggle];
+}
+
+const WIDE_QUERY = '(min-width: 1024px)';
+function subscribeWide(listener: () => void) {
+  const query = window.matchMedia?.(WIDE_QUERY);
+  query?.addEventListener('change', listener);
+  return () => query?.removeEventListener('change', listener);
+}
+/**
+ * A wide (lg) screen; `null` on the server and while hydrating, so both render alike and CSS decides meanwhile. Without
+ * media queries (a test's jsdom) it counts as wide, the page's long-standing default.
+ */
+function useWide(): boolean | null {
+  return useSyncExternalStore(subscribeWide, () => window.matchMedia?.(WIDE_QUERY).matches ?? true, () => null);
 }
 
 export const agreementStorageKey = (threadId: string) => `tnm.agreement.${threadId}`;
@@ -191,22 +207,26 @@ function Agreement({ agreement, threadId, canProposeChange, compact }: { agreeme
   const items = useTranslations('completion.checklist.items');
   const { formatDate, formatDateTime, formatTimeRange, zoneName } = useFormat();
   const id = useId();
-  const [open, toggle] = useStoredOpen(agreementStorageKey(threadId), !compact);
+  // Folded in the window, and by default on a phone's page too, where open it left about 90 px for the messages under
+  // it, the day-of chips and the message box (sweep 2026-11-24, C10). Open by default on a wide page. Before the width
+  // is known (server, hydration) CSS shows that default, so neither size moves when the page hydrates.
+  const wide = useWide();
+  const [open, toggle] = useStoredOpen(agreementStorageKey(threadId), compact ? false : wide);
   const { pricing, money, window: schedule } = agreement;
   const amount = formatMoney(money.amountCents);
   const rate = pricing.type === 'hourly' ? t('hourly', { rate: formatMoney(pricing.rateCents), hours: formatHours(pricing.estimatedHours), cap: formatHours(pricing.hoursCap) }) : null;
   // Under the page's h1, or under the window's h3 with the other person's name.
   const Heading = compact ? 'h4' : 'h2';
-  return <section aria-labelledby={`${id}-title`} data-agreement={open ? 'open' : 'closed'} className="shrink-0 border-b border-foreground/[0.07] bg-brand-soft/35 dark:border-white/[0.06] dark:bg-white/[0.03]">
+  return <section aria-labelledby={`${id}-title`} data-agreement={open === null ? 'auto' : open ? 'open' : 'closed'} className="shrink-0 border-b border-foreground/[0.07] bg-brand-soft/35 dark:border-white/[0.06] dark:bg-white/[0.03]">
     <Heading className="m-0">
-      <button type="button" aria-expanded={open} aria-controls={`${id}-body`} onClick={toggle} className={cn('flex w-full min-w-0 items-center gap-2 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring', compact ? 'min-h-10 px-3 py-1.5 text-xs' : 'min-h-11 px-4 py-2 text-sm')}>
+      <button type="button" aria-expanded={open ?? undefined} aria-controls={`${id}-body`} onClick={toggle} className={cn('flex w-full min-w-0 items-center gap-2 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring', compact ? 'min-h-10 px-3 py-1.5 text-xs' : 'min-h-11 px-4 py-2 text-sm')}>
         <Handshake aria-hidden="true" className="size-4 shrink-0 text-primary" />
         <span id={`${id}-title`} className="shrink-0 font-semibold">{t('title')}</span>
         <span className="min-w-0 truncate text-muted-foreground tabular-nums">{t('summary', { when: formatDateTime(agreement.start), amount })}</span>
-        <ChevronDown aria-hidden="true" className={cn('ml-auto size-4 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none', open && 'rotate-180')} />
+        <ChevronDown aria-hidden="true" className={cn('ml-auto size-4 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none', open === true && 'rotate-180', open === null && 'lg:rotate-180')} />
       </button>
     </Heading>
-    <div id={`${id}-body`} hidden={!open} className={cn('overflow-y-auto overscroll-contain', compact ? 'max-h-48 space-y-2 px-3 pb-2.5 text-xs' : 'max-h-[min(30vh,20rem)] space-y-3 px-4 pb-3 text-sm')}>
+    <div id={`${id}-body`} hidden={open === false} className={cn('overflow-y-auto overscroll-contain', open === null && 'max-lg:hidden', compact ? 'max-h-48 space-y-2 px-3 pb-2.5 text-xs' : 'max-h-[min(30vh,20rem)] space-y-3 px-4 pb-3 text-sm')}>
       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1">
         <dt className="text-muted-foreground">{t('task')}</dt>
         <dd className="font-medium [overflow-wrap:anywhere]">{agreement.title}</dd>

@@ -298,9 +298,11 @@ export interface BookingDisputeView {
 /**
  * What the viewer does next on a booking (from the domain: `bookingNextStep`). Clients pay to confirm
  * (until `dueAt`, when the hold ends) or review the work (by `dueAt`, then it's approved automatically).
- * Helpers tap "On my way" when they leave, then "I'm here" (from 2 hours before the start, `dueAt`).
+ * Helpers tap "On my way" when they leave, then "I'm here" (from 2 hours before the start, `dueAt`). A client whose
+ * helper hasn't checked in or sent word past the no-show time (`no_show_check`, `dueAt` the start) messages them or
+ * reports a no-show (sweep 2026-11-24: an overdue booking sat in Upcoming with nothing to do).
  */
-export const BOOKING_NEXT_STEPS = ['pay', 'review_work', 'on_my_way', 'check_in'] as const;
+export const BOOKING_NEXT_STEPS = ['pay', 'review_work', 'on_my_way', 'check_in', 'no_show_check'] as const;
 export type BookingNextStep = (typeof BOOKING_NEXT_STEPS)[number];
 
 /** A row on `/app/bookings`. */
@@ -315,8 +317,10 @@ export interface BookingListRow {
   otherParty: PersonSummary;
   start: ISODateTime;
   location: TaskLocation;
-  /** Posters: the total charged. Helpers: what they'll earn. */
+  /** Posters: the total charged. Helpers: what they'll earn. Paid directly: the price the client pays the helper. */
   amountCents: Cents;
+  /** `direct`: the client pays the helper themselves (2026-11-23), so nothing is charged here. Absent: held by TasksNearMe. */
+  paymentMode?: 'direct';
   /** The viewer has something to do now (pay, check in, approve…): `nextStep`. */
   needsAction: boolean;
   nextStep?: { kind: BookingNextStep; dueAt?: ISODateTime };
@@ -569,7 +573,8 @@ export type ProblemUnavailableReason = (typeof PROBLEM_UNAVAILABLE_REASONS)[numb
 
 /** `/app/bookings/[bookingId]/problem`: the client reports a problem instead of approving. */
 export interface ReportProblemPageData {
-  booking: Pick<BookingView, 'id' | 'task' | 'helper' | 'terms'>;
+  /** `paymentMode`: paid directly, nothing is held while support looks (sweep 2026-11-24, M7). */
+  booking: Pick<BookingView, 'id' | 'task' | 'helper' | 'terms' | 'paymentMode'>;
   completion?: CompletionView;
   /** Report before this; afterwards the booking is approved automatically. */
   approvalDueAt?: ISODateTime;

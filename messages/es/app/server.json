@@ -215,7 +215,7 @@
         "helper_running_late": "Si la nueva hora no te funciona, escríbele desde la página de la reserva.",
         "cant_access": "Escríbele desde la página de la reserva para que pueda entrar.",
         "work_submitted": "Revisa las fotos y luego aprueba o reporta un problema.",
-        "work_approved": "Tus ganancias van en camino.",
+        "work_approved": "Si TasksNearMe retuvo el pago, tus ganancias van en camino. Si te pagan directamente, tu cliente te paga como acordaron.",
         "problem_reported": "Conversen en la página de la reserva. Soporte puede intervenir si no logran resolverlo entre ustedes.",
         "earnings_transferred": "Llegan a tu cuenta bancaria según tu calendario de pagos habitual.",
         "payout_paid": "Puede tardar un día hábil en aparecer en tu cuenta bancaria.",
@@ -232,7 +232,7 @@
         "rebook_accepted": "Los detalles están en la página de la reserva.",
         "task_reopened": "El ayudante anterior canceló, así que la hora ya está fijada y el cliente puede reservar de inmediato.",
         "booking_reminder": "Revisa la hora y los detalles en la página de la reserva.",
-        "verification_passed": "Tu página de configuración muestra lo que falta antes de poder enviar ofertas.",
+        "verification_passed": "Tu página de configuración muestra lo que ya puedes hacer y lo que falta para ser ayudante verificado.",
         "verification_action_needed": "Abre tu página de configuración para ver qué hace falta. Solo toma unos minutos.",
         "background_check_expiring": "Si la renuevas, tus categorías a domicilio siguen abiertas sin interrupción.",
         "id_expiring": "Toma fotos de una identificación vigente. Tu verificación actual cuenta hasta que termine el mes en que vence tu identificación.",
@@ -246,7 +246,7 @@
         "series_resumed": "Las próximas visitas vuelven a estar en el calendario.",
         "scheduled_payment_failed": "Paga desde la página de la reserva o cambia la tarjeta. Volveremos a intentarlo antes de esa fecha.",
         "replacement_needed": "El ayudante anterior canceló, así que la hora ya está fijada y el cliente puede reservar de inmediato.",
-        "replacement_search_started": "Se te reembolsó el monto completo. Las nuevas ofertas aparecerán en tu tarea. Si ya no la necesitas, cancela la tarea.",
+        "replacement_search_started": "Lo que pagaste a través de TasksNearMe se reembolsó por completo. Las nuevas ofertas aparecerán en tu tarea. Si ya no la necesitas, cancela la tarea.",
         "badge_earned": "Mira todas tus insignias, y las próximas, en tu página de cuenta.",
         "city_open": "Elige tu vecindario y agrega tu domicilio. Después podrás enviar ofertas en tareas cerca de ti.",
         "city_live_client": "Describe lo que necesitas en pocas palabras. Tú eliges a quién reservar y solo pagas al reservar.",
@@ -324,7 +324,7 @@
       "verification_passed": "{track, select, phone {Tu número de teléfono está verificado.} identity {Tu identidad está verificada.} address {Tu domicilio está verificado.} payout {Tu cuenta de pagos está lista.} background {Tu verificación de antecedentes está completa.} other {Se completó un paso de verificación.}}",
       "verification_action_needed": "{track, select, identity {Tu verificación de identidad necesita tu atención.} address {Necesitamos otro comprobante de tu domicilio.} payout {La configuración de tus pagos necesita más información.} background {Tu verificación de antecedentes necesita tu atención. Revisa tu correo de Checkr.} other {Un paso de verificación necesita tu atención.}}",
       "background_check_expiring": "{days, plural, =0 {Tu verificación de antecedentes venció. Inicia una nueva para volver a tomar tareas a domicilio.} one {Tu verificación de antecedentes vence mañana. Inicia la renovación para conservar tus categorías a domicilio.} other {Tu verificación de antecedentes vence en # días. Inicia la renovación para conservar tus categorías a domicilio.}}",
-      "id_expiring": "{days, plural, =0 {La identificación con la que te verificaste venció. Haz una nueva verificación de identidad para volver a recibir reservas.} one {La identificación con la que te verificaste vence mañana. Haz una nueva verificación de identidad para seguir recibiendo reservas.} other {La identificación con la que te verificaste vence en # días. Haz una nueva verificación de identidad para seguir recibiendo reservas.}}",
+      "id_expiring": "{days, plural, =0 {La identificación con la que te verificaste venció. Haz una nueva verificación de identidad para recuperar tu insignia de identidad verificada.} one {La identificación con la que te verificaste vence mañana. Haz una nueva verificación de identidad para conservar tu insignia de identidad verificada.} other {La identificación con la que te verificaste vence en # días. Haz una nueva verificación de identidad para conservar tu insignia de identidad verificada.}}",
       "helper_ready": "Todo listo: ya puedes enviar ofertas. Busca trabajo cerca de ti.",
       "task_match": "Nueva tarea cerca de ti: {title}{hasAmount, select, yes {, {amount}} other {}}.",
       "data_export_ready": "La copia de tus datos de TasksNearMe que pediste ya está lista para descargar.",
@@ -640,8 +640,8 @@
       },
       "checked": {
         "question": "¿Cómo se verifica a los ayudantes?",
-        "answer": "Antes de enviar ofertas, cada ayudante verifica una identificación oficial con una selfie en vivo y su domicilio. Los clientes ven una insignia con la fecha de cada verificación.",
-        "inHome": "Antes de enviar ofertas, cada ayudante verifica una identificación oficial con una selfie en vivo y su domicilio. Este servicio se hace en tu casa, así que además necesitan una verificación de antecedentes aprobada para poder hacerlo."
+        "answer": "Antes de enviar ofertas, cada ayudante verifica su domicilio. Muchos también verifican una identificación oficial con una selfie en vivo, y los clientes ven una insignia con la fecha de cada verificación.",
+        "inHome": "Antes de enviar ofertas, cada ayudante verifica su domicilio. Este servicio se hace en tu casa, así que además necesitan una verificación de antecedentes aprobada para poder hacerlo, y los clientes ven una insignia con la fecha de cada verificación."
       },
       "remote": {
         "question": "¿Se puede hacer a distancia?",

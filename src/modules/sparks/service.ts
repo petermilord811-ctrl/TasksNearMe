@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import {
   CONTACT_LEVELS,
   DIRECT_CHATS_PER_DAY,
@@ -9,8 +10,7 @@ import {
   SPARK_LEVELS,
   SPARK_PACK_OFFERS,
   SPARK_PACKS,
-  SPARK_RULES,
-  SPARK_SOURCES,
+  SPARK_GIVER_RULES,
   type ActionResult,
   type SparkPack,
   type SparkPurchaseView,
@@ -28,7 +28,7 @@ import { reviews } from '@/modules/reviews/schema';
 import { auditLog } from '@/platform/audit/schema';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
-import { directChatsPerDay, earnedSparks, nextSparkLevel, sparksSummary, type SparkCounts } from './domain';
+import { cappedReactions, directChatsPerDay, earnedSparks, nextSparkLevel, sparkRuleRows, sparksSummary, type SparkCounts } from './domain';
 import { sparkPurchases } from './schema';
 
 /**
@@ -50,6 +50,11 @@ export async function sparkTallies(db: Db, userIds: readonly string[]): Promise<
   const out = new Map<string, { counts: ReturnType<typeof emptyCounts>; bought: number }>(ids.map((id) => [id, { counts: emptyCounts(), bought: 0 }]));
   if (ids.length === 0) return out;
   const count = sql<number>`count(*)::int`;
+  const givers = alias(users, 'spark_givers');
+  const giverCounts = and(
+    eq(givers.status, 'active'),
+    sql`${communityReactions.createdAt} >= ${givers.createdAt} + ${SPARK_GIVER_RULES.minAccountDays}::int * interval '1 day'`,
+  );
   const postDay = sql`date_trunc('day', ${communityPosts.createdAt} at time zone 'UTC')`;
   const replyDay = sql`date_trunc('day', ${communityReplies.createdAt} at time zone 'UTC')`;
   const [posts, replies, onPosts, onReplies, asClient, asHelper, written, bought] = await Promise.all([
@@ -63,19 +68,22 @@ export async function sparkTallies(db: Db, userIds: readonly string[]): Promise<
       .from(communityReplies)
       .where(and(inArray(communityReplies.authorUserId, ids), eq(communityReplies.status, 'visible')))
       .groupBy(communityReplies.authorUserId, replyDay),
-    // Helpful and Thanks from other people on what they wrote, while it's visible.
+    // Helpful and Thanks from other people on what they wrote, while it's visible, per giver: only from accounts in good
+    // standing that were old enough when they reacted (`SPARK_GIVER_RULES`), each giver capped below (sweep A2).
     db
-      .select({ userId: communityPosts.authorUserId, kind: communityReactions.kind, count })
+      .select({ userId: communityPosts.authorUserId, giverId: communityReactions.userId, kind: communityReactions.kind, count })
       .from(communityReactions)
       .innerJoin(communityPosts, and(eq(communityReactions.targetKind, 'post'), eq(communityReactions.targetId, communityPosts.id)))
-      .where(and(inArray(communityPosts.authorUserId, ids), eq(communityPosts.status, 'visible'), ne(communityReactions.userId, communityPosts.authorUserId)))
-      .groupBy(communityPosts.authorUserId, communityReactions.kind),
+      .innerJoin(givers, eq(givers.id, communityReactions.userId))
+      .where(and(inArray(communityPosts.authorUserId, ids), eq(communityPosts.status, 'visible'), ne(communityReactions.userId, communityPosts.authorUserId), giverCounts))
+      .groupBy(communityPosts.authorUserId, communityReactions.userId, communityReactions.kind),
     db
-      .select({ userId: communityReplies.authorUserId, kind: communityReactions.kind, count })
+      .select({ userId: communityReplies.authorUserId, giverId: communityReactions.userId, kind: communityReactions.kind, count })
       .from(communityReactions)
       .innerJoin(communityReplies, and(eq(communityReactions.targetKind, 'reply'), eq(communityReactions.targetId, communityReplies.id)))
-      .where(and(inArray(communityReplies.authorUserId, ids), eq(communityReplies.status, 'visible'), ne(communityReactions.userId, communityReplies.authorUserId)))
-      .groupBy(communityReplies.authorUserId, communityReactions.kind),
+      .innerJoin(givers, eq(givers.id, communityReactions.userId))
+      .where(and(inArray(communityReplies.authorUserId, ids), eq(communityReplies.status, 'visible'), ne(communityReactions.userId, communityReplies.authorUserId), giverCounts))
+      .groupBy(communityReplies.authorUserId, communityReactions.userId, communityReactions.kind),
     db.select({ userId: bookings.posterUserId, count }).from(bookings).where(and(inArray(bookings.posterUserId, ids), eq(bookings.status, 'completed'))).groupBy(bookings.posterUserId),
     db.select({ userId: bookings.helperUserId, count }).from(bookings).where(and(inArray(bookings.helperUserId, ids), eq(bookings.status, 'completed'))).groupBy(bookings.helperUserId),
     db
@@ -92,11 +100,23 @@ export async function sparkTallies(db: Db, userIds: readonly string[]): Promise<
   const of = (userId: string | null) => (userId ? out.get(userId) : undefined);
   for (const row of posts) of(row.userId)?.counts.postsPerDay.push(row.count);
   for (const row of replies) of(row.userId)?.counts.repliesPerDay.push(row.count);
+  // One giver's reactions on posts and replies together, then each giver's cap (cappedReactions).
+  const perGiver = new Map<string, Map<string, { kind: string; count: number }>>();
   for (const row of [...onPosts, ...onReplies]) {
-    const entry = of(row.userId);
+    if (!row.userId || !of(row.userId)) continue;
+    const byGiver = perGiver.get(row.userId) ?? new Map<string, { kind: string; count: number }>();
+    perGiver.set(row.userId, byGiver);
+    const key = `${row.giverId}:${row.kind}`;
+    const seen = byGiver.get(key);
+    if (seen) seen.count += row.count;
+    else byGiver.set(key, { kind: row.kind, count: row.count });
+  }
+  for (const [userId, byGiver] of perGiver) {
+    const entry = of(userId);
     if (!entry) continue;
-    if (row.kind === 'helpful') entry.counts.helpful += row.count;
-    else if (row.kind === 'thanks') entry.counts.thanks += row.count;
+    const reactions = cappedReactions(byGiver.values());
+    entry.counts.helpful += reactions.helpful;
+    entry.counts.thanks += reactions.thanks;
   }
   for (const row of [...asClient, ...asHelper]) {
     const entry = of(row.userId);
@@ -275,7 +295,8 @@ export async function sparksPageData(db: Db, provider: BillingProvider | null, u
     planDirectChatsPerDay: PLAN_DIRECT_CHATS_PER_DAY,
     hasPlan,
     ...(hasPlan ? { yourPlanDirectChatsPerDay: Math.max(...[...plans.keys()].map((plan) => PLAN_DIRECT_CHATS_PER_DAY[plan])) } : {}),
-    rules: SPARK_SOURCES.map((source) => ({ source, points: SPARK_RULES[source].points, ...(SPARK_RULES[source].dailyCap ? { dailyCap: SPARK_RULES[source].dailyCap } : {}) })),
+    rules: sparkRuleRows(),
+    giverMinAccountDays: SPARK_GIVER_RULES.minAccountDays,
     packs: SPARK_PACKS.map((pack) => ({ pack, ...SPARK_PACK_OFFERS[pack] })),
     purchases,
     ...(provider ? {} : { unavailable: true as const }),

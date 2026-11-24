@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 import { createDevGiftCardProvider } from '@/integrations/gift-cards';
 import { bookingTerms, bookings } from '@/modules/bookings/schema';
@@ -6,6 +6,8 @@ import { rewardGrants } from '@/modules/rewards/schema';
 import { getRewardsPage, redeemReward } from '@/modules/rewards/service';
 import { tasks } from '@/modules/tasks/schema';
 import { createDb } from '@/platform/db/connect';
+import { users } from '@/modules/accounts/schema';
+import { throwawayClient } from '../support/people';
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
 afterAll(() => pool.end());
@@ -64,5 +66,32 @@ describe('the repeat reward', () => {
     expect(after.repeatProgress).toContainEqual(expect.objectContaining({ clientDisplayName: 'Priya S.', paidBookings: 2, needed: 3 }));
     const live = await db.select().from(rewardGrants).where(and(eq(rewardGrants.helperUserId, 'usr_lee'), eq(rewardGrants.program, 'repeat')));
     expect(live).toHaveLength(1);
+  });
+
+  it('never counts bookings paid directly: no money moves through TasksNearMe, so nothing could pay it (sweep 2026-11-24, M3)', async () => {
+    // A client of Lee's of their own, paying Lee directly three times.
+    const client = await throwawayClient(db, 'usr_rw_direct');
+    await db.update(users).set({ firstName: 'Dirk', lastName: 'Directo' }).where(eq(users.id, client));
+    const [tv] = await db.select().from(bookings).where(eq(bookings.id, 'bkg_tv'));
+    const [task] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_tv'));
+    const [terms] = await db.select().from(bookingTerms).where(eq(bookingTerms.bookingId, 'bkg_tv'));
+    const ids = [1, 2, 3].map((n) => `rwd${n}`);
+    try {
+      for (const [index, id] of ids.entries()) {
+        const confirmedAt = new Date(Date.now() - (4 - index) * 86_400_000);
+        await db.insert(tasks).values({ ...task!, id: `tsk_${id}`, slug: `${id}-tv`, posterUserId: client, status: 'completed', requestKey: null });
+        await db.insert(bookings).values({ ...tv!, id: `bkg_${id}`, taskId: `tsk_${id}`, offerId: null, posterUserId: client, helperUserId: 'usr_lee', status: 'completed', paymentMode: 'direct', confirmedAt, completedAt: confirmedAt, createdAt: confirmedAt });
+        await db.insert(bookingTerms).values({ ...terms!, id: `btm_${id}`, bookingId: `bkg_${id}` });
+      }
+      const page = await getRewardsPage(db, { id: 'usr_lee', helperReady: true }, new Date());
+      expect(page.grants.filter((grant) => grant.program === 'repeat' && ids.some((id) => grant.booking?.id === `bkg_${id}`))).toEqual([]);
+      expect(page.repeatProgress.map((row) => row.clientDisplayName)).not.toContain('Dirk D.');
+      const grants = await db.select().from(rewardGrants).where(and(eq(rewardGrants.helperUserId, 'usr_lee'), inArray(rewardGrants.bookingId, ids.map((id) => `bkg_${id}`))));
+      expect(grants).toEqual([]);
+    } finally {
+      await db.delete(bookingTerms).where(inArray(bookingTerms.bookingId, ids.map((id) => `bkg_${id}`)));
+      await db.delete(bookings).where(inArray(bookings.id, ids.map((id) => `bkg_${id}`)));
+      await db.delete(tasks).where(inArray(tasks.id, ids.map((id) => `tsk_${id}`)));
+    }
   });
 });

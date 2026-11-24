@@ -84,7 +84,7 @@ describe('public screen interactions', () => {
     for (const link of posts) expect(link.getAttribute('href')).toBe(routes.app.newTask({ category: 'furniture-assembly' }));
     expect(screen.getByText(messages.publicPages.shared.freeToPost)).toBeDefined();
     const trust = screen.getByRole('list', { name: messages.publicPages.shared.trustPoints.label });
-    expect(within(trust).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['ID-verified helpers', 'Reviews only from completed bookings', 'Price agreed before you book']);
+    expect(within(trust).getAllByRole('listitem').map((item) => item.textContent)).toEqual(['Address-verified helpers', 'Reviews only from completed bookings', 'Price agreed before you book']);
     // Before anyone posts here: the first-of-its-kind card's button too.
     cleanup();
     renderScreen(<CategoryScreen data={{ ...furnitureCategoryPageData, recentTasks: [], topHelpers: [] }} now={now} />);

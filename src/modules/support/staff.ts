@@ -98,6 +98,9 @@ import {
 import { thankYouNotes } from '@/modules/thanks/schema';
 import { reportedGroupMessageOf, setGroupMessageRemoved } from '@/modules/community/groups';
 
+/** A transaction on `db`. */
+type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
+
 /**
  * Staff working support cases (UI-018; blueprint 03 §9, B-052, B-054): the queues, the case list, a
  * case with its people, booking and timeline; replies to each person, notes, assignment, status,
@@ -318,7 +321,7 @@ export async function loadCase(db: Db, staff: StaffActor, caseId: string): Promi
   if (!row) return null;
   const [booking] = row.bookingId
     ? await db
-        .select({ id: bookings.id, taskId: bookings.taskId, title: tasks.title, status: bookings.status, startAt: bookings.startAt, termsVersion: bookings.termsVersion, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId })
+        .select({ id: bookings.id, taskId: bookings.taskId, title: tasks.title, status: bookings.status, startAt: bookings.startAt, termsVersion: bookings.termsVersion, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId, paymentMode: bookings.paymentMode })
         .from(bookings)
         .innerJoin(tasks, eq(tasks.id, bookings.taskId))
         .where(eq(bookings.id, row.bookingId))
@@ -364,7 +367,7 @@ export async function loadCase(db: Db, staff: StaffActor, caseId: string): Promi
       status: caseStatusOf(row.status),
       assigneeId: row.assigneeUserId,
       waitingOn,
-      ...(booking ? { booking: { status: booking.status, paid: paidRows.length > 0 } } : {}),
+      ...(booking ? { booking: { status: booking.status, paid: paidRows.length > 0, direct: booking.paymentMode === 'direct' } } : {}),
     },
     ...(booking ? { booking } : {}),
   };
@@ -794,20 +797,36 @@ async function moveCase(
   ctx: CaseContext,
   version: number,
   now: Date,
-  change: { set: Partial<typeof supportCases.$inferInsert>; events: (typeof supportCaseEvents.$inferInsert)[]; action: string; metadata?: Record<string, unknown> },
+  change: {
+    set: Partial<typeof supportCases.$inferInsert>;
+    events: (typeof supportCaseEvents.$inferInsert)[];
+    action: string;
+    metadata?: Record<string, unknown>;
+    /** Runs with the case's change, in its transaction: false undoes both (the booking moved on meanwhile). */
+    alongside?: (tx: Tx) => Promise<boolean>;
+  },
 ): Promise<ActionResult | null> {
-  return db.transaction(async (tx) => {
-    const updated = await tx
-      .update(supportCases)
-      .set({ ...change.set, version: ctx.row.version + 1, updatedAt: now })
-      .where(and(eq(supportCases.id, ctx.row.id), eq(supportCases.version, Number(version))))
-      .returning({ id: supportCases.id });
-    if (updated.length === 0) return { ok: false, code: 'version_conflict' } satisfies ActionResult;
-    if (change.events.length > 0) await tx.insert(supportCaseEvents).values(change.events);
-    await audit(tx, staff, change.action, ctx.row.id, now, change.metadata ? { metadata: change.metadata } : {});
-    return null;
-  });
+  try {
+    return await db.transaction(async (tx) => {
+      const updated = await tx
+        .update(supportCases)
+        .set({ ...change.set, version: ctx.row.version + 1, updatedAt: now })
+        .where(and(eq(supportCases.id, ctx.row.id), eq(supportCases.version, Number(version))))
+        .returning({ id: supportCases.id });
+      if (updated.length === 0) return { ok: false, code: 'version_conflict' } satisfies ActionResult;
+      if (change.alongside && !(await change.alongside(tx))) throw new MovedOn();
+      if (change.events.length > 0) await tx.insert(supportCaseEvents).values(change.events);
+      await audit(tx, staff, change.action, ctx.row.id, now, change.metadata ? { metadata: change.metadata } : {});
+      return null;
+    });
+  } catch (error) {
+    if (error instanceof MovedOn) return { ok: false, code: 'version_conflict' };
+    throw error;
+  }
 }
+
+/** What `moveCase`'s `alongside` throws to undo the case's change with it. */
+class MovedOn extends Error {}
 
 const statusEvent = (caseId: string, staffId: string, status: CaseStatus, at: Date) => ({ id: newId('cev'), caseId, kind: 'status', authorUserId: staffId, status, createdAt: at });
 
@@ -954,6 +973,23 @@ export async function addCaseNote(db: Db, staff: StaffActor, caseId: string, inp
 }
 
 /** Resolve without money effects: the summary goes to everyone staff can write to on the case. */
+/**
+ * Ends a disputed booking paid directly (no money anywhere): done, it completes as support decided, like a released
+ * payment does; not done, it's canceled by support, with nothing to refund. Its task follows: completed, or open no
+ * longer (canceled, as a task whose only booking ended this way). False when the booking isn't disputed any more.
+ */
+async function closeDirectDispute(tx: Tx, bookingId: string, taskId: string, resolution: CaseResolution, now: Date): Promise<boolean> {
+  const done = resolution === 'closed_done';
+  const rows = await tx
+    .update(bookings)
+    .set(done ? { status: 'completed', completedVia: 'support', completedAt: now, approvalDueAt: null, updatedAt: now } : { status: 'canceled', cancelReason: 'admin', canceledBy: 'support', canceledAt: now, approvalDueAt: null, updatedAt: now })
+    .where(and(eq(bookings.id, bookingId), eq(bookings.status, 'disputed'), eq(bookings.paymentMode, 'direct')))
+    .returning({ id: bookings.id });
+  if (rows.length === 0) return false;
+  await tx.update(tasks).set({ status: done ? 'completed' : 'canceled', updatedAt: now }).where(eq(tasks.id, taskId));
+  return true;
+}
+
 export async function resolveCase(
   db: Db,
   staff: StaffActor,
@@ -972,6 +1008,11 @@ export async function resolveCase(
   if (MONEY_RESOLUTIONS.includes(parsed.data.resolution) && !options.moneyApplied) return { ok: false, code: 'not_allowed' };
   const allowed = options.moneyApplied ? staffCaseActions(ctx.facts).includes('resolve') : caseResolutions(ctx.facts).includes(parsed.data.resolution);
   if (!allowed) return { ok: false, code: 'not_allowed' };
+  // A dispute over a booking paid directly closes on what happened, with the case, in one transaction (sweep
+  // 2026-11-24, M2): a booking that isn't disputed any more (a stale page) undoes both.
+  const resolution = parsed.data.resolution;
+  const booking = ctx.booking;
+  const closesBooking = (resolution === 'closed_done' || resolution === 'closed_not_done') && booking !== undefined;
   const later = (ms: number) => new Date(now.getTime() + ms);
   const failed = await moveCase(db, staff, ctx, version, now, {
     set: {
@@ -990,6 +1031,7 @@ export async function resolveCase(
     ],
     action: 'case.resolve',
     metadata: { resolution: parsed.data.resolution },
+    ...(closesBooking ? { alongside: (tx: Tx) => closeDirectDispute(tx, booking.id, booking.taskId, resolution, now) } : {}),
   });
   if (failed) return failed;
   await db.insert(outboxEvents).values({

@@ -25,7 +25,7 @@ export function SparksBadge({ sparks, compact = false, className }: { sparks: Sp
     <span aria-hidden="true" className={cn('inline-flex items-center gap-1 rounded-full font-semibold', compact ? 'px-1.5 py-px' : 'px-2.5 py-0.5', levelTone[sparks.level])}>
       <Sparkles className={compact ? 'size-3' : 'size-3.5'} />
       <span className="tabular-nums">{total}</span>
-      <span>· {t(`levels.${sparks.level}`)}</span>
+      <span data-sparks-level="">· {t(`levels.${sparks.level}`)}</span>
     </span>
     {sparks.bought > 0 && <span aria-hidden="true" className="tabular-nums text-muted-foreground">{t('bought', { bought })}</span>}
   </span>;

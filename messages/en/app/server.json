@@ -215,7 +215,7 @@
         "helper_running_late": "If the new time doesn't work, message them from the booking page.",
         "cant_access": "Message them from the booking page so they can get in.",
         "work_submitted": "Check the photos, then approve or report a problem.",
-        "work_approved": "Your earnings are on their way.",
+        "work_approved": "Paid through TasksNearMe, your earnings are on their way. Paid directly, your client pays you as you agreed.",
         "problem_reported": "Talk it through on the booking page. Support can step in if you can't sort it out together.",
         "earnings_transferred": "They go to your bank account on your usual payout schedule.",
         "payout_paid": "It can take a business day to show in your bank account.",
@@ -232,7 +232,7 @@
         "rebook_accepted": "The details are on the booking page.",
         "task_reopened": "Their helper canceled, so the time is set and the client is ready to book.",
         "booking_reminder": "Check the time and the details on the booking page.",
-        "verification_passed": "Your setup page shows what is left before you can send offers.",
+        "verification_passed": "Your setup page shows what you can do now and what is left to become a verified helper.",
         "verification_action_needed": "Open your setup page to see what is needed. It only takes a few minutes.",
         "background_check_expiring": "Renewing keeps your in-home categories open without a gap.",
         "id_expiring": "Take photos of a current ID. Your current check counts until the end of your ID's expiry month.",
@@ -246,7 +246,7 @@
         "series_resumed": "The next visits are on the calendar again.",
         "scheduled_payment_failed": "Pay on the booking page, or change the card. We try again before then.",
         "replacement_needed": "Their helper canceled, so the time is set and the client is ready to book.",
-        "replacement_search_started": "You were refunded in full. New offers will appear on your task. If you no longer need it, cancel the task.",
+        "replacement_search_started": "Anything you paid through TasksNearMe was refunded in full. New offers will appear on your task. If you no longer need it, cancel the task.",
         "badge_earned": "See all your badges, and the next ones, on your account page.",
         "city_open": "Choose your neighborhood and add your home address. Then you can send offers on tasks near you.",
         "city_live_client": "Describe what you need in a few words. You choose who to book, and pay only when you book.",
@@ -324,7 +324,7 @@
       "verification_passed": "{track, select, phone {Your phone number is verified.} identity {Your ID is verified.} address {Your home address is verified.} payout {Your payout account is ready.} background {Your background check is complete.} other {A verification step is complete.}}",
       "verification_action_needed": "{track, select, identity {Your ID check needs your attention.} address {We need another proof of your home address.} payout {Your payout setup needs more information.} background {Your background check needs your attention. Check your email from Checkr.} other {A verification step needs your attention.}}",
       "background_check_expiring": "{days, plural, =0 {Your background check has run out. Start a new one to take in-home tasks again.} one {Your background check runs out tomorrow. Start the renewal to keep your in-home categories.} other {Your background check runs out in # days. Start the renewal to keep your in-home categories.}}",
-      "id_expiring": "{days, plural, =0 {The ID you verified with has expired. Take a new ID check to be booked again.} one {The ID you verified with expires tomorrow. Take a new ID check to stay bookable.} other {The ID you verified with expires in # days. Take a new ID check to stay bookable.}}",
+      "id_expiring": "{days, plural, =0 {The ID you verified with has expired. Take a new ID check to get your ID-verified badge back.} one {The ID you verified with expires tomorrow. Take a new ID check to keep your ID-verified badge.} other {The ID you verified with expires in # days. Take a new ID check to keep your ID-verified badge.}}",
       "helper_ready": "You're all set: you can send offers now. Find work near you.",
       "task_match": "New task near you: {title}{hasAmount, select, yes {, {amount}} other {}}.",
       "data_export_ready": "The copy of your TasksNearMe data you asked for is ready to download.",
@@ -640,8 +640,8 @@
       },
       "checked": {
         "question": "How are helpers checked?",
-        "answer": "Before sending offers, every helper verifies a government ID with a live selfie and their home address. Clients see a badge with the date of each check.",
-        "inHome": "Before sending offers, every helper verifies a government ID with a live selfie and their home address. This service happens in your home, so helpers also need a cleared background check before they can take it."
+        "answer": "Before sending offers, every helper verifies their home address. Many also verify a government ID with a live selfie, and clients see a badge with the date of each check.",
+        "inHome": "Before sending offers, every helper verifies their home address. This service happens in your home, so helpers also need a cleared background check before they can take it, and clients see a badge with the date of each check."
       },
       "remote": {
         "question": "Can it be done remotely?",

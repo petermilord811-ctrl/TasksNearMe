@@ -121,6 +121,8 @@ async function exceptions(db: Db, query: string, now: Date): Promise<Found> {
   const graceCutoff = new Date(now.getTime() - TRANSFER_GRACE_DAYS * DAY);
   const missingWhere = and(
     eq(bookings.status, 'completed'),
+    // A booking paid directly has no transfer to miss (sweep 2026-11-24, M5).
+    eq(bookings.paymentMode, 'held'),
     sql`${bookings.completedAt} < ${graceCutoff}`,
     sql`not exists (select 1 from ${earnings} e where e.booking_id = ${bookings.id} and e.kind = 'earnings' and e.status in ('transferred', 'paid_out'))`,
     personMatch(query, bookings.helperUserId, bookings.id),

@@ -100,12 +100,13 @@ export function SparksScreen({ data, handlers, initialResult, initialPendingPack
             return <li key={rule.source} className="flex items-start justify-between gap-3 py-2.5">
               <span className="min-w-0">
                 <span className="block font-medium">{t(`earn.sources.${rule.source}`)}</span>
-                <span className="block text-muted-foreground">{rule.dailyCap ? t('earn.pointsCapped', { points: rule.points, cap: rule.dailyCap }) : t('earn.points', { points: rule.points })}</span>
+                <span className="block text-muted-foreground">{rule.dailyCap ? t('earn.pointsCapped', { points: rule.points, cap: rule.dailyCap }) : rule.perGiver ? t('earn.pointsPerGiver', { points: rule.points, cap: rule.perGiver }) : t('earn.points', { points: rule.points })}</span>
               </span>
               <span className="shrink-0 text-right tabular-nums">{t('earn.yours', { points: number(counted?.points ?? 0) })}</span>
             </li>;
           })}
         </ul>
+        <p className="text-xs text-muted-foreground">{t('earn.giverNote', { days: data.giverMinAccountDays })}</p>
       </section>
 
       <section aria-labelledby="sparks-contact" className={cn(card, 'space-y-3')}>

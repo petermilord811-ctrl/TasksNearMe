@@ -78,7 +78,8 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
   const folded = !compact && body.length > 0 && !toolsOpen && (Boolean(actionsMenu) || rules.maxAttachments > 0);
   const lastTyping = useRef(0);
   const locked = useRef(initialPending);
-  const requestKey = useRef<string | null>(null);
+  // This message's key and what it was made for: words, photos and the reply (sweep 2026-11-24 C14).
+  const requestKey = useRef<{ key: string; content: string } | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const uploadLocked = useRef(false);
   const mounted = useRef(true);
@@ -154,9 +155,11 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
     };
     locked.current = true; setPending(true); setResult(undefined); setGifError(undefined);
     // This message's key (bad connections pass, J-N1): a retry after an answer that never arrived sends the same key, so
-    // the message goes once. A new key after it's sent.
-    requestKey.current ??= newRequestKey();
-    const keyed = { ...input, requestKey: requestKey.current };
+    // the message goes once. A new key after it's sent, and for words or photos changed since the last try: the server
+    // answers an old key with "sent" without reading it, so an edited message went nowhere (sweep 2026-11-24 C14).
+    const content = JSON.stringify([input.body, input.attachmentIds, replyTo?.id ?? null]);
+    if (requestKey.current?.content !== content) requestKey.current = { key: newRequestKey(), content };
+    const keyed = { ...input, requestKey: requestKey.current.key };
     let next: ActionResult;
     try { next = await handlers.onSend(replyTo ? { ...keyed, replyToId: replyTo.id } : keyed); }
     catch { next = { ok: false, code: 'unknown' }; }

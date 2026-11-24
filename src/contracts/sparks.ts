@@ -50,16 +50,25 @@ export type SparkSource = (typeof SPARK_SOURCES)[number];
 /**
  * What each thing earns. `dailyCap`: only that many a day count (in UTC days), so posting more to farm Sparks
  * doesn't pay. Posts and replies count while they're visible (one removed by its author or our team stops counting);
- * Helpful and Thanks count from other people only.
+ * Helpful and Thanks count from other people only, and only from givers `SPARK_GIVER_RULES` accepts. `perGiver`: at
+ * most that many of the kind count from any one person (sweep 2026-11-24 A2: two sock accounts marking every post and
+ * reply reached the contact-details level in about three days).
  */
-export const SPARK_RULES: Record<SparkSource, { points: number; dailyCap?: number }> = {
+export const SPARK_RULES: Record<SparkSource, { points: number; dailyCap?: number; perGiver?: number }> = {
   posts: { points: 5, dailyCap: 3 },
   replies: { points: 2, dailyCap: 10 },
-  helpful: { points: 3 },
-  thanks: { points: 2 },
+  helpful: { points: 3, perGiver: 5 },
+  thanks: { points: 2, perGiver: 5 },
   bookings: { points: 10 },
   reviews: { points: 2 },
 };
+
+/**
+ * Whose Helpful and Thanks count (sweep 2026-11-24 A2): an account in good standing now (active: not restricted,
+ * suspended, banned or deleted, so a banned sock's reactions stop counting at once) that was at least
+ * `minAccountDays` old when it reacted (a fresh account's reactions never count, even once it's older).
+ */
+export const SPARK_GIVER_RULES = { minAccountDays: 7 } as const;
 
 /** Sparks for sale. */
 export const SPARK_PACKS = ['small', 'medium', 'large'] as const;
@@ -117,7 +126,9 @@ export interface SparksPageData {
   /** With a plan: the least it allows a day (the viewer's highest plan's, `PLAN_DIRECT_CHATS_PER_DAY`). */
   yourPlanDirectChatsPerDay?: number;
   /** What earns Sparks (`SPARK_RULES`), in `SPARK_SOURCES` order. */
-  rules: { source: SparkSource; points: number; dailyCap?: number }[];
+  rules: { source: SparkSource; points: number; dailyCap?: number; perGiver?: number }[];
+  /** How old another person's account must have been when they reacted for their Helpful and Thanks to count. */
+  giverMinAccountDays: number;
   packs: { pack: SparkPack; points: number; priceCents: Cents }[];
   /** Newest first, at most 20. */
   purchases: SparkPurchaseView[];

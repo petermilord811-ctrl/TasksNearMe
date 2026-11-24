@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createDevPaymentProvider } from '@/integrations/payments';
+import { runBookingAction } from '@/modules/bookings/hub';
 import { bookingTerms, bookings } from '@/modules/bookings/schema';
 import { getDashboard } from '@/modules/home/service';
 import { getPublishedPolicy } from '@/modules/markets/queries';
@@ -21,6 +22,7 @@ import {
 import { taskLocations, tasks } from '@/modules/tasks/schema';
 import { createFieldCipher } from '@/platform/crypto/field-encryption';
 import { createDb } from '@/platform/db/connect';
+import { rateLimits } from '@/platform/rate-limit/schema';
 import { marketDayKey } from '@/shared/format';
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
@@ -39,7 +41,9 @@ beforeAll(async () => {
   const [cleaning] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_cleaning'));
   const policy = await getPublishedPolicy(cleaning!.marketId, db);
   const start = new Date(Date.now() - 10 * DAY);
-  await db.insert(tasks).values({ ...cleaning!, id: 'tsk_rbk', slug: 'rbk-cleaning-x1y2', status: 'completed', offerCount: 0, version: 1, windowStart: start, windowEnd: new Date(start.getTime() + 3 * 3_600_000) });
+  // Posted through the wizard, so it carries a request key (unique per client): accepting a proposal copies the task,
+  // and a copy that kept the key was refused (sweep 2026-11-24, M1).
+  await db.insert(tasks).values({ ...cleaning!, id: 'tsk_rbk', slug: 'rbk-cleaning-x1y2', status: 'completed', offerCount: 0, version: 1, windowStart: start, windowEnd: new Date(start.getTime() + 3 * 3_600_000), requestKey: 'rk_rbk_source_m1' });
   await db.insert(bookings).values({ id: 'bkg_rbk', taskId: 'tsk_rbk', posterUserId: 'usr_ana', helperUserId: 'usr_sam', marketId: cleaning!.marketId, policyVersionId: policy!.id, status: 'completed', startAt: start, confirmedAt: start, completedAt: new Date(start.getTime() + 4 * 3_600_000) });
   await db.insert(bookingTerms).values({ id: 'btm_rbk', bookingId: 'bkg_rbk', version: 1, pricingType: 'fixed', priceCents: 9000, breakdown: quoteBreakdown(policy!.fees, { type: 'fixed', priceCents: 9000 }), scopeText: cleaning!.description, startAt: start });
 });
@@ -89,6 +93,23 @@ describe('my clients and rebooking', () => {
     const aboutBooking = told.filter((note) => note.target.kind === 'booking' && note.target.bookingId === done!.bookingId);
     expect(aboutBooking.map((note) => note.type)).toEqual(['rebook_accepted']);
     expect(aboutBooking[0]!.params).toMatchObject({ at: booking!.startAt.toISOString(), timeZone: 'America/Chicago' });
+  });
+
+  it("sends Pay on an unpaid booking from a proposal back to the proposal, where its payment is finished (sweep 2026-11-24, B2)", async () => {
+    expect(await proposeRebook(db, 'usr_sam', 'bkg_rbk', proposal(8), now())).toMatchObject({ ok: true });
+    const [row] = await db.select().from(rebookProposals).where(and(eq(rebookProposals.fromBookingId, 'bkg_rbk'), eq(rebookProposals.status, 'sent')));
+    // The client's bank asks them to verify (3-D Secure), and they leave it: the booking waits for its payment.
+    const first = await acceptProposal(deps, 'usr_ana', row!.id, { payment: { kind: 'dev_card', card: 'requires_verification', save: false }, acceptTerms: true }, now());
+    expect(first).toMatchObject({ ok: false, code: 'requires_bank_verification' });
+    const [waiting] = await db.select().from(rebookProposals).where(eq(rebookProposals.id, row!.id));
+    expect((await db.select().from(bookings).where(eq(bookings.id, waiting!.bookingId!)))[0]?.status).toBe('pending_funding');
+    // "Finish payment" leads to the booking; its Pay used to answer not_allowed (it has no offer to pay through).
+    expect(await runBookingAction(db, 'usr_ana', waiting!.bookingId!, 'pay', now())).toEqual({ ok: true, code: 'opened', redirectTo: `/app/proposals/${row!.id}` });
+    // Left as an unpaid hold would, so the cases after this one start clean.
+    await db.update(bookings).set({ status: 'canceled', cancelReason: 'funding_failed', canceledAt: now(), fundingExpiresAt: null }).where(eq(bookings.id, waiting!.bookingId!));
+    expect(await withdrawProposal(db, 'usr_sam', row!.id, now())).toMatchObject({ ok: true });
+    // Sam may propose 10 a day: this case's one mustn't use up another file's (double-submit's) in a full run.
+    await db.delete(rateLimits).where(eq(rateLimits.key, 'rebook:usr_sam'));
   });
 
   it('lets the client decline, the helper withdraw, and expires old proposals', async () => {

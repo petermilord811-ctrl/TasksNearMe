@@ -3,7 +3,7 @@ title: Finding help for tasks near you
 summary: Describe the task, compare offers from verified neighbors, and book with the price agreed up front.
 topic: guides
 order: 1
-updated: 2026-11-23
+updated: 2026-11-24
 action: post_task
 ---
 Furniture to put together, a truck to load, leaves to bag: most everyday tasks go faster with one more pair of hands. This is how to find the right person for yours.
@@ -23,7 +23,7 @@ You only share your general area when you post. See [who sees my address](/help/
 
 Helpers nearby send offers with their price and a start time. For each one, look at:
 
-- **Their checks.** Every helper verifies a government ID with a live selfie and their home address before they can send offers. Services in your home also need a cleared background check.
+- **Their checks.** Every helper verifies their home address before they can send offers, and services in your home also need a cleared background check. Badges show who also verified a government ID with a live selfie, and when.
 - **Reviews and completed tasks** from people who booked them.
 - **The price, what it covers and how to pay.** There are no service fees. Each offer says whether you pay the helper directly after the task, or upfront, held by TasksNearMe for a small hold fee, and you see your total before you book.
 

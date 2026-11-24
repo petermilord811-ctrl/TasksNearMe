@@ -19,7 +19,7 @@ Al publicar solo compartes tu zona general. Consulta [quién ve mi dirección](/
 
 Ayudantes cercanos te envían ofertas con su precio y una hora de inicio. En cada una, revisa:
 
-- **Sus verificaciones.** Todo ayudante verifica una identificación oficial con una selfie en vivo y su domicilio antes de poder enviar ofertas. Los servicios dentro de tu casa también requieren una verificación de antecedentes aprobada.
+- **Sus verificaciones.** Todo ayudante verifica su domicilio antes de poder enviar ofertas, y los servicios dentro de tu casa también requieren una verificación de antecedentes aprobada. Las insignias muestran quién verificó además una identificación oficial con una selfie en vivo, y cuándo.
 - **Las reseñas y las tareas completadas** de sus clientes anteriores.
 - **El precio, lo que incluye y cómo se paga.** No hay tarifas de servicio. Cada oferta dice si le pagas al ayudante directamente después de la tarea, o por adelantado, con el pago retenido por TasksNearMe por una pequeña tarifa de retención, y ves tu total antes de reservar.
 

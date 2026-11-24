@@ -37,6 +37,8 @@ import { publishNotices } from '@/platform/realtime/publish';
 import { presenceOf } from '@/modules/realtime/presence';
 import { firstMessagesLeft } from './direct-rules';
 import { mentionsOf } from './mentions';
+import { unarchiveForOthers } from './archive';
+import { answeredWithCard } from './card-answers';
 import { noteSampleRecipient } from './samples';
 import { CATCH_UP_UNREAD, chatAssistOffered } from './assist';
 import { cardsFor } from './cards';
@@ -285,7 +287,8 @@ async function directPeopleOf(db: Db, list: ThreadRow[], viewerId: string) {
 
 /**
  * A direct conversation's first messages (2026-11-21): what the viewer can still send before the other person
- * answers (`firstMessagesLeft`), or null once they have, for the person who didn't start it, and for other threads.
+ * answers (`firstMessagesLeft`), or null once they have, for the person who didn't start it, and for other threads. A card
+ * from the other person (an ask for an offer, shared times, a task request) is an answer too (sweep 2026-11-24 C12).
  */
 export async function directFirstMessagesLeft(db: Db, thread: ThreadRow, viewerId: string): Promise<number | null> {
   if (thread.kind !== 'direct' || thread.startedByUserId !== viewerId) return null;
@@ -296,7 +299,8 @@ export async function directFirstMessagesLeft(db: Db, thread: ThreadRow, viewerI
     .groupBy(messages.senderUserId);
   const viewerSent = rows.find((row) => row.senderUserId === viewerId)?.value ?? 0;
   const otherSent = rows.filter((row) => row.senderUserId !== null && row.senderUserId !== viewerId).reduce((sum, row) => sum + row.value, 0);
-  return firstMessagesLeft({ viewerStarted: true, viewerSent, otherSent });
+  const left = firstMessagesLeft({ viewerStarted: true, viewerSent, otherSent });
+  return left !== null && (await answeredWithCard(db, thread.id, viewerId)) ? null : left;
 }
 
 /** `deletedLabel`: the reader's "Deleted account" (shown-name.ts), for someone whose account was deleted (J-PR15). */
@@ -427,7 +431,9 @@ async function summaryOf(db: Db, thread: ThreadRow, viewerId: string, now: Date)
 
 /**
  * Messages (and booking updates) in the viewer's threads that they haven't read yet: the shell's badge. Not in muted
- * conversations or message requests (2026-11-23): those show their own counts in Messages.
+ * conversations or message requests (2026-11-23): those show their own counts in Messages. Nor in archived ones (sweep
+ * 2026-11-24 C7): the list hides them, so the badge counted what the person couldn't find; anything someone sends there
+ * brings the conversation back first (`unarchiveForOthers`).
  */
 export async function unreadMessageCount(db: Db, userId: string): Promise<number> {
   const [row] = await db
@@ -440,6 +446,7 @@ export async function unreadMessageCount(db: Db, userId: string): Promise<number
         or(isNull(messages.senderUserId), ne(messages.senderUserId, userId)),
         or(isNull(threadParticipants.lastReadAt), gt(messages.createdAt, threadParticipants.lastReadAt)),
         eq(threadParticipants.muted, false),
+        isNull(threadParticipants.archivedAt),
         not(requestCondition(userId)),
       ),
     );
@@ -482,11 +489,13 @@ async function readMessageNotifications(db: Writer, userId: string, threadId: st
 /**
  * The reader's own pages hear that they read a conversation (sweep MN6): the Messages and bell badges live in the
  * signed-in shell, which stays mounted from page to page, and on the person's other devices. Only when something was
- * unread, so the page that refreshes on it doesn't send another.
+ * unread, so the page that refreshes on it doesn't send another. `mine` tells it from the other person's "Seen" (the same
+ * type, on the sender's stream): the chat window that just read the conversation doesn't read it again on its own
+ * notice, which threw away the first answer's "New messages" and "Catch me up" (sweep 2026-11-24 C11).
  */
 async function noticeReadByReader(db: Db, userId: string, threadId: string, unreadBefore: number, notificationsRead: number): Promise<void> {
   if (unreadBefore === 0 && notificationsRead === 0) return;
-  await publishNotices(db, [{ channel: userChannel(userId), notice: { type: 'read', thread: threadId } }]);
+  await publishNotices(db, [{ channel: userChannel(userId), notice: { type: 'read', thread: threadId, mine: true } }]);
 }
 
 /**
@@ -499,9 +508,11 @@ const beforeMessage = (id: string) => sql`(${messages.createdAt}, ${messages.id}
 /**
  * One conversation for a participant (null for anyone else). Opening it marks it read. It shows the latest 100 messages,
  * or, after "Load earlier messages" (`from`, a message of it: sweep MN11), everything from that message on, up to the
- * latest 1,000; `earlier` says where the 100 before the first one shown start.
+ * latest 1,000; `earlier` says where the 100 before the first one shown start. `peek`: the same data for a conversation
+ * that isn't on screen (a head docked beside the chat window, sweep 2026-11-24 C1), which reads nothing: no read mark,
+ * no "sent you a message" notifications read, no "Seen" for the sender, and its real unread count.
  */
-export async function getThreadPage(db: Db, userId: string, threadId: string, now: Date, page: { from?: string } = {}): Promise<ThreadPageData | null> {
+export async function getThreadPage(db: Db, userId: string, threadId: string, now: Date, page: { from?: string; peek?: boolean } = {}): Promise<ThreadPageData | null> {
   const [thread] = await db.select().from(threads).where(eq(threads.id, threadId)).limit(1);
   if (!thread) return null;
   const found = await summaryOf(db, thread, userId, now);
@@ -514,8 +525,11 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   const participants = await db.select().from(threadParticipants).where(eq(threadParticipants.threadId, thread.id));
   const mine = participants.find((row) => row.userId === userId);
   const theirs = participants.find((row) => row.userId === found.other.id);
-  await db.update(threadParticipants).set({ lastReadAt: now }).where(and(eq(threadParticipants.threadId, thread.id), eq(threadParticipants.userId, userId)));
-  await noticeReadByReader(db, userId, thread.id, found.summary.unreadCount, await readMessageNotifications(db, userId, thread.id, now));
+  const peek = page.peek === true;
+  if (!peek) {
+    await db.update(threadParticipants).set({ lastReadAt: now }).where(and(eq(threadParticipants.threadId, thread.id), eq(threadParticipants.userId, userId)));
+    await noticeReadByReader(db, userId, thread.id, found.summary.unreadCount, await readMessageNotifications(db, userId, thread.id, now));
+  }
 
   const [blocked, otherSparks] = await Promise.all([isBlocked(db, userId, found.other.id), sparksSummaryOf(db, found.other.id)]);
   // Mutual (WhatsApp's rule, completion plan 7.1): someone who hides their own activity doesn't see anyone
@@ -529,7 +543,7 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   const presence = mutual ? presenceOf(found.other.lastActiveAt, true, now) : undefined;
   // "Seen" for the people whose messages were just read: a live notice, ids only.
   const newlyRead = rows.filter((row) => row.senderUserId && row.senderUserId !== userId && (!mine?.lastReadAt || row.createdAt > mine.lastReadAt));
-  if (newlyRead.length > 0 && mutual) {
+  if (newlyRead.length > 0 && mutual && !peek) {
     const senders = [...new Set(newlyRead.map((row) => row.senderUserId!))];
     await publishNotices(db, senders.map((sender) => ({ channel: userChannel(sender), notice: { type: 'read', thread: thread.id } })));
   }
@@ -595,7 +609,7 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   };
   return {
     // The other person's Sparks in the header (2026-11-22), never a deleted account's.
-    thread: { ...found.summary, unreadCount: 0, otherParty: { ...found.summary.otherParty, ...(otherSparks && !otherGone ? { sparks: otherSparks } : {}) } },
+    thread: { ...found.summary, unreadCount: peek ? found.summary.unreadCount : 0, otherParty: { ...found.summary.otherParty, ...(otherSparks && !otherGone ? { sparks: otherSparks } : {}) } },
     messages: rows.map(withExtras),
     ...(earlier ? { earlier: { from: earlier.id } } : {}),
     ...(replies.length ? { savedReplies: replies } : {}),
@@ -817,10 +831,7 @@ export async function sendMessage(db: Db, userId: string, threadId: string, inpu
     .set({ lastReadAt: now, ...(thread.kind === 'direct' ? { acceptedAt: sql`coalesce(${threadParticipants.acceptedAt}, ${now})` } : {}) })
     .where(and(eq(threadParticipants.threadId, thread.id), eq(threadParticipants.userId, userId)));
   // A new message brings an archived conversation back into the other person's list, unless it's a request they ignored.
-  await db
-    .update(threadParticipants)
-    .set({ archivedAt: null })
-    .where(and(eq(threadParticipants.threadId, thread.id), ne(threadParticipants.userId, userId), isNotNull(threadParticipants.archivedAt), ...(thread.kind === 'direct' ? [isNotNull(threadParticipants.acceptedAt)] : [])));
+  await unarchiveForOthers(db, thread, userId);
   // A sample profile never answers: the app says so, once (2026-11-23).
   await noteSampleRecipient(db, thread.id, userId, others.map((row) => row.userId), now);
   // Answering reads the conversation too: the person's other devices hear it (this page refreshes with the action).

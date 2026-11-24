@@ -68,6 +68,7 @@ const attentionCopy: Record<AttentionKind, RegExp> = {
   answer_proposal: /proposed a booking/i,
   choose_offer: /choose a helper/i,
   no_offers: /no offers yet/i,
+  helper_not_checked_in: /hasn't checked in/i,
 };
 
 const attentionTargets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {

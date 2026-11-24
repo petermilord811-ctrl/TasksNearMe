@@ -136,4 +136,19 @@ describe('contact details on a helper profile', () => {
     expect(refused).toMatchObject({ ok: false, code: 'rate_limited' });
     expect(refused.ok === false && refused.retryAt ? new Date(refused.retryAt).getTime() : 0).toBeGreaterThan(day.getTime());
   });
+
+  it("refuses sharing a phone that can't be verified here, where texts are off (sweep 2026-11-24 A6)", async () => {
+    const textsOff = { NODE_ENV: 'production' };
+    const [before] = await db.select({ contactSharing: users.contactSharing, phoneVerifiedAt: users.phoneVerifiedAt }).from(users).where(eq(users.id, HELPER));
+    await db.update(users).set({ phoneVerifiedAt: null, contactSharing: 'none' }).where(eq(users.id, HELPER));
+    try {
+      expect(await saveContactSharing(db, HELPER, { setting: 'phone' }, now, textsOff)).toEqual({ ok: false, code: 'not_allowed' });
+      expect(await saveContactSharing(db, HELPER, { setting: 'email_phone' }, now, textsOff)).toEqual({ ok: false, code: 'not_allowed' });
+      expect(await saveContactSharing(db, HELPER, { setting: 'email' }, now, textsOff)).toEqual({ ok: true, code: 'updated' });
+      // Where texts work, it can be chosen and shows once verified.
+      expect(await saveContactSharing(db, HELPER, { setting: 'phone' }, now)).toEqual({ ok: true, code: 'updated' });
+    } finally {
+      await db.update(users).set({ phoneVerifiedAt: before!.phoneVerifiedAt, contactSharing: before!.contactSharing }).where(eq(users.id, HELPER));
+    }
+  });
 });

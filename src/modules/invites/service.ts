@@ -36,6 +36,7 @@ import { payments } from '@/modules/payments/schema';
 import { helperProfiles, helperServices } from '@/modules/profiles/schema';
 import { getHelperSummaries } from '@/modules/profiles/queries';
 import { savedHelpers } from '@/modules/reviews/schema';
+import { taskCopyFields } from '@/modules/tasks/copy';
 import { withCopySlug } from '@/modules/tasks/copy-slug';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
 import { taskLocations, tasks } from '@/modules/tasks/schema';
@@ -500,7 +501,7 @@ async function requestAgain(
         createdAt: now,
         updatedAt: now,
       });
-      const { id: _id, slug: _slug, createdAt: _created, updatedAt: _updated, publishedAt: _published, expiresAt: _expires, aiGenerationId: _ai, reopenedAt: _reopened, hiddenAt: _hidden, hiddenByUserId: _hiddenBy, hiddenReason: _hiddenReason, ...copy } = source.task;
+      const copy = taskCopyFields(source.task);
       // In a savepoint, so a slug that's taken is tried again with another (repeats review #16).
       await withCopySlug(source.task.slug, (slug) =>
         tx.transaction((savepoint) =>

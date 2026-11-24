@@ -115,6 +115,8 @@ export interface NeighborsAnswerView {
  * number that isn't verified never shows.
  */
 export const CONTACT_SHARING_SETTINGS = ['none', 'email', 'phone', 'email_phone'] as const;
+/** The settings that share the phone number, which needs a verified phone (sweep 2026-11-24 A6). */
+export const contactSettingSharesPhone = (setting: string) => setting === 'phone' || setting === 'email_phone';
 export type ContactSharingSetting = (typeof CONTACT_SHARING_SETTINGS)[number];
 
 /** One kind of contact detail a helper shares. */

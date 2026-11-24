@@ -9,7 +9,7 @@ import {
   type PreviewEntry,
   type ResolutionPreviewResult,
 } from '@/contracts';
-import { ADMIN_NOW, adminBookingDisputedData, adminBookingReadOnlyData, adminBookingSettledData, alexStaff, deskExactAddress, deskSettledBreakdown, disputeMoneyCaseData, fakeAdminBookingHandlers, fakeAdminCaseHandlers, fakeHandler, overLimitPreview, releaseFullPreview, reportedConversation, settleAt45Preview, adminBookingRefundRequestData } from '@/fixtures';
+import { ADMIN_NOW, adminBookingDisputedData, adminBookingReadOnlyData, adminBookingSettledData, alexStaff, deskExactAddress, deskSettledBreakdown, disputeMoneyCaseData, fakeAdminBookingHandlers, fakeAdminCaseHandlers, fakeHandler, overLimitPreview, releaseFullPreview, reportedConversation, settleAt45Preview, adminBookingRefundRequestData, adminBookingDirectData } from '@/fixtures';
 import { AdminBookingContent } from '@/ui/screens/admin/admin-booking-screen';
 import { AdminCaseContent } from '@/ui/screens/admin/admin-case-screen';
 import { AdminShell } from '@/ui/shells/admin-shell';
@@ -101,6 +101,7 @@ export const adminMoneyPreviews: PreviewEntry[] = [
   bookingPreview('disputed', b.disputed),
   bookingPreview('settled', b.settled, adminBookingSettledData),
   bookingPreview('read-only', b['read-only'], adminBookingReadOnlyData),
+  bookingPreview('paid-directly', b['paid-directly'], adminBookingDirectData),
   bookingPreview('address-revealed', b['address-revealed'], adminBookingDisputedData, { initialAddress: deskExactAddress }),
   bookingPreview('refund-form', b['refund-form'], adminBookingDisputedData, { initialDialog: 'refund', refundState: { initialValues: refundValues } }),
   bookingPreview('refund-over-limit', b['refund-over-limit'], adminBookingDisputedData, {

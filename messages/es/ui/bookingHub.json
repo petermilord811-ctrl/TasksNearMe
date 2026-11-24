@@ -109,7 +109,9 @@
       "rework": "Trabajo de seguimiento acordado",
       "goodwill_refund": "Reembolso de cortesía emitido",
       "account_action": "Se tomó una medida sobre la cuenta",
-      "reward_action": "Recompensa actualizada"
+      "reward_action": "Recompensa actualizada",
+      "closed_done": "Cerrado: el trabajo cuenta como hecho",
+      "closed_not_done": "Cerrado: la reserva se canceló"
     }
   },
   "helper": "Tu ayudante",

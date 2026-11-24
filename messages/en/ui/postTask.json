@@ -2,7 +2,7 @@
   "title": "Post a task",
   "intro": "Tell nearby helpers what you need. You can check everything before you post.",
   "guest": {
-    "intro": "You don't need an account to start. You'll make one when you post, and your task stays on this device until then.",
+    "intro": "You don't need an account to start. You'll make one when you post.",
     "photosLater": "You can add photos once you've created your account, before you post.",
     "reviewNote": "Next, create your account or sign in. Your task stays on this device and opens again here, ready to post."
   },

@@ -1,7 +1,7 @@
 {
   "checklist": {
     "title": "Tu verificación",
-    "intro": "Cada paso ayuda a que los clientes reserven con confianza. Termínalos todos para enviar ofertas.",
+    "intro": "Tu domicilio abre la ayuda: ofertas, horarios disponibles y reservas. Los demás pasos te hacen ayudante verificado; hazlos cuando quieras.",
     "count": "{done} de {total} listos",
     "steps": {
       "phone": "Teléfono",

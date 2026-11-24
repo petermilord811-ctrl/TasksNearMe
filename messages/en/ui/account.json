@@ -17,7 +17,7 @@
     }
   },
   "profile": {
-    "title": "Profile",
+    "title": "Photo and name",
     "description": "Your photo and name, as people see them on TasksNearMe.",
     "nameLegend": "Your name",
     "displayName": "Your display name: {name}",
@@ -381,6 +381,7 @@
     },
     "hint": "Only neighbors who’ve earned {at} Sparks (Pillar and Local legend) can see them on your profile, and we keep a record of who does. Bought Sparks don’t count, and no one else sees them. You can stop sharing at any time, though people who already saw them may have kept them.",
     "phoneUnverified": "Your phone number shows once you’ve verified it.",
+    "phoneUnavailable": "Sharing your phone number needs a verified phone, and phones can’t be verified here yet. Your email can be shared now.",
     "failed": "That didn’t save. Try again."
   },
   "sparks": {

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeftRight, CalendarCheck, CalendarPlus, ChevronRight, CircleAlert, ClipboardCheck, Clock, CreditCard, DoorOpen, ListChecks, MessageCircle, MessagesSquare, RefreshCw, UserRoundPlus, UserSearch, type LucideIcon } from 'lucide-react';
+import { ArrowLeftRight, CalendarCheck, CalendarPlus, ChevronRight, CircleAlert, ClipboardCheck, Clock, CreditCard, DoorOpen, ListChecks, MessageCircle, MessagesSquare, RefreshCw, UserRoundPlus, UserRoundX, UserSearch, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { AttentionItem, AttentionKind, ISODateTime } from '@/contracts';
 import { useFormat } from '@/ui/lib/format';
@@ -23,6 +23,7 @@ const icons: Record<AttentionKind, LucideIcon> = {
   answer_proposal: CalendarPlus,
   choose_offer: ListChecks,
   no_offers: UserSearch,
+  helper_not_checked_in: UserRoundX,
 };
 
 function AttentionRow({ item, now }: { item: AttentionItem; now?: ISODateTime }) {
@@ -64,8 +65,8 @@ function AttentionRow({ item, now }: { item: AttentionItem; now?: ISODateTime })
         <span className="block text-sm leading-6 text-muted-foreground">{t(`attention.body.${late ? 'check_in_late' : item.kind}`)}</span>
         {item.dueAt && <span className="flex items-start gap-1.5 pt-0.5 text-sm font-medium tabular-nums">
           <Clock aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-          <time dateTime={item.dueAt}>{item.kind === 'check_in_today'
-            ? t(late ? 'attention.startedAt' : 'attention.startTime', { time: formatTime(item.dueAt), date: formatDate(item.dueAt) })
+          <time dateTime={item.dueAt}>{item.kind === 'check_in_today' || item.kind === 'helper_not_checked_in'
+            ? t(late || item.kind === 'helper_not_checked_in' ? 'attention.startedAt' : 'attention.startTime', { time: formatTime(item.dueAt), date: formatDate(item.dueAt) })
             : t(`attention.${deadlineKey}`, { deadline: formatDateTime(item.dueAt) })}</time>
         </span>}
       </span>

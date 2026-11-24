@@ -55,7 +55,9 @@ async function helperBookingFacts(db: Db, helperUserId: string): Promise<Booking
     })
     .from(bookings)
     .innerJoin(tasks, eq(tasks.id, bookings.taskId))
-    .where(and(eq(bookings.helperUserId, helperUserId), isNotNull(bookings.confirmedAt)));
+    // Only bookings TasksNearMe held the money for: a booking paid directly never moves money through us, so it can't
+    // count toward a reward paid on our transfers (sweep 2026-11-24, M3; rewards terms).
+    .where(and(eq(bookings.helperUserId, helperUserId), isNotNull(bookings.confirmedAt), eq(bookings.paymentMode, 'held')));
   if (rows.length === 0) return [];
   const ids = rows.map((row) => row.id);
   const [terms, completions, transfers] = await Promise.all([

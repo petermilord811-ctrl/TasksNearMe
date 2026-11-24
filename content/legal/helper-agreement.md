@@ -3,7 +3,7 @@ title: Helper agreement
 summary: The extra terms that apply when you offer help on TasksNearMe.
 version: Draft 0.1
 status: draft
-updated: 2026-11-23
+updated: 2026-11-24
 ---
 > [!warning] This is a working draft for review. It has not been reviewed by a lawyer and is not in effect.
 
@@ -11,7 +11,7 @@ updated: 2026-11-23
 You're an independent helper, not an employee. You choose your tasks, prices, and hours, and you're responsible for your own taxes.
 
 ## 2. Verification {#verification}
-To send offers you need an ID check and payout setup. In-home categories also need a background check. Badges show what was checked and when.
+To send offers and be booked you need your profile and a verified home address. In-home categories also need a background check. To be paid upfront through TasksNearMe you need payout setup. Badges show what was checked and when.
 
 ## 3. Doing the work {#work}
 - Do what was agreed, at the agreed time.

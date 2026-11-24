@@ -262,7 +262,8 @@
       "answer_proposal": "Review the details, then accept and pay or decline.",
       "choose_offer": "It starts soon. Compare the offers and book one.",
       "no_offers": "Invite a helper you like, or check the price and the time.",
-      "check_in_late": "Open the booking to say you're on your way, or message the client."
+      "check_in_late": "Open the booking to check in, or message the client.",
+      "helper_not_checked_in": "Message them, or report a no-show on the booking."
     },
     "deadline": "Due {deadline}",
     "approvalDeadline": "Approve or report a problem by {deadline}. After that, the task is approved automatically.",
@@ -284,7 +285,8 @@
     "check_in_late": "{title} was due to start",
     "startedAt": "Was due at {time} · {date}",
     "more": "Show {count} more",
-    "fewer": "Show fewer"
+    "fewer": "Show fewer",
+    "helper_not_checked_in": "{title}: your helper hasn't checked in"
   },
   "previews": {
     "group": "Screens · Home",

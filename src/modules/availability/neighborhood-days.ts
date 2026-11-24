@@ -81,6 +81,18 @@ export async function createNeighborhoodDay(db: Db, helperId: string, input: Nei
 }
 
 /** The helper cancels the visits still open or requested (a waiting request is declined); booked visits go ahead. */
+/**
+ * Every open day of a helper our team suspended or banned (sweep 2026-11-24 A5), canceled as the helper's own Cancel
+ * does: waiting and still-authorizing requests are declined and their holds released. Visits already booked stay
+ * bookings. Returns how many days were canceled.
+ */
+export async function cancelOpenNeighborhoodDays(db: Db, payments_: PaymentProvider | null, helperId: string, now: Date): Promise<number> {
+  const days = await db.select({ id: neighborhoodDays.id }).from(neighborhoodDays).where(and(eq(neighborhoodDays.helperUserId, helperId), eq(neighborhoodDays.status, 'open')));
+  let canceled = 0;
+  for (const day of days) if ((await cancelNeighborhoodDay(db, payments_, helperId, day.id, now)).ok) canceled += 1;
+  return canceled;
+}
+
 export async function cancelNeighborhoodDay(db: Db, payments_: PaymentProvider | null, helperId: string, dayId: string, now: Date): Promise<ActionResult> {
   const [day] = await db.select().from(neighborhoodDays).where(and(eq(neighborhoodDays.id, String(dayId)), eq(neighborhoodDays.helperUserId, helperId))).limit(1);
   if (!day) return { ok: false, code: 'not_allowed' };

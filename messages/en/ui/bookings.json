@@ -15,11 +15,13 @@
   "needsAction": "Needs your action",
   "money": {
     "poster": "Total",
-    "helper": "You'll earn"
+    "helper": "You'll earn",
+    "direct": "Direct payment"
   },
   "amount": {
     "poster": "Total {amount}",
-    "helper": "You'll earn {amount}"
+    "helper": "You'll earn {amount}",
+    "direct": "Direct payment {amount}"
   },
   "remote": "Remote",
   "postTask": "Post a task",
@@ -41,8 +43,9 @@
   "nextStep": {
     "pay": "Pay to confirm. The hold ends {relative}.",
     "review_work": "Review the work by {date}, or it's approved automatically.",
-    "on_my_way": "{late, select, yes {This was due to start {today, select, yes {at {time}} other {{date}}}: tap \"On my way\" now, or message the client.} other {Tap \"On my way\" when you leave. It starts {today, select, yes {at {time}} other {{date}}}.}}",
-    "check_in": "{late, select, yes {This was due to start {today, select, yes {at {time}} other {{date}}}: tap \"I'm here\" when you arrive, or message the client.} other {Tap \"I'm here\" when you arrive. It starts {today, select, yes {at {time}} other {{date}}}.}}"
+    "on_my_way": "{late, select, yes {{today, select, yes {This was due to start at {time}: tap \"On my way\" now, or message the client.} other {This was due to start {date}. If you did it, tap \"I'm here\" and send the work; if not, message the client.}}} other {Tap \"On my way\" when you leave. It starts {today, select, yes {at {time}} other {{date}}}.}}",
+    "check_in": "{late, select, yes {{today, select, yes {This was due to start at {time}: tap \"I'm here\" when you arrive, or message the client.} other {This was due to start {date}. If you did it, tap \"I'm here\" and send the work; if not, message the client.}}} other {Tap \"I'm here\" when you arrive. It starts {today, select, yes {at {time}} other {{date}}}.}}",
+    "no_show_check": "Your helper hasn't checked in. It was due to start {today, select, yes {at {time}} other {{date}}}: message them, or report a no-show on the booking."
   },
   "regular": {
     "title": "Regular visits",

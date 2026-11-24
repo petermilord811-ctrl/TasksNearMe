@@ -88,7 +88,7 @@ export const helpArticleWhenCharged: HelpArticleData = {
       ordered: false,
       items: [
         ['The task price you agreed with your helper.'],
-        ['A hold fee of 5% of the task price, at least $1.00. With a Plus plan there’s no hold fee.'],
+        ['A hold fee of 5% of the task price, at least $1.00. With a Pro plan there’s no hold fee.'],
         ['Any expense allowance you agreed on. Unused allowance is refunded.'],
       ],
     },

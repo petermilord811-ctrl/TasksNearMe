@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ADMIN_BOOKING_ACTIONS, EARNINGS_STATUSES, STAFF_REFUND_REASONS, routes, type ActionResult, type AdminBookingHandlers, type AdminBookingPageData } from '@/contracts';
-import { ADMIN_NOW, adminBookingDisputedData, adminBookingReadOnlyData, adminBookingRefundRequestData, adminBookingSettledData, deskExactAddress, reportedConversation } from '@/fixtures';
+import { ADMIN_NOW, adminBookingDirectData, adminBookingDisputedData, adminBookingReadOnlyData, adminBookingRefundRequestData, adminBookingSettledData, deskExactAddress, reportedConversation } from '@/fixtures';
 import { formatDateTime, formatMoney } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
 import adminBooking from '../../../../messages/en/ui/adminBooking.json';
@@ -73,6 +73,15 @@ describe('AdminBookingScreen', () => {
     expect(within(earnings).getByText(messages.status.earnings.transferred)).toBeVisible();
     expect(within(earnings).getByText(copy.transferred.replace('{at}', formatDateTime(adminBookingSettledData.money.earnings[0]!.transferredAt!)))).toBeVisible();
     expect(screen.getByRole('link', { name: adminBookingSettledData.cases[0]!.subject })).toHaveAttribute('href', routes.admin.case(adminBookingSettledData.cases[0]!.id));
+  });
+
+  it('says a booking paid directly moves no money here, so its zeros read as nothing owed (sweep 2026-11-24, M5)', () => {
+    mount(adminBookingDirectData);
+    expect(screen.getByText(adminBooking.paidDirectly)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: adminBooking.actions.refund })).not.toBeInTheDocument();
+    cleanup();
+    mount(adminBookingDisputedData);
+    expect(screen.queryByText(adminBooking.paidDirectly)).not.toBeInTheDocument();
   });
 
   it('renders actions in the supplied order and no controls for a read-only viewer', () => {

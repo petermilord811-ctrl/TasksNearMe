@@ -1,6 +1,8 @@
 import { and, desc, eq, gte, ilike, inArray, isNull, notInArray, or } from 'drizzle-orm';
 import type { ActionResult, StrikeReversalInput, AdminDeliveryRow, AdminHelperStatus, AdminUserPageData, AdminUserRow, AdminUsersPageData, BookingStatus, DeliveryStatus, HelperSuspensionInput, NotificationChannel, NotificationType, StaffRole } from '@/contracts';
 import { helperSuspensionInputSchema, strikeReversalInputSchema } from '@/contracts';
+import { createPaymentProvider, type PaymentProvider } from '@/integrations/payments';
+import { cancelOpenNeighborhoodDays } from '@/modules/availability/neighborhood-days';
 import { bookingTerms, bookings, helperStrikes } from '@/modules/bookings/schema';
 import { notificationDeliveries, notifications } from '@/modules/notifications/schema';
 import { offers } from '@/modules/offers/schema';
@@ -150,8 +152,11 @@ export async function getAdminUser(db: Db, staff: StaffActor, userId: string, no
   };
 }
 
-/** Suspends (active offers withdrawn, hidden from search) or reinstates a helper, with the reason in the audit log. */
-export async function setHelperSuspension(db: Db, staff: StaffActor, userId: string, input: HelperSuspensionInput, now: Date): Promise<ActionResult> {
+/**
+ * Suspends (active offers withdrawn, open neighborhood days canceled, hidden from search) or reinstates a helper, with
+ * the reason in the audit log.
+ */
+export async function setHelperSuspension(db: Db, staff: StaffActor, userId: string, input: HelperSuspensionInput, now: Date, payments_: PaymentProvider | null = createPaymentProvider()): Promise<ActionResult> {
   const parsed = helperSuspensionInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
   // Never on one's own account: another staff member decides (sweep 2026-11-20, security review).
@@ -184,6 +189,9 @@ export async function setHelperSuspension(db: Db, staff: StaffActor, userId: str
       metadata: {},
     });
   });
+  // Their neighborhood days close too, as their own Cancel would (sweep 2026-11-24 A5): neighbors waiting on a visit hear
+  // now and get their holds back, instead of waiting for the request to expire.
+  if (suspend) await cancelOpenNeighborhoodDays(db, payments_, profile.userId, now);
   return { ok: true, code: 'updated' };
 }
 

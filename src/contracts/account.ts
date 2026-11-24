@@ -361,7 +361,11 @@ export interface AccountPageData {
    * who've earned `at` Sparks (Pillar and Local legend; bought Sparks don't count). `phoneVerified`: false when their
    * phone isn't verified, so it can't show yet whatever they choose.
    */
-  contactSharing?: { setting: ContactSharingSetting; phoneVerified: boolean; at: number };
+  /**
+   * `phoneUnavailable`: no verified phone, and texts are off here, so no phone can be verified (sweep 2026-11-24 A6). The
+   * phone options aren't offered then (one already chosen stays listed, so it can be changed), with the reason.
+   */
+  contactSharing?: { setting: ContactSharingSetting; phoneVerified: boolean; at: number; phoneUnavailable?: true };
   /**
    * Their own quiet hours (2026-11-24): off until turned on; the times are on their home city's clock and may cross
    * midnight. While on, message notifications reach only the app inside them, except a booking's on its day.

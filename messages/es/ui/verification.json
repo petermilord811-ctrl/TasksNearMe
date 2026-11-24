@@ -250,7 +250,7 @@
     "verifiedNow": "Tu número de teléfono está verificado.",
     "verified": "Tu número de teléfono que termina en {last4} está verificado.",
     "change": "Usar otro número",
-    "privacy": "Los clientes nunca ven tu número: las llamadas y los mensajes pasan por la app."
+    "privacy": "Los clientes no ven tu número a menos que elijas compartirlo en tu perfil: los mensajes pasan por la app."
   },
   "capture": {
     "explanation": "Primero, toma fotos de tu identificación y una selfie. Nuestro equipo las compara, normalmente en un día. Después, nuestro socio de identidad verifica tu identificación por segunda vez. En total toma unos 5 minutos.",

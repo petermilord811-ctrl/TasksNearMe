@@ -1,5 +1,6 @@
 import { and, eq, ne } from 'drizzle-orm';
-import type { ActionResult, HelperContactAccess, HelperContactReveal } from '@/contracts';
+import { contactSettingSharesPhone, type ActionResult, type HelperContactAccess, type HelperContactReveal } from '@/contracts';
+import { smsAvailable } from '@/integrations/sms';
 import { users } from '@/modules/accounts/schema';
 import { earnedSparks } from '@/modules/sparks/domain';
 import { sparkTallies } from '@/modules/sparks/service';
@@ -94,17 +95,20 @@ export async function revealHelperContact(db: Db, viewerId: string, input: { hel
 }
 
 /** "Contact details on your profile" on the account page: only someone with a helper profile, and recorded as consent. */
-export async function saveContactSharing(db: Db, userId: string, input: { setting?: unknown }, now: Date): Promise<ActionResult> {
+export async function saveContactSharing(db: Db, userId: string, input: { setting?: unknown }, now: Date, env: Record<string, string | undefined> = process.env): Promise<ActionResult> {
   if (!isContactSharingSetting(input?.setting)) return { ok: false, code: 'validation_failed', fieldErrors: { setting: ['invalid'] } };
   const setting = input.setting;
   const [row] = await db
-    .select({ contactSharing: users.contactSharing })
+    .select({ contactSharing: users.contactSharing, phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt })
     .from(users)
     .innerJoin(helperProfiles, eq(helperProfiles.userId, users.id))
     .where(and(eq(users.id, userId), ne(users.status, 'deleted')))
     .limit(1);
   if (!row) return { ok: false, code: 'not_allowed' };
   if (row.contactSharing === setting) return { ok: true, code: 'updated' };
+  // A phone that can't be verified here (texts off) can't be shared: never chosen, as the account page no longer offers
+  // it (sweep 2026-11-24 A6). Choosing to share less always works.
+  if (contactSettingSharesPhone(setting) && !(row.phone && row.phoneVerifiedAt) && !smsAvailable(env)) return { ok: false, code: 'not_allowed' };
   await db.transaction(async (tx) => {
     await tx.update(users).set({ contactSharing: setting, updatedAt: now }).where(eq(users.id, userId));
     await tx.insert(auditLog).values({ id: newId('aud'), at: now.toISOString(), actorId: userId, actorRole: 'user', action: 'account.contact_sharing_changed', targetType: 'user', targetId: userId, metadata: { from: row.contactSharing, to: setting } });

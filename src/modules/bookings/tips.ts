@@ -85,6 +85,9 @@ export async function tipBooking(deps: BookingDeps, userId: string, bookingId: s
   // connections pass, J-N1). Only their own: another person's tip still refuses.
   if (through && role === 'poster' && through.payerUserId === userId) return { ok: true, code: 'paid', redirectTo: routes.app.booking(booking.id) };
   if (tipRefusal(factsOf(booking, Boolean(through)), role, now)) return { ok: false, code: 'not_allowed' };
+  // Paid directly, a tip goes the same way, between the two people: the page never offers one, and the action refuses
+  // too, so no card is charged on a booking that moves no money (sweep 2026-11-24, M10).
+  if (booking.paymentMode === 'direct') return { ok: false, code: 'not_allowed' };
   const paused = await pausedIn(db, booking.marketId);
   if (paused) return paused;
   const limited = await consumeRateLimit(db, `tip:${userId}`, TIP_RATE_LIMIT, now);

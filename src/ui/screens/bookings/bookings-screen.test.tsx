@@ -85,6 +85,24 @@ describe('BookingsScreen', () => {
     expect(screen.getByText('Jordan T.')).toBeVisible();
   });
 
+  it('shows a booking paid directly as the price paid directly, for either side, never a charge (sweep 2026-11-24, M6)', () => {
+    renderBookings({ ...bookingsEmptyData, upcoming: [{ ...mayaBookingsPageData.upcoming[0], paymentMode: 'direct', amountCents: 6000 }, { ...jordanBookingsPageData.upcoming[0], id: 'bkg_helper', paymentMode: 'direct', amountCents: 6000 }] });
+    expect(screen.getAllByText('Direct payment $60.00')).toHaveLength(2);
+    expect(screen.queryByText(/^Total /)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^You'll earn /)).not.toBeInTheDocument();
+  });
+
+  it("tells the client their helper hasn't checked in, and a helper days late what to do now (sweep 2026-11-24)", () => {
+    // now is Tue Nov 17, 9:00 am Central; the start was Sun Nov 15.
+    const due = '2026-11-15T16:00:00.000Z';
+    renderBookings({ ...bookingsEmptyData, needsAction: [{ ...mayaBookingsPageData.upcoming[0], start: due, needsAction: true, nextStep: { kind: 'no_show_check', dueAt: due } }] });
+    expect(screen.getByText(/^Your helper hasn't checked in\. It was due to start Sun, Nov 15/)).toBeVisible();
+    cleanup();
+    renderBookings({ ...bookingsEmptyData, needsAction: [{ ...jordanBookingsPageData.upcoming[0], start: due, needsAction: true, nextStep: { kind: 'on_my_way', dueAt: due } }] });
+    expect(screen.getByText(/If you did it, tap "I'm here" and send the work; if not, message the client\./)).toBeVisible();
+    expect(screen.queryByText(/tap "On my way" now/)).not.toBeInTheDocument();
+  });
+
   it('opens Past when it is the only populated tab', () => {
     renderBookings({ ...bookingsEmptyData, past: mayaBookingsPageData.past });
     expect(screen.getByRole('tab', { name: 'Past (1)' })).toHaveAttribute('aria-selected', 'true');
@@ -110,7 +128,8 @@ describe('BookingsScreen', () => {
     renderBookings({ ...bookingsEmptyData, needsAction: [due('2026-11-17T16:00:00.000Z'), due('2026-11-17T09:00:00.000Z'), due('2026-11-16T20:00:00.000Z')] });
     expect(screen.getByText('Tap "On my way" when you leave. It starts at 10:00 am.')).toBeVisible();
     expect(screen.getByText('This was due to start at 3:00 am: tap "On my way" now, or message the client.')).toBeVisible();
-    expect(screen.getByText('This was due to start Mon, Nov 16 · 2:00 pm: tap "On my way" now, or message the client.')).toBeVisible();
+    // An earlier day: "On my way" is long past, so it says what's left (sweep 2026-11-24).
+    expect(screen.getByText('This was due to start Mon, Nov 16 · 2:00 pm. If you did it, tap "I\'m here" and send the work; if not, message the client.')).toBeVisible();
   });
 
   it('labels a remote booking without adding an area', () => {

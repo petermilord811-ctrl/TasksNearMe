@@ -2,7 +2,7 @@
   "title": "Publicar una tarea",
   "intro": "Cuéntales a los ayudantes cercanos qué necesitas. Puedes revisar todo antes de publicar.",
   "guest": {
-    "intro": "No necesitas una cuenta para empezar. La crearás al publicar, y tu tarea se queda en este dispositivo hasta entonces.",
+    "intro": "No necesitas una cuenta para empezar. La crearás al publicar.",
     "photosLater": "Puedes agregar fotos cuando hayas creado tu cuenta, antes de publicar.",
     "reviewNote": "Luego, crea tu cuenta o inicia sesión. Tu tarea se queda en este dispositivo y se abre aquí de nuevo, lista para publicar."
   },

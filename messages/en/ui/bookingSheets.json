@@ -79,13 +79,15 @@
     "title": "Report a no-show",
     "intro": "{helper} hasn't checked in.",
     "terms": "Reporting a no-show cancels this booking. You'll get a full refund, and support will see your report.",
-    "submit": "Report a no-show"
+    "submit": "Report a no-show",
+    "termsDirect": "Reporting a no-show cancels this booking, and support will see your report. You pay your helper directly, so there's nothing to refund: don't pay for work that didn't happen."
   },
   "cantAccess": {
     "title": "Can't get in?",
     "intro": "Let {client} know you're waiting to get in.",
     "terms": "Your client has 30 minutes to answer. If they don't answer, the booking is canceled and you're paid the late-cancellation amount.",
-    "submit": "Report that I can't get in"
+    "submit": "Report that I can't get in",
+    "termsDirect": "Your client has 30 minutes to answer. If they don't answer, the booking is canceled. You're paid directly, so any payment for the trip is between you and your client; support will see your report."
   },
   "safety": {
     "emergency": "In danger? Call 911",

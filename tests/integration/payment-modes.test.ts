@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { createDevPaymentProvider } from '@/integrations/payments';
 import { users } from '@/modules/accounts/schema';
 import { confirmBooking, getBookingConfirmPage } from '@/modules/bookings/confirm';
@@ -86,6 +86,25 @@ describe('paid directly', () => {
     await db.update(bookings).set({ startAt: new Date(now.getTime() + 2 * 3_600_000) }).where(eq(bookings.id, bookingId));
     expect(await previewCancellation(db, CLIENT, bookingId, now)).toMatchObject({ late: true, paidDirectly: true, posterRefundCents: 0, helperCompensationCents: 0 });
     expect(await previewCancellation(db, 'usr_jordan', bookingId, now)).toMatchObject({ by: 'helper', late: true, paidDirectly: true, posterRefundCents: 0, helperStrike: true });
+  });
+});
+
+describe('switching from a held attempt to paying directly', () => {
+  it("cancels the held attempt's bank step at the provider, so finishing it later can't charge (sweep 2026-11-24, M11)", async () => {
+    const base = createDevPaymentProvider();
+    const canceled: string[] = [];
+    const spied = { db, payments: { ...base, cancelAuthorization: vi.fn(async (input: { authorizationRef: string }) => { canceled.push(input.authorizationRef); return base.cancelAuthorization(input); }) } };
+    const { taskId, offerId } = await copyDesk(5, 'held');
+    // The client starts paying upfront and is sent to their bank (3-D Secure), which they leave open.
+    const first = await confirmBooking(spied, CLIENT, taskId, offerId, { offerRevision: 1, payment: { kind: 'dev_card', card: 'requires_verification', save: false }, acceptTerms: true }, now);
+    expect(first).toMatchObject({ ok: false, code: 'requires_bank_verification' });
+    const [waiting] = await db.select({ providerRef: payments.providerRef }).from(payments).innerJoin(bookings, eq(bookings.id, payments.bookingId)).where(and(eq(bookings.taskId, taskId), eq(payments.status, 'requires_confirmation')));
+    expect(waiting?.providerRef).toBeTruthy();
+    // The helper agrees to be paid directly instead, and the client books that.
+    await db.update(offers).set({ paymentMode: 'direct', revision: 2 }).where(eq(offers.id, offerId));
+    const booked = await confirmBooking(spied, CLIENT, taskId, offerId, { offerRevision: 2, acceptTerms: true }, now);
+    expect(booked).toMatchObject({ ok: true, code: 'booked' });
+    expect(canceled).toContain(waiting!.providerRef);
   });
 });
 

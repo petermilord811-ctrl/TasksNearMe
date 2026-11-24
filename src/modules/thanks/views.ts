@@ -4,6 +4,7 @@ import { users } from '@/modules/accounts/schema';
 import { bookings } from '@/modules/bookings/schema';
 import { areas } from '@/modules/markets/schema';
 import { tasks } from '@/modules/tasks/schema';
+import { isBlockedBetween } from '@/modules/trust/blocks';
 import { maskContactDetails } from '@/modules/trust/contact-masking';
 import { toMessageSegments } from '@/modules/trust/message-segments';
 import type { Db } from '@/platform/db/connect';
@@ -61,9 +62,16 @@ export async function thanksCardsFor(db: Db, viewerId: string, noteIds: readonly
 export async function thanksPanelFor(db: Db, viewerId: string, booking: { id: string; status: string; posterUserId: string; helperUserId: string; confirmedAt: Date | null }, now: Date): Promise<ThanksPanel | null> {
   const viewerRole = booking.posterUserId === viewerId ? 'client' : booking.helperUserId === viewerId ? 'helper' : null;
   if (!viewerRole || booking.status !== 'completed') return null;
-  const [note] = await db.select().from(thankYouNotes).where(eq(thankYouNotes.bookingId, booking.id)).limit(1);
+  // Not across a block, either way (sweep 2026-11-24 A4: the booking page offered it where the conversation didn't).
+  const [note, blocked, [helper]] = await Promise.all([
+    db.select().from(thankYouNotes).where(eq(thankYouNotes.bookingId, booking.id)).limit(1).then((rows) => rows[0]),
+    isBlockedBetween(db, booking.posterUserId, booking.helperUserId),
+    db.select({ status: users.status }).from(users).where(eq(users.id, booking.helperUserId)).limit(1),
+  ]);
+  if (blocked) return null;
   const view = note ? noteViewFor(note, viewerId, now, booking.confirmedAt === null) : null;
-  const canWrite = canWriteThanks({ bookingStatus: booking.status, viewerIsClient: viewerRole === 'client', hasNote: note !== undefined });
+  // No new note to a helper whose account is gone.
+  const canWrite = helper?.status !== 'deleted' && canWriteThanks({ bookingStatus: booking.status, viewerIsClient: viewerRole === 'client', hasNote: note !== undefined });
   if (!view && !canWrite) return null;
   return { bookingId: booking.id, viewerRole, ...(view ? { note: view } : {}), canWrite };
 }

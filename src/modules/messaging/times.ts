@@ -10,6 +10,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
+import { unarchiveForOthers } from './archive';
 import { activeHelper } from './asks';
 import { messages, threadParticipants, threads } from './schema';
 
@@ -59,13 +60,14 @@ export async function shareableSlotsFor(db: Db, userId: string, thread: ThreadRe
   return slots.length >= SHARE_TIMES_MIN ? slots : [];
 }
 
-/** A status line in the conversation, read by the one who sent it (as `postInDirectThread`). */
-async function postLine(db: Pick<Db, 'insert' | 'update'>, threadId: string, event: Pick<TimelineEvent, 'type' | 'params'>, now: Date, actorUserId: string): Promise<void> {
+/** A status line in the conversation, read by the one who sent it (as `postInDirectThread`). Returns its id. */
+async function postLine(db: Pick<Db, 'insert' | 'update'>, threadId: string, event: Pick<TimelineEvent, 'type' | 'params'>, now: Date, actorUserId: string): Promise<string> {
   const id = newId('msg');
   await db.insert(messages).values({ id, threadId, kind: 'status', event, createdAt: now });
   await db.update(threads).set({ lastMessageAt: now }).where(eq(threads.id, threadId));
   const unreadBefore = sql`exists (select 1 from ${messages} where ${messages.threadId} = ${threadId} and ${messages.id} <> ${id} and (${messages.senderUserId} is null or ${messages.senderUserId} <> ${actorUserId}) and (${threadParticipants.lastReadAt} is null or ${messages.createdAt} > ${threadParticipants.lastReadAt}))`;
   await db.update(threadParticipants).set({ lastReadAt: now }).where(and(eq(threadParticipants.threadId, threadId), eq(threadParticipants.userId, actorUserId), sql`not ${unreadBefore}`));
+  return id;
 }
 
 /**
@@ -92,9 +94,12 @@ export async function shareTimes(db: Db, userId: string, threadId: string, input
   const limited = await consumeRateLimit(db, `messages:share-times:${userId}`, SHARE_TIMES_RULE, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
   await db.transaction(async (tx) => {
-    await postLine(tx, thread.id, { type: 'times_shared', params: { slotIds: open.map((row) => row.id) } }, now, userId);
-    // The other person hears it as a message ("sent you a message", push), and the conversation updates live.
-    await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'message.sent', aggregateType: 'thread', aggregateId: thread.id, payload: { threadId: thread.id, ...(thread.taskId ? { taskId: thread.taskId } : {}), senderUserId: userId, recipientIds: [otherId] } });
+    const lineId = await postLine(tx, thread.id, { type: 'times_shared', params: { slotIds: open.map((row) => row.id) } }, now, userId);
+    // Like a message, it brings the conversation back from the other person's Archived (sweep C7).
+    await unarchiveForOthers(tx, thread, userId);
+    // The other person hears it as a message ("sent you a message", push), and the conversation updates live. The event
+    // names its line, which has no sender (sweep C4).
+    await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'message.sent', aggregateType: 'thread', aggregateId: thread.id, payload: { threadId: thread.id, ...(thread.taskId ? { taskId: thread.taskId } : {}), senderUserId: userId, recipientIds: [otherId], lineId } });
   });
   return { ok: true, code: 'sent' };
 }

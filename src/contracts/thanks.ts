@@ -76,9 +76,10 @@ export interface PublicThankYouNote {
 }
 
 /**
- * - `onSave`: write the note (ok `sent`) or edit it within 24 hours (ok `saved`). Errors: `validation_failed`
- *   (`body`: `required`, `too_long`), `not_allowed` (not the booking's client, not completed, or past the 24 hours),
- *   `not_found`.
+ * - `onSave`: write the note (ok `sent`) or edit it within 24 hours (ok `saved`; new words take it off the helper's
+ *   profile until they show it again). Errors: `validation_failed` (`body`: `required`, `too_long`), `not_allowed` (not
+ *   the booking's client, not completed, past the 24 hours, a block either way, or the helper's account is deleted),
+ *   `rate_limited` (with `retryAt`: three new notes a booking in 30 days), `not_found`.
  * - `onDelete`: the client deletes it, at any time (it leaves the profile too): ok `updated`. Errors: `not_found`.
  * - `onShowOnProfile`: the helper's consent, revocable: ok `updated`. Errors: `not_allowed` (our team hid it), `not_found`.
  * - `onHideName`: the client's "Don't show my name", at any time: ok `updated`. Errors: `not_found`.

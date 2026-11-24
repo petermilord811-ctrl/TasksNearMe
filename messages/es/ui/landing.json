@@ -19,7 +19,7 @@
       "light-cleaning": "ordenar antes de las visitas",
       "computer-help": "configurar una laptop nueva"
     },
-    "trust": "Ayudantes con identidad verificada · Precio acordado desde el inicio · Sin tarifas de servicio",
+    "trust": "Ayudantes con domicilio verificado · Precio acordado desde el inicio · Sin tarifas de servicio",
     "floatingTaskLabel": "Tarea abierta",
     "floatingOffers": "{count, plural, =0 {Nueva} one {# oferta} other {# ofertas}}",
     "floatingHelperLabel": "Ayudante cerca",
@@ -78,7 +78,7 @@
       "line2": "cobra de tus",
       "line3Vivid": "vecinos",
       "line3Rest": ".",
-      "subtitle": "Elige los trabajos que quieres, acuerda el precio desde el inicio y cobra a través de la plataforma."
+      "subtitle": "Elige los trabajos que quieres, acuerda el precio desde el inicio y cobra directamente o a través de TasksNearMe."
     },
     "activity": {
       "label": "Nuevas tareas abiertas",
@@ -90,9 +90,9 @@
     },
     "trustChips": {
       "label": "Por qué es seguro",
-      "verified": "Ayudantes con identidad verificada",
+      "verified": "Ayudantes con domicilio verificado",
       "verifiedCount": "{count, plural, one {# ayudante verificado} other {# ayudantes verificados}}",
-      "verifiedBody": "Todos los ayudantes pasan una verificación de identidad. Las tareas dentro del hogar también requieren una verificación de antecedentes.",
+      "verifiedBody": "Cada ayudante verifica su domicilio antes de enviar ofertas. Las tareas dentro del hogar también requieren una verificación de antecedentes, y una insignia muestra quién verificó su identidad.",
       "openThisWeek": "{count, plural, one {# de ellos tiene} other {# de ellos tienen}} horarios libres esta semana.",
       "price": "Precios claros",
       "priceBody": "Tú y tu ayudante acuerdan el precio antes de empezar. No hay tarifas de servicio para nadie.",
@@ -431,7 +431,7 @@
     "titleAccent": "con tranquilidad",
     "verified": {
       "title": "Ayudantes verificados",
-      "body": "Todos los ayudantes pasan una verificación de identidad. Las tareas dentro del hogar también requieren una verificación de antecedentes."
+      "body": "Cada ayudante verifica su domicilio antes de enviar ofertas. Las tareas dentro del hogar también requieren una verificación de antecedentes, y una insignia muestra quién verificó su identidad."
     },
     "address": {
       "title": "Tu dirección es privada",
@@ -510,7 +510,7 @@
     },
     "verified": {
       "question": "¿Cómo se verifica a los ayudantes?",
-      "answer": "Todos los ayudantes pasan una verificación de identidad antes de enviar ofertas. Las tareas dentro del hogar, como limpieza y armado, también requieren una verificación de antecedentes."
+      "answer": "Cada ayudante verifica su domicilio antes de enviar ofertas. Las tareas dentro del hogar, como limpieza y armado, también requieren una verificación de antecedentes. Quienes además verifican su identidad y su teléfono y configuran sus pagos son ayudantes verificados, y cada insignia muestra cuándo se verificó."
     },
     "rebook": {
       "question": "¿Puedo reservar al mismo ayudante otra vez?",

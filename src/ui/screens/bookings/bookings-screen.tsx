@@ -60,8 +60,8 @@ export function BookingRow({ row, tab, now, headingLevel = 2, showRole = false }
       {/* A team job (2026-11-24): both parts carry the team, so they read as one job. */}
       {row.team && <RowFact icon={UsersRound}><span data-team-row={row.team.part}>{teams('team', { lead: row.team.lead, partner: row.team.partner })}</span></RowFact>}
     </>}
-    trailing={<RowMoney caption={t(`money.${row.viewerRole}`)} amount={amount} />}
-    trailingInline={t(`amount.${row.viewerRole}`, { amount })}
+    trailing={<RowMoney caption={row.paymentMode === 'direct' ? t('money.direct') : t(`money.${row.viewerRole}`)} amount={amount} />}
+    trailingInline={row.paymentMode === 'direct' ? t('amount.direct', { amount }) : t(`amount.${row.viewerRole}`, { amount })}
     note={step && <p className="flex items-start gap-1.5 font-medium text-foreground tabular-nums">
       <CircleAlert aria-hidden="true" className="mt-0.5 size-3.5 shrink-0 text-warning" />
       <span>{t(`nextStep.${step.kind}`, { relative: dueAt ? formatRelative(dueAt, now) : '', date: dueAt ? formatDateTime(dueAt) : '', time: dueAt ? formatTime(dueAt) : '', today: today ? 'yes' : 'no', late: late ? 'yes' : 'no' })}</span>

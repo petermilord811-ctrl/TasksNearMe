@@ -519,6 +519,8 @@ async function confirmDirectBooking(deps: BookingDeps, posterId: string, ctx: No
   const { db } = deps;
   const pricing = offerPricing(ctx.offer);
   let bookingId: string;
+  // The intents of a held booking's attempt still waiting for the bank, which this booking replaces.
+  let replacedIntents: (string | null)[] = [];
   try {
     bookingId = await db.transaction(async (tx) => {
       await tx.execute(sql`select id from tasks where id = ${ctx.task.id} for update`);
@@ -532,7 +534,12 @@ async function confirmDirectBooking(deps: BookingDeps, posterId: string, ctx: No
         const [inFlight] = await tx.select({ id: payments.id }).from(payments).where(and(eq(payments.bookingId, live.id), eq(payments.status, 'processing'))).limit(1);
         if (inFlight) throw new PaymentInFlight();
         await tx.update(bookings).set({ status: 'canceled', cancelReason: 'funding_failed', canceledAt: now, fundingExpiresAt: null, updatedAt: now }).where(eq(bookings.id, live.id));
-        await tx.update(payments).set({ status: 'canceled', updatedAt: now }).where(and(eq(payments.bookingId, live.id), eq(payments.status, 'requires_confirmation')));
+        const replaced = await tx
+          .update(payments)
+          .set({ status: 'canceled', updatedAt: now })
+          .where(and(eq(payments.bookingId, live.id), eq(payments.status, 'requires_confirmation')))
+          .returning({ providerRef: payments.providerRef });
+        replacedIntents = replaced.map((row) => row.providerRef);
       }
       const id = newId('bkg');
       await tx.insert(bookings).values({
@@ -600,6 +607,9 @@ async function confirmDirectBooking(deps: BookingDeps, posterId: string, ctx: No
     if (error instanceof HoldConflict || isUniqueViolation(error)) return { ok: false, code: 'not_allowed' };
     throw error;
   }
+  // A bank step left open on the replaced attempt would still charge the card if it were finished later, as on the held
+  // path (repeats review #5; sweep 2026-11-24, M11).
+  await cancelIntents(deps.payments, replacedIntents, `booking replaced by ${bookingId}`);
   // Booked: the task's other invites end and let go of the client's card now (repeats review #11).
   await closeTaskInvites(db, ctx.task.id, now, deps.payments);
   return { ok: true, code: 'booked', redirectTo: routes.app.booking(bookingId) };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CONTACT_LEVELS, HELPER_CONTACT_EARNED_MIN, SPARK_LEVELS } from '@/contracts';
-import { directChatsPerDay, earnedSparks, nextSparkLevel, sparkLevel, sparksSummary } from './domain';
+import { CONTACT_LEVELS, HELPER_CONTACT_EARNED_MIN, SPARK_GIVER_RULES, SPARK_LEVELS, SPARK_RULES } from '@/contracts';
+import { cappedReactions, directChatsPerDay, earnedSparks, nextSparkLevel, sparkLevel, sparkRuleRows, sparksSummary } from './domain';
 
 const none = { postsPerDay: [], repliesPerDay: [], helpful: 0, thanks: 0, bookings: 0, reviews: 0 };
 
@@ -62,5 +62,31 @@ describe('Sparks (2026-11-21)', () => {
     expect(sparksSummary(40, 100)).toEqual({ total: 140, bought: 100, level: 'neighbor' });
     expect(sparksSummary(60, 0)).toEqual({ total: 60, bought: 0, level: 'neighbor' });
     expect(sparksSummary(0, 0)).toBeUndefined();
+  });
+
+  it('counts at most five Helpful and five Thanks from any one person (sweep 2026-11-24 A2)', () => {
+    expect(SPARK_RULES.helpful.perGiver).toBe(5);
+    expect(SPARK_RULES.thanks.perGiver).toBe(5);
+    // One giver marking 68 posts and replies Helpful and Thanks counts 5 of each; a second giver adds as much again.
+    const sock = [{ kind: 'helpful', count: 68 }, { kind: 'thanks', count: 68 }];
+    expect(cappedReactions(sock)).toEqual({ helpful: 5, thanks: 5 });
+    expect(cappedReactions([...sock, ...sock])).toEqual({ helpful: 10, thanks: 10 });
+    expect(cappedReactions([{ kind: 'helpful', count: 2 }, { kind: 'thanks', count: 0 }, { kind: 'other', count: 9 }])).toEqual({ helpful: 2, thanks: 0 });
+    // So a giver adds at most 25 Sparks to a person: reaching the contact-details level on reactions alone takes 80 people.
+    const perGiverMax = earnedSparks({ ...none, ...cappedReactions(sock) }).earned;
+    expect(perGiverMax).toBe(25);
+    expect(Math.ceil(HELPER_CONTACT_EARNED_MIN / perGiverMax)).toBe(80);
+  });
+
+  it("states each source's caps on the page, and that givers' accounts must be a week old", () => {
+    expect(sparkRuleRows()).toEqual([
+      { source: 'posts', points: 5, dailyCap: 3 },
+      { source: 'replies', points: 2, dailyCap: 10 },
+      { source: 'helpful', points: 3, perGiver: 5 },
+      { source: 'thanks', points: 2, perGiver: 5 },
+      { source: 'bookings', points: 10 },
+      { source: 'reviews', points: 2 },
+    ]);
+    expect(SPARK_GIVER_RULES.minAccountDays).toBe(7);
   });
 });

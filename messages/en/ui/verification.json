@@ -250,7 +250,7 @@
     "verifiedNow": "Your phone number is verified.",
     "verified": "Your phone number ending in {last4} is verified.",
     "change": "Use a different number",
-    "privacy": "Clients never see your number: calls and messages go through the app."
+    "privacy": "Clients don't see your number unless you choose to share it on your profile: messages go through the app."
   },
   "capture": {
     "explanation": "First, take photos of your ID and a selfie. Our team compares them, usually within a day. Then our ID partner double-checks your ID. It takes about 5 minutes in all.",
