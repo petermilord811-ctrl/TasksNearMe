@@ -1,5 +1,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { communityPosts } from '@/modules/community/schema';
+import { followerIdsOf } from '@/modules/followers/access';
+import { threads } from '@/modules/messaging/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
 import type { Db } from '@/platform/db/connect';
@@ -17,7 +19,8 @@ type EventRow = typeof outboxEvents.$inferSelect;
  * Who gets one follows who may read the thing: a conversation's other participants, the people a task, offer,
  * invite or booking names, and the market's public stream for a newly posted (open, unhidden) task or a task whose
  * offers or state changed (its id only). Blocked pairs get nothing from each other. Ids and the event type only,
- * never text.
+ * never text. A booking's family followers (2026-11-24) hear its conversation's messages and that it changed (a
+ * generic `booking.followed`, never which change: they don't see money or proposals).
  */
 export type NoticePlan =
   | { kind: 'users'; userIds: string[]; actorId?: string; notice: RealtimeNotice; boardTaskId?: string }
@@ -127,12 +130,31 @@ export async function noticesFor(db: Db, event: Pick<EventRow, 'type' | 'payload
     if (plan.actorId && plan.actorId !== userId && (await isBlockedBetween(db, plan.actorId, userId))) continue;
     envelopes.push({ channel: userChannel(userId), notice: plan.notice });
   }
+  envelopes.push(...(await followerEnvelopes(db, plan)));
   if (plan.boardTaskId) {
     // A draft was never on a board; any other task may be on someone's open board page, so its market hears it.
     const [task] = await db.select({ marketId: tasks.marketId, status: tasks.status }).from(tasks).where(eq(tasks.id, plan.boardTaskId)).limit(1);
     if (task && task.status !== 'draft') envelopes.push({ channel: marketChannel(task.marketId), notice: { type: 'task.changed', task: plan.boardTaskId } });
   }
   return envelopes;
+}
+
+/**
+ * A booking's family followers (sweep C13): a message in its conversation reaches them as it does its two people (they
+ * read it), and any other update about the booking as `booking.followed` with its id only. `followerIdsOf` counts only
+ * followers who may still read it (no block with its client or helper; an account that can follow).
+ */
+async function followerEnvelopes(db: Db, plan: Extract<NoticePlan, { kind: 'users' }>): Promise<RealtimeEnvelope[]> {
+  const { notice } = plan;
+  let bookingId = notice.type === 'update' && typeof notice.booking === 'string' ? notice.booking : undefined;
+  if (notice.type === 'message' && typeof notice.thread === 'string') {
+    const [thread] = await db.select({ linkedId: threads.linkedId }).from(threads).where(and(eq(threads.id, notice.thread), eq(threads.kind, 'booking'))).limit(1);
+    bookingId = thread?.linkedId;
+  }
+  if (!bookingId) return [];
+  const told = (await followerIdsOf(db, bookingId)).filter((id) => !plan.userIds.includes(id) && id !== plan.actorId);
+  const followed: RealtimeNotice = notice.type === 'message' ? notice : { type: 'update', event: 'booking.followed', booking: bookingId };
+  return told.map((id) => ({ channel: userChannel(id), notice: followed }));
 }
 
 /** Sends an event's live notices; returns how many went out. */

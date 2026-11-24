@@ -15,7 +15,7 @@ import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
-import { followedBookingIds, hasOpenFollow } from './access';
+import { countedFollowerIds, FOLLOWABLE_STATUSES, followedBookingIds, hasOpenFollow } from './access';
 import { addBlockedReason, followEndsAt, followOpen, parseFollowerLookup } from './domain';
 import { bookingFollowers } from './schema';
 
@@ -27,8 +27,6 @@ import { bookingFollowers } from './schema';
 
 /** Ten tries in ten minutes: a lookup by email says whether an account exists, so it can't be run as a scan. */
 export const ADD_FOLLOWER_RATE_LIMIT = { limit: 10, windowSeconds: 600 };
-/** Accounts that can be added: not deleted, banned or suspended. */
-const FOLLOWABLE_STATUSES = ['active', 'restricted'];
 
 type BookingRow = typeof bookings.$inferSelect;
 
@@ -73,9 +71,10 @@ export async function addFollower(db: Db, clientId: string, input: AddFollowerIn
     // The booking row locked: two adds at once can't both be the second follower.
     const [locked] = await tx.select().from(bookings).where(eq(bookings.id, booking.id)).for('update');
     if (!locked) return { ok: false, code: 'not_found' };
-    const open = await tx.select({ followerUserId: bookingFollowers.followerUserId }).from(bookingFollowers).where(and(eq(bookingFollowers.bookingId, locked.id), isNull(bookingFollowers.endedAt)));
+    // Who follows now (a banned or blocked follower doesn't count, or hold a place: access.ts `followCounts`).
+    const open = await countedFollowerIds(tx, locked.id);
     // Already following: nothing new (no second status line or notification).
-    if (open.some((row) => row.followerUserId === person.id)) return { ok: true, code: 'saved' };
+    if (open.includes(person.id)) return { ok: true, code: 'saved' };
     const blocked = addBlockedReason(locked, open.length, now);
     if (blocked === 'limit') return { ok: false, code: 'limit_reached' };
     if (blocked === 'ended') return { ok: false, code: 'expired' };

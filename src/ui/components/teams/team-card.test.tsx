@@ -82,6 +82,15 @@ describe('the team bar', () => {
     expect(within(bar).getByText('With Jordan').getAttribute('aria-current')).toBe('page');
     expect(within(bar).getByRole('link', { name: 'With Sam' }).getAttribute('href')).toBe(routes.app.thread('thr_bkg_moving_sam'));
   });
+
+  it('in the chat window, opens the other conversation there, not as a page (sweep C9)', async () => {
+    const onOpen = vi.fn();
+    wrap(<TeamBarView bar={teamBarClient} compact onOpen={onOpen} />);
+    const bar = screen.getByRole('navigation', { name: 'Team: Jordan (lead) and Sam' });
+    expect(within(bar).queryByRole('link')).toBeNull();
+    await userEvent.click(within(bar).getByRole('button', { name: 'With Sam' }));
+    expect(onOpen).toHaveBeenCalledWith('thr_bkg_moving_sam');
+  });
 });
 
 describe('the booking page panel', () => {

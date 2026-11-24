@@ -68,16 +68,17 @@ describe('who does what', () => {
   ] as const)('%s: the %s can %j', (status, role, actions) => {
     expect(teamActions(team({ status }), role, now)).toEqual(actions);
   });
-  it('a confirmed part not booked: the client books it, the partner can step back, the lead nothing', () => {
+  it('a confirmed part not booked: the client books it or says no after all, the partner can step back, the lead take it back (sweep B7)', () => {
     const confirmed = team({ status: 'confirmed', offerOpen: true });
-    expect(teamActions(confirmed, 'client', now)).toEqual(['book']);
+    expect(teamActions(confirmed, 'client', now)).toEqual(['book', 'refuse']);
     expect(teamActions(confirmed, 'partner', now)).toEqual(['withdraw']);
-    expect(teamActions(confirmed, 'lead', now)).toEqual([]);
+    expect(teamActions(confirmed, 'lead', now)).toEqual(['cancel']);
   });
   it('once booked, each booking is canceled through its own page', () => {
     const booked = team({ status: 'confirmed', partnerBooking: { status: 'confirmed' } });
     expect(teamActions(booked, 'client', now)).toEqual([]);
     expect(teamActions(booked, 'partner', now)).toEqual([]);
+    expect(teamActions(booked, 'lead', now)).toEqual([]);
   });
   it('nothing on an expired invite', () => {
     expect(teamActions(team({ lead: { status: 'confirmed', startAt: earlier } }), 'partner', now)).toEqual([]);

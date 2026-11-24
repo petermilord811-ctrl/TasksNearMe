@@ -110,8 +110,13 @@ const verification: PaymentAttemptResult = {
   verification: { kind: 'dev', paymentId: 'pay_desk_change' },
 };
 
+/** A team job (sweep 2026-11-24, B4): no new start, and the note saying why. */
+const { scheduleWindow: _window, ...movingWithoutWindow } = movingProposeChangeData;
+const movingTeamJobData: ProposeChangePageData = { ...movingWithoutWindow, teamJob: true, allowedTypes: movingProposeChangeData.allowedTypes.filter((type) => type !== 'schedule') };
+
 export const changesPreviews: PreviewEntry[] = [
   proposePreview('desk', deskProposeChangeData, { initialInput: chairInput }),
+  proposePreview('team-job', movingTeamJobData),
   proposePreview('moving', movingProposeChangeData, {
     initialInput: movingInput,
     handlers: { ...proposeHandlers, onQuote: async () => { await fakeHandler()(undefined); return movingQuote; } },

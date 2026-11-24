@@ -62,6 +62,8 @@ export interface ProposeChangePageData {
   scheduleWindow?: { earliest: ISODateTime; latest: ISODateTime };
   /** An open change request already exists: show it instead (one at a time). */
   openChangeId?: string;
+  /** Part of a team job (2026-11-24): its time is the team's, so no new start is offered (`allowedTypes`); say why. */
+  teamJob?: true;
 }
 
 /** Only the fields that change are sent. Money in cents; the new start as an ISO time. */

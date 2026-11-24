@@ -35,14 +35,14 @@ export const teamCardPartnerAccepted: TeamInviteCard = { ...base, status: 'accep
 export const teamCardPartnerBooked: TeamInviteCard = { ...base, status: 'confirmed', actions: [], partnerBooking: { bookingId: 'bkg_moving_sam', status: 'confirmed' } };
 /** Jordan's card while asking: their proposal's price, and Cancel invite. */
 export const teamCardLeadInvited: TeamInviteCard = { ...base, viewerRole: 'lead', actions: ['cancel'] };
-/** Jordan once Chris confirmed: names and roles only, no price. */
+/** Jordan once Sam is booked: names and roles only, no price, nothing to do (before that, Cancel invite). */
 const { pricing: _leadPrice, ...withoutPrice } = base;
 export const teamCardLeadConfirmed: TeamInviteCard = { ...withoutPrice, viewerRole: 'lead', status: 'confirmed', actions: [] };
 /** Chris's card in his conversation with Jordan: confirm or not now. */
 const { note: _clientNote, ...withoutNote } = base;
 export const teamCardClientAccepted: TeamInviteCard = { ...withoutNote, viewerRole: 'client', status: 'accepted', actions: ['confirm', 'refuse'] };
-/** Chris confirmed a held part but hasn't paid yet: Book Sam opens the confirm dialog. */
-export const teamCardClientBooking: TeamInviteCard = { ...teamCardClientAccepted, status: 'confirmed', paymentMode: 'held', actions: ['book'], bookHref: '/app/tasks/tsk_moving_sam/offers/off_moving_sam/confirm' };
+/** Chris confirmed a held part but hasn't paid yet: Book Sam opens the confirm dialog, or Not now after all (sweep B7). */
+export const teamCardClientBooking: TeamInviteCard = { ...teamCardClientAccepted, status: 'confirmed', paymentMode: 'held', actions: ['book', 'refuse'], bookHref: '/app/tasks/tsk_moving_sam/offers/off_moving_sam/confirm' };
 /** Chris once Sam is booked. */
 export const teamCardClientBooked: TeamInviteCard = { ...teamCardClientAccepted, status: 'confirmed', actions: [], partnerBooking: { bookingId: 'bkg_moving_sam', status: 'confirmed' } };
 /** Ended invites. */

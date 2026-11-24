@@ -73,10 +73,12 @@ export function teamActions(team: TeamFacts, role: TeamViewerRole, now: Date): T
       if (status === 'invited') return ['accept', 'decline'];
       return status === 'accepted' || unbooked ? ['withdraw'] : [];
     case 'lead':
-      return status === 'invited' || status === 'accepted' ? ['cancel'] : [];
+      // Until the partner's part is booked (sweep B7: a confirmed part never booked held the lead's one place).
+      return status === 'invited' || status === 'accepted' || unbooked ? ['cancel'] : [];
     case 'client':
       if (status === 'accepted') return ['confirm', 'refuse'];
-      return unbooked && team.offerOpen !== false ? ['book'] : [];
+      // A confirmed part not booked yet: book it, or say no after all (sweep B7: closing the checkout left no way out).
+      return unbooked && team.offerOpen !== false ? ['book', 'refuse'] : [];
   }
 }
 

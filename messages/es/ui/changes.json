@@ -18,6 +18,7 @@
     "hoursHint": "El máximo de horas incluidas en la reserva, hasta 24.",
     "start": "Nuevo inicio ({zone})",
     "startHint": "Elige una fecha y una hora ({zone}).",
+    "teamJob": "Un trabajo en equipo tiene una sola hora para los dos ayudantes, así que su inicio no se puede cambiar aquí.",
     "windowHint": "Elige un inicio entre {earliest} y {latest} ({zone}).",
     "scope": "Alcance de la tarea",
     "scopeHint": "Describe la tarea completa con los cambios propuestos. Usa de 10 a 2,000 caracteres.",
@@ -46,6 +47,7 @@
     "propose": {
       "desk": "Propuesta de escritorio y silla",
       "moving": "Propuesta de límite de horas de mudanza",
+      "team-job": "Un trabajo en equipo: su inicio sigue siendo el del equipo",
       "blocked": "Ya hay un cambio abierto",
       "quote-pending": "Actualizando el dinero",
       "validation-failed": "Error de validación de la propuesta",

@@ -36,6 +36,7 @@ import { getHelperSummaries } from '@/modules/profiles/queries';
 import { findTaskWithPublicView } from '@/modules/tasks/queries';
 import { bookingThreadLink, postEvent } from '@/modules/messaging/service';
 import { tasks } from '@/modules/tasks/schema';
+import { bookingTeams } from '@/modules/teams/schema';
 import { isBlockedBetween } from '@/modules/trust/blocks';
 import { cardOfBannedAccount, unusableCardIds } from '@/modules/trust/card-fingerprints';
 import { maskContactDetails } from '@/modules/trust/contact-masking';
@@ -84,6 +85,20 @@ async function loadContext(db: Db, posterId: string, taskId: string, offerId: st
     .where(and(eq(tasks.id, taskId), eq(tasks.posterUserId, posterId), eq(offers.id, offerId)))
     .limit(1);
   return row && row.task.status !== 'draft' ? { ...row, categorySlug: row.categorySlug as CategorySlug } : null;
+}
+
+/**
+ * A team partner's part (its task `team_part_of`, 2026-11-24) books only while its team stands confirmed and the lead's
+ * booking is confirmed and hasn't started (sweep B8): a withdrawn, refused or lapsed team's part never books, even from
+ * a confirm dialog left open. A plain read: callers check it under the task's lock, which the team's own changes to the
+ * part also take.
+ */
+async function teamPartClosed(db: Db | Tx, task: Pick<TaskRow, 'id' | 'teamPartOf'>, now: Date): Promise<boolean> {
+  if (!task.teamPartOf) return false;
+  const [team] = await db.select({ status: bookingTeams.status }).from(bookingTeams).where(eq(bookingTeams.partnerTaskId, task.id)).limit(1);
+  if (team?.status !== 'confirmed') return true;
+  const [lead] = await db.select({ status: bookings.status, startAt: bookings.startAt }).from(bookings).where(eq(bookings.id, task.teamPartOf)).limit(1);
+  return !(lead?.status === 'confirmed' && lead.startAt > now);
 }
 
 async function liveBooking(db: Db | Tx, taskId: string): Promise<BookingRow | null> {
@@ -228,7 +243,7 @@ export async function getBookingConfirmPage(
     live && live.status === 'pending_funding' && live.offerId === offerId && live.fundingExpiresAt
       ? { bookingId: live.id, expiresAt: live.fundingExpiresAt.toISOString(), failure: await lastFailure(db, live.id) }
       : null;
-  const unavailable = unavailableReason(ctx.task, ctx.offer, live, now);
+  const unavailable = unavailableReason(ctx.task, ctx.offer, live, now) ?? ((await teamPartClosed(db, ctx.task, now)) ? 'task_closed' : undefined);
   const later = paysLaterOf(ctx.offer.proposedStart, now);
   const { id, title, categorySlug, location, schedule } = found.view;
 
@@ -358,6 +373,7 @@ export async function confirmBooking(
     return { ok: true, code: 'booked', redirectTo: routes.app.booking(existing.id) };
   }
   if (unavailableReason(ctx.task, ctx.offer, existing, now)) return { ok: false, code: 'not_allowed' };
+  if (await teamPartClosed(db, ctx.task, now)) return { ok: false, code: 'not_allowed' };
   if (await isBlockedBetween(db, posterId, ctx.offer.helperUserId)) return { ok: false, code: 'not_allowed' };
   if (ctx.offer.revision !== parsed.data.offerRevision) return { ok: false, code: 'version_conflict' };
 
@@ -391,6 +407,7 @@ export async function confirmBooking(
       // Still open under the lock (security review): a cancel or another booking that landed after the page was read.
       const [fresh] = await tx.select({ status: tasks.status }).from(tasks).where(eq(tasks.id, ctx.task.id)).limit(1);
       if (fresh?.status !== 'open') throw new HoldConflict();
+      if (await teamPartClosed(tx, ctx.task, now)) throw new HoldConflict();
       let booking = await liveBooking(tx, ctx.task.id);
       if (booking && booking.status !== 'pending_funding') throw new HoldConflict();
       // The poster switched to another offer while a hold was open: release it.
@@ -507,6 +524,7 @@ async function confirmDirectBooking(deps: BookingDeps, posterId: string, ctx: No
       await tx.execute(sql`select id from tasks where id = ${ctx.task.id} for update`);
       const [fresh] = await tx.select({ status: tasks.status }).from(tasks).where(eq(tasks.id, ctx.task.id)).limit(1);
       if (fresh?.status !== 'open') throw new HoldConflict();
+      if (await teamPartClosed(tx, ctx.task, now)) throw new HoldConflict();
       const live = await liveBooking(tx, ctx.task.id);
       if (live && live.status !== 'pending_funding') throw new HoldConflict();
       if (live) {
@@ -630,6 +648,7 @@ async function scheduleBooking(
   try {
     bookingId = await deps.db.transaction(async (tx) => {
       await tx.execute(sql`select id from tasks where id = ${ctx.task.id} for update`);
+      if (await teamPartClosed(tx, ctx.task, now)) throw new HoldConflict();
       const live = await liveBooking(tx, ctx.task.id);
       if (live && live.status !== 'pending_funding') throw new HoldConflict();
       // A hold opened earlier for this task (the poster paid now, then changed their mind): released.

@@ -15,6 +15,11 @@ describe('what can change when', () => {
     expect(allowedChangeTypes({ status: 'completion_submitted', pricingType: 'fixed', startAt: start, now: during })).toEqual([]);
   });
 
+  it("keeps a team job's start: the team's time for both helpers (sweep B4)", () => {
+    expect(allowedChangeTypes({ status: 'confirmed', pricingType: 'fixed', startAt: start, now: before, teamJob: true })).toEqual(['price', 'scope', 'expense_allowance']);
+    expect(allowedChangeTypes({ status: 'confirmed', pricingType: 'fixed', startAt: start, now: before, teamJob: false })).toContain('schedule');
+  });
+
   it('expires at the start before the work, and 24 hours later during it or while waiting for payment', () => {
     expect(changeExpiresAt('proposed', { status: 'confirmed', startAt: start, now: before })).toEqual(start);
     expect(changeExpiresAt('proposed', { status: 'in_progress', startAt: start, now: during })).toEqual(new Date(during.getTime() + 86_400_000));

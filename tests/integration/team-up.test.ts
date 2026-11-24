@@ -1,14 +1,16 @@
 import { and, eq, inArray, like, or, sql } from 'drizzle-orm';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { routes } from '@/contracts';
 import { createDevPaymentProvider } from '@/integrations/payments';
 import { usernames } from '@/modules/accounts/schema';
+import { acceptChange, getProposeChangePage, proposeChange } from '@/modules/bookings/changes';
 import { confirmBooking } from '@/modules/bookings/confirm';
 import { getBookingsPage, getBookingView } from '@/modules/bookings/hub';
-import { bookingTerms, bookings } from '@/modules/bookings/schema';
+import { bookingChangeRequests, bookingTerms, bookings } from '@/modules/bookings/schema';
 import { cancelBookingBy } from '@/modules/bookings/sheets';
 import { blocks, messages, threads } from '@/modules/messaging/schema';
 import { bookingThreadLink, ensureThread, getThreadPage } from '@/modules/messaging/service';
+import { getMyOffers, helperOfferAction, reviseOffer } from '@/modules/offers/helper';
 import { offers } from '@/modules/offers/schema';
 import { payments } from '@/modules/payments/schema';
 import { openIn } from '@/modules/tasks/queries';
@@ -239,6 +241,98 @@ describe("the client's confirm makes an ordinary second booking", () => {
     // The ended team no longer shows as "on the team" to the lead; the client sees Sam's booking canceled.
     expect(jordanAfter?.team?.invite).toBeUndefined();
     expect((await getBookingView(hub, CLIENT, leadId, now))?.team?.invite?.partnerBooking).toMatchObject({ bookingId: partnerId, status: 'canceled' });
+  });
+});
+
+describe('a confirmed part not booked yet (sweep 2026-11-24)', () => {
+  const HOUR = 3_600_000;
+  const card = { offerRevision: 1, payment: { kind: 'dev_card' as const, card: 'success' as const, save: false }, acceptTerms: true as const };
+
+  /** Sam accepts, Chris confirms: the part and its offer are made, not booked. */
+  async function confirmedPart() {
+    // Jordan's invites are a person's pace (10 an hour): these tests make more than that.
+    await db.delete(rateLimits).where(like(rateLimits.key, `%team-invite:${LEAD}%`));
+    const team = await invite();
+    expect(await runTeamAction(db, PARTNER, { teamId: team.id, action: 'accept' }, now)).toMatchObject({ ok: true });
+    const opened = await runTeamAction(db, CLIENT, { teamId: team.id, action: 'confirm' }, now);
+    expect(opened).toMatchObject({ ok: true, code: 'opened' });
+    const [row] = await db.select().from(bookingTeams).where(eq(bookingTeams.id, team.id));
+    made.tasks.push(row!.partnerTaskId!);
+    return { team: row!, opened };
+  }
+
+  // A test that stops halfway leaves no team in play (or change open) for the next one.
+  afterEach(async () => {
+    const open = await db.select().from(bookingTeams).where(and(eq(bookingTeams.leadBookingId, leadId), inArray(bookingTeams.status, ['invited', 'accepted', 'confirmed'])));
+    for (const row of open) {
+      const [booked] = row.partnerTaskId ? await db.select({ id: bookings.id }).from(bookings).where(and(eq(bookings.taskId, row.partnerTaskId), sql`${bookings.status} <> 'canceled'`)) : [];
+      if (booked) continue;
+      await db.update(bookingTeams).set({ status: 'canceled', closedAt: new Date() }).where(eq(bookingTeams.id, row.id));
+      if (row.partnerTaskId) await db.update(tasks).set({ status: 'canceled' }).where(eq(tasks.id, row.partnerTaskId));
+      if (row.partnerOfferId) await db.update(offers).set({ status: 'withdrawn' }).where(and(eq(offers.id, row.partnerOfferId), eq(offers.status, 'pending')));
+    }
+    await db.update(bookingChangeRequests).set({ status: 'withdrawn' }).where(and(eq(bookingChangeRequests.bookingId, leadId), inArray(bookingChangeRequests.status, ['proposed', 'accepted_pending_funding'])));
+  });
+
+  it('Confirm again opens the same checkout; the client can still say no, which closes the part (B7)', async () => {
+    const { team, opened } = await confirmedPart();
+    expect(await runTeamAction(db, CLIENT, { teamId: team.id, action: 'confirm' }, now)).toEqual(opened);
+    expect((await getBookingView(hub, CLIENT, leadId, now))?.team?.invite?.actions).toEqual(['book', 'refuse']);
+    expect(await runTeamAction(db, CLIENT, { teamId: team.id, action: 'refuse' }, now)).toMatchObject({ ok: true });
+    const [part] = await db.select({ status: tasks.status }).from(tasks).where(eq(tasks.id, team.partnerTaskId!));
+    expect(part?.status).toBe('canceled');
+    const [offer] = await db.select({ status: offers.status }).from(offers).where(eq(offers.id, team.partnerOfferId!));
+    expect(offer?.status).toBe('withdrawn');
+    expect((await getBookingView(hub, LEAD, leadId, now))?.team?.canInvite).toBe(true);
+  });
+
+  it("the lead can take back a part the client hasn't booked (B7)", async () => {
+    const { team } = await confirmedPart();
+    expect((await getBookingView(hub, LEAD, leadId, now))?.team?.invite?.actions).toEqual(['cancel']);
+    expect(await runTeamAction(db, LEAD, { teamId: team.id, action: 'cancel' }, now)).toMatchObject({ ok: true, code: 'canceled' });
+    const [part] = await db.select({ status: tasks.status }).from(tasks).where(eq(tasks.id, team.partnerTaskId!));
+    expect(part?.status).toBe('canceled');
+  });
+
+  it('a part never books once its team ended, even from a checkout left open (B8)', async () => {
+    const { team } = await confirmedPart();
+    expect(await runTeamAction(db, PARTNER, { teamId: team.id, action: 'withdraw' }, now)).toMatchObject({ ok: true });
+    expect(await confirmBooking(pay, CLIENT, team.partnerTaskId!, team.partnerOfferId!, card, new Date())).toMatchObject({ ok: false, code: 'not_allowed' });
+    // The team's row alone says so: a part left open (as after a raced step back) still doesn't book.
+    const { team: other } = await confirmedPart();
+    await db.update(bookingTeams).set({ status: 'withdrawn', closedAt: new Date() }).where(eq(bookingTeams.id, other.id));
+    expect(await confirmBooking(pay, CLIENT, other.partnerTaskId!, other.partnerOfferId!, card, new Date())).toMatchObject({ ok: false, code: 'not_allowed' });
+    await db.update(tasks).set({ status: 'canceled' }).where(eq(tasks.id, other.partnerTaskId!));
+    await db.update(offers).set({ status: 'withdrawn' }).where(eq(offers.id, other.partnerOfferId!));
+  });
+
+  it("the partner's part isn't an offer of theirs: nothing to revise or withdraw, and not in My offers (B3)", async () => {
+    const { team } = await confirmedPart();
+    expect(await helperOfferAction(db, PARTNER, team.partnerOfferId!, 'withdraw_offer', now)).toMatchObject({ ok: false, code: 'not_allowed' });
+    expect(await reviseOffer(db, PARTNER, team.partnerTaskId!, { pricing: { type: 'fixed', priceCents: 9000 }, startTime: '09:00', message: 'A bit more for the stairs', brings: [] }, now)).toMatchObject({ ok: false, code: 'not_allowed' });
+    const [offer] = await db.select({ priceCents: offers.priceCents, revision: offers.revision }).from(offers).where(eq(offers.id, team.partnerOfferId!));
+    expect(offer).toEqual({ priceCents: 4500, revision: 1 });
+    const mine = await getMyOffers(db, PARTNER, now);
+    expect([...mine.active, ...mine.booked, ...mine.closed].some((row) => row.offer.id === team.partnerOfferId)).toBe(false);
+    expect(await runTeamAction(db, CLIENT, { teamId: team.id, action: 'refuse' }, now)).toMatchObject({ ok: true });
+  });
+
+  it("while the team stands, the lead booking's start doesn't change, also from a change proposed before (B4)", async () => {
+    const [lead] = await db.select().from(bookings).where(eq(bookings.id, leadId));
+    const later = new Date(lead!.startAt.getTime() + HOUR).toISOString();
+    expect(await proposeChange(db, LEAD, leadId, { start: later, message: 'Could we start an hour later?' }, now)).toMatchObject({ ok: true });
+    const [change] = await db.select({ id: bookingChangeRequests.id }).from(bookingChangeRequests).where(and(eq(bookingChangeRequests.bookingId, leadId), eq(bookingChangeRequests.status, 'proposed')));
+    const { team } = await confirmedPart();
+    const page = await getProposeChangePage(db, CLIENT, leadId, now);
+    expect(page).toMatchObject({ teamJob: true });
+    expect(page?.allowedTypes).not.toContain('schedule');
+    expect(await acceptChange(pay, CLIENT, leadId, change!.id, {}, now)).toMatchObject({ ok: false, code: 'not_allowed' });
+    const [still] = await db.select({ startAt: bookings.startAt }).from(bookings).where(eq(bookings.id, leadId));
+    expect(still!.startAt.toISOString()).toBe(lead!.startAt.toISOString());
+    // Once the team ends, the start is the booking's own again.
+    expect(await runTeamAction(db, CLIENT, { teamId: team.id, action: 'refuse' }, now)).toMatchObject({ ok: true });
+    expect((await getProposeChangePage(db, CLIENT, leadId, now))?.allowedTypes).toContain('schedule');
+    await db.update(bookingChangeRequests).set({ status: 'withdrawn' }).where(eq(bookingChangeRequests.id, change!.id));
   });
 });
 

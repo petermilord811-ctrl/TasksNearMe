@@ -50,6 +50,7 @@ export function ProposeChangeFields({ data }: { data: ProposeChangePageData }) {
       onChange={(event) => { const [date, time] = event.target.value.split('T'); field.onChange(date && time ? marketLocalToUtc(date, time, timeZone) : ''); }}
       aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="min-w-0 max-w-sm scroll-mb-40 tabular-nums"
     />} />}</ChangeField>}
+    {data.teamJob && <p data-team-job className="text-sm text-muted-foreground">{t('teamJob')}</p>}
     {data.allowedTypes.includes('scope') && <ChangeField name="scopeText" label={t('scope')} hint={t('scopeHint')}>{(id, invalid) => <Textarea {...register('scopeText')} id={id} rows={4} maxLength={2000} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="scroll-mb-40" />}</ChangeField>}
     {data.allowedTypes.includes('expense_allowance') && <ChangeMoneyField name="expenseAllowanceCents" label={t('expenses')} hint={t('expensesHint')} />}
     <ChangeField name="message" label={t('message')} hint={t('messageHint')}>{(id, invalid) => <Textarea {...register('message')} id={id} rows={3} maxLength={1000} aria-invalid={invalid} aria-describedby={`${id}-hint ${id}-error`} className="scroll-mb-40" />}</ChangeField>

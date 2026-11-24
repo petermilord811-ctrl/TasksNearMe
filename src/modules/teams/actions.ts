@@ -9,8 +9,9 @@ import { inviteTeamPartner, keepPartner, runTeamAction } from './service';
 
 /**
  * Server Actions for team up (src/contracts/teams.ts), bound by where they're used: `page` refreshes the page (the
- * booking page, the conversation page), `window` doesn't (the chat window reloads its conversation itself). An action
- * that opens the confirm dialog (`redirectTo`) changes nothing on the page yet, so nothing refreshes for it.
+ * booking page, the conversation page), `window` doesn't (the chat window reloads its conversation itself). Also when
+ * the confirm dialog opens (`redirectTo`): the client's yes made the partner's part, so the card behind the dialog
+ * reads "Book" from then on, not "Confirm" again (sweep B7).
  */
 
 type From = 'page' | 'window';
@@ -21,7 +22,7 @@ async function signedInUserId(): Promise<string | null> {
 }
 
 function settled(from: From, result: ActionResult): ActionResult {
-  if (result.ok && from === 'page' && !result.redirectTo) refresh();
+  if (result.ok && from === 'page') refresh();
   return result;
 }
 

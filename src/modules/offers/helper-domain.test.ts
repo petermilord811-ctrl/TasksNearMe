@@ -84,4 +84,11 @@ describe('offer rules', () => {
     expect(helperOfferActions({ status: 'accepted' }, { ...task, status: 'assigned' }, now).map((a) => a.id)).toEqual(['message_poster']);
     expect(helperOfferActions({ status: 'pending' }, { ...task, status: 'assigned' }, now)).toEqual([]);
   });
+
+  it("offers nothing on a team partner's part: its price and time are the team's (sweep B3)", () => {
+    const part = { status: 'open', windowEnd: desk.windowEnd, teamPartOf: 'bkg_lead' };
+    expect(helperOfferActions({ status: 'pending' }, part, now)).toEqual([]);
+    expect(helperOfferActions({ status: 'stale' }, part, now)).toEqual([]);
+    expect(helperOfferActions({ status: 'accepted' }, { ...part, status: 'assigned' }, now)).toEqual([]);
+  });
 });

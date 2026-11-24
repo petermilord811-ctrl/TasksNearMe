@@ -29,8 +29,9 @@ export type TeamViewerRole = 'client' | 'lead' | 'partner';
 
 /**
  * What a person can do on a team invite (from the domain, never the UI): the partner `accept`s or `decline`s, and may
- * `withdraw` until it's booked; the lead may `cancel` until the client confirms; the client `confirm`s or `refuse`s,
- * and `book`s a confirmed part not booked yet (the confirm dialog, `TeamInviteCard.bookHref`).
+ * `withdraw` until it's booked; the lead may `cancel` until the partner's part is booked; the client `confirm`s or
+ * `refuse`s, and `book`s a confirmed part not booked yet (the confirm dialog, `TeamInviteCard.bookHref`) or `refuse`s it
+ * after all. A second `confirm` on a part already made opens the same confirm dialog.
  */
 export const TEAM_ACTION_IDS = ['accept', 'decline', 'withdraw', 'cancel', 'confirm', 'refuse', 'book'] as const;
 export type TeamActionId = (typeof TEAM_ACTION_IDS)[number];

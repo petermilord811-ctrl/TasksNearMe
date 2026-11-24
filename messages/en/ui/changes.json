@@ -18,6 +18,7 @@
     "hoursHint": "The most hours included in the booking, up to 24.",
     "start": "New start ({zone})",
     "startHint": "Choose a date and time ({zone}).",
+    "teamJob": "A team job keeps one time for both helpers, so its start can't change here.",
     "windowHint": "Choose a start from {earliest} to {latest} ({zone}).",
     "scope": "Task scope",
     "scopeHint": "Describe the full task with the proposed changes. Use 10–2,000 characters.",
@@ -46,6 +47,7 @@
     "propose": {
       "desk": "Desk and chair proposal",
       "moving": "Moving hours cap proposal",
+      "team-job": "A team job: its start stays the team's",
       "blocked": "A change is already open",
       "quote-pending": "Updating the money",
       "validation-failed": "Proposal validation error",

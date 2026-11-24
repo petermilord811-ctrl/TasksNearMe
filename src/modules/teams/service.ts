@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { normalizeUsername, routes, teamInviteInputSchema, USERNAME_PATTERN, type ActionResult, type CategorySlug, type PricingInput, type TeamActionInput, type TeamKeepInput, type TeamInviteInput, type TeamStatus } from '@/contracts';
 import { usernames, users } from '@/modules/accounts/schema';
 import { pricingColumns, pricingColumnsForTask, pricingOf } from '@/modules/bookings/pricing-columns';
@@ -18,7 +18,8 @@ import type { Db } from '@/platform/db/connect';
 import { isUniqueViolation } from '@/platform/db/errors';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
-import { canInviteTeam, partnerRefusal, teamActions, teamInPlay, teamStatusNow, type TeamFacts } from './domain';
+import { canInviteTeam, partnerRefusal, teamActions, teamInPlay, teamStatusNow } from './domain';
+import { teamFactsOf } from './jobs';
 import { bookingTeams } from './schema';
 
 /**
@@ -49,28 +50,6 @@ async function leadBookingOf(db: Db | Tx, bookingId: string) {
     .where(eq(bookings.id, bookingId))
     .limit(1);
   return row ? { ...row, categorySlug: row.categorySlug as CategorySlug } : null;
-}
-
-/** The partner's latest booking on their part, and whether its offer can still be booked. */
-export async function partnerSideOf(db: Db | Tx, team: Pick<TeamRow, 'partnerTaskId' | 'partnerOfferId'>): Promise<Pick<TeamFacts, 'partnerBooking' | 'offerOpen'> & { partnerBookingId?: string }> {
-  if (!team.partnerTaskId) return {};
-  const [[booking], [offer]] = await Promise.all([
-    db.select({ id: bookings.id, status: bookings.status }).from(bookings).where(eq(bookings.taskId, team.partnerTaskId)).orderBy(desc(bookings.createdAt)).limit(1),
-    team.partnerOfferId ? db.select({ status: offers.status, expiresAt: offers.expiresAt }).from(offers).where(eq(offers.id, team.partnerOfferId)).limit(1) : Promise.resolve([]),
-  ]);
-  // A held part whose payment never went through (funding_failed): not booked, the offer open again.
-  const live = booking && !(booking.status === 'canceled' && offer?.status === 'pending') ? booking : undefined;
-  return {
-    ...(live ? { partnerBooking: { status: live.status }, partnerBookingId: live.id } : {}),
-    offerOpen: offer ? offer.status === 'pending' : false,
-  };
-}
-
-/** A team's facts for the domain. */
-export async function teamFactsOf(db: Db | Tx, team: TeamRow, lead: Pick<BookingRow, 'status' | 'startAt'>) {
-  const side = await partnerSideOf(db, team);
-  const facts: TeamFacts = { status: team.status as TeamStatus, lead: { status: lead.status, startAt: lead.startAt }, ...side };
-  return { facts, partnerBookingId: side.partnerBookingId };
 }
 
 /** Whether the lead's booking already has a team in play (an invite waiting, or a partner booked or bookable). */
@@ -237,7 +216,7 @@ async function makePartnerPart(tx: Tx, team: TeamRow, lead: BookingRow, now: Dat
   return { taskId, offerId };
 }
 
-/** The part was never booked: the offer and the part end (a booking on its way keeps both). */
+/** The part was never booked: the offer and the part end (a booking on its way keeps both). Takes the part's lock. */
 async function closePartnerPart(tx: Tx, team: TeamRow, now: Date): Promise<boolean> {
   if (!team.partnerTaskId) return true;
   await tx.execute(sql`select id from tasks where id = ${team.partnerTaskId} for update`);
@@ -247,6 +226,25 @@ async function closePartnerPart(tx: Tx, team: TeamRow, now: Date): Promise<boole
   if (team.partnerOfferId) await tx.update(offers).set({ status: 'withdrawn', closedAt: now, updatedAt: now }).where(and(eq(offers.id, team.partnerOfferId), eq(offers.status, 'pending')));
   return true;
 }
+
+/**
+ * Ends a team from one of `from` under its row's lock, reading its status there (sweep B8: a status read before the
+ * transaction could be stale, and a part confirmed meanwhile stayed bookable). A confirmed part never booked ends with
+ * it (its task and offer); one booked meanwhile keeps the team as it is. Locks the team, then the part: confirming a
+ * booking takes only the part's lock and reads the team, so the two never wait on each other in a circle.
+ */
+async function closeTeam(db: Db, teamId: string, from: TeamStatus[], to: TeamStatus, now: Date): Promise<boolean> {
+  return db.transaction(async (tx) => {
+    const [fresh] = await tx.select().from(bookingTeams).where(eq(bookingTeams.id, teamId)).limit(1).for('update');
+    const status = fresh?.status as TeamStatus | undefined;
+    if (!fresh || !status || !from.includes(status)) return false;
+    if (status === 'confirmed' && !(await closePartnerPart(tx, fresh, now))) return false;
+    return move(tx, fresh.id, [status], to, now);
+  });
+}
+
+const bookPart = (team: TeamRow): ActionResult =>
+  team.partnerTaskId && team.partnerOfferId ? { ok: true, code: 'opened', redirectTo: routes.app.confirmOffer(team.partnerTaskId, team.partnerOfferId) } : { ok: false, code: 'not_allowed' };
 
 /** An answer on a team invite, by the partner, the lead or the client: only what `teamActions` offers them now. */
 export async function runTeamAction(db: Db, userId: string, input: TeamActionInput, now: Date): Promise<ActionResult> {
@@ -258,7 +256,11 @@ export async function runTeamAction(db: Db, userId: string, input: TeamActionInp
   if (!lead) return { ok: false, code: 'not_found' };
   const { facts } = await teamFactsOf(db, team, lead);
   const action = input?.action;
-  if (!teamActions(facts, role, now).includes(action)) return { ok: false, code: teamStatusNow(facts, now) === 'expired' ? 'expired' : 'not_allowed' };
+  const actions = teamActions(facts, role, now);
+  // Confirm again on a card read before the first yes (the checkout closed, the page not read again): the same
+  // checkout, never "not allowed" (sweep B7).
+  if (action === 'confirm' && !actions.includes('confirm') && actions.includes('book')) return bookPart(team);
+  if (!actions.includes(action)) return { ok: false, code: teamStatusNow(facts, now) === 'expired' ? 'expired' : 'not_allowed' };
 
   switch (action) {
     case 'accept': {
@@ -270,18 +272,13 @@ export async function runTeamAction(db: Db, userId: string, input: TeamActionInp
     case 'decline':
       return (await move(db, team.id, ['invited'], 'declined', now, { answeredAt: now })) ? { ok: true, code: 'updated' } : { ok: false, code: 'not_allowed' };
     case 'cancel':
-      return (await move(db, team.id, ['invited', 'accepted'], 'canceled', now)) ? { ok: true, code: 'canceled' } : { ok: false, code: 'not_allowed' };
+      return (await closeTeam(db, team.id, ['invited', 'accepted', 'confirmed'], 'canceled', now)) ? { ok: true, code: 'canceled' } : { ok: false, code: 'not_allowed' };
     case 'refuse':
-      return (await move(db, team.id, ['accepted'], 'refused', now)) ? { ok: true, code: 'updated' } : { ok: false, code: 'not_allowed' };
-    case 'withdraw': {
-      const done = await db.transaction(async (tx) => {
-        if (team.status === 'confirmed' && !(await closePartnerPart(tx, team, now))) return false;
-        return move(tx, team.id, ['accepted', 'confirmed'], 'withdrawn', now);
-      });
-      return done ? { ok: true, code: 'updated' } : { ok: false, code: 'not_allowed' };
-    }
+      return (await closeTeam(db, team.id, ['accepted', 'confirmed'], 'refused', now)) ? { ok: true, code: 'updated' } : { ok: false, code: 'not_allowed' };
+    case 'withdraw':
+      return (await closeTeam(db, team.id, ['accepted', 'confirmed'], 'withdrawn', now)) ? { ok: true, code: 'updated' } : { ok: false, code: 'not_allowed' };
     case 'book':
-      return team.partnerTaskId && team.partnerOfferId ? { ok: true, code: 'opened', redirectTo: routes.app.confirmOffer(team.partnerTaskId, team.partnerOfferId) } : { ok: false, code: 'not_allowed' };
+      return bookPart(team);
     case 'confirm':
       return confirmTeam(db, team, lead, now);
   }

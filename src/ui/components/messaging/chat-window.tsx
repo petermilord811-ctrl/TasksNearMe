@@ -106,7 +106,7 @@ function Failed({ onRetry, notFound = false }: { onRetry(): void; notFound?: boo
 }
 
 /** One conversation in the window: who and what it's about, the messages, and the composer (or why it's closed). */
-function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, focusId, onJump, onIgnored, onOpenBeside, onShowInWindow, controls }: {
+function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, focusId, onJump, onIgnored, onOpenBeside, onShowInWindow, onOpenThread, controls }: {
   load: ChatLoad<ChatThreadData>;
   now: ISODateTime;
   handlers: ChatThreadHandlers;
@@ -120,6 +120,8 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
   onOpenBeside?: () => void;
   /** A docked window: back into the chat window (in its menu), and its own buttons (minimize, close) at the header's end. */
   onShowInWindow?: () => void;
+  /** Another conversation from the team bar, opened in the window (sweep C9: its links left for the full page). */
+  onOpenThread?: (threadId: string) => void;
   controls?: ReactNode;
 }) {
   const t = useTranslations('thread');
@@ -190,7 +192,7 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
     </header>
     {thread.contactMasking && <p className="flex items-start gap-2 border-b border-foreground/[0.07] bg-secondary/60 px-2.5 py-1.5 text-[11px] leading-4 text-secondary-foreground dark:border-white/[0.06]"><LockKeyhole aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" /><span>{thread.kind === 'direct' ? t('direct.masking') : t('masking')}</span></p>}
     <FamilyNote family={data.family} compact />
-    {data.team && <TeamBarView bar={data.team} compact />}
+    {data.team && <TeamBarView bar={data.team} compact {...(onOpenThread ? { onOpen: onOpenThread } : {})} />}
     {data.agreement && <AgreementCard agreement={data.agreement} threadId={thread.id} canProposeChange={Boolean(data.canProposeChange)} compact />}
     {data.canProposeChange && thread.subject.kind === 'booking' && !data.agreement && <p className="flex flex-wrap items-center justify-between gap-x-3 border-b border-foreground/[0.07] px-3 py-1.5 text-xs dark:border-white/[0.06]">
       <span className="text-muted-foreground">{t('cards.change.hint')}</span>
@@ -398,7 +400,7 @@ export function ChatWindow(props: ChatWindowProps) {
       </div>
       <div className={cn('min-h-0 flex-col', listShown ? 'hidden @2xl:flex' : 'flex')}>
         {view.kind === 'thread'
-          ? <ThreadPane load={thread} now={now} handlers={threadHandlers} onRetry={onRetry} onRefresh={onRefreshThread} onLoadEarlier={onLoadEarlier} focusId={focusId} onJump={onJump} onIgnored={() => onShow({ kind: 'list' })} {...(onOpenBeside ? { onOpenBeside: () => onOpenBeside(view.threadId) } : {})} />
+          ? <ThreadPane load={thread} now={now} handlers={threadHandlers} onRetry={onRetry} onRefresh={onRefreshThread} onLoadEarlier={onLoadEarlier} focusId={focusId} onJump={onJump} onIgnored={() => onShow({ kind: 'list' })} onOpenThread={(threadId) => onShow({ kind: 'thread', threadId })} {...(onOpenBeside ? { onOpenBeside: () => onOpenBeside(view.threadId) } : {})} />
           : view.kind === 'new'
             ? <NewChat
               variant="pane"
@@ -555,7 +557,7 @@ export function DockedChats({ docked, mainKey, loads, now, handlers, onMinimize,
         className="app-glass flex h-[min(34rem,calc(100dvh-var(--app-header-offset,4.25rem)-3rem))] flex-col overflow-hidden rounded-[1.5rem] border border-foreground/[0.08] bg-card/85 shadow-[0_2px_6px_rgb(23_18_14/0.06),0_30px_60px_-24px_rgb(40_20_5/0.55)] outline-none motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 dark:border-white/[0.1]"
         style={{ width: DOCKED_WIDTH }}>
         {loaded
-          ? <ThreadPane load={load} now={now} handlers={handlers} onRetry={() => onRefresh(chat.threadId)} onRefresh={() => onRefresh(chat.threadId)} onLoadEarlier={(from) => onLoadEarlier(chat.threadId, from)} onJump={() => onShowInWindow(chat.threadId)} onIgnored={() => onClose(chat.threadId)} onShowInWindow={() => onShowInWindow(chat.threadId)} controls={controls} />
+          ? <ThreadPane load={load} now={now} handlers={handlers} onRetry={() => onRefresh(chat.threadId)} onRefresh={() => onRefresh(chat.threadId)} onLoadEarlier={(from) => onLoadEarlier(chat.threadId, from)} onJump={() => onShowInWindow(chat.threadId)} onIgnored={() => onClose(chat.threadId)} onShowInWindow={() => onShowInWindow(chat.threadId)} onOpenThread={onShowInWindow} controls={controls} />
           : <>
             <div className="flex justify-end border-b border-foreground/[0.07] px-2 py-1.5 dark:border-white/[0.06]">{controls}</div>
             {load.status === 'error' ? <Failed onRetry={() => onRefresh(chat.threadId)} notFound={load.notFound} /> : <Loading />}

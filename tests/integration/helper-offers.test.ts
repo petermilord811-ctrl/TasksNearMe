@@ -170,6 +170,10 @@ describe('My offers after a change (journeys on a phone, ab decided)', () => {
       // A booking still on the offer's terms carries no "now".
       await db.update(bookings).set({ termsVersion: 1 }).where(eq(bookings.id, ids.booking));
       expect((await getMyOffers(db, 'usr_jordan', now())).booked.find((entry) => entry.offer.id === ids.offer)?.current).toBeUndefined();
+      // Its money is the booking's own, made under the fees of its day (a4's sweep: today's fees showed $60 for $54).
+      const older = { ...quoteBreakdown(policy!.fees, { type: 'fixed', priceCents: 6000 }), helperEarningsCents: 5400 };
+      await db.update(bookingTerms).set({ breakdown: older }).where(eq(bookingTerms.id, 'btm_myoffers_change_1'));
+      expect((await getMyOffers(db, 'usr_jordan', now())).booked.find((entry) => entry.offer.id === ids.offer)?.offer.breakdown).toEqual(older);
     } finally {
       await db.delete(bookingTerms).where(eq(bookingTerms.bookingId, ids.booking));
       await db.delete(bookings).where(eq(bookings.id, ids.booking));

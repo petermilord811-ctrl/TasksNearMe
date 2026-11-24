@@ -29,6 +29,7 @@ import { isUniqueViolation } from '@/platform/db/errors';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { consumeRateLimit } from '@/platform/rate-limit';
+import { inTeamJob } from '@/modules/teams/jobs';
 import { allowedChangeTypes, changeExpiresAt, changeScheduleWindow, OPEN_CHANGE_STATUSES, pricingOf, proposedTerms, type ChangeTerms } from './changes-domain';
 import { bankStep, chargeMethodOf, methodForChoice, paymentPanel, type BookingDeps } from './confirm';
 import { pausedIn } from '@/modules/markets/outage';
@@ -148,12 +149,14 @@ export async function getProposeChangePage(db: Db, userId: string, bookingId: st
   await expireDueChanges(db, now, { bookingId: loaded.booking.id });
   const [open, policy] = await Promise.all([openChangeOf(db, loaded.booking.id), bookingPolicy(db, loaded.booking.policyVersionId)]);
   const terms = termsOf(loaded.terms);
-  const allowedTypes = allowedChangeTypes({ status: loaded.booking.status, pricingType: terms.pricingType, startAt: terms.startAt, now });
+  const teamJob = await inTeamJob(db, loaded.booking, now);
+  const allowedTypes = allowedChangeTypes({ status: loaded.booking.status, pricingType: terms.pricingType, startAt: terms.startAt, now, teamJob });
   const window = changeScheduleWindow(policy?.timers as PolicyTimers, now);
   return {
     booking: { id: loaded.booking.id, title: loaded.title, viewerRole: loaded.role },
     current: termsView(terms),
     allowedTypes,
+    ...(teamJob ? { teamJob: true as const } : {}),
     ...(allowedTypes.includes('schedule')
       ? {
           scheduleWindow: { earliest: window.earliest.toISOString(), latest: window.latest.toISOString() },
@@ -171,7 +174,7 @@ async function prepare(db: Db, userId: string, bookingId: string, input: Propose
   const loaded = await loadBooking(db, userId, bookingId);
   if (!loaded) return { ok: false, result: { ok: false, code: 'not_allowed' } };
   const current = termsOf(loaded.terms);
-  const allowed = allowedChangeTypes({ status: loaded.booking.status, pricingType: current.pricingType, startAt: current.startAt, now });
+  const allowed = allowedChangeTypes({ status: loaded.booking.status, pricingType: current.pricingType, startAt: current.startAt, now, teamJob: await inTeamJob(db, loaded.booking, now) });
   if (allowed.length === 0) return { ok: false, result: { ok: false, code: 'not_allowed' } };
   const policy = await bookingPolicy(db, loaded.booking.policyVersionId);
   if (!policy) return { ok: false, result: { ok: false, code: 'unknown' } };
@@ -309,6 +312,7 @@ async function writeChange(tx: Tx, row: ChangeRow, now: Date, actorUserId: strin
   const [booking] = await tx.select().from(bookings).where(eq(bookings.id, row.bookingId)).limit(1).for('update');
   if (!booking || booking.termsVersion !== row.fromVersion) return false;
   if (!CHANGEABLE.includes(booking.status) || booking.completionSubmittedAt) return false;
+  if (await movesTeamJob(tx, row, booking, now)) return false;
   // Still open now: a change withdrawn, declined or expired meanwhile never applies, even if its payment lands later.
   const [current] = await tx.select({ status: bookingChangeRequests.status }).from(bookingChangeRequests).where(eq(bookingChangeRequests.id, row.id)).limit(1).for('update');
   if (!current || !(OPEN_CHANGE_STATUSES as readonly string[]).includes(current.status)) return false;
@@ -333,6 +337,14 @@ async function writeChange(tx: Tx, row: ChangeRow, now: Date, actorUserId: strin
   await tx.update(bookingChangeRequests).set({ status: 'applied', decidedAt: now, updatedAt: now }).where(eq(bookingChangeRequests.id, row.id));
   await tx.insert(outboxEvents).values({ id: newId('evt'), type: 'change.applied', aggregateType: 'booking', aggregateId: booking.id, payload: { bookingId: booking.id, changeId: row.id, actorUserId } });
   return true;
+}
+
+/**
+ * The change moves the start of a booking that's part of a team job now (sweep B4): proposed before the team formed,
+ * it never applies while the team stands (the other helper would stay at the old time).
+ */
+async function movesTeamJob(db: Db | Tx, row: ChangeRow, booking: Pick<BookingRow, 'id' | 'taskId' | 'status' | 'startAt'>, now: Date): Promise<boolean> {
+  return changeTermsOf(row).startAt.getTime() !== booking.startAt.getTime() && inTeamJob(db, booking, now);
 }
 
 /** Applies accepted terms: a new terms version (the start moves if it changed); a lower total is refunded. */
@@ -465,6 +477,8 @@ export async function acceptChange(deps: BookingDeps, userId: string, bookingId:
   if (row.status !== 'proposed') return { ok: false, code: row.status === 'expired' ? 'expired' : 'not_allowed' };
   if (row.proposedByUserId === userId) return { ok: false, code: 'not_allowed' };
   if (row.fromVersion !== loaded.booking.termsVersion) return { ok: false, code: 'version_conflict' };
+  // Before any money moves: a new start on a team job never applies (writeChange checks again under the lock).
+  if (await movesTeamJob(deps.db, row, loaded.booking, now)) return { ok: false, code: 'not_allowed' };
   if (row.differenceCents <= 0) {
     return (await applyChange(deps.db, deps.payments, row, now, userId)) ? { ok: true, code: 'updated', redirectTo: routes.app.booking(loaded.booking.id) } : { ok: false, code: 'version_conflict' };
   }
@@ -482,6 +496,7 @@ export async function payChangeDifference(deps: BookingDeps, userId: string, boo
   if (!found) return { ok: false, code: 'not_found' };
   if (found.loaded.role !== 'poster') return { ok: false, code: 'not_allowed' };
   if (found.row.status !== 'accepted_pending_funding') return { ok: false, code: found.row.status === 'expired' ? 'expired' : 'not_allowed' };
+  if (await movesTeamJob(deps.db, found.row, found.loaded.booking, now)) return { ok: false, code: 'not_allowed' };
   return chargeDifference(deps, userId, found.row, found.loaded.booking.marketId, input, now);
 }
 

@@ -26,12 +26,13 @@ export const workStarted = (status: string, startAt: Date, now: Date) => status 
 
 /**
  * Before the work: everything can change. During it: not the start. The hours cap only for hourly work.
- * Nothing changes once the work was sent, or the booking ended.
+ * Nothing changes once the work was sent, or the booking ended. A team job's time is the team's (`teamJob`, sweep B4):
+ * moving one booking would leave the other helper at the old time, so its start doesn't change here.
  */
-export function allowedChangeTypes(input: { status: string; pricingType: 'fixed' | 'hourly'; startAt: Date; now: Date }): ProposableChangeType[] {
+export function allowedChangeTypes(input: { status: string; pricingType: 'fixed' | 'hourly'; startAt: Date; now: Date; teamJob?: boolean }): ProposableChangeType[] {
   if (input.status !== 'confirmed' && input.status !== 'in_progress') return [];
   const types: ProposableChangeType[] = ['price', 'scope'];
-  if (!workStarted(input.status, input.startAt, input.now)) types.push('schedule');
+  if (!workStarted(input.status, input.startAt, input.now) && !input.teamJob) types.push('schedule');
   if (input.pricingType === 'hourly') types.push('hours_cap');
   types.push('expense_allowance');
   return types;

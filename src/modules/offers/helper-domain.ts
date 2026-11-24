@@ -131,12 +131,17 @@ export function offerDefaultsFor(budget: PricingInput, rules: OfferRules) {
   return { pricing: budget, startTime: rules.startTimes[0] ?? '', message: '', brings: [] as string[] };
 }
 
-/** What the helper can do with their own offer while the task is open. */
+/**
+ * What the helper can do with their own offer while the task is open. A team partner's part (`teamPartOf`, 2026-11-24)
+ * has none: its price and time are the team's, answered on the team card (sweep B3: revising it there changed what the
+ * client was charged while the card showed the team's price).
+ */
 export function helperOfferActions(
   offer: { status: OfferStatus | string },
-  task: { status: TaskStatus | string; windowEnd: Date },
+  task: { status: TaskStatus | string; windowEnd: Date; teamPartOf?: string | null },
   now: Date,
 ): ActionDescriptor<OfferActionId>[] {
+  if (task.teamPartOf) return [];
   const message: ActionDescriptor<OfferActionId> = { id: 'message_poster', kind: 'secondary', enabled: true };
   if (offer.status === 'accepted') return [message];
   if (task.status !== 'open' || task.windowEnd <= now) return [];

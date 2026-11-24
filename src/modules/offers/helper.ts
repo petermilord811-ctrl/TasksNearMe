@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, gte, inArray, isNull, lte, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, or, type SQL } from 'drizzle-orm';
 import { hasPlan } from '@/modules/billing/benefits';
 import { aiDraftingEnabledFor } from '@/modules/assist/availability';
 import type {
@@ -521,6 +521,8 @@ function pricingColumns(pricing: OfferInput['pricing']) {
 async function prepareOffer(db: Db, userId: string, taskId: string, input: OfferInput, now: Date) {
   const row = await taskWithCategory(db, String(taskId));
   if (!row || row.task.status === 'draft') return { ready: false as const, result: { ok: false, code: 'not_found' } as ActionResult };
+  // A team partner's part takes no offer but the one the team made, and that one isn't revised (sweep B3).
+  if (row.task.teamPartOf) return { ready: false as const, result: { ok: false, code: 'not_allowed' } as ActionResult };
   if (await isBlockedBetween(db, userId, row.task.posterUserId)) return { ready: false as const, result: { ok: false, code: 'not_allowed' } as ActionResult };
   const state = await loadHelperState(db, userId, now);
   const point = row.task.publicLat !== null && row.task.publicLng !== null ? { lat: row.task.publicLat, lng: row.task.publicLng } : null;
@@ -718,6 +720,8 @@ export async function getMyOffers(db: Db, userId: string, now: Date): Promise<My
       found ? [[found.view.id, found] as const] : [],
     ),
   );
+  // A team partner's part isn't one of their offers: it's answered on the team card and booked in Bookings (sweep B3).
+  const teamParts = new Set((await db.select({ id: tasks.id }).from(tasks).where(and(inArray(tasks.id, taskIds), isNotNull(tasks.teamPartOf)))).map((task) => task.id));
   const feesByMarket = new Map<string, FeeSchedule | null>();
   // Declined by the task's cancellation, not by the client's choice (sweep D9): "Task canceled", not "Not selected".
   const canceled = await declinedByCancel(db, rows, (taskId) => views.get(taskId)?.row.status);
@@ -732,7 +736,7 @@ export async function getMyOffers(db: Db, userId: string, now: Date): Promise<My
   );
   const toRow = async (row: OfferRow): Promise<MyOfferRow | null> => {
     const found = views.get(row.taskId);
-    if (!found) return null;
+    if (!found || teamParts.has(row.taskId)) return null;
     const marketId = found.row.marketId;
     if (!feesByMarket.has(marketId)) feesByMarket.set(marketId, await feesFor(db, marketId));
     const fees = feesByMarket.get(marketId);
@@ -750,7 +754,8 @@ export async function getMyOffers(db: Db, userId: string, now: Date): Promise<My
         proposedStart: row.proposedStart.toISOString(),
         expiresAt: row.expiresAt.toISOString(),
         revision: row.revision,
-        breakdown: quoteBreakdown(fees, pricing, { held: row.paymentMode === 'held' }),
+        // Booked: the booking's own money, made under the fees of its day (a4's sweep: today's fees showed $60 for $54).
+        breakdown: standing ? standing.breakdown : quoteBreakdown(fees, pricing, { held: row.paymentMode === 'held' }),
         ...(canceled.has(row.id) ? { taskCanceled: true } : {}),
       },
       task: found.view,

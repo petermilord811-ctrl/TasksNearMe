@@ -17,6 +17,8 @@ import { Spinner } from '@/ui/primitives/spinner';
 
 const frame = 'w-full max-w-sm space-y-2.5 rounded-[1.25rem] border border-foreground/[0.08] bg-card px-4 py-3 text-left shadow-[0_1px_2px_rgb(23_18_14/0.05)] dark:border-white/[0.08]';
 const link = 'inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-primary underline-offset-4 hover:underline';
+/** The team bar's other conversations. */
+const other = 'inline-flex items-center gap-1 rounded-full border border-primary/35 px-2.5 font-semibold text-primary hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-ring';
 
 const first = (name: string) => name.split(' ')[0] || name;
 
@@ -73,8 +75,11 @@ function TeamCard({ card, handlers, onDone, createdAt, embedded }: { card: TeamI
     try {
       const result = await handlers.onAction({ teamId: card.teamId, action });
       if (result.ok) {
-        if (result.redirectTo) router.push(localeHref(result.redirectTo, locale), { scroll: false });
-        else {
+        if (result.redirectTo) {
+          // The chat window reads the conversation again too: the yes made the part, the card reads "Book" now (sweep B7).
+          onDone?.();
+          router.push(localeHref(result.redirectTo, locale), { scroll: false });
+        } else {
           toast.success(t(`done.${action}`));
           onDone?.();
         }
@@ -112,9 +117,10 @@ function TeamCard({ card, handlers, onDone, createdAt, embedded }: { card: TeamI
 
 /**
  * "Team: Jordan (lead) and Sam" on top of a team job's conversations (2026-11-24), with the viewer's other team
- * conversations: they open in place (the Messages pane beside the list, or the chat window).
+ * conversations: they open in place (the Messages pane beside the list; in the chat window through `onOpen`, its
+ * links being the full page's).
  */
-export function TeamBarView({ bar, compact = false }: { bar: TeamBar; compact?: boolean }) {
+export function TeamBarView({ bar, compact = false, onOpen }: { bar: TeamBar; compact?: boolean; onOpen?: (threadId: string) => void }) {
   const t = useTranslations('teams.bar');
   const names = { lead: first(bar.lead.displayName), partner: first(bar.partner.displayName) };
   return <nav aria-label={t('label', names)} data-team-bar className={cn('flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-foreground/[0.07] bg-brand-soft/35 dark:border-white/[0.06] dark:bg-white/[0.03]', compact ? 'px-3 py-1.5 text-xs' : 'px-4 py-2 text-sm')}>
@@ -123,7 +129,9 @@ export function TeamBarView({ bar, compact = false }: { bar: TeamBar; compact?: 
       {bar.conversations.map((item) => <li key={item.threadId}>
         {item.current
           ? <span aria-current="page" className={cn('inline-flex items-center gap-1 rounded-full bg-foreground/[0.06] px-2.5 font-semibold dark:bg-white/[0.08]', compact ? 'min-h-7' : 'min-h-9')}>{t(item.kind, names)}</span>
-          : <Link href={routes.app.thread(item.threadId)} replace scroll={false} className={cn('inline-flex items-center gap-1 rounded-full border border-primary/35 px-2.5 font-semibold text-primary hover:bg-brand-soft', compact ? 'min-h-7' : 'min-h-11 sm:min-h-9')}><MessagesSquare aria-hidden="true" className="size-3.5" />{t(item.kind, names)}</Link>}
+          : onOpen
+            ? <button type="button" onClick={() => onOpen(item.threadId)} className={cn(other, compact ? 'min-h-7' : 'min-h-11 sm:min-h-9')}><MessagesSquare aria-hidden="true" className="size-3.5" />{t(item.kind, names)}</button>
+            : <Link href={routes.app.thread(item.threadId)} replace scroll={false} className={cn(other, compact ? 'min-h-7' : 'min-h-11 sm:min-h-9')}><MessagesSquare aria-hidden="true" className="size-3.5" />{t(item.kind, names)}</Link>}
       </li>)}
     </ul>
   </nav>;

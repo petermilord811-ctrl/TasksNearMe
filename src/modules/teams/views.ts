@@ -11,7 +11,8 @@ import { tasks } from '@/modules/tasks/schema';
 import type { Db } from '@/platform/db/connect';
 import { cancelChoiceOpen, showsPartnerPrice, teamActions, teamStatusNow } from './domain';
 import { bookingTeams } from './schema';
-import { canInviteFor, teamFactsOf } from './service';
+import { teamFactsOf } from './jobs';
+import { canInviteFor } from './service';
 
 /**
  * Team up as each of its three people sees it (2026-11-24): the cards in conversations, the panel on the booking pages,

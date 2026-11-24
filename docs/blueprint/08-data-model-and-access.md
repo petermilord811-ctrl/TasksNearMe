@@ -167,6 +167,7 @@ This changes who can read a booking. A booking's client may let up to **2** exis
 - **Transparency.** The helper always sees that someone follows ("Maya's family member Lia follows this booking") and gets a status line when a follower is added, removed or leaves. A follower's contact details are never shown to anyone; only their display name.
 - **Notifications.** The follower is told once when added, then about the key moments only: on the way, arrived, done, canceled, a new time.
 - **Ending.** The client removes a follower at any time; a follower can leave. Following ends on its own when the booking is canceled, or 7 days after it's done. Regular visits (series) can't be followed yet.
+- **Blocks and bans (sweep 2026-11-24).** A follow counts only while the follower's account can follow (active or restricted) and no block stands between them and the client or the helper, either way: reading, photos, the list, notifications and live updates stop at once, and such a follower holds none of the two places. The row stays, so an unblock or a lifted suspension brings it back. Live updates reach followers ids only: a message in the conversation, or that the booking changed (never which change).
 
 ### Staff roles and limits (configurable)
 

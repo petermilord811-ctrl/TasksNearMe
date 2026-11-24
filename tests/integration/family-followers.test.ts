@@ -7,16 +7,18 @@ import { familyViewFor } from '@/modules/followers/access';
 import { bookingFollowers } from '@/modules/followers/schema';
 import { addFollower, followedBookingRows, getFollowedBookingView, removeFollower } from '@/modules/followers/service';
 import { bookingThreadLink, canViewMessageFile, ensureThread, getInbox, getThreadPage, maskingFor, notifyTyping, postEvent, reactToMessage, sendMessage, unreadMessageCount } from '@/modules/messaging/service';
-import { messages, threadParticipants, threads } from '@/modules/messaging/schema';
+import { blocks, messages, threadParticipants, threads } from '@/modules/messaging/schema';
 import { planNotifications } from '@/modules/notifications/service';
 import { notifications } from '@/modules/notifications/schema';
 import { offers } from '@/modules/offers/schema';
+import { noticesFor } from '@/modules/realtime/reactions';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { tasks } from '@/modules/tasks/schema';
 import { auditLog } from '@/platform/audit/schema';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { createDb } from '@/platform/db/connect';
 import { outboxEvents } from '@/platform/outbox/schema';
+import { userChannel } from '@/platform/realtime/hub';
 import { rateLimits } from '@/platform/rate-limit/schema';
 
 /**
@@ -104,6 +106,7 @@ afterAll(async () => {
   await db.delete(usernames).where(inArray(usernames.userId, PEOPLE));
   await clearAddLimits();
   await db.delete(rateLimits).where(or(...PEOPLE.map((id) => like(rateLimits.key, `%${id}%`))));
+  await db.delete(blocks).where(or(inArray(blocks.blockerId, PEOPLE), inArray(blocks.blockedId, PEOPLE)));
   await db.delete(users).where(inArray(users.id, PEOPLE));
   await pool.end();
 });
@@ -253,6 +256,71 @@ describe('notifications for a follower', () => {
     for (const type of ['booking.tipped', 'booking.confirmed', 'earnings.transferred', 'booking.disputed']) {
       expect((await planFor(type, { amountCents: 500 })).some((item) => item.userId === LIA)).toBe(false);
     }
+  });
+
+  it('gets live notices: a message in the conversation, and that the booking changed but never which change (C13)', async () => {
+    const lia = userChannel(LIA);
+    const followed = { channel: lia, notice: { type: 'update', event: 'booking.followed', booking: BOOKING } };
+    for (const type of ['booking.on_my_way', 'change.proposed']) {
+      const envelopes = await noticesFor(db, { type, payload: { bookingId: BOOKING, posterUserId: CLIENT, helperUserId: HELPER, actorUserId: HELPER, changeId: 'chg_ffw' } });
+      expect(envelopes.filter((envelope) => envelope.channel === lia)).toEqual([followed]);
+    }
+    const sent = { type: 'message.sent', payload: { threadId: thread, senderUserId: HELPER, recipientIds: [CLIENT] } };
+    expect((await noticesFor(db, sent)).filter((envelope) => envelope.channel === lia)).toEqual([{ channel: lia, notice: { type: 'message', thread } }]);
+    // Never across a block with the client or the helper.
+    await db.insert(blocks).values({ blockerId: CLIENT, blockedId: LIA });
+    try {
+      expect((await noticesFor(db, sent)).some((envelope) => envelope.channel === lia)).toBe(false);
+    } finally {
+      await db.delete(blocks).where(and(eq(blocks.blockerId, CLIENT), eq(blocks.blockedId, LIA)));
+    }
+  });
+});
+
+describe('a block, a ban or a suspension cuts a follower off at once (sweep 2026-11-24)', () => {
+  const photo = 'fil_ffw_photo';
+  const reads = async () => {
+    expect(await getFollowedBookingView(db, LIA, BOOKING, NOW)).not.toBeNull();
+    expect(await getThreadPage(db, LIA, thread, NOW)).not.toBeNull();
+    expect(await canViewMessageFile(db, photo, LIA)).toBe(true);
+  };
+  const cutOff = async () => {
+    expect(await getFollowedBookingView(db, LIA, BOOKING, NOW)).toBeNull();
+    expect(await getThreadPage(db, LIA, thread, NOW)).toBeNull();
+    expect(await canViewMessageFile(db, photo, LIA)).toBe(false);
+    expect((await planFor('booking.on_my_way', { posterUserId: CLIENT, helperUserId: HELPER })).some((item) => item.userId === LIA)).toBe(false);
+    expect((await getBookingsPage(db, LIA, NOW)).following ?? []).toEqual([]);
+  };
+
+  it('a block either way between the follower and the helper or the client: no conversation, photos, page or notices (B6)', async () => {
+    await db.update(messages).set({ attachmentFileIds: [photo] }).where(eq(messages.id, 'msg_ffw_2'));
+    try {
+      for (const [blockerId, blockedId] of [[HELPER, LIA], [LIA, CLIENT], [CLIENT, LIA]] as const) {
+        await reads();
+        await db.insert(blocks).values({ blockerId, blockedId });
+        await cutOff();
+        await db.delete(blocks).where(and(eq(blocks.blockerId, blockerId), eq(blocks.blockedId, blockedId)));
+      }
+      // Unblocked: the follow (never ended) reads again.
+      await reads();
+    } finally {
+      await db.delete(blocks).where(or(eq(blocks.blockerId, LIA), eq(blocks.blockedId, LIA)));
+      await db.update(messages).set({ attachmentFileIds: [] }).where(eq(messages.id, 'msg_ffw_2'));
+    }
+  });
+
+  it('a suspended or banned follower stops following, and holds none of the two places (A11)', async () => {
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, BOOKING));
+    try {
+      for (const status of ['suspended', 'banned']) {
+        await db.update(users).set({ status }).where(eq(users.id, LIA));
+        await cutOff();
+        expect((await familyViewFor(db, booking!, CLIENT, NOW))?.manage?.followers.map((person) => person.id) ?? []).not.toContain(LIA);
+      }
+    } finally {
+      await db.update(users).set({ status: 'active' }).where(eq(users.id, LIA));
+    }
+    expect((await familyViewFor(db, booking!, CLIENT, NOW))?.manage?.followers.map((person) => person.id)).toContain(LIA);
   });
 });
 
