@@ -18,7 +18,7 @@
   "save": "Guardar",
   "saved": "Guardado",
   "saveLabel": "Guardar a {name}",
-  "unsaveLabel": "Quitar a {name} de los ayudantes guardados",
+  "unsaveLabel": "Guardado: quitar a {name} de los ayudantes guardados",
   "savedMessage": "{name} está en tus ayudantes guardados.",
   "removedMessage": "{name} se quitó de tus ayudantes guardados.",
   "error": "No pudimos actualizar tus ayudantes guardados. Inténtalo de nuevo.",

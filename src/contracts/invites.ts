@@ -11,6 +11,7 @@ import { paymentChoiceSchema, type CardRemovalHandlers, type PaymentAttemptResul
 import type { ClientSummary, HelperSummary } from './people';
 import { TASK_DESCRIPTION_MAX } from './posting';
 import type { InviteStatus } from './status';
+import type { NeighborhoodDayCardView } from './neighborhood-days';
 
 /**
  * Direct invites (blueprint 02 J3, 03 §3; ui-contract §13): a client asks one helper to do one of their open
@@ -103,6 +104,12 @@ export interface RequestHelperPageData {
   slot?: AvailabilitySlotView;
   /** `?slot=<id>` named a slot that's no longer open (requested, booked, past, or canceled). */
   slotUnavailable?: boolean;
+  /**
+   * The slot is a visit of a neighborhood day (2026-11-24): the day, whose other open visits the dialog offers
+   * (`routes.app.requestHelper(handle, { slotId })`, replacing the dialog's URL). `tasks` are then only the client's
+   * tasks in the day's neighborhood: the trip goes to the task's place.
+   */
+  neighborhoodDay?: NeighborhoodDayCardView;
   payment: PaymentPanelData;
 }
 

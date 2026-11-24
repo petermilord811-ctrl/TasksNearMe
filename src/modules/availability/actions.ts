@@ -1,10 +1,11 @@
 'use server';
 
 import { refresh, updateTag } from 'next/cache';
-import type { ActionResult, AvailabilityPostInput } from '@/contracts';
+import type { ActionResult, AvailabilityPostInput, NeighborhoodDayInput } from '@/contracts';
 import { createPaymentProvider } from '@/integrations/payments';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
+import { cancelNeighborhoodDay, createNeighborhoodDay } from './neighborhood-days';
 import { cancelAvailabilityPost, createAvailabilityPost, helperAreaOf } from './service';
 import { requestNow } from '@/platform/clock';
 
@@ -34,6 +35,23 @@ export async function cancelAvailabilityPostAction(input: { postId: string }): P
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
   const result = await cancelAvailabilityPost(db, createPaymentProvider(), userId, String(input.postId), await requestNow());
+  if (result.ok) await changed(userId);
+  return result;
+}
+
+/** A neighborhood day (2026-11-24): its visits are slots, so the profile and Neighbors show the change at once. */
+export async function createNeighborhoodDayAction(input: NeighborhoodDayInput): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  const result = await createNeighborhoodDay(db, userId, input, await requestNow());
+  if (result.ok) await changed(userId);
+  return result;
+}
+
+export async function cancelNeighborhoodDayAction(input: { dayId: string }): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  const result = await cancelNeighborhoodDay(db, createPaymentProvider(), userId, String(input.dayId), await requestNow());
   if (result.ok) await changed(userId);
   return result;
 }

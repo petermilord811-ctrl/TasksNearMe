@@ -242,7 +242,8 @@ describe('T-18: chargebacks', () => {
     // The case's note tells finance where the evidence pack is.
     const [opened] = await db.select({ id: supportCases.id }).from(supportCases).where(and(eq(supportCases.bookingId, AFTER), eq(supportCases.type, 'payment_issue')));
     const notes = await db.select({ body: supportCaseEvents.body }).from(supportCaseEvents).where(eq(supportCaseEvents.caseId, opened!.id));
-    expect(notes[0]?.body).toContain(routes.api.evidencePack(AFTER));
+    // Any of the case's notes (they come back in no set order: "dispute closed" is a note too).
+    expect(notes.map((note) => note.body)).toContainEqual(expect.stringContaining(routes.api.evidencePack(AFTER)));
   });
 
   it('gives finance the evidence pack as a download, audited, and nobody else', async () => {

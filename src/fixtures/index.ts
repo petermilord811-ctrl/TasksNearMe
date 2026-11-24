@@ -40,6 +40,7 @@ export * from './rewards';
 export * from './changes';
 export * from './invites';
 export * from './availability';
+export * from './neighborhood-days';
 export * from './rebook';
 export * from './admin-people';
 export * from './admin-verification';

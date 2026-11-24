@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, isNull, sql } from 'drizzle-orm';
 import type { AvailabilitySlotView, CategorySlug, PricingInput } from '@/contracts';
 import { categories } from '@/modules/markets/schema';
 import type { Db } from '@/platform/db/connect';
@@ -62,13 +62,16 @@ export async function bookSlot(db: Tx, slotId: string | null, now: Date): Promis
   await db.update(availabilityPosts).set({ status: 'booked', updatedAt: now }).where(and(eq(availabilityPosts.id, slotId), eq(availabilityPosts.status, 'held')));
 }
 
-/** The helper's open slots for their public profile, soonest first (the database clock: the page is cached). */
+/**
+ * The helper's open slots for their public profile, soonest first (the database clock: the page is cached). A
+ * neighborhood day's visits show on the day's card instead (2026-11-24).
+ */
 export async function openSlotsOf(db: Db, helperId: string, limit = 6): Promise<AvailabilitySlotView[]> {
   const rows = await db
     .select({ row: availabilityPosts, slug: categories.slug })
     .from(availabilityPosts)
     .innerJoin(categories, eq(categories.id, availabilityPosts.categoryId))
-    .where(and(eq(availabilityPosts.helperUserId, helperId), eq(availabilityPosts.status, 'active'), gt(availabilityPosts.startAt, sql`now()`)))
+    .where(and(eq(availabilityPosts.helperUserId, helperId), eq(availabilityPosts.status, 'active'), isNull(availabilityPosts.dayId), gt(availabilityPosts.startAt, sql`now()`)))
     .orderBy(asc(availabilityPosts.startAt))
     .limit(limit);
   return rows.map(({ row, slug }) => slotViewOf(row, slug as CategorySlug));

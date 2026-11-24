@@ -3,17 +3,19 @@
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bookmark, BookmarkCheck, CalendarClock } from 'lucide-react';
+import { Bookmark, BookmarkCheck, CalendarClock, Route } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type HelperBrowseRow, type SavedHelperHandlers } from '@/contracts';
+import { marketLocalToUtc } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { HelperCard } from '@/ui/components/people/helper-card';
 import { Button, buttonVariants } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 
 function Row({ row, handlers, onMessage }: { row: HelperBrowseRow; handlers: SavedHelperHandlers; onMessage: (message: string) => void }) {
-  const { formatDateTime } = useFormat();
+  const { formatDate, formatDateTime, timeZone } = useFormat();
   const t = useTranslations('helpersBrowse');
+  const days = useTranslations('neighborhoodDays');
   const categories = useTranslations('helperCard.categories');
   const router = useRouter();
   const [saved, setSaved] = useState(row.saved);
@@ -46,6 +48,7 @@ function Row({ row, handlers, onMessage }: { row: HelperBrowseRow; handlers: Sav
   // Ask and Save live in the card's own footer, so they read as this helper's (audit M35).
   return <li className="min-w-0">
     <HelperCard helper={helper} footer={<div className="space-y-3">
+      {row.neighborhoodDay && <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium"><Route aria-hidden="true" className="size-4 shrink-0 text-primary" /><span>{days('browse', { area: row.neighborhoodDay.areaName, date: formatDate(marketLocalToUtc(row.neighborhoodDay.date, '12:00', timeZone)), count: row.neighborhoodDay.openCount })}</span><Link href={routes.app.requestHelper(helper.handle, { slotId: row.neighborhoodDay.firstOpenSlotId })} className="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4">{days('browseLink')}</Link></p>}
       {row.nextOpenTime && <p className="flex items-center gap-2 text-sm font-medium"><CalendarClock aria-hidden="true" className="size-4 shrink-0 text-primary" /><span><time dateTime={row.nextOpenTime.start}>{t('nextOpen', { date: formatDateTime(row.nextOpenTime.start) })}</time>{' · '}{categories(row.nextOpenTime.categorySlug)}</span></p>}
       <div className="flex flex-wrap gap-2">
         <Link href={routes.app.requestHelper(helper.handle)} className={buttonVariants({ variant: 'secondary', className: 'flex-1' })}>{t('request', { name: helper.displayName })}</Link>

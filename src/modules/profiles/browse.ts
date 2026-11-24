@@ -1,3 +1,4 @@
+import { dayTeasersOf } from '@/modules/availability/day-cards';
 import { and, asc, desc, eq, exists, gt, ilike, inArray, lt, notInArray, sql } from 'drizzle-orm';
 import { CATEGORY_SLUGS, type CategorySlug, type HelperBrowseQuery, type HelperBrowseRow, type HelpersBrowsePageData, type ServiceSummary } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
@@ -123,10 +124,13 @@ export async function getHelpersBrowse(db: Db, viewerId: string, marketId: strin
   }
   const saved = new Set(savedRows.map((row) => row.helperUserId));
   const badges = await badgesFor(db, page.map(({ user }) => user.id));
+  // Their next neighborhood day with an open visit (2026-11-24).
+  const days = await dayTeasersOf(db, pageIds, now);
   const result: HelperBrowseRow[] = page.map(({ profile, user, area }) => {
     const next = nextSlot.get(user.id);
+    const day = days.get(user.id);
     const summary = toHelperSummary(profile, user, area.name, services.get(user.id) ?? [], badges.get(user.id));
-    return { helper: isReliable(facts.get(user.id)!) ? { ...summary, reliable: true } : summary, saved: saved.has(user.id), ...(next ? { nextOpenTime: next } : {}) };
+    return { helper: isReliable(facts.get(user.id)!) ? { ...summary, reliable: true } : summary, saved: saved.has(user.id), ...(next ? { nextOpenTime: next } : {}), ...(day ? { neighborhoodDay: day } : {}) };
   });
   return { query, rows: result, areas: areaRows.map(({ slug, name }) => ({ slug, name })), total: candidates.length };
 }

@@ -3,11 +3,13 @@ import { recommendedByCounts } from '@/modules/community/service';
 import { sparksSummaryOf } from '@/modules/sparks/service';
 import { responseTimeRange } from '@/shared/response-time';
 import 'server-only';
+import { dayCardsOf, databaseNow, publicCard } from '@/modules/availability/day-cards';
 import { openSlotsOf } from '@/modules/availability/slots';
 import { and, asc, count, desc, eq, exists, gt, inArray, isNotNull, max, or, sql } from 'drizzle-orm';
 import type {
   BadgeView,
   CategorySlug,
+  NeighborhoodDayCardView,
   HelperProfilePageData,
   HelperReviewTag,
   HelperServiceDetail,
@@ -294,6 +296,8 @@ export async function getHelperProfile(handle: string, database: Db = db, rows: 
       publishedAt: (review.publishedAt ?? review.createdAt).toISOString(),
     })),
     slots: await openSlotsOf(database, userId),
+    // Their upcoming neighborhood days (2026-11-24), on the database clock like the slots (the page is cached).
+    ...(await neighborhoodDaysOn(database, userId)),
     workSamples: sampleRows.map(({ sample, file, categorySlug }) => ({
       id: sample.id,
       photo: { id: file.id, src: fileUrl(file), alt: file.alt, width: file.width, height: file.height },
@@ -387,4 +391,10 @@ export async function getHelperSummaries(userIds: string[], database: Db = db): 
   // A helper on a past booking or an old offer whose account was deleted shows as the reader's "Deleted account" (J-PR15).
   const deletedLabel = await deletedLabelFor(rows.map(({ user }) => user));
   return new Map(rows.map(({ profile, user, areaName }) => [user.id, withRecommended(toHelperSummary(profile, user, areaName, services.get(user.id) ?? [], badges.get(user.id), deletedLabel), recommended)]));
+}
+
+/** The profile's neighborhood days (2026-11-24): the next three still ahead, full ones too. */
+async function neighborhoodDaysOn(database: Db, helperId: string): Promise<{ neighborhoodDays?: NeighborhoodDayCardView[] }> {
+  const cards = await dayCardsOf(database, { helperIds: [helperId], upcoming: true, limit: 3 }, await databaseNow(database));
+  return cards.length > 0 ? { neighborhoodDays: cards.map((card) => publicCard(card)) } : {};
 }

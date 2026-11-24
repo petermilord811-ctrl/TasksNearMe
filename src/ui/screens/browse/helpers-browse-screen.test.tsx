@@ -123,12 +123,12 @@ describe('HelpersBrowseScreen', () => {
     const [jordan, sam] = helpersBrowseData.rows;
     expect(screen.getByRole('link', { name: `Ask ${sam!.helper.displayName}` })).toHaveAttribute('href', routes.app.requestHelper(sam!.helper.handle));
     expect(screen.getAllByText(/^Open (Mon|Tue|Wed|Thu|Fri|Sat|Sun), /).length).toBe(helpersBrowseData.rows.filter((row) => row.nextOpenTime).length);
-    expect(screen.getByRole('button', { name: `Remove ${jordan!.helper.displayName} from saved helpers` })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: `Saved: remove ${jordan!.helper.displayName} from saved helpers` })).toHaveAttribute('aria-pressed', 'true');
 
     await user.click(screen.getByRole('button', { name: `Save ${sam!.helper.displayName}` }));
     await waitFor(() => expect(onToggleSaved).toHaveBeenCalledWith({ helperId: sam!.helper.id, saved: true }));
     expect(await screen.findByText(`${sam!.helper.displayName} is in your saved helpers.`)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: `Remove ${sam!.helper.displayName} from saved helpers` })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: `Saved: remove ${sam!.helper.displayName} from saved helpers` })).toHaveAttribute('aria-pressed', 'true');
     expect(navigation.refresh).toHaveBeenCalled();
   });
 

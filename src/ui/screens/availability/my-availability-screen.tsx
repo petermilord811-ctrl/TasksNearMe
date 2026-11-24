@@ -7,6 +7,8 @@ import { PageHeader } from '@/ui/components/layout/page-header';
 import { useFormat } from '@/ui/lib/format';
 import { AvailabilityPostForm, type AvailabilityFormPreviewState } from './availability-post-form';
 import { AvailabilityPostCard } from './availability-post-card';
+import { NeighborhoodDayForm, type NeighborhoodDayFormPreviewState } from './neighborhood-day-form';
+import { NeighborhoodDayManageCard } from './neighborhood-day-manage-card';
 
 export interface MyAvailabilityScreenProps { data: MyAvailabilityPageData; handlers: AvailabilityHandlers; now: ISODateTime }
 
@@ -15,11 +17,13 @@ export function MyAvailabilityScreen(props: MyAvailabilityScreenProps) {
 }
 
 /** Preview state stays separate from the screen's application contract. */
-export function MyAvailabilityContent({ data, handlers, now, initialConfirmId, initialCancelResult, ...formState }: MyAvailabilityScreenProps & AvailabilityFormPreviewState & {
+export function MyAvailabilityContent({ data, handlers, now, initialConfirmId, initialCancelResult, initialDayResult, initialDayValues, ...formState }: MyAvailabilityScreenProps & AvailabilityFormPreviewState & NeighborhoodDayFormPreviewState & {
   initialConfirmId?: string;
   initialCancelResult?: ActionResult;
 }) {
   const t = useTranslations('availability');
+  const days = useTranslations('neighborhoodDays');
+  const canPost = data.setup.bookable && data.limits.activeCount < data.limits.maxActive;
   // "Times shown in Eastern Time": the market's zone, named in the page's language (8.1).
   const { zoneName } = useFormat(data.timeZone);
   return <div className="mx-auto w-full max-w-reading space-y-section">
@@ -30,6 +34,12 @@ export function MyAvailabilityContent({ data, handlers, now, initialConfirmId, i
     {!data.setup.bookable ? <FinishSetupPanel setup={data.setup} title={t('setupTitle')} body={t('setupBody')} />
       : data.limits.activeCount >= data.limits.maxActive ? <p role="status" className="rounded-[1.375rem] border border-foreground/[0.05] bg-secondary p-card text-secondary-foreground">{t('atLimit', { count: data.limits.activeCount })}</p>
         : <AvailabilityPostForm data={data} onCreate={handlers.onCreate} now={now} {...formState} />}
+    {/* Neighborhood days (2026-11-24): a day of visits in one neighborhood, beside single open times. */}
+    {canPost && data.neighborhood && data.neighborhood.areas.length > 0 && handlers.onCreateDay && <NeighborhoodDayForm data={data} neighborhood={data.neighborhood} onCreateDay={handlers.onCreateDay} initialDayResult={initialDayResult} initialDayValues={initialDayValues} />}
+    {data.neighborhood && data.neighborhood.days.length > 0 && <section aria-labelledby="my-neighborhood-days" className="space-y-4">
+      <h2 id="my-neighborhood-days" className="font-display text-xl/7 font-semibold tracking-[-0.015em]">{days('manage.title')}</h2>
+      <ul className="space-y-4">{data.neighborhood.days.map((day) => <li key={day.id}><NeighborhoodDayManageCard day={day} {...(handlers.onCancelDay ? { onCancelDay: handlers.onCancelDay } : {})} initialConfirm={initialConfirmId === day.id} initialResult={initialConfirmId === day.id ? initialCancelResult : undefined} /></li>)}</ul>
+    </section>}
     <section className="space-y-4" aria-label={t('postsTitle')}>
       <div className="space-y-2"><h2 className="font-display text-xl/7 font-semibold tracking-[-0.015em]">{t('postsTitle')}</h2><p className="text-sm text-muted-foreground">{t('marketTime', { zone: zoneName })}</p></div>
       {data.posts.length ? <ul className="space-y-4">{data.posts.map((post) => <li key={post.id}><AvailabilityPostCard post={post} timeZone={data.timeZone} onCancel={handlers.onCancel} initialConfirm={initialConfirmId === post.id} initialResult={initialConfirmId === post.id ? initialCancelResult : undefined} /></li>)}</ul>

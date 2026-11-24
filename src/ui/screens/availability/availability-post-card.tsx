@@ -27,6 +27,7 @@ export function AvailabilityPostCard({ post, timeZone, onCancel, initialConfirm 
   const { formatDate, formatTimeRange } = useFormat(timeZone);
   const t = useTranslations('availability');
   const categories = useTranslations('helperProfile.categories');
+  const days = useTranslations('neighborhoodDays');
   const actions = useTranslations('actions');
   const router = useRouter();
   const [open, setOpen] = useState(initialConfirm);
@@ -55,7 +56,7 @@ export function AvailabilityPostCard({ post, timeZone, onCancel, initialConfirm 
     <div className="flex flex-wrap items-start justify-between gap-3"><h3 className="font-display text-lg/6 font-semibold tracking-[-0.015em]">{categories(post.categorySlug)}</h3><StatusBadge label={t(`status.${post.status}`)} tone={tones[post.status]} /></div>
     <p className="flex items-start gap-2 tabular-nums"><CalendarDays aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-muted-foreground" /><span>{t('slotWindow', { date: formatDate(post.start), times: formatTimeRange(post.start, post.end) })}</span></p>
     <AvailabilityPrice pricing={post.pricing} />
-    <p className="flex items-center gap-2 text-sm text-muted-foreground"><MapPin aria-hidden="true" className="size-4 shrink-0" />{t('area', { name: post.areaName, radius: post.radiusMiles })}</p>
+    <p className="flex items-center gap-2 text-sm text-muted-foreground"><MapPin aria-hidden="true" className="size-4 shrink-0" />{post.dayAreaName ? days('postDay', { area: post.dayAreaName }) : t('area', { name: post.areaName, radius: post.radiusMiles })}</p>
     {(post.request || post.bookingId) && <div className="flex flex-wrap gap-3 border-t pt-3">
       {post.request && <Link href={routes.app.offers(post.request.inviteId)} className={buttonVariants({ variant: 'outline', className: 'h-auto min-h-11 max-w-full whitespace-normal text-left' })}>{t('requestLink', { name: post.request.client.displayName })}</Link>}
       {post.bookingId && <Link href={routes.app.booking(post.bookingId)} className={buttonVariants({ variant: 'outline', className: 'h-auto min-h-11 max-w-full whitespace-normal text-left' })}>{post.request ? t('bookingLink', { name: post.request.client.displayName }) : t('bookingLinkWithoutClient')}</Link>}

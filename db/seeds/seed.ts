@@ -52,7 +52,7 @@ import { blocks, messages, threadParticipants, threads } from '../../src/modules
 import { supportCaseEvents, supportCaseReads, supportCases } from '../../src/modules/support/schema';
 import { notificationDeliveries, notificationPreferences, notifications, privacyRequests } from '../../src/modules/notifications/schema';
 import { rebookProposals } from '../../src/modules/rebook/schema';
-import { availabilityPosts } from '../../src/modules/availability/schema';
+import { availabilityPosts, neighborhoodDays } from '../../src/modules/availability/schema';
 import { rewardGrants } from '../../src/modules/rewards/schema';
 import { communityAnnouncementDismissals, communityAnnouncements, communityEdits, communityFollows, communityPosts, communityReactions, communityReplies } from '../../src/modules/community/schema';
 import { taskQuestions } from '../../src/modules/questions/schema';
@@ -500,6 +500,8 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
   await tx.delete(invites).where(inArray(invites.posterUserId, people));
   // After the invites that hold them.
   await tx.delete(availabilityPosts).where(inArray(availabilityPosts.helperUserId, people));
+  // After their visits (the posts above).
+  await tx.delete(neighborhoodDays).where(inArray(neighborhoodDays.helperUserId, people));
   await tx.delete(rebookProposals).where(or(inArray(rebookProposals.posterUserId, people), inArray(rebookProposals.helperUserId, people)));
   // Rate-limit counters start over too (the seed is for development and tests only): repeated e2e runs on
   // one day would otherwise hit the daily limits (reports are 10 a day).

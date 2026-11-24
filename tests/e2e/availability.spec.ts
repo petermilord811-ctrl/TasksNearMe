@@ -15,11 +15,13 @@ test('a helper posts an open time and cancels it', async ({ page }, testInfo) =>
   await devSignIn(page, 'jordan@example.test');
   await page.goto('/app/availability');
   await expect(page.getByRole('heading', { level: 1, name: 'My availability' })).toBeVisible({ timeout: 30_000 });
-  await page.getByLabel('Service').selectOption('furniture-assembly');
-  await page.getByLabel('Date').fill(marketDate(5));
-  await page.getByLabel('Start time').selectOption('13:00');
-  await page.getByLabel('End time').selectOption('16:00');
-  await page.getByRole('button', { name: 'Post open time' }).click();
+  // The open-time form's own fields: the neighborhood day form on the same page has a Date and a Service too (2026-11-24).
+  const slotForm = page.getByRole('form', { name: 'Add an open time' });
+  await slotForm.getByLabel('Service').selectOption('furniture-assembly');
+  await slotForm.getByLabel('Date').fill(marketDate(5));
+  await slotForm.getByLabel('Start time').selectOption('13:00');
+  await slotForm.getByLabel('End time').selectOption('16:00');
+  await slotForm.getByRole('button', { name: 'Post open time' }).click();
   await expect(page.getByText('Your open time has been posted.').first()).toBeVisible({ timeout: 30_000 });
 
   const post = page.getByRole('listitem').filter({ hasText: 'Furniture assembly' }).first();

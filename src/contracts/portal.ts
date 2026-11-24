@@ -18,6 +18,7 @@ import type { PhotoUploadResult } from './posting';
 import type { OfferBlockedReason } from './helper-work';
 import type { OfferStatus } from './status';
 import type { TaskBoardPricePreset, TaskBoardTime, TaskBoardWhen, TaskPublicView } from './tasks';
+import type { NeighborhoodDayCardView } from './neighborhood-days';
 
 /**
  * The neighborhood portal (completion plan 9.10, docs/ui/portal-9.10.md): the community's posts and the open tasks
@@ -328,6 +329,11 @@ export interface PortalPageData {
    * strip. Absent on the Open tasks tab.
    */
   openTasks?: { items: PortalTaskView[]; count: number };
+  /**
+   * Neighborhood days in the place (2026-11-24): upcoming, not canceled, soonest first (at most 6), full ones too.
+   * Absent on the Open tasks tab and when there are none.
+   */
+  neighborhoodDays?: NeighborhoodDayCardView[];
   /** The card staff pinned for the market (plan 10.16), unless the viewer closed it. */
   announcement?: CommunityAnnouncementView;
   /** "Welcome to Mueller" for someone who just moved or joined (2026-11-24), until they close it. */

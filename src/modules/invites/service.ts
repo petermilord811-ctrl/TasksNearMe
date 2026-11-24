@@ -21,6 +21,7 @@ import { BOOK_AGAIN_RULES, counterInviteInputSchema, requestHelperInputSchema, r
 import type { PaymentProvider } from '@/integrations/payments';
 import { users } from '@/modules/accounts/schema';
 import { availabilityPosts } from '@/modules/availability/schema';
+import { dayAreaOfSlot, dayOfSlot, publicCard } from '@/modules/availability/day-cards';
 import { bookSlot, holdSlot, openSlotOf, releaseSlot, slotViewOf } from '@/modules/availability/slots';
 import { bankStep, chargeMethodOf, confirmFundedBooking, customerFor, methodForChoice, paymentPanel, type BookingDeps } from '@/modules/bookings/confirm';
 import { clientSummary } from '@/modules/bookings/hub';
@@ -150,18 +151,20 @@ export async function expireDueInvites(db: Db, payments_: PaymentProvider | null
 // ---- Requesting ---------------------------------------------------------------------------------------
 
 /** The client's open tasks in the helper's bookable categories. */
-async function invitableTasks(db: Db, posterId: string, helperId: string, now: Date): Promise<(InvitableTask & { marketId: string; expenseAllowanceCents: number })[]> {
+async function invitableTasks(db: Db, posterId: string, helperId: string, now: Date): Promise<(InvitableTask & { marketId: string; expenseAllowanceCents: number; areaId: string | null })[]> {
   const state = await loadHelperState(db, helperId, now);
   const rows = await db
-    .select({ id: tasks.id, title: tasks.title, slug: categories.slug, windowStart: tasks.windowStart, windowEnd: tasks.windowEnd, marketId: tasks.marketId, expenseAllowanceCents: tasks.expenseAllowanceCents })
+    .select({ id: tasks.id, title: tasks.title, slug: categories.slug, windowStart: tasks.windowStart, windowEnd: tasks.windowEnd, marketId: tasks.marketId, expenseAllowanceCents: tasks.expenseAllowanceCents, areaId: taskLocations.areaId })
     .from(tasks)
     .innerJoin(categories, eq(categories.id, tasks.categoryId))
+    // The task's neighborhood (its place's area): a neighborhood day's visit goes there (2026-11-24).
+    .leftJoin(taskLocations, eq(taskLocations.id, tasks.locationId))
     // Hidden tasks can't be shown to a helper through an invite either.
     .where(and(eq(tasks.posterUserId, posterId), eq(tasks.status, 'open'), isNull(tasks.hiddenAt)))
     .orderBy(desc(tasks.createdAt));
   return rows
     .filter((row) => state.facts.bookableCategories.includes(row.slug as CategorySlug))
-    .map((row) => ({ id: row.id, title: row.title, categorySlug: row.slug as CategorySlug, windowStart: row.windowStart.toISOString(), windowEnd: row.windowEnd.toISOString(), marketId: row.marketId, expenseAllowanceCents: row.expenseAllowanceCents }));
+    .map((row) => ({ id: row.id, title: row.title, categorySlug: row.slug as CategorySlug, windowStart: row.windowStart.toISOString(), windowEnd: row.windowEnd.toISOString(), marketId: row.marketId, expenseAllowanceCents: row.expenseAllowanceCents, areaId: row.areaId }));
 }
 
 /** The helper's listed price per category: the fixed price, or the hourly rate with their minimum hours. */
@@ -272,19 +275,22 @@ export async function getRequestHelperPage(
     const open = await openSlotOf(db, options.slotId, helperId, now);
     if (open) slot = slotViewOf(open.row, open.categorySlug);
   }
-  const offered = slot ? tasksFound.filter((task) => fitsSlot(task, slot)) : tasksFound;
+  // A neighborhood day's visit (2026-11-24): only the client's tasks in that neighborhood, where the trip goes.
+  const day = slot ? await dayOfSlot(db, slot.id, now) : null;
+  const offered = slot ? tasksFound.filter((task) => fitsSlot(task, slot) && (!day || task.areaId === day.areaId)) : tasksFound;
   if (slot) suggestion = { ...(offered[0] ? { taskId: offered[0].id } : {}), pricing: slot.pricing };
   // "Invite helpers" on one of the client's tasks: that task first, at the helper's listed price for its kind of work.
   const chosen = !slot && !options.fromBookingId && options.taskId ? offered.find((task) => task.id === String(options.taskId)) : undefined;
   if (chosen) suggestion = { taskId: chosen.id, pricing: listedPricing[chosen.categorySlug] ?? { type: 'fixed', priceCents: 0 } };
   return {
     helper,
-    tasks: offered.map(({ marketId: _market, expenseAllowanceCents: _allowance, ...task }) => task),
+    tasks: offered.map(({ marketId: _market, expenseAllowanceCents: _allowance, areaId: _area, ...task }) => task),
     listedPricing,
     ...(suggestion ? { suggestion } : {}),
     ...(fromBooking && !options.slotId ? { fromBooking } : {}),
     ...(slot ? { slot } : {}),
     ...(options.slotId && !slot ? { slotUnavailable: true } : {}),
+    ...(day ? { neighborhoodDay: publicCard(day, posterId) } : {}),
     payment: panel,
   };
 }
@@ -326,6 +332,8 @@ export async function requestHelper(deps: BookingDeps, posterId: string, handle:
     if (!open) return { ok: false, code: 'not_allowed' };
     if (!fitsSlot(task, slotViewOf(open.row, open.categorySlug))) return { ok: false, code: 'validation_failed', fieldErrors: { taskId: ['invalid'] } };
     if (start < open.row.startAt || start >= open.row.endAt) return { ok: false, code: 'validation_failed', fieldErrors: { start: ['out_of_range'] } };
+    // A neighborhood day's visit is for a task in that neighborhood (2026-11-24).
+    if (open.row.dayId && (await dayAreaOfSlot(db, open.row.id)) !== task.areaId) return { ok: false, code: 'validation_failed', fieldErrors: { taskId: ['invalid'] } };
     slotId = open.row.id;
   }
   // The outage switch: no new request (and no hold on the card) until it's off.

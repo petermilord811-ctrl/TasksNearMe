@@ -13,7 +13,8 @@ import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { marketDayKey, marketLocalToUtc } from '@/shared/format';
-import { availabilityPosts } from './schema';
+import { myNeighborhoodDays } from './day-cards';
+import { availabilityPosts, neighborhoodDays } from './schema';
 import { slotViewOf, type PostRow } from './slots';
 
 /**
@@ -59,10 +60,11 @@ const activeCountOf = (rows: PostRow[], now: Date) => rows.filter((row) => OPEN_
 /** `routes.app.availability()`: upcoming posts soonest first, then the ten latest past or canceled ones. */
 export async function getMyAvailabilityPage(db: Db, helperId: string, now: Date): Promise<MyAvailabilityPageData> {
   await expireDuePosts(db, now);
-  const [state, area, listedPricing, rows] = await Promise.all([
+  const [state, area, listedPricing, neighborhood, rows] = await Promise.all([
     loadHelperState(db, helperId, now),
     helperAreaOf(db, helperId),
     listedPricingOf(db, helperId),
+    myNeighborhoodDays(db, helperId, now),
     db
       .select({ row: availabilityPosts, slug: categories.slug })
       .from(availabilityPosts)
@@ -79,6 +81,9 @@ export async function getMyAvailabilityPage(db: Db, helperId: string, now: Date)
         .from(invites)
         .where(and(inArray(invites.slotId, shown.map(({ row }) => row.id)), inArray(invites.status, [...WAITING, 'accepted'])))
     : [];
+  // A visit of a neighborhood day shows its neighborhood (2026-11-24); the helper's days are the latest ones, so look the rest up.
+  const dayIds = [...new Set(shown.flatMap(({ row }) => (row.dayId ? [row.dayId] : [])))];
+  const dayAreas = new Map(dayIds.length ? (await db.select({ id: neighborhoodDays.id, name: areas.name }).from(neighborhoodDays).innerJoin(areas, eq(areas.id, neighborhoodDays.areaId)).where(inArray(neighborhoodDays.id, dayIds))).map((day) => [day.id, day.name] as const) : []);
   const clients = new Map(await Promise.all([...new Set(requests.map((request) => request.posterUserId))].map(async (id) => [id, await clientSummary(db, id)] as const)));
   const posts = shown.map(({ row, slug }): AvailabilityPostView => {
     const status = row.status as AvailabilityStatus;
@@ -89,6 +94,7 @@ export async function getMyAvailabilityPage(db: Db, helperId: string, now: Date)
       status,
       areaName: area?.areaName ?? '',
       radiusMiles: area?.radiusMiles ?? 1,
+      ...(row.dayId && dayAreas.has(row.dayId) ? { dayAreaName: dayAreas.get(row.dayId)! } : {}),
       ...(request && client && (status === 'held' || status === 'booked') ? { request: { inviteId: request.id, client, status: request.status as InviteStatus } } : {}),
       ...(status === 'booked' && request?.bookingId ? { bookingId: request.bookingId } : {}),
       actions: OPEN_POSTS.includes(status) ? ['cancel_post'] : [],
@@ -111,6 +117,8 @@ export async function getMyAvailabilityPage(db: Db, helperId: string, now: Date)
       activeCount: activeCountOf(rows.map(({ row }) => row), now),
     },
     timeZone,
+    // Neighborhood days (2026-11-24): once the helper has an area to choose neighborhoods from.
+    ...(neighborhood.areas.length > 0 || neighborhood.days.length > 0 ? { neighborhood } : {}),
   };
 }
 

@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, sql, type SQL } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { users } from '@/modules/accounts/schema';
 import { neighborsAnswersOf } from '@/modules/community/answers';
@@ -10,7 +10,7 @@ import { createCommunityPost, setCommunityArea } from '@/modules/community/servi
 import { dismissWelcome } from '@/modules/community/welcome';
 import { areas } from '@/modules/markets/schema';
 import { blocks } from '@/modules/messaging/schema';
-import { notificationPreferences, notifications } from '@/modules/notifications/schema';
+import { notificationDeliveries, notificationPreferences, notifications } from '@/modules/notifications/schema';
 import { getAccountPage, planNotifications } from '@/modules/notifications/service';
 import { helperProfiles } from '@/modules/profiles/schema';
 import { getHelperProfile } from '@/modules/profiles/queries';
@@ -18,6 +18,15 @@ import { createDb } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { rateLimits } from '@/platform/rate-limit/schema';
+
+/** Notifications go with their delivery rows: the job runner may have delivered them already (a foreign key). */
+async function dropNotifications(where: SQL | undefined): Promise<void> {
+  const rows = await db.select({ id: notifications.id }).from(notifications).where(where);
+  if (rows.length === 0) return;
+  const ids = rows.map((row) => row.id);
+  await db.delete(notificationDeliveries).where(inArray(notificationDeliveries.notificationId, ids));
+  await db.delete(notifications).where(inArray(notifications.id, ids));
+}
 
 /**
  * Helpers answer on Neighbors and the welcome for new movers (2026-11-24), on the seeded Austin people: Maya (Mueller)
@@ -34,7 +43,7 @@ const DAY = 86_400_000;
 
 async function clearAskAlerts() {
   // Alerts planned elsewhere for these helpers today would cap them here (3 a day).
-  await db.delete(notifications).where(and(inArray(notifications.userId, FURNITURE_HELPERS), inArray(notifications.type, [...ASK_ALERT_TYPE_LIST]), gte(notifications.createdAt, new Date(now.getTime() - 2 * DAY))));
+  await dropNotifications(and(inArray(notifications.userId, FURNITURE_HELPERS), inArray(notifications.type, [...ASK_ALERT_TYPE_LIST]), gte(notifications.createdAt, new Date(now.getTime() - 2 * DAY))));
 }
 
 beforeAll(clearAskAlerts);
@@ -85,12 +94,12 @@ describe('ask alerts for questions (2026-11-24)', () => {
     const ids = [newId('ntf'), newId('ntf'), newId('ntf')];
     const types = ['community_ask_match', 'community_ask_match', 'community_question_match'];
     await db.insert(notifications).values(ids.map((id, index) => ({ id, userId: target!, type: types[index]!, target: { kind: 'community_post' as const, postId: 'cpo_cap' }, sourceEventId: `evt_cap_${id}` })));
-    cleanups.push(() => db.delete(notifications).where(inArray(notifications.id, ids)));
+    cleanups.push(() => dropNotifications(inArray(notifications.id, ids)));
     expect(await helpersOf(postId)).not.toContain(target);
     // Two today leave room for a third.
-    await db.delete(notifications).where(eq(notifications.id, ids[2]!));
+    await dropNotifications(eq(notifications.id, ids[2]!));
     expect(await helpersOf(postId)).toContain(target);
-    await db.delete(notifications).where(inArray(notifications.id, ids));
+    await dropNotifications(inArray(notifications.id, ids));
   });
 
   it('never alerts a helper who turned them off, or anyone either side blocked', async () => {

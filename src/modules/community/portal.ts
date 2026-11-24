@@ -22,6 +22,7 @@ import {
   type PortalItem,
   type PortalMore,
   type PortalPageData,
+  type NeighborhoodDayCardView,
   type PortalPlace,
   type PortalQuery,
   type PortalQueryState,
@@ -46,6 +47,7 @@ import { toTaskPublicView } from '@/modules/tasks/projections';
 import { keywordCondition, openIn, selectPublic, taskPriceCents, timeCondition, toRow } from '@/modules/tasks/queries';
 import { taskMarks, tasks } from '@/modules/tasks/schema';
 import { blockedPeopleOf } from '@/modules/trust/blocks';
+import { dayCardsOf, publicCard } from '@/modules/availability/day-cards';
 import type { Db } from '@/platform/db/connect';
 import { avatarPhoto } from '@/modules/files/photos';
 import { marketDayKey } from '@/shared/format';
@@ -621,12 +623,19 @@ export async function visibleFreshKeys(db: Db, viewerId: string, keys: readonly 
   return wanted.filter((key) => seen.has(key));
 }
 
+/** Upcoming neighborhood days in the place, full ones too, never a blocked helper's (2026-11-24). */
+async function neighborhoodDaysIn(db: Db, scope: Scope, viewerId: string, now: Date): Promise<NeighborhoodDayCardView[]> {
+  const [cards, blocked] = await Promise.all([dayCardsOf(db, { marketId: scope.facts.market.id, areaIds: scope.areaIds, upcoming: true }, now), blockedPeopleOf(db, viewerId)]);
+  const hidden = new Set(blocked);
+  return cards.filter((card) => !hidden.has(card.helper.id)).slice(0, 6).map((card) => publicCard(card, viewerId));
+}
+
 export async function getPortal(db: Db, viewer: CommunityViewer, params: Params, now: Date): Promise<PortalPageData | null> {
   const scope = await scopeFor(db, viewer, parsePortalQuery(params), now);
   if (!scope) return null;
   const { query, facts } = scope;
   const locale = localeOrDefault(viewer.locale);
-  const [listing, { facets, areaCounts }, stats, rail, composer, announcement, openTasks, welcome] = await Promise.all([
+  const [listing, { facets, areaCounts }, stats, rail, composer, announcement, openTasks, welcome, days] = await Promise.all([
     sectioned(scope)
       ? sectionsOf(db, scope).then((sections) => ({ sections, items: sections.flatMap((section) => section.items), totalCount: sections.reduce((sum, section) => sum + section.count, 0) }))
       : itemPage(db, scope, query.page, pageSize(query)).then((page) => ({ sections: undefined, ...page })),
@@ -639,6 +648,8 @@ export async function getPortal(db: Db, viewer: CommunityViewer, params: Params,
     query.type === 'task' ? Promise.resolve(undefined) : openTasksOf(db, scope),
     // "Welcome to Mueller" for someone who just moved or joined (2026-11-24), on the Neighbors tab.
     query.type === 'task' ? Promise.resolve(null) : welcomeFor(db, viewer, facts, now),
+    // Neighborhood days in the place (2026-11-24), on the Neighbors tab.
+    query.type === 'task' || scope.place.kind === 'citywide' ? Promise.resolve([]) : neighborhoodDaysIn(db, scope, viewer.id, now),
   ]);
   // Staff in production get a switch for the demo marketplace, which members don't see here (plan 10, D1).
   const samplesSwitch = viewer.staff && samplesHiddenInThisBuild() && isRealRecordId(viewer.id) ? { samples: { shown: (viewer.rows ?? 'all') === 'all' } } : {};
@@ -664,6 +675,7 @@ export async function getPortal(db: Db, viewer: CommunityViewer, params: Params,
     today: marketDayKey(now, scope.timeZone),
     boardHref: boardHrefOf(scope),
     ...(openTasks ? { openTasks: { items: openTasks, count: stats.openTasks } } : {}),
+    ...(days.length > 0 ? { neighborhoodDays: days } : {}),
     ...(announcement ? { announcement } : {}),
     ...(welcome ? { welcome } : {}),
     // We don't know their neighborhood (plan 10.15): the page asks, above the stream.

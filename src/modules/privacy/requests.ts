@@ -8,7 +8,7 @@ import { DATA_EXPORT_DAYS, DELETION_GRACE_DAYS, localeOrDefault, type AccountPri
 import { isReservedEmailAddress, type EmailProvider } from '@/integrations/email';
 import type { FileStorage } from '@/integrations/storage';
 import { accounts, contactChangeReverts, passkeys, phoneVerifications, sessions, staffAuthenticators, staffRoles, usernames, users, verifications } from '@/modules/accounts/schema';
-import { availabilityPosts } from '@/modules/availability/schema';
+import { availabilityPosts, neighborhoodDays } from '@/modules/availability/schema';
 import { bookingSeries, bookings } from '@/modules/bookings/schema';
 import { earnings, payouts } from '@/modules/earnings/schema';
 import { blocks, threadParticipants } from '@/modules/messaging/schema';
@@ -403,6 +403,7 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     await tx.update(threadParticipants).set({ muted: true }).where(eq(threadParticipants.userId, userId));
     await tx.update(paymentMethods).set({ detachedAt: now, isDefault: false }).where(and(eq(paymentMethods.userId, userId), isNull(paymentMethods.detachedAt)));
     await tx.update(availabilityPosts).set({ status: 'canceled', canceledAt: now, updatedAt: now }).where(and(eq(availabilityPosts.helperUserId, userId), ne(availabilityPosts.status, 'canceled')));
+    await tx.update(neighborhoodDays).set({ status: 'canceled', canceledAt: now, updatedAt: now }).where(and(eq(neighborhoodDays.helperUserId, userId), ne(neighborhoodDays.status, 'canceled')));
     // No trust badges on a deleted account's card where others still see it (a past booking, privacy rehearsal J-PR16):
     // the verification rows keep their statuses and dates as records.
     await tx.update(helperProfiles).set({ handle: `deleted-${userId}`, headline: '', bio: '', tools: [], homeZip: null, idVerifiedAt: null, backgroundCheckedAt: null, addressVerifiedAt: null, status: 'paused', updatedAt: now.toISOString() }).where(eq(helperProfiles.userId, userId));

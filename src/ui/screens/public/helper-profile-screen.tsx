@@ -6,6 +6,7 @@ import { routes } from '@/contracts/routes';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { AvailabilitySlotList } from '@/ui/components/availability/availability-slot-list';
+import { NeighborhoodDayList } from '@/ui/components/availability/neighborhood-day-card';
 import { HelperContactPanel } from '@/ui/components/people/helper-contact-panel';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { NeighborsAnswers } from '@/ui/components/people/neighbors-answers';
@@ -69,6 +70,7 @@ export function HelperProfileScreen({ data, contact, onRevealContact, initialCon
   const t = useTranslations('helperProfile');
   const report = useTranslations('report');
   const thanks = useTranslations('thanks.profile');
+  const days = useTranslations('neighborhoodDays');
   const { helper } = data;
 
   return (
@@ -129,6 +131,7 @@ export function HelperProfileScreen({ data, contact, onRevealContact, initialCon
         </div>
       </header>
 
+      {data.neighborhoodDays && data.neighborhoodDays.length > 0 && <NeighborhoodDayList days={data.neighborhoodDays} title={days('title')} intro={days('intro')} headingId="profile-neighborhood-days" />}
       {data.slots && data.slots.length > 0 && <AvailabilitySlotList slots={data.slots} handle={helper.handle} />}
 
       <section aria-labelledby="helper-about-heading" className="max-w-reading space-y-3">

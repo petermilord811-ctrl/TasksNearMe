@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ISODateTime, type PaymentAttemptResult, type PriceBreakdown, type RequestHelperHandlers, type RequestHelperPageData } from '@/contracts';
 import { AvailabilitySlotSummary } from '@/ui/components/availability/availability-slot-summary';
+import { NeighborhoodDayCard } from '@/ui/components/availability/neighborhood-day-card';
 import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
 import { RequestHelperForm } from './request-helper-form';
 
@@ -49,14 +50,18 @@ export function RequestHelperDialogScreen(props: RequestHelperScreenProps & Requ
 /** The open time asked for, then the form (or the way to post a task first): on the page and in the dialog. */
 function RequestHelperBody({ data, handlers, initialResult, initialPending, initialBreakdown }: RequestHelperScreenProps & RequestHelperState) {
   const t = useTranslations('invites');
+  const days = useTranslations('neighborhoodDays');
+  const day = data.slot && !data.slotUnavailable ? data.neighborhoodDay : undefined;
   return <>
     {data.slotUnavailable ? <p role="status" className="rounded-2xl border border-info/30 bg-info/[0.05] p-4">{t('slotUnavailable')}</p> : data.slot && <section className="space-y-3 rounded-[1.375rem] border border-primary/15 bg-primary/[0.04] p-4 sm:p-6 dark:border-primary/25 dark:bg-primary/[0.08]">
       <h2 className="font-heading text-xl/7 font-semibold">{t('slotTitle')}</h2>
       <AvailabilitySlotSummary slot={data.slot} />
     </section>}
+    {/* A neighborhood day's visit (2026-11-24): the day, with its other open visits to switch to in this dialog. */}
+    {data.neighborhoodDay && data.slot && !data.slotUnavailable && <NeighborhoodDayCard day={data.neighborhoodDay} headingLevel={2} currentSlotId={data.slot.id} replaceLinks />}
     {data.tasks.length === 0 && !data.fromBooking ? <section className="space-y-3 rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06] bg-card p-4 shadow-card sm:p-6">
-      <h2 className="font-heading text-xl/7 font-semibold">{t(data.slot && !data.slotUnavailable ? 'noSlotTasksTitle' : 'noTasksTitle')}</h2>
-      <p className="text-muted-foreground">{t(data.slot && !data.slotUnavailable ? 'noSlotTasksDescription' : 'noTasksDescription')}</p>
+      <h2 className="font-heading text-xl/7 font-semibold">{day ? days('request.noTasksTitle', { area: day.areaName }) : t(data.slot && !data.slotUnavailable ? 'noSlotTasksTitle' : 'noTasksTitle')}</h2>
+      <p className="text-muted-foreground">{day ? days('request.noTasksBody', { area: day.areaName }) : t(data.slot && !data.slotUnavailable ? 'noSlotTasksDescription' : 'noTasksDescription')}</p>
       <Link href={routes.app.newTask()} className="inline-flex min-h-11 items-center rounded-md font-medium text-primary underline underline-offset-4">{t('postTask')}</Link>
     </section> : <RequestHelperForm key={`${data.helper.id}-${data.slotUnavailable ? 'regular' : data.slot?.id ?? 'regular'}`} data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} initialBreakdown={initialBreakdown} />}
   </>;

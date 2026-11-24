@@ -18,7 +18,7 @@
   "save": "Save",
   "saved": "Saved",
   "saveLabel": "Save {name}",
-  "unsaveLabel": "Remove {name} from saved helpers",
+  "unsaveLabel": "Saved: remove {name} from saved helpers",
   "savedMessage": "{name} is in your saved helpers.",
   "removedMessage": "{name} was removed from your saved helpers.",
   "error": "We couldn't update your saved helpers. Try again.",

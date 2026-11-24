@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
-import { cancelAvailabilityPostAction, createAvailabilityPostAction } from '@/modules/availability/actions';
+import { cancelAvailabilityPostAction, cancelNeighborhoodDayAction, createAvailabilityPostAction, createNeighborhoodDayAction } from '@/modules/availability/actions';
 import { getMyAvailabilityPage } from '@/modules/availability/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
@@ -30,7 +30,7 @@ async function Availability() {
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.availability()));
   const now = await requestNow();
   const data = await getMyAvailabilityPage(db, viewer.user.id, now);
-  return <MyAvailabilityScreen data={data} now={now.toISOString()} handlers={{ onCreate: createAvailabilityPostAction, onCancel: cancelAvailabilityPostAction }} />;
+  return <MyAvailabilityScreen data={data} now={now.toISOString()} handlers={{ onCreate: createAvailabilityPostAction, onCancel: cancelAvailabilityPostAction, onCreateDay: createNeighborhoodDayAction, onCancelDay: cancelNeighborhoodDayAction }} />;
 }
 
 export default withClientMessages('[locale]/(app)/app/(main)/availability/page.tsx', MyAvailabilityPage);

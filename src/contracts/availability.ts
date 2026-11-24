@@ -5,6 +5,7 @@ import { CATEGORY_SLUGS, type CategorySlug, type ISODateTime, type TimeZone } fr
 import type { HelperSetupState } from './helper-work';
 import { invitePricingSchema } from './invites';
 import type { PricingInput } from './money';
+import type { NeighborhoodDayFormData, NeighborhoodDayHandlers } from './neighborhood-days';
 import type { ClientSummary } from './people';
 import type { AvailabilityStatus, InviteStatus } from './status';
 
@@ -40,6 +41,8 @@ export interface AvailabilityPostView extends AvailabilitySlotView {
   request?: { inviteId: string; client: ClientSummary; status: InviteStatus };
   /** Booked: `routes.app.booking(bookingId)`. */
   bookingId?: string;
+  /** A visit of a neighborhood day: its neighborhood, shown instead of the service area. */
+  dayAreaName?: string;
   /** `cancel_post` while active or held (cancelling a held post declines its request). */
   actions: AvailabilityActionId[];
 }
@@ -62,6 +65,8 @@ export interface MyAvailabilityPageData {
   limits: { firstDate: string; lastDate: string; leadHours: number; maxHours: number; maxActive: number; activeCount: number };
   /** The helper's market zone: the form's dates and times and every post's are on its clock (completion plan 8.1). */
   timeZone: TimeZone;
+  /** Neighborhood days (2026-11-24): the form's neighborhoods and the helper's days. Absent until the helper has an area. */
+  neighborhood?: NeighborhoodDayFormData;
 }
 
 /** A new slot, in market time (like the posting wizard's schedule). */
@@ -84,7 +89,7 @@ export type AvailabilityPostInput = z.input<typeof availabilityPostInputSchema>;
  *   `unknown`.
  * - `onCancel`: ok `canceled`. Errors: `not_allowed` (already booked, expired or canceled), `unknown`.
  */
-export interface AvailabilityHandlers {
+export interface AvailabilityHandlers extends Partial<NeighborhoodDayHandlers> {
   onCreate: ActionHandler<AvailabilityPostInput>;
   onCancel: ActionHandler<{ postId: string }>;
 }
