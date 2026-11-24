@@ -125,6 +125,7 @@
     "retryAt": "Try again after {at} ({zone}).",
     "reload": "Reload conversation",
     "attach": "Attach photos",
+    "tools": "Photos, GIFs and more",
     "photos": "Photos to send",
     "photosHint": "Up to {maximum, plural, one {# photo} other {# photos}}. JPEG, PNG, WebP or HEIC, up to {megabytes} MB each. Avoid house numbers, mail, and faces.",
     "blocked": "You can't message each other",

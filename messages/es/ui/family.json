@@ -9,7 +9,7 @@
     "removeNamed": "Quitar a {name}",
     "removed": "{name} ya no sigue esta reserva.",
     "label": "Su nombre de usuario o correo",
-    "placeholder": "@usuario o nombre@ejemplo.com",
+    "placeholder": "@usuario o nombre@mail.com",
     "hint": "Necesita una cuenta de TasksNearMe. Le avisaremos de que lo agregaste.",
     "add": "Agregar",
     "added": "Agregaste a {who}. Ya puede seguir esta reserva.",

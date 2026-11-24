@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { ArrowRight, BadgeCheck, Bookmark, ClipboardList, Clock, Flame, Laptop, Lock, MapPin, MessageCircleQuestion, MessagesSquare, Plus, Star, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { PortalHelper, PortalPageData, PortalRail as PortalRailData, PortalTaskView } from '@/contracts';
@@ -237,14 +238,17 @@ export function YourStuffStrip({ rail, query }: { rail: PortalRailData; query: P
 /**
  * The rail beside the stream on wide screens (completion plan 9.10): your open tasks, your posts and what you
  * saved; on Neighbors, the place's newest open tasks (2026-11-23); helpers who work in the place; the week's liveliest
- * posts; and the rules that keep it a good place.
+ * posts; and the rules that keep it a good place. `groups`, the viewer's building and street groups (2026-11-24), comes
+ * first.
  */
-export function PortalRail({ data }: { data: Pick<PortalPageData, 'rail' | 'query' | 'place' | 'market'> & Partial<Pick<PortalPageData, 'openTasks'>> }) {
+export function PortalRail({ data, groups }: { data: Pick<PortalPageData, 'rail' | 'query' | 'place' | 'market'> & Partial<Pick<PortalPageData, 'openTasks'>>; groups?: ReactNode }) {
   const t = useTranslations('portal.rail');
   const { rail, query } = data;
   const nothing = rail.yourTasks.length === 0 && rail.yourPosts.length === 0 && rail.savedCount === 0;
   const helpersHref = routes.app.helpers(data.place.kind === 'area' ? { area: data.place.slug } : {});
   return <aside aria-label={t('label')} className="space-y-3">
+    {groups}
+
     <section aria-labelledby="portal-your-stuff" className={cardClass}>
       <h2 id="portal-your-stuff" className={cardTitle}><ClipboardList aria-hidden="true" className="size-4 text-primary" />{t('yourStuff')}</h2>
       {nothing

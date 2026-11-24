@@ -32,9 +32,12 @@ describe('KLIPY results', () => {
     expect(() => mapKlipyPage({ result: false })).toThrow(GifUnavailableError);
   });
 
-  it('stores the medium GIF when it fits, else a smaller one', () => {
-    expect(storedKlipyMedia(item('cat-1'), 4_000_000)).toEqual({ id: 'cat-1', title: 'Dancing cat-1', url: 'https://static.klipy.com/ii/abc/md.gif', bytes: 2_000_000 });
-    expect(storedKlipyMedia(item('cat-1'), 1_000_000)?.url).toBe('https://static.klipy.com/ii/abc/sm.gif');
+  it('stores the small GIF a bubble shows when it fits, the medium one only without a small one, else the tiny one', () => {
+    expect(storedKlipyMedia(item('cat-1'), 4_000_000)).toEqual({ id: 'cat-1', title: 'Dancing cat-1', url: 'https://static.klipy.com/ii/abc/sm.gif', bytes: 50_000 });
+    const noSmall = item('cat-2', { file: { md: file('md', 498, 498, 2_000_000), xs: file('xs', 90, 90) } });
+    expect(storedKlipyMedia(noSmall, 4_000_000)?.url).toBe('https://static.klipy.com/ii/abc/md.gif');
+    const long = item('cat-3', { file: { md: file('md', 498, 498, 9_000_000), sm: file('sm', 220, 220, 5_000_000), xs: file('xs', 90, 90, 800_000) } });
+    expect(storedKlipyMedia(long, 4_000_000)?.url).toBe('https://static.klipy.com/ii/abc/xs.gif');
     expect(storedKlipyMedia({ type: 'ad', slug: 'x' }, 4_000_000)).toBeNull();
   });
 });
@@ -56,7 +59,7 @@ describe('the KLIPY client', () => {
     const searchUrl = new URL(String(fetchImpl.mock.calls[1]![0]));
     expect(searchUrl.pathname).toBe('/api/v1/test-key/gifs/search');
     expect(searchUrl.searchParams.get('q')).toBe('happy dance');
-    expect(await klipy.find('cat-1', 4_000_000)).toMatchObject({ id: 'cat-1', url: 'https://static.klipy.com/ii/abc/md.gif' });
+    expect(await klipy.find('cat-1', 4_000_000)).toMatchObject({ id: 'cat-1', url: 'https://static.klipy.com/ii/abc/sm.gif' });
     expect(new URL(String(fetchImpl.mock.calls[2]![0])).searchParams.get('slugs')).toBe('cat-1');
     expect(await klipy.find('not-there', 4_000_000)).toBeNull();
   });

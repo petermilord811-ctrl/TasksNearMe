@@ -85,11 +85,16 @@ export function mapKlipyPage(body: unknown): GifPage {
   return { results, hasMore: record(record(body)?.data)?.has_next === true };
 }
 
-/** The rendition the server stores for an item: the medium GIF when it fits, else a smaller one. */
+/**
+ * The rendition the server stores for an item: the small GIF (about 220 px wide), the size a chat bubble shows it at,
+ * when it fits; the medium one only when there's no small one; else the tiny one. The medium GIF was stored first
+ * until 2026-11-24, often 1–4 MB for a 240 px box, so GIFs came in slowly (owner: "GIF is shown slowly"); the small
+ * one is mostly 50–900 KB.
+ */
 export function storedKlipyMedia(value: unknown, maxBytes: number): GifMedia | null {
   const item = record(value);
   if (!item || item.type !== 'gif' || typeof item.slug !== 'string') return null;
-  for (const size of ['md', 'sm', 'xs']) {
+  for (const size of ['sm', 'md', 'xs']) {
     const found = rendition(item, [size], 'gif');
     if (found && (found.bytes === undefined || found.bytes <= maxBytes)) {
       return { id: item.slug, title: titleOf(item.title), url: found.url, ...(found.bytes ? { bytes: found.bytes } : {}) };

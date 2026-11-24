@@ -41,6 +41,8 @@ import { agreements } from '../../src/modules/accounts/schema';
 import { HELPER_LANGUAGES, SEED_REVIEWS, SERVICE_DESCRIPTIONS, WORK_SAMPLES } from './data/profile-extras';
 import { reviews } from '../../src/modules/reviews/schema';
 import { thankYouNotes } from '../../src/modules/thanks/schema';
+import { bookingFollowers } from '../../src/modules/followers/schema';
+import { bookingTeams } from '../../src/modules/teams/schema';
 import { helperWorkSamples } from '../../src/modules/profiles/schema';
 import { files } from '../../src/modules/tasks/schema';
 import { bookingChangeRequests, bookingCompletionPhotos, bookingCompletions, bookingExpenses, bookingTerms, bookings, helperStrikes } from '../../src/modules/bookings/schema';
@@ -555,6 +557,9 @@ async function clearSeedBookings(tx: Tx): Promise<void> {
   await tx.delete(reviews).where(inArray(reviews.bookingId, ids));
   // Thank-you notes written on them while trying the app (2026-11-24).
   await tx.delete(thankYouNotes).where(inArray(thankYouNotes.bookingId, ids));
+  // Family followers and teams made on them (2026-11-24): both point at the booking, so they go first.
+  await tx.delete(bookingFollowers).where(inArray(bookingFollowers.bookingId, ids));
+  await tx.delete(bookingTeams).where(inArray(bookingTeams.leadBookingId, ids));
   const paidOut = await tx.select({ payoutId: earnings.payoutId }).from(earnings).where(inArray(earnings.bookingId, ids));
   await tx.delete(earnings).where(inArray(earnings.bookingId, ids));
   const payoutIds = paidOut.flatMap((row) => (row.payoutId ? [row.payoutId] : []));

@@ -83,6 +83,37 @@ describe('reactions', () => {
     await act(async () => { answer({ ok: true, code: 'updated' }); });
   });
 
+  it("keeps a tapped reaction while the server answers and until the conversation's data shows it", async () => {
+    // The owner, 2026-11-24: "emoji is reacted and disappeared and reacted again". The chat window reads the
+    // conversation again only after the action answers, so in between the old data didn't have the reaction yet.
+    const user = userEvent.setup();
+    const onReact = vi.fn(async (_input: { messageId: string; emoji: MessageReaction; on: boolean }): Promise<ActionResult> => ({ ok: true, code: 'updated' }));
+    const log = (message: typeof theirs) => <NextIntlClientProvider locale="en" timeZone="America/New_York" messages={messages}><ReplyProvider><MessageLog messages={[message]} otherParty={data.thread.otherParty} now={now} onReact={onReact} canReply /></ReplyProvider></NextIntlClientProvider>;
+    const view = render(log(theirs));
+    await user.click(screen.getByRole('button', { name: 'React' }));
+    await user.click(within(await screen.findByRole('toolbar')).getByRole('button', { name: 'Fire' }));
+    await waitFor(() => expect(onReact).toHaveBeenCalledOnce());
+    await act(async () => { await Promise.resolve(); });
+    // The action has answered; the conversation hasn't been read again yet: the pill stays.
+    expect(screen.getByRole('list', { name: 'Reactions' })).toHaveTextContent(/^🔥\s*Fire\s*1$/);
+    // The conversation read again, with the reaction: still one pill, one count.
+    const withFire = { ...theirs, reactions: [{ emoji: 'fire' as const, count: 1, mine: true }] };
+    view.rerender(log(withFire));
+    expect(screen.getByRole('list', { name: 'Reactions' })).toHaveTextContent(/^🔥\s*Fire\s*1$/);
+    // Settled: what the data says from now on (here, taken back on another device).
+    view.rerender(log({ ...theirs, reactions: [] }));
+    expect(screen.queryByRole('list', { name: 'Reactions' })).toBeNull();
+  });
+
+  it('takes a tapped reaction back when the server refuses it', async () => {
+    const user = userEvent.setup();
+    const onReact = vi.fn(async (_input: { messageId: string; emoji: MessageReaction; on: boolean }): Promise<ActionResult> => ({ ok: false, code: 'rate_limited' }));
+    wrap(<ReplyProvider><MessageLog messages={[theirs]} otherParty={data.thread.otherParty} now={now} onReact={onReact} canReply /></ReplyProvider>);
+    await user.click(screen.getByRole('button', { name: 'React' }));
+    await user.click(within(await screen.findByRole('toolbar')).getByRole('button', { name: 'Fire' }));
+    await waitFor(() => expect(screen.queryByRole('list', { name: 'Reactions' })).toBeNull());
+  });
+
   it('opens the picker with Reply and Copy on a long press, and a double tap sends a heart', async () => {
     vi.useFakeTimers();
     const onReact = vi.fn(async (_input: { messageId: string; emoji: MessageReaction; on: boolean }): Promise<ActionResult> => ({ ok: true, code: 'updated' }));

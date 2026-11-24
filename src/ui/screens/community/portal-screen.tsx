@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { ISODateTime, PortalHandlers, PortalPageData } from '@/contracts';
 import { NEIGHBORS_RAIL_ADS } from '@/contracts/ads';
 import { PORTAL_GENERAL } from '@/contracts/portal';
@@ -16,7 +17,7 @@ import { PortalPhoneBar } from '@/ui/components/portal/portal-phone-bar';
 import { PortalRail, YourStuffStrip } from '@/ui/components/portal/portal-rail';
 import { PortalStream } from '@/ui/components/portal/portal-stream';
 import { NeighborhoodDaysStrip } from '@/ui/components/portal/neighborhood-days-strip';
-import { NeighborGroupsCard } from '@/ui/components/portal/neighbor-groups-card';
+import { NeighborGroups, NeighborGroupsCard } from '@/ui/components/portal/neighbor-groups-card';
 import { BoardComposer } from '@/ui/components/tasks/board-composer';
 
 export interface PortalScreenProps { data: PortalPageData; handlers: PortalHandlers; now: ISODateTime }
@@ -33,7 +34,8 @@ export interface PortalScreenProps { data: PortalPageData; handlers: PortalHandl
  * stuff, on Neighbors the place's newest open tasks, helpers nearby, the asks waiting for an answer, the week's busiest
  * posts, the rules), whose parts join the stream on smaller ones. New posts and tasks wait in a pill until asked for.
  * The rail also carries two sponsored cards (2026-11-22): one above its cards, one pinned under them while the stream
- * scrolls; the route imports their styles (ads.css).
+ * scrolls; the route imports their styles (ads.css). The viewer's building and street groups (2026-11-24) are the rail's
+ * first card, and on smaller screens join the stream after its first item, so posts still start high on phones.
  */
 export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
   const { query } = data;
@@ -43,6 +45,10 @@ export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
   // A new filter set starts a new stream; a refresh (a reaction, the live pill) keeps what was added.
   const streamKey = JSON.stringify({ ...query, page: undefined });
   const [topAd, pinnedAd] = NEIGHBORS_RAIL_ADS;
+  // The groups' two cards share one sheet and one pair of dialogs, which also open a group or an invite from the address.
+  const groups = !tasks && data.groups && handlers.groups ? { data: data.groups, handlers: handlers.groups } : null;
+  const groupsCard = (layout: 'page' | 'rail') => groups && <NeighborGroupsCard data={groups.data} handlers={groups.handlers} now={now} layout={layout} />;
+  const withGroups = (node: ReactNode) => (groups ? <NeighborGroups data={groups.data} handlers={groups.handlers}>{node}</NeighborGroups> : node);
   return <div className="space-y-3 sm:space-y-4">
     <PortalPhoneBar data={data} {...(handlers.onSetArea ? { onSetArea: handlers.onSetArea } : {})} />
     <div className="max-sm:hidden">
@@ -50,7 +56,7 @@ export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
     </div>
     <div className="max-sm:hidden"><PortalHeader data={data} /></div>
     <div className="max-sm:hidden"><AreaStrip data={data} {...(handlers.onSetArea ? { onSetArea: handlers.onSetArea } : {})} /></div>
-    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_17.5rem] xl:gap-x-5 2xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:gap-x-6">
+    {withGroups(<div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_17.5rem] xl:gap-x-5 2xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:gap-x-6">
       <div className="min-w-0 space-y-3">
         {!tasks && data.welcome && <NeighborsWelcomeCard key={data.welcome.id} welcome={data.welcome} {...(handlers.onDismissWelcome ? { onDismiss: handlers.onDismissWelcome } : {})} />}
         {tasks
@@ -59,8 +65,6 @@ export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
         {data.announcement && <AnnouncementCard announcement={data.announcement} {...(handlers.onDismissAnnouncement ? { onDismiss: handlers.onDismissAnnouncement } : {})} />}
         {data.askArea && handlers.onSetArea && <AskAreaCard areas={data.areas} marketName={data.market.name} onSetArea={handlers.onSetArea} />}
         <YourStuffStrip rail={data.rail} query={query} />
-        {/* Building and street groups (2026-11-24): the viewer's own, opened over the page. */}
-        {!tasks && data.groups && handlers.groups && <NeighborGroupsCard data={data.groups} handlers={handlers.groups} now={now} />}
         {!tasks && data.neighborhoodDays && data.neighborhoodDays.length > 0 && <NeighborhoodDaysStrip days={data.neighborhoodDays} />}
         <div className="space-y-2">
           {/* The kinds of posts are Neighbors' own; Open tasks is one kind already. */}
@@ -76,16 +80,16 @@ export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
           {/* One neighborhood (or what's citywide) lists by day only, so there's no grouping to choose (sweep P9). */}
           {query.view === 'list' && data.items.length > 0 && data.place.kind !== 'area' && data.place.kind !== 'citywide' && <ListGroupBar data={data} />}
           {data.items.length === 0
-            ? <PortalEmpty data={data} />
-            : <PortalStream key={streamKey} data={data} now={now} visitKey={visitKey} handlers={handlers} />}
+            ? <><PortalEmpty data={data} />{groups && <div className="xl:hidden">{groupsCard('page')}</div>}</>
+            : <PortalStream key={streamKey} data={data} now={now} visitKey={visitKey} handlers={handlers} {...(groups ? { groups: groupsCard('page') } : {})} />}
         </div>
       </div>
       {/* As tall as the stream, so the last ad can stay in view while it scrolls. */}
       <div className="hidden xl:flex xl:flex-col xl:gap-4 xl:self-stretch">
         <SponsoredAd ad={topAd} />
-        <PortalRail data={data} />
+        <PortalRail data={data} {...(groups ? { groups: groupsCard('rail') } : {})} />
         <div className="sticky top-[calc(var(--app-header-offset,4.25rem)+1.5rem)]"><SponsoredAd ad={pinnedAd} /></div>
       </div>
-    </div>
+    </div>)}
   </div>;
 }

@@ -9,7 +9,7 @@
     "removeNamed": "Remove {name}",
     "removed": "{name} doesn't follow this booking any more.",
     "label": "Their username or email",
-    "placeholder": "@username or name@example.com",
+    "placeholder": "@username or name@mail.com",
     "hint": "They need a TasksNearMe account. We'll let them know you added them.",
     "add": "Add",
     "added": "Added {who}. They can follow this booking now.",

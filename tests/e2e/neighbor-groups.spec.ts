@@ -129,7 +129,7 @@ test('a neighbor starts a street group, invites a neighbor by link, and they tal
     await expect(async () => {
       if (!(await sheet.getByText('Count me in!').isVisible())) {
         await page.reload();
-        await page.getByRole('button', { name: new RegExp(`^Open ${groupName}`) }).click();
+        await page.getByRole('button', { name: new RegExp(`^${groupName}`) }).click();
       }
       await expect(page.getByRole('dialog', { name: groupName }).getByText('Count me in!')).toBeVisible({ timeout: 5_000 });
     }).toPass({ timeout: 45_000 });

@@ -121,3 +121,67 @@ test('a GIF picked in a conversation goes at once and shows animated, or behind 
     await removeCast(cast);
   }
 });
+
+test('the picker keeps its height, the GIF shows while it goes, and its box has its size before the file arrives', async ({ page, baseURL }) => {
+  // The owner, 2026-11-24: "when GIF loading, window size gets changed", "GIF is shown slowly and also that chat bubble
+  // size is changed". The actions and the GIF file are held back here, as on a slow connection.
+  test.setTimeout(240_000);
+  const cast = await makeCast();
+  try {
+    await page.context().addCookies([{ name: 'tnm_gif_stand_in', value: '1', url: baseURL! }]);
+    await devSignIn(page, cast.clientEmail);
+    await page.goto(`/app/messages/new?helper=${cast.handle}`);
+    await page.getByLabel('Your message').fill('Hi Gus! One more thing.');
+    await page.getByRole('button', { name: 'Send message' }).click();
+    await expect(page).toHaveURL(/\/app\/messages\/thr_/, { timeout: 30_000 });
+
+    await page.getByRole('button', { name: 'Choose a GIF' }).filter({ visible: true }).click();
+    const picker = page.getByRole('dialog', { name: 'GIFs' });
+    const panel = picker.locator('[data-gif-panel]');
+    const gifs = picker.getByRole('button', { name: /^Send GIF: / });
+    await expect(gifs).toHaveCount(6, { timeout: 30_000 });
+    // Its laid-out height (a box would include the sheet's opening zoom).
+    const heightOf = () => panel.evaluate((element: HTMLElement) => element.offsetHeight);
+    const height = await heightOf();
+    expect(height).toBeGreaterThan(200);
+    // Nothing found: the same height, not a shorter window.
+    await picker.getByRole('searchbox', { name: 'Search KLIPY' }).fill('zzzz');
+    await expect(picker.getByText('No GIFs for “zzzz”. Try other words.').first()).toBeVisible({ timeout: 30_000 });
+    expect(await heightOf()).toBe(height);
+    await picker.getByRole('searchbox', { name: 'Search KLIPY' }).fill('thanks');
+    await expect(gifs).toHaveCount(2, { timeout: 30_000 });
+
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    await page.route('**/api/files/fil_*', async (route) => { await held; await route.continue(); });
+    await page.route(/\/app\/messages\/thr_/, async (route) => {
+      if (route.request().method() === 'POST' && route.request().headers()['next-action']) await new Promise((resolve) => setTimeout(resolve, 1_500));
+      await route.continue();
+    });
+    await picker.getByRole('button', { name: 'Send GIF: Thank you' }).click();
+    // At once: the GIF picked, where the message will be.
+    const sending = page.getByRole('status').filter({ hasText: 'Sending GIF…' });
+    await expect(sending).toBeVisible();
+    await expect(sending.locator('img')).toHaveAttribute('src', /thank-you\.gif$/);
+
+    const log = page.getByRole('log').filter({ visible: true });
+    const box = log.locator('[data-gif]');
+    await expect(box).toBeVisible({ timeout: 30_000 });
+    await expect(sending).toBeHidden();
+    // The file hasn't come yet: the box already has its size, with a shimmer.
+    const sizeOf = () => box.evaluate((element: HTMLElement) => ({ width: element.offsetWidth, height: element.offsetHeight }));
+    const before = await sizeOf();
+    expect(before.width).toBeGreaterThan(200);
+    expect(before.height).toBeGreaterThan(150);
+    await expect(box.locator('[data-slot="skeleton"]')).toHaveCount(1);
+    release();
+    await expect.poll(() => box.locator('img').evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0), { timeout: 30_000 }).toBe(true);
+    await expect(box.locator('[data-slot="skeleton"]')).toHaveCount(0);
+    expect(await sizeOf()).toEqual(before);
+    // Its address as stored (the image isn't asked for again after hydration).
+    expect(await box.locator('img').getAttribute('src')).toMatch(/^\/api\/files\/fil_/);
+  } finally {
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await removeCast(cast);
+  }
+});

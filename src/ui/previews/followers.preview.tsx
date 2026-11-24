@@ -28,8 +28,9 @@ const leaveHandlers: FollowingHandlers = { onLeave: fakeHandler({ ok: true, code
 const threadHandlers: ThreadHandlers = { ...fakeThreadHandlers, ...fakeConversationHandlers, followers: followerHandlers };
 
 
+// Not fullscreen: the dialog renders in a portal, and the padded root is what the harness waits to see.
 const dialog = (id: string, title: string, props: Omit<FollowersDialogProps, 'open' | 'onOpenChange' | 'handlers' | 'helperName'> & { handlers?: FollowerHandlers }): PreviewEntry => ({
-  id: `followers/${id}`, group, title, layout: 'fullscreen',
+  id: `followers/${id}`, group, title,
   render: () => <OpenDialog handlers={followerHandlers} helperName="Jordan" {...props} />,
 });
 

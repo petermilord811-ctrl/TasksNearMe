@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import type { ReactNode } from 'react';
@@ -122,6 +122,21 @@ describe('MessageComposer with GIFs', () => {
     expect(navigation.refresh).toHaveBeenCalledOnce();
   });
 
+  it('shows the picked GIF where the message will be, "Sending GIF…", until it has gone', async () => {
+    const user = userEvent.setup();
+    let attached!: (result: PhotoUploadResult) => void;
+    const handlers = mount(vi.fn(() => new Promise<PhotoUploadResult>((resolve) => { attached = resolve; })));
+    await user.click(screen.getByRole('button', { name: copy.open }));
+    const gif = gifTrendingResults[1]!;
+    await user.click(await screen.findByRole('button', { name: `Send GIF: ${gif.title}` }));
+    const sending = (await screen.findByText(copy.sending)).closest('[data-gif-sending]')!;
+    expect(sending).toHaveAttribute('role', 'status');
+    expect(sending.querySelector('img')).toHaveAttribute('src', gif.preview.src);
+    attached({ ok: true, photo: sentGifPhoto });
+    await waitFor(() => expect(handlers.onSend).toHaveBeenCalledOnce());
+    await waitFor(() => expect(screen.queryByText(copy.sending)).not.toBeInTheDocument());
+  });
+
   it('says why a GIF could not be sent, and sends nothing', async () => {
     const user = userEvent.setup();
     const handlers = mount(vi.fn(async (): Promise<PhotoUploadResult> => ({ ok: false, code: 'too_large' })));
@@ -129,6 +144,7 @@ describe('MessageComposer with GIFs', () => {
     await user.click((await screen.findAllByRole('button', { name: /^Send GIF: / }))[0]!);
     expect(await screen.findByRole('alert')).toHaveTextContent(copy.failed.too_large);
     expect(handlers.onSend).not.toHaveBeenCalled();
+    expect(screen.queryByText(copy.sending)).not.toBeInTheDocument();
   });
 });
 
@@ -148,5 +164,23 @@ describe('MessageLog with a GIF', () => {
     await user.click(play);
     expect(screen.queryByRole('button', { name: `Play GIF: ${sentGifPhoto.alt}` })).not.toBeInTheDocument();
     expect(opener).not.toHaveClass('motion-reduce:hidden');
+  });
+
+  it('has its final size before the file arrives, with a shimmer until it does', async () => {
+    // The owner, 2026-11-24: "that chat bubble size is changed". A fixed width counts when the bubble sizes itself.
+    const tall = { ...gifMessage, id: 'msg_gif_tall', attachments: [{ ...sentGifPhoto, id: 'fil_gif_tall', width: 165, height: 221 }] };
+    render(wrap(<MessageLog messages={[gifMessage, tall]} otherParty={deskBookingThreadPageData.thread.otherParty} now="2026-11-21T16:05:00.000Z" />));
+    const [wide, high] = Array.from(document.querySelectorAll<HTMLElement>('[data-gif]'));
+    expect(wide!.style.width).toBe('240px');
+    expect(wide!.style.aspectRatio).toBe('160 / 120');
+    // A tall GIF is narrower, so it's at most 280 px high.
+    expect(high!.style.width).toBe(`${Math.round((280 * 165) / 221)}px`);
+    expect(wide!.querySelector('[data-slot="skeleton"]')).not.toBeNull();
+    fireEvent.load(wide!.querySelector('img')!);
+    await waitFor(() => expect(wide!.querySelector('[data-slot="skeleton"]')).toBeNull());
+    expect(high!.querySelector('[data-slot="skeleton"]')).not.toBeNull();
+    // A file that fails stops the shimmer too.
+    fireEvent.error(high!.querySelector('img')!);
+    await waitFor(() => expect(high!.querySelector('[data-slot="skeleton"]')).toBeNull());
   });
 });

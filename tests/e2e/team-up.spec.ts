@@ -2,7 +2,7 @@ import { randomInt, randomUUID } from 'node:crypto';
 import { expect, test } from '@playwright/test';
 import { eq, inArray } from 'drizzle-orm';
 import { PEOPLE, type SeedPerson } from '../../db/seeds/data/people';
-import { upsertPeople } from '../../db/seeds/seed';
+import { seedVerification, upsertPeople } from '../../db/seeds/seed';
 import { usernames, users } from '../../src/modules/accounts/schema';
 import { bookings } from '../../src/modules/bookings/schema';
 import { threadParticipants, threads } from '../../src/modules/messaging/schema';
@@ -50,10 +50,16 @@ async function partnerCopy(): Promise<Partner> {
         email: `team-${token}@example.test`,
         lastName: `Sample${token}`,
         phone: `+1512556${randomInt(3000, 10_000)}`,
+        homeMarketId: 'mkt_austin',
         helper: { ...sam.helper, handle: `sam-team-${token}` },
       };
       try {
-        await db.transaction(async (tx) => upsertPeople(tx, [person]));
+        await db.transaction(async (tx) => {
+          await upsertPeople(tx, [person]);
+          // The ID, address, background and payout rows behind Sam's badges: without them the copy isn't bookable, and
+          // the invite answers "nobody bookable by that @username".
+          await seedVerification(tx, [person]);
+        });
         const username = `team_${token}`;
         await db.insert(usernames).values({ userId: person.id, username });
         return { id: person.id, email: person.email, username, firstName: person.firstName };
@@ -75,7 +81,8 @@ async function cleanUp(partner: Partner | null, leadBookingId: string | null): P
     if (leadBookingId) {
       const teams = await db.select().from(bookingTeams).where(eq(bookingTeams.leadBookingId, leadBookingId));
       const parts = teams.flatMap((team) => (team.partnerTaskId ? [team.partnerTaskId] : []));
-      await db.update(bookingTeams).set({ status: 'canceled', closedAt: new Date() }).where(eq(bookingTeams.leadBookingId, leadBookingId));
+      // The team rows go: they point at the lead booking, and the seed's reset removes the e2e bookings.
+      await db.delete(bookingTeams).where(eq(bookingTeams.leadBookingId, leadBookingId));
       if (parts.length) {
         await db.update(bookings).set({ status: 'canceled', cancelReason: 'admin', canceledAt: new Date() }).where(inArray(bookings.taskId, parts));
         await db.update(offers).set({ status: 'withdrawn' }).where(inArray(offers.taskId, parts));

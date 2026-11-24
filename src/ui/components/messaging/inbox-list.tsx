@@ -136,7 +136,6 @@ export function InboxList({ threads, now, currentId, variant = 'full', pinned, o
                   <h2 className={cn('min-w-0 truncate group-hover:text-primary', as({ full: 'text-base/6 sm:text-[17px]/6', pane: 'text-sm', split: 'text-base/6 sm:text-[17px]/6 lg:text-sm' }), unread ? 'font-bold' : 'font-semibold')}>{other.displayName}</h2>
                   <ConversationMarks thread={thread} />
                   <span className="min-w-0 flex-1" />
-                  {unread && <span className="shrink-0 rounded-full bg-primary px-1.5 py-px text-xs font-semibold text-primary-foreground tabular-nums">{t('unread', { count: thread.unreadCount })}</span>}
                   {thread.lastMessage && <time dateTime={thread.lastMessage.createdAt} title={formatDateTime(thread.lastMessage.createdAt)} className="shrink-0 text-xs text-muted-foreground tabular-nums">
                     <span className="sr-only">{formatDateTime(thread.lastMessage.createdAt)} · </span>{formatRelative(thread.lastMessage.createdAt, now)}
                   </time>}
@@ -146,9 +145,14 @@ export function InboxList({ threads, now, currentId, variant = 'full', pinned, o
                   {/* A direct conversation's title is the person's name, already the row's heading. */}
                   {thread.kind !== 'direct' && <span className="min-w-0 truncate font-medium">{thread.title}</span>}
                 </p>
-                <p className={cn('leading-5 [overflow-wrap:anywhere]', as({ full: 'line-clamp-2 text-sm', pane: 'line-clamp-1 text-[13px]', split: 'line-clamp-2 text-sm lg:line-clamp-1' }), unread ? 'text-foreground' : 'text-muted-foreground')}>
-                  {thread.lastMessage ? <LastMessage message={thread.lastMessage} /> : t('noMessage')}
-                </p>
+                {/* The unread count at the end of the last message's line, as in any messenger (2026-11-24): on the name's
+                    line, beside the time, it squeezed a name to "…" in the chat window's narrow list. */}
+                <div className="flex min-w-0 items-start gap-2">
+                  <p className={cn('min-w-0 flex-1 leading-5 [overflow-wrap:anywhere]', as({ full: 'line-clamp-2 text-sm', pane: 'line-clamp-1 text-[13px]', split: 'line-clamp-2 text-sm lg:line-clamp-1' }), unread ? 'text-foreground' : 'text-muted-foreground')}>
+                    {thread.lastMessage ? <LastMessage message={thread.lastMessage} /> : t('noMessage')}
+                  </p>
+                  {unread && <span className="mt-px inline-flex h-[1.125rem] min-w-[1.125rem] shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground tabular-nums"><span aria-hidden="true">{thread.unreadCount}</span><span className="sr-only">{t('unread', { count: thread.unreadCount })}</span></span>}
+                </div>
               </div>
               {variant !== 'pane' && !handlers && <ChevronRight aria-hidden="true" className={cn('mt-1 size-5 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none', variant === 'split' && 'lg:hidden')} />}
             </Link>

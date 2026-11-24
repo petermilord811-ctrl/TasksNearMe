@@ -18,7 +18,7 @@ import {
 } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { NeighborGroupPanel } from '../community/neighbor-group-sheet';
-import { NeighborGroupsCard } from './neighbor-groups-card';
+import { NeighborGroups, NeighborGroupsCard } from './neighbor-groups-card';
 
 const refresh = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh, push: vi.fn(), replace: vi.fn(), prefetch: vi.fn(), back: vi.fn() }), usePathname: () => '/app/community' }));
@@ -33,12 +33,30 @@ describe('NeighborGroupsCard', () => {
     const onOpen = vi.spyOn(handlers, 'onOpen');
     wrap(<NeighborGroupsCard data={neighborGroupsUnread} handlers={handlers} now={GROUPS_NOW} />);
     expect(screen.getByRole('heading', { name: 'Your groups' })).toBeDefined();
-    const aldrich = screen.getByRole('button', { name: 'Open Aldrich St 1900 block, 3 unread messages' });
-    expect(screen.getByRole('button', { name: 'Open Garden Court building, 12 unread messages' })).toBeDefined();
+    // A row is named by what it shows (axe: the visible words are part of the name), and what's unread in full.
+    const aldrich = screen.getByRole('button', { name: /^Aldrich St 1900 block.*3 unread messages$/ });
+    expect(screen.getByRole('button', { name: /^Garden Court building.*12 unread messages$/ })).toBeDefined();
     expect(screen.getByLabelText('Muted')).toBeDefined();
     fireEvent.click(aldrich);
     await waitFor(() => expect(onOpen).toHaveBeenCalledWith({ groupId: 'ngrp_aldrich' }));
     expect(await screen.findByRole('heading', { name: 'Aldrich St 1900 block' })).toBeDefined();
+  });
+
+  it('in the rail and in the stream, both cards open the one sheet, also for a group the address names', async () => {
+    const handlers = fakeNeighborGroupHandlers();
+    const both = (data: typeof neighborGroupsUnread) => <NeighborGroups data={data} handlers={handlers}>
+      <NeighborGroupsCard data={data} handlers={handlers} now={GROUPS_NOW} layout="rail" />
+      <NeighborGroupsCard data={data} handlers={handlers} now={GROUPS_NOW} />
+    </NeighborGroups>;
+    wrap(both(neighborGroupsUnread));
+    expect(screen.getAllByRole('heading', { name: 'Your groups' })).toHaveLength(2);
+    fireEvent.click(screen.getAllByRole('button', { name: /^Aldrich St 1900 block/ })[0]!);
+    expect(await screen.findByRole('heading', { name: 'Aldrich St 1900 block' })).toBeDefined();
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1);
+    cleanup();
+    wrap(both({ ...neighborGroupsUnread, openGroupId: 'ngrp_aldrich' }));
+    expect(await screen.findByRole('heading', { name: 'Aldrich St 1900 block' })).toBeDefined();
+    expect(document.querySelectorAll('[role="dialog"]')).toHaveLength(1);
   });
 
   it('says why creating is off: no neighborhood yet, or 3 created', () => {

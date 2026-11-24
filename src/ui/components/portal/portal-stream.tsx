@@ -103,12 +103,15 @@ const keyOfItem = (item: PortalItem) => `${item.type}:${item.id}`;
  * and the List by day keep going like LinkedIn's (the next pages added underneath, by themselves for the first
  * few, then with "Show more"; nothing on screen moves; an item that shifted between pages shows once; screen
  * readers hear how many were added). The List by neighborhood shows each neighborhood's first few with "See all".
- * Without JavaScript, "Show more" is the next page's link.
+ * Without JavaScript, "Show more" is the next page's link. `groups` (the viewer's building and street groups, 2026-11-24)
+ * joins on screens without the rail, on the first page: after the Feed's first item, or the List's first panel.
  */
-export function PortalStream({ data, now, visitKey, handlers }: { data: StreamData; now: ISODateTime; visitKey: string; handlers: StreamHandlers }) {
+export function PortalStream({ data, now, visitKey, handlers, groups }: { data: StreamData; now: ISODateTime; visitKey: string; handlers: StreamHandlers; groups?: ReactNode }) {
   const t = useTranslations('portal');
   const { formatDate, dayKey } = useFormat();
   const { query } = data;
+  const groupsHere = Boolean(groups) && query.page === 1;
+  const groupsPanel = groupsHere && <div className="xl:hidden">{groups}</div>;
   const [more, setMore] = useState<PortalItem[]>([]);
   const [next, setNext] = useState(query.page + 1);
   const [last, setLast] = useState(data.pageCount);
@@ -207,10 +210,12 @@ export function PortalStream({ data, now, visitKey, handlers }: { data: StreamDa
         {blocks.map((block, index) => block.kind === 'tasks'
           ? <Fragment key={`run-${keyOfItem(block.items[0]!)}`}>
               <li><TaskGroup items={block.items} now={now} visitKey={visitKey} query={query} /></li>
+              {index === 0 && groupsHere && <li className="xl:hidden">{groups}</li>}
               {inFeed(index)}
             </Fragment>
           : <Fragment key={keyOf(block.item)}>
               <li data-item={block.item.type}><FeedItem item={block.item} now={now} visitKey={visitKey} query={query} {...(data.me ? { me: data.me } : {})} handlers={handlers} /></li>
+              {index === 0 && groupsHere && <li className="xl:hidden">{groups}</li>}
               {inFeed(index)}
             </Fragment>)}
       </ol>
@@ -225,12 +230,12 @@ export function PortalStream({ data, now, visitKey, handlers }: { data: StreamDa
   // ---- The List by neighborhood: a panel each, its count, the first few, and "See all".
   if (data.sections) {
     return <div className="space-y-3">
-      {data.sections.map((section) => {
+      {data.sections.map((section, index) => {
         const name = section.kind === 'market' ? (tasksTab ? t('list.remote') : t('list.market', { market: data.market.name })) : section.areaName ?? section.key;
         const seeAll = section.count > section.items.length;
         // "See all" picks the neighborhood, or for "Across {market}" what belongs to none (sweep P10).
         const seeAllHref = section.kind === 'market' ? portalHref(query, { area: PORTAL_CITYWIDE }) : section.areaSlug ? portalHref(query, { area: section.areaSlug }) : undefined;
-        return <section key={section.key} aria-labelledby={`portal-${section.key}`} className={panelClass}>
+        return <Fragment key={section.key}><section aria-labelledby={`portal-${section.key}`} className={panelClass}>
           <header className={panelHeadClass}>
             <h2 id={`portal-${section.key}`} className="text-[15px] font-semibold">
               {name}<span className="ml-2 text-[13px] font-normal text-muted-foreground tabular-nums">{countOf(section.count)}</span>
@@ -241,7 +246,7 @@ export function PortalStream({ data, now, visitKey, handlers }: { data: StreamDa
             </Link>}
           </header>
           <ol className="divide-y divide-border/70">{section.items.map((item) => <li key={keyOf(item)}><PortalRow item={item} now={now} visitKey={visitKey} showArea={section.kind === 'market'} highlight={highlightWords(query.q)} /></li>)}</ol>
-        </section>;
+        </section>{index === 0 && groupsPanel}</Fragment>;
       })}
     </div>;
   }
@@ -266,11 +271,11 @@ export function PortalStream({ data, now, visitKey, handlers }: { data: StreamDa
   const byDay = data.place.kind === 'area' || data.place.kind === 'citywide' || query.group === 'day' || (!tasksTab && query.sort === 'new');
   return <>
     {byDay
-      ? <div className="space-y-3">{days.map((group) => <section key={group.day} aria-labelledby={`portal-day-${group.day}`} className={panelClass}>
+      ? <div className="space-y-3">{days.map((group, index) => <Fragment key={group.day}><section aria-labelledby={`portal-day-${group.day}`} className={panelClass}>
           <header className={panelHeadClass}><h2 id={`portal-day-${group.day}`} className="text-[15px] font-semibold">{dayLabel(group.day, group.items[0]!)}<span className="ml-2 text-[13px] font-normal text-muted-foreground tabular-nums">{countOf(group.items.length)}</span></h2></header>
           <ol className="divide-y divide-border/70">{group.items.map((item) => <li key={keyOf(item)}><PortalRow item={item} now={now} visitKey={visitKey} highlight={highlightWords(query.q)} /></li>)}</ol>
-        </section>)}</div>
-      : <div className={panelClass}><ol aria-label={t('view.list')} className="divide-y divide-border/70">{items.map((item) => <li key={keyOf(item)}><PortalRow item={item} now={now} visitKey={visitKey} highlight={highlightWords(query.q)} /></li>)}</ol></div>}
+        </section>{index === 0 && groupsPanel}</Fragment>)}</div>
+      : <div className="space-y-3"><div className={panelClass}><ol aria-label={t('view.list')} className="divide-y divide-border/70">{items.map((item) => <li key={keyOf(item)}><PortalRow item={item} now={now} visitKey={visitKey} highlight={highlightWords(query.q)} /></li>)}</ol></div>{groupsPanel}</div>}
     {footer}
   </>;
 }

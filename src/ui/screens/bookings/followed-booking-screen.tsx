@@ -51,17 +51,18 @@ export function FollowedBookingScreen({ data, handlers, now, leaveResult }: Foll
     {!data.ended && <>
       <section aria-labelledby="followed-when" className={cn(surface, surfacePad, 'space-y-4')}>
         <h2 id="followed-when" className={sectionTitle}>{t('whenWhere')}</h2>
+        {/* Each pair a dt and its dds straight in one div (a list's rule): the icon is the dt's, its word for screen readers. */}
         <dl className="space-y-3 text-sm">
-          <div className="flex items-start gap-3"><CalendarDays aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" /><div>
-            <dt className="sr-only">{t('when')}</dt>
-            <dd className="font-medium tabular-nums"><time dateTime={data.start}>{formatDate(data.start)} · {formatTime(data.start)}</time></dd>
-            <dd className="text-muted-foreground tabular-nums">{formatRelative(data.start, now)}</dd>
-          </div></div>
-          <div className="flex items-start gap-3">{data.place.kind === 'remote' ? <Monitor aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" /> : <MapPin aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-primary" />}<div>
-            <dt className="sr-only">{t('where')}</dt>
-            <dd className="font-medium">{data.place.kind === 'remote' ? t('remote') : data.place.areaName}</dd>
-            {data.place.kind === 'local' && <dd className="text-muted-foreground">{t('addressPrivate', { client: data.client.displayName })}</dd>}
-          </div></div>
+          <div className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-3">
+            <dt className="row-span-2 pt-0.5 text-primary"><CalendarDays aria-hidden="true" className="size-5" /><span className="sr-only">{t('when')}</span></dt>
+            <dd className="col-start-2 font-medium tabular-nums"><time dateTime={data.start}>{formatDate(data.start)} · {formatTime(data.start)}</time></dd>
+            <dd className="col-start-2 text-muted-foreground tabular-nums">{formatRelative(data.start, now)}</dd>
+          </div>
+          <div className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-3">
+            <dt className="row-span-2 pt-0.5 text-primary">{data.place.kind === 'remote' ? <Monitor aria-hidden="true" className="size-5" /> : <MapPin aria-hidden="true" className="size-5" />}<span className="sr-only">{t('where')}</span></dt>
+            <dd className="col-start-2 font-medium">{data.place.kind === 'remote' ? t('remote') : data.place.areaName}</dd>
+            {data.place.kind === 'local' && <dd className="col-start-2 text-muted-foreground">{t('addressPrivate', { client: data.client.displayName })}</dd>}
+          </div>
         </dl>
       </section>
 

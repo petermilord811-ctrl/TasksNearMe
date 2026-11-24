@@ -50,6 +50,14 @@ const card = (id: string, title: string, data: NeighborGroupsData, extra: { dial
   render: () => <div className="mx-auto max-w-2xl"><NeighborGroupsCard data={data} handlers={handlers} now={GROUPS_NOW} {...(extra.dialog ? { initialDialog: extra.dialog } : {})} /></div>,
 });
 
+/** The card as the rail's first card on wide screens, at the rail's width. */
+const railCard = (id: string, title: string, data: NeighborGroupsData): PreviewEntry => ({
+  id: `neighbor-groups/${id}`,
+  group: GROUP,
+  title,
+  render: () => <div className="w-[17.5rem]"><NeighborGroupsCard data={data} handlers={handlers} now={GROUPS_NOW} layout="rail" /></div>,
+});
+
 /** A group as its sheet shows it, framed at a phone sheet's height (the sheet itself opens over the page). */
 const panel = (id: string, title: string, view: NeighborGroupView, tab: NeighborGroupTab = 'chat'): PreviewEntry => ({
   id: `neighbor-groups/${id}`,
@@ -66,6 +74,8 @@ export const neighborGroupPreviews: PreviewEntry[] = [
   card('card-unread', p.cardUnread, neighborGroupsUnread),
   card('card-no-area', p.cardNoArea, neighborGroupsNoArea),
   card('card-limit', p.cardLimit, neighborGroupsLimit),
+  railCard('card-rail', p.cardRail, neighborGroupsUnread),
+  railCard('card-rail-empty', p.cardRailEmpty, neighborGroupsEmpty),
   card('create', p.create, neighborGroupsSome, { dialog: 'create' }),
   card('join-valid', p.joinValid, neighborGroupsWithInvite),
   card('join-expired', p.joinExpired, { ...neighborGroupsSome, invite: inviteExpired }),

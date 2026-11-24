@@ -23,6 +23,7 @@ import { MaskedText } from '@/ui/components/messaging/masked-text';
 import { cn } from '@/ui/lib/utils';
 import { buttonVariants } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
+import { Skeleton } from '@/ui/primitives/skeleton';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/ui/primitives/dialog';
 import { ThankYouNoteCard } from '@/ui/components/thanks/thank-you-note';
 import { TeamInviteCardView } from '@/ui/components/teams/team-card';
@@ -44,6 +45,11 @@ function MessagePhoto({ photo, number, count, sender }: { photo: Photo; number: 
   </Dialog>;
 }
 
+/** A GIF's width in a bubble, in px: 240, or less for a tall one so it's at most 280 px high (never under 120). */
+function gifBoxWidth(photo: Pick<Photo, 'width' | 'height'>): number {
+  return Math.max(120, Math.min(240, Math.round((280 * photo.width) / Math.max(1, photo.height))));
+}
+
 /**
  * A GIF (2026-11-24): the GIF itself, at most 240 px wide, opening larger on a tap. With reduced motion asked for on the
  * device it doesn't play by itself: a still placeholder says "Play GIF" until tapped (CSS, so the first paint is right).
@@ -51,12 +57,19 @@ function MessagePhoto({ photo, number, count, sender }: { photo: Photo; number: 
 function MessageGif({ photo, sender }: { photo: Photo; sender: string }) {
   const t = useTranslations('thread.gif');
   const [playing, setPlaying] = useState(false);
+  const [arrived, setArrived] = useState(false);
   const alt = photo.alt || t('alt', { name: sender });
-  return <div className="relative w-full max-w-60 overflow-hidden rounded-xl border bg-muted" style={{ aspectRatio: `${photo.width} / ${photo.height}` }} data-gif="">
+  // The box has its final size before the file arrives, from the size the server stored (2026-11-24, owner: "that chat
+  // bubble size is changed"): a fixed width (240 px, less for a tall GIF so it's at most 280 px high), never wider than
+  // the bubble. A fixed width also counts when the bubble sizes itself; a percentage of it waited for the file. Until
+  // the file is there, a shimmer. (A file that fails stops it too: caught here, as React passes the image's error up. Given
+  // to the Image itself, onError makes it ask for the file again after hydration and rewrite its address.)
+  return <div className="relative max-w-full overflow-hidden rounded-xl border bg-muted" style={{ width: gifBoxWidth(photo), aspectRatio: `${photo.width} / ${photo.height}` }} data-gif="" onError={() => setArrived(true)}>
+    {!arrived && <Skeleton aria-hidden="true" className="absolute inset-0 rounded-none" />}
     <Dialog>
       <DialogTrigger asChild>
-        <button type="button" aria-label={t('open', { description: alt })} className={cn('block size-full focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring', !playing && 'motion-reduce:hidden')}>
-          <Image src={photo.src} alt={alt} width={photo.width} height={photo.height} unoptimized className="size-full object-cover" />
+        <button type="button" aria-label={t('open', { description: alt })} className={cn('relative block size-full focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring', !playing && 'motion-reduce:hidden')}>
+          <Image src={photo.src} alt={alt} width={photo.width} height={photo.height} unoptimized loading="eager" onLoad={() => setArrived(true)} className="size-full object-cover" />
         </button>
       </DialogTrigger>
       <DialogContent className="max-h-[90dvh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:max-w-md max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none">
@@ -193,12 +206,36 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
       window.setTimeout(() => setBurst((current) => (current === key ? null : current)), 700);
     }
     setPendingReactions((current) => ({ ...current, [key]: on }));
-    void onReact({ messageId, emoji, on }).catch(() => undefined).finally(() => setPendingReactions((current) => {
+    // Only this tap's own state lets go: a later tap on the same emoji keeps its own.
+    const drop = () => setPendingReactions((current) => {
+      if (current[key] !== on) return current;
       const next = { ...current };
       delete next[key];
       return next;
-    }));
+    });
+    // The tap shows at once and stays until the conversation's own data says the same (the refresh after the action,
+    // below), so it never blinks off in between (2026-11-24, owner: "emoji is reacted and disappeared and reacted again").
+    // A refusal or a failure takes it back at once; a refresh that never comes lets go after a while.
+    void onReact({ messageId, emoji, on }).then((result) => { if (!result.ok) drop(); }, drop);
+    window.setTimeout(drop, 20_000);
   };
+  // Reactions the conversation's data now shows as tapped settle (React's "adjust state when props change").
+  const [reactionsSeenIn, setReactionsSeenIn] = useState(messages);
+  if (reactionsSeenIn !== messages) {
+    setReactionsSeenIn(messages);
+    const settled = Object.entries(pendingReactions).filter(([key, on]) => {
+      const cut = key.lastIndexOf(':');
+      const message = messages.find((item) => item.id === key.slice(0, cut));
+      return (message?.reactions?.find((reaction) => reaction.emoji === key.slice(cut + 1))?.mine ?? false) === on;
+    });
+    if (settled.length > 0) {
+      setPendingReactions((current) => {
+        const next = { ...current };
+        for (const [key] of settled) delete next[key];
+        return next;
+      });
+    }
+  }
   // The whole conversation translated, and "Catch me up" (2026-11-24): from the conversation's provider, where it has one.
   const assist = useChatAssist();
   const translating = assist?.translating ?? false;

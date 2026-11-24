@@ -62,7 +62,7 @@ export function GifPicker({ onSearch, onPick, busy = false, compact = false }: {
     setOpen(false);
     onPick(gif);
   };
-  const trigger = <button type="button" aria-label={t('open')} title={t('open')} aria-disabled={busy || undefined} className={cn('grid shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-2 focus-visible:outline-ring aria-disabled:opacity-40', compact ? 'size-10' : 'h-12 w-11')}>
+  const trigger = <button type="button" aria-label={t('open')} title={t('open')} aria-disabled={busy || undefined} className={cn('grid shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-2 focus-visible:outline-ring aria-disabled:opacity-40', compact ? 'size-10' : 'size-10 sm:h-12 sm:w-11')}>
     <span aria-hidden="true" className="rounded-[5px] border-2 border-current px-1 text-[10px] font-extrabold leading-[14px] tracking-wide">{t('button')}</span>
   </button>;
   const panel = <GifPickerPanel onSearch={onSearch} onPick={pick} />;
@@ -174,7 +174,9 @@ export function GifPickerPanel({ onSearch, onPick, seed }: {
   const announcement = state.status === 'loading' ? t('loading')
     : state.status === 'error' ? t(state.error === 'rate_limited' ? 'rateLimited' : 'error')
       : count === 0 ? (state.query ? t('empty', { query: state.query }) : t('emptyTrending')) : t('count', { count });
-  return <div className="flex max-h-[min(65dvh,30rem)] min-h-0 flex-col gap-2.5">
+  // One height whatever it shows (2026-11-24, owner: "when GIF loading, window size gets changed"): loading, results,
+  // nothing found or an error, and the row under it keeps its height with or without "Load more".
+  return <div className="flex h-[min(65dvh,30rem)] min-h-0 flex-col gap-2.5" data-gif-panel="">
     <div className="relative">
       <label htmlFor={`${id}-search`} className="sr-only">{t('search')}</label>
       <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -189,7 +191,7 @@ export function GifPickerPanel({ onSearch, onPick, seed }: {
     <p id={`${id}-heading`} className="text-xs font-semibold text-muted-foreground">{heading}</p>
     <p role="status" aria-live="polite" className="sr-only">{announcement}</p>
     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain" aria-busy={state.status === 'loading' || state.more === 'loading'}>
-      {state.status === 'loading' && <div aria-hidden="true" className="grid grid-cols-3 gap-1.5">{Array.from({ length: 9 }, (_, index) => <Skeleton key={index} className="aspect-4/3 rounded-lg" />)}</div>}
+      {state.status === 'loading' && <div aria-hidden="true" className="grid grid-cols-3 gap-1.5">{Array.from({ length: 15 }, (_, index) => <Skeleton key={index} className="aspect-4/3 rounded-lg" />)}</div>}
       {state.status === 'error' && <div className="space-y-2 rounded-xl border border-dashed p-4 text-center">
         <p className="text-sm text-muted-foreground">{t(state.error === 'rate_limited' ? 'rateLimited' : 'error')}</p>
         <Button type="button" variant="outline" size="sm" onClick={() => void run(state.query, 1)}>{t('retry')}</Button>
@@ -206,7 +208,7 @@ export function GifPickerPanel({ onSearch, onPick, seed }: {
         </button>)}
       </div>}
     </div>
-    <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
       {state.status === 'ready' && state.nextPage
         ? <Button type="button" variant="outline" size="sm" disabled={state.more === 'loading'} aria-busy={state.more === 'loading'} onClick={() => { if (state.nextPage) void run(state.query, state.nextPage); }}>
             {state.more === 'loading' ? <><Spinner aria-hidden="true" />{t('loadingMore')}</> : t('more')}
