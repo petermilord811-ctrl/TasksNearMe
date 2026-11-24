@@ -2,42 +2,102 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from 'react';
 import { cn } from '@/ui/lib/utils';
+import { dueFrame } from '../frame-clock';
 
 const TYPE_MS = 52;
 const ERASE_MS = 22;
 const HOLD_MS = 1700;
 const GAP_MS = 380;
 
+/** Where the typing is: which example, how many of its characters show, and whether it's being erased. */
+export interface TypingState {
+  index: number;
+  shown: number;
+  erasing: boolean;
+}
+
+const TYPING_START: TypingState = { index: 0, shown: 0, erasing: false };
+
+/** How long the typing waits before its next step from `state`. */
+export function typingDelay(state: TypingState, phrase: string): number {
+  if (!state.erasing && state.shown >= phrase.length) return HOLD_MS;
+  if (state.erasing && state.shown === 0) return GAP_MS;
+  return state.erasing ? ERASE_MS : TYPE_MS;
+}
+
+/** The typing's next step: a character more or less, the turn to erasing once written, the next example once erased. */
+export function typingStep(state: TypingState, phrase: string): TypingState {
+  if (!state.erasing && state.shown >= phrase.length) return { ...state, erasing: true };
+  if (state.erasing && state.shown === 0) return { index: state.index + 1, shown: 0, erasing: false };
+  return { ...state, shown: state.shown + (state.erasing ? -1 : 1) };
+}
+
 /**
  * Example requests that type themselves out and erase, one after another, over an empty field (decorative: the
  * field keeps a plain placeholder for screen readers). It runs only while `active` (the field is empty, on screen,
  * the tab visible, motion allowed); otherwise it rests on the current example, fully written.
+ *
+ * The characters are written straight into the text (no render per character), on the landing's shared 30-a-second
+ * frame clock: they show on the frames the town and the weather draw anyway (2026-11-24, round three; it used to
+ * re-render about ten times a second on timers of its own, each change a frame of its own).
  */
 export function TypewriterHint({ phrases, active, className }: { phrases: string[]; active: boolean; className?: string }) {
-  const [index, setIndex] = useState(0);
-  const [shown, setShown] = useState(0);
-  const [erasing, setErasing] = useState(false);
-  const phrase = phrases[index % Math.max(1, phrases.length)] ?? '';
+  const textRef = useRef<HTMLSpanElement>(null);
+  const state = useRef<TypingState>(TYPING_START);
+  const key = phrases.join('\n');
+  const stateKey = useRef(key);
 
   useEffect(() => {
-    if (!active || !phrase) return;
-    let delay = erasing ? ERASE_MS : TYPE_MS;
-    if (!erasing && shown >= phrase.length) delay = HOLD_MS;
-    if (erasing && shown === 0) delay = GAP_MS;
-    const timer = window.setTimeout(() => {
-      if (!erasing && shown >= phrase.length) setErasing(true);
-      else if (erasing && shown === 0) {
-        setErasing(false);
-        setIndex((value) => value + 1);
-      } else setShown((value) => value + (erasing ? -1 : 1));
-    }, delay);
-    return () => window.clearTimeout(timer);
-  }, [active, phrase, shown, erasing]);
+    const node = textRef.current;
+    const list = key ? key.split('\n') : [];
+    if (!node || list.length === 0) return;
+    // Another list of examples (the other audience's, another season's) starts over from its first.
+    if (stateKey.current !== key) {
+      stateKey.current = key;
+      state.current = TYPING_START;
+    }
+    const phraseAt = (index: number) => list[index % list.length] ?? '';
+    // The text node's own characters change in place: replacing the node would be a change to the page's tree, which
+    // makes the browser re-check far more of the page than a change of characters.
+    const write = (text: string) => {
+      const first = node.firstChild;
+      if (first && first === node.lastChild && first.nodeType === Node.TEXT_NODE) (first as Text).data = text;
+      else node.textContent = text;
+    };
+    if (!active) {
+      write(phraseAt(state.current.index));
+      return;
+    }
+    write(phraseAt(state.current.index).slice(0, state.current.shown));
+    let frame = 0;
+    let last = 0;
+    let due = 0;
+    const loop = (now: number) => {
+      frame = window.requestAnimationFrame(loop);
+      if (!dueFrame(now, last, 30)) return;
+      last = now;
+      let next = state.current;
+      // The first frame, or one long after the last (a busy moment): carry on from now, not from the past.
+      if (!due || now - due > 1000) due = now + typingDelay(next, phraseAt(next.index));
+      while (now >= due) {
+        next = typingStep(next, phraseAt(next.index));
+        due += typingDelay(next, phraseAt(next.index));
+      }
+      if (next === state.current) return;
+      state.current = next;
+      write(phraseAt(next.index).slice(0, next.shown));
+    };
+    frame = window.requestAnimationFrame(loop);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      write(phraseAt(state.current.index));
+    };
+  }, [active, key]);
 
-  const text = active ? phrase.slice(0, shown) : phrase;
   return (
     <span aria-hidden="true" className={cn('pointer-events-none truncate', className)}>
-      {text}
+      {/* The server's text: the first example, written out. From then on the typing writes here by hand. */}
+      <span ref={textRef}>{phrases[0] ?? ''}</span>
       {active && <span className="assistant-caret ml-px inline-block h-[1.05em] w-px translate-y-[0.15em] bg-current" />}
     </span>
   );

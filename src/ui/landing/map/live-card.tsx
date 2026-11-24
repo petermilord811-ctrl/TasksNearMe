@@ -242,7 +242,8 @@ function Pulse({ className }: { className?: string }) {
   const text = parts.join(' · ');
   return (
     <p className={cn('relative h-5 overflow-hidden text-[13px] font-medium text-foreground/80', className)}>
-      <AnimatePresence initial={false} mode="popLayout">
+      {/* Stacked already (absolute): a plain swap, no "popLayout" (it restyles the whole page each time). */}
+      <AnimatePresence initial={false}>
         <m.span
           key={explorer.latest?.id ?? 'pulse'}
           className="absolute inset-x-0 top-0 block truncate"

@@ -45,6 +45,15 @@ const HERO_WAIT_MS = 6000;
  * after (its first frames compile shaders, which would make the growth stutter). Its style is fetched at once.
  */
 const HERO_SETTLE_MS = 400;
+/**
+ * Starting on the way (the map not in view yet) waits for a quiet moment, the pointer and the page still for this
+ * long: the engine's first frames compile its shaders, which holds the page for a moment, and that shouldn't land
+ * while someone moves over the 3D town or scrolls (2026-11-24, round three). At most `QUIET_MAX_MS`, then it starts
+ * anyway; in view it starts at once.
+ */
+const QUIET_MS = 350;
+const QUIET_MAX_MS = 8000;
+const BUSY_EVENTS = ['pointermove', 'pointerdown', 'wheel', 'scroll', 'keydown', 'touchmove'] as const;
 /** How far past the service area drive times are still offered (the map loads the roads around the visitor). */
 const DRIVE_REACH_MILES = 25;
 
@@ -214,8 +223,8 @@ export function TaskMap({
   // When to load the live map: only once the visitor heads for it, so a visit that never scrolls down fetches no
   // tiles at all (and the page's network settles). As the map comes within about a screen, its style is fetched
   // and the engine starts once the hero's town has finished building (they'd compete for the main thread and
-  // the GPU) or after a short wait; when the map is actually in view it starts right away. Pointing at the map or
-  // asking it to show something also starts it (below). Either way in an idle moment.
+  // the GPU) or after a short wait, in a quiet moment; when the map is actually in view it starts right away. Pointing
+  // at the map or asking it to show something also starts it (below). Either way in an idle moment.
   useEffect(() => {
     if (mode === 'static') return;
     const frame = watchRef?.current ?? frameRef.current;
@@ -225,13 +234,23 @@ export function TaskMap({
     let heroDone = false;
     let idle = 0;
     let settle = 0;
+    let quiet = 0;
+    let quietLimit = 0;
     const hasIdle = typeof window.requestIdleCallback === 'function';
     let cancelHero = () => {};
     const watchers: IntersectionObserver[] = [];
+    // The pointer or the page moved while waiting for a quiet moment: wait again.
+    function onBusy() {
+      window.clearTimeout(quiet);
+      quiet = window.setTimeout(start, QUIET_MS);
+    }
     const stopWatching = () => {
       cancelHero();
       for (const watcher of watchers) watcher.disconnect();
       window.clearTimeout(settle);
+      window.clearTimeout(quiet);
+      window.clearTimeout(quietLimit);
+      for (const type of BUSY_EVENTS) window.removeEventListener(type, onBusy, { capture: true });
     };
     // The style (and its tiles' description, sprite and first glyphs) is only network: fetched as the map nears.
     const warmUp = () => void prefetchBaseStyle(map.styleUrl);
@@ -242,8 +261,14 @@ export function TaskMap({
       warmUp();
       idle = hasIdle ? window.requestIdleCallback(() => setNear(true), { timeout: 1500 }) : window.setTimeout(() => setNear(true), 80);
     };
+    const startWhenQuiet = () => {
+      if (started) return;
+      for (const type of BUSY_EVENTS) window.addEventListener(type, onBusy, { capture: true, passive: true });
+      quiet = window.setTimeout(start, QUIET_MS);
+      quietLimit = window.setTimeout(start, QUIET_MAX_MS);
+    };
     const maybeStart = () => {
-      if (approaching && heroDone) settle = window.setTimeout(start, HERO_SETTLE_MS);
+      if (approaching && heroDone) settle = window.setTimeout(startWhenQuiet, HERO_SETTLE_MS);
     };
     cancelHero = whenHeroReady(() => {
       heroDone = true;

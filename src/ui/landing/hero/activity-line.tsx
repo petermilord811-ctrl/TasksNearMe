@@ -87,7 +87,9 @@ export function ActivityLine({ data, now, area, onShowAll, className }: { data: 
         <span className="sr-only">{t('label')}:</span>
         {/* The title always shows; the area, the price, the time and "New" join as the line gets room. */}
         <span className="@container relative h-9 min-w-0 flex-1 overflow-hidden">
-          <AnimatePresence initial={false} mode="popLayout">
+          {/* The lines sit on top of each other already (absolute), so they simply swap: "popLayout" would measure
+              the leaving one and add a style sheet to the page on every turn, restyling the whole page (round three). */}
+          <AnimatePresence initial={false}>
             <m.span
               key={pin.id}
               className="absolute inset-0 flex items-center"

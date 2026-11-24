@@ -5,6 +5,7 @@ import { routes, type HomePageData } from '@/contracts';
 import type { Season } from '@/shared/seasons';
 import { HoverLift, Magnetic, Reveal } from '@/ui/motion';
 import { SeasonOrnament } from '../season-ornament';
+import { ClosingDrift } from './closing-drift';
 
 /** The brand's gradient: the card's color outside a season (each season has its own, landing.css "Seasons"). */
 const BRAND_GRADIENT = 'linear-gradient(120deg, #3b1d8f, #7a2bd1 30%, #d2357a 62%, #ff7a45)';
@@ -25,7 +26,7 @@ export function ClosingSection({ data, season }: { data: HomePageData; season?: 
     <section aria-labelledby="closing-title" className="px-gutter pt-6 pb-16 sm:pt-12 sm:pb-32">
       <Reveal variant="bloom" origin="50% 100%" className="mx-auto max-w-content">
         <HoverLift surfaceClassName="overflow-hidden rounded-[2.5rem] text-white" glow="#ffffff" tilt={0} lift={0} grow={0}>
-          <div aria-hidden="true" className="absolute inset-0 -z-10 [animation:hue-drift_14s_ease-in-out_infinite]" style={{ backgroundImage: `var(--closing-gradient, ${BRAND_GRADIENT})`, backgroundSize: '220% 220%' }} />
+          <ClosingDrift image={`var(--closing-gradient, ${BRAND_GRADIENT})`} />
           <div aria-hidden="true" className="absolute inset-0 -z-10 bg-[radial-gradient(60%_60%_at_50%_0%,rgb(255_255_255/0.18),transparent_60%)]" />
           {season && <SeasonOrnament season={season} className="-z-10 text-white" />}
           <div className="px-6 py-16 text-center sm:px-12 sm:py-24">

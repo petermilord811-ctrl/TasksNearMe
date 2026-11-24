@@ -937,7 +937,8 @@ function OpenCount() {
   return (
     <div className="mt-1 flex min-h-10 items-center gap-2">
       <p role="status" aria-live="polite" className="relative h-6 min-w-0 flex-1 overflow-hidden text-sm font-medium text-muted-foreground">
-        <AnimatePresence initial={false} mode="popLayout">
+        {/* Stacked already (absolute): a plain swap, no "popLayout" (it restyles the whole page each time). */}
+        <AnimatePresence initial={false}>
           <m.span
             key={text}
             className="absolute inset-x-0 top-0 block truncate"

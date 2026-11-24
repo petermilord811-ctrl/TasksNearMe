@@ -54,6 +54,29 @@ test('a mouse gets the Bubble cursors from the first paint, a press squeezes, an
   expect(await htmlCursor(page)).toContain('bcur-rest');
 });
 
+test('a field takes the text cursor, never “Not yet”, while someone is in it', async ({ page }, testInfo) => {
+  // Owner, 2026-11-24: "if I am in text field, it's shown 'Not yet' cursor as what the disabled button hover". The form
+  // primitives carry `disabled:cursor-not-allowed`, which applies only while they're disabled.
+  test.skip(testInfo.project.name !== 'app-desktop', 'a mouse is a desktop thing; phones never get it');
+  await page.goto('/sign-in');
+  const email = page.locator('input[type="email"][data-slot="input"]').first();
+  await expect(email).toBeVisible();
+  await expect(email).not.toHaveAttribute('data-hydrating');
+  expect(await email.getAttribute('class')).toContain('disabled:cursor-not-allowed');
+  expect(await cursorOf(email)).toContain('bcur-text');
+
+  await email.click();
+  await email.pressSequentially('neighbor@example.test');
+  const box = await email.boundingBox();
+  if (!box) throw new Error('The email field is missing');
+  await page.mouse.move(box.x + box.width * 0.4, box.y + box.height / 2, { steps: 4 });
+  await page.mouse.move(box.x + box.width * 0.6, box.y + box.height / 2, { steps: 4 });
+  expect(await cursorOf(email)).toContain('bcur-text');
+  // The words beside the cursor would show after 600 ms; a field never has any.
+  await page.waitForTimeout(900);
+  await expect(page.locator('.bcur-label[data-shown]')).toHaveCount(0);
+});
+
 test('phones never get the Bubble cursors', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-mobile', 'phones only');
   await page.goto('/pricing');
