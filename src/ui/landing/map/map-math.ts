@@ -258,26 +258,35 @@ export interface ScreenRect {
 
 /**
  * Moves a pill (centered at `at`, `half` its half size) out from under the page's panels over the map (the heading's
- * card, the explorer, the controls, the minimap), staying inside `box`: of the four ways out of a panel it overlaps
- * (below, above, right, left of it), the shortest that stays inside. Where none does, it stays put.
+ * card, the explorer, the tool bars), staying inside `box`: of the four ways out of a panel it overlaps (below, above,
+ * right, left of it), the shortest that stays inside, again if that lands on another panel. Where that still ends on
+ * a panel (two panels stacked with less room between them than the pill, like the card over the tool bars along the
+ * map's left edge), the nearest spot inside the box that's clear of every panel, among the panels' edges. Where there's
+ * none, it stays put.
  */
 export function stepAroundPanels(at: { x: number; y: number }, half: { x: number; y: number }, box: EdgeBox, panels: ScreenRect[], gap = 10): { x: number; y: number } {
+  const onPanel = (spot: { x: number; y: number }) => panels.find((panel) => spot.x + half.x + gap > panel.left && spot.x - half.x - gap < panel.right && spot.y + half.y + gap > panel.top && spot.y - half.y - gap < panel.bottom);
+  const inside = (spot: { x: number; y: number }) => spot.x - half.x >= box.left && spot.x + half.x <= box.right && spot.y - half.y >= box.top && spot.y + half.y <= box.bottom;
+  const nearest = (spots: { x: number; y: number }[], from: { x: number; y: number }) => spots.reduce((best, spot) => (Math.hypot(spot.x - from.x, spot.y - from.y) < Math.hypot(best.x - from.x, best.y - from.y) ? spot : best));
   let { x, y } = at;
   for (let round = 0; round < 4; round += 1) {
-    const hit = panels.find((panel) => x + half.x + gap > panel.left && x - half.x - gap < panel.right && y + half.y + gap > panel.top && y - half.y - gap < panel.bottom);
-    if (!hit) break;
+    const hit = onPanel({ x, y });
+    if (!hit) return { x, y };
     const ways = [
       { x, y: hit.bottom + half.y + gap },
       { x, y: hit.top - half.y - gap },
       { x: hit.right + half.x + gap, y },
       { x: hit.left - half.x - gap, y },
-    ].filter((spot) => spot.x - half.x >= box.left && spot.x + half.x <= box.right && spot.y - half.y >= box.top && spot.y + half.y <= box.bottom);
+    ].filter(inside);
     if (ways.length === 0) break;
-    const next = ways.reduce((best, spot) => (Math.hypot(spot.x - x, spot.y - y) < Math.hypot(best.x - x, best.y - y) ? spot : best));
-    x = next.x;
-    y = next.y;
+    ({ x, y } = nearest(ways, { x, y }));
   }
-  return { x, y };
+  if (!onPanel({ x, y })) return { x, y };
+  // Still on a panel: the nearest clear spot where the panels' edges (and the pill's own place) cross.
+  const xs = new Set([at.x, ...panels.flatMap((panel) => [panel.right + half.x + gap, panel.left - half.x - gap])]);
+  const ys = new Set([at.y, ...panels.flatMap((panel) => [panel.bottom + half.y + gap, panel.top - half.y - gap])]);
+  const clear = [...xs].flatMap((spotX) => [...ys].map((spotY) => ({ x: spotX, y: spotY }))).filter((spot) => inside(spot) && !onPanel(spot));
+  return clear.length > 0 ? nearest(clear, at) : { x, y };
 }
 
 /**

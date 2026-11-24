@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState, type ComponentType, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
+import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { BellRing, Building2, Car, Expand, Flame, Layers, Lasso, Loader2, LocateFixed, MapPinned, Minus, Move, Navigation2, Plus, RotateCw, Shrink, Sparkles, SunMoon, Target, X, ZoomIn } from 'lucide-react';
 import { routes, type LandingMapData, type MapArea } from '@/contracts';
@@ -16,8 +17,23 @@ import { DEFAULT_LAYERS, MAP_FRAME_ATTRIBUTE, useOptionalMapExplorer, type MapLa
 import { MapCardRail } from './card-rail';
 import { listOrigin } from './map-math';
 import type { DriveTimesState, MapControls, MapViewProps } from './maplibre-view';
+import { MINIMAP_SIZES, type MinimapMode } from './minimap-math';
 import { sitesInOutline } from './neighborhoods';
 import { StaticMap } from './static-map';
+
+/** The minimap loads with the live map, only where it shows (wide screens, and full screen there). */
+const MinimapDock = dynamic(() => import('./minimap').then((module) => module.MinimapDock), { ssr: false });
+/** How the visitor left the minimap (small, large or folded), kept for the visit. */
+const MINIMAP_KEY = 'tnm-minimap';
+
+function readMinimapMode(): MinimapMode {
+  try {
+    const value = typeof window === 'undefined' ? null : window.sessionStorage.getItem(MINIMAP_KEY);
+    return value === 'large' || value === 'folded' ? value : 'small';
+  } catch {
+    return 'small';
+  }
+}
 
 export type MapMode = 'interactive' | 'static';
 
@@ -128,6 +144,15 @@ export function TaskMap({
   const [pointerOver, setPointerOver] = useState(false);
   const bubbleRef = useRef<HTMLDivElement>(null);
   const [localLayers, setLocalLayers] = useState<MapLayers>(DEFAULT_LAYERS);
+  const [minimapMode, setMinimapMode] = useState<MinimapMode>(readMinimapMode);
+  const chooseMinimap = (mode: MinimapMode) => {
+    setMinimapMode(mode);
+    try {
+      window.sessionStorage.setItem(MINIMAP_KEY, mode);
+    } catch {
+      /* storage blocked: it's kept for this page only */
+    }
+  };
   const hintTimer = useRef<number | undefined>(undefined);
   const fill = variant === 'fill';
   const row = controlsRow && !fullscreen;
@@ -397,7 +422,8 @@ export function TaskMap({
             arrival={arrival}
             arrivalSource={arrivalSource}
             edgeInsets={fullscreen ? FULLSCREEN_EDGE : edgeInsets}
-            homeInsets={fullscreen ? undefined : homeInsets}
+            // The city view keeps its tasks clear of the minimap too, beside the tool bars along the left edge.
+            homeInsets={fullscreen || !homeInsets ? undefined : minimapMode === 'folded' ? homeInsets : { ...homeInsets, left: (homeInsets.left ?? 0) + MINIMAP_SIZES[minimapMode].width + 24 }}
             cityKey={marketSlug}
             onEngage={engage}
             onDragging={onDragging}
@@ -560,6 +586,38 @@ export function TaskMap({
             </>
           )}
         </p>
+      )}
+
+      {/* The minimap: the city at a glance, with what the big map shows framed (wide screens, beside the tool bars;
+          full screen, in its top-left corner). Not while an area is drawn or watched. */}
+      {fill && liveReady && controls && (!waiting || fullscreen) && !explorer?.drawing && !explorer?.watchAreas && (
+        <div
+          className={cn(
+            'absolute z-[2] max-lg:hidden',
+            fullscreen ? 'top-4 left-4' : 'bottom-[max(1.25rem,2.5svh)] left-[calc(var(--map-edge)+3.75rem)] transition-opacity duration-300 group-data-[map-dragging]/stage:opacity-[0.58]',
+          )}
+        >
+          <MinimapDock
+            mode={minimapMode}
+            onMode={chooseMinimap}
+            map={map}
+            pins={pinsShown}
+            controls={controls}
+            userPoint={userPoint}
+            litTaskId={litTaskId}
+            pickedTaskId={focusedTaskId}
+            activeCategory={activeCategory}
+            selectedArea={area?.name ?? null}
+            onPickArea={pickArea}
+            onPickTask={(id) => {
+              pickTask(id);
+              explorer?.requestFocus({ kind: 'task', id });
+            }}
+            pulses={explorer?.pulses}
+            market={market}
+            timeZone={explorer?.timeZone}
+          />
+        </div>
       )}
 
       {/* Watching an area: drawing it, then its neighborhoods and "Get alerts", over the top of the map. */}

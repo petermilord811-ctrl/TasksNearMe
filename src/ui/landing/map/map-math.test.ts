@@ -277,6 +277,20 @@ describe('the marker that points to the visitor, around the panels', () => {
     const explorer = { left: 900, top: 0, right: 1000, bottom: 800 };
     expect(stepAroundPanels({ x: 940, y: 400 }, half, box, [explorer])).toEqual({ x: 900 - 60 - 10, y: 400 });
   });
+
+  it('two panels stacked along the left edge with too little room between them: the nearest spot clear of both', () => {
+    // The card over the map's top left and the tool bars under it, 37 px apart (the pill needs 60): stepping out of
+    // one lands on the other, back and forth.
+    const card = { left: 32, top: 16, right: 416, bottom: 450 };
+    const tools = { left: 32, top: 487, right: 86, bottom: 780 };
+    const edge = { left: 14, top: 96, right: 1266, bottom: 756 };
+    const spot = stepAroundPanels({ x: 76, y: 293 }, { x: 62, y: 20 }, edge, [card, tools]);
+    const over = (panel: typeof card) => spot.x + 62 + 10 > panel.left && spot.x - 62 - 10 < panel.right && spot.y + 20 + 10 > panel.top && spot.y - 20 - 10 < panel.bottom;
+    expect(over(card)).toBe(false);
+    expect(over(tools)).toBe(false);
+    // Just right of the tool bars, under the card: the nearest such spot.
+    expect(spot).toEqual({ x: 86 + 62 + 10, y: 450 + 20 + 10 });
+  });
 });
 
 describe('drive estimates from a straight-line distance', () => {

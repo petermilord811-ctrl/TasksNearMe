@@ -33,6 +33,19 @@ export interface MapControls {
   zoomBy: (delta: number) => void;
   /** Turns the map back to north (and flat again, unless the 3D buildings are on). */
   resetNorth: () => void;
+  /**
+   * What the visitor sees of the map (the part the panels leave free): its four corners ([lng, lat], clockwise from the
+   * top left), for the minimap's frame.
+   */
+  corners: () => [number, number][];
+  /** Runs `listener` after the camera moves (once a frame at most); returns the way to stop. */
+  onMove: (listener: () => void) => () => void;
+  /** Brings a point to the middle of what's seen (the minimap's press or drag), closer by `zoomBy` if given. */
+  centerOn: (point: LatLng, options?: { animate?: boolean; zoomBy?: number }) => void;
+  /** Moves the map by a share of what's seen (-1 to 1 each way: the minimap's arrow keys). */
+  panBy: (x: number, y: number) => void;
+  /** Back to the whole city (the city view: its open tasks framed). */
+  showCity: () => void;
 }
 
 /** How the drive times are doing: off, worked out, or nothing to show (no roads near the visitor on the map). */
@@ -71,8 +84,9 @@ export interface MapViewProps {
    */
   padding?: Padding;
   /**
-   * More room the city view keeps clear, on top of `padding` (pixels): the heading's card over the map's top left, so
-   * the first view of a city doesn't put tasks under it. Bringing a task or a group to the middle ignores it.
+   * More room the city view keeps clear, on top of `padding` (pixels): the heading's card over the map's top left and
+   * the tool bars and the minimap along its left edge, so the first view of a city doesn't put tasks under them.
+   * Bringing a task or a group to the middle ignores it.
    */
   homeInsets?: { top?: number; left?: number };
   /** The visitor used the map (a drag, a zoom, a turn, a group opened, a task picked): the page can make room. */
@@ -1000,6 +1014,58 @@ export function MapLibreView({
           stopArrival.current();
           instance.easeTo({ bearing: 0, ...(lastBuildings.current ? {} : { pitch: 0 }), duration: latest.current.reduced ? 0 : 520 });
         },
+        corners: () => {
+          const box = instance.getContainer();
+          const room = instance.getPadding();
+          // The free part only (the panels' room is the camera's padding), within the part of the map a screen shows.
+          const left = room.left ?? 0;
+          const top = room.top ?? 0;
+          const right = box.clientWidth - (room.right ?? 0);
+          const bottom = Math.min(box.clientHeight, window.innerHeight) - Math.max(0, (room.bottom ?? 0) - Math.max(0, box.clientHeight - window.innerHeight));
+          return ([[left, top], [right, top], [right, bottom], [left, bottom]] as [number, number][]).map(([x, y]) => {
+            const at = instance.unproject([x, y]);
+            return [at.lng, at.lat] as [number, number];
+          });
+        },
+        onMove: (listener) => {
+          let frame = 0;
+          const onMoved = () => {
+            if (!frame)
+              frame = requestAnimationFrame(() => {
+                frame = 0;
+                listener();
+              });
+          };
+          instance.on('move', onMoved);
+          instance.on('resize', onMoved);
+          return () => {
+            cancelAnimationFrame(frame);
+            instance.off('move', onMoved);
+            instance.off('resize', onMoved);
+          };
+        },
+        centerOn: (point, options = {}) => {
+          stopArrival.current();
+          latest.current.onEngage?.();
+          const zoom = options.zoomBy ? Math.min(instance.getMaxZoom(), instance.getZoom() + options.zoomBy) : undefined;
+          instance.easeTo({ center: [point.lng, point.lat], ...(zoom !== undefined ? { zoom } : {}), duration: options.animate && !latest.current.reduced ? 450 : 0 });
+        },
+        panBy: (x, y) => {
+          stopArrival.current();
+          latest.current.onEngage?.();
+          const box = instance.getContainer();
+          const room = instance.getPadding();
+          const width = box.clientWidth - (room.left ?? 0) - (room.right ?? 0);
+          const height = Math.min(box.clientHeight, window.innerHeight) - (room.top ?? 0) - (room.bottom ?? 0);
+          instance.panBy([Math.round(x * width), Math.round(y * height)], { duration: latest.current.reduced ? 0 : 300 });
+        },
+        showCity: () => {
+          stopArrival.current();
+          const home = frameHomeRef.current() ?? homeView.current;
+          if (!home) return;
+          homeView.current = home;
+          instance.easeTo({ center: [home.center.lng, home.center.lat], zoom: home.zoom, ...(lastBuildings.current ? {} : { pitch: 0, bearing: 0 }), duration: latest.current.reduced ? 0 : 900 });
+        },
       });
       latest.current.onReady();
       if (arriving) followArrival(progressNow());
@@ -1318,19 +1384,34 @@ export function MapLibreView({
     live.on('move', schedule);
     live.on('resize', schedule);
     window.addEventListener('resize', schedule, { passive: true });
-    // A panel that grows or folds (the card's notes, the explorer folding) moves what the marker must step around.
+    // A panel that grows or folds (the card's notes, the explorer folding), or slides with the top bar as the page
+    // scrolls (the card and the explorer follow it), moves what the marker must step around: placed again then, and
+    // once the panel's slide has ended.
     const container = live.getContainer();
-    const panelsResized = typeof ResizeObserver === 'function' ? new ResizeObserver(() => {
+    const section = container.closest('section') ?? document;
+    const fresh = () => {
       panelCache.delete(container);
       schedule();
-    }) : null;
-    for (const panel of (container.closest('section') ?? document).querySelectorAll<HTMLElement>('[data-map-panel]')) panelsResized?.observe(panel);
+    };
+    let settleTimer = 0;
+    const onScroll = () => {
+      fresh();
+      window.clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(fresh, 420);
+    };
+    const panelsResized = typeof ResizeObserver === 'function' ? new ResizeObserver(fresh) : null;
+    for (const panel of section.querySelectorAll<HTMLElement>('[data-map-panel]')) panelsResized?.observe(panel);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    section.addEventListener('transitionend', fresh);
     return () => {
       cancelAnimationFrame(frame);
+      window.clearTimeout(settleTimer);
       placeEdge.current = () => {};
       live.off('move', schedule);
       live.off('resize', schedule);
       window.removeEventListener('resize', schedule);
+      window.removeEventListener('scroll', onScroll);
+      section.removeEventListener('transitionend', fresh);
       panelsResized?.disconnect();
     };
   }, [live, userPoint, settled, padding, edgeInsets?.top, edgeInsets?.bottom, fullscreen]);
@@ -1726,8 +1807,31 @@ export function MapLibreView({
     place(true);
     const follow = () => place(false);
     live.on('move', follow);
+    // Panels that change size or slide also change where the card fits: the heading's card folds once the map is in
+    // use (with reduced motion the camera has already jumped, and the map won't move again), the top bar slides the
+    // panels as the page scrolls. Placed again then, without a glide.
+    const container = live.getContainer();
+    const section = container.closest('section') ?? document;
+    const refit = () => {
+      panelCache.delete(container);
+      follow();
+    };
+    let settleTimer = 0;
+    const onScroll = () => {
+      refit();
+      window.clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(refit, 420);
+    };
+    const resized = typeof ResizeObserver === 'function' ? new ResizeObserver(refit) : null;
+    for (const panel of section.querySelectorAll<HTMLElement>('[data-map-panel]')) resized?.observe(panel);
+    section.addEventListener('transitionend', refit);
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       live.off('move', follow);
+      resized?.disconnect();
+      section.removeEventListener('transitionend', refit);
+      window.removeEventListener('scroll', onScroll);
+      window.clearTimeout(settleTimer);
     };
     // The card moves when its task changes (or the bloom it's in); `cardPin` is looked up from the same pins.
     // eslint-disable-next-line react-hooks/exhaustive-deps

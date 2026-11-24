@@ -294,7 +294,21 @@
     "cardOpenHeading": "Mostrar el encabezado del mapa",
     "cardFoldHeading": "Plegar el encabezado para dar más espacio al mapa",
     "explorerOpen": "Mostrar los filtros y la lista",
-    "explorerFold": "Plegar los filtros y la lista"
+    "explorerFold": "Plegar los filtros y la lista",
+    "minimapLabel": "Minimapa de {city}: las flechas mueven el mapa, + y − acercan y alejan, Intro muestra toda la ciudad",
+    "minimapClock": "{market} · {time}",
+    "minimapFit": "Ver toda la ciudad",
+    "minimapBigger": "Agrandar el minimapa",
+    "minimapSmaller": "Achicar el minimapa",
+    "minimapFold": "Plegar el minimapa",
+    "minimapOpen": "Abrir el minimapa",
+    "minimapChip": "Minimapa",
+    "minimapTask": "{title} · {area}",
+    "minimapArea": "{area} · {count, plural, =0 {sin tareas abiertas} one {# tarea abierta} other {# tareas abiertas}}",
+    "minimapNone": "Aún no hay tareas abiertas aquí",
+    "minimapAllInView": "{count, plural, one {La tarea abierta está a la vista} other {Las # tareas abiertas están a la vista}}",
+    "minimapSomeInView": "{shown, plural, =0 {Ninguna a la vista} other {# a la vista}} · {outside, plural, other {# fuera del mapa}}",
+    "minimapScale": "{miles} mi"
   },
   "categories": {
     "eyebrow": "Lo que más se reserva",

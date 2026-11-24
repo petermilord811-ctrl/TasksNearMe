@@ -1,8 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
 /**
- * The landing's live map (MapLibre): drawing an area to watch, switching cities, drive times, bringing a task to the
- * middle of the free map, and the neighborhoods' cards.
+ * The landing's live map (MapLibre): drawing an area to watch, switching cities, the minimap, drive times, bringing a
+ * task to the middle of the free map, and the neighborhoods' cards.
  * It needs WebGL (software, through SwiftShader, here) and OpenFreeMap's style and tiles from the internet, so it runs
  * locally and not on CI, where a slow tile server would fail a ship. The filters, the stream and the home
  * neighborhood, which don't need the live map, are in public-pages.spec.ts.
@@ -101,9 +101,68 @@ test.describe('the live map', () => {
     const lift = Math.min(145, (at.height - 32) / 2 - 48);
     expect(Math.abs(at.x - (at.freeLeft + at.freeRight) / 2)).toBeLessThan(14);
     expect(Math.abs(at.y - (at.height / 2 + lift))).toBeLessThan(14);
-    // The card opens above the task, whole, under the window's top.
-    expect(at.cardBottom).toBeLessThanOrEqual(at.y);
-    expect(at.cardTop).toBeGreaterThan(0);
+    // The card opens above the task, whole, under the window's top (once the heading has folded: the card is placed
+    // again when a panel changes).
+    await expect
+      .poll(
+        () =>
+          page.evaluate((y) => {
+            const card = [...document.querySelectorAll('a')].find((link) => link.closest('.group\\/pin'))!.closest('.group\\/pin')!.getBoundingClientRect();
+            return card.bottom <= y && card.top > 0 ? 'above' : `card ${Math.round(card.top)}–${Math.round(card.bottom)}, task at ${Math.round(y)}`;
+          }, at.y),
+        { timeout: 8000, intervals: [400] },
+      )
+      .toBe('above');
+  });
+
+  test('the minimap: its frame follows the map and moves it, a neighborhood picked there narrows the list, and it folds', async ({ page }) => {
+    // Owner, 2026-11-24: "improve it more deeply, more functional".
+    const map = await openLiveMap(page);
+    const minimap = map.locator('[data-minimap]');
+    await expect(minimap).toBeVisible();
+    const drawingLocator = minimap.locator('[data-minimap-city]');
+    const frame = drawingLocator.locator('polygon').last();
+    await expect.poll(() => frame.getAttribute('points'), { timeout: 30_000 }).toMatch(/\d/);
+    // Once the map has come to rest: the frame stops changing.
+    let before = await frame.getAttribute('points');
+    await expect
+      .poll(
+        async () => {
+          const now = await frame.getAttribute('points');
+          const still = now === before;
+          before = now;
+          return still;
+        },
+        { timeout: 30_000, intervals: [1500] },
+      )
+      .toBe(true);
+    // Dragging the frame moves the big map: the frame follows the drag and stays there.
+    const box = (await frame.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 24, box.y + box.height / 2 + 8, { steps: 6 });
+    await page.mouse.up();
+    await expect.poll(() => frame.getAttribute('points'), { timeout: 15_000 }).not.toBe(before);
+    // A neighborhood clicked on the minimap (its name shows under it on the way) narrows the list to it.
+    const drawing = (await drawingLocator.boundingBox())!;
+    const footer = minimap.locator('p').last();
+    let picked: string | null = null;
+    for (const [fx, fy] of [[0.5, 0.5], [0.4, 0.45], [0.6, 0.55], [0.45, 0.6], [0.55, 0.4], [0.35, 0.5]] as const) {
+      await page.mouse.move(drawing.x + drawing.width * fx, drawing.y + drawing.height * fy);
+      const text = (await footer.textContent()) ?? '';
+      const match = /^(.+) · (no open tasks|\d+ open tasks?)$/.exec(text);
+      if (!match) continue;
+      picked = match[1]!;
+      await page.mouse.click(drawing.x + drawing.width * fx, drawing.y + drawing.height * fy);
+      break;
+    }
+    expect(picked, 'a neighborhood under the pointer on the minimap').not.toBeNull();
+    await expect(map.getByRole('button', { name: `Show all of the city, not just ${picked}` })).toBeVisible({ timeout: 10_000 });
+    // It folds to a chip, and opens again.
+    await minimap.getByRole('button', { name: 'Fold the minimap' }).click();
+    await expect(map.locator('[data-minimap]')).toHaveCount(0);
+    await map.getByRole('button', { name: 'Open the minimap' }).click();
+    await expect(map.locator('[data-minimap]')).toBeVisible();
   });
 
   test('drive times from a shared location, as an estimate', async ({ page, context }) => {
@@ -122,17 +181,26 @@ test.describe('the live map', () => {
     const map = await openLiveMap(page);
     await expect(map.getByText(/^You're [\d,]+ mi from Gainesville: we're opening city by city\.$/)).toBeVisible();
     await expect(map.getByText(/^The nearest open city is Austin, [\d,]+ mi away\.$/)).toBeVisible();
-    // The marker on the map's edge: solid, with the distance and the drive, and over none of the page's panels.
+    // The marker on the map's edge: solid, with the distance and the drive, and (once the panels have settled: the
+    // card grows as its notes come) over none of the page's panels. A failure lists the rectangles.
     const pill = map.getByRole('button', { name: /^You're [\d,]+ mi from the middle of the map/ });
     await expect(pill).toBeVisible();
     await expect(pill).toContainText(/h drive/);
-    const box = (await pill.boundingBox())!;
-    for (const panel of await page.locator('[data-map-panel]').all()) {
-      const rect = await panel.boundingBox();
-      if (!rect || !(await panel.isVisible())) continue;
-      const overlaps = box.x < rect.x + rect.width && box.x + box.width > rect.x && box.y < rect.y + rect.height && box.y + box.height > rect.y;
-      expect(overlaps, `the marker over ${await panel.evaluate((element) => element.className.slice(0, 60))}`).toBe(false);
-    }
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const marker = [...document.querySelectorAll('button')].find((button) => /mi from the middle of the map/.test(button.getAttribute('aria-label') ?? ''))!.getBoundingClientRect();
+            const round = (box: DOMRect) => [Math.round(box.left), Math.round(box.top), Math.round(box.right), Math.round(box.bottom)];
+            return [...document.querySelectorAll<HTMLElement>('[data-map-panel]')]
+              .filter((panel) => panel.offsetParent !== null || getComputedStyle(panel).position === 'fixed')
+              .map((panel) => ({ panel: panel.className.slice(0, 40), box: panel.getBoundingClientRect() }))
+              .filter(({ box }) => box.width > 0 && marker.left < box.right && marker.right > box.left && marker.top < box.bottom && marker.bottom > box.top)
+              .map(({ panel, box }) => `${panel} ${round(box)} under the marker ${round(marker)}`);
+          }),
+        { timeout: 8000, intervals: [400] },
+      )
+      .toEqual([]);
     // Showing the nearest city instead: the map goes there.
     await map.getByRole('button', { name: 'Show Austin' }).click();
     await expect(map.getByRole('button', { name: 'City: Austin, TX. Show another city' })).toBeVisible({ timeout: 20_000 });
@@ -146,6 +214,16 @@ test.describe('the live map', () => {
       box.y > 40 &&
       box.y + box.height < 760 &&
       panels.every((panel) => box.x + box.width + 30 < panel.left || box.x - 30 > panel.right || box.y + box.height + 30 < panel.top || box.y - 30 > panel.bottom);
+    // The live map draws its tasks as it settles (slowly on software WebGL): wait for one clear of the panels.
+    await expect
+      .poll(async () => {
+        for (const marker of await map.locator('.tnm-marker > div').all()) {
+          const box = await marker.boundingBox();
+          if (box && clear(box)) return true;
+        }
+        return false;
+      }, { timeout: 30_000, intervals: [1000] })
+      .toBe(true);
     let hovered = false;
     for (const marker of await map.locator('.tnm-marker > div').all()) {
       const box = await marker.boundingBox();
@@ -186,9 +264,9 @@ test.describe('the live map', () => {
   test("a neighborhood's card under the pointer, and a click narrows the list to it", async ({ page }) => {
     const map = await openLiveMap(page);
     const box = (await map.locator('[data-task-map]').boundingBox())!;
-    // Over the map itself (not a pin): rest there a moment.
+    // Over the map itself (not a pin): rest there a moment, at a few spots (tasks may sit on some of them).
     let found = false;
-    for (const [fx, y] of [[0.45, 470], [0.4, 520], [0.5, 430], [0.35, 560]] as const) {
+    for (const [fx, y] of [[0.45, 470], [0.4, 520], [0.5, 430], [0.35, 560], [0.55, 520], [0.45, 600], [0.6, 450], [0.5, 640]] as const) {
       await page.mouse.move(box.x + box.width * fx, box.y + y);
       await page.waitForTimeout(900);
       if (await map.getByText('Click to see its tasks').isVisible()) {

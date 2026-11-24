@@ -294,7 +294,21 @@
     "cardOpenHeading": "Show the map's heading",
     "cardFoldHeading": "Fold the heading to give the map more room",
     "explorerOpen": "Show the filters and the list",
-    "explorerFold": "Fold the filters and the list"
+    "explorerFold": "Fold the filters and the list",
+    "minimapLabel": "Minimap of {city}: the arrow keys move the map, + and − zoom, Enter shows the whole city",
+    "minimapClock": "{market} · {time}",
+    "minimapFit": "Show the whole city",
+    "minimapBigger": "Make the minimap bigger",
+    "minimapSmaller": "Make the minimap smaller",
+    "minimapFold": "Fold the minimap",
+    "minimapOpen": "Open the minimap",
+    "minimapChip": "Minimap",
+    "minimapTask": "{title} · {area}",
+    "minimapArea": "{area} · {count, plural, =0 {no open tasks} one {# open task} other {# open tasks}}",
+    "minimapNone": "No open tasks here yet",
+    "minimapAllInView": "{count, plural, one {The open task is in view} other {All # open tasks in view}}",
+    "minimapSomeInView": "{shown, plural, =0 {None in view} other {# in view}} · {outside, plural, other {# outside the map}}",
+    "minimapScale": "{miles} mi"
   },
   "categories": {
     "eyebrow": "What people book",
