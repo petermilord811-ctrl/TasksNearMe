@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { densityShade, inPolygon, inQuad, miniEdge, miniProjection, nearestDot, quadMiddle, scaleBar } from './minimap-math';
+import { densityShade, groupDots, inPolygon, inQuad, miniEdge, miniProjection, mostCommon, nearestDot, placeEdgeLabels, quadMiddle, scaleBar } from './minimap-math';
 
 const austin = { lat: 30.2672, lng: -97.7431 };
 
@@ -102,5 +102,79 @@ describe('a press on a neighborhood', () => {
     expect(inPolygon({ x: 5, y: 30 }, ell)).toBe(true);
     expect(inPolygon({ x: 30, y: 30 }, ell)).toBe(false);
     expect(inPolygon({ x: -5, y: 5 }, ell)).toBe(false);
+  });
+});
+
+describe('tasks at one spot (owner, 2026-11-24: overlapping dots hid each other)', () => {
+  it('are one counted dot at their middle; dots apart stay apart, in the order given', () => {
+    const dots = [
+      { id: 'a', x: 50, y: 50 },
+      { id: 'b', x: 53, y: 51 },
+      { id: 'c', x: 120, y: 80 },
+      { id: 'd', x: 51, y: 54 },
+    ];
+    const groups = groupDots(dots, 6);
+    expect(groups.map((group) => group.members.map((dot) => dot.id))).toEqual([['a', 'b', 'd'], ['c']]);
+    expect(groups[0]!.x).toBeCloseTo(51.333, 3);
+    expect(groups[0]!.y).toBeCloseTo(51.667, 3);
+    expect(groups[1]).toMatchObject({ x: 120, y: 80 });
+    expect(groupDots([], 6)).toEqual([]);
+  });
+
+  it('name themselves after what most of them are (ties: the first seen)', () => {
+    expect(mostCommon(['Mueller', 'Hyde Park', 'Mueller'])).toBe('Mueller');
+    expect(mostCommon(['Zilker', 'Downtown'])).toBe('Zilker');
+    expect(mostCommon([])).toBeUndefined();
+  });
+});
+
+describe('labels on the edge for far places (the open cities, from a visitor in none)', () => {
+  const width = 220;
+  const height = 140;
+  it('sit where the line toward each place leaves the minimap, on that side, clear of the corners', () => {
+    const [east, north] = placeEdgeLabels(
+      [
+        { id: 'gainesville', at: { x: 5000, y: 90 } },
+        { id: 'tulsa', at: { x: 120, y: -900 } },
+      ],
+      width,
+      height,
+    );
+    expect(east).toMatchObject({ id: 'gainesville', side: 'right', x: width - 8 });
+    expect(east!.y).toBeGreaterThan(70);
+    expect(east!.angle).toBeCloseTo(Math.atan2(20, 5000 - 110), 9);
+    expect(north).toMatchObject({ id: 'tulsa', side: 'top', y: 8 });
+    // Kept off the corners: a label is about 92 px wide.
+    const corner = placeEdgeLabels([{ id: 'nw', at: { x: -600, y: -500 } }], width, height)[0]!;
+    expect(corner.side).toBe('top');
+    expect(corner.x).toBe(92 / 2 + 4);
+  });
+
+  it('two places the same way stack along the edge; places on the minimap get none; at most the limit', () => {
+    const labels = placeEdgeLabels(
+      [
+        { id: 'houston', at: { x: 900, y: 80 } },
+        { id: 'gainesville', at: { x: 5000, y: 90 } },
+        { id: 'here', at: { x: 100, y: 60 } },
+        { id: 'denver', at: { x: -3000, y: 20 } },
+        { id: 'raleigh', at: { x: 4000, y: -3000 } },
+      ],
+      width,
+      height,
+    );
+    expect(labels.map((label) => label.id)).toEqual(['houston', 'gainesville', 'denver']);
+    const [houston, gainesville] = labels;
+    // Gainesville slid up, clear of Houston's label (28 px tall, 2 px apart).
+    expect(houston!.y - gainesville!.y).toBeCloseTo(30, 6);
+    expect(placeEdgeLabels([{ id: 'houston', at: { x: 900, y: 80 } }, { id: 'denver', at: { x: -3000, y: 20 } }], width, height, { limit: 1 }).map((label) => label.id)).toEqual(['houston']);
+  });
+
+  it("one that can't slide clear within reach is left out", () => {
+    const east = [70, 71, 72, 73].map((y, index) => ({ id: `east-${index}`, at: { x: 5000, y } }));
+    const labels = placeEdgeLabels(east, width, height, { limit: 4 });
+    expect(labels).toHaveLength(3);
+    // Each clear of the others.
+    const ys = labels.map((label) => label.y).sort((a, b) => a - b);
+    for (let index = 1; index < ys.length; index += 1) expect(ys[index]! - ys[index - 1]!).toBeGreaterThanOrEqual(28);
   });
 });

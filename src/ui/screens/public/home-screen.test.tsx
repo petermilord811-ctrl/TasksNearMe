@@ -205,12 +205,13 @@ describe('HomeScreen (the landing page)', () => {
     const hrefs = within(list).getAllByRole('link').map((link) => link.getAttribute('href'));
     const nearest = [...homePageData.map.pins].sort((a, b) => distanceMiles(inMueller, a.point) - distanceMiles(inMueller, b.point));
     expect(hrefs).toEqual(nearest.slice(0, hrefs.length).map((pin) => routes.publicTask(pin.slug)));
-    expect(screen.queryByText(/we're opening city by city/)).not.toBeInTheDocument();
+    expect(document.querySelector('[data-map-away]')).toBeNull();
   });
 
-  it('says how far the visitor is when outside the service area, and offers the waitlist (one line, one link)', () => {
+  it("in a city we haven't opened, says so by its name and how many people there wait, and offers the waitlist", () => {
     show(homePageData, { location: inDallas });
-    expect(screen.getByText(/^You're [\d,]+ mi from Austin: we're opening city by city\.$/)).toBeInTheDocument();
+    expect(screen.getByText(t('map.awayTitle', { place: 'Dallas' }))).toBeInTheDocument();
+    expect(screen.getByText(t('map.awayWaiting', { count: 29 }))).toBeInTheDocument();
     expect(screen.getByRole('link', { name: t('map.waitlist') })).toHaveAttribute('href', routes.waitlist());
   });
 

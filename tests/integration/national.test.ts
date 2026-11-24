@@ -2,6 +2,7 @@ import { and, eq, inArray, like } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { users } from '@/modules/accounts/schema';
 import { waitlistEntries } from '@/modules/marketing/schema';
+import { loadWaitingPlaces } from '@/modules/marketing/waiting-places';
 import { citiesComingNext, joinWaitlist, waitlistDemand } from '@/modules/marketing/waitlist';
 import { areas, markets } from '@/modules/markets/schema';
 import { setMarketStatus } from '@/modules/markets/status';
@@ -15,6 +16,7 @@ import { loadOnboardingState } from '@/modules/verification/state';
 import { auditLog } from '@/platform/audit/schema';
 import { createDb } from '@/platform/db/connect';
 import { outboxEvents } from '@/platform/outbox/schema';
+import { distanceMiles } from '@/shared/geo';
 
 /**
  * National (owner, 2026-11-14), and since 2026-11-23 with no limit of location: a helper anywhere gives a ZIP and city and
@@ -126,6 +128,20 @@ describe('the waitlist across the US', () => {
     expect(next.some((city) => city.city === 'Dallas')).toBe(false);
     // A prefix we cover leaves the list.
     expect((await citiesComingNext(db, ['802'])).some((city) => city.city === 'Denver')).toBe(false);
+  });
+
+  it('marks the places people wait for on the landing map (owner, 2026-11-24: "Now I am in Austin"): paused cities, and metro areas of three or more', async () => {
+    const places = await loadWaitingPlaces(db, 'all');
+    // 802: two entries and the Denver helper, at the middle of their ZIPs; Boulder's one entry (803) is no place.
+    const denver = places.find((place) => place.name === 'Denver' && place.state === 'CO');
+    expect(denver?.waiting).toBe(3);
+    expect(distanceMiles(denver!.point, { lat: 39.7392, lng: -104.9903 })).toBeLessThan(10);
+    expect(places.filter((place) => place.state === 'CO')).toHaveLength(1);
+    // A paused city is a place at its middle, its count hidden below three (Dallas has one waiting helper).
+    expect(places.find((place) => place.name === 'Dallas' && place.state === 'TX')).toEqual({ name: 'Dallas', state: 'TX', point: { lat: 32.7767, lng: -96.797 }, waiting: 0 });
+    expect(places.find((place) => place.name === 'New York')).toMatchObject({ state: 'NY', waiting: 0 });
+    // Most people first.
+    expect(places.map((place) => place.waiting)).toEqual(places.map((place) => place.waiting).sort((a, b) => b - a));
   });
 });
 

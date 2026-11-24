@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type ComponentType, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
-import { BellRing, Building2, Car, Expand, Flame, Layers, Lasso, Loader2, LocateFixed, MapPinned, Minus, Move, Navigation2, Plus, RotateCw, Shrink, Sparkles, SunMoon, Target, X, ZoomIn } from 'lucide-react';
+import { BellRing, Building2, Car, Expand, Flame, Layers, Lasso, Loader2, LocateFixed, Map as MapIcon, MapPinned, Minus, Move, Navigation2, Plus, RotateCw, Shrink, Sparkles, SunMoon, Target, X, ZoomIn } from 'lucide-react';
 import { routes, type LandingMapData, type MapArea } from '@/contracts';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { distanceMiles, roundMiles } from '@/shared/geo';
@@ -15,20 +15,21 @@ import { ARRIVAL_PANELS_AT, type ArrivalSource } from './arrival';
 import { prefetchBaseStyle } from './base-style';
 import { DEFAULT_LAYERS, MAP_FRAME_ATTRIBUTE, useOptionalMapExplorer, type MapLayers } from './explorer-state';
 import { MapCardRail } from './card-rail';
-import { listOrigin } from './map-math';
+import { listOrigin, showCityFrom } from './map-math';
 import type { DriveTimesState, MapControls, MapViewProps } from './maplibre-view';
+import type { MinimapAway } from './minimap';
 import { MINIMAP_SIZES, type MinimapMode } from './minimap-math';
 import { sitesInOutline } from './neighborhoods';
 import { StaticMap } from './static-map';
 
-/** The minimap loads with the live map, only where it shows (wide screens, and full screen there). */
+/** The minimap loads with the live map, only where it shows (wide screens; phones and tablets once asked for). */
 const MinimapDock = dynamic(() => import('./minimap').then((module) => module.MinimapDock), { ssr: false });
-/** How the visitor left the minimap (small, large or folded), kept for the visit. */
+/** How the visitor left the minimap (small, large or folded), kept on this device for next time. */
 const MINIMAP_KEY = 'tnm-minimap';
 
 function readMinimapMode(): MinimapMode {
   try {
-    const value = typeof window === 'undefined' ? null : window.sessionStorage.getItem(MINIMAP_KEY);
+    const value = typeof window === 'undefined' ? null : window.localStorage.getItem(MINIMAP_KEY);
     return value === 'large' || value === 'folded' ? value : 'small';
   } catch {
     return 'small';
@@ -75,6 +76,7 @@ export function TaskMap({
   fillFade = 'vertical',
   watchRef,
   controlsRow = false,
+  wide = false,
   controlsClassName,
   noteClassName,
   className,
@@ -106,6 +108,11 @@ export function TaskMap({
   watchRef?: RefObject<HTMLElement | null>;
   /** The controls in one row (wide screens, where a column would reach the heading on short screens). */
   controlsRow?: boolean;
+  /**
+   * Wide screens (1024 px and up): the minimap docks beside the tool bars. Narrower, a tool shows it over the map's
+   * top-left corner.
+   */
+  wide?: boolean;
   controlsClassName?: string;
   /** Where the map's notes sit: a new task, drawing an area, the area to watch. */
   noteClassName?: string;
@@ -113,7 +120,7 @@ export function TaskMap({
 }) {
   const t = useTranslations('landing.map');
   // Pointing at a category quiets the other pins; picking one also flies the map to its tasks.
-  const { activeCategory, selectedCategory, litTaskId, focusedTaskId, setHighlightedTaskId, pickTask, location, locateDevice, locating, area, pickArea } = useLanding();
+  const { activeCategory, selectedCategory, litTaskId, focusedTaskId, setHighlightedTaskId, pickTask, location, locateDevice, locating, area, pickArea, away, cities, switchCity } = useLanding();
   const explorer = useOptionalMapExplorer();
   const userPoint = location.status === 'granted' ? location.point : undefined;
   const userAccuracy = location.status === 'granted' ? location.accuracy : undefined;
@@ -148,10 +155,29 @@ export function TaskMap({
   const chooseMinimap = (mode: MinimapMode) => {
     setMinimapMode(mode);
     try {
-      window.sessionStorage.setItem(MINIMAP_KEY, mode);
+      window.localStorage.setItem(MINIMAP_KEY, mode);
     } catch {
       /* storage blocked: it's kept for this page only */
     }
+  };
+  /** Phones and tablets: the minimap is over the map's corner (a tool shows and hides it). */
+  const [phoneMinimap, setPhoneMinimap] = useState(false);
+  // In no open city: the minimap can show the visitor's own area, its edge pointing to the open cities.
+  const minimapAway = useMemo<MinimapAway | null>(
+    () =>
+      away
+        ? {
+            point: away.point,
+            place: away.place ? { name: away.place.name, state: away.place.state } : null,
+            cities: cities.map((item) => ({ slug: item.slug, name: item.name, point: item.point, miles: distanceMiles(away.point, item.point) })).sort((a, b) => a.miles - b.miles),
+          }
+        : null,
+    [away, cities],
+  );
+  /** An open city from the minimap's edge: back to the one the map has (from far, a jump first), or another. */
+  const showOpenCity = (slug: string) => {
+    if (slug !== marketSlug) switchCity(slug, 'pick');
+    else if (controls) showCityFrom(controls, map);
   };
   const hintTimer = useRef<number | undefined>(undefined);
   const fill = variant === 'fill';
@@ -167,6 +193,8 @@ export function TaskMap({
     };
   }, [arrivalSource]);
   const waiting = arriving && !fullscreen;
+  // An area being drawn or watched: the minimap steps back, out of reach.
+  const minimapBusy = Boolean(explorer?.drawing || explorer?.watchAreas);
   const label = market ? t('mapLabel', { market }) : undefined;
   const layers = explorer?.layers ?? localLayers;
   const setLayers = explorer?.setLayers ?? setLocalLayers;
@@ -430,7 +458,10 @@ export function TaskMap({
             layers={driveFar && layers.driveTimes ? { ...layers, driveTimes: false } : layers}
             fullscreen={fullscreen}
             request={explorer?.request ?? null}
-            onControls={(next) => setControls(() => next)}
+            onControls={(next) => {
+              setControls(() => next);
+              explorer?.setMapControls(next);
+            }}
             onView={explorer?.setView}
             onBearing={(bearing) => {
               if (needleRef.current) needleRef.current.style.transform = `rotate(${-bearing}deg)`;
@@ -542,6 +573,19 @@ export function TaskMap({
                 <BellRing aria-hidden="true" className="size-4" />
               </button>
             )}
+            {/* Phones and tablets: the minimap, over the map's corner, on request. */}
+            {!wide && (
+              <button
+                type="button"
+                onClick={() => setPhoneMinimap((on) => !on)}
+                aria-pressed={phoneMinimap}
+                aria-label={phoneMinimap ? t('minimapHide') : t('minimapShow')}
+                title={phoneMinimap ? t('minimapHide') : t('minimapShow')}
+                className={cn(TOOL, phoneMinimap ? 'bg-violet/[0.12] text-violet' : 'text-foreground/80')}
+              >
+                <MapIcon aria-hidden="true" className="size-4" />
+              </button>
+            )}
             <button
               ref={openRef}
               type="button"
@@ -573,7 +617,8 @@ export function TaskMap({
         <p
           role="status"
           data-map-panel=""
-          className={cn('glass absolute z-[3] inline-flex min-h-10 items-center gap-2.5 rounded-full px-3.5 text-xs font-medium whitespace-nowrap text-foreground shadow-overlay', fullscreen ? 'top-4 left-1/2 -translate-x-1/2' : 'top-3 left-3 lg:top-auto lg:bottom-[max(1.25rem,2.5svh)] lg:left-1/2 lg:-translate-x-1/2')}
+          // Phones: under the minimap while it's open over the same corner.
+          className={cn('glass absolute z-[3] inline-flex min-h-10 items-center gap-2.5 rounded-full px-3.5 text-xs font-medium whitespace-nowrap text-foreground shadow-overlay', fullscreen ? 'top-4 left-1/2 -translate-x-1/2' : cn('top-3 left-3 lg:top-auto lg:bottom-[max(1.25rem,2.5svh)] lg:left-1/2 lg:-translate-x-1/2', phoneMinimap && 'max-lg:top-[14.5rem]'))}
         >
           <Car aria-hidden="true" className="size-3.5 text-violet" />
           {driveState === 'none' ? (
@@ -588,22 +633,35 @@ export function TaskMap({
         </p>
       )}
 
-      {/* The minimap: the city at a glance, with what the big map shows framed (wide screens, beside the tool bars;
-          full screen, in its top-left corner). Not while an area is drawn or watched. */}
-      {fill && liveReady && controls && (!waiting || fullscreen) && !explorer?.drawing && !explorer?.watchAreas && (
+      {/* The minimap: the city at a glance (in no open city, the visitor's own area), with what the big map shows
+          framed. Wide screens: beside the tool bars (full screen: in its top-left corner), there from the arrival on.
+          Phones and tablets: over the map's top-left corner once the tool asks for it (full screen: above the cards).
+          While an area is drawn or watched, it steps back and is out of reach. */}
+      {fill && liveReady && controls && (wide || phoneMinimap) && (
         <div
+          inert={minimapBusy || undefined}
           className={cn(
-            'absolute z-[2] max-lg:hidden',
-            fullscreen ? 'top-4 left-4' : 'bottom-[max(1.25rem,2.5svh)] left-[calc(var(--map-edge)+3.75rem)] transition-opacity duration-300 group-data-[map-dragging]/stage:opacity-[0.58]',
+            'absolute z-[2] transition-opacity duration-300 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500',
+            wide
+              ? fullscreen
+                ? 'top-4 left-4'
+                : 'bottom-[max(1.25rem,2.5svh)] left-[calc(var(--map-edge)+3.75rem)] group-data-[map-dragging]/stage:opacity-[0.58]'
+              : fullscreen
+                ? 'bottom-[calc(9.75rem+env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))]'
+                : 'top-3 left-3',
+            minimapBusy && 'opacity-40',
           )}
         >
           <MinimapDock
             mode={minimapMode}
             onMode={chooseMinimap}
+            compact={!wide}
+            onClose={() => setPhoneMinimap(false)}
             map={map}
             pins={pinsShown}
             controls={controls}
             userPoint={userPoint}
+            userSource={userSource}
             litTaskId={litTaskId}
             pickedTaskId={focusedTaskId}
             activeCategory={activeCategory}
@@ -616,6 +674,9 @@ export function TaskMap({
             pulses={explorer?.pulses}
             market={market}
             timeZone={explorer?.timeZone}
+            away={minimapAway}
+            onShowCity={showOpenCity}
+            onBlockedWheel={() => fine && showHint('blocked', 1800)}
           />
         </div>
       )}

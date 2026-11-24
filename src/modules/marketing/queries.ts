@@ -49,6 +49,7 @@ import { quoteBreakdown } from '@/modules/payments/fees';
 import { citiesComingNext, WAITLIST_TAG, waitlistDemand } from './waitlist';
 import { neighborhoodsOnly } from '@/modules/markets/city-areas';
 import { findHomeMarketSlug } from '@/modules/verification/home-area';
+import { loadWaitingPlaces } from './waiting-places';
 
 /**
  * Public marketing page data. Cached (Cache Components) so the pages prerender and stay fast;
@@ -187,7 +188,7 @@ const MAP_PINS = 60;
 const KM_PER_MILE = 1.609344;
 
 async function landingMap(market: { id: string; centerLat: number; centerLng: number; serviceRadiusKm: number }, rows: RowScope): Promise<LandingMapData> {
-  const [open, areaRows, helperRows, cityRows] = await Promise.all([
+  const [open, areaRows, helperRows, cityRows, waiting] = await Promise.all([
     listRecentOpenTasks(db, { marketId: market.id, limit: MAP_PINS, now: new Date(), rows }),
     db
       .select({ id: areaTable.id, name: areaTable.name, slug: areaTable.slug, lat: areaTable.centerLat, lng: areaTable.centerLng })
@@ -220,6 +221,8 @@ async function landingMap(market: { id: string; centerLat: number; centerLng: nu
       .from(marketTable)
       .where(inArray(marketTable.status, ['live', 'prelaunch']))
       .orderBy(asc(marketTable.name)),
+    // Places people wait for (a visitor in one is told it isn't open yet): the same for every city.
+    loadWaitingPlaces(db, rows),
   ]);
   const helpersByArea = new Map(helperRows.map((row) => [row.areaId, row.value]));
   const pins: TaskMapPin[] = open.flatMap((task) => taskMapPinOf(task) ?? []);
@@ -243,6 +246,7 @@ async function landingMap(market: { id: string; centerLat: number; centerLng: nu
         serviceRadiusMiles: Math.round(row.serviceRadiusKm / KM_PER_MILE),
         timeZone: row.timeZone,
       })),
+    waiting,
   };
 }
 

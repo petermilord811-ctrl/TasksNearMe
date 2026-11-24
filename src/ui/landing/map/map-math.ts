@@ -1,4 +1,4 @@
-import type { LandingMapData, MapCity, TaskMapPin } from '@/contracts';
+import type { LandingMapData, MapCity, TaskMapPin, WaitingPlace } from '@/contracts';
 import { distanceMiles, roundMiles, type LatLng } from '@/shared/geo';
 
 /**
@@ -133,6 +133,45 @@ export function nearestCity(cities: readonly MapCity[], point: LatLng): { city: 
     if (!best || miles < best.miles) best = { city, miles };
   }
   return best;
+}
+
+/** How far from a place people wait for a visitor still counts as "there" (miles: about one metro area). */
+export const WAITING_REACH_MILES = 35;
+
+/**
+ * The place people wait for nearest a point, within `reach` miles (a visitor in no open city: "Not open in {name}
+ * yet"), or null. Worked out on the device, like `cityAt`.
+ */
+export function waitingPlaceNear(places: readonly WaitingPlace[] | undefined, point: LatLng, reach = WAITING_REACH_MILES): WaitingPlace | null {
+  let best: { place: WaitingPlace; miles: number } | null = null;
+  for (const place of places ?? []) {
+    const miles = distanceMiles(place.point, point);
+    if (miles <= reach && (!best || miles < best.miles)) best = { place, miles };
+  }
+  return best?.place ?? null;
+}
+
+/** The middle of what the map shows (its corners' average, [lng, lat] each), or null while they aren't all known. */
+export function cornersMiddle(corners: readonly (readonly [number, number])[]): LatLng | null {
+  if (corners.length === 0 || !corners.every(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat))) return null;
+  return { lat: corners.reduce((sum, [, lat]) => sum + lat, 0) / corners.length, lng: corners.reduce((sum, [lng]) => sum + lng, 0) / corners.length };
+}
+
+/** What `showCityFrom` needs of the live map's controls. */
+export interface CityCamera {
+  corners: () => [number, number][];
+  centerOn: (point: LatLng, options?: { animate?: boolean }) => void;
+  showCity: () => void;
+}
+
+/**
+ * Back to the city view. From far away (the visitor's own area, in a city we haven't opened), the map first jumps to
+ * the city: easing there would sweep hundreds of miles of streets past at street level.
+ */
+export function showCityFrom(controls: CityCamera, map: Pick<LandingMapData, 'center' | 'serviceRadiusMiles'>): void {
+  const middle = cornersMiddle(controls.corners());
+  if (middle && distanceMiles(middle, map.center) > map.serviceRadiusMiles * 3) controls.centerOn(map.center);
+  controls.showCity();
 }
 
 /**

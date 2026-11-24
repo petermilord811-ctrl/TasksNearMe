@@ -176,17 +176,19 @@ test.describe('public pages', () => {
     await expect(page.getByText(/\d+ (Example|Sample) (Lane|Street|Road)/)).toHaveCount(0);
   });
 
-  test('home map: outside the service area, how far it is and the city list, in one line', async ({ page, context }) => {
+  test("home map: in a city we haven't opened, it says so, with the waitlist and the nearest open city (owner, 2026-11-24: \"Now I am in Austin\")", async ({ page, context }) => {
     await context.grantPermissions(['geolocation']);
     await context.setGeolocation({ latitude: 32.7767, longitude: -96.797 }); // Dallas
     await page.goto('/');
     const map = page.locator('#tasks-near-you');
     // Found without a press (allowed before). National, cities open in turn (owner, 2026-11-14).
-    // One line over the map: how far, and the city's list (owner, 2026-11-21: fewer elements there).
-    await expect(map.getByText(/^You're [\d,]+ mi from Gainesville: we're opening city by city\.$/)).toBeVisible();
-    await expect(map.getByRole('link', { name: "Join your city's list" })).toHaveAttribute('href', '/waitlist');
-    // Another city is open nearer than this one (Austin, in the test world): it's one press away.
-    await expect(map.getByText(/^The nearest open city is Austin, [\d,]+ mi away\.$/)).toBeVisible();
+    const away = map.locator('[data-map-away]');
+    await expect(away).toContainText(/We're not open (where you are|in .+) yet/);
+    await expect(away.getByRole('link', { name: "Join your city's list" })).toHaveAttribute('href', '/waitlist');
+    // Another city is open nearer than the map's (Austin, in the test world): one press shows it.
+    await landOnMap(page);
+    await away.getByRole('button', { name: /^See Austin · [\d,]+ mi$/ }).click();
+    await expect(map.getByRole('button', { name: 'City: Austin, TX. Show another city' })).toBeVisible();
   });
 
   test('home map: a visitor in another open city sees that city, with the way back (owner, 2026-11-23: "If I am in Austin, you are still showing Gainesville")', async ({ page, context }) => {
@@ -260,22 +262,29 @@ test.describe('public pages', () => {
     await expect.poll(() => opened, { timeout: 30_000 }).toContain('/api/realtime/market/gainesville');
   });
 
-  test("home map: a helper's home neighborhood, instead of asking where they are", async ({ page, context }) => {
-    await context.grantPermissions(['geolocation']);
-    await context.setGeolocation({ latitude: 32.7767, longitude: -96.797 }); // Dallas: the device is never asked by itself
+  test("home map: a helper's home neighborhood, instead of asking where they are; on a trip, where they are (owner, 2026-11-24)", async ({ page, context }) => {
     const helper = await withHomeArea('Duckpond');
     try {
       await devSignIn(page, helper.email);
       await page.goto('/');
       const map = page.locator('#tasks-near-you');
+      // The browser hasn't shared the device's place: the home area, and the device isn't asked by itself.
       await expect(map.getByRole('button', { name: 'Tasks near your home' })).toBeVisible();
       await expect(map.getByText('Starting from your home area, Duckpond.')).toBeVisible();
       await expect(map.getByRole('list', { name: 'Open tasks nearest you' })).toBeVisible();
-      // Not Dallas: the device's location wasn't used.
-      await expect(map.getByText(/we're opening city by city/)).toHaveCount(0);
-      // "Where I am now" asks the device (here, Dallas: outside the city).
+      await expect(map.locator('[data-map-away]')).toHaveCount(0);
+      // Shared before, with the device in Dallas (far from home, not open yet): the map follows it, home a press away.
+      await context.grantPermissions(['geolocation']);
+      await context.setGeolocation({ latitude: 32.7767, longitude: -96.797 });
+      await page.reload();
+      await expect(map.locator('[data-map-away]')).toContainText(/We're not open (where you are|in .+) yet/);
+      await expect(map.getByText('Showing where you are now.')).toBeVisible();
+      await map.getByRole('button', { name: 'Back to my home area' }).click();
+      await expect(map.getByText('Starting from your home area, Duckpond.')).toBeVisible();
+      await expect(map.locator('[data-map-away]')).toHaveCount(0);
+      // "Where I am now": the device again.
       await map.getByRole('button', { name: 'Use where I am now' }).click();
-      await expect(map.getByText(/^You're [\d,]+ mi from Gainesville: we're opening city by city\.$/)).toBeVisible();
+      await expect(map.locator('[data-map-away]')).toBeVisible();
     } finally {
       await helper.remove();
     }

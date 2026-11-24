@@ -3,7 +3,8 @@ import type { LatLng } from '@/shared/geo';
 /**
  * Small, pure helpers for the landing map's minimap (unit-tested): its flat projection of the city (fine at city
  * scale), whether a point is in the big map's frame, how deep a neighborhood is shaded for its open tasks, the scale
- * bar's length, and the task under a press.
+ * bar's length, the task under a press, tasks at one spot drawn as one counted dot, and labels on its edge for far
+ * places (the open cities, seen from a visitor's own area).
  */
 
 export type MinimapSize = 'small' | 'large';
@@ -110,4 +111,128 @@ export function inPolygon(point: MiniPoint, ring: readonly MiniPoint[]): boolean
     if (a.y > point.y !== b.y > point.y && point.x < ((b.x - a.x) * (point.y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
   }
   return inside;
+}
+
+/** Away from every open city, the minimap shows the visitor's own area: this many miles from them to its top and bottom. */
+export const MINIMAP_AWAY_MILES = 10;
+
+/** Dots closer than this (pixels) are drawn as one counted dot. */
+export const DOT_GROUP_REACH = 6;
+
+/** Dots drawn as one: their middle and who's in it (one member: a plain dot). */
+export interface DotGroup<T> {
+  x: number;
+  y: number;
+  members: T[];
+}
+
+/**
+ * Tasks at (nearly) the same spot, as one counted dot instead of dots hiding each other: in the order given (newest
+ * first), each dot joins the first group whose middle is within `reach` pixels, or starts one; a group's middle is
+ * its members' average.
+ */
+export function groupDots<T extends MiniPoint>(dots: readonly T[], reach = DOT_GROUP_REACH): DotGroup<T>[] {
+  const groups: (DotGroup<T> & { sumX: number; sumY: number })[] = [];
+  for (const dot of dots) {
+    const group = groups.find((item) => Math.hypot(item.x - dot.x, item.y - dot.y) <= reach);
+    if (!group) {
+      groups.push({ x: dot.x, y: dot.y, members: [dot], sumX: dot.x, sumY: dot.y });
+      continue;
+    }
+    group.members.push(dot);
+    group.sumX += dot.x;
+    group.sumY += dot.y;
+    group.x = group.sumX / group.members.length;
+    group.y = group.sumY / group.members.length;
+  }
+  return groups.map(({ x, y, members }) => ({ x, y, members }));
+}
+
+/** The most common value (ties: the first seen), e.g. a group's neighborhood or category. */
+export function mostCommon<T>(values: readonly T[]): T | undefined {
+  const counts = new Map<T, number>();
+  let best: T | undefined;
+  let bestCount = 0;
+  for (const value of values) {
+    const next = (counts.get(value) ?? 0) + 1;
+    counts.set(value, next);
+    if (next > bestCount) {
+      best = value;
+      bestCount = next;
+    }
+  }
+  return best;
+}
+
+export type EdgeSide = 'left' | 'right' | 'top' | 'bottom';
+
+/** About how big a far place's label is on the minimap's edge (pixels): its name over its miles. */
+export const EDGE_LABEL_SIZE = { width: 92, height: 28 };
+
+export interface EdgeLabel {
+  id: string;
+  /** Where the label is anchored (on the edge it sits on, kept clear of the corners). */
+  x: number;
+  y: number;
+  /** Radians, 0 = right: the way to the place (the label's arrow points there). */
+  angle: number;
+  /** The edge it sits on (the label grows inward from it). */
+  side: EdgeSide;
+}
+
+/**
+ * Where labels for far places sit on the minimap's edge, each where the line toward its place leaves the minimap: in
+ * the order given (nearest first), at most `limit`. A label is about `size` pixels (a city's name over its miles), kept
+ * off the corners; one that would overlap a label already placed slides along its edge until it's clear (by at most
+ * `maxNudge` pixels: two cities the same way stack), or is left out. Places on the minimap itself get none.
+ */
+export function placeEdgeLabels(
+  items: readonly { id: string; at: MiniPoint }[],
+  width: number,
+  height: number,
+  options: { limit?: number; margin?: number; size?: { width: number; height: number }; maxNudge?: number } = {},
+): EdgeLabel[] {
+  const { limit = 3, margin = 8, size = EDGE_LABEL_SIZE, maxNudge = 48 } = options;
+  const halfWidth = size.width / 2;
+  const halfHeight = size.height / 2;
+  // Each label's box: it grows inward from its edge.
+  const box = (at: EdgeLabel) => {
+    const left = at.side === 'left' ? at.x : at.side === 'right' ? at.x - size.width : at.x - halfWidth;
+    const top = at.side === 'top' ? at.y : at.side === 'bottom' ? at.y - size.height : at.y - halfHeight;
+    return { left, top, right: left + size.width, bottom: top + size.height };
+  };
+  const placed: EdgeLabel[] = [];
+  const collides = (label: EdgeLabel) => {
+    const mine = box(label);
+    return placed.some((other) => {
+      const theirs = box(other);
+      return mine.left < theirs.right && mine.right > theirs.left && mine.top < theirs.bottom && mine.bottom > theirs.top;
+    });
+  };
+  for (const item of items) {
+    if (placed.length >= limit) break;
+    const edge = miniEdge(item.at, width, height, margin);
+    if (!edge) continue;
+    const dx = item.at.x - width / 2;
+    const dy = item.at.y - height / 2;
+    const across = Math.abs(dx) / Math.max(1, width / 2 - margin) >= Math.abs(dy) / Math.max(1, height / 2 - margin);
+    const side: EdgeSide = across ? (dx < 0 ? 'left' : 'right') : dy < 0 ? 'top' : 'bottom';
+    const [low, high] = across ? [halfHeight + 2, height - halfHeight - 2] : [halfWidth + 4, width - halfWidth - 4];
+    const ideal = Math.min(high, Math.max(low, across ? edge.y : edge.x));
+    const at = (along: number): EdgeLabel =>
+      across ? { id: item.id, x: side === 'left' ? margin : width - margin, y: along, angle: edge.angle, side } : { id: item.id, x: along, y: side === 'top' ? margin : height - margin, angle: edge.angle, side };
+    // Where it would sit, or just past each label already placed (either way along its edge): the nearest clear one.
+    const spots = [ideal];
+    for (const other of placed) {
+      const theirs = box(other);
+      if (across) spots.push(theirs.top - halfHeight - 2, theirs.bottom + halfHeight + 2);
+      else spots.push(theirs.left - halfWidth - 2, theirs.right + halfWidth + 2);
+    }
+    const fit = spots
+      .filter((along) => along >= low && along <= high && Math.abs(along - ideal) <= maxNudge)
+      .sort((a, b) => Math.abs(a - ideal) - Math.abs(b - ideal))
+      .find((along) => !collides(at(along)));
+    if (fit !== undefined) placed.push(at(fit));
+  }
+  return placed;
 }

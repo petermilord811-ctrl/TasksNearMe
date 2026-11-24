@@ -7,6 +7,7 @@ import type { LatLng } from '@/shared/geo';
 import { usePrefersReducedMotion } from '@/ui/motion';
 import { useLiveTasks, type MapPulse } from './live';
 import { inTimeRange, type ListSort, type TimeRange, type ViewBounds } from './map-math';
+import type { MapControls } from './maplibre-view';
 
 /** Marks the map frame on the page (the list's "show on the map" buttons bring it into view on phones). */
 export const MAP_FRAME_ATTRIBUTE = 'data-task-map';
@@ -61,6 +62,9 @@ interface ExplorerState {
   /** The live map is up (its own controls only make sense then). */
   liveReady: boolean;
   setLiveReady: (ready: boolean) => void;
+  /** The live map's camera, while it's up (the heading's card sends it back to the city from the visitor's own area). */
+  mapControls: MapControls | null;
+  setMapControls: (controls: MapControls | null) => void;
   /**
    * The visitor has started using the map (a drag, a zoom, a turn, a group opened, a task shown): the heading's card
    * folds to one line on wide screens so the map has the room, until the visitor opens it again.
@@ -134,6 +138,7 @@ export function MapExplorerProvider({
   const [followMap, setFollowMap] = useState(true);
   const [view, setViewState] = useState<ViewBounds | null>(null);
   const [liveReady, setLiveReady] = useState(false);
+  const [mapControls, setMapControls] = useState<MapControls | null>(null);
   const [engaged, setEngaged] = useState(initialView?.engaged ?? false);
   const [collapsed, setCollapsed] = useState(initialView?.collapsed ?? false);
   const [near, setNear] = useState(false);
@@ -204,6 +209,8 @@ export function MapExplorerProvider({
       setView,
       liveReady,
       setLiveReady,
+      mapControls,
+      setMapControls,
       engaged,
       setEngaged,
       collapsed,
@@ -229,7 +236,7 @@ export function MapExplorerProvider({
       watchAreas,
       setWatchAreas,
     }),
-    [sortChoice, withinMiles, followMap, view, setView, liveReady, engaged, collapsed, live.connected, timeZone, request, requestFocus, layers, live.pins, live.arrivals, live.pulses, live.latest, live.dismissLatest, when, whenRange, mapPins, drawing, watchAreas],
+    [sortChoice, withinMiles, followMap, view, setView, liveReady, mapControls, engaged, collapsed, live.connected, timeZone, request, requestFocus, layers, live.pins, live.arrivals, live.pulses, live.latest, live.dismissLatest, when, whenRange, mapPins, drawing, watchAreas],
   );
   return <ExplorerContext.Provider value={value}>{children}</ExplorerContext.Provider>;
 }

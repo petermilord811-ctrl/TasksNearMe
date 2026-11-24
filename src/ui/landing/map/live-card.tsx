@@ -5,15 +5,14 @@ import { AnimatePresence, m } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { ChevronDown, ChevronUp, House, Loader2, LocateFixed, ShieldCheck } from 'lucide-react';
 import { routes } from '@/contracts';
-import { distanceMiles } from '@/shared/geo';
 import { useFormat } from '@/ui/lib/format';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
 import { spring, usePrefersReducedMotion } from '@/ui/motion';
-import { useLanding } from '../landing-state';
+import { useLanding, type AwayPlace } from '../landing-state';
 import { CitySwitcher } from './city-switcher';
 import { useMapExplorer } from './explorer-state';
-import { aboutMiles, cityAt, insideServiceArea, nearestCity } from './map-math';
+import { aboutMiles, inBounds, insideServiceArea, showCityFrom } from './map-math';
 import { useNow } from './use-now';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -25,13 +24,15 @@ const EASE = [0.22, 1, 0.36, 1] as const;
  * task comes in), then "Use my location". Wide screens: once the visitor uses the map, it folds to one line (the mark,
  * the city and the pulse) so the map has the room, and opens again with a press. Phones: always open, above the map.
  *
- * Its notes (announced politely): the map moved to the visitor's own city (with the way back), a city that didn't
- * load, a helper's home neighborhood, and a visitor outside every open city (how far, the nearest open city to see,
- * and the waitlist).
+ * Its notes (announced politely): the map moved to the visitor's own city (with the way back), or didn't because they
+ * picked a city before (their city, one press away), a city that didn't load, a visitor in no open city ("Not open in
+ * Austin yet", how many wait there, the waitlist, their area and the nearest open city), a helper's home neighborhood
+ * (or, on a trip, the way back to it), and the location blocked (how to allow it) or not shared yet (the button
+ * invites).
  */
 export function LiveCard({ wide, className }: { wide: boolean; className?: string }) {
   const t = useTranslations('landing.map');
-  const { city, cities, location, requestLocation, locateDevice, locating, locateIssue, cityIssue, cityMovedFrom, switchCity, cityLoading } = useLanding();
+  const { city, cities, location, requestLocation, locateDevice, locating, locateIssue, cityIssue, cityMovedFrom, cityHere, switchCity, cityLoading, away, home, backToHome } = useLanding();
   const explorer = useMapExplorer();
   const reduced = usePrefersReducedMotion();
   const market = city.market.name;
@@ -39,12 +40,9 @@ export function LiveCard({ wide, className }: { wide: boolean; className?: strin
   const fromHome = location.status === 'granted' && location.source === 'home';
   const here = location.status === 'granted' ? location.point : undefined;
   const outside = here !== undefined && !insideServiceArea(city.map, here);
-  // Outside every open city (in one, the map moves there by itself): how far this one is, and the nearest other one.
-  const elsewhere = here !== undefined && outside && cityAt(cities, here) === null;
-  const nearest = here && elsewhere ? nearestCity(cities.filter((item) => item.slug !== city.market.slug), here) : null;
-  const thisFar = here ? distanceMiles(here, city.map.center) : null;
-  const suggest = nearest && thisFar !== null && nearest.miles < thisFar ? nearest : null;
   const issueCity = cityIssue ? cities.find((item) => item.slug === cityIssue.slug) : undefined;
+  // The question was closed without an answer: the button invites again, lit.
+  const invite = location.status === 'dismissed';
 
   return (
     <div data-compact={compact ? '' : undefined} className={cn('lg:glass lg:rounded-[1.75rem] lg:px-5 lg:py-4', !compact && 'lg:px-6 lg:py-5', 'transition-[padding] duration-300 ease-[var(--ease-out)]', className)}>
@@ -89,6 +87,7 @@ export function LiveCard({ wide, className }: { wide: boolean; className?: strin
             className={cn(
               'pointer-events-auto inline-flex min-h-12 items-center gap-2 rounded-full px-5 text-sm font-semibold transition-[background-color,box-shadow,color] duration-300 active:scale-[0.97] disabled:opacity-70 lg:min-h-11',
               location.status === 'granted' ? 'glass text-foreground' : 'bg-foreground text-background hover:shadow-[0_12px_28px_-12px_rgb(0_0_0/0.45)]',
+              invite && 'shadow-[0_0_0_5px_color-mix(in_oklab,var(--violet)_26%,transparent),0_12px_28px_-12px_rgb(0_0_0/0.45)]',
             )}
           >
             <m.span layout="position" className="inline-flex items-center gap-2">
@@ -100,13 +99,22 @@ export function LiveCard({ wide, className }: { wide: boolean; className?: strin
         </div>
       </Fold>
 
-      <div role="status" aria-live="polite" className="text-sm [&:not(:empty)]:mt-3">
+      <div role="status" aria-live="polite" className="text-sm [&:not(:empty)]:mt-3 [&>*+*]:mt-2">
         {/* The map moved to the city the visitor is in: one press goes back. */}
         {cityMovedFrom && !cityLoading && (
           <p className="text-foreground">
             <span>{fromHome ? t('cityMovedHome', { city: market }) : t('cityMoved', { city: market })}</span>{' '}
-            <button type="button" onClick={() => switchCity(cityMovedFrom.slug, 'pick')} className="pointer-events-auto font-semibold text-primary underline-offset-4 hover:underline">
+            <button type="button" onClick={() => switchCity(cityMovedFrom.slug, 'pick')} className={NOTE_ACTION}>
               {t('cityBack', { city: cityMovedFrom.name })}
+            </button>
+          </p>
+        )}
+        {/* The visitor is in another open city, and the map stayed (a city they picked before): theirs is one press away. */}
+        {cityHere && !cityMovedFrom && !cityLoading && (
+          <p className="text-foreground">
+            <span>{fromHome ? t('cityHereHome', { city: cityHere.name }) : t('cityHere', { city: cityHere.name })}</span>{' '}
+            <button type="button" onClick={() => switchCity(cityHere.slug, 'pick')} className={NOTE_ACTION}>
+              {t('outsideShow', { city: cityHere.name })}
             </button>
           </p>
         )}
@@ -114,39 +122,81 @@ export function LiveCard({ wide, className }: { wide: boolean; className?: strin
           <p className="text-foreground">
             <span>{cityIssue.code === 'not_found' ? t('cityGone', { city: issueCity?.name ?? cityIssue.slug }) : t('cityFailed', { city: issueCity?.name ?? cityIssue.slug })}</span>{' '}
             {cityIssue.code === 'unavailable' && (
-              <button type="button" onClick={() => switchCity(cityIssue.slug, 'pick')} className="pointer-events-auto font-semibold text-primary underline-offset-4 hover:underline">
+              <button type="button" onClick={() => switchCity(cityIssue.slug, 'pick')} className={NOTE_ACTION}>
                 {t('cityRetry')}
               </button>
             )}
           </p>
         )}
+        {away && !cityLoading && <AwayNote away={away} />}
         {/* A helper's home neighborhood: the map starts there, and "where I am now" is a press away. */}
-        {fromHome && !compact && (
+        {fromHome && !away && !compact && (
           <p className="text-muted-foreground">
             {locateIssue === 'denied' ? t('homeDenied') : t('homeNote', { area: location.areaName ?? '' })}{' '}
-            <button type="button" onClick={locateDevice} disabled={locating} className="pointer-events-auto font-semibold text-primary underline-offset-4 hover:underline disabled:opacity-60">
+            <button type="button" onClick={locateDevice} disabled={locating} className={cn(NOTE_ACTION, 'disabled:opacity-60')}>
               {locating ? t('locating') : t('homeUseDevice')}
             </button>
           </p>
         )}
-        {location.status === 'denied' && !compact && <p className="text-muted-foreground">{t('denied', { market })}</p>}
-        {location.status === 'unavailable' && !compact && <p className="text-muted-foreground">{t('unavailable', { market })}</p>}
-        {elsewhere && thisFar !== null && !cityLoading && (
-          <p className="text-foreground">
-            <span>{t('outsideFar', { miles: aboutMiles(thisFar), market })}</span>{' '}
-            {suggest && (
-              <>
-                <span>{t('outsideNearest', { city: suggest.city.name, miles: aboutMiles(suggest.miles) })}</span>{' '}
-                <button type="button" onClick={() => switchCity(suggest.city.slug, 'pick')} className="pointer-events-auto font-semibold text-primary underline-offset-4 hover:underline">
-                  {t('outsideShow', { city: suggest.city.name })}
-                </button>
-                <span aria-hidden="true"> · </span>
-              </>
-            )}
-            <Link href={routes.waitlist()} className="pointer-events-auto font-semibold text-primary underline-offset-4 hover:underline">{t('waitlist')}</Link>
+        {/* A helper on a trip (the map follows the device away from home): home is a press away. */}
+        {home && location.status === 'granted' && !fromHome && !cityMovedFrom && !compact && (
+          <p className="text-muted-foreground">
+            {t('tripNote')}{' '}
+            <button type="button" onClick={backToHome} className={NOTE_ACTION}>
+              {t('tripHome')}
+            </button>
           </p>
         )}
+        {location.status === 'denied' && !compact && <p className="text-muted-foreground">{t('denied', { market })}</p>}
+        {invite && !compact && <p className="text-muted-foreground">{t('dismissed')}</p>}
+        {location.status === 'unavailable' && !compact && <p className="text-muted-foreground">{t('unavailable', { market })}</p>}
       </div>
+    </div>
+  );
+}
+
+/** A note's action: a link-styled button (or link) in the card's words. */
+const NOTE_ACTION = 'pointer-events-auto font-semibold text-primary underline-offset-4 hover:underline';
+
+/**
+ * The visitor is in no open city: it says so by the place's name, with how many people wait there (or that joining
+ * the list starts it), then the waitlist, their own area (while the map shows somewhere else), and the nearest open
+ * city with how far it is (while the map shows their area, or when it's another city than the map's).
+ */
+function AwayNote({ away }: { away: AwayPlace }) {
+  const t = useTranslations('landing.map');
+  const { city, switchCity, requestLocation } = useLanding();
+  const explorer = useMapExplorer();
+  const shown = explorer.view !== null && inBounds(away.point, explorer.view);
+  const nearest = away.nearest;
+  const nearestIsShown = nearest?.city.slug === city.market.slug;
+  const controls = explorer.mapControls;
+  const showNearest = () => {
+    if (!nearest) return;
+    if (nearestIsShown) {
+      if (controls) showCityFrom(controls, city.map);
+      return;
+    }
+    switchCity(nearest.city.slug, 'pick');
+  };
+  const place = away.place;
+  return (
+    <div data-map-away="">
+      <p className="font-semibold text-foreground">{place ? t('awayTitle', { place: place.name }) : t('awayTitleHere')}</p>
+      <p className="mt-0.5 text-muted-foreground">{place && place.waiting > 0 ? t('awayWaiting', { count: place.waiting }) : t('awayFirst')}</p>
+      <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+        <Link href={routes.waitlist()} className={NOTE_ACTION}>{t('waitlist')}</Link>
+        {!shown && (
+          <button type="button" onClick={requestLocation} className={NOTE_ACTION}>
+            {away.source === 'home' ? t('showHome') : t('awayShowArea')}
+          </button>
+        )}
+        {nearest && (nearestIsShown ? shown && controls !== null : true) && (
+          <button type="button" onClick={showNearest} className={NOTE_ACTION}>
+            {t('awayShowCity', { city: nearest.city.name, miles: aboutMiles(nearest.miles) })}
+          </button>
+        )}
+      </p>
     </div>
   );
 }

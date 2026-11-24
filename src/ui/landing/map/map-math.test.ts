@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { austinLandingMap, austinMapPins } from '@/fixtures';
 import { distanceMiles, roundMiles, type LatLng } from '@/shared/geo';
 import {
@@ -7,6 +7,7 @@ import {
   bloomOffsets,
   citiesInOrder,
   cityAt,
+  cornersMiddle,
   circleBounds,
   circleRing,
   donutArcs,
@@ -26,8 +27,10 @@ import {
   pinnedArrivalProgress,
   pixelsPerMile,
   projector,
+  showCityFrom,
   shownAmountCents,
   stepAroundPanels,
+  waitingPlaceNear,
 } from './map-math';
 
 const inMueller: LatLng = { lat: 30.2989, lng: -97.7064 };
@@ -345,5 +348,43 @@ describe('the city a visitor is in (owner, 2026-11-23: "If I am in Austin, you a
     expect(citiesInOrder(cities, inDallas).map((city) => city.slug)).toEqual(['austin', 'houston', 'gainesville']);
     // The list it was given is left as it was.
     expect(cities.map((city) => city.slug)).toEqual(['austin', 'gainesville', 'houston']);
+  });
+});
+
+describe('a visitor in no open city (owner, 2026-11-24: "Now I am in Austin, but you still show Gainesville")', () => {
+  const places = austinLandingMap.waiting!;
+
+  it('is near the place people wait for within reach (a metro area), the nearest one if two are', () => {
+    expect(waitingPlaceNear(places, inDallas)?.name).toBe('Dallas');
+    // Fort Worth, about 30 mi from Dallas's middle: still Dallas.
+    expect(waitingPlaceNear(places, { lat: 32.7555, lng: -97.3308 })?.name).toBe('Dallas');
+    expect(waitingPlaceNear(places, { lat: 29.4241, lng: -98.4936 })?.name).toBe('San Antonio');
+    // Waco is about 90 mi from both: no place.
+    expect(waitingPlaceNear(places, { lat: 31.5493, lng: -97.1467 })).toBeNull();
+    expect(waitingPlaceNear(undefined, inDallas)).toBeNull();
+    expect(waitingPlaceNear(places, inDallas, 0.5)?.name).toBe('Dallas');
+  });
+
+  it("the big map's middle, from its corners (none while one isn't known)", () => {
+    expect(cornersMiddle([[-98, 31], [-97, 31], [-97, 30], [-98, 30]])).toEqual({ lat: 30.5, lng: -97.5 });
+    expect(cornersMiddle([])).toBeNull();
+    expect(cornersMiddle([[-98, 31], [Number.NaN, 31]])).toBeNull();
+  });
+
+  it('back to the city: from far away (the visitor\'s own area) a jump to it first, then the city view', () => {
+    const camera = (middle: LatLng) => ({
+      corners: (): [number, number][] => [[middle.lng - 0.1, middle.lat + 0.1], [middle.lng + 0.1, middle.lat - 0.1]],
+      centerOn: vi.fn(),
+      showCity: vi.fn(),
+    });
+    const far = camera(inDallas);
+    showCityFrom(far, austinLandingMap);
+    expect(far.centerOn).toHaveBeenCalledWith(austinLandingMap.center);
+    expect(far.showCity).toHaveBeenCalledTimes(1);
+    expect(far.centerOn.mock.invocationCallOrder[0]!).toBeLessThan(far.showCity.mock.invocationCallOrder[0]!);
+    const near = camera(inMueller);
+    showCityFrom(near, austinLandingMap);
+    expect(near.centerOn).not.toHaveBeenCalled();
+    expect(near.showCity).toHaveBeenCalledTimes(1);
   });
 });

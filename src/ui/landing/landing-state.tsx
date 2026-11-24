@@ -1,10 +1,10 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
-import type { CategorySlug, LandingCity, MapArea, MapCity, MapHome } from '@/contracts';
+import type { CategorySlug, LandingCity, MapArea, MapCity, MapHome, WaitingPlace } from '@/contracts';
 import { distanceMiles, type LatLng } from '@/shared/geo';
 import { useLandingHandlers } from './landing-handlers';
-import { cityAt } from './map/map-math';
+import { cityAt, insideServiceArea, nearestCity, waitingPlaceNear } from './map/map-math';
 
 export type VisitorLocation =
   | { status: 'idle' }
@@ -14,11 +14,30 @@ export type VisitorLocation =
    * location, or a signed-in helper's home neighborhood (`areaName`; its center, never the address).
    */
   | { status: 'granted'; point: LatLng; accuracy?: number; source?: 'device' | 'home'; areaName?: string }
+  /** The browser refused: location is blocked for the site (its settings can allow it again). */
   | { status: 'denied' }
+  /** The browser's question was closed without an answer: it can be asked again (the card invites the visitor). */
+  | { status: 'dismissed' }
   | { status: 'unavailable' };
+
+/**
+ * The visitor (their device, or a helper's home area) is in no open city (owner, 2026-11-24: "Now I am in Austin, but
+ * you still show Gainesville"): where they are, the place people wait for there, if any (its name, and how many wait),
+ * and the nearest open city. Worked out on the device: the location goes nowhere.
+ */
+export interface AwayPlace {
+  point: LatLng;
+  source: 'device' | 'home';
+  place: WaitingPlace | null;
+  nearest: { city: MapCity; miles: number } | null;
+}
 
 /** A new fix closer than this to the last one (miles, about 25 m) doesn't move anything. */
 const LOCATION_JITTER_MILES = 0.015;
+/** A helper's device this far from their home area (miles), or in another city, is on a trip: the map follows it. */
+const HOME_TRIP_MILES = 25;
+/** A refusal this soon after a press (ms) came without a question (the browser stopped asking): blocked, not dismissed. */
+const UNASKED_REFUSAL_MS = 400;
 /** The page asked for the location by itself once in this visit (a "Not now" isn't asked again). */
 const AUTO_ASKED_KEY = 'tnm-location-asked';
 
@@ -87,8 +106,21 @@ interface LandingState {
   locating: boolean;
   /** The last press couldn't get the device's location (the map keeps the home neighborhood if there is one). */
   locateIssue: 'denied' | 'unavailable' | null;
-  /** A signed-in helper's home neighborhood, when they have one: the map's starting place instead of the device's. */
+  /**
+   * A signed-in helper's home neighborhood, when they have one: the map's starting place instead of the device's. If
+   * the browser already shares the device's place, it's watched quietly: far from home (another city, a trip), the map
+   * follows the device, and `backToHome` returns.
+   */
   home: MapHome | null;
+  /** Back to the home neighborhood (and it stays, wherever the device goes, until "where I am now"). */
+  backToHome: () => void;
+  /** The visitor is in no open city: their place, the waiting there, and the nearest open city. */
+  away: AwayPlace | null;
+  /**
+   * The open city the visitor's location is in, while the map shows another and didn't move there by itself (a city
+   * picked on an earlier visit, or the page's city brought back for one of its tasks): the card offers it.
+   */
+  cityHere: MapCity | null;
   /**
    * The visitor has reached the map: find them without a press. Already allowed, it's silent (and happens as the
    * page opens anyway); not decided yet, the browser asks once per visit; refused, nothing happens. A failure here
@@ -155,6 +187,11 @@ async function locationPermission(): Promise<{ state: 'granted' | 'prompt' | 'de
   }
 }
 
+/** A helper's device away from their home neighborhood (another city, or a trip): the map follows the device. */
+function onTrip(home: LatLng, device: LatLng, cities: readonly MapCity[]): boolean {
+  return distanceMiles(home, device) > HOME_TRIP_MILES || cityAt(cities, home)?.slug !== cityAt(cities, device)?.slug;
+}
+
 function askedThisVisit(): boolean {
   try {
     return window.sessionStorage.getItem(AUTO_ASKED_KEY) === '1';
@@ -184,7 +221,9 @@ function markAsked(): void {
  * (worked out here: only that city's slug is asked for, through the route's `onLoadCity`), or one picked in the
  * map's switcher (remembered, and the page is drawn again for it, so the hero and the sections follow). A city the
  * location found changes the map only: the hero and the sections below stay about the page's city, and a task or a
- * neighborhood of theirs, picked while the map shows another city, brings the map back first.
+ * neighborhood of theirs, picked while the map shows another city, brings the map back first. A visitor in no open
+ * city (`away`) is shown their own area once, with the place's name and how many people wait there; a city picked
+ * before stays put, and the card offers the visitor's own city or area instead.
  */
 export function LandingProvider({
   children,
@@ -260,9 +299,11 @@ export function LandingProvider({
   const [cityLoading, setCityLoading] = useState<string | null>(null);
   const [cityIssue, setCityIssue] = useState<CityIssue | null>(null);
   const [cityMovedFrom, setCityMovedFrom] = useState<MapCity | null>(null);
-  /** The visitor picked a city (in this visit, or the page's own on an earlier one): their location no longer moves the
-   * map to another. */
-  const pickedCity = useRef(cityPicked);
+  /** The visitor picked the page's city on an earlier visit: their location doesn't move the map away from it (the card
+   * offers their own city instead). */
+  const pickedEarlier = useRef(cityPicked);
+  /** The visitor picked a city in this visit: they know where they are, so the map stays and nothing is offered. */
+  const pickedNow = useRef(false);
   /** Each request's number: an answer that comes after a newer request is dropped. */
   const cityTicket = useRef(0);
   /** A neighborhood of the page's city picked (the hero, the coverage section) while the map showed another city. */
@@ -277,7 +318,7 @@ export function LandingProvider({
   const cities = city.map.cities.length > 0 ? city.map.cities : pageCity.map.cities;
   const switchCity = useCallback(
     (slug: string, how: CityMove) => {
-      if (how === 'pick') pickedCity.current = true;
+      if (how === 'pick') pickedNow.current = true;
       const current = cityRef.current;
       const sameCity = slug === current.market.slug;
       // Already there: a pick is still remembered (the cookie), and a note about having moved goes.
@@ -355,17 +396,38 @@ export function LandingProvider({
     locationRef.current = location;
   }, [location]);
   const watchId = useRef<number | null>(null);
-  /** A press is waiting for the next fix (then the map goes there). */
+  /** A press is waiting for the next fix (then the map goes there), and when it was made. */
   const pressWaiting = useRef(false);
+  const pressedAt = useRef(0);
+  /** The device's last fix: a press while the device is already watched (quietly, behind a home) answers with it. */
+  const deviceFix = useRef<{ point: LatLng; accuracy?: number } | null>(null);
   const autoTried = useRef(Boolean(initialLocation) || homeLocation !== null);
   const homeRef = useRef(homeLocation);
   useEffect(() => {
     homeRef.current = homeLocation;
   }, [homeLocation]);
+  /**
+   * How a home neighborhood holds against the device: `auto` until the device turns out to be on a trip (then the map
+   * follows it: `off`), `chosen` once the visitor went back home (the device no longer moves the map), `off` after a
+   * press for "where I am now".
+   */
+  const homeHold = useRef<'auto' | 'chosen' | 'off'>(homeLocation ? 'auto' : 'off');
+  const citiesRef = useRef(cities);
+  useEffect(() => {
+    citiesRef.current = cities;
+  }, [cities]);
 
   const stopWatching = useCallback(() => {
     if (watchId.current !== null && typeof navigator !== 'undefined') navigator.geolocation?.clearWatch(watchId.current);
     watchId.current = null;
+  }, []);
+
+  /** The device's place on the map (a fix within a few steps of the last one changes nothing). */
+  const showDevice = useCallback((point: LatLng, accuracy: number | undefined) => {
+    setLocation((current) => {
+      if (current.status === 'granted' && current.source !== 'home' && distanceMiles(current.point, point) < LOCATION_JITTER_MILES && current.accuracy === accuracy) return current;
+      return { status: 'granted', point, accuracy, source: 'device' };
+    });
   }, []);
 
   const watch = useCallback(
@@ -375,9 +437,18 @@ export function LandingProvider({
         return;
       }
       if (source === 'press') {
+        // A press wants the device's place, over a home neighborhood too.
+        homeHold.current = 'off';
+        pressedAt.current = performance.now();
+        setLocateIssue(null);
+        const fix = watchId.current !== null ? deviceFix.current : null;
+        if (fix) {
+          showDevice(fix.point, fix.accuracy);
+          setLocatePicks((count) => count + 1);
+          return;
+        }
         pressWaiting.current = true;
         setLocating(true);
-        setLocateIssue(null);
         // Only a press says it's looking (an automatic try waits quietly, maybe behind the browser's question).
         if (locationRef.current.status !== 'granted') setLocation({ status: 'locating' });
       }
@@ -386,10 +457,15 @@ export function LandingProvider({
         (position) => {
           const point = { lat: position.coords.latitude, lng: position.coords.longitude };
           const accuracy = Number.isFinite(position.coords.accuracy) ? Math.round(position.coords.accuracy) : undefined;
-          setLocation((current) => {
-            if (current.status === 'granted' && current.source !== 'home' && distanceMiles(current.point, point) < LOCATION_JITTER_MILES && current.accuracy === accuracy) return current;
-            return { status: 'granted', point, accuracy, source: 'device' };
-          });
+          deviceFix.current = { point, accuracy };
+          const home = homeRef.current;
+          if (home?.status === 'granted' && homeHold.current !== 'off' && !pressWaiting.current) {
+            // The home neighborhood leads: the device takes over only on a trip (another city, or far from home), and
+            // never once the visitor chose home.
+            if (homeHold.current === 'chosen' || !onTrip(home.point, point, citiesRef.current)) return;
+            homeHold.current = 'off';
+          }
+          showDevice(point, accuracy);
           if (pressWaiting.current) {
             pressWaiting.current = false;
             setLocating(false);
@@ -404,8 +480,15 @@ export function LandingProvider({
           const fallback = homeRef.current;
           if (error.code === error.PERMISSION_DENIED) {
             stopWatching();
-            if (press) setLocateIssue('denied');
-            setLocation(fallback ?? (press ? { status: 'denied' } : { status: 'idle' }));
+            deviceFix.current = null;
+            // Blocked (the site's settings say no, or the browser answered without asking), or only the question
+            // closed: then it can be asked again, and the card invites the visitor to.
+            const unasked = press && performance.now() - pressedAt.current < UNASKED_REFUSAL_MS;
+            void locationPermission().then(({ state }) => {
+              const dismissed = state === 'prompt' && !unasked;
+              if (press) setLocateIssue(dismissed ? null : 'denied');
+              setLocation(fallback ?? (dismissed ? { status: 'dismissed' } : press ? { status: 'denied' } : { status: 'idle' }));
+            });
             return;
           }
           // A slow or failed fix: a known place stays (the watch carries on); otherwise a press says so, and a later
@@ -418,7 +501,7 @@ export function LandingProvider({
         { enableHighAccuracy: false, maximumAge: 60_000, timeout: 15_000 },
       );
     },
-    [stopWatching],
+    [stopWatching, showDevice],
   );
 
   const requestLocation = useCallback(() => {
@@ -439,11 +522,21 @@ export function LandingProvider({
     watch('press');
   }, [watch]);
 
-  // Allowed before (on an earlier visit): found as the page opens, with no question. The browser's answer can also
-  // change while the page is open (its site settings).
+  const backToHome = useCallback(() => {
+    const home = homeRef.current;
+    if (!home) return;
+    homeHold.current = 'chosen';
+    pressWaiting.current = false;
+    setLocating(false);
+    setLocateIssue(null);
+    setLocation(home);
+    setLocatePicks((count) => count + 1);
+  }, []);
+
+  // Allowed before (on an earlier visit): found as the page opens, with no question (behind a helper's home
+  // neighborhood, quietly: see `home`). The browser's answer can also change while the page is open (its settings).
   useEffect(() => {
-    // A helper's home neighborhood is where the map starts: the device isn't asked by itself (only "where I am now").
-    if (initialLocation || homeLocation) return;
+    if (initialLocation) return;
     let cancelled = false;
     let status: PermissionStatus | undefined;
     const onChange = () => {
@@ -451,7 +544,8 @@ export function LandingProvider({
       if (status.state === 'granted') watch('auto');
       else if (status.state === 'denied') {
         stopWatching();
-        setLocation((current) => (current.status === 'granted' ? { status: 'idle' } : current));
+        deviceFix.current = null;
+        setLocation((current) => (current.status === 'granted' && current.source !== 'home' ? (homeRef.current ?? { status: 'idle' }) : current));
       }
     };
     void locationPermission().then((answer) => {
@@ -467,7 +561,7 @@ export function LandingProvider({
       cancelled = true;
       status?.removeEventListener?.('change', onChange);
     };
-  }, [initialLocation, homeLocation, watch, stopWatching]);
+  }, [initialLocation, watch, stopWatching]);
   useEffect(() => stopWatching, [stopWatching]);
 
   const autoLocate = useCallback(() => {
@@ -485,19 +579,52 @@ export function LandingProvider({
   }, [watch]);
 
   // The visitor's location falls in another open city (worked out here, on the device; only the city's slug is asked
-  // for): the map goes there by itself, once per city in a visit, unless the visitor picked a city themselves.
+  // for): the map goes there by itself, once per city in a visit. A city picked on an earlier visit stays, and so does
+  // the page's city once a task of its brought the map back: the card offers the visitor's city instead. A city picked
+  // in this visit stays with nothing offered (they know where they are).
   const autoMoved = useRef(new Set<string>());
+  const [cityHere, setCityHere] = useState<MapCity | null>(null);
+  const shownSlug = city.market.slug;
   useEffect(() => {
-    if (location.status !== 'granted' || pickedCity.current || !onLoadCity) return;
-    const here = cityAt(cities, location.point);
-    if (!here || here.slug === cityRef.current.market.slug || autoMoved.current.has(here.slug)) return;
+    const here = location.status === 'granted' && onLoadCity ? cityAt(cities, location.point) : null;
     const timer = window.setTimeout(() => {
-      if (pickedCity.current || autoMoved.current.has(here.slug)) return;
+      if (!here || here.slug === cityRef.current.market.slug || pickedNow.current) {
+        setCityHere(null);
+        return;
+      }
+      if (pickedEarlier.current || autoMoved.current.has(here.slug)) {
+        setCityHere((current) => (current?.slug === here.slug ? current : here));
+        return;
+      }
       autoMoved.current.add(here.slug);
+      setCityHere(null);
       switchCity(here.slug, 'location');
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [location, cities, onLoadCity, switchCity]);
+  }, [location, cities, shownSlug, onLoadCity, switchCity]);
+
+  // In no open city (one we haven't opened, or between cities): the card says so, by the place's name and with how
+  // many wait there, and the map goes to the visitor's own area once in a visit, unless they picked a city (the card
+  // then offers their area).
+  const waitingPlaces = city.map.waiting ?? pageCity.map.waiting;
+  const away = useMemo<AwayPlace | null>(() => {
+    if (location.status !== 'granted') return null;
+    const point = location.point;
+    if (insideServiceArea(city.map, point) || cityAt(cities, point)) return null;
+    return { point, source: location.source ?? 'device', place: waitingPlaceNear(waitingPlaces, point), nearest: nearestCity(cities, point) };
+  }, [location, city.map, cities, waitingPlaces]);
+  const isAway = away !== null;
+  const awayCentered = useRef(false);
+  useEffect(() => {
+    if (!isAway || awayCentered.current) return;
+    const timer = window.setTimeout(() => {
+      if (awayCentered.current) return;
+      awayCentered.current = true;
+      if (pickedEarlier.current || pickedNow.current) return;
+      setLocatePicks((count) => count + 1);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [isAway]);
 
   const value = useMemo<LandingState>(
     () => ({
@@ -519,6 +646,9 @@ export function LandingProvider({
       locating,
       locateIssue,
       home: homeValue,
+      backToHome,
+      away,
+      cityHere,
       autoLocate,
       pointer,
       audience,
@@ -550,6 +680,9 @@ export function LandingProvider({
       locating,
       locateIssue,
       homeValue,
+      backToHome,
+      away,
+      cityHere,
       autoLocate,
       audience,
       area,

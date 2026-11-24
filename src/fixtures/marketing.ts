@@ -247,6 +247,14 @@ export const austinLandingMap: LandingMapData = {
     { slug: 'gainesville', name: 'Gainesville', state: 'FL', status: 'live', point: { lat: 29.6516, lng: -82.3248 }, serviceRadiusMiles: 16, timeZone: 'America/New_York' },
     { slug: 'houston', name: 'Houston', state: 'TX', status: 'prelaunch', point: { lat: 29.7604, lng: -95.3698 }, serviceRadiusMiles: 22, timeZone: 'America/Chicago' },
   ],
+  // Where people wait for us (the waitlist page's "coming next", and a paused city with too few to count): a visitor
+  // there is told "We're not open in Dallas yet" and how many wait.
+  waiting: [
+    { name: 'Dallas', state: 'TX', point: { lat: 32.7767, lng: -96.797 }, waiting: 29 },
+    { name: 'San Antonio', state: 'TX', point: { lat: 29.4241, lng: -98.4936 }, waiting: 19 },
+    { name: 'Raleigh', state: 'NC', point: { lat: 35.7796, lng: -78.6382 }, waiting: 8 },
+    { name: 'Tampa', state: 'FL', point: { lat: 27.9506, lng: -82.4572 }, waiting: 0 },
+  ],
 };
 
 /**

@@ -309,6 +309,7 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
                 onDragging={onDragging}
                 fillFade={wide ? 'top' : 'vertical'}
                 watchRef={stageRef}
+                wide={wide}
                 // (Their own transition already eases opacity: only the drag's step back is added.)
                 controlsClassName="right-[var(--page-gutter)] bottom-[16%] lg:right-auto lg:bottom-[max(1.25rem,2.5svh)] lg:left-[var(--map-edge)] lg:group-data-[map-dragging]/stage:opacity-[0.58]"
                 noteClassName="top-3 left-1/2 -translate-x-1/2 justify-center lg:top-[calc(var(--top-bar-offset,5.5rem)+1rem)]"

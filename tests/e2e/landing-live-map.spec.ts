@@ -175,12 +175,32 @@ test.describe('the live map', () => {
     await expect(map.getByText('10 min')).toBeVisible();
   });
 
-  test('far away: how far the city is and the nearest open one, and the marker pointing to the visitor stays clear of the panels', async ({ page, context }) => {
+  test("in a city we haven't opened: the map shows the visitor's own area, and the minimap points to the open cities (owner, 2026-11-24)", async ({ page, context }) => {
     await context.grantPermissions(['geolocation']);
     await context.setGeolocation({ latitude: 32.7767, longitude: -96.797 }); // Dallas
     const map = await openLiveMap(page);
-    await expect(map.getByText(/^You're [\d,]+ mi from Gainesville: we're opening city by city\.$/)).toBeVisible();
-    await expect(map.getByText(/^The nearest open city is Austin, [\d,]+ mi away\.$/)).toBeVisible();
+    await expect(map.locator('[data-map-away]')).toContainText(/We're not open (where you are|in .+) yet/);
+    // The map went to the visitor's area (once): the minimap shows it, its edge pointing to the open cities.
+    const minimap = map.locator('[data-minimap]');
+    await expect(minimap).toHaveAttribute('data-minimap-away', '', { timeout: 30_000 });
+    await expect(minimap.locator('[data-minimap-edge="austin"]')).toBeVisible();
+    // Their area is on the map: the card offers the nearest open city instead of their area.
+    await expect(map.locator('[data-map-away]').getByRole('button', { name: 'Show my area' })).toHaveCount(0);
+    // The way back to the map's city, from the minimap's header (a jump, then the city view).
+    await minimap.getByRole('button', { name: 'Show Gainesville', exact: true }).click();
+    await expect(minimap).not.toHaveAttribute('data-minimap-away', '', { timeout: 20_000 });
+    await expect(map.locator('[data-map-away]').getByRole('button', { name: 'Show my area' })).toBeVisible();
+  });
+
+  test('far away, with a city picked before: the map stays, and the marker pointing to the visitor stays clear of the panels', async ({ page, context, baseURL }) => {
+    await context.grantPermissions(['geolocation']);
+    await context.setGeolocation({ latitude: 32.7767, longitude: -96.797 }); // Dallas
+    // Picked on an earlier visit: the map doesn't go to the visitor's area by itself.
+    await context.addCookies([{ name: 'tnm_city', value: 'gainesville', url: baseURL! }]);
+    const map = await openLiveMap(page);
+    const away = map.locator('[data-map-away]');
+    await expect(away).toContainText(/We're not open (where you are|in .+) yet/);
+    await expect(away.getByRole('button', { name: 'Show my area' })).toBeVisible();
     // The marker on the map's edge: solid, with the distance and the drive, and (once the panels have settled: the
     // card grows as its notes come) over none of the page's panels. A failure lists the rectangles.
     const pill = map.getByRole('button', { name: /^You're [\d,]+ mi from the middle of the map/ });
@@ -201,8 +221,8 @@ test.describe('the live map', () => {
         { timeout: 8000, intervals: [400] },
       )
       .toEqual([]);
-    // Showing the nearest city instead: the map goes there.
-    await map.getByRole('button', { name: 'Show Austin' }).click();
+    // Showing the nearest open city instead: the map goes there.
+    await away.getByRole('button', { name: /^See Austin · [\d,]+ mi$/ }).click();
     await expect(map.getByRole('button', { name: 'City: Austin, TX. Show another city' })).toBeVisible({ timeout: 20_000 });
   });
 

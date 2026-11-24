@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createTranslator, NextIntlClientProvider } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { routes, type LandingCityResult, type LandingHandlers } from '@/contracts';
+import { routes, type LandingCityResult, type LandingHandlers, type MapHome } from '@/contracts';
 import { gainesvilleLandingCity, homePageData } from '@/fixtures';
 import { distanceMiles, type LatLng } from '@/shared/geo';
 import messages from '../../../messages/en/ui';
@@ -37,7 +37,27 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  // The browser's location stand-ins (`stubLocation`).
+  delete (navigator as { geolocation?: unknown }).geolocation;
+  delete (navigator as { permissions?: unknown }).permissions;
 });
+
+/**
+ * The browser's location, as a stand-in: its answer so far (the Permissions API), then the device's place, or a
+ * refusal (`error`: 1 is "denied"), after `delay` ms.
+ */
+function stubLocation(answer: { state: PermissionState; point?: LatLng; error?: number; delay?: number }) {
+  const watchPosition = vi.fn((success: PositionCallback, failure?: PositionErrorCallback | null) => {
+    window.setTimeout(() => {
+      if (answer.point) success({ coords: { latitude: answer.point.lat, longitude: answer.point.lng, accuracy: 25 } } as GeolocationPosition);
+      else failure?.({ code: answer.error ?? 1, PERMISSION_DENIED: 1, POSITION_UNAVAILABLE: 2, TIMEOUT: 3, message: 'no' } as GeolocationPositionError);
+    }, answer.delay ?? 0);
+    return 7;
+  });
+  Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { watchPosition, clearWatch: vi.fn(), getCurrentPosition: vi.fn() } });
+  Object.defineProperty(navigator, 'permissions', { configurable: true, value: { query: vi.fn(async () => ({ state: answer.state, addEventListener: vi.fn(), removeEventListener: vi.fn() })) } });
+  return watchPosition;
+}
 
 function show(location?: LatLng) {
   return render(
@@ -113,11 +133,11 @@ describe('the map explorer', () => {
 });
 
 /** The page drawn for Austin, with a way to load another city (a stand-in for the route's server action). */
-function showCities(handlers: LandingHandlers, options: { location?: LatLng; cityPicked?: boolean } = {}) {
+function showCities(handlers: LandingHandlers, options: { location?: LatLng; cityPicked?: boolean; home?: MapHome } = {}) {
   return render(
     <NextIntlClientProvider locale="en" messages={messages}>
       <LandingHandlersProvider handlers={handlers}>
-        <LandingProvider initialCity={{ market: homePageData.market, map: homePageData.map }} initialLocation={options.location} cityPicked={options.cityPicked}>
+        <LandingProvider initialCity={{ market: homePageData.market, map: homePageData.map }} initialLocation={options.location} cityPicked={options.cityPicked} home={options.home}>
           <MapSection data={homePageData} mapMode="static" />
         </LandingProvider>
       </LandingHandlersProvider>
@@ -130,6 +150,7 @@ const loads = (results: Record<string, LandingCityResult>) =>
   vi.fn(async ({ slug }: { slug: string; remember: boolean }): Promise<LandingCityResult> => results[slug] ?? { ok: false, code: 'not_found' });
 /** A visitor in Gainesville's Duckpond. */
 const inGainesville: LatLng = { lat: 29.6577, lng: -82.3195 };
+const inDallas: LatLng = { lat: 32.7767, lng: -96.797 };
 
 describe('one city at a time (owner, 2026-11-23: "If I am in Austin, you are still showing Gainesville")', () => {
   it('a visitor whose location falls in another open city sees that city, and one press goes back (remembered)', async () => {
@@ -152,26 +173,84 @@ describe('one city at a time (owner, 2026-11-23: "If I am in Austin, you are sti
     expect(screen.getByRole('button', { name: t('cityButton', { city: t('cityName', { city: 'Austin', state: 'TX' }) }) })).toBeInTheDocument();
   });
 
-  it('a city the visitor picked before stays, wherever they are', async () => {
+  it("a city the visitor picked before stays, wherever they are, and the card offers the one they're in (owner, 2026-11-24)", async () => {
     const onLoadCity = loads({ gainesville: { ok: true, city: gainesvilleLandingCity } });
     showCities({ onLoadCity }, { location: inGainesville, cityPicked: true });
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(await screen.findByText(t('cityHere', { city: 'Gainesville' }))).toBeInTheDocument();
     expect(onLoadCity).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: t('cityButton', { city: t('cityName', { city: 'Austin', state: 'TX' }) }) })).toBeInTheDocument();
+    // One press: their city, remembered.
+    fireEvent.click(screen.getByRole('button', { name: t('outsideShow', { city: 'Gainesville' }) }));
+    await waitFor(() => expect(onLoadCity).toHaveBeenCalledWith({ slug: 'gainesville', remember: true }));
+    expect(await screen.findByRole('button', { name: t('cityButton', { city: t('cityName', { city: 'Gainesville', state: 'FL' }) }) })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(t('cityHere', { city: 'Gainesville' }))).not.toBeInTheDocument());
   });
 
-  it('far from every city: how far this one is, and the nearest open city to show instead', async () => {
+  it('in no open city: says so, offers the waitlist and their own area, and the nearest open city to see instead', async () => {
     const onLoadCity = loads({ houston: { ok: false, code: 'unavailable' } });
-    // Baton Rouge: no city there; Houston is nearer than Austin.
+    // Baton Rouge: no city there, and too few waiting to name it; Houston is nearer than Austin.
     showCities({ onLoadCity }, { location: { lat: 30.4515, lng: -91.1871 } });
-    expect(screen.getByText(/^You're [\d,]+ mi from Austin: we're opening city by city\.$/)).toBeInTheDocument();
-    expect(screen.getByText(/^The nearest open city is Houston, [\d,]+ mi away\.$/)).toBeInTheDocument();
+    const away = within(document.querySelector<HTMLElement>('[data-map-away]')!);
+    expect(away.getByText(t('awayTitleHere'))).toBeInTheDocument();
+    expect(away.getByText(t('awayFirst'))).toBeInTheDocument();
+    expect(away.getByRole('link', { name: t('waitlist') })).toHaveAttribute('href', routes.waitlist());
+    expect(away.getByRole('button', { name: t('awayShowArea') })).toBeInTheDocument();
     expect(onLoadCity).not.toHaveBeenCalled();
     // Houston can't be loaded just now: the card says so, with a way to try again.
-    fireEvent.click(screen.getByRole('button', { name: t('outsideShow', { city: 'Houston' }) }));
+    fireEvent.click(away.getByRole('button', { name: /^See Houston · [\d,]+ mi$/ }));
     expect(await screen.findByText(t('cityFailed', { city: 'Houston' }))).toBeInTheDocument();
     expect(onLoadCity).toHaveBeenCalledWith({ slug: 'houston', remember: true });
     expect(screen.getByRole('button', { name: t('cityRetry') })).toBeInTheDocument();
+  });
+
+  it("in a city we haven't opened: names it and how many people there wait (owner, 2026-11-24: \"Now I am in Austin\")", () => {
+    showCities({ onLoadCity: loads({}) }, { location: inDallas });
+    const away = within(document.querySelector<HTMLElement>('[data-map-away]')!);
+    expect(away.getByText(t('awayTitle', { place: 'Dallas' }))).toBeInTheDocument();
+    expect(away.getByText(t('awayWaiting', { count: 29 }))).toBeInTheDocument();
+    expect(away.getByRole('button', { name: t('awayShowArea') })).toBeInTheDocument();
+    // Austin, the city the map shows, is the nearest open one: nothing else to suggest while it shows Austin.
+    expect(away.queryByRole('button', { name: /^See / })).toBeNull();
+  });
+
+  it("a helper's home neighborhood leads; on a trip (the browser already shares the device) the map follows it, and home is a press away", async () => {
+    stubLocation({ state: 'granted', point: inDallas });
+    showCities({ onLoadCity: loads({}) }, { home: { areaName: 'Mueller', point: inMueller } });
+    // The device, watched quietly, is in Dallas: far from home, and not open yet.
+    expect(await screen.findByText(t('awayTitle', { place: 'Dallas' }))).toBeInTheDocument();
+    expect(screen.getByText(t('tripNote'))).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: t('tripHome') }));
+    expect(await screen.findByText(t('homeNote', { area: 'Mueller' }))).toBeInTheDocument();
+    expect(screen.queryByText(t('awayTitle', { place: 'Dallas' }))).not.toBeInTheDocument();
+  });
+
+  it("a helper's device near home changes nothing: the map stays on the home neighborhood", async () => {
+    const watch = stubLocation({ state: 'granted', point: { lat: 30.3, lng: -97.712 } });
+    showCities({ onLoadCity: loads({}) }, { home: { areaName: 'Mueller', point: inMueller } });
+    await waitFor(() => expect(watch).toHaveBeenCalledTimes(1));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    });
+    expect(screen.getByText(t('homeNote', { area: 'Mueller' }))).toBeInTheDocument();
+    expect(screen.queryByText(t('tripNote'))).not.toBeInTheDocument();
+  });
+
+  it("the browser's question closed without an answer: the card invites again", async () => {
+    // The question was open a while (a person closed it), then the browser answered no; it would ask again.
+    stubLocation({ state: 'prompt', error: 1, delay: 600 });
+    showCities({ onLoadCity: loads({}) });
+    fireEvent.click(screen.getByRole('button', { name: t('useLocation') }));
+    expect(await screen.findByText(t('dismissed'), undefined, { timeout: 3000 })).toBeInTheDocument();
+    expect(screen.queryByText(t('denied', { market: 'Austin' }))).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('useLocation') })).toBeEnabled();
+  });
+
+  it('location blocked for the site: the card says how to allow it', async () => {
+    stubLocation({ state: 'denied', error: 1 });
+    showCities({ onLoadCity: loads({}) });
+    fireEvent.click(screen.getByRole('button', { name: t('useLocation') }));
+    expect(await screen.findByText(t('denied', { market: 'Austin' }))).toBeInTheDocument();
+    expect(screen.queryByText(t('dismissed'))).not.toBeInTheDocument();
   });
 
   it('the switcher lists every open city with its status; a pick moves the map there', async () => {

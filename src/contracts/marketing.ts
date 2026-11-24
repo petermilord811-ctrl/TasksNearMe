@@ -202,6 +202,22 @@ export interface LandingMapData {
    * the city a visitor's location falls in.
    */
   cities: MapCity[];
+  /**
+   * Places people are waiting for (paused cities, and the waitlist's busiest areas), most people first: a visitor
+   * whose location falls near one, and in no open city, is told "Not open in {name} yet". Optional for older data.
+   */
+  waiting?: WaitingPlace[];
+}
+
+/**
+ * A place people are waiting for: a city that isn't open (paused, or never opened) by its approximate middle, and how
+ * many people there joined the waitlist or wait as helpers (0 when fewer than 3: too few to say).
+ */
+export interface WaitingPlace {
+  name: string;
+  state: string;
+  point: { lat: number; lng: number };
+  waiting: number;
 }
 
 /**
