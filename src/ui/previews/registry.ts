@@ -89,6 +89,7 @@ import { requestHelperPreviews } from './request-helper.preview';
 import { availabilityPreviews } from './availability.preview';
 import { neighborhoodDayPreviews } from './neighborhood-days.preview';
 import { neighborGroupPreviews } from './neighbor-groups.preview';
+import { teamPreviews } from './teams.preview';
 import { availabilitySlotPreviews } from './availability-slots.preview';
 import { myClientsPreviews } from './my-clients.preview';
 import { proposeRebookPreviews } from './propose-rebook.preview';
@@ -176,6 +177,7 @@ export const previews: PreviewEntry[] = [
   ...availabilityPreviews,
   ...neighborhoodDayPreviews,
   ...neighborGroupPreviews,
+  ...teamPreviews,
   ...availabilitySlotPreviews,
   ...myClientsPreviews,
   ...proposeRebookPreviews,

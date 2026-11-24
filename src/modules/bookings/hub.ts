@@ -46,6 +46,7 @@ import { clientSummary } from './people';
 import { tipViewOf } from './tips';
 import { thankOnNeighborsHref } from '@/modules/community/thanks';
 import { thanksPanelFor } from '@/modules/thanks/views';
+import { bookingTeamFor, teamTagsFor } from '@/modules/teams/views';
 import { scheduledPaymentViewOf } from './scheduled';
 import { seriesOfBooking, seriesSummaries, skipVisit } from './series';
 import { bookingTerms, bookings } from './schema';
@@ -222,7 +223,7 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     paymentLines.sort((a, b) => a.at.localeCompare(b.at));
   }
 
-  const [dispute, openChange, tip, series, scheduledPayment, thankHref, thanks, family] = await Promise.all([
+  const [dispute, openChange, tip, series, scheduledPayment, thankHref, thanks, family, team] = await Promise.all([
     getBookingDispute(db, booking.id, userId, role),
     bookingOpenChange(db, booking.id, userId, role, now),
     tipViewOf(deps, booking, role, completion?.finalBreakdown.taskPriceCents ?? terms.breakdown.taskPriceCents, now),
@@ -234,6 +235,8 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     thanksPanelFor(db, userId, booking, now),
     // Family followers (2026-11-24): the client's panel; who follows, for both.
     familyViewFor(db, booking, userId, now),
+    // Team up (2026-11-24): the lead's invite, the partner's part, the client's choices.
+    bookingTeamFor(db, userId, booking, now),
   ]);
 
   const helperBeforePayment = role === 'helper' && !booking.confirmedAt;
@@ -297,6 +300,7 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     // The helper canceled and the task is open for offers again: the client's page links to it.
     ...(role === 'poster' && booking.status === 'canceled' && facts.task?.reopened && facts.task.status === 'open' ? { taskReopened: true } : {}),
     ...(scheduledPayment ? { scheduledPayment } : {}),
+    ...(team ? { team } : {}),
     actions: allBookingActions(facts, role, policy, now),
   };
 }
@@ -339,6 +343,8 @@ export async function getBookingsPage(db: Db, userId: string, now: Date): Promis
   const helpers = await getHelperSummaries(rows.map((row) => row.booking.helperUserId), db);
   const clientIds = [...new Set(rows.map((row) => row.booking.posterUserId))];
   const clients = new Map((await Promise.all(clientIds.map((id) => clientSummary(db, id)))).flatMap((c) => (c ? [[c.id, c] as const] : [])));
+  // Team jobs (2026-11-24): both parts carry "Team: Jordan (lead) and Sam".
+  const teamTags = await teamTagsFor(db, rows.map((row) => row.booking));
 
   const list = rows.flatMap(({ booking, terms }): BookingListRow[] => {
     const role = roleOf(booking, userId);
@@ -367,6 +373,7 @@ export async function getBookingsPage(db: Db, userId: string, now: Date): Promis
             : terms.breakdown.helperEarningsCents,
         needsAction: nextStep !== undefined,
         ...(nextStep ? { nextStep } : {}),
+        ...(teamTags.has(booking.id) ? { team: teamTags.get(booking.id)! } : {}),
       },
     ];
   });

@@ -16,6 +16,7 @@ import { Badge } from '@/ui/primitives/badge';
 import { buttonVariants } from '@/ui/primitives/button';
 import { MessageComposerContent } from './message-composer';
 import { MessageLog } from './message-log';
+import { TeamBarView } from '@/ui/components/teams/team-card';
 import { ChatAssistProvider, type ChatAssistSeed } from './chat-assist';
 import { QuietHoursNote } from '@/ui/components/messaging/quiet-hours-note';
 import { ThanksOffer } from '@/ui/components/thanks/thank-you-note';
@@ -156,9 +157,10 @@ export function ThreadContent({ data, handlers, now, safety, composerState, assi
     {/* Photos dropped anywhere on the conversation attach to the message (2026-11-23). */}
     <div data-drop-photos="" className={cn('relative flex flex-col overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06]', thread.contactMasking ? 'h-[max(24rem,calc(100dvh-var(--app-header-offset,4.25rem)-13rem))]' : 'h-[max(24rem,calc(100dvh-var(--app-header-offset,4.25rem)-9rem))]', 'lg:h-[max(32rem,calc(100dvh-var(--app-header-offset,4.25rem)-10rem))]')}>
       {/* What we agreed, on top of a booking's messages (2026-11-24). */}
+      {data.team && <TeamBarView bar={data.team} />}
       {data.agreement && <AgreementCard agreement={data.agreement} threadId={thread.id} canProposeChange={Boolean(data.canProposeChange)} />}
       <ReplyProvider>
-      <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier) } : {})} otherParty={other} now={now} readUpTo={data.readUpTo} firstUnreadId={data.firstUnreadId} focusId={focusId} canReply={composer.canSend} {...(composer.canSend && handlers.onReact ? { onReact: handlers.onReact } : {})} {...(data.assist?.translate && handlers.onTranslate ? { onTranslate: handlers.onTranslate } : {})} {...(data.cards ? { cards: data.cards } : {})} {...(handlers.requestCards ? { requestCardHandlers: handlers.requestCards } : {})} {...(handlers.thanks ? { thanksHandlers: handlers.thanks } : {})} className="min-h-0 flex-1" />
+      <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier) } : {})} otherParty={other} now={now} readUpTo={data.readUpTo} firstUnreadId={data.firstUnreadId} focusId={focusId} canReply={composer.canSend} {...(composer.canSend && handlers.onReact ? { onReact: handlers.onReact } : {})} {...(data.assist?.translate && handlers.onTranslate ? { onTranslate: handlers.onTranslate } : {})} {...(data.cards ? { cards: data.cards } : {})} {...(handlers.requestCards ? { requestCardHandlers: handlers.requestCards } : {})} {...(handlers.thanks ? { thanksHandlers: handlers.thanks } : {})} {...(handlers.teams ? { teamHandlers: handlers.teams } : {})} className="min-h-0 flex-1" />
       {/* A stranger's first message (2026-11-23): Accept, Ignore or Block; answering accepts too. */}
       {composer.disabledReason !== 'blocked' && <RequestBanner thread={thread} name={firstName} handlers={handlers} {...(safety ? { onBlock: safety.handlers.onBlock } : {})} />}
       {data.thanks?.canWrite && handlers.thanks && <ThanksOffer bookingId={data.thanks.bookingId} name={firstName} onSave={handlers.thanks.onSave} compact className="border-t border-foreground/[0.07] bg-brand-soft/40 px-4 dark:border-white/[0.06]" />}

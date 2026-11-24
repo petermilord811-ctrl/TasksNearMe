@@ -26,3 +26,4 @@ export * from '../../modules/webhooks/schema';
 export * from '../../modules/community/schema';
 export * from '../../modules/questions/schema';
 export * from '../../modules/searches/schema';
+export * from '../../modules/teams/schema';

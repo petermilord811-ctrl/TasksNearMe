@@ -54,6 +54,13 @@ export const TIMELINE_EVENT_TYPES = [
   'follower_removed',
   /** A follower stopped following (`params.name`). */
   'follower_left',
+  /**
+   * Team up (2026-11-24): the lead invited a partner (`team_invited`, in the lead and partner's conversation) and the
+   * partner said yes (`team_proposed`, in the lead's booking conversation, for the client); `params.teamId`. Each shows
+   * as the team's card.
+   */
+  'team_invited',
+  'team_proposed',
 ] as const;
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];
 
@@ -82,5 +89,7 @@ export interface TimelineEvent {
     noteId?: string;
     /** A family follower's display name (`follower_added`, `follower_removed`, `follower_left`). */
     name?: string;
+    /** A team invite (`team_invited`, `team_proposed`). */
+    teamId?: string;
   };
 }

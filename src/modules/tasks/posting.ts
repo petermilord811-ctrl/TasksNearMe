@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { and, count, eq, gt, inArray } from 'drizzle-orm';
+import { and, count, eq, gt, inArray, isNull } from 'drizzle-orm';
 import { posterIdentityRequirement } from '@/modules/trust/poster-risk';
 import type { ActionResult, AddressSuggestion, CategorySlug, PostTaskPageData, PostTaskRepeat, TaskDraftInput, TaskPostingRules, TimeZone } from '@/contracts';
 import { compactTaskDetails, createTaskDraftSchema, REPEAT_PLACE_PREFIX } from '@/contracts';
@@ -303,7 +303,8 @@ export function createTaskPosting({ db, geocoder, cipher, now = () => new Date()
         .from(tasks)
         // Still open: a task whose window has ended stays `open` in the table (it reads as expired), and counting it
         // kept a new client from posting again for the rest of the week (sweep 2026-11-20).
-        .where(and(eq(tasks.posterUserId, userId), eq(tasks.status, 'open'), gt(tasks.windowEnd, at)));
+        // A team job's partner part (2026-11-24) isn't a task the client posted.
+        .where(and(eq(tasks.posterUserId, userId), eq(tasks.status, 'open'), isNull(tasks.teamPartOf), gt(tasks.windowEnd, at)));
       if ((open?.value ?? 0) >= NEW_ACCOUNT.maxOpenTasks) return fail({ ok: false, code: 'limit_reached' });
     }
 

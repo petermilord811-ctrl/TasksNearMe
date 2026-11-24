@@ -42,6 +42,7 @@ export * from './invites';
 export * from './availability';
 export * from './neighborhood-days';
 export * from './neighbor-groups';
+export * from './teams';
 export * from './rebook';
 export * from './admin-people';
 export * from './admin-verification';

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CircleAlert, Clock, Eye, MapPin, Monitor } from 'lucide-react';
+import { CircleAlert, Clock, Eye, MapPin, Monitor, UsersRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type BookingListRow, type BookingsPageData, type FollowedBookingRow, type ISODateTime } from '@/contracts';
 import { formatMoney } from '@/shared/format';
@@ -33,6 +33,7 @@ export function BookingRow({ row, tab, now, headingLevel = 2, showRole = false }
   const { formatDateTime, formatRelative, formatTime, dayKey } = useFormat();
   const t = useTranslations('bookings');
   const card = useTranslations('taskCard');
+  const teams = useTranslations('teams.list');
   const status = useBookingStatus(row.status, row.viewerRole);
   const CategoryIcon = CATEGORY_ICONS[row.categorySlug];
   const amount = formatMoney(row.amountCents);
@@ -56,6 +57,8 @@ export function BookingRow({ row, tab, now, headingLevel = 2, showRole = false }
       <RowFact icon={Clock} className="tabular-nums"><time dateTime={row.start}>{formatTime(row.start)}</time><span>{' · '}{formatRelative(row.start, now)}</span></RowFact>
       <RowFact icon={row.location.kind === 'remote' ? Monitor : MapPin}>{row.location.kind === 'remote' ? t('remote') : row.location.areaName}</RowFact>
       <span className="inline-flex min-w-0 items-center gap-1.5"><InitialsAvatar initials={row.otherParty.initials} photo={row.otherParty.photo} size="xs" /><span className="truncate">{row.otherParty.displayName}</span></span>
+      {/* A team job (2026-11-24): both parts carry the team, so they read as one job. */}
+      {row.team && <RowFact icon={UsersRound}><span data-team-row={row.team.part}>{teams('team', { lead: row.team.lead, partner: row.team.partner })}</span></RowFact>}
     </>}
     trailing={<RowMoney caption={t(`money.${row.viewerRole}`)} amount={amount} />}
     trailingInline={t(`amount.${row.viewerRole}`, { amount })}

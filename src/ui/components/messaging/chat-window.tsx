@@ -35,6 +35,7 @@ import { ReplyProvider } from '@/ui/screens/messages/reply-context';
 import { subjectHref } from '@/ui/screens/messages/thread-screen';
 import { ThreadPresence } from '@/ui/screens/messages/thread-presence';
 import { AgreementCard, BookingDayChips } from './booking-chat-tools';
+import { TeamBarView } from '@/ui/components/teams/team-card';
 import { ConversationActionsMenu } from './conversation-actions';
 import { ConversationMarks, ConversationMenu, RequestBanner } from './conversation-tools';
 import { FamilyNote } from '@/ui/components/family/family-note';
@@ -189,6 +190,7 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
     </header>
     {thread.contactMasking && <p className="flex items-start gap-2 border-b border-foreground/[0.07] bg-secondary/60 px-2.5 py-1.5 text-[11px] leading-4 text-secondary-foreground dark:border-white/[0.06]"><LockKeyhole aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" /><span>{thread.kind === 'direct' ? t('direct.masking') : t('masking')}</span></p>}
     <FamilyNote family={data.family} compact />
+    {data.team && <TeamBarView bar={data.team} compact />}
     {data.agreement && <AgreementCard agreement={data.agreement} threadId={thread.id} canProposeChange={Boolean(data.canProposeChange)} compact />}
     {data.canProposeChange && thread.subject.kind === 'booking' && !data.agreement && <p className="flex flex-wrap items-center justify-between gap-x-3 border-b border-foreground/[0.07] px-3 py-1.5 text-xs dark:border-white/[0.06]">
       <span className="text-muted-foreground">{t('cards.change.hint')}</span>
@@ -199,7 +201,7 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
       <Link href={routes.app.requestHelper(requestHandle)} className="inline-flex min-h-9 items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">{t('direct.request')}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>
     </p>}
     <ReplyProvider>
-      <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier), onLoadEarlier: () => onLoadEarlier(data.earlier!.from) } : {})} onRefresh={onRefresh} otherParty={other} now={now} readUpTo={data.readUpTo} firstUnreadId={data.firstUnreadId} focusId={focusId} canReply={composer.canSend} {...(composer.canSend ? { onReact: bound.onReact } : {})} {...(data.assist?.translate ? { onTranslate: bound.onTranslate } : {})} {...(data.cards ? { cards: data.cards } : {})} requestCardHandlers={handlers.requestCards} {...(handlers.thanks ? { thanksHandlers: handlers.thanks } : {})} compact className="min-h-0 flex-1 space-y-4 px-2.5 py-2.5 sm:px-2.5 sm:py-2.5" />
+      <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier), onLoadEarlier: () => onLoadEarlier(data.earlier!.from) } : {})} onRefresh={onRefresh} otherParty={other} now={now} readUpTo={data.readUpTo} firstUnreadId={data.firstUnreadId} focusId={focusId} canReply={composer.canSend} {...(composer.canSend ? { onReact: bound.onReact } : {})} {...(data.assist?.translate ? { onTranslate: bound.onTranslate } : {})} {...(data.cards ? { cards: data.cards } : {})} requestCardHandlers={handlers.requestCards} {...(handlers.thanks ? { thanksHandlers: handlers.thanks } : {})} {...(handlers.teams ? { teamHandlers: handlers.teams } : {})} compact className="min-h-0 flex-1 space-y-4 px-2.5 py-2.5 sm:px-2.5 sm:py-2.5" />
       {composer.disabledReason !== 'blocked' && <RequestBanner thread={thread} name={firstName} handlers={bound} onBlock={(input) => handlers.onBlock(id, input)} onIgnored={onIgnored} compact />}
       {data.thanks?.canWrite && handlers.thanks && <ThanksOffer bookingId={data.thanks.bookingId} name={firstName} onSave={handlers.thanks.onSave} compact className="border-t border-foreground/[0.07] bg-brand-soft/40 dark:border-white/[0.06]" />}
       {composer.canSend && data.quietHours && <QuietHoursNote name={firstName} until={data.quietHours.until} compact />}

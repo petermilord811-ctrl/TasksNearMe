@@ -30,6 +30,8 @@ import { getFollowedBookingView } from '@/modules/followers/service';
 import { FollowedBookingScreen } from '@/ui/screens/bookings/followed-booking-screen';
 import { MarketTime } from '@/ui/lib/market-time';
 
+import { inviteTeamPartnerAction, keepPartnerAction, teamAction } from '@/modules/teams/actions';
+
 export async function generateMetadata(): Promise<Metadata> {
   return appPageMetadata('booking');
 }
@@ -56,6 +58,7 @@ async function Booking({ params }: Pick<PageProps<'/[locale]/app/bookings/[booki
   }
   // The task map: the trip there (the helper's from home or where they are), the weather for the booking, what's around.
   const map = await taskMapFor(db, { task: { ...data.task, location: data.location }, viewer: { kind: data.viewerRole, userId: viewer.user.id }, now });
+  const partnerId = data.team?.cancelChoice?.partnerBookingId;
   return (
     <BookingHubScreen
       data={data}
@@ -74,6 +77,16 @@ async function Booking({ params }: Pick<PageProps<'/[locale]/app/bookings/[booki
       scheduledPayment={{ onPayNow: payScheduledAction.bind(null, bookingId), onFinishPayVerification: finishScheduledVerificationAction.bind(null, bookingId), onRemoveCard: removeCardAction }}
       thanks={{ onSave: saveThanksAction.bind(null, 'page'), onDelete: deleteThanksAction.bind(null, 'page'), onShowOnProfile: showThanksOnProfileAction.bind(null, 'page'), onHideName: hideThanksNameAction.bind(null, 'page') }}
       followers={{ onAdd: addFollowerAction.bind(null, 'page'), onRemove: removeFollowerAction.bind(null, 'page') }}
+      // Team up (2026-11-24): the lead's invite and every answer; the client's "cancel both" uses the partner's own sheet.
+      team={{ onInvite: inviteTeamPartnerAction.bind(null, bookingId), onAction: teamAction.bind(null, 'page'), onKeep: keepPartnerAction.bind(null, 'page') }}
+      {...(partnerId ? { partnerSheets: {
+        onPreviewCancel: previewCancelAction.bind(null, partnerId),
+        onCancel: cancelBookingAction.bind(null, partnerId),
+        onRunningLate: runningLateAction.bind(null, partnerId),
+        onReportNoShow: reportNoShowAction.bind(null, partnerId),
+        onCantAccess: cantAccessAction.bind(null, partnerId),
+        onSafetyReport: safetyReportAction.bind(null, partnerId),
+      } } : {})}
     />
   );
 }

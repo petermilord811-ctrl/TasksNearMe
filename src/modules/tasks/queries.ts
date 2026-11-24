@@ -84,6 +84,8 @@ export function openIn(marketId: string, now: Date, rows: RowScope = 'all'): SQL
     eq(tasks.status, 'open'),
     gt(tasks.windowStart, now),
     isNull(tasks.hiddenAt),
+    // A team job's partner part (2026-11-24) is booked through the team, never listed.
+    isNull(tasks.teamPartOf),
     // Not while its poster can't use their account: suspended, banned or deleted (sweep PT10). Reinstated, it's back.
     sql`exists (select 1 from ${users} where ${users.id} = ${tasks.posterUserId} and ${users.status} in ('active', 'restricted'))`,
   ];

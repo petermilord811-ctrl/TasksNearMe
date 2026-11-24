@@ -21,6 +21,7 @@ import { appPageMetadata } from '@/i18n/metadata';
 import { acceptInviteAction, cancelInviteAction, declineInviteAction } from '@/modules/invites/actions';
 import { deleteThanksAction, hideThanksNameAction, saveThanksAction, showThanksOnProfileAction } from '@/modules/thanks/actions';
 import { addFollowerAction, removeFollowerAction } from '@/modules/followers/actions';
+import { teamAction } from '@/modules/teams/actions';
 
 export async function generateMetadata(): Promise<Metadata> {
   return appPageMetadata('conversation');
@@ -92,6 +93,8 @@ async function Thread({ params, searchParams, wide }: Pick<PageProps<'/[locale]/
         thanks: { onSave: saveThanksAction.bind(null, 'page'), onDelete: deleteThanksAction.bind(null, 'page'), onShowOnProfile: showThanksOnProfileAction.bind(null, 'page'), onHideName: hideThanksNameAction.bind(null, 'page') },
         // "Add a family member" from the ⋯ menu (2026-11-24).
         followers: { onAdd: addFollowerAction.bind(null, 'page'), onRemove: removeFollowerAction.bind(null, 'page') },
+        // A team invite's card (2026-11-24): the partner's, the lead's and the client's answers.
+        teams: { onAction: teamAction.bind(null, 'page') },
       }}
       {...(subject ? { safety: { subject, handlers: { onReport: reportUserAction.bind(null, threadId), onBlock: blockUserAction.bind(null, threadId) } } } : {})}
     />

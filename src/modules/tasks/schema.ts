@@ -108,6 +108,12 @@ export const tasks = pgTable(
      * poster, so nobody can probe another person's keys.
      */
     requestKey: text('request_key'),
+    /**
+     * Team up (2026-11-24): this task is the partner's part of a team job, a copy of the lead's task (same time and
+     * place) for the partner's own booking; the lead's booking id. Never listed on the board or the feeds, and never
+     * reopened for offers (the lead invites someone else instead).
+     */
+    teamPartOf: text('team_part_of'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },

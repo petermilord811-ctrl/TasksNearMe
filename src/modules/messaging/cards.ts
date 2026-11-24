@@ -10,6 +10,7 @@ import { offers } from '@/modules/offers/schema';
 import { tasks } from '@/modules/tasks/schema';
 import type { Db } from '@/platform/db/connect';
 import { thanksCardsFor } from '@/modules/thanks/views';
+import { teamCardsFor } from '@/modules/teams/views';
 import type { messages } from './schema';
 
 /**
@@ -167,13 +168,16 @@ async function sharedTimesCards(db: Db, viewerId: string, otherId: string | unde
 
 export async function cardsFor(db: Db, viewerId: string, rows: readonly Row[], now: Date, otherId?: string): Promise<ConversationCards | undefined> {
   const noteIds = [...new Set(rows.flatMap((row) => (row.kind !== 'text' && row.event?.type === 'thanks_sent' && typeof row.event.params?.noteId === 'string' ? [row.event.params.noteId] : [])))];
-  const [requests, changes, offerAsks, sharedTimes, thanks] = await Promise.all([
+  const teamIds = [...new Set(rows.flatMap((row) => (row.kind !== 'text' && (row.event?.type === 'team_invited' || row.event?.type === 'team_proposed') && typeof row.event.params?.teamId === 'string' ? [row.event.params.teamId] : [])))];
+  const [requests, changes, offerAsks, sharedTimes, thanks, teams] = await Promise.all([
     requestCards(db, viewerId, idsOf(rows, 'invite_sent', 'inviteId'), now),
     changeCards(db, viewerId, idsOf(rows, 'change_proposed', 'changeId'), now),
     offerAskCards(db, viewerId, otherId, rows, now),
     sharedTimesCards(db, viewerId, otherId, rows, now),
     // Thank-you notes (2026-11-24): the note as it is now; a deleted one's line shows as the plain line.
     thanksCardsFor(db, viewerId, noteIds, now),
+    // Team up (2026-11-24): the invite as it stands, for the viewer.
+    teamCardsFor(db, viewerId, teamIds, now),
   ]);
   const cards: ConversationCards = {
     ...(Object.keys(requests).length ? { requests } : {}),
@@ -181,6 +185,7 @@ export async function cardsFor(db: Db, viewerId: string, rows: readonly Row[], n
     ...(Object.keys(offerAsks).length ? { offerAsks } : {}),
     ...(Object.keys(sharedTimes).length ? { sharedTimes } : {}),
     ...(Object.keys(thanks).length ? { thanks } : {}),
+    ...(Object.keys(teams).length ? { teams } : {}),
   };
-  return cards.requests || cards.changes || cards.offerAsks || cards.sharedTimes || cards.thanks ? cards : undefined;
+  return cards.requests || cards.changes || cards.offerAsks || cards.sharedTimes || cards.thanks || cards.teams ? cards : undefined;
 }

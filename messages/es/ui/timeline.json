@@ -48,5 +48,7 @@
   "thanks_sent": "Envió una nota de agradecimiento",
   "follower_added": "{name} ahora sigue esta reserva (familia)",
   "follower_removed": "{name} ya no sigue esta reserva",
-  "follower_left": "{name} dejó de seguir esta reserva"
+  "follower_left": "{name} dejó de seguir esta reserva",
+  "team_invited": "Invitó a un ayudante a formar equipo",
+  "team_proposed": "Un segundo ayudante quiere sumarse a este trabajo"
 }

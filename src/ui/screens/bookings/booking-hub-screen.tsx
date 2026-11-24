@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import {
   routes, type ActionResult, type BadgeTone, type BookingActionId, type BookingHubHandlers,
   type BookingPaymentLine, type BookingSheetHandlers, type BookingTipHandlers, type BookingView, type ISODateTime,
-  type FollowerHandlers, type ScheduledPaymentHandlers, type TaskMapBundle, type ThankYouHandlers,
+  type FollowerHandlers, type ScheduledPaymentHandlers, type TaskMapBundle, type TeamHandlers, type ThankYouHandlers,
 } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
@@ -33,6 +33,7 @@ import { BookingHubWithoutSheetHandlers } from './booking-hub-with-sheets';
 import { RichText } from '@/ui/components/rich-text/rich-text';
 import { ThanksPanelView } from '@/ui/components/thanks/thank-you-note';
 import { FamilyCard } from '@/ui/components/family/followers-dialog';
+import { TeamPanel } from '@/ui/components/teams/team-panel';
 
 export interface BookingHubScreenProps {
   data: BookingView;
@@ -47,6 +48,10 @@ export interface BookingHubScreenProps {
   thanks?: ThankYouHandlers;
   /** The client's "Add a family member" and Remove (2026-11-24). Without it the card shows who follows, without buttons. */
   followers?: FollowerHandlers;
+  /** Team up (2026-11-24): the lead's invite, the answers, and the client's keep. Without it the team shows without buttons. */
+  team?: TeamHandlers;
+  /** The partner's booking's cancel sheet, for the client's "cancel both" on the lead's canceled booking. */
+  partnerSheets?: BookingSheetHandlers;
   now: ISODateTime;
   /** The task map (the area, the trip there, the weather for the booking and what's around). */
   map?: TaskMapBundle | null;
@@ -128,7 +133,7 @@ function BookingPayment({ payment }: { payment: BookingPaymentLine }) {
 }
 
 /** Initial result/pending states belong to the preview gallery. App pages use BookingHubScreen. */
-export function BookingHubContent({ data, handlers, sheets, tip, scheduledPayment, thanks, followers, now, initialResult, initialPending, tipPreview, scheduledPreview, map }: Omit<BookingHubScreenProps, 'sheets'> & {
+export function BookingHubContent({ data, handlers, sheets, tip, scheduledPayment, thanks, followers, team, partnerSheets, now, initialResult, initialPending, tipPreview, scheduledPreview, map }: Omit<BookingHubScreenProps, 'sheets'> & {
   sheets: BookingSheetHandlers;
   initialResult?: ActionResult;
   initialPending?: BookingActionId;
@@ -177,6 +182,9 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
     <ScheduledPaymentCard key={`scheduled-${data.id}`} data={data} handlers={scheduledPayment} preview={scheduledPreview} />
 
     <BookingHubActions key={data.id} data={data} handlers={handlers} sheets={sheets} initialResult={initialResult} initialPending={initialPending} now={now} />
+
+    {/* Team up (2026-11-24): a two-person job's lead and partner, each on their own booking. */}
+    {data.team && <TeamPanel key={`team-${data.id}`} data={data} team={data.team} {...(team ? { handlers: team } : {})} {...(partnerSheets ? { partnerSheets } : {})} />}
 
     <BookingTipCard key={`tip-${data.id}`} data={data} handlers={tip} preview={tipPreview} />
 

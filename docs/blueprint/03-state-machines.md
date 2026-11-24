@@ -83,6 +83,20 @@ pending_funding ──payment succeeded──▶ confirmed ──check-in──�
 | `completed` | Review; save the helper; **Book again**; report damage within 14 days (opens a case; any refund is platform goodwill, see 04 §6) | Review; **My clients**; offer to rebook | Goodwill refund (platform-funded); assemble chargeback evidence | Create transfers; refund unused cap or allowance; open the review window; evaluate rewards; hide the address after 48 h |
 | `canceled` | **Find a replacement** (reopens the task) or post again | — | Add notes; reverse strikes on appeal | Apply refunds and fees per policy; void pending rewards; notify both people |
 
+### 4.1 Team jobs (owner, 2026-11-24)
+
+A **team job** is two linked bookings; there are **no new booking states** and nothing changes in money or fees. The lead helper of a `confirmed` booking (before it starts; not a visit of regular visits, not itself a partner's part) invites one partner (02 J5 "Team up"). The invite (`booking_teams`) has its own small lifecycle: `invited` → `accepted` (the partner said yes) → `confirmed` (the client said yes); or `declined` (partner), `withdrawn` (partner, before the part is booked), `canceled` (lead, before the client answers), `refused` (client), `expired` (the lead's booking started or isn't `confirmed` any more). One invite in play per lead booking; a partner booking that ends frees the place.
+
+The client's yes makes the **partner's part**: a copy of the lead's task with the same title, details, time and place (`location_id`), priced at the partner's part, marked `team_part_of` the lead's booking, with the partner's offer on it in the lead's payment mode. The client books it through the normal confirm flow (§4: `pending_funding` → `confirmed` for a held booking; confirmed at once paid directly). So invariant 5 holds as written (each task, the lead's and the part, has at most one live booking), each booking mirrors onto its own task, and the partner reads the exact address under invariant 4 for their own booking.
+
+| Event | Effect |
+|---|---|
+| The partner (or the client) cancels the partner's booking | §4's cancel rules on that booking only; the lead's booking is untouched. The part is never reopened for offers (no **Find a replacement**, no automatic reopening): the lead may invite someone else. |
+| The lead's booking is canceled | §4's cancel rules on it; the partner's booking goes on. The client chooses on the lead's booking page: keep the partner, or cancel the partner's booking through its own cancel sheet (its policy preview first). |
+| The lead's booking starts or ends before the partner's part is booked | The invite (or the unbooked part) reads `expired`; the part's offer expires at the start as offers do. |
+
+A partner's part is never listed on the board, the feeds or the client's own open-task pickers, and its pending offer isn't shown as an offer to review.
+
 ### 5. Change requests (both people must accept)
 
 | State | Proposer can | Counterparty can | System |

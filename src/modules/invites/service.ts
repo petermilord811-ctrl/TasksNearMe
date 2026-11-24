@@ -160,7 +160,7 @@ async function invitableTasks(db: Db, posterId: string, helperId: string, now: D
     // The task's neighborhood (its place's area): a neighborhood day's visit goes there (2026-11-24).
     .leftJoin(taskLocations, eq(taskLocations.id, tasks.locationId))
     // Hidden tasks can't be shown to a helper through an invite either.
-    .where(and(eq(tasks.posterUserId, posterId), eq(tasks.status, 'open'), isNull(tasks.hiddenAt)))
+    .where(and(eq(tasks.posterUserId, posterId), eq(tasks.status, 'open'), isNull(tasks.hiddenAt), isNull(tasks.teamPartOf)))
     .orderBy(desc(tasks.createdAt));
   return rows
     .filter((row) => state.facts.bookableCategories.includes(row.slug as CategorySlug))
@@ -193,7 +193,7 @@ export async function getInviteHelpersPage(db: Db, posterId: string, taskId: str
   const [task] = await db
     .select({ id: tasks.id, title: tasks.title })
     .from(tasks)
-    .where(and(eq(tasks.id, String(taskId)), eq(tasks.posterUserId, posterId), eq(tasks.status, 'open'), isNull(tasks.hiddenAt)))
+    .where(and(eq(tasks.id, String(taskId)), eq(tasks.posterUserId, posterId), eq(tasks.status, 'open'), isNull(tasks.hiddenAt), isNull(tasks.teamPartOf)))
     .limit(1);
   if (!task) return null;
   const rows = await db.select({ helperUserId: savedHelpers.helperUserId }).from(savedHelpers).where(eq(savedHelpers.userId, posterId)).orderBy(desc(savedHelpers.createdAt));

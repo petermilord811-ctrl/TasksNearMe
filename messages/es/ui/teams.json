@@ -1,0 +1,104 @@
+{
+  "card": {
+    "title": "Trabajo en equipo",
+    "people": "{lead} (a cargo) y {partner}",
+    "invitedYou": "{lead} te quiere en su equipo para este trabajo",
+    "youInvited": "Le pediste a {partner} que te ayude en este trabajo",
+    "proposed": "{lead} quiere traer a {partner}: {price} por la parte de {partner}",
+    "proposedNoPrice": "{lead} quiere traer a {partner}",
+    "part": "{price} por tu parte",
+    "partFor": "{price} por la parte de {partner}",
+    "paidDirectly": "Se le paga directamente a {partner} después del trabajo, igual que a {lead}.",
+    "paidUpfront": "Se paga por adelantado y TasksNearMe lo retiene, igual que la parte de {lead}.",
+    "status": {
+      "invited": "Esperando a {partner}",
+      "accepted": "Esperando al cliente",
+      "confirmed": "En el equipo",
+      "booking": "Listo para reservar",
+      "declined": "{partner} dijo que no",
+      "withdrawn": "{partner} se retiró",
+      "canceled": "Invitación cancelada",
+      "refused": "El cliente dijo que no",
+      "expired": "Venció",
+      "partnerCanceled": "La reserva de {partner} se canceló"
+    },
+    "statusClient": {
+      "accepted": "Esperando tu respuesta",
+      "confirmed": "En el equipo",
+      "booking": "Listo para reservar",
+      "refused": "Dijiste que no",
+      "withdrawn": "{partner} se retiró",
+      "canceled": "{lead} canceló la invitación",
+      "expired": "Venció",
+      "invited": "Esperando a {partner}",
+      "declined": "{partner} dijo que no",
+      "partnerCanceled": "La reserva de {partner} se canceló"
+    },
+    "actions": {
+      "accept": "Aceptar",
+      "decline": "Rechazar",
+      "withdraw": "Retirarme",
+      "cancel": "Cancelar invitación",
+      "confirm": "Confirmar a {partner}",
+      "refuse": "Ahora no",
+      "book": "Reservar a {partner}"
+    },
+    "done": {
+      "accept": "Ya estás en el equipo. Ahora confirma el cliente.",
+      "decline": "Rechazada",
+      "withdraw": "Te retiraste",
+      "cancel": "Invitación cancelada",
+      "refuse": "De acuerdo, esta vez no",
+      "confirm": "Abriendo la reserva",
+      "book": "Abriendo la reserva"
+    },
+    "viewBooking": "Ver la reserva de {partner}",
+    "note": "Nota de {lead}",
+    "failed": "No funcionó. Inténtalo de nuevo.",
+    "changedNow": "Esta invitación cambió. Vuelve a cargar para ver cómo está.",
+    "expiredNow": "Esta invitación venció: el trabajo empezó o terminó."
+  },
+  "bar": {
+    "label": "Equipo: {lead} (a cargo) y {partner}",
+    "lead_booking": "Con {lead}",
+    "partner_booking": "Con {partner}",
+    "team": "Chat del equipo",
+    "current": "Abierto ahora"
+  },
+  "panel": {
+    "title": "Trabajo en equipo",
+    "inviteTitle": "¿Necesitas otro par de manos?",
+    "inviteBody": "Trae a un ayudante de confianza para un trabajo de dos personas. El cliente lo confirma y lo reserva por separado, así cada uno conserva su propio pago, reserva y reseña.",
+    "invite": "Formar equipo",
+    "leadsThis": "{lead} está a cargo de este trabajo. Tú eres el segundo ayudante.",
+    "partOf": "Parte de un trabajo en equipo a cargo de {lead}.",
+    "leadBooking": "Ver la reserva de {lead}",
+    "teamChat": "Chat del equipo",
+    "choiceTitle": "La reserva de {partner} sigue en pie",
+    "choiceBody": "Esta reserva se canceló. Mantén a {partner} en el trabajo o cancela también su reserva con las condiciones de cancelación de siempre.",
+    "keep": "Mantener a {partner}",
+    "cancelBoth": "Cancelar la reserva de {partner}",
+    "kept": "{partner} sigue en el trabajo"
+  },
+  "dialog": {
+    "title": "Formar equipo",
+    "description": "Invita a un ayudante para este trabajo. Verá tu nombre y el trabajo, no lo que tú cobras.",
+    "username": "Su @usuario",
+    "usernameHint": "Un ayudante verificado que ofrece este tipo de tarea aquí.",
+    "note": "Nota para esa persona (opcional)",
+    "noteHint": "Qué hará y qué debe traer.",
+    "send": "Enviar invitación",
+    "cancel": "Cancelar",
+    "sent": "Invitación enviada. Te responderá en el chat del equipo.",
+    "errors": {
+      "invalid": "Ningún ayudante con ese @usuario puede tomar este trabajo.",
+      "prohibited": "Invita a alguien que no seas tú ni tu cliente.",
+      "not_allowed": "Ahora no puedes invitar a un ayudante en esta reserva.",
+      "rate_limited": "Demasiadas invitaciones. Inténtalo más tarde.",
+      "unknown": "No funcionó. Inténtalo de nuevo."
+    }
+  },
+  "list": {
+    "team": "Equipo: {lead} (a cargo) y {partner}"
+  }
+}

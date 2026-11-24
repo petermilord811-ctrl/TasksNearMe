@@ -48,5 +48,7 @@
   "thanks_sent": "Sent a thank-you note",
   "follower_added": "{name} now follows this booking (family)",
   "follower_removed": "{name} no longer follows this booking",
-  "follower_left": "{name} stopped following this booking"
+  "follower_left": "{name} stopped following this booking",
+  "team_invited": "Invited a helper to team up",
+  "team_proposed": "A second helper wants to join this job"
 }

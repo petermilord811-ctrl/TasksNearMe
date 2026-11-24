@@ -1,0 +1,104 @@
+{
+  "card": {
+    "title": "Team up",
+    "people": "{lead} (lead) and {partner}",
+    "invitedYou": "{lead} wants you on their team for this job",
+    "youInvited": "You asked {partner} to help on this job",
+    "proposed": "{lead} wants to bring {partner}: {price} for {partner}'s part",
+    "proposedNoPrice": "{lead} wants to bring {partner}",
+    "part": "{price} for your part",
+    "partFor": "{price} for {partner}'s part",
+    "paidDirectly": "Paid directly to {partner} after the job, like {lead}.",
+    "paidUpfront": "Paid upfront and held by TasksNearMe, like {lead}'s part.",
+    "status": {
+      "invited": "Waiting for {partner}",
+      "accepted": "Waiting for the client",
+      "confirmed": "On the team",
+      "booking": "Ready to book",
+      "declined": "{partner} said no",
+      "withdrawn": "{partner} stepped back",
+      "canceled": "Invite canceled",
+      "refused": "The client said no",
+      "expired": "Expired",
+      "partnerCanceled": "{partner}'s booking was canceled"
+    },
+    "statusClient": {
+      "accepted": "Waiting for you",
+      "confirmed": "On the team",
+      "booking": "Ready to book",
+      "refused": "You said no",
+      "withdrawn": "{partner} stepped back",
+      "canceled": "{lead} canceled the invite",
+      "expired": "Expired",
+      "invited": "Waiting for {partner}",
+      "declined": "{partner} said no",
+      "partnerCanceled": "{partner}'s booking was canceled"
+    },
+    "actions": {
+      "accept": "Accept",
+      "decline": "Decline",
+      "withdraw": "Step back",
+      "cancel": "Cancel invite",
+      "confirm": "Confirm {partner}",
+      "refuse": "Not now",
+      "book": "Book {partner}"
+    },
+    "done": {
+      "accept": "You're on the team. The client confirms next.",
+      "decline": "Declined",
+      "withdraw": "You stepped back",
+      "cancel": "Invite canceled",
+      "refuse": "Okay, not this time",
+      "confirm": "Opening the booking",
+      "book": "Opening the booking"
+    },
+    "viewBooking": "View {partner}'s booking",
+    "note": "Note from {lead}",
+    "failed": "That didn't work. Try again.",
+    "changedNow": "This invite changed. Reload to see where it stands.",
+    "expiredNow": "This invite expired: the job started or ended."
+  },
+  "bar": {
+    "label": "Team: {lead} (lead) and {partner}",
+    "lead_booking": "With {lead}",
+    "partner_booking": "With {partner}",
+    "team": "Team chat",
+    "current": "Open now"
+  },
+  "panel": {
+    "title": "Team job",
+    "inviteTitle": "Need a second pair of hands?",
+    "inviteBody": "Bring one helper you trust for a two-person job. The client confirms them and books them separately, so each of you keeps your own pay, booking and review.",
+    "invite": "Team up",
+    "leadsThis": "{lead} leads this job. You're the second helper.",
+    "partOf": "Part of a team job led by {lead}.",
+    "leadBooking": "View {lead}'s booking",
+    "teamChat": "Team chat",
+    "choiceTitle": "{partner}'s booking is still on",
+    "choiceBody": "This booking was canceled. Keep {partner} on the job, or cancel their booking too under the usual cancellation terms.",
+    "keep": "Keep {partner}",
+    "cancelBoth": "Cancel {partner}'s booking",
+    "kept": "{partner} stays on the job"
+  },
+  "dialog": {
+    "title": "Team up",
+    "description": "Invite one helper for this job. They see your name and the job, not your pay.",
+    "username": "Their @username",
+    "usernameHint": "A verified helper who offers this kind of task here.",
+    "note": "Note for them (optional)",
+    "noteHint": "What they'll do, what to bring.",
+    "send": "Send invite",
+    "cancel": "Cancel",
+    "sent": "Invite sent. They'll answer in your team chat.",
+    "errors": {
+      "invalid": "No helper with that @username can take this job.",
+      "prohibited": "Invite someone other than yourself or your client.",
+      "not_allowed": "You can't invite a helper on this booking now.",
+      "rate_limited": "Too many invites. Try again later.",
+      "unknown": "That didn't work. Try again."
+    }
+  },
+  "list": {
+    "team": "Team: {lead} (lead) and {partner}"
+  }
+}

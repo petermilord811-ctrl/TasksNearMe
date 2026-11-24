@@ -457,7 +457,7 @@ async function railOf(db: Db, scope: Scope): Promise<PortalRail> {
     db
       .select({ id: tasks.id, title: tasks.title, offerCount: tasks.offerCount })
       .from(tasks)
-      .where(and(eq(tasks.posterUserId, viewer.id), eq(tasks.status, 'open'), gt(tasks.windowEnd, scope.now)))
+      .where(and(eq(tasks.posterUserId, viewer.id), eq(tasks.status, 'open'), isNull(tasks.teamPartOf), gt(tasks.windowEnd, scope.now)))
       .orderBy(desc(tasks.createdAt))
       .limit(3),
     db

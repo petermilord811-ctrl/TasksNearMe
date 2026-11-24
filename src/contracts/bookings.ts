@@ -15,6 +15,7 @@ import type { TaskPublicView, TaskSchedule } from './tasks';
 import type { TimelineEvent } from './timeline';
 import type { ThanksPanel } from './thanks';
 import type { BookingFamilyView, FollowedBookingRow } from './followers';
+import type { BookingTeamView } from './teams';
 
 /**
  * Bookings. This file starts with booking an offer: the confirmation and payment page
@@ -264,6 +265,8 @@ export interface BookingView {
   dispute?: BookingDisputeView;
   /** The open change request, if any (UI-027): the page links to `routes.app.bookingChange`. */
   openChange?: { id: string; status: 'proposed' | 'accepted_pending_funding'; fromMe: boolean; differenceCents?: Cents };
+  /** A team job (2026-11-24): the lead's or the partner's part, the invite as it stands, and the client's choices. */
+  team?: BookingTeamView;
   /** From the domain (ui-contract §6): only actions that work today are included. */
   actions: ActionDescriptor<BookingActionId>[];
 }
@@ -317,6 +320,8 @@ export interface BookingListRow {
   /** The viewer has something to do now (pay, check in, approve…): `nextStep`. */
   needsAction: boolean;
   nextStep?: { kind: BookingNextStep; dueAt?: ISODateTime };
+  /** One part of a team job (2026-11-24): "Team: Jordan (lead) and Sam", on both parts' rows. */
+  team?: { part: 'lead' | 'partner'; lead: string; partner: string };
 }
 
 /** `/app/bookings`: every booking as poster or helper. */

@@ -92,7 +92,8 @@ export async function getMyTasks(db: Db, userId: string, now: Date): Promise<MyT
   const requested = new Set(drafts.length
     ? (await db.select({ taskId: invites.taskId }).from(invites).where(and(inArray(invites.taskId, drafts), eq(invites.source, 'rebook'), inArray(invites.status, ['sent', 'countered'])))).map((row) => row.taskId)
     : []);
-  const visible = rows.filter((row) => (row.status === 'draft' ? requested.has(row.id) : !(row.status === 'canceled' && !row.publishedAt)));
+  // A team job's partner part (2026-11-24) is the lead task's second booking, shown with it on the bookings list.
+  const visible = rows.filter((row) => !row.teamPartOf && (row.status === 'draft' ? requested.has(row.id) : !(row.status === 'canceled' && !row.publishedAt)));
   const ids = visible.map((row) => row.id);
   // Open offers, newest first: their count, the unopened ones, and the newest one per task. The ones the task page
   // lists: not expired, not from someone either side blocked, and none from before Find a replacement reopened it.

@@ -27,7 +27,7 @@ async function openTasksOf(db: Pick<Db, 'select'>, userId: string, now: Date): P
   return db
     .select({ id: tasks.id, title: tasks.title })
     .from(tasks)
-    .where(and(eq(tasks.posterUserId, userId), eq(tasks.status, 'open'), or(isNull(tasks.expiresAt), gt(tasks.expiresAt, now))))
+    .where(and(eq(tasks.posterUserId, userId), eq(tasks.status, 'open'), isNull(tasks.teamPartOf), or(isNull(tasks.expiresAt), gt(tasks.expiresAt, now))))
     .orderBy(desc(tasks.createdAt))
     .limit(CHOICES);
 }
@@ -70,7 +70,7 @@ export async function askForOffer(db: Db, userId: string, threadId: string, inpu
   const [task] = await db
     .select({ id: tasks.id })
     .from(tasks)
-    .where(and(eq(tasks.id, parsed.data.taskId), eq(tasks.posterUserId, userId), eq(tasks.status, 'open'), or(isNull(tasks.expiresAt), gt(tasks.expiresAt, now))))
+    .where(and(eq(tasks.id, parsed.data.taskId), eq(tasks.posterUserId, userId), eq(tasks.status, 'open'), isNull(tasks.teamPartOf), or(isNull(tasks.expiresAt), gt(tasks.expiresAt, now))))
     .limit(1);
   if (!task) return { ok: false, code: 'not_allowed' };
   const limited = await consumeRateLimit(db, `messages:ask-offer:${userId}`, ASK_FOR_OFFER_RULE, now);

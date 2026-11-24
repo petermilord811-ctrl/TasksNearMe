@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { useSelectedLayoutSegments } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
+  TeamActionInput,
   ThankYouHandlers,
   FollowerHandlers,
   AttachGifInput,
@@ -111,6 +112,8 @@ export interface ChatActions {
   thanks: ThankYouHandlers;
   /** A booking's family followers (2026-11-24), bound to the window. */
   followers?: FollowerHandlers;
+  /** A team invite's answers (2026-11-24), bound to the window (no page refresh). */
+  team?: (input: TeamActionInput) => Promise<ActionResult>;
 }
 
 const WIDE = '(min-width: 1024px)';
@@ -587,6 +590,8 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
       },
       // "Add a family member" and Remove (2026-11-24): the conversation reads again after each.
       ...(actions.followers ? { followers: { onAdd: async (input) => afterThanks(await actions.followers!.onAdd(input)), onRemove: async (input) => afterThanks(await actions.followers!.onRemove(input)) } } : {}),
+      // A team invite's buttons (2026-11-24): the conversation reads again after each (the confirm dialog opens itself).
+      ...(actions.team ? { teams: { onAction: async (input: TeamActionInput) => afterThanks(await actions.team!(input)) } } : {}),
     }),
     [actions, threadAgain, soon, loadInbox, afterThanks],
   );

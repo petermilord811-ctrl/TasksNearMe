@@ -218,6 +218,8 @@ async function receivedOfferItems(db: Db, userId: string, now: Date): Promise<Da
       and(
         eq(tasks.posterUserId, userId),
         eq(tasks.status, 'open'),
+        // A team job's partner part (2026-11-24) is booked from the team's card, not reviewed as an offer.
+        isNull(tasks.teamPartOf),
         gt(tasks.windowEnd, now),
         inArray(offers.status, ['pending', 'stale']),
         gt(offers.expiresAt, now),

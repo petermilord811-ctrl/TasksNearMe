@@ -1,4 +1,4 @@
-import { and, eq, gt, ne, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull, ne, sql } from 'drizzle-orm';
 import type { ActionResult } from '@/contracts';
 import { routes } from '@/contracts';
 import { markets } from '@/modules/markets/schema';
@@ -24,13 +24,13 @@ type BookingRow = typeof bookings.$inferSelect;
 export async function canceledFacts(db: Db, booking: BookingRow, userId: string): Promise<Partial<BookingFacts>> {
   if (booking.status !== 'canceled') return {};
   const [[task], [contest]] = await Promise.all([
-    db.select({ status: tasks.status, windowEnd: tasks.windowEnd, hiddenAt: tasks.hiddenAt, reopenedAt: tasks.reopenedAt }).from(tasks).where(eq(tasks.id, booking.taskId)).limit(1),
+    db.select({ status: tasks.status, windowEnd: tasks.windowEnd, hiddenAt: tasks.hiddenAt, reopenedAt: tasks.reopenedAt, teamPartOf: tasks.teamPartOf }).from(tasks).where(eq(tasks.id, booking.taskId)).limit(1),
     contestOf(db, booking.id, userId),
   ]);
   return {
     cancelReason: booking.cancelReason,
     canceledAt: booking.canceledAt,
-    ...(task ? { task: { status: task.status, windowEnd: task.windowEnd, hidden: task.hiddenAt !== null, reopened: task.reopenedAt !== null && booking.canceledAt !== null && task.reopenedAt >= booking.canceledAt } } : {}),
+    ...(task ? { task: { status: task.status, windowEnd: task.windowEnd, hidden: task.hiddenAt !== null || task.teamPartOf !== null, reopened: task.reopenedAt !== null && booking.canceledAt !== null && task.reopenedAt >= booking.canceledAt } } : {}),
     contested: Boolean(contest),
   };
 }
@@ -60,7 +60,8 @@ export async function reopenForReplacement(db: Db, userId: string, booking: Book
     const [task] = await tx
       .update(tasks)
       .set({ status: 'open', offerCount: 0, reopenedAt: now, updatedAt: now, version: sql`${tasks.version} + 1` })
-      .where(and(eq(tasks.id, booking.taskId), eq(tasks.posterUserId, userId), eq(tasks.status, 'canceled'), gt(tasks.windowEnd, now)))
+      // A team job's partner part (2026-11-24) is never reopened: the lead invites someone else instead.
+      .where(and(eq(tasks.id, booking.taskId), eq(tasks.posterUserId, userId), eq(tasks.status, 'canceled'), gt(tasks.windowEnd, now), isNull(tasks.teamPartOf)))
       .returning({ id: tasks.id, slug: tasks.slug, marketId: tasks.marketId });
     if (!task) return null;
     const earlier = await tx

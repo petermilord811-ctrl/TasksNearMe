@@ -18,6 +18,7 @@ import type { ProposableChangeType } from './changes';
 import type { PricingInput } from './money';
 import type { TaskSchedule } from './tasks';
 import type { ChangeStatus, InviteStatus } from './status';
+import type { TeamBar, TeamHandlers, TeamInviteCard } from './teams';
 import type { ThankYouHandlers, ThankYouNoteView, ThanksPanel } from './thanks';
 import type { BookingFamilyView, FollowerHandlers } from './followers';
 
@@ -320,6 +321,11 @@ export interface ThreadPageData {
    * people see ("Maya's family member Lia follows this booking"), or, for a follower, that they're following.
    */
   family?: BookingFamilyView;
+  /**
+   * A team job's conversation (2026-11-24): "Team: Jordan (lead) and Sam" on top, with the viewer's other team
+   * conversations a tap away, in place.
+   */
+  team?: TeamBar;
 }
 
 // ---- Cards in a conversation (2026-11-23, owner: "plan all and implement") ---------------------------------------------
@@ -411,6 +417,8 @@ export interface ConversationCards {
   offerAsks?: Record<string, OfferAskCard>;
   /** By the line's message id (2026-11-24). */
   sharedTimes?: Record<string, SharedTimesCard>;
+  /** Team invites (`team_invited`, `team_proposed`), by team id (2026-11-24). */
+  teams?: Record<string, TeamInviteCard>;
   /** Thank-you notes (`thanks_sent` lines), by note id; a deleted note's line shows as the plain line. */
   thanks?: Record<string, ThankYouNoteView>;
 }
@@ -638,6 +646,8 @@ export interface ThreadHandlers {
   thanks?: ThankYouHandlers;
   /** The client's "Add a family member" and Remove (2026-11-24), from the ⋯ menu. */
   followers?: FollowerHandlers;
+  /** A team invite card's answers (2026-11-24): accept, decline, withdraw, cancel, confirm, refuse, book. */
+  teams?: TeamHandlers;
 }
 
 // ---- Direct conversations (2026-11-21) -----------------------------------------------------------------------
@@ -886,4 +896,6 @@ export interface ChatThreadHandlers {
   thanks?: ThankYouHandlers;
   /** A booking's client: "Add a family member" and Remove (2026-11-24), bound to the window. */
   followers?: FollowerHandlers;
+  /** A team invite card's answers (2026-11-24), bound to the window. */
+  teams?: TeamHandlers;
 }

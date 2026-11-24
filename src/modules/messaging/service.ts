@@ -42,6 +42,7 @@ import { CATCH_UP_UNREAD, chatAssistOffered } from './assist';
 import { cardsFor } from './cards';
 import { recipientQuietUntil } from '@/modules/notifications/own-quiet-hours';
 import { thanksPanelFor } from '@/modules/thanks/views';
+import { teamBarFor } from '@/modules/teams/views';
 import { requestOptionsFor } from './asks';
 import { shareableSlotsFor } from './times';
 import { bookingChatToolsOf } from '@/modules/bookings/chat-tools';
@@ -562,6 +563,8 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   // Family followers of a booking (2026-11-24): the client's panel, and who follows, for both of its people.
   const [familyBooking] = thread.kind === 'booking' ? await db.select({ id: bookings.id, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId, status: bookings.status, completedAt: bookings.completedAt, seriesId: bookings.seriesId }).from(bookings).where(eq(bookings.id, thread.linkedId)).limit(1) : [];
   const family = familyBooking ? await familyViewFor(db, familyBooking, userId, now) : undefined;
+  // A team job's conversation (2026-11-24): "Team: Jordan (lead) and Sam", and the viewer's other team conversations.
+  const team = thread.kind === 'booking' || thread.kind === 'direct' ? await teamBarFor(db, userId, thread) : undefined;
   const canProposeChange = changeable ? allowedChangeTypes({ status: changeable.status, pricingType: 'fixed', startAt: now, now }).length > 0 : false;
   // Quotes (a replied-to message may be older than this page) and reactions, then the viewer's saved replies (7.3).
   const quotedIds = [...new Set(rows.flatMap((row) => (row.replyToMessageId ? [row.replyToMessageId] : [])))];
@@ -609,6 +612,7 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
     ...(quietUntil ? { quietHours: { until: quietUntil.toISOString() } } : {}),
     ...(thanks ? { thanks } : {}),
     ...(family ? { family } : {}),
+    ...(team ? { team } : {}),
     ...(presence ? { presence } : {}),
     ...(mutual && lastMine && theirs?.lastReadAt && theirs.lastReadAt >= lastMine.createdAt ? { seenMessageId: lastMine.id } : {}),
     // Ticks (2026-11-24): how far they've read, under the same rule as "Seen".
