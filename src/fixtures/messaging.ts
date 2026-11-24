@@ -297,7 +297,8 @@ export const changeCardThreadPageData: ThreadPageData = {
 };
 
 /** Fake handlers for the chat's new tools: everything works, "desk" finds two messages, Translate marks the text. */
-export const fakeConversationHandlers: Pick<ThreadHandlers, 'onFlag' | 'onAccept' | 'onSearch' | 'onTranslate' | 'onSuggest' | 'requestCards'> = {
+export const fakeConversationHandlers: Pick<ThreadHandlers, 'onFlag' | 'onAccept' | 'onSearch' | 'onTranslate' | 'onSuggest' | 'requestCards' | 'onAskForOffer'> = {
+  onAskForOffer: () => wait({ ok: true, code: 'sent' }),
   onFlag: () => wait({ ok: true, code: 'updated' }),
   onAccept: () => wait({ ok: true, code: 'updated' }),
   onSearch: (query) => wait({ ...conversationSearchData, query, hits: query.toLowerCase().includes('desk') ? conversationSearchData.hits : [] }),
@@ -308,4 +309,28 @@ export const fakeConversationHandlers: Pick<ThreadHandlers, 'onFlag' | 'onAccept
     onDecline: () => wait({ ok: true, code: 'updated' }),
     onCancel: () => wait({ ok: true, code: 'updated' }),
   },
+};
+
+// ---- The conversation's "+" and "Asked for an offer" (2026-11-23) -------------------------------------------------------
+
+/** Maya talking to Jordan, a bookable helper: Request a task, and Ask for an offer on one of her two open tasks. */
+export const plusMenuThreadPageData: ThreadPageData = {
+  ...directThreadPageData,
+  messages: [
+    ...directThreadPageData.messages,
+    wrote('msg_d6', 'them', text('Happy to help with anything this weekend.'), '2026-11-21T15:54:00.000Z'),
+    { id: 'msg_d7', sender: 'system', kind: 'status', segments: [], attachments: [], event: { type: 'offer_requested', params: { taskId: 'tsk_shelves' } }, createdAt: '2026-11-21T15:56:00.000Z' },
+  ],
+  composer,
+  requestOptions: { requestHandle: 'jordan-t', myOpenTasks: [{ id: 'tsk_shelves', title: 'Hang three shelves in the hallway' }, { id: 'tsk_leaves', title: 'Clear leaves from the backyard' }], theirOpenTasks: [] },
+  cards: { offerAsks: { msg_d7: { taskId: 'tsk_shelves', title: 'Hang three shelves in the hallway', open: true, viewerRole: 'poster', offered: false, href: '/app/tasks/tsk_shelves' } } },
+};
+
+/** The same ask as Jordan sees it: Make an offer; and Maya's own open tasks to offer on from the "+". */
+export const plusMenuForHelperPageData: ThreadPageData = {
+  ...plusMenuThreadPageData,
+  thread: { ...plusMenuThreadPageData.thread, title: 'Maya R.', otherParty: maya, subject: { kind: 'person', canRequest: false } },
+  messages: plusMenuThreadPageData.messages.map((message) => (message.sender === 'me' ? { ...message, sender: 'them' as const } : message.sender === 'them' ? { ...message, sender: 'me' as const } : message)),
+  requestOptions: { myOpenTasks: [], theirOpenTasks: [{ id: 'tsk_shelves', title: 'Hang three shelves in the hallway' }, { id: 'tsk_leaves', title: 'Clear leaves from the backyard' }] },
+  cards: { offerAsks: { msg_d7: { taskId: 'tsk_shelves', title: 'Hang three shelves in the hallway', open: true, viewerRole: 'helper', offered: false, href: '/app/find-work/tsk_shelves/offer' } } },
 };

@@ -61,4 +61,5 @@ export * from './cities';
 export * from './billing';
 export * from './sparks';
 export * from './assistant';
+export * from './peek';
 export * from './task-map';

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { onConversationPage } from './support/conversation';
+import { onConversationPage, reactTo } from './support/conversation';
 import { devSignIn } from './support/sign-in';
 
 /**
@@ -55,7 +55,7 @@ test('a conversation updates live: typing, new messages, then presence and Seen'
     await expect(lee.getByText('Replying to Ruth A.')).toBeVisible();
     await lee.getByRole('textbox', { name: 'Message' }).fill('Great, ten it is');
     await lee.getByRole('button', { name: 'Send' }).click();
-    await ruthsMessage.getByRole('button', { name: 'Thumbs up' }).click();
+    await reactTo(ruthsMessage.locator('article'), 'Thumbs up');
     const quoted = ruth.getByRole('log').getByRole('listitem').filter({ hasText: 'Great, ten it is' }).first();
     await expect(quoted.locator('blockquote')).toContainText('Perfect, see you then', { timeout: 15_000 });
     await expect(ruth.getByRole('log').getByRole('list', { name: 'Reactions' }).first()).toBeVisible({ timeout: 15_000 });

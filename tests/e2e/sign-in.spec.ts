@@ -183,11 +183,22 @@ test.describe('waitlist, help, and legal', () => {
     await expect(page.getByText(/opens near 10001/)).toBeVisible();
   });
 
-  test('help center lists topics and opens an article', async ({ page }) => {
+  test('help center lists topics and opens an article beside them', async ({ page }) => {
     await page.goto('/help');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    await page.getByRole('link', { name: 'When am I charged?' }).click();
-    await expect(page).toHaveURL(/\/help\/when-am-i-charged$/);
+    // An article opens in a sheet over the help center (2026-11-23, owner: "I hate redirect"); a click before the page
+    // has hydrated follows the link, so that comes back and tries again.
+    const sheet = page.getByRole('dialog', { name: 'When am I charged?' });
+    await expect(async () => {
+      if (await sheet.isVisible()) return;
+      if (!/\/help$/.test(page.url())) await page.goto('/help');
+      await page.getByRole('link', { name: 'When am I charged?' }).click({ timeout: 10_000 });
+      await expect(sheet).toBeVisible({ timeout: 10_000 });
+    }).toPass({ timeout: 90_000 });
+    await expect(page).toHaveURL(/\/help$/);
+    await expect(sheet.getByRole('link', { name: 'pricing page' })).toHaveAttribute('href', '/pricing');
+    // The article's own page reads the same.
+    await page.goto('/help/when-am-i-charged');
     await expect(page.getByRole('heading', { level: 1, name: 'When am I charged?' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'pricing page' })).toHaveAttribute('href', '/pricing');
   });

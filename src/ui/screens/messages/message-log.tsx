@@ -7,9 +7,12 @@ import { useRouter } from 'next/navigation';
 import { ArrowUp, Expand } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionHandler, ConversationCards, ISODateTime, MessageReaction, MessageTranslation, MessageView, PersonSummary, Photo, RequestCardHandlers } from '@/contracts';
-import { ChangeCardView, TaskRequestCardView } from '@/ui/components/messaging/conversation-cards';
+import { ChangeCardView, OfferAskCardView, TaskRequestCardView } from '@/ui/components/messaging/conversation-cards';
 import { MESSAGE_REACTIONS } from '@/contracts/messaging';
-import { Languages, Reply } from 'lucide-react';
+import { Languages, Reply, SmilePlus } from 'lucide-react';
+import { toast } from 'sonner';
+import { Popover, PopoverAnchor } from '@/ui/primitives/popover';
+import { PickerAction, ReactionBurst, ReactionPicker, useBubbleGestures } from './message-reactions';
 import { REACTION_EMOJI, useReply } from './reply-context';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
@@ -124,9 +127,17 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
   const { setReplyTo } = useReply();
   // A reaction shows at once and settles when the page refreshes (the server action refreshes it).
   const [pendingReactions, setPendingReactions] = useState<Record<string, boolean>>({});
+  // The picker that's open (a message's id), and the reaction just added (it pops in with a burst: 2026-11-23).
+  const [picker, setPicker] = useState<{ id: string; via: 'button' | 'touch' } | null>(null);
+  const [burst, setBurst] = useState<string | null>(null);
+  const pickerFrom = useRef<HTMLElement | null>(null);
   const react = (messageId: string, emoji: MessageReaction, on: boolean) => {
     if (!onReact) return;
     const key = `${messageId}:${emoji}`;
+    if (on) {
+      setBurst(key);
+      window.setTimeout(() => setBurst((current) => (current === key ? null : current)), 700);
+    }
     setPendingReactions((current) => ({ ...current, [key]: on }));
     void onReact({ messageId, emoji, on }).catch(() => undefined).finally(() => setPendingReactions((current) => {
       const next = { ...current };
@@ -149,6 +160,16 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
       .catch(() => null)
       .then((answer) => setTranslations((all) => ({ ...all, [messageId]: answer ? { status: 'ready', text: answer.text, shown: true } : { status: 'error' } })));
   };
+  // Touch: a long press opens a bubble's picker, a double tap sends a heart (or takes it back).
+  const mineAlready = (message: MessageView, emoji: MessageReaction) => pendingReactions[`${message.id}:${emoji}`] ?? message.reactions?.find((reaction) => reaction.emoji === emoji)?.mine ?? false;
+  const gestures = useBubbleGestures({
+    // Always something to offer: Copy at least, so a long press never just blocks the phone's own text selection.
+    onLongPress: (id) => setPicker({ id, via: 'touch' }),
+    onDoubleTap: (id) => {
+      const message = messages.find((item) => item.id === id);
+      if (message && onReact) react(id, 'heart', !mineAlready(message, 'heart'));
+    },
+  });
   const liveRef = useRef(live);
   useEffect(() => { liveRef.current = live; }, [live]);
   const refreshRef = useRef(onRefresh);
@@ -215,6 +236,21 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
     };
   }, [focusId, messages]);
 
+  // The message box grows under the log (photos to send, a reply, more lines) and the log gets shorter: a reader at the
+  // bottom stays there, the newest message in full view (2026-11-23, owner: "unable to scroll to bottom to see photo").
+  useEffect(() => {
+    const log = logRef.current;
+    if (!log || typeof ResizeObserver === 'undefined') return;
+    let height = log.clientHeight;
+    const observer = new ResizeObserver(() => {
+      const next = log.clientHeight;
+      if (next < height && log.scrollHeight - log.scrollTop - height <= 40) log.scrollTop = log.scrollHeight;
+      height = next;
+    });
+    observer.observe(log);
+    return () => observer.disconnect();
+  }, []);
+
   const days = new Map<string, MessageView[]>();
   for (const message of messages) {
     const key = dayKey(message.createdAt);
@@ -262,11 +298,13 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
           // A task request or a booking change (2026-11-23): its card, as it stands now.
           const requestCard = isNotice && message.event?.type === 'invite_sent' && message.event.params?.inviteId ? cards?.requests?.[message.event.params.inviteId] : undefined;
           const changeCard = isNotice && message.event?.type === 'change_proposed' && message.event.params?.changeId ? cards?.changes?.[message.event.params.changeId] : undefined;
+          const askCard = isNotice && message.event?.type === 'offer_requested' ? cards?.offerAsks?.[message.id] : undefined;
           const firstName = otherParty.displayName.split(' ')[0] ?? otherParty.displayName;
-          if (requestCard || changeCard) return <Fragment key={message.id}>{divider}<li data-message-id={message.id} className="flex min-w-0 justify-center">
+          if (requestCard || changeCard || askCard) return <Fragment key={message.id}>{divider}<li data-message-id={message.id} className="flex min-w-0 justify-center">
             {requestCard
               ? <TaskRequestCardView card={requestCard} name={firstName} createdAt={message.createdAt} {...(requestCardHandlers ? { handlers: requestCardHandlers } : {})} {...(onRefresh ? { onDone: onRefresh } : {})} />
-              : <ChangeCardView card={changeCard!} name={firstName} createdAt={message.createdAt} />}
+              : askCard ? <OfferAskCardView card={askCard} name={firstName} createdAt={message.createdAt} />
+                : <ChangeCardView card={changeCard!} name={firstName} createdAt={message.createdAt} />}
           </li></Fragment>;
           // Updates ("On the way", an offer received…) are small notes between the bubbles.
           if (isNotice) return <Fragment key={message.id}>{divider}<li className="flex min-w-0 justify-center">
@@ -276,9 +314,25 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
               {time}
             </article>
           </li></Fragment>;
+          const replyTo = () => setReplyTo({ id: message.id, name: sender, text: message.segments.map((segment) => (segment.kind === 'text' ? segment.text : segment.kind === 'mention' ? `@${segment.name}` : '•••')).join('').slice(0, 120) });
+          const canTranslate = Boolean(onTranslate) && message.sender === 'them';
+          const translation = translations[message.id];
+          const showingTranslation = translation?.status === 'ready' && translation.shown;
+          const plainText = message.segments.map((segment) => (segment.kind === 'text' ? segment.text : segment.kind === 'mention' ? `@${segment.name}` : '')).join('');
+          // Reactions under the bubble (completion plan 7.3; animated 2026-11-23): each emoji with its count; yours are
+          // marked, and a tap takes one back. The one just added pops in with a little burst.
+          const pills = MESSAGE_REACTIONS.flatMap((emoji) => {
+            const given = message.reactions?.find((reaction) => reaction.emoji === emoji);
+            const mineNow = mineAlready(message, emoji);
+            const count = (given?.count ?? 0) - (given?.mine ? 1 : 0) + (mineNow ? 1 : 0);
+            return count > 0 ? [{ emoji, count, mine: mineNow }] : [];
+          });
+          const hasActions = canReply || Boolean(onReact) || canTranslate;
           return <Fragment key={message.id}>{divider}<li data-message-id={message.id} className={cn('group/msg flex min-w-0 flex-col rounded-[1.5rem] transition-[background-color,box-shadow] duration-700', mine ? 'items-end' : 'items-start', grouped && '-mt-1.5', marked === message.id && 'bg-primary/10 ring-2 ring-primary/40')}>
-            <article className={cn(
-              'min-w-0 max-w-[86%] space-y-1.5 rounded-[1.25rem] px-3.5 py-2.5 [overflow-wrap:anywhere] sm:max-w-[75%] sm:px-4 sm:py-3',
+            <Popover open={picker?.id === message.id} onOpenChange={(open) => { if (!open) setPicker(null); }}>
+            <PopoverAnchor asChild>
+            <article {...gestures(message.id)} className={cn(
+              'relative min-w-0 max-w-[86%] space-y-1.5 rounded-[1.25rem] px-3.5 py-2.5 [overflow-wrap:anywhere] [-webkit-touch-callout:none] sm:max-w-[75%] sm:px-4 sm:py-3',
               mine
                 ? 'rounded-br-md bg-secondary text-secondary-foreground'
                 : 'rounded-bl-md border border-foreground/[0.07] bg-background shadow-[0_1px_2px_rgb(23_18_14/0.05)] dark:border-white/[0.07]',
@@ -289,56 +343,58 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
                 <span className="font-semibold">{message.replyTo.sender === 'me' ? t('you') : otherParty.displayName}: </span><MaskedText segments={message.replyTo.segments} />
               </blockquote>}
               <p className="text-[15px] leading-6"><MessageContent message={message} /></p>
-              {(() => {
-                const translation = translations[message.id];
-                if (!translation || translation.status === 'loading' || (translation.status === 'ready' && !translation.shown)) return null;
-                return <div className="space-y-0.5 border-t border-foreground/[0.08] pt-1.5 dark:border-white/[0.08]">
-                  <p className="text-xs font-semibold text-muted-foreground">{t('translate.label')}</p>
-                  {translation.status === 'ready' ? <p className="text-[15px] leading-6 whitespace-pre-wrap">{translation.text}</p> : <p role="alert" className="text-sm text-destructive">{t('translate.failed')}</p>}
-                </div>;
-              })()}
+              {translation && translation.status !== 'loading' && (translation.status !== 'ready' || translation.shown) && <div className="space-y-0.5 border-t border-foreground/[0.08] pt-1.5 dark:border-white/[0.08]">
+                <p className="text-xs font-semibold text-muted-foreground">{t('translate.label')}</p>
+                {translation.status === 'ready' ? <p className="text-[15px] leading-6 whitespace-pre-wrap">{translation.text}</p> : <p role="alert" className="text-sm text-destructive">{t('translate.failed')}</p>}
+              </div>}
               {message.attachments.length > 0 && <ul aria-label={t('photos')} className="grid max-w-96 grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
                 {message.attachments.map((photo, index) => <li key={photo.id} className="min-w-0"><MessagePhoto photo={photo} number={index + 1} count={message.attachments.length} sender={sender} /></li>)}
               </ul>}
               {time}
               {mine && message.id === seenMessageId && <p className="text-right text-xs font-medium text-muted-foreground">{t('seen')}</p>}
-              {/* Reactions (completion plan 7.3): each emoji with its count; yours are marked and tap again to take back. */}
-              {(() => {
-                const shown = MESSAGE_REACTIONS.flatMap((emoji) => {
-                  const given = message.reactions?.find((reaction) => reaction.emoji === emoji);
-                  const pendingOn = pendingReactions[`${message.id}:${emoji}`];
-                  const mineNow = pendingOn ?? given?.mine ?? false;
-                  const count = (given?.count ?? 0) - (given?.mine ? 1 : 0) + (mineNow ? 1 : 0);
-                  return count > 0 ? [{ emoji, count, mine: mineNow }] : [];
-                });
-                return shown.length > 0 && <ul aria-label={t('reactions.label')} className={cn('flex flex-wrap gap-1 pt-0.5', mine && 'justify-end')}>
-                  {shown.map((reaction) => <li key={reaction.emoji}><button type="button" disabled={!onReact} aria-pressed={reaction.mine} onClick={() => react(message.id, reaction.emoji, !reaction.mine)} className={cn('inline-flex min-h-7 items-center gap-1 rounded-full border px-2 text-xs tabular-nums', reaction.mine ? 'border-primary/40 bg-brand-soft' : 'border-foreground/[0.1] bg-card')}>
-                    <span aria-hidden="true">{REACTION_EMOJI[reaction.emoji]}</span><span className="sr-only">{t(`reactions.${reaction.emoji}`)}</span>{reaction.count}
-                  </button></li>)}
-                </ul>;
-              })()}
+              {pills.length > 0 && <ul aria-label={t('reactions.label')} className={cn('flex flex-wrap gap-1 pt-0.5', mine && 'justify-end')}>
+                {pills.map((reaction) => {
+                  const key = `${message.id}:${reaction.emoji}`;
+                  return <li key={reaction.emoji} className="relative">
+                    <button type="button" disabled={!onReact} aria-pressed={reaction.mine} onClick={() => react(message.id, reaction.emoji, !reaction.mine)} className={cn('inline-flex min-h-7 items-center gap-1 rounded-full border px-2 text-xs tabular-nums transition-colors', reaction.mine ? 'border-primary/40 bg-brand-soft' : 'border-foreground/[0.1] bg-card hover:bg-accent')}>
+                      <span aria-hidden="true" className={cn('inline-block text-sm leading-none', burst === key && 'reaction-pop')}>{REACTION_EMOJI[reaction.emoji]}</span><span className="sr-only">{t(`reactions.${reaction.emoji}`)}</span>{reaction.count}
+                    </button>
+                    {burst === key && <ReactionBurst />}
+                  </li>;
+                })}
+              </ul>}
+              {/* Wide screens: React, Reply and Translate float over the bubble's top corner while the pointer or the
+                  keyboard is near; touch screens use a long press instead (the picker carries the same actions). */}
+              {hasActions && <div role="group" aria-label={t('actions.label', { name: sender })} className={cn('absolute -top-4 z-10 flex items-center gap-0.5 rounded-full border border-foreground/[0.08] bg-card p-0.5 opacity-0 shadow-[0_6px_18px_-8px_rgb(40_20_5/0.45)] transition-opacity group-hover/msg:opacity-100 focus-within:opacity-100 [@media(pointer:coarse)]:hidden dark:border-white/[0.1]', mine ? 'left-2' : 'right-2', picker?.id === message.id && 'opacity-100')}>
+                {onReact && <button type="button" aria-label={t('reactions.react')} title={t('reactions.react')} aria-haspopup="dialog" aria-expanded={picker?.id === message.id} onClick={(event) => { pickerFrom.current = event.currentTarget; setPicker({ id: message.id, via: 'button' }); }} className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+                  <SmilePlus aria-hidden="true" className="size-4" />
+                </button>}
+                {canReply && <button type="button" onClick={replyTo} aria-label={t('actions.reply')} title={t('actions.reply')} className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+                  <Reply aria-hidden="true" className="size-4" />
+                </button>}
+                {/* Translate (2026-11-23): their words in the reader's language, under the message; again: the original. */}
+                {canTranslate && <button type="button" onClick={() => translate(message.id)} disabled={translation?.status === 'loading'} aria-busy={translation?.status === 'loading'} aria-pressed={showingTranslation} aria-label={showingTranslation ? t('translate.original') : t('translate.action')} title={showingTranslation ? t('translate.original') : t('translate.action')} className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
+                  {translation?.status === 'loading' ? <Spinner aria-hidden="true" className="size-4" /> : <Languages aria-hidden="true" className="size-4" />}
+                </button>}
+              </div>}
             </article>
-            {/* Reply and react: under the message, quiet until the pointer or the keyboard comes near on wide screens; none
-                where nothing can be sent (a closed or blocked conversation has no composer to reply in). */}
-            {(canReply || onReact || (onTranslate && message.sender === 'them')) && <div role="group" aria-label={t('actions.label', { name: sender })} className="flex items-center gap-0.5 opacity-100 transition-opacity lg:opacity-0 lg:focus-within:opacity-100 lg:group-hover/msg:opacity-100">
-              {canReply && <button type="button" onClick={() => setReplyTo({ id: message.id, name: sender, text: message.segments.map((segment) => (segment.kind === 'text' ? segment.text : segment.kind === 'mention' ? `@${segment.name}` : '•••')).join('').slice(0, 120) })} className="inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-xs font-medium text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
-                <Reply aria-hidden="true" className="size-3.5" />{t('actions.reply')}
-              </button>}
-              {/* Translate (2026-11-23): their words in the reader's language, under the message; again: the original. */}
-              {onTranslate && message.sender === 'them' && (() => {
-                const translation = translations[message.id];
-                const showing = translation?.status === 'ready' && translation.shown;
-                return <button type="button" onClick={() => translate(message.id)} disabled={translation?.status === 'loading'} aria-busy={translation?.status === 'loading'} aria-pressed={showing} className="inline-flex min-h-8 items-center gap-1 rounded-full px-2 text-xs font-medium text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
-                  {translation?.status === 'loading' ? <Spinner aria-hidden="true" className="size-3.5" /> : <Languages aria-hidden="true" className="size-3.5" />}{showing ? t('translate.original') : t('translate.action')}
-                </button>;
-              })()}
-              {onReact && MESSAGE_REACTIONS.map((emoji) => {
-                const mineAlready = pendingReactions[`${message.id}:${emoji}`] ?? message.reactions?.find((reaction) => reaction.emoji === emoji)?.mine ?? false;
-                return <button key={emoji} type="button" aria-pressed={mineAlready} aria-label={t(`reactions.${emoji}`)} onClick={() => react(message.id, emoji, !mineAlready)} className={cn('inline-flex size-8 items-center justify-center rounded-full text-sm hover:bg-foreground/[0.05] focus-visible:outline-2 focus-visible:outline-ring', mineAlready && 'bg-brand-soft')}>
-                  <span aria-hidden="true">{REACTION_EMOJI[emoji]}</span>
-                </button>;
-              })}
-            </div>}
+            </PopoverAnchor>
+            {picker?.id === message.id && (Boolean(onReact) || canReply || canTranslate || plainText.length > 0) && <ReactionPicker
+              label={mine ? t('reactions.pickerMine') : t('reactions.picker', { name: sender })}
+              chosen={(emoji) => mineAlready(message, emoji)}
+              onPick={(emoji) => {
+                if (onReact) react(message.id, emoji, !mineAlready(message, emoji));
+                setPicker(null);
+              }}
+              onCloseFocus={() => (picker.via === 'button' ? pickerFrom.current : null)}
+              actions={picker.via === 'button' ? undefined : <>
+                {canReply && <PickerAction icon="reply" label={t('actions.reply')} onSelect={() => { replyTo(); setPicker(null); }} />}
+                {canTranslate && <PickerAction icon="translate" label={showingTranslation ? t('translate.original') : t('translate.action')} onSelect={() => { translate(message.id); setPicker(null); }} />}
+                {plainText && <PickerAction icon="copy" label={t('actions.copy')} onSelect={() => { void navigator.clipboard?.writeText(plainText).then(() => toast.success(t('actions.copied'))).catch(() => undefined); setPicker(null); }} />}
+              </>}
+              {...(onReact ? {} : { reactionsOff: true })}
+            />}
+            </Popover>
           </li>
           </Fragment>;
         })}

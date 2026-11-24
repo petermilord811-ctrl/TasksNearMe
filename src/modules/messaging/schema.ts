@@ -95,7 +95,7 @@ export const messageReactions = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.id),
-    emoji: text('emoji').notNull(), // thumbs_up | heart | laugh | check
+    emoji: text('emoji').notNull(), // MESSAGE_REACTIONS: thumbs_up | heart | laugh | wow | sad | pray | fire | party | clap | check
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.messageId, t.userId, t.emoji] })],

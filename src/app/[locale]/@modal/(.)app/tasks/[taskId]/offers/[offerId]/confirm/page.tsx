@@ -8,9 +8,10 @@ import { confirmBookingAction, finishBankVerificationAction } from '@/modules/bo
 import { getBookingConfirmPage } from '@/modules/bookings/confirm';
 import { bookingDeps } from '@/modules/bookings/server';
 import { removeCardAction } from '@/modules/earnings/actions';
-import { requirePosterIdentity } from '@/modules/verification/poster-identity';
+import { posterIdentityRequirement } from '@/modules/trust/poster-risk';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
+import { IdentityCheckDialog } from '@/ui/components/layout/identity-check-dialog';
 import { RouteDialogLoading } from '@/ui/components/layout/route-dialog-frame';
 import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 import { BookingConfirmDialogScreen } from '@/ui/screens/bookings';
@@ -44,7 +45,10 @@ async function Confirm({ params }: { params: Params }) {
   if (!page) notFound();
   if (page.kind === 'booked') redirect(routes.app.booking(page.bookingId));
   const { breakdown } = page.data;
-  await requirePosterIdentity(deps.db, viewer.user.id, now, routes.app.confirmOffer(taskId, offerId), breakdown.posterChargedCents ?? breakdown.posterTotalCents);
+  // An ID check the risk rules ask for first: said in the dialog, with the check in a new tab (2026-11-23), instead of
+  // sending the page there. The full page still goes to it.
+  const idCheck = await posterIdentityRequirement(deps.db, viewer.user.id, now, breakdown.posterChargedCents ?? breakdown.posterTotalCents);
+  if (idCheck) return <IdentityCheckDialog reason={idCheck.reason} verifyHref={routes.app.verifyIdentity(routes.app.confirmOffer(taskId, offerId))} />;
   return (
     <TimeZoneProvider timeZone={viewer.user.timeZone}>
       <BookingConfirmDialogScreen

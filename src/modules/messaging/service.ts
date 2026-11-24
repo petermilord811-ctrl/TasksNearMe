@@ -40,6 +40,7 @@ import { mentionsOf } from './mentions';
 import { noteSampleRecipient } from './samples';
 import { chatAssistOffered } from './assist';
 import { cardsFor } from './cards';
+import { requestOptionsFor } from './asks';
 import { allowedChangeTypes } from '@/modules/bookings/changes-domain';
 import { isSampleId, samplesHiddenInThisBuild } from '@/shared/sample-data';
 import { messageReactions, messages, savedReplies, threadParticipants, threads } from './schema';
@@ -535,8 +536,10 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   }
   const lastMine = [...rows].reverse().find((row) => row.senderUserId === userId);
   const assist = chatAssistOffered();
-  // Task requests and booking changes its lines show as cards, as they are now (2026-11-23).
-  const cards = await cardsFor(db, userId, rows, now);
+  // Task requests, booking changes and asks for an offer its lines show as cards, as they are now (2026-11-23).
+  const cards = await cardsFor(db, userId, rows, now, found.other.id);
+  // A direct conversation's "+" menu: Request a task, Ask for an offer, Make an offer on their task (2026-11-23).
+  const requestOptions = thread.kind === 'direct' && found.other.status !== 'deleted' ? await requestOptionsFor(db, userId, found.other.id, found.summary.subject, now) : null;
   // A deleted account reads nothing (privacy rehearsal J-PR8): the conversation reads as closed, with no reason that
   // points a way on (no offer to request again, no booking to write about).
   const otherGone = found.other.status === 'deleted';
@@ -585,6 +588,7 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
     ...(assist.translate || assist.suggest ? { assist } : {}),
     ...(cards ? { cards } : {}),
     ...(canProposeChange ? { canProposeChange: true } : {}),
+    ...(requestOptions ? { requestOptions } : {}),
     ...(presence ? { presence } : {}),
     ...(mutual && lastMine && theirs?.lastReadAt && theirs.lastReadAt >= lastMine.createdAt ? { seenMessageId: lastMine.id } : {}),
     ...(newlyRead[0] ? { firstUnreadId: newlyRead[0].id } : {}),

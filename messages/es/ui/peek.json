@@ -1,0 +1,43 @@
+{
+  "loading": "Cargando…",
+  "failed": "No se cargó. Inténtalo de nuevo.",
+  "notFound": "Esto no está disponible.",
+  "retry": "Intentar de nuevo",
+  "back": "Atrás",
+  "openInNewTab": "Abrir en una pestaña nueva",
+  "openProfile": "Abrir el perfil completo",
+  "message": "Escribir",
+  "save": "Guardar",
+  "saved": "Guardado",
+  "saveFailed": "No se guardó. Inténtalo de nuevo.",
+  "readMore": "Leer más",
+  "readLess": "Mostrar menos",
+  "latestReview": "Reseña más reciente",
+  "helpCenter": "Centro de ayuda",
+  "yourProfile": "Este es tu perfil, como lo ven los demás.",
+  "kinds": {
+    "helper": "Perfil de ayudante",
+    "help": "Ayuda",
+    "legal": "Política"
+  },
+  "idCheck": {
+    "title": "Primero verifica tu identidad",
+    "body": "Se abre en una pestaña nueva, y esto te espera aquí.",
+    "start": "Verificar en una pestaña nueva",
+    "done": "Ya terminé",
+    "checking": "Comprobando…",
+    "stillNeeded": "Aún no recibimos tu verificación. Si acabas de terminar, espera un minuto e inténtalo de nuevo."
+  },
+  "previews": {
+    "group": "Vistas rápidas",
+    "helper": "Vista rápida: el perfil de un ayudante junto a la página",
+    "helperBesideChat": "Vista rápida: el perfil de un ayudante a la izquierda, junto a una ventana de chat",
+    "helperSelf": "Vista rápida: tu propio perfil",
+    "helpCenter": "Vista rápida: el centro de ayuda",
+    "helpArticle": "Vista rápida: un artículo de ayuda",
+    "legal": "Vista rápida: una política (solo en inglés)",
+    "loading": "Vista rápida: cargando",
+    "failed": "Vista rápida: no se cargó",
+    "idCheck": "Solicitud: la verificación de identidad, en el diálogo"
+  }
+}

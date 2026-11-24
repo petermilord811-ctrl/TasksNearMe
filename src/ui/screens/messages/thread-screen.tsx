@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, ArrowUpRight, LockKeyhole } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useShownPerson } from '@/ui/lib/shown-person';
 import { routes, type ConversationListHandlers, type HelpSummary, type ISODateTime, type ReportHandlers, type ReportSubject, type ThreadHandlers, type ThreadPageData, type ThreadSubject, type ThreadSummary } from '@/contracts';
+import { ConversationActionsMenu } from '@/ui/components/messaging/conversation-actions';
 import { ConversationMarks, ConversationMenu, RequestBanner } from '@/ui/components/messaging/conversation-tools';
 import { HelpRow } from '@/ui/components/messaging/help-row';
 import { InboxList } from '@/ui/components/messaging/inbox-list';
@@ -131,14 +132,15 @@ export function ThreadContent({ data, handlers, now, safety, composerState, focu
       <span className="text-muted-foreground">{t('direct.requestHint', { name: firstName })}</span>
       <Link href={routes.app.requestHelper(requestHandle)} className="group/request inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary underline-offset-4 hover:underline">{t('direct.request')}<ArrowRight aria-hidden="true" className="size-4 transition-transform duration-200 group-hover/request:translate-x-0.5 motion-reduce:transition-none" /></Link>
     </p>}
-    <div className={cn('flex flex-col overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06]', thread.contactMasking ? 'h-[max(24rem,calc(100dvh-var(--app-header-offset,4.25rem)-13rem))]' : 'h-[max(24rem,calc(100dvh-var(--app-header-offset,4.25rem)-9rem))]', 'lg:h-[max(32rem,calc(100dvh-var(--app-header-offset,4.25rem)-10rem))]')}>
+    {/* Photos dropped anywhere on the conversation attach to the message (2026-11-23). */}
+    <div data-drop-photos="" className={cn('relative flex flex-col overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06]', thread.contactMasking ? 'h-[max(24rem,calc(100dvh-var(--app-header-offset,4.25rem)-13rem))]' : 'h-[max(24rem,calc(100dvh-var(--app-header-offset,4.25rem)-9rem))]', 'lg:h-[max(32rem,calc(100dvh-var(--app-header-offset,4.25rem)-10rem))]')}>
       <ReplyProvider>
       <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier) } : {})} otherParty={other} now={now} seenMessageId={data.seenMessageId} firstUnreadId={data.firstUnreadId} focusId={focusId} canReply={composer.canSend} {...(composer.canSend && handlers.onReact ? { onReact: handlers.onReact } : {})} {...(data.assist?.translate && handlers.onTranslate ? { onTranslate: handlers.onTranslate } : {})} {...(data.cards ? { cards: data.cards } : {})} {...(handlers.requestCards ? { requestCardHandlers: handlers.requestCards } : {})} className="min-h-0 flex-1" />
       {/* A stranger's first message (2026-11-23): Accept, Ignore or Block; answering accepts too. */}
       {composer.disabledReason !== 'blocked' && <RequestBanner thread={thread} name={firstName} handlers={handlers} {...(safety ? { onBlock: safety.handlers.onBlock } : {})} />}
       {composer.canSend && composer.firstMessagesLeft !== undefined && <p role="note" className="border-t border-foreground/[0.07] bg-muted/40 px-4 py-2 text-xs text-muted-foreground dark:border-white/[0.06]">{t('direct.firstMessagesLeft', { count: composer.firstMessagesLeft, name: firstName })}</p>}
       {composer.canSend
-        ? <MessageComposerContent key={`composer-${thread.id}`} rules={composer} handlers={handlers} savedReplies={data.savedReplies} template={{ firstName, task: thread.title }} {...(suggestFor ? { suggestFor } : {})} {...composerState} />
+        ? <MessageComposerContent key={`composer-${thread.id}`} rules={composer} handlers={handlers} savedReplies={data.savedReplies} template={{ firstName, task: thread.title }} {...(suggestFor ? { suggestFor } : {})} {...(data.requestOptions ? { actionsMenu: <ConversationActionsMenu options={data.requestOptions} name={firstName} {...(handlers.onAskForOffer ? { onAskForOffer: handlers.onAskForOffer } : {})} /> } : {})} {...composerState} />
         : <div role="status" className="border-t border-foreground/[0.07] bg-muted/60 px-4 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] text-center text-sm dark:border-white/[0.06]">
           {/* Why it closed and the way on (audit L13): the offer, the task, the booking or the visits it was about. */}
           <p className="font-medium">{closedReason ? t(`closed.${thread.subject.kind}.${closedReason}`, { name: other.displayName }) : t(`disabled.${composer.disabledReason ?? 'unavailable'}`, { name: firstName })}</p>

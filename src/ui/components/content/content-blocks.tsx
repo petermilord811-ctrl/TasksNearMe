@@ -12,7 +12,8 @@ function InlineContent({ content }: { content: RichText }) {
     if ('strong' in node) return <strong key={index}>{node.text}</strong>;
     const className = 'rounded-sm text-primary underline decoration-1 underline-offset-4 hover:decoration-2';
     if (node.href.startsWith('/')) return <Link key={index} href={node.href} className={className}>{node.text}</Link>;
-    return <a key={index} href={node.href} rel="noopener noreferrer" className={className}>{node.text} <span className="sr-only">{t('externalLink')}</span></a>;
+    // Another site opens in a new tab (2026-11-23): the article, or the sheet it's read in, stays.
+    return <a key={index} href={node.href} target="_blank" rel="noopener noreferrer" className={className}>{node.text} <span className="sr-only">{t('externalLink')}</span></a>;
   });
 }
 

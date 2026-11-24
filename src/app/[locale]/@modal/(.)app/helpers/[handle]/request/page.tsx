@@ -8,9 +8,10 @@ import { bookingDeps } from '@/modules/bookings/server';
 import { removeCardAction } from '@/modules/earnings/actions';
 import { finishRequestVerificationAction, quoteInviteAction, requestHelperAction } from '@/modules/invites/actions';
 import { getRequestHelperPage } from '@/modules/invites/service';
-import { requirePosterIdentity } from '@/modules/verification/poster-identity';
+import { posterIdentityRequirement } from '@/modules/trust/poster-risk';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
+import { IdentityCheckDialog } from '@/ui/components/layout/identity-check-dialog';
 import { RouteDialogLoading } from '@/ui/components/layout/route-dialog-frame';
 import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 import { RequestHelperDialogScreen } from '@/ui/screens/invites';
@@ -25,7 +26,8 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /**
  * Request this helper over the profile, the list or the booking it was opened from (the full page:
- * (app)/app/(flow)/helpers/[handle]/request). An ID check the risk rules ask for first is its own page, as there.
+ * (app)/app/(flow)/helpers/[handle]/request). An ID check the risk rules ask for first is said in the dialog, the check
+ * itself in a new tab (2026-11-23).
  */
 function RequestHelperDialogPage({ params, searchParams }: { params: Params; searchParams: SearchParams }) {
   return (
@@ -45,7 +47,10 @@ async function RequestHelper({ params, searchParams }: { params: Params; searchP
   const deps = bookingDeps();
   if (!deps) notFound();
   const now = await requestNow();
-  await requirePosterIdentity(deps.db, viewer.user.id, now, routes.app.requestHelper(handle, { fromBookingId: from, slotId, taskId }));
+  // An ID check the risk rules ask for first: said in the dialog, with the check in a new tab (2026-11-23, owner: "I hate
+  // redirect"), instead of sending the page there. The full page still goes to it.
+  const idCheck = await posterIdentityRequirement(deps.db, viewer.user.id, now);
+  if (idCheck) return <IdentityCheckDialog reason={idCheck.reason} verifyHref={routes.app.verifyIdentity(routes.app.requestHelper(handle, { fromBookingId: from, slotId, taskId }))} />;
   const data = await getRequestHelperPage(deps.db, deps.payments, viewer.user.id, handle, { fromBookingId: from, slotId, taskId }, now);
   if (!data) notFound();
   return (

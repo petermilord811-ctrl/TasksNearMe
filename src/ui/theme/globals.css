@@ -568,6 +568,23 @@ html[data-motion="on"] [data-reveal="bloom"]:not([data-revealed]) {
 @keyframes draw { from { stroke-dashoffset: var(--draw-length, 200); } to { stroke-dashoffset: 0; } }
 @keyframes hue-drift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
 
+/* Reactions on a message (2026-11-23, owner: "make it animated and also easy to use as telegram emoji reaction"): the
+   picker's emoji rise in turn and grow under the pointer with a little wiggle; a chosen one pops in with a small burst. */
+@keyframes reaction-rise { from { opacity: 0; transform: translate3d(0, 10px, 0) scale(0.4); } to { opacity: 1; transform: none; } }
+@keyframes reaction-pop { 0% { transform: scale(0.2); } 55% { transform: scale(1.35); } 80% { transform: scale(0.92); } 100% { transform: scale(1); } }
+@keyframes reaction-burst { from { opacity: 1; transform: rotate(var(--burst-angle)) translateY(-4px) scale(1); } to { opacity: 0; transform: rotate(var(--burst-angle)) translateY(-20px) scale(0.2); } }
+@keyframes reaction-wiggle { 0%, 100% { transform: rotate(0) scale(1.4); } 30% { transform: rotate(-11deg) scale(1.5); } 70% { transform: rotate(11deg) scale(1.5); } }
+.reaction-choice > span { display: inline-block; transition: transform 160ms var(--ease-out); }
+.reaction-choice:is(:hover, :focus-visible) > span { transform: scale(1.4); }
+.reaction-burst { position: absolute; inset: 0; pointer-events: none; }
+.reaction-burst > i { position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px; border-radius: 9999px; background: var(--primary); opacity: 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .reaction-rise { animation: reaction-rise 280ms var(--ease-out) both; animation-delay: var(--rise-delay, 0ms); }
+  .reaction-pop { animation: reaction-pop 460ms var(--ease-out) both; }
+  .reaction-burst > i { animation: reaction-burst 560ms var(--ease-out) both; }
+  .reaction-choice:is(:hover, :focus-visible) > span { animation: reaction-wiggle 640ms ease-in-out infinite; }
+}
+
 /* A line that draws itself when its [data-reveal] ancestor is revealed (always drawn without motion). */
 .draw-on-reveal { --draw-length: 900; stroke-dasharray: 900; }
 html[data-motion="on"] [data-reveal]:not([data-revealed]) .draw-on-reveal { stroke-dashoffset: var(--draw-length); }

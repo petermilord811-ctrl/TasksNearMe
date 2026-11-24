@@ -4,7 +4,7 @@ import {
 } from '@/contracts';
 import {
   blockedThreadPageData, closedThreadPageData, deskBookingThreadPageData, deskOfferThreadPageData, directThreadAwaitingReplyData, directThreadPageData, earlierThreadPageData, expiredOfferThreadPageData,
-  mayaInboxWithDirectData, changeCardThreadPageData, fakeConversationHandlers, mayaFoldersInboxData, requestCardForHelperPageData, requestCardThreadPageData, requestThreadPageData, sampleThreadPageData,
+  mayaInboxWithDirectData, plusMenuForHelperPageData, plusMenuThreadPageData, changeCardThreadPageData, fakeConversationHandlers, mayaFoldersInboxData, requestCardForHelperPageData, requestCardThreadPageData, requestThreadPageData, sampleThreadPageData,
   fakeHandler, fakeThreadHandlers, inboxEmptyData, jordanInboxPageData, jordanShell, mayaInboxPageData,
   mayaShell, movingOfferThreadForHelper, taskCanceledOfferThreadPageData, taskCanceledThreadForHelperPageData,
 } from '@/fixtures';
@@ -73,6 +73,8 @@ export const messagesScreenPreviews: PreviewEntry[] = [
   threadPreview('request-card', 'A task request card in the conversation, waiting on the helper (client)', requestCardThreadPageData),
   threadPreview('request-card-helper', 'A task request card the helper accepts or declines in the conversation', requestCardForHelperPageData, { helper: true }),
   threadPreview('change-card', 'A booking change card in the booking’s conversation, with Propose a change', changeCardThreadPageData),
+  threadPreview('plus-menu', 'A direct conversation with a helper: the "+" and an "asked for an offer" card (client)', plusMenuThreadPageData),
+  threadPreview('plus-menu-helper', 'The same ask as the helper sees it: Make an offer, and the client\u2019s open tasks in the "+"', plusMenuForHelperPageData, { helper: true }),
   threadPreview('suggestions', 'Suggested replies above the composer', requestThreadPageData, { suggestions: ['Sounds good to me!', 'What day and time work best for you?', 'Let me check and get back to you today.'] }),
   threadPreview('direct-awaiting-reply', 'Direct conversation: three sent, waiting on a reply', directThreadAwaitingReplyData),
   threadPreview('booking', threadCopy.previews.booking, deskBookingThreadPageData),

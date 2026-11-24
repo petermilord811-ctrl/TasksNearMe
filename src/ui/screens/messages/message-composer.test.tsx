@@ -27,6 +27,9 @@ function mount(props: Partial<MessageComposerProps> = {}) {
 const input = () => screen.getByRole('textbox', { name: thread.composer.label });
 const send = () => screen.getByRole('button', { name: thread.composer.send });
 const file = () => new File(['photo'], 'desk.jpg', { type: 'image/jpeg' });
+// The paperclip opens the file picker straight away (2026-11-23): its hidden input takes the files.
+const photoInput = () => document.querySelector<HTMLInputElement>('input[type="file"]')!;
+const attachButton = () => screen.getByRole('button', { name: thread.composer.attach });
 
 describe('MessageComposer', () => {
   it('trims the message, submits the contract input, clears on sent, and refreshes', async () => {
@@ -43,9 +46,8 @@ describe('MessageComposer', () => {
   it('uploads a photo and allows an attachment-only message, clearing it after sent', async () => {
     const user = userEvent.setup();
     const { handlers } = mount();
-    await user.click(screen.getByText(thread.composer.attach));
     const upload = file();
-    await user.upload(screen.getByLabelText(thread.composer.photos), upload);
+    await user.upload(photoInput(), upload);
     expect(handlers.onUploadPhoto).toHaveBeenCalledOnce();
     expect(vi.mocked(handlers.onUploadPhoto).mock.calls[0]![0].get('file')).toBe(upload);
     expect(await screen.findByRole('img')).toHaveAccessibleName(uploadedTaskPhotos[0]!.alt);
@@ -57,8 +59,7 @@ describe('MessageComposer', () => {
   it('removes a photo before sending and enforces the supplied photo count and size', async () => {
     const user = userEvent.setup();
     const { handlers } = mount({ rules: { ...deskBookingThreadPageData.composer, maxAttachments: 1, maxPhotoMegabytes: 1 } });
-    await user.click(screen.getByText(thread.composer.attach));
-    const uploadInput = screen.getByLabelText(thread.composer.photos);
+    const uploadInput = photoInput();
     const large = file(); Object.defineProperty(large, 'size', { value: 1024 * 1024 + 1 });
     await user.upload(uploadInput, large);
     expect(handlers.onUploadPhoto).not.toHaveBeenCalled();
@@ -80,8 +81,7 @@ describe('MessageComposer', () => {
     const onSend = vi.fn<ThreadHandlers['onSend']>().mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce({ ok: false, code: 'rate_limited', retryAt: '2026-11-21T16:10:00.000Z' });
     mount({ handlers: { ...fakeThreadHandlers, onSend, onUploadPhoto: async () => ({ ok: true, photo: uploadedTaskPhotos[0]! }) } });
     await user.type(input(), 'Keep this draft');
-    await user.click(screen.getByText(thread.composer.attach));
-    await user.upload(screen.getByLabelText(thread.composer.photos), file());
+    await user.upload(photoInput(), file());
     await screen.findByRole('img');
     await user.click(send());
     expect(await screen.findByText(messages.feedback.error.unknown)).toBeInTheDocument();
@@ -116,8 +116,7 @@ describe('MessageComposer', () => {
     const onSend = vi.fn(() => new Promise<ActionResult>((resolve) => { finishSend = resolve; }));
     mount({ handlers: { onSend, onUploadPhoto: () => new Promise((resolve) => { finishUpload = resolve; }) } });
     await user.type(input(), 'See attached');
-    await user.click(screen.getByText(thread.composer.attach));
-    await user.upload(screen.getByLabelText(thread.composer.photos), file());
+    await user.upload(photoInput(), file());
     expect(send()).toBeDisabled();
     fireEvent.submit(screen.getByRole('form'));
     expect(onSend).not.toHaveBeenCalled();
@@ -174,6 +173,27 @@ describe('MessageComposer', () => {
     expect(input()).toHaveFocus();
   });
 
+  it('leaves focus where the person moved it while the message was sending (a reaction picker, a menu)', async () => {
+    const user = userEvent.setup();
+    let finishSend!: (result: ActionResult) => void;
+    const onSend = vi.fn(() => new Promise<ActionResult>((resolve) => { finishSend = resolve; }));
+    mount({ handlers: { onSend, onUploadPhoto: vi.fn(async () => ({ ok: true as const, photo: uploadedTaskPhotos[0]! })) } });
+    const elsewhere = document.createElement('button');
+    elsewhere.textContent = 'Thumbs up';
+    document.body.append(elsewhere);
+    try {
+      await user.type(input(), 'On my way up.');
+      await user.click(send());
+      expect(input()).toHaveFocus();
+      elsewhere.focus();
+      await act(async () => finishSend({ ok: true, code: 'sent' }));
+      expect(input()).toHaveValue('');
+      expect(elsewhere).toHaveFocus();
+    } finally {
+      elsewhere.remove();
+    }
+  });
+
   it.each(['blocked', 'closed'] as const)('renders the %s reason without a send button', (disabledReason) => {
     mount({ rules: { ...deskBookingThreadPageData.composer, canSend: false, disabledReason } });
     expect(screen.getByRole('status')).toHaveTextContent(thread.composer[disabledReason]);
@@ -191,14 +211,14 @@ describe('MessageComposer', () => {
     expect(input()).toHaveValue('Still here');
   });
 
-  it('shows server field errors and opens photo controls for attachment errors', async () => {
+  it('shows server field errors and points at the photos for attachment errors', async () => {
     const user = userEvent.setup();
     mount({ handlers: { ...fakeThreadHandlers, onSend: fakeHandler({ ok: false, code: 'validation_failed', fieldErrors: { attachmentIds: ['invalid'] } }, 0) } });
     await user.type(input(), 'See attached'); await user.click(send());
-    const upload = await screen.findByLabelText(thread.composer.photos);
-    await waitFor(() => expect(upload).toHaveFocus());
-    expect(upload).toBeVisible(); expect(upload).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByText('Check your photos. You can attach up to 4 photos.')).toBeInTheDocument();
+    // Focus goes to the paperclip, which the error describes.
+    await waitFor(() => expect(attachButton()).toHaveFocus());
+    expect(screen.getByRole('alert')).toHaveTextContent('Check your photos. You can attach up to 4 photos.');
+    expect(attachButton()).toHaveAccessibleDescription(/^Check your photos\. You can attach up to 4 photos\./);
   });
 
   it.each(ACTION_ERROR_CODES)('provides translated feedback for %s', async (code) => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type RefObject } from 'react';
-import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronUp, LockKeyhole, Maximize2, MessagesSquare, Minus, RotateCcw, SquarePen, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronUp, LockKeyhole, Maximize2, MessagesSquare, Minus, RotateCcw, SquarePen, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type {
   AssistantTranscript,
@@ -33,6 +33,7 @@ import { MessageLog } from '@/ui/screens/messages/message-log';
 import { ReplyProvider } from '@/ui/screens/messages/reply-context';
 import { subjectHref } from '@/ui/screens/messages/thread-screen';
 import { ThreadPresence } from '@/ui/screens/messages/thread-presence';
+import { ConversationActionsMenu } from './conversation-actions';
 import { ConversationMarks, ConversationMenu, RequestBanner } from './conversation-tools';
 import { HelpChat } from './help-chat';
 import { HelpAvatar, HelpRow } from './help-row';
@@ -99,7 +100,7 @@ function Failed({ onRetry, notFound = false }: { onRetry(): void; notFound?: boo
 }
 
 /** One conversation in the window: who and what it's about, the messages, and the composer (or why it's closed). */
-function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, focusId, onJump, onIgnored, onOpenBeside, controls }: {
+function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, focusId, onJump, onIgnored, onOpenBeside, onShowInWindow, controls }: {
   load: ChatLoad<ChatThreadData>;
   now: ISODateTime;
   handlers: ChatThreadHandlers;
@@ -111,7 +112,8 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
   onIgnored(): void;
   /** "Open beside": this conversation in a window of its own, docked beside the chat window (2026-11-23). */
   onOpenBeside?: () => void;
-  /** A docked window's own buttons (minimize, close), at the end of the header. */
+  /** A docked window: back into the chat window (in its menu), and its own buttons (minimize, close) at the header's end. */
+  onShowInWindow?: () => void;
   controls?: ReactNode;
 }) {
   const t = useTranslations('thread');
@@ -144,24 +146,27 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
   const lastWritten = [...messages].reverse().find((message) => message.kind === 'text');
   const suggestFor = data.assist?.suggest && lastWritten?.sender === 'them' ? lastWritten.id : undefined;
   const safetyMenu = safety ? { subject: safety, handlers: { onReport: (input: Parameters<ChatThreadHandlers['onReport']>[1]) => handlers.onReport(id, input), onBlock: (input: { blocked: boolean }) => handlers.onBlock(id, input) } } : undefined;
-  return <section aria-label={w('conversation', { name: other.displayName })} className="flex min-h-0 flex-1 flex-col">
-    <header className="flex min-w-0 items-center gap-2.5 border-b border-foreground/[0.07] px-3 py-2.5 dark:border-white/[0.06]">
+  // The header never overlaps itself, however narrow (2026-11-23, owner: "bugs in header"): the name and its line below
+  // take what's left after the buttons and wrap; the way to what it's about lives in the menu, with search and the rest.
+  return <section aria-label={w('conversation', { name: other.displayName })} data-drop-photos="" className="@container/thread relative flex min-h-0 flex-1 flex-col">
+    <header className="flex min-w-0 items-center gap-2 border-b border-foreground/[0.07] px-3 py-2 dark:border-white/[0.06]">
       <InitialsAvatar initials={other.initials} photo={other.photo} size="sm" />
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-1.5"><h3 className="truncate text-[15px] font-semibold">{other.displayName}</h3><ConversationMarks thread={thread} /></div>
-        <div className="flex min-w-0 items-center gap-x-2 text-xs text-muted-foreground">
+      <div className="min-w-0 flex-1 overflow-hidden">
+        <div className="flex min-w-0 items-center gap-1.5"><h3 className="min-w-0 truncate text-[15px] font-semibold" title={other.displayName}>{other.displayName}</h3><ConversationMarks thread={thread} /></div>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
           <ThreadPresence threadId={thread.id} presence={data.presence} className="shrink-0 text-xs" />
           {/* Their @username and Sparks (2026-11-22). */}
-          {other.username && <span className="shrink-0">@{other.username}</span>}
+          {other.username && <span className="min-w-0 max-w-full truncate">@{other.username}</span>}
           {thread.sample && <Badge variant="outline" className="shrink-0">{t('sampleBadge')}</Badge>}
           {other.sparks && <SparksBadge sparks={other.sparks} compact className="shrink-0 flex-nowrap" />}
-          <span className="truncate">{thread.kind === 'direct' ? t('direct.label') : thread.title}</span>
+          <span className="min-w-0 truncate @max-[24rem]/thread:hidden">{thread.kind === 'direct' ? t('direct.label') : thread.title}</span>
         </div>
       </div>
-      {subjectLink && <Link href={subjectLink} title={t(`subject.${thread.subject.kind}`)} aria-label={t(`subject.${thread.subject.kind}`)} className={control}><ArrowUpRight aria-hidden="true" className="size-4" /></Link>}
-      {/* Search, pin, mute, archive, then Report and Block (2026-11-23). */}
-      <ConversationMenu thread={thread} handlers={bound} safety={safetyMenu} name={other.displayName} onJump={onJump} now={now} {...(onOpenBeside ? { onOpenBeside } : {})} />
-      {controls}
+      <div className="flex shrink-0 items-center">
+        {/* What it's about, search, side by side, pin, mute, archive, then Report and Block (2026-11-23). */}
+        <ConversationMenu thread={thread} handlers={bound} safety={safetyMenu} name={other.displayName} onJump={onJump} now={now} {...(subjectLink ? { subject: { href: subjectLink, label: t(`subject.${thread.subject.kind}`) } } : {})} {...(onOpenBeside ? { onOpenBeside } : {})} {...(onShowInWindow ? { onShowInWindow } : {})} />
+        {controls}
+      </div>
     </header>
     {thread.contactMasking && <p className="flex items-start gap-2 border-b border-foreground/[0.07] bg-secondary/60 px-3 py-2 text-xs leading-5 text-secondary-foreground dark:border-white/[0.06]"><LockKeyhole aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" /><span>{thread.kind === 'direct' ? t('direct.masking') : t('masking')}</span></p>}
     {data.canProposeChange && thread.subject.kind === 'booking' && <p className="flex flex-wrap items-center justify-between gap-x-3 border-b border-foreground/[0.07] px-3 py-1.5 text-xs dark:border-white/[0.06]">
@@ -177,7 +182,7 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
       {composer.disabledReason !== 'blocked' && <RequestBanner thread={thread} name={firstName} handlers={bound} onBlock={(input) => handlers.onBlock(id, input)} onIgnored={onIgnored} compact />}
       {composer.canSend && composer.firstMessagesLeft !== undefined && <p role="note" className="border-t border-foreground/[0.07] bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground dark:border-white/[0.06]">{t('direct.firstMessagesLeft', { count: composer.firstMessagesLeft, name: firstName })}</p>}
       {composer.canSend
-        ? <MessageComposerContent key={`composer-${thread.id}`} compact rules={composer} handlers={bound} savedReplies={data.savedReplies} template={{ firstName, task: thread.title }} onRefresh={onRefresh} {...(suggestFor ? { suggestFor } : {})} />
+        ? <MessageComposerContent key={`composer-${thread.id}`} compact rules={composer} handlers={bound} savedReplies={data.savedReplies} template={{ firstName, task: thread.title }} onRefresh={onRefresh} {...(suggestFor ? { suggestFor } : {})} {...(data.requestOptions ? { actionsMenu: <ConversationActionsMenu options={data.requestOptions} name={firstName} onAskForOffer={(input) => handlers.onAskForOffer(id, input)} compact /> } : {})} />
         : <div role="status" className="border-t border-foreground/[0.07] bg-muted/60 px-3 py-3 text-center text-sm dark:border-white/[0.06]">
           <p className="font-medium">{closedReason ? t(`closed.${thread.subject.kind}.${closedReason}`, { name: other.displayName }) : t(`disabled.${composer.disabledReason ?? 'unavailable'}`, { name: firstName })}</p>
           {closedReason && subjectLink && <Link href={subjectLink} className="mt-1 inline-flex min-h-9 items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">{t(`wayOn.${thread.subject.kind}`)}<ArrowRight aria-hidden="true" className="size-4" /></Link>}
@@ -393,17 +398,19 @@ export interface DockedChat {
   minimized: boolean;
 }
 
-/** A docked window's width, and the gap between windows. */
+/** A docked window's width, the gap between windows, a minimized chat's head and the page's edge. */
 export const DOCKED_WIDTH = 360;
 const DOCKED_GAP = 12;
+const HEAD = 52;
 const EDGE = 24;
 
 /**
- * How far from the right the docked windows start: past the chat window, its minimized bar, or the chat button
- * (`mainKey`: which of them is there; its size is followed as it's resized).
+ * Where the docked row starts and how many open windows fit (`mainKey`: what the chat window is now: open, minimized or
+ * closed). Measured with offsetWidth, the layout's width: the window's opening zoom made a bounding box 5% narrow, and the
+ * first docked window covered its edge (2026-11-23, owner: "beside opened chat is conflicted with main chat window").
  */
-function useDockOffset(mainKey: string): number {
-  const [offset, setOffset] = useState(EDGE + 64 + DOCKED_GAP);
+function useDock(mainKey: string): { offset: number; free: number } {
+  const [dock, setDock] = useState({ offset: EDGE + 64 + DOCKED_GAP, free: DOCKED_WIDTH });
   useEffect(() => {
     let frame = 0;
     let tries = 0;
@@ -411,9 +418,10 @@ function useDockOffset(mainKey: string): number {
     const find = () => document.querySelector<HTMLElement>('[data-chat-window]') ?? document.querySelector<HTMLElement>('[data-chat-launcher="window"]');
     const measure = () => {
       const main = watched ?? find();
-      setOffset(EDGE + Math.round(main ? main.getBoundingClientRect().width : 64) + DOCKED_GAP);
+      const offset = EDGE + (main ? main.offsetWidth : 64) + DOCKED_GAP;
+      setDock({ offset, free: window.innerWidth - offset - EDGE });
     };
-    const observer = new ResizeObserver(measure);
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
     // The chat window's code may still be loading: look again for a few frames.
     const attach = () => {
       const main = find();
@@ -423,24 +431,46 @@ function useDockOffset(mainKey: string): number {
         return;
       }
       watched = main;
-      if (main) observer.observe(main);
+      if (main) observer?.observe(main);
       measure();
     };
     frame = requestAnimationFrame(attach);
     window.addEventListener('resize', measure);
     return () => {
       cancelAnimationFrame(frame);
-      observer.disconnect();
+      observer?.disconnect();
       window.removeEventListener('resize', measure);
     };
   }, [mainKey]);
-  return offset;
+  return dock;
+}
+
+/** How many docked windows fit in a width. */
+const windowsIn = (space: number) => Math.max(0, Math.floor((space + DOCKED_GAP) / (DOCKED_WIDTH + DOCKED_GAP)));
+
+/** A minimized (or crowded-out) conversation: a round head beside the chat window, its unread count, a close on hover. */
+function DockedHead({ name, avatar, unread, onRestore, onClose }: { name: string; avatar: ReactNode; unread: number; onRestore(): void; onClose(): void }) {
+  const t = useTranslations('chat.window');
+  return <li data-chat-docked="head" className="group/head relative motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-75">
+    <button type="button" onClick={onRestore} title={name} className="grid size-[3.25rem] place-items-center rounded-full bg-card shadow-[0_10px_28px_-12px_rgb(40_20_5/0.6)] ring-2 ring-card transition-transform duration-200 hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none">
+      {/* Named by its words, not an aria-label: a label over the avatar's visible initials reads as a mismatch (axe:
+          label-content-name-mismatch), and the initials would be read out again. */}
+      <span aria-hidden="true" className="grid size-12 place-items-center [&>*]:size-12">{avatar}</span>
+      <span className="sr-only">{t('restoreDocked', { name, count: unread })}</span>
+    </button>
+    {unread > 0 && <span aria-hidden="true" className="pointer-events-none absolute -top-1 -right-1 min-w-5 rounded-full bg-primary px-1.5 text-center text-[0.6875rem] leading-5 font-semibold text-primary-foreground tabular-nums ring-2 ring-background">{unread > 99 ? '99+' : unread}</span>}
+    <button type="button" onClick={onClose} aria-label={t('closeDocked', { name })} title={t('closeDocked', { name })} className="absolute -top-1.5 -left-1.5 grid size-6 place-items-center rounded-full bg-foreground text-background opacity-0 shadow transition-opacity group-hover/head:opacity-100 focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ring">
+      <X aria-hidden="true" className="size-3.5" />
+    </button>
+  </li>;
 }
 
 /**
  * Conversations side by side (2026-11-23): "Open beside" docks a conversation in a window of its own to the left of the
- * chat window, at most two, each with its messages, composer and live updates, minimized to a bar or closed on its own.
- * Not modal, as the chat window; Esc in one minimizes it.
+ * chat window. As many open windows as fit, the newest nearest the chat window; the rest, and the minimized ones, wait as
+ * round heads beside the chat window (2026-11-23, owner: "unable to open more than 2 beside chats. if many opens, show it
+ * effectively"). Each window has its messages, composer and live updates. Not modal, as the chat window; Esc in one
+ * minimizes it. One `[data-chat-docked-row]` holds them all (page switches lift that one element above the page).
  */
 export function DockedChats({ docked, mainKey, loads, now, handlers, onMinimize, onRestore, onClose, onRefresh, onLoadEarlier, onShowInWindow }: {
   docked: DockedChat[];
@@ -459,30 +489,35 @@ export function DockedChats({ docked, mainKey, loads, now, handlers, onMinimize,
 }) {
   const t = useTranslations('chat.window');
   const person = useShownPerson();
-  const offset = useDockOffset(mainKey);
+  const opened = docked.filter((chat) => !chat.minimized);
+  const { offset, free } = useDock(mainKey);
   if (docked.length === 0) return null;
+  // The newest open ones that fit are windows; any others wait as heads with the minimized ones. The heads' column takes
+  // its own room whenever one waits (minimized, or more open than fit).
+  const alone = windowsIn(free);
+  const room = docked.length > opened.length || opened.length > alone ? windowsIn(free - HEAD - DOCKED_GAP) : alone;
+  const shown = opened.slice(0, room);
+  const shownIds = new Set(shown.map((chat) => chat.threadId));
+  const heads = docked.filter((chat) => !shownIds.has(chat.threadId));
+  const who = (threadId: string) => {
+    const load = loads[threadId] ?? { status: 'idle' };
+    const loaded = load.status === 'idle' ? undefined : load.data;
+    const other = loaded ? person(loaded.data.thread.otherParty) : undefined;
+    return { load, loaded, other, name: other?.displayName ?? t('title') };
+  };
   return <div data-chat-docked-row="" className="fixed bottom-6 z-40 hidden flex-row-reverse items-end gap-3 lg:flex" style={{ right: offset }}>
-    {docked.map((chat) => {
-      const load = loads[chat.threadId] ?? { status: 'idle' };
-      const loaded = load.status === 'idle' ? undefined : load.data;
-      const other = loaded ? person(loaded.data.thread.otherParty) : undefined;
-      const name = other?.displayName ?? t('title');
-      const close = <button type="button" onClick={() => onClose(chat.threadId)} aria-label={t('closeDocked', { name })} title={t('closeDocked', { name })} className={control}><X aria-hidden="true" className="size-4" /></button>;
-      if (chat.minimized) {
-        const unread = loaded?.data.thread.unreadCount ?? 0;
-        return <div key={chat.threadId} data-chat-docked="minimized" role="region" aria-label={t('dockedMinimized', { name })} className="app-glass flex w-56 items-center gap-1 rounded-full border border-foreground/[0.08] p-1.5 shadow-[0_18px_40px_-18px_rgb(40_20_5/0.5)] dark:border-white/[0.1]">
-          <button type="button" onClick={() => onRestore(chat.threadId)} className="flex min-w-0 flex-1 items-center gap-2 rounded-full py-0.5 pr-2 pl-0.5 text-left hover:bg-foreground/[0.04] focus-visible:outline-2 focus-visible:outline-ring">
-            {other ? <InitialsAvatar initials={other.initials} photo={other.photo} size="sm" /> : <span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground"><MessagesSquare className="size-4" /></span>}
-            <span className="min-w-0 flex-1 truncate text-sm font-semibold"><span className="sr-only">{t('restore')}: </span>{name}</span>
-            {unread > 0 && <span className="shrink-0 rounded-full bg-primary px-2 text-xs leading-5 font-semibold text-primary-foreground tabular-nums">{unread > 99 ? '99+' : unread}<span className="sr-only"> {t('unreadWord')}</span></span>}
-          </button>
-          {close}
-        </div>;
-      }
+    {heads.length > 0 && <ul aria-label={t('dockedHeads')} className="flex max-h-[calc(100dvh-var(--app-header-offset,4.25rem)-3rem)] flex-col-reverse gap-2.5 overflow-y-auto overscroll-contain p-1.5 [scrollbar-width:none]">
+      {heads.map((chat) => {
+        const { loaded, other, name } = who(chat.threadId);
+        const avatar = other ? <InitialsAvatar initials={other.initials} photo={other.photo} size="md" /> : <span aria-hidden="true" className="grid size-12 place-items-center rounded-full bg-primary text-primary-foreground"><MessagesSquare className="size-5" /></span>;
+        return <DockedHead key={chat.threadId} name={name} avatar={avatar} unread={loaded?.data.thread.unreadCount ?? 0} onRestore={() => onRestore(chat.threadId)} onClose={() => onClose(chat.threadId)} />;
+      })}
+    </ul>}
+    {shown.map((chat) => {
+      const { load, loaded, name } = who(chat.threadId);
       const controls = <>
-        <button type="button" onClick={() => onShowInWindow(chat.threadId)} aria-label={t('showInWindow')} title={t('showInWindow')} className={control}><ArrowRight aria-hidden="true" className="size-4" /></button>
         <button type="button" onClick={() => onMinimize(chat.threadId)} aria-label={t('minimizeDocked', { name })} title={t('minimizeDocked', { name })} className={control}><Minus aria-hidden="true" className="size-4" /></button>
-        {close}
+        <button type="button" onClick={() => onClose(chat.threadId)} aria-label={t('closeDocked', { name })} title={t('closeDocked', { name })} className={control}><X aria-hidden="true" className="size-4" /></button>
       </>;
       return <section key={chat.threadId} data-chat-docked="open" role="dialog" aria-modal="false" aria-label={t('docked', { name })} tabIndex={-1}
         onKeyDown={(event) => {
@@ -493,7 +528,7 @@ export function DockedChats({ docked, mainKey, loads, now, handlers, onMinimize,
         className="app-glass flex h-[min(34rem,calc(100dvh-var(--app-header-offset,4.25rem)-3rem))] flex-col overflow-hidden rounded-[1.5rem] border border-foreground/[0.08] bg-card/85 shadow-[0_2px_6px_rgb(23_18_14/0.06),0_30px_60px_-24px_rgb(40_20_5/0.55)] outline-none motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 dark:border-white/[0.1]"
         style={{ width: DOCKED_WIDTH }}>
         {loaded
-          ? <ThreadPane load={load} now={now} handlers={handlers} onRetry={() => onRefresh(chat.threadId)} onRefresh={() => onRefresh(chat.threadId)} onLoadEarlier={(from) => onLoadEarlier(chat.threadId, from)} onJump={() => onShowInWindow(chat.threadId)} onIgnored={() => onClose(chat.threadId)} controls={controls} />
+          ? <ThreadPane load={load} now={now} handlers={handlers} onRetry={() => onRefresh(chat.threadId)} onRefresh={() => onRefresh(chat.threadId)} onLoadEarlier={(from) => onLoadEarlier(chat.threadId, from)} onJump={() => onShowInWindow(chat.threadId)} onIgnored={() => onClose(chat.threadId)} onShowInWindow={() => onShowInWindow(chat.threadId)} controls={controls} />
           : <>
             <div className="flex justify-end border-b border-foreground/[0.07] px-2 py-1.5 dark:border-white/[0.06]">{controls}</div>
             {load.status === 'error' ? <Failed onRetry={() => onRefresh(chat.threadId)} notFound={load.notFound} /> : <Loading />}

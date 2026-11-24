@@ -71,8 +71,11 @@ export type ThreadSubject =
    */
   | { kind: 'person'; helperHandle?: string; canRequest: boolean };
 
-/** Reactions on a message (completion plan 7.3): a small set, like a team chat. */
-export const MESSAGE_REACTIONS = ['thumbs_up', 'heart', 'laugh', 'check'] as const;
+/**
+ * Reactions on a message (completion plan 7.3; ten since 2026-11-23, owner: "make it animated and also easy to use as
+ * telegram emoji reaction"). The picker shows the first seven, the rest under "more"; reactions show in this order.
+ */
+export const MESSAGE_REACTIONS = ['thumbs_up', 'heart', 'laugh', 'wow', 'sad', 'pray', 'fire', 'party', 'clap', 'check'] as const;
 export type MessageReaction = (typeof MESSAGE_REACTIONS)[number];
 
 /** A person's saved reply: `{first_name}` and `{task}` are filled in when it's used (completion plan 7.3). */
@@ -259,6 +262,8 @@ export interface ThreadPageData {
    * change dialog (`routes.app.bookingProposeChange`), and the proposal shows here as a card (2026-11-23).
    */
   canProposeChange?: boolean;
+  /** A direct conversation's "+" menu (2026-11-23); absent when it has nothing to offer. */
+  requestOptions?: ConversationRequestOptions;
 }
 
 // ---- Cards in a conversation (2026-11-23, owner: "plan all and implement") ---------------------------------------------
@@ -302,12 +307,51 @@ export interface ChangeCard {
   expiresAt?: ISODateTime;
 }
 
+/**
+ * "Asked for an offer" (2026-11-23, owner: "once started conversation, it's unable to request task or request offer"): a
+ * client asked the helper they're talking to for an offer on one of their open tasks. The helper's card says Make an
+ * offer (`routes.app.findWorkOffer(taskId)`, a dialog over the page) until they have one; the client's, View task.
+ */
+export interface OfferAskCard {
+  taskId: string;
+  title: string;
+  /** The task is still open for offers. */
+  open: boolean;
+  viewerRole: 'poster' | 'helper';
+  /** The helper has made an offer on it (theirs, pending or accepted). */
+  offered: boolean;
+  /** The client's task (`routes.app.task`), or for the helper the offer form (`routes.app.findWorkOffer`) / their offer. */
+  href: string;
+}
+
 export interface ConversationCards {
   /** By invite id. */
   requests?: Record<string, TaskRequestCard>;
   /** By change id. */
   changes?: Record<string, ChangeCard>;
+  /** By the line's message id (one task may be asked about twice). */
+  offerAsks?: Record<string, OfferAskCard>;
 }
+
+/** An open task to choose in a conversation's "+" menu. */
+export interface TaskChoice {
+  id: string;
+  title: string;
+}
+
+/**
+ * What a direct conversation's "+" menu offers (2026-11-23): Request a task (the other person is a bookable helper:
+ * `requestHandle`), Ask for an offer on one of the viewer's open tasks (`myOpenTasks`, to a helper), and, for a helper,
+ * Make an offer on one of the other person's open tasks (`theirOpenTasks`).
+ */
+export interface ConversationRequestOptions {
+  requestHandle?: string;
+  myOpenTasks: TaskChoice[];
+  theirOpenTasks: TaskChoice[];
+}
+
+export const askForOfferInputSchema = z.object({ taskId: z.string('required').trim().min(1, 'required').max(80, 'too_long') });
+export type AskForOfferInput = z.input<typeof askForOfferInputSchema>;
 
 /**
  * A task request card's buttons (the invites' own actions, with `{ inviteId }`): ok `booked` (accept, with `redirectTo` the
@@ -373,6 +417,11 @@ export interface ThreadHandlers {
   onSuggest?: () => Promise<ReplySuggestions | null>;
   /** A task request card's Accept, Decline and Cancel (2026-11-23). */
   requestCards?: RequestCardHandlers;
+  /**
+   * Ask the other person for an offer on one of the viewer's open tasks (2026-11-23): ok `sent` (the card shows in the
+   * conversation). Errors: `not_allowed` (not theirs, not open, or the other person isn't a helper), `rate_limited`.
+   */
+  onAskForOffer?: ActionHandler<AskForOfferInput>;
 }
 
 // ---- Direct conversations (2026-11-21) -----------------------------------------------------------------------
@@ -607,4 +656,5 @@ export interface ChatThreadHandlers {
   onTranslate(threadId: string, messageId: string): Promise<MessageTranslation | null>;
   onSuggest(threadId: string): Promise<ReplySuggestions | null>;
   requestCards: RequestCardHandlers;
+  onAskForOffer(threadId: string, input: AskForOfferInput): Promise<ActionResult>;
 }

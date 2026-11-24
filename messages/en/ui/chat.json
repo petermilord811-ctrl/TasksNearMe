@@ -30,7 +30,9 @@
     "dockedMinimized": "Conversation with {name}, minimized",
     "minimizeDocked": "Minimize the conversation with {name}",
     "closeDocked": "Close the conversation with {name}",
-    "showInWindow": "Show in the chat window"
+    "showInWindow": "Show in the chat window",
+    "dockedHeads": "Conversations waiting beside the chat window",
+    "restoreDocked": "{name}{count, plural, =0 {} one {, # unread message} other {, # unread messages}}: open"
   },
   "help": {
     "title": "TasksNearMe Help",

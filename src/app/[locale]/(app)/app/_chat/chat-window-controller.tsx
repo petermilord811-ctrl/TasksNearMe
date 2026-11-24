@@ -5,6 +5,7 @@ import { useSelectedLayoutSegments } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   ActionResult,
+  AskForOfferInput,
   ChatInboxData,
   ChatLoad,
   ChatThreadData,
@@ -33,6 +34,7 @@ import type {
 } from '@/contracts';
 import { chatViewHref, chatViewOfHref, directChatTargetKey } from '@/shared/chat-links';
 import { OPEN_IN_CHAT_EVENT, type OpenInChatDetail } from '@/ui/lib/chat-window-open';
+import { openAfterMenu } from '@/ui/lib/menus';
 import { ChatLauncher } from '@/ui/components/messaging/chat-launcher';
 import { useRealtime, useRealtimeConnected, type RealtimeNotice } from '@/ui/lib/realtime';
 import { useAppShellLayout } from '@/ui/shells/app-shell-layout';
@@ -46,8 +48,11 @@ const DockedChats = dynamic(() => import('@/ui/components/messaging/chat-window'
 
 /** A conversation docked beside the chat window (the window's `DockedChat`). */
 type Docked = { threadId: string; minimized: boolean };
-/** At most two docked windows, each this wide with this gap (chat-window.tsx's `DOCKED_WIDTH`), from 1024 px. */
-const DOCKED_MAX = 2;
+/**
+ * At most six docked conversations (2026-11-23, owner: "unable to open more than 2 beside chats"): as many open windows as
+ * fit, the rest as heads (chat-window.tsx's `DockedChats`). Each window is this wide with this gap (`DOCKED_WIDTH`).
+ */
+const DOCKED_MAX = 6;
 const DOCKED_SPACE = 360 + 12;
 
 /** Server Actions the signed-in shell hands over (never closures: src/app/[locale]/(app)/app/signed-in-shell.tsx). */
@@ -76,6 +81,8 @@ export interface ChatActions {
   /** Translate a message, suggest replies (2026-11-23). */
   translate(threadId: string, messageId: string): Promise<MessageTranslation | null>;
   suggest(threadId: string): Promise<ReplySuggestions | null>;
+  /** Ask the helper of a direct conversation for an offer on one of your open tasks (2026-11-23). */
+  askForOffer(threadId: string, input: AskForOfferInput): Promise<ActionResult>;
   /** A task request card's buttons: the invites' own actions (2026-11-23). */
   acceptInvite(input: { inviteId: string }): Promise<ActionResult>;
   declineInvite(input: { inviteId: string }): Promise<ActionResult>;
@@ -427,10 +434,10 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
       if (!next) return;
       // The page's own handlers never see this click: some navigate after their work (a notification marks itself read,
       // then opens its page). Opening the conversation here reads it, and its "sent you a message" notifications too.
-      // A menu's item still hears it, so the menu closes (the link itself stands down: the click is prevented).
+      // A menu it was in closes first: Radix skips its own select on a prevented click, so the menu would stay open.
       event.preventDefault();
-      if (!anchor.closest('[role="menu"], [role="menubar"]')) event.stopPropagation();
-      openWith(next);
+      event.stopPropagation();
+      openAfterMenu(anchor, () => openWith(next));
     };
     document.addEventListener('click', onClick, true);
     return () => document.removeEventListener('click', onClick, true);
@@ -518,6 +525,11 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
       onTranslate: actions.translate,
       onSuggest: actions.suggest,
       requestCards: { onAccept: actions.acceptInvite, onDecline: actions.declineInvite, onCancel: actions.cancelInvite },
+      onAskForOffer: async (threadId, input) => {
+        const result = await actions.askForOffer(threadId, input);
+        if (result.ok) threadAgain(threadId);
+        return result;
+      },
     }),
     [actions, threadAgain, soon, loadInbox],
   );
@@ -600,17 +612,18 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
   /** As many docked windows as fit to the left of the chat window (at most `DOCKED_MAX`). */
   const dockRoom = () => {
     const main = document.querySelector<HTMLElement>('[data-chat-window]');
-    const mainWidth = main ? main.getBoundingClientRect().width : 64;
+    // The layout's width: the window's opening zoom makes a bounding box 5% narrow.
+    const mainWidth = main ? main.offsetWidth : 64;
     return Math.max(0, Math.min(DOCKED_MAX, Math.floor((window.innerWidth - 48 - mainWidth) / DOCKED_SPACE)));
   };
   const openBeside = (threadId: string) => {
-    const room = dockRoom();
-    // No room: it opens in the window itself.
-    if (room === 0) {
+    // No room for even one window beside it: it opens in the window itself.
+    if (dockRoom() === 0) {
       openWith({ kind: 'thread', threadId });
       return;
     }
-    setDocked((current) => [{ threadId, minimized: false }, ...current.filter((chat) => chat.threadId !== threadId)].slice(0, room));
+    // The newest first: it's a window, and older ones that no longer fit wait as heads; past six, the oldest goes.
+    setDocked((current) => [{ threadId, minimized: false }, ...current.filter((chat) => chat.threadId !== threadId)].slice(0, DOCKED_MAX));
     // The window goes back to the list: the conversation is beside it now.
     const current = viewRef.current;
     if (current.kind === 'thread' && current.threadId === threadId) show({ kind: 'list' });
@@ -667,7 +680,8 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
       now={now}
       handlers={threadHandlers}
       onMinimize={(threadId) => dockedChange(threadId, { minimized: true })}
-      onRestore={(threadId) => dockedChange(threadId, { minimized: false })}
+      // A head comes back as the newest window (an older one may step back to a head to make room).
+      onRestore={(threadId) => setDocked((current) => [{ threadId, minimized: false }, ...current.filter((chat) => chat.threadId !== threadId)])}
       onClose={(threadId) => dockedChange(threadId, null)}
       onRefresh={(threadId) => void loadDocked(threadId)}
       onLoadEarlier={(threadId, from) => loadDocked(threadId, from)}

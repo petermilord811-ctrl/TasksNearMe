@@ -232,7 +232,8 @@ test.describe('the chat window (wide screens)', () => {
       await expect(log.getByText('This needs our support team.')).toBeVisible({ timeout: 30_000 });
       // One tap, no form: the chat goes to support as a live chat (in line, or a reply here when no one is online).
       await log.getByRole('button', { name: 'Talk to a person' }).click();
-      const waiting = box.getByRole('status').filter({ hasText: /Connecting you to a person from support|No one from support is online right now/ });
+      // Out of support hours (its days and times in Eastern Time) the same tap leaves the message for support to answer here.
+      const waiting = box.getByRole('status').filter({ hasText: /Connecting you to a person from support|No one from support is online right now|Live chat is closed now/ });
       await expect(waiting).toBeVisible({ timeout: 30_000 });
       await expect(log.getByText('My helper never came, I want a refund').first()).toBeVisible();
 

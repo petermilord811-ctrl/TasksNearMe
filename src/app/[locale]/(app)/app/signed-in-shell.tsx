@@ -6,7 +6,7 @@ import { setMode, signOut } from '@/modules/accounts/actions';
 import { checkPushSubscriptionAction, removePushSubscriptionAction } from '@/modules/notifications/actions';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { unreadMessageCount } from '@/modules/messaging/service';
-import { acceptRequestFromWindowAction, deleteReplyAction, reactFromWindowAction, saveReplyAction, searchConversationAction, sendFromWindowAction, setConversationFlagFromWindowAction, startDirectChatAction, suggestRepliesAction, translateMessageAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
+import { acceptRequestFromWindowAction, askForOfferFromWindowAction, deleteReplyAction, reactFromWindowAction, saveReplyAction, searchConversationAction, sendFromWindowAction, setConversationFlagFromWindowAction, startDirectChatAction, suggestRepliesAction, translateMessageAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
 import { handOffToSupportAction, replyToHelpCaseAction, requestLiveChatAction, typingInHelpCaseAction } from '@/modules/assist/support-chat-actions';
 import { blockUserAction, emailSupportTranscriptAction, rateSupportCaseAction, reportUserAction } from '@/modules/support/actions';
 import { helpUnreadCount } from '@/modules/support/service';
@@ -27,6 +27,8 @@ import { requestNow } from '@/platform/clock';
 import { AppShellSkeleton } from '@/ui/shells/app-shell-skeleton';
 import { ChatWindowController } from './_chat/chat-window-controller';
 import { acceptInviteAction, cancelInviteAction, declineInviteAction } from '@/modules/invites/actions';
+import { toggleSavedHelperAction } from '@/modules/reviews/actions';
+import { PeekController } from '../../_peek/peek-controller';
 
 /**
  * The signed-in shell: one, in `(app)/app/layout.tsx`, for both route groups, so a hop between (main) and (flow)
@@ -78,10 +80,12 @@ async function ViewerShell({ children }: { children: React.ReactNode }) {
         handlers={{ onModeChange: setMode, onSignOut: signOut, onSwitchLanguage: switchLanguageAction, onCheckPushDevice: checkPushSubscriptionAction, onForgetPushDevice: removePushSubscriptionAction, ...(aiWritingSetUp() ? { onAskSearch: searchWithAi } : {}) }}
         // Messages: the chat button and window (2026-11-22). Server Actions only (unbound, called with the conversation's
         // or the case's id), never closures.
-        chat={<ChatWindowController viewerId={viewer.user.id} unread={unreadMessages + unreadHelp} actions={{ send: sendFromWindowAction, react: reactFromWindowAction, typing: typingAction, upload: uploadMessagePhoto, saveReply: saveReplyAction, deleteReply: deleteReplyAction, report: reportUserAction, block: blockUserAction, handOff: handOffToSupportAction, reply: replyToHelpCaseAction, requestLive: requestLiveChatAction, typingInCase: typingInHelpCaseAction, startChat: startDirectChatAction, flag: setConversationFlagFromWindowAction, accept: acceptRequestFromWindowAction, searchThread: searchConversationAction, translate: translateMessageAction, suggest: suggestRepliesAction, acceptInvite: acceptInviteAction, declineInvite: declineInviteAction, cancelInvite: cancelInviteAction, rateCase: rateSupportCaseAction, emailTranscript: emailSupportTranscriptAction }} />}
+        chat={<ChatWindowController viewerId={viewer.user.id} unread={unreadMessages + unreadHelp} actions={{ send: sendFromWindowAction, react: reactFromWindowAction, typing: typingAction, upload: uploadMessagePhoto, saveReply: saveReplyAction, deleteReply: deleteReplyAction, report: reportUserAction, block: blockUserAction, handOff: handOffToSupportAction, reply: replyToHelpCaseAction, requestLive: requestLiveChatAction, typingInCase: typingInHelpCaseAction, startChat: startDirectChatAction, flag: setConversationFlagFromWindowAction, accept: acceptRequestFromWindowAction, searchThread: searchConversationAction, translate: translateMessageAction, suggest: suggestRepliesAction, acceptInvite: acceptInviteAction, declineInvite: declineInviteAction, cancelInvite: cancelInviteAction, askForOffer: askForOfferFromWindowAction, rateCase: rateSupportCaseAction, emailTranscript: emailSupportTranscriptAction }} />}
       >
         {children}
       </AppShell>
+      {/* Peeks (2026-11-23): profiles, help articles and policies in a sheet instead of leaving the page. */}
+      <PeekController handlers={{ onToggleSaved: toggleSavedHelperAction }} />
     </TimeZoneProvider>
   );
 }

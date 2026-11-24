@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
-import { acceptMessageRequestAction, deleteReplyAction, reactToMessageAction, saveReplyAction, searchConversationAction, sendMessageAction, setConversationFlagAction, suggestRepliesAction, translateMessageAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
+import { acceptMessageRequestAction, askForOfferAction, deleteReplyAction, reactToMessageAction, saveReplyAction, searchConversationAction, sendMessageAction, setConversationFlagAction, suggestRepliesAction, translateMessageAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
 import { supportAssistantForRequest } from '@/modules/assist/assistant-choice';
 import { getHelpSummary } from '@/modules/assist/support-chat';
 import { getInbox, getThreadPage } from '@/modules/messaging/service';
@@ -74,6 +74,7 @@ async function Thread({ params, searchParams, wide }: Pick<PageProps<'/[locale]/
         onTranslate: translateMessageAction.bind(null, threadId),
         onSuggest: suggestRepliesAction.bind(null, threadId),
         requestCards: { onAccept: acceptInviteAction, onDecline: declineInviteAction, onCancel: cancelInviteAction },
+        onAskForOffer: askForOfferAction.bind(null, threadId),
       }}
       {...(subject ? { safety: { subject, handlers: { onReport: reportUserAction.bind(null, threadId), onBlock: blockUserAction.bind(null, threadId) } } } : {})}
     />

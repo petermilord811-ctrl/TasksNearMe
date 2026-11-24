@@ -216,7 +216,7 @@ export function AdminVerificationSection({ userId, verification, handlers, now, 
                 {/* eslint-disable-next-line @next/next/no-img-element -- a short-lived staff link, never cached */}
                 <img src={revealed.result.document.url} alt={t('reveal.documentAlt')} className="max-h-[32rem] w-full rounded-lg border object-contain" />
               </a>}
-              {revealed.result.document?.kind === 'pdf' && <a href={revealed.result.document.url} className="inline-flex min-h-11 items-center gap-2 font-medium text-primary underline underline-offset-4"><Download aria-hidden="true" className="size-4" />{t('reveal.downloadPdf')}</a>}
+              {revealed.result.document?.kind === 'pdf' && <a href={revealed.result.document.url} target="_blank" rel="noreferrer noopener" className="inline-flex min-h-11 items-center gap-2 font-medium text-primary underline underline-offset-4"><Download aria-hidden="true" className="size-4" />{t('reveal.downloadPdf')}</a>}
               <p className="text-muted-foreground tabular-nums">{t('reveal.expires', { time: formatDateTime(revealed.result.expiresAt) })}</p>
             </div>}
             {(canOpen || proof.status === 'in_review') && proof.documentAvailable && verification.actions.length > 0 && <div className="flex flex-wrap gap-2">

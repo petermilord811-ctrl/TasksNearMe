@@ -134,6 +134,14 @@
       "loading": "Pensando respuestas…",
       "failed": "No hay sugerencias ahora. Escribe la tuya o inténtalo más tarde.",
       "dismiss": "Ocultar sugerencias"
+    },
+    "photoStrip": {
+      "label": "Fotos para enviar",
+      "alt": "Foto {number} para enviar",
+      "remove": "Quitar la foto {number}",
+      "uploading": "{count, plural, one {Agregando # foto…} other {Agregando # fotos…}}",
+      "ready": "{count, plural, one {# foto} other {# fotos}} de {max}, listas para enviar",
+      "drop": "Suelta las fotos para enviarlas"
     }
   },
   "newMessages": "Mensajes nuevos",
@@ -142,14 +150,26 @@
   "loadedEarlier": "{count, plural, one {Se cargó # mensaje anterior} other {Se cargaron # mensajes anteriores}}",
   "actions": {
     "label": "Responder o reaccionar a {name}",
-    "reply": "Responder"
+    "reply": "Responder",
+    "copy": "Copiar",
+    "copied": "Copiado"
   },
   "reactions": {
     "label": "Reacciones",
     "thumbs_up": "Pulgar arriba",
     "heart": "Corazón",
     "laugh": "Risa",
-    "check": "Listo"
+    "check": "Listo",
+    "wow": "Asombro",
+    "sad": "Triste",
+    "pray": "Gracias",
+    "fire": "Fuego",
+    "party": "Celebrar",
+    "clap": "Aplausos",
+    "react": "Reaccionar",
+    "more": "Más reacciones",
+    "picker": "Reacciones al mensaje de {name}",
+    "pickerMine": "Reacciones a tu mensaje"
   },
   "direct": {
     "label": "Mensaje directo",
@@ -184,7 +204,8 @@
       "archived": "{on, select, yes {Archivada} other {De vuelta en Mensajes}}",
       "accepted": "Solicitud aceptada"
     },
-    "openBeside": "Abrir al lado"
+    "openBeside": "Abrir al lado",
+    "showInWindow": "Ver en la ventana del chat"
   },
   "request": {
     "label": "Solicitud de mensaje",
@@ -278,6 +299,38 @@
       "view": "Ver cambio",
       "hint": "¿Necesitas otra hora, otro precio u otro alcance?",
       "propose": "Proponer un cambio"
+    },
+    "ask": {
+      "label": "Oferta pedida: {title}",
+      "fromYou": "Le pediste una oferta a {name}",
+      "fromThem": "{name} te pidió una oferta",
+      "open": "Abierta",
+      "closed": "Ya no está abierta",
+      "offered": "Oferta hecha",
+      "view": "Ver tarea",
+      "makeOffer": "Hacer una oferta",
+      "yourOffer": "Ver tu oferta"
     }
+  },
+  "plus": {
+    "label": "Más formas de trabajar con {name}",
+    "request": "Solicitar una tarea",
+    "requestHint": "Reserva a {name} para algo nuevo, con hora y precio",
+    "ask": "Pedir una oferta",
+    "askHint": "Sobre una de tus tareas abiertas: {name} responde con una oferta",
+    "offer": "Hacerle una oferta a {name}",
+    "offerHint": "{count, plural, one {# tarea abierta} other {# tareas abiertas}} en las que podrías ayudar",
+    "askTitle": "Pedirle una oferta a {name}",
+    "askDescription": "Elige una de tus tareas abiertas. {name} la recibe aquí como tarjeta y puede responder con una oferta.",
+    "askLegend": "Tus tareas abiertas",
+    "askSend": "Enviar",
+    "cancel": "Cancelar",
+    "asked": "Enviado: {name} puede hacer una oferta desde la conversación",
+    "rateLimited": "Has pedido muchas esta hora. Inténtalo un poco más tarde.",
+    "notAllowed": "Esa tarea ya no está abierta, o esta persona no puede recibir ofertas ahora.",
+    "failed": "No funcionó. Inténtalo de nuevo.",
+    "theirTitle": "Tareas abiertas de {name}",
+    "theirDescription": "Haz una oferta en una: el formulario se abre aquí mismo.",
+    "makeOffer": "Hacer una oferta"
   }
 }

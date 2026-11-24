@@ -40,6 +40,8 @@ export const TIMELINE_EVENT_TYPES = [
    * app works and won't reply. Only where sample rows are told apart (production).
    */
   'sample_profile_notice',
+  /** A client asked the helper they're talking to for an offer on one of their tasks (2026-11-23); `params.taskId`. */
+  'offer_requested',
 ] as const;
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];
 
@@ -60,5 +62,7 @@ export interface TimelineEvent {
     /** A conversation's card (2026-11-23): the task request (`invite_sent`) or the booking change (`change_proposed`) it shows. */
     inviteId?: string;
     changeId?: string;
+    /** "Asked for an offer" (`offer_requested`): the task. */
+    taskId?: string;
   };
 }

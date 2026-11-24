@@ -30,7 +30,9 @@
     "dockedMinimized": "Conversación con {name}, minimizada",
     "minimizeDocked": "Minimizar la conversación con {name}",
     "closeDocked": "Cerrar la conversación con {name}",
-    "showInWindow": "Ver en la ventana del chat"
+    "showInWindow": "Ver en la ventana del chat",
+    "dockedHeads": "Conversaciones en espera junto a la ventana del chat",
+    "restoreDocked": "{name}{count, plural, =0 {} one {, # mensaje sin leer} other {, # mensajes sin leer}}: abrir"
   },
   "help": {
     "title": "Ayuda de TasksNearMe",

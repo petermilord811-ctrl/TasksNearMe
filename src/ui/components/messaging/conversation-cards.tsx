@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { ArrowRight, CalendarClock, Check, ClipboardList, Repeat2, X } from 'lucide-react';
-import { routes, type ChangeCard, type ISODateTime, type RequestCardHandlers, type TaskRequestCard } from '@/contracts';
+import { ArrowRight, CalendarClock, Check, ClipboardList, HandHelping, Repeat2, X } from 'lucide-react';
+import { routes, type ChangeCard, type ISODateTime, type OfferAskCard, type RequestCardHandlers, type TaskRequestCard } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
@@ -105,6 +105,25 @@ export function ChangeCardView({ card, name, createdAt }: { card: ChangeCard; na
     {card.startAt && <p className="flex items-center gap-1.5 text-sm tabular-nums"><CalendarClock aria-hidden="true" className="size-4 text-muted-foreground" />{t('change.newTime', { time: formatDateTime(card.startAt) })} <span className="text-muted-foreground">{zoneName}</span></p>}
     <p className="text-sm tabular-nums text-muted-foreground">{card.differenceCents === 0 ? t('change.samePrice') : card.differenceCents > 0 ? t('change.more', { amount: formatMoney(card.differenceCents) }) : t('change.less', { amount: formatMoney(-card.differenceCents) })}</p>
     <Link href={routes.app.bookingChange(card.bookingId, card.changeId)} className={link}>{t(open && !card.fromViewer ? 'change.review' : 'change.view')}<ArrowRight aria-hidden="true" className="size-4" /></Link>
+    <p className="sr-only">{formatDateTime(createdAt)}</p>
+  </article>;
+}
+
+/**
+ * "Asked for an offer" in a direct conversation (2026-11-23): the client's task, and for the helper Make an offer (the
+ * offer form in a dialog over the page) until they've made one.
+ */
+export function OfferAskCardView({ card, name, createdAt }: { card: OfferAskCard; name: string; createdAt: ISODateTime }) {
+  const t = useTranslations('thread.cards.ask');
+  const { formatDateTime } = useFormat();
+  const action = card.viewerRole === 'poster' ? t('view') : card.offered ? t('yourOffer') : t('makeOffer');
+  return <article aria-label={t('label', { title: card.title })} className={frame}>
+    <header className="flex items-center justify-between gap-2">
+      <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase"><HandHelping aria-hidden="true" className="size-3.5" />{card.viewerRole === 'poster' ? t('fromYou', { name }) : t('fromThem', { name })}</p>
+      <Badge variant={card.offered ? 'default' : card.open ? 'secondary' : 'outline'}>{card.offered ? t('offered') : card.open ? t('open') : t('closed')}</Badge>
+    </header>
+    <h3 className="font-heading text-base leading-snug font-semibold [overflow-wrap:anywhere]">{card.title}</h3>
+    {(card.open || card.offered || card.viewerRole === 'poster') && <Link href={card.href} className={link}>{action}<ArrowRight aria-hidden="true" className="size-4" /></Link>}
     <p className="sr-only">{formatDateTime(createdAt)}</p>
   </article>;
 }

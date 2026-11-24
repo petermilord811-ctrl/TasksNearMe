@@ -1,0 +1,43 @@
+{
+  "loading": "Loading…",
+  "failed": "This didn't load. Try again.",
+  "notFound": "This isn't available.",
+  "retry": "Try again",
+  "back": "Back",
+  "openInNewTab": "Open in new tab",
+  "openProfile": "Open full profile",
+  "message": "Message",
+  "save": "Save",
+  "saved": "Saved",
+  "saveFailed": "That didn't save. Try again.",
+  "readMore": "Read more",
+  "readLess": "Show less",
+  "latestReview": "Latest review",
+  "helpCenter": "Help center",
+  "yourProfile": "This is your profile, as others see it.",
+  "kinds": {
+    "helper": "Helper profile",
+    "help": "Help",
+    "legal": "Policy"
+  },
+  "idCheck": {
+    "title": "Verify your identity first",
+    "body": "It opens in a new tab, and this waits here.",
+    "start": "Verify in a new tab",
+    "done": "I've finished",
+    "checking": "Checking…",
+    "stillNeeded": "We haven't received your verification yet. If you just finished, give it a minute and try again."
+  },
+  "previews": {
+    "group": "Peek sheets",
+    "helper": "Peek: a helper's profile beside the page",
+    "helperBesideChat": "Peek: a helper's profile on the left, beside a chat window",
+    "helperSelf": "Peek: your own profile",
+    "helpCenter": "Peek: the help center",
+    "helpArticle": "Peek: a help article",
+    "legal": "Peek: a policy (English only)",
+    "loading": "Peek: loading",
+    "failed": "Peek: didn't load",
+    "idCheck": "Request: the ID check, in the dialog"
+  }
+}

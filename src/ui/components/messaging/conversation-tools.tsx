@@ -4,9 +4,10 @@ import { useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { Archive, ArchiveRestore, Ban, Bell, BellOff, MoreHorizontal, PanelLeft, Pin, PinOff, Search, UserCheck, X } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowUpRight, Ban, Bell, BellOff, MoreHorizontal, PanelLeft, PanelRight, Pin, PinOff, Search, UserCheck, X } from 'lucide-react';
 import { routes, type ActionResult, type ConversationFlag, type ConversationSearchData, type ISODateTime, type ReportHandlers, type ReportSubject, type ThreadHandlers, type ThreadSummary } from '@/contracts';
 import { ReportBlockMenu } from '@/ui/components/safety';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useFormat } from '@/ui/lib/format';
 import { cn } from '@/ui/lib/utils';
 import { Button, buttonVariants } from '@/ui/primitives/button';
@@ -37,6 +38,10 @@ export interface ConversationMenuProps {
   onJump?: (messageId: string) => void;
   /** The chat window on wide screens: this conversation in a docked window of its own (2026-11-23). */
   onOpenBeside?: () => void;
+  /** A docked window: back into the chat window's own pane. */
+  onShowInWindow?: () => void;
+  /** Where the conversation's subject lives (the person's profile, the booking, the offer): the menu's first item. */
+  subject?: { href: string; label: string };
   now: ISODateTime;
 }
 
@@ -44,7 +49,7 @@ export interface ConversationMenuProps {
  * A conversation's ⋯ menu (2026-11-23, owner: "plan all and implement"): search it, pin it on top of Messages, mute it,
  * archive it, then Report and Block. One menu on the conversation page and in the chat window.
  */
-export function ConversationMenu({ thread, handlers, safety, name, onJump, onOpenBeside, now }: ConversationMenuProps) {
+export function ConversationMenu({ thread, handlers, safety, name, onJump, onOpenBeside, onShowInWindow, subject, now }: ConversationMenuProps) {
   const t = useTranslations('thread.tools');
   const said = useFlagResult();
   const [pending, setPending] = useState(false);
@@ -67,9 +72,12 @@ export function ConversationMenu({ thread, handlers, safety, name, onJump, onOpe
   }
 
   const items = <>
+    {/* What it's about first: a helper's profile opens in a sheet beside the page, never a trip away (2026-11-23). */}
+    {subject && <DropdownMenuItem asChild><Link href={subject.href}><ArrowUpRight aria-hidden="true" />{subject.label}</Link></DropdownMenuItem>}
     {/* The dialog opens once the menu has closed and given focus back to its button (no focus tug of war). */}
     {handlers.onSearch && <DropdownMenuItem onSelect={() => { window.setTimeout(() => setSearching(true), 0); }}><Search aria-hidden="true" />{t('search')}</DropdownMenuItem>}
     {onOpenBeside && <DropdownMenuItem onSelect={onOpenBeside}><PanelLeft aria-hidden="true" />{t('openBeside')}</DropdownMenuItem>}
+    {onShowInWindow && <DropdownMenuItem onSelect={onShowInWindow}><PanelRight aria-hidden="true" />{t('showInWindow')}</DropdownMenuItem>}
     {handlers.onFlag && <>
       {!thread.archived && !thread.request && <DropdownMenuItem disabled={pending} onSelect={() => void flag('pinned', !thread.pinned)}>{thread.pinned ? <PinOff aria-hidden="true" /> : <Pin aria-hidden="true" />}{t(thread.pinned ? 'unpin' : 'pin')}</DropdownMenuItem>}
       <DropdownMenuItem disabled={pending} onSelect={() => void flag('muted', !thread.muted)}>{thread.muted ? <Bell aria-hidden="true" /> : <BellOff aria-hidden="true" />}{t(thread.muted ? 'unmute' : 'mute')}</DropdownMenuItem>
@@ -83,7 +91,7 @@ export function ConversationMenu({ thread, handlers, safety, name, onJump, onOpe
     <ReportBlockMenu key={safety.subject.userId} subject={safety.subject} handlers={safety.handlers} items={items} label={label} />
     {search}
   </span>;
-  if (!handlers.onFlag && !handlers.onSearch && !onOpenBeside) return null;
+  if (!handlers.onFlag && !handlers.onSearch && !onOpenBeside && !onShowInWindow && !subject) return null;
   return <span ref={box} className="contents">
     <DropdownMenu>
       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={label} disabled={pending} aria-busy={pending}>{pending ? <Spinner aria-hidden="true" /> : <MoreHorizontal aria-hidden="true" />}</Button></DropdownMenuTrigger>

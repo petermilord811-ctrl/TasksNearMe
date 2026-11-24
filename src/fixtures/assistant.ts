@@ -270,6 +270,7 @@ export const fakeChatThreadHandlers: ChatThreadHandlers = {
   onTranslate: async () => ({ text: '¡Hola Maya! Jordan T. dijo que quizá necesitas ayuda para mover un sofá el sábado.' }),
   onSuggest: async () => ({ replies: ['Sounds good to me!', 'What day and time work best for you?', 'Let me check and get back to you today.'] }),
   requestCards: { onAccept: async () => ({ ok: true, code: 'booked' }), onDecline: async () => ({ ok: true, code: 'updated' }), onCancel: async () => ({ ok: true, code: 'updated' }) },
+  onAskForOffer: async () => ({ ok: true, code: 'sent' }),
 };
 
 /** The window's list with a pinned, a muted and an archived conversation, and a message request (2026-11-23). */

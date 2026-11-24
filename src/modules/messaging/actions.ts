@@ -2,11 +2,12 @@
 
 import { refresh } from 'next/cache';
 import { cookies } from 'next/headers';
-import type { ActionResult, ConversationFlagInput, ConversationSearchData, DirectMessageSetting, MessageReaction, MessageSavedReplyInput, MessageTranslation, PhotoUploadResult, ReplySuggestions, SendMessageInput, StartDirectChatInput } from '@/contracts';
+import type { ActionResult, AskForOfferInput, ConversationFlagInput, ConversationSearchData, DirectMessageSetting, MessageReaction, MessageSavedReplyInput, MessageTranslation, PhotoUploadResult, ReplySuggestions, SendMessageInput, StartDirectChatInput } from '@/contracts';
 import { AI_STAND_IN_COOKIE, wantsAiStandIn } from '@/integrations/ai';
 import { createFakeReplySuggester } from '@/integrations/ai/reply-suggester';
 import { createFakeTranslator } from '@/integrations/ai/translator';
 import { suggestReplies, translateMessage } from './assist';
+import { askForOffer } from './asks';
 import { storePhoto } from '@/modules/files/uploads';
 import { fileStorage } from '@/modules/tasks/server';
 import { getViewer } from '@/platform/auth/viewer';
@@ -168,4 +169,20 @@ export async function suggestRepliesAction(threadId: string): Promise<ReplySugge
   const userId = await signedInUserId();
   if (!userId) return null;
   return suggestReplies(db, userId, String(threadId), await requestNow(), (await aiStandIn()) ? createFakeReplySuggester() : undefined);
+}
+
+/** Ask the helper of a direct conversation for an offer on one of the viewer's open tasks (2026-11-23): ok `sent`. */
+export async function askForOfferAction(threadId: string, input: AskForOfferInput): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  const result = await askForOffer(db, userId, String(threadId), input, await requestNow());
+  if (result.ok) refresh();
+  return result;
+}
+
+/** The chat window's: the same, without refreshing the page behind it (the window reads the conversation again). */
+export async function askForOfferFromWindowAction(threadId: string, input: AskForOfferInput): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  return askForOffer(db, userId, String(threadId), input, await requestNow());
 }

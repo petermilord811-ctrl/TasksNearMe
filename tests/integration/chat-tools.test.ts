@@ -3,6 +3,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { staffRoles, usernames, users } from '@/modules/accounts/schema';
 import { invites } from '@/modules/invites/schema';
 import { suggestReplies, translateMessage } from '@/modules/messaging/assist';
+import { askForOffer, requestOptionsFor } from '@/modules/messaging/asks';
+import { helperProfiles } from '@/modules/profiles/schema';
 import { cardsFor } from '@/modules/messaging/cards';
 import { getNewDirectMessagePage, postInDirectThread, startDirectChat } from '@/modules/messaging/direct';
 import { acceptMessageRequest, searchConversation, setConversationFlag } from '@/modules/messaging/folders';
@@ -69,6 +71,8 @@ afterAll(async () => {
     await db.delete(threads).where(inArray(threads.id, ids));
   }
   await db.delete(invites).where(or(inArray(invites.posterUserId, PEOPLE), inArray(invites.helperUserId, PEOPLE)));
+  await db.delete(tasks).where(inArray(tasks.posterUserId, PEOPLE));
+  await db.delete(helperProfiles).where(inArray(helperProfiles.userId, PEOPLE));
   await db.delete(rateLimits).where(or(...PEOPLE.map((id) => like(rateLimits.key, `%${id}%`))));
   await db.delete(staffRoles).where(inArray(staffRoles.userId, PEOPLE));
   await db.delete(usernames).where(inArray(usernames.userId, PEOPLE));
@@ -225,7 +229,7 @@ describe('task request cards', () => {
       updatedAt: now,
     });
     expect(await postInDirectThread(db, ANA, CAL, { type: 'invite_sent', params: { inviteId } }, later(1000), ANA)).toBe(id);
-    const rows = await db.select({ kind: messages.kind, event: messages.event }).from(messages).where(eq(messages.threadId, id));
+    const rows = await db.select({ id: messages.id, kind: messages.kind, event: messages.event }).from(messages).where(eq(messages.threadId, id));
     const forHelper = await cardsFor(db, CAL, rows, later(2000));
     expect(forHelper?.requests?.[inviteId]).toMatchObject({ viewerRole: 'helper', status: 'sent', actions: ['accept', 'decline'], pricing: { type: 'fixed', priceCents: 6000 }, href: `/app/offers?invite=${inviteId}` });
     const forClient = await cardsFor(db, ANA, rows, later(2000));
@@ -236,5 +240,37 @@ describe('task request cards', () => {
     expect(await cardsFor(db, BEN, rows, later(2000))).toBeUndefined();
     // No direct conversation between them: nothing is posted.
     expect(await postInDirectThread(db, DEE, ANA, { type: 'invite_sent', params: { inviteId } }, now, DEE)).toBeNull();
+  });
+});
+
+describe('the conversation\'s "+": asking for an offer', () => {
+  it('asks the helper for an offer on an open task, as a card both of them see, and offers the menu\'s choices', async () => {
+    const [profile] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, 'usr_jordan'));
+    await db.insert(helperProfiles).values({ ...profile!, userId: CAL, handle: 'tmp-ct-cal', status: 'active', foundingNumber: null, completedCount: 0 });
+    const [desk] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_desk'));
+    const taskId = 'tsk_tmp_ct_ask';
+    const windowStart = later(3 * 86_400_000);
+    await db.insert(tasks).values({ ...desk!, id: taskId, slug: `${taskId}-slug`, posterUserId: ANA, status: 'open', offerCount: 0, version: 1, requestKey: null, expiresAt: later(5 * 86_400_000), windowStart, windowEnd: new Date(windowStart.getTime() + 6 * 3_600_000) });
+    const id = await threadOf(ANA, CAL);
+
+    // Ana's menu: request Cal (a bookable helper) and ask for an offer on her open task; Cal's: offer on Ana's tasks.
+    const anaMenu = await requestOptionsFor(db, ANA, CAL, { kind: 'person', helperHandle: 'tmp-ct-cal', canRequest: true }, now);
+    expect(anaMenu).toMatchObject({ requestHandle: 'tmp-ct-cal', myOpenTasks: [{ id: taskId }] });
+    const calMenu = await requestOptionsFor(db, CAL, ANA, { kind: 'person', canRequest: false }, now);
+    expect(calMenu?.theirOpenTasks.map((task) => task.id)).toContain(taskId);
+
+    expect(await askForOffer(db, ANA, id, { taskId }, later(70_000))).toEqual({ ok: true, code: 'sent' });
+    // Not her task, or not a direct conversation's helper: refused.
+    expect(await askForOffer(db, CAL, id, { taskId }, later(70_000))).toEqual({ ok: false, code: 'not_allowed' });
+    const rows = await db.select({ id: messages.id, kind: messages.kind, event: messages.event }).from(messages).where(eq(messages.threadId, id));
+    const line = rows.find((row) => row.event?.type === 'offer_requested');
+    expect(line?.event?.params).toEqual({ taskId });
+    const forCal = await cardsFor(db, CAL, rows, later(71_000), ANA);
+    expect(forCal?.offerAsks?.[line!.id]).toMatchObject({ viewerRole: 'helper', open: true, offered: false, href: `/app/find-work/${taskId}/offer` });
+    const forAna = await cardsFor(db, ANA, rows, later(71_000), CAL);
+    expect(forAna?.offerAsks?.[line!.id]).toMatchObject({ viewerRole: 'poster', href: `/app/tasks/${taskId}` });
+    // Cal hears it as a message from Ana.
+    const [event] = await db.select({ payload: outboxEvents.payload }).from(outboxEvents).where(and(eq(outboxEvents.aggregateId, id), eq(outboxEvents.type, 'message.sent'))).orderBy(outboxEvents.createdAt);
+    expect(event).toBeDefined();
   });
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useForm, useWatch } from 'react-hook-form';
@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/primitives/popover';
 import { useReply } from './reply-context';
 import { useFormat } from '@/ui/lib/format';
-import { EvidencePhotoPicker } from '@/ui/components/bookings/evidence-photo-picker';
+import { ComposerPhotoStrip, PHOTO_TYPES, PhotoDropOverlay, useComposerPhotos, usePhotoDrop } from './composer-photos';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Alert, AlertDescription } from '@/ui/primitives/alert';
 import { Button } from '@/ui/primitives/button';
@@ -36,6 +36,8 @@ export interface MessageComposerProps {
    * `handlers.onSuggest`). New suggestions for each new message.
    */
   suggestFor?: string;
+  /** A direct conversation's "+" (Request a task, Ask for an offer…: 2026-11-23), before the paperclip. */
+  actionsMenu?: ReactNode;
 }
 
 export function MessageComposer({ rules, handlers }: MessageComposerProps) {
@@ -43,7 +45,7 @@ export function MessageComposer({ rules, handlers }: MessageComposerProps) {
 }
 
 /** Seeds let previews show asynchronous states without starting a request on mount. */
-export function MessageComposerContent({ rules, handlers, savedReplies = [], template, onRefresh, compact = false, suggestFor, initialResult, initialPending = false, initialBody = '', initialSuggestions }: MessageComposerProps & {
+export function MessageComposerContent({ rules, handlers, savedReplies = [], template, onRefresh, compact = false, suggestFor, actionsMenu, initialResult, initialPending = false, initialBody = '', initialSuggestions }: MessageComposerProps & {
   initialResult?: ActionResult;
   initialPending?: boolean;
   initialBody?: string;
@@ -71,7 +73,9 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
   const uploadLocked = useRef(false);
   const mounted = useRef(true);
   const fileInput = useRef<HTMLInputElement>(null);
-  const photoDetails = useRef<HTMLDetailsElement>(null);
+  // The paperclip: where focus goes when the photos need another look (the file input itself is hidden).
+  const attachButton = useRef<HTMLButtonElement>(null);
+
   const { setError, setFocus } = form;
   const { replyTo, setReplyTo } = useReply();
   const [repliesOpen, setRepliesOpen] = useState(false);
@@ -88,6 +92,21 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
     setSuggestions(answer && answer.replies.length > 0 ? { for: asked, status: 'ready', replies: answer.replies } : { for: asked, status: 'error', replies: [] });
   }
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  // Photos (2026-11-23): picked, dropped on the conversation or pasted; Send waits while any still uploads.
+  const attach = useComposerPhotos({
+    max: rules.maxAttachments,
+    megabytes: rules.maxPhotoMegabytes,
+    onUpload: handlers.onUploadPhoto,
+    disabled: pending || !rules.canSend,
+    onChange: (next, busy) => {
+      setPhotos(next);
+      form.setValue('attachmentIds', next.map((photo) => photo.id));
+      form.clearErrors('attachmentIds');
+      uploadLocked.current = busy;
+      setUploading(busy);
+    },
+  });
+  const drop = usePhotoDrop(formRef, attach.add, rules.canSend && rules.maxAttachments > 0);
   const fill = (text: string) => text.replaceAll('{first_name}', template?.firstName ?? '').replaceAll('{task}', template?.task ?? '');
 
   useEffect(() => {
@@ -97,12 +116,9 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
     const photoError = result.fieldErrors?.attachmentIds?.[0]
       ?? Object.entries(result.fieldErrors ?? {}).find(([name]) => name.startsWith('attachmentIds.'))?.[1]?.[0];
     if (bodyError) setError('body', { type: 'server', message: bodyError });
-    if (photoError) {
-      setError('attachmentIds', { type: 'server', message: photoError });
-      if (photoDetails.current) photoDetails.current.open = true;
-    }
+    if (photoError) setError('attachmentIds', { type: 'server', message: photoError });
     if (bodyError || photoError) {
-      const timer = setTimeout(() => { if (bodyError) setFocus('body'); else fileInput.current?.focus(); }, 0);
+      const timer = setTimeout(() => { if (bodyError) setFocus('body'); else attachButton.current?.focus(); }, 0);
       return () => clearTimeout(timer);
     }
   }, [pending, result, setError, setFocus]);
@@ -118,9 +134,14 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
   async function submit(input: SendMessageInput) {
     if (!rules.canSend || locked.current || uploadLocked.current) return;
     if (body.length > rules.maxLength) { setError('body', { type: 'maxLength', message: 'too_long' }); setFocus('body'); return; }
-    if (input.attachmentIds.length > rules.maxAttachments) { setError('attachmentIds', { type: 'maxLength', message: 'too_long' }); fileInput.current?.focus(); return; }
+    if (input.attachmentIds.length > rules.maxAttachments) { setError('attachmentIds', { type: 'maxLength', message: 'too_long' }); attachButton.current?.focus(); return; }
     // Writing goes on after a message: focus (and a phone's keyboard) stays in the message box (journeys on a phone, J-C4).
+    // Only while it's still here when the answer comes: a reaction picker or a menu opened meanwhile keeps it (2026-11-23).
     const keepFocus = formRef.current?.contains(document.activeElement) ?? false;
+    const focusStillHere = () => {
+      const active = document.activeElement;
+      return !active || active === document.body || (formRef.current?.contains(active) ?? false);
+    };
     locked.current = true; setPending(true); setResult(undefined);
     // This message's key (bad connections pass, J-N1): a retry after an answer that never arrived sends the same key, so
     // the message goes once. A new key after it's sent.
@@ -132,11 +153,11 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
     if (!mounted.current) return;
     locked.current = false; setPending(false); setResult(next);
     if (next.ok) {
-      if (next.code === 'sent') { requestKey.current = null; form.reset({ body: '', attachmentIds: [] }); setPhotos([]); setReplyTo(null); if (onRefresh) onRefresh(); else router.refresh(); }
+      if (next.code === 'sent') { requestKey.current = null; form.reset({ body: '', attachmentIds: [] }); setPhotos([]); attach.clear(); setReplyTo(null); if (onRefresh) onRefresh(); else router.refresh(); }
       if (next.redirectTo) router.push(next.redirectTo);
       // By id: reset() has just let go of the field's ref, so setFocus would find nothing.
-      else if (keepFocus) document.getElementById(`${id}-body`)?.focus();
-    } else if (keepFocus && !next.fieldErrors) document.getElementById(`${id}-body`)?.focus();
+      else if (keepFocus && focusStillHere()) document.getElementById(`${id}-body`)?.focus();
+    } else if (keepFocus && !next.fieldErrors && focusStillHere()) document.getElementById(`${id}-body`)?.focus();
   }
 
   if (!rules.canSend) return <p role="status" className="flex items-center justify-center gap-2 rounded-xl border bg-muted px-4 py-5 text-sm text-muted-foreground"><Lock aria-hidden="true" className="size-4 shrink-0" />{t(rules.disabledReason ?? 'closed')}</p>;
@@ -146,7 +167,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
   return <form ref={formRef} noValidate aria-label={t('label')} aria-busy={pending || uploading} onSubmit={(event) => {
     if (locked.current || uploadLocked.current) { event.preventDefault(); return; }
     void form.handleSubmit(submit)(event);
-  }} className={cn('space-y-2.5 border-t border-foreground/[0.07] bg-card px-3 pt-3 dark:border-white/[0.06]', compact ? 'pb-3' : 'pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:pt-4 sm:pb-4')}>
+  }} className={cn('relative space-y-2.5 border-t border-foreground/[0.07] bg-card px-3 pt-3 dark:border-white/[0.06]', compact ? 'pb-3' : 'pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:pt-4 sm:pb-4')}>
     {replyTo && <div className="flex items-start justify-between gap-2 rounded-xl bg-foreground/[0.04] px-3 py-2 text-[13px] dark:bg-white/[0.05]">
       <p className="min-w-0"><span className="font-semibold">{t('replyingTo', { name: replyTo.name })}</span> <span className="line-clamp-1 text-muted-foreground [overflow-wrap:anywhere]">{replyTo.text}</span></p>
       <button type="button" onClick={() => setReplyTo(null)} aria-label={t('cancelReply')} className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><X aria-hidden="true" className="size-4" /></button>
@@ -158,12 +179,30 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
       {shownSuggestions.replies.map((reply) => <button key={reply} type="button" onClick={() => { form.setValue('body', reply, { shouldDirty: true }); setSuggestions(null); setFocus('body'); }} className="max-w-full rounded-full border border-primary/30 bg-brand-soft/50 px-3 py-1.5 text-left text-[13px] leading-5 hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-ring [overflow-wrap:anywhere]">{reply}</button>)}
       {shownSuggestions.status !== 'loading' && <button type="button" onClick={() => setSuggestions(null)} aria-label={t('suggest.dismiss')} className="inline-flex size-7 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><X aria-hidden="true" className="size-3.5" /></button>}
     </div>}
+    {rules.maxAttachments > 0 && <ComposerPhotoStrip photos={attach} max={rules.maxAttachments} megabytes={rules.maxPhotoMegabytes} compact={compact} />}
+    {photoError && <p id={`${id}-photos-error`} role="alert" className="text-xs text-destructive">{photoError}</p>}
+    <PhotoDropOverlay target={drop.target} over={drop.over} />
     <Field className="gap-1.5" data-invalid={!!bodyError}>
       {/* The panel above already says what this is: the label is for screen readers. */}
       <FieldLabel htmlFor={`${id}-body`} className="sr-only">{t('label')}</FieldLabel>
       {/* Send sits beside the message, as in any chat (on phones as an icon, still named "Send"). */}
-      <div className="flex items-end gap-2">
-      <Textarea {...form.register('body')} id={`${id}-body`} rows={1} maxLength={rules.maxLength} readOnly={pending} aria-invalid={!!bodyError} aria-describedby={`${id}-hint ${id}-counter ${id}-body-error`} placeholder={t('label')} className="max-h-40 min-h-12 flex-1 resize-none field-sizing-content" onInput={() => {
+      <div className="flex items-end gap-1.5">
+      {actionsMenu}
+      {/* Photos straight from the picker (2026-11-23): no panel to open first. */}
+      {rules.maxAttachments > 0 && <>
+        <input ref={fileInput} type="file" accept={PHOTO_TYPES.join(',')} multiple={rules.maxAttachments > 1} hidden tabIndex={-1} onChange={(event) => { attach.add(Array.from(event.target.files ?? [])); event.target.value = ''; }} />
+        <button ref={attachButton} type="button" onClick={() => fileInput.current?.click()} disabled={pending || attach.photos.length + attach.pending.length >= rules.maxAttachments} aria-label={t('attach')} aria-describedby={photoError ? `${id}-photos-error ${id}-photos-hint` : `${id}-photos-hint`} title={t('photosHint', { maximum: rules.maxAttachments, megabytes: rules.maxPhotoMegabytes })} className="grid size-12 shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-40">
+          <Paperclip aria-hidden="true" className="size-5" />
+        </button>
+        <span id={`${id}-photos-hint`} className="sr-only">{t('photosHint', { maximum: rules.maxAttachments, megabytes: rules.maxPhotoMegabytes })}</span>
+      </>}
+      <Textarea {...form.register('body')} onPaste={(event) => {
+        // A photo pasted into the message attaches it (2026-11-23); pasted words paste as usual.
+        const pasted = Array.from(event.clipboardData?.files ?? []).filter((file) => file.type.startsWith('image/'));
+        if (pasted.length === 0 || rules.maxAttachments === 0) return;
+        event.preventDefault();
+        attach.add(pasted);
+      }} id={`${id}-body`} rows={1} maxLength={rules.maxLength} readOnly={pending} aria-invalid={!!bodyError} aria-describedby={`${id}-hint ${id}-counter ${id}-body-error`} placeholder={t('label')} className="max-h-40 min-h-12 flex-1 resize-none field-sizing-content" onInput={() => {
         // "Typing…" for the other person (completion plan 7.1), at most one ping every 2.5 s; never blocks typing.
         if (!handlers.onTyping || Date.now() - lastTyping.current < 2500) return;
         lastTyping.current = Date.now();
@@ -206,10 +245,6 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
         <p className="text-xs text-muted-foreground">{t('savedReplies.hint')}</p>
       </PopoverContent>
     </Popover>}
-    {rules.maxAttachments > 0 && <details ref={photoDetails} className="group">
-      <summary className="flex min-h-11 w-fit cursor-pointer list-none items-center gap-2 rounded-md px-2 text-sm font-medium text-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><Paperclip aria-hidden="true" className="size-4" />{t('attach')}</summary>
-      <div className="pt-2"><EvidencePhotoPicker id={`${id}-photos`} label={t('photos')} hint={t('photosHint', { maximum: rules.maxAttachments, megabytes: rules.maxPhotoMegabytes })} photos={photos} onChange={(next) => { setPhotos(next); form.setValue('attachmentIds', next.map((photo) => photo.id)); form.clearErrors('attachmentIds'); }} onUploadPhoto={handlers.onUploadPhoto} maxPhotos={rules.maxAttachments} maxPhotoMegabytes={rules.maxPhotoMegabytes} disabled={pending} error={photoError} onBusyChange={(busy) => { uploadLocked.current = busy; setUploading(busy); }} inputRef={fileInput} /></div>
-    </details>}
     </div>
     {specialError ? <div aria-live="polite" aria-atomic="true"><Alert role="status" className="border-destructive/30"><CircleAlert aria-hidden="true" className="text-destructive" /><AlertDescription className="text-foreground">
       <p>{t(result.code === 'not_allowed' ? 'notAllowed' : 'rateLimited')}</p>

@@ -26,15 +26,15 @@ describe('ContentBlocks', () => {
     expect(screen.getAllByRole('note')).toHaveLength(2);
   });
 
-  it('uses next/link for internal links and marks external links without opening a new tab', () => {
+  it('uses next/link for internal links and opens external links in a new tab, said in their name (2026-11-23)', () => {
     renderBlocks(helpArticleWhenCharged.blocks);
     const internal = screen.getByRole('link', { name: 'pricing page' });
     expect(internal.getAttribute('href')).toBe(routes.pricing());
     expect(internal.getAttribute('data-next-link')).toBe('true');
-    const external = screen.getByRole('link', { name: 'Stripe (opens another site)' });
+    const external = screen.getByRole('link', { name: 'Stripe (opens another site in a new tab)' });
     expect(external.getAttribute('href')).toBe('https://stripe.com');
     expect(external.getAttribute('rel')).toBe('noopener noreferrer');
-    expect(external.getAttribute('target')).toBeNull();
+    expect(external.getAttribute('target')).toBe('_blank');
     expect(external.getAttribute('data-next-link')).toBeNull();
   });
 

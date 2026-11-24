@@ -134,6 +134,14 @@
       "loading": "Thinking of replies…",
       "failed": "No suggestions right now. Write your own, or try again later.",
       "dismiss": "Hide suggestions"
+    },
+    "photoStrip": {
+      "label": "Photos to send",
+      "alt": "Photo {number} to send",
+      "remove": "Remove photo {number}",
+      "uploading": "{count, plural, one {Adding # photo…} other {Adding # photos…}}",
+      "ready": "{count, plural, one {# photo} other {# photos}} of {max}, ready to send",
+      "drop": "Drop photos to send"
     }
   },
   "newMessages": "New messages",
@@ -142,14 +150,26 @@
   "loadedEarlier": "{count, plural, one {Loaded # earlier message} other {Loaded # earlier messages}}",
   "actions": {
     "label": "Reply or react to {name}",
-    "reply": "Reply"
+    "reply": "Reply",
+    "copy": "Copy",
+    "copied": "Copied"
   },
   "reactions": {
     "label": "Reactions",
     "thumbs_up": "Thumbs up",
     "heart": "Heart",
     "laugh": "Laugh",
-    "check": "Done"
+    "check": "Done",
+    "wow": "Wow",
+    "sad": "Sad",
+    "pray": "Thank you",
+    "fire": "Fire",
+    "party": "Celebrate",
+    "clap": "Applause",
+    "react": "React",
+    "more": "More reactions",
+    "picker": "Reactions to {name}'s message",
+    "pickerMine": "Reactions to your message"
   },
   "direct": {
     "label": "Direct message",
@@ -184,7 +204,8 @@
       "archived": "{on, select, yes {Archived} other {Back in Messages}}",
       "accepted": "Request accepted"
     },
-    "openBeside": "Open beside"
+    "openBeside": "Open beside",
+    "showInWindow": "Show in the chat window"
   },
   "request": {
     "label": "Message request",
@@ -278,6 +299,38 @@
       "view": "View change",
       "hint": "Need a different time, price or scope?",
       "propose": "Propose a change"
+    },
+    "ask": {
+      "label": "Asked for an offer: {title}",
+      "fromYou": "You asked {name} for an offer",
+      "fromThem": "{name} asked you for an offer",
+      "open": "Open",
+      "closed": "No longer open",
+      "offered": "Offer made",
+      "view": "View task",
+      "makeOffer": "Make an offer",
+      "yourOffer": "See your offer"
     }
+  },
+  "plus": {
+    "label": "More ways to work with {name}",
+    "request": "Request a task",
+    "requestHint": "Book {name} for something new, with a time and a price",
+    "ask": "Ask for an offer",
+    "askHint": "On one of your open tasks: {name} answers with an offer",
+    "offer": "Make an offer to {name}",
+    "offerHint": "{count, plural, one {# open task} other {# open tasks}} you could help with",
+    "askTitle": "Ask {name} for an offer",
+    "askDescription": "Choose one of your open tasks. {name} gets it here as a card and can answer with an offer.",
+    "askLegend": "Your open tasks",
+    "askSend": "Send",
+    "cancel": "Cancel",
+    "asked": "Sent: {name} can make an offer from your conversation",
+    "rateLimited": "You've asked a lot this hour. Try again a little later.",
+    "notAllowed": "That task isn't open any more, or this person can't take offers now.",
+    "failed": "That didn't work. Try again.",
+    "theirTitle": "{name}'s open tasks",
+    "theirDescription": "Make an offer on one: the form opens right here.",
+    "makeOffer": "Make an offer"
   }
 }
