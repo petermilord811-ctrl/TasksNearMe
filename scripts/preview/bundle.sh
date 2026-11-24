@@ -19,7 +19,13 @@ cp -a .next/standalone/. "$out/"
 rm -rf "$out/.data"
 mkdir -p "$out/.next"
 cp -a .next/static "$out/.next/static"
-cp -a public "$out/public"
+# public/ merged into the folder the server serves (2026-11-24). Code that reads a file under public/ at runtime (the GIF
+# stand-in's samples, src/integrations/gifs/stand-in.ts) makes the file tracer give the standalone output a public/ of
+# its own, and `cp -a public "$out/public"` then copied the whole folder into it as public/public: from e22d145f every
+# image and icon on the site, and the photos in emails, answered 404. Never silently again: the bundle stops instead.
+mkdir -p "$out/public"
+cp -a public/. "$out/public/"
+[[ -f "$out/public/sw.js" && ! -e "$out/public/public" ]] || { echo "public/ didn't land where the server serves it" >&2; exit 1; }
 
 # Read from disk at runtime: help and legal pages (src/modules/content/loaders.ts) and the map worker
 # (src/app/vendor/maplibre-gl-worker.mjs/route.ts).
