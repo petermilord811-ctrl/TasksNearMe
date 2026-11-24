@@ -34,6 +34,7 @@ import { ChatAssistProvider } from '@/ui/screens/messages/chat-assist';
 import { ReplyProvider } from '@/ui/screens/messages/reply-context';
 import { subjectHref } from '@/ui/screens/messages/thread-screen';
 import { ThreadPresence } from '@/ui/screens/messages/thread-presence';
+import { AgreementCard, BookingDayChips } from './booking-chat-tools';
 import { ConversationActionsMenu } from './conversation-actions';
 import { ConversationMarks, ConversationMenu, RequestBanner } from './conversation-tools';
 import { HelpChat } from './help-chat';
@@ -180,7 +181,8 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
       </div>
     </header>
     {thread.contactMasking && <p className="flex items-start gap-2 border-b border-foreground/[0.07] bg-secondary/60 px-2.5 py-1.5 text-[11px] leading-4 text-secondary-foreground dark:border-white/[0.06]"><LockKeyhole aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" /><span>{thread.kind === 'direct' ? t('direct.masking') : t('masking')}</span></p>}
-    {data.canProposeChange && thread.subject.kind === 'booking' && <p className="flex flex-wrap items-center justify-between gap-x-3 border-b border-foreground/[0.07] px-3 py-1.5 text-xs dark:border-white/[0.06]">
+    {data.agreement && <AgreementCard agreement={data.agreement} threadId={thread.id} canProposeChange={Boolean(data.canProposeChange)} compact />}
+    {data.canProposeChange && thread.subject.kind === 'booking' && !data.agreement && <p className="flex flex-wrap items-center justify-between gap-x-3 border-b border-foreground/[0.07] px-3 py-1.5 text-xs dark:border-white/[0.06]">
       <span className="text-muted-foreground">{t('cards.change.hint')}</span>
       <Link href={routes.app.bookingProposeChange(thread.subject.bookingId)} className="inline-flex min-h-9 items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">{t('cards.change.propose')}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>
     </p>}
@@ -192,8 +194,9 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
       <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier), onLoadEarlier: () => onLoadEarlier(data.earlier!.from) } : {})} onRefresh={onRefresh} otherParty={other} now={now} readUpTo={data.readUpTo} firstUnreadId={data.firstUnreadId} focusId={focusId} canReply={composer.canSend} {...(composer.canSend ? { onReact: bound.onReact } : {})} {...(data.assist?.translate ? { onTranslate: bound.onTranslate } : {})} {...(data.cards ? { cards: data.cards } : {})} requestCardHandlers={handlers.requestCards} compact className="min-h-0 flex-1 space-y-4 px-2.5 py-2.5 sm:px-2.5 sm:py-2.5" />
       {composer.disabledReason !== 'blocked' && <RequestBanner thread={thread} name={firstName} handlers={bound} onBlock={(input) => handlers.onBlock(id, input)} onIgnored={onIgnored} compact />}
       {composer.canSend && composer.firstMessagesLeft !== undefined && <p role="note" className="border-t border-foreground/[0.07] bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground dark:border-white/[0.06]">{t('direct.firstMessagesLeft', { count: composer.firstMessagesLeft, name: firstName })}</p>}
+      {data.bookingActions && thread.subject.kind === 'booking' && <BookingDayChips actions={data.bookingActions} bookingId={thread.subject.bookingId} onAction={(input) => handlers.onBookingAction(id, input)} onDone={onRefresh} compact />}
       {composer.canSend
-        ? <MessageComposerContent key={`composer-${thread.id}`} compact rules={composer} handlers={bound} savedReplies={data.savedReplies} template={{ firstName, task: thread.title }} onRefresh={onRefresh} {...(suggestFor ? { suggestFor } : {})} {...(data.requestOptions ? { actionsMenu: <ConversationActionsMenu options={data.requestOptions} name={firstName} onAskForOffer={(input) => handlers.onAskForOffer(id, input)} compact /> } : {})} />
+        ? <MessageComposerContent key={`composer-${thread.id}`} compact rules={composer} handlers={bound} savedReplies={data.savedReplies} template={{ firstName, task: thread.title }} onRefresh={onRefresh} {...(suggestFor ? { suggestFor } : {})} {...(data.requestOptions ? { actionsMenu: <ConversationActionsMenu options={data.requestOptions} name={firstName} onAskForOffer={(input) => handlers.onAskForOffer(id, input)} onShareTimes={(input) => handlers.onShareTimes(id, input)} compact /> } : {})} />
         : <div role="status" className="border-t border-foreground/[0.07] bg-muted/60 px-3 py-3 text-center text-sm dark:border-white/[0.06]">
           <p className="font-medium">{closedReason ? t(`closed.${thread.subject.kind}.${closedReason}`, { name: other.displayName }) : t(`disabled.${composer.disabledReason ?? 'unavailable'}`, { name: firstName })}</p>
           {closedReason && subjectLink && <Link href={subjectLink} className="mt-1 inline-flex min-h-9 items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">{t(`wayOn.${thread.subject.kind}`)}<ArrowRight aria-hidden="true" className="size-4" /></Link>}

@@ -10,6 +10,7 @@ import type {
   ActionResult,
   AskForOfferInput,
   CatchUpInput,
+  BookingChatActionInput,
   ChatInboxData,
   ChatLoad,
   ChatThreadData,
@@ -35,6 +36,7 @@ import type {
   ReplySuggestions,
   ReportInput,
   SendMessageInput,
+  ShareTimesInput,
   StartDirectChatInput,
   SupportReplyInput,
   TranslateManyInput,
@@ -93,6 +95,9 @@ export interface ChatActions {
   catchUp(threadId: string, input: CatchUpInput): Promise<ConversationSummary | null>;
   /** Ask the helper of a direct conversation for an offer on one of your open tasks (2026-11-23). */
   askForOffer(threadId: string, input: AskForOfferInput): Promise<ActionResult>;
+  /** A booking's day-of chip, and Share times (2026-11-24). */
+  bookingAction(threadId: string, input: BookingChatActionInput): Promise<ActionResult>;
+  shareTimes(threadId: string, input: ShareTimesInput): Promise<ActionResult>;
   /** A task request card's buttons: the invites' own actions (2026-11-23). */
   acceptInvite(input: { inviteId: string }): Promise<ActionResult>;
   declineInvite(input: { inviteId: string }): Promise<ActionResult>;
@@ -546,6 +551,17 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
         return result;
       },
       ...(actions.searchGifs && actions.attachGif ? { onSearchGifs: actions.searchGifs, onAttachGif: actions.attachGif } : {}),
+      // The status line or the card shows at once (2026-11-24).
+      onBookingAction: async (threadId, input) => {
+        const result = await actions.bookingAction(threadId, input);
+        if (result.ok) threadAgain(threadId);
+        return result;
+      },
+      onShareTimes: async (threadId, input) => {
+        const result = await actions.shareTimes(threadId, input);
+        if (result.ok) threadAgain(threadId);
+        return result;
+      },
     }),
     [actions, threadAgain, soon, loadInbox],
   );

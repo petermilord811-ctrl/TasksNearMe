@@ -11,7 +11,7 @@ import type {
   LiveChatHours,
   SupportAgentView,
 } from '@/contracts';
-import { conversationSearchData, deskBookingThreadPageData, inboxEmptyData, luciaCatchUpSummary, luciaThreadPageData, mayaFoldersInboxData, mayaInboxWithDirectData, requestCardThreadPageData, requestThreadPageData, translationsFor } from './messaging';
+import { conversationSearchData, dayOfOnTheWayThreadPageData, deskBookingThreadPageData, inboxEmptyData, luciaCatchUpSummary, luciaThreadPageData, mayaFoldersInboxData, mayaInboxWithDirectData, requestCardThreadPageData, requestThreadPageData, sharedTimesForHelperPageData, sharedTimesThreadPageData, translationsFor } from './messaging';
 import { jordanSparks } from './sparks';
 
 /**
@@ -273,6 +273,9 @@ export const fakeChatThreadHandlers: ChatThreadHandlers = {
   onCatchUp: async () => luciaCatchUpSummary,
   requestCards: { onAccept: async () => ({ ok: true, code: 'booked' }), onDecline: async () => ({ ok: true, code: 'updated' }), onCancel: async () => ({ ok: true, code: 'updated' }) },
   onAskForOffer: async () => ({ ok: true, code: 'sent' }),
+  // A booking's day-of chips and Share times (2026-11-24).
+  onBookingAction: async (_threadId, input) => ({ ok: true, code: input.action === 'on_my_way' ? 'on_the_way' : input.action === 'arrived' ? 'arrived' : 'updated' }),
+  onShareTimes: async () => ({ ok: true, code: 'sent' }),
 };
 
 /** The window's list with a pinned, a muted and an archived conversation, and a message request (2026-11-23). */
@@ -282,3 +285,9 @@ export const chatRequestThreadData: ChatThreadData = { data: requestThreadPageDa
 export const chatRequestCardThreadData: ChatThreadData = { data: requestCardThreadPageData };
 /** Lucía's conversation in the window (2026-11-24): nine unread in Spanish, "Catch me up" offered above "New messages". */
 export const chatCatchUpThreadData: ChatThreadData = { data: luciaThreadPageData };
+
+/** A booking's conversation in the window (2026-11-24): what they agreed (folded), and Jordan's day-of chips. */
+export const chatDayOfThreadData: ChatThreadData = { data: dayOfOnTheWayThreadPageData };
+/** Shared open times in the window: Maya picks one; Jordan sees where his stand. */
+export const chatSharedTimesThreadData: ChatThreadData = { data: sharedTimesThreadPageData };
+export const chatSharedTimesHelperThreadData: ChatThreadData = { data: sharedTimesForHelperPageData };

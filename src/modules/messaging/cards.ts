@@ -1,7 +1,11 @@
 import { and, eq, inArray, or } from 'drizzle-orm';
-import { routes, type ChangeCard, type ChangeStatus, type ConversationCards, type InviteStatus, type OfferAskCard, type PricingInput, type ProposableChangeType, type TaskRequestCard } from '@/contracts';
+import { routes, SHARE_TIMES_MAX, type CategorySlug, type ChangeCard, type ChangeStatus, type ConversationCards, type InviteStatus, type OfferAskCard, type PricingInput, type ProposableChangeType, type SharedSlot, type SharedTimesCard, type TaskRequestCard, type TimeZone } from '@/contracts';
+import { availabilityPosts } from '@/modules/availability/schema';
+import { slotViewOf } from '@/modules/availability/slots';
 import { bookingChangeRequests, bookings } from '@/modules/bookings/schema';
 import { invites } from '@/modules/invites/schema';
+import { categories, markets } from '@/modules/markets/schema';
+import { helperProfiles } from '@/modules/profiles/schema';
 import { offers } from '@/modules/offers/schema';
 import { tasks } from '@/modules/tasks/schema';
 import type { Db } from '@/platform/db/connect';
@@ -120,16 +124,58 @@ async function offerAskCards(db: Db, viewerId: string, otherId: string | undefin
   return out;
 }
 
+/** Where a shared slot stands now: someone requested or booked it, it started or expired, or the helper took it down. */
+function slotState(row: typeof availabilityPosts.$inferSelect, now: Date): SharedSlot['state'] {
+  if (row.status === 'canceled') return 'withdrawn';
+  if (row.status === 'held' || row.status === 'booked') return 'taken';
+  return row.status === 'expired' || row.startAt <= now ? 'past' : 'open';
+}
+
+/**
+ * "Shared open times" lines (2026-11-24), by message id: the helper's slots as they stand now. Only a helper in the
+ * conversation (`otherId` or the viewer), and only that helper's slots.
+ */
+async function sharedTimesCards(db: Db, viewerId: string, otherId: string | undefined, rows: readonly Row[], now: Date): Promise<Record<string, SharedTimesCard>> {
+  const shares = rows.flatMap((row) => {
+    const slotIds = row.kind !== 'text' && row.event?.type === 'times_shared' ? row.event.params?.slotIds : undefined;
+    return Array.isArray(slotIds) ? [{ id: row.id, slotIds: slotIds.filter((id): id is string => typeof id === 'string').slice(0, SHARE_TIMES_MAX) }] : [];
+  });
+  if (shares.length === 0 || !otherId) return {};
+  const found = await db
+    .select({ row: availabilityPosts, slug: categories.slug, timeZone: markets.timeZone, handle: helperProfiles.handle })
+    .from(availabilityPosts)
+    .innerJoin(categories, eq(categories.id, availabilityPosts.categoryId))
+    .innerJoin(markets, eq(markets.id, availabilityPosts.marketId))
+    .innerJoin(helperProfiles, eq(helperProfiles.userId, availabilityPosts.helperUserId))
+    .where(and(inArray(availabilityPosts.id, [...new Set(shares.flatMap((share) => share.slotIds))]), inArray(availabilityPosts.helperUserId, [viewerId, otherId])));
+  const byId = new Map(found.map((slot) => [slot.row.id, slot]));
+  const out: Record<string, SharedTimesCard> = {};
+  for (const share of shares) {
+    const slots = share.slotIds.flatMap((id) => byId.get(id) ?? []);
+    const first = slots[0];
+    if (!first) continue;
+    out[share.id] = {
+      viewerRole: first.row.helperUserId === viewerId ? 'helper' : 'client',
+      helperHandle: first.handle,
+      timeZone: first.timeZone as TimeZone,
+      slots: slots.filter((slot) => slot.row.helperUserId === first.row.helperUserId).map(({ row, slug }) => ({ ...slotViewOf(row, slug as CategorySlug), state: slotState(row, now) })),
+    };
+  }
+  return out;
+}
+
 export async function cardsFor(db: Db, viewerId: string, rows: readonly Row[], now: Date, otherId?: string): Promise<ConversationCards | undefined> {
-  const [requests, changes, offerAsks] = await Promise.all([
+  const [requests, changes, offerAsks, sharedTimes] = await Promise.all([
     requestCards(db, viewerId, idsOf(rows, 'invite_sent', 'inviteId'), now),
     changeCards(db, viewerId, idsOf(rows, 'change_proposed', 'changeId'), now),
     offerAskCards(db, viewerId, otherId, rows, now),
+    sharedTimesCards(db, viewerId, otherId, rows, now),
   ]);
   const cards: ConversationCards = {
     ...(Object.keys(requests).length ? { requests } : {}),
     ...(Object.keys(changes).length ? { changes } : {}),
     ...(Object.keys(offerAsks).length ? { offerAsks } : {}),
+    ...(Object.keys(sharedTimes).length ? { sharedTimes } : {}),
   };
-  return cards.requests || cards.changes || cards.offerAsks ? cards : undefined;
+  return cards.requests || cards.changes || cards.offerAsks || cards.sharedTimes ? cards : undefined;
 }

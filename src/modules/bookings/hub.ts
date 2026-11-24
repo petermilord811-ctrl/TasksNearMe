@@ -19,7 +19,6 @@ import type {
 } from '@/contracts';
 import { routes } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
-import { marketPolicies } from '@/modules/markets/schema';
 import { offers } from '@/modules/offers/schema';
 import { earnings } from '@/modules/earnings/schema';
 import { payments, refunds } from '@/modules/payments/schema';
@@ -38,7 +37,8 @@ import { bookingOpenChange } from './changes';
 import { bookingThreadLink, ensureThread, postEvent } from '@/modules/messaging/service';
 import { canceledFacts, contestNoShow, reopenForReplacement, type ReopenedTask } from './after-cancel';
 import { autoApproveDue, completionViewOf } from './completion-view';
-import { addressVisibility, allBookingActions, bookingDeadlines, bookingNextStep, type BookingFacts, type BookingPolicy } from './domain';
+import { addressVisibility, allBookingActions, bookingDeadlines, bookingNextStep, type BookingFacts } from './domain';
+import { bookingFactsOf as factsOf, bookingPolicyOf as policyOf } from './facts';
 import { expireCantAccess } from './sheets';
 import { readExactAddress } from '@/modules/tasks/locations';
 import type { PaymentProvider } from '@/integrations/payments';
@@ -64,7 +64,6 @@ export interface HubDeps {
 
 type BookingRow = typeof bookings.$inferSelect;
 type TermsRow = typeof bookingTerms.$inferSelect;
-const DEFAULT_POLICY: BookingPolicy = { noShowMinutes: 30, addressHideAfterHours: 48 };
 
 function roleOf(booking: BookingRow, userId: string): BookingViewerRole | null {
   if (booking.posterUserId === userId) return 'poster';
@@ -101,34 +100,10 @@ async function otherDeletedOf(db: Db, booking: BookingRow, role: BookingViewerRo
   return other?.status === 'deleted' ? { otherDeleted: true } : {};
 }
 
-function factsOf(booking: BookingRow, remote: boolean): BookingFacts {
-  return {
-    status: booking.status,
-    startAt: booking.startAt,
-    remote,
-    onMyWayAt: booking.onMyWayAt,
-    arrivedAt: booking.arrivedAt,
-    fundingExpiresAt: booking.fundingExpiresAt,
-    approvalDueAt: booking.approvalDueAt,
-    completedAt: booking.completedAt,
-    lateByMinutes: booking.lateByMinutes,
-    cantAccessAt: booking.cantAccessAt,
-    posterResponseDueAt: booking.posterResponseDueAt,
-    seriesId: booking.seriesId,
-    fundingFailure: booking.fundingFailure,
-    paymentMode: booking.paymentMode === 'direct' ? 'direct' : 'held',
-  };
-}
-
 function pricingOf(terms: TermsRow): PricingInput {
   return terms.pricingType === 'hourly'
     ? { type: 'hourly', rateCents: terms.hourlyRateCents ?? 0, estimatedHours: terms.estimatedHours ?? 0, hoursCap: terms.hoursCap ?? 0 }
     : { type: 'fixed', priceCents: terms.priceCents ?? 0 };
-}
-
-async function policyOf(db: Db, policyVersionId: string): Promise<BookingPolicy> {
-  const [row] = await db.select({ timers: marketPolicies.timers }).from(marketPolicies).where(eq(marketPolicies.id, policyVersionId)).limit(1);
-  return row ? { noShowMinutes: row.timers.noShowMinutes, addressHideAfterHours: row.timers.addressHideAfterHours } : DEFAULT_POLICY;
 }
 
 export { clientSummary } from './people';
@@ -469,6 +444,8 @@ export async function runBookingAction(
         .returning({ id: bookings.id });
       if (answered.length === 0) return { ok: false, code: 'version_conflict' };
       await recordEvent(db, 'booking.client_present', userId, booking);
+      // The helper sees the answer in the conversation too, as with on the way and arrived (2026-11-24).
+      await postEvent(db, bookingThreadLink(booking), 'status', { type: 'client_present' }, now, userId);
       return { ok: true, code: 'updated' };
     }
     case 'message': {

@@ -5,7 +5,10 @@ import {
   chatCatchUpThreadData,
   chatInboxData,
   chatInboxEmptyData,
+  chatDayOfThreadData,
   chatInboxFoldersData,
+  chatSharedTimesHelperThreadData,
+  chatSharedTimesThreadData,
   chatRequestCardThreadData,
   chatRequestThreadData,
   chatThreadData,
@@ -161,6 +164,10 @@ export const chatWindowPreviews: PreviewEntry[] = [
   windowPreview('list-folders', 'Chat window: pinned, muted and archived conversations, and Requests', { inbox: { status: 'ready', data: chatInboxFoldersData } }),
   windowPreview('thread-request', 'Chat window: a message request (Accept, Ignore, Block)', { view: { kind: 'thread', threadId: chatRequestThreadData.data.thread.id }, thread: { status: 'ready', data: chatRequestThreadData } }),
   windowPreview('thread-request-card', 'Chat window: a task request card in the conversation', { view: { kind: 'thread', threadId: chatRequestCardThreadData.data.thread.id }, thread: { status: 'ready', data: chatRequestCardThreadData } }),
+  // A booking's conversation and shared times in the window (2026-11-24).
+  windowPreview('thread-day-of', 'Chat window: a booking’s conversation, What we agreed folded and the helper’s day-of chips', { view: { kind: 'thread', threadId: chatDayOfThreadData.data.thread.id }, thread: { status: 'ready', data: chatDayOfThreadData } }),
+  windowPreview('thread-shared-times', 'Chat window: shared open times to pick from (client)', { view: { kind: 'thread', threadId: chatSharedTimesThreadData.data.thread.id }, thread: { status: 'ready', data: chatSharedTimesThreadData } }),
+  windowPreview('thread-shared-times-helper', 'Chat window: shared open times as the helper sees them, Share times in the "+"', { view: { kind: 'thread', threadId: chatSharedTimesHelperThreadData.data.thread.id }, thread: { status: 'ready', data: chatSharedTimesHelperThreadData } }),
   windowPreview('docked', 'Chat window with two conversations docked beside it, one minimized', { docked: true }),
   // "Catch me up" (2026-11-24): nine unread in Spanish, offered above "New messages" in the window's compact card.
   windowPreview('thread-catch-up', 'Chat window: nine unread messages, “Catch me up” offered above “New messages”', { view: { kind: 'thread', threadId: chatCatchUpThreadData.data.thread.id }, thread: { status: 'ready', data: chatCatchUpThreadData } }),

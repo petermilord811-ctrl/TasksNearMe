@@ -1,4 +1,4 @@
-import type { ActionDescriptor, AddressVisibility, BookingActionId, BookingDeadlines, BookingNextStep, BookingStatus, BookingViewerRole } from '@/contracts';
+import { BOOKING_CHAT_ACTION_IDS, type ActionDescriptor, type AddressVisibility, type BookingActionId, type BookingChatActionId, type BookingDeadlines, type BookingNextStep, type BookingStatus, type BookingViewerRole } from '@/contracts';
 
 /**
  * Booking rules as pure functions (docs/blueprint/03 §4, docs/ui/ui-contract.md §5–6): which actions
@@ -250,6 +250,15 @@ export function allBookingActions(booking: BookingFacts, role: BookingViewerRole
     .filter((action) => !booking.otherDeleted || !TOWARD_THE_OTHER.includes(action.id))
     .filter((action) => booking.paymentMode !== 'direct' || !MONEY_ACTIONS.includes(action.id));
   return all.map((action, index) => ({ action, index })).sort((a, b) => KIND_ORDER[a.action.kind] - KIND_ORDER[b.action.kind] || a.index - b.index).map(({ action }) => action);
+}
+
+/**
+ * A booking's day-of updates in its conversation (2026-11-24): the booking page's own actions (`allBookingActions`) among
+ * `BOOKING_CHAT_ACTION_IDS` that the viewer can use right now, in the page's order. Chips above the composer.
+ */
+export function dayOfActions(booking: BookingFacts, role: BookingViewerRole, policy: BookingPolicy, now: Date): ActionDescriptor<BookingChatActionId>[] {
+  const ids: readonly string[] = BOOKING_CHAT_ACTION_IDS;
+  return allBookingActions(booking, role, policy, now).filter((action): action is ActionDescriptor<BookingChatActionId> => action.enabled && ids.includes(action.id));
 }
 
 /**

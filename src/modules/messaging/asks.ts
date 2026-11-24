@@ -32,7 +32,8 @@ async function openTasksOf(db: Pick<Db, 'select'>, userId: string, now: Date): P
     .limit(CHOICES);
 }
 
-async function activeHelper(db: Pick<Db, 'select'>, userId: string): Promise<boolean> {
+/** A helper whose profile is active (they take offers and requests). */
+export async function activeHelper(db: Pick<Db, 'select'>, userId: string): Promise<boolean> {
   const [row] = await db.select({ status: helperProfiles.status }).from(helperProfiles).where(eq(helperProfiles.userId, userId)).limit(1);
   return row?.status === 'active';
 }

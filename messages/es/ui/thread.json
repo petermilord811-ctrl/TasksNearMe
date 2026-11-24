@@ -353,6 +353,22 @@
       "view": "Ver tarea",
       "makeOffer": "Hacer una oferta",
       "yourOffer": "Ver tu oferta"
+    },
+    "times": {
+      "label": "Horarios libres compartidos",
+      "fromYou": "Compartiste horarios libres",
+      "fromThem": "{name} compartió horarios libres",
+      "openCount": "{count} libres",
+      "noneOpen": "Ninguno libre ahora",
+      "pick": "Elige uno para enviar una solicitud para ese horario.",
+      "choose": "Elegir",
+      "state": {
+        "open": "Libre",
+        "taken": "Ocupado",
+        "past": "Pasado",
+        "withdrawn": "Ya no se ofrece"
+      },
+      "zone": "Horarios en {zone}"
     }
   },
   "plus": {
@@ -374,7 +390,19 @@
     "failed": "No funcionó. Inténtalo de nuevo.",
     "theirTitle": "Tareas abiertas de {name}",
     "theirDescription": "Haz una oferta en una: el formulario se abre aquí mismo.",
-    "makeOffer": "Hacer una oferta"
+    "makeOffer": "Hacer una oferta",
+    "share": "Compartir horarios",
+    "shareHint": "Dos o tres de tus horarios libres: {name} elige uno",
+    "shareTitle": "Compartir horarios con {name}",
+    "shareDescription": "Elige {min} o {max} de tus horarios libres. {name} los recibe aquí como una tarjeta y puede solicitar uno.",
+    "shareLegend": "Tus horarios libres",
+    "shareChosen": "{count} de {max} elegidos · {zone}",
+    "shareSend": "Compartir",
+    "shared": "Compartido: {name} puede elegir un horario desde tu conversación",
+    "shareGone": "Uno de esos horarios ya no está libre. Elige de nuevo.",
+    "shareRateLimited": "Compartiste horarios muchas veces esta hora. Inténtalo un poco más tarde.",
+    "shareNotAllowed": "Ahora no puedes compartir horarios aquí.",
+    "hourly": "{rate}/h · unas {hours} h"
   },
   "delivery": {
     "sent": "Enviado",
@@ -405,5 +433,54 @@
     "failed": "No se pudo hacer el resumen ahora. Inténtalo de nuevo en un rato.",
     "retry": "Intentar de nuevo",
     "dismiss": "Cerrar el resumen"
+  },
+  "agreement": {
+    "title": "Lo que acordamos",
+    "summary": "{when} · {amount}",
+    "task": "Tarea",
+    "when": "Cuándo",
+    "anyTime": "Cualquier hora el {day}",
+    "window": "Horario {range}",
+    "remote": "A distancia",
+    "money": {
+      "client_total": "Tu total",
+      "helper_earnings": "Ganas"
+    },
+    "hourly": "{rate}/h · unas {hours} h (hasta {cap} h)",
+    "expenses": "Gastos",
+    "included": "Qué incluye",
+    "checklist": "Se confirma al enviar el trabajo",
+    "changeHint": "¿Necesitas otra hora, otro precio u otro alcance?",
+    "propose": "Proponer un cambio"
+  },
+  "dayOf": {
+    "label": "Avisos de la reserva",
+    "labels": {
+      "on_my_way": "Voy en camino",
+      "running_late": "Voy tarde",
+      "arrived": "Ya llegué",
+      "im_here": "Estoy aquí",
+      "submit_completion": "Terminar el trabajo"
+    },
+    "done": {
+      "on_my_way": "Enviado: vas en camino",
+      "running_late": "Enviado: vas tarde",
+      "arrived": "Enviado: ya llegaste",
+      "im_here": "Enviado: estás ahí",
+      "submit_completion": "Abierto"
+    },
+    "late": {
+      "title": "¿Qué tan tarde llegarás?",
+      "minutes": "{minutes} min",
+      "hint": "El cliente lo sabe al momento, y su espera antes de reportar que no llegaste crece los mismos minutos."
+    },
+    "confirm": "¿Enviar «{action}»?",
+    "send": "Enviar",
+    "cancel": "Cancelar",
+    "errors": {
+      "rate_limited": "Ya enviaste varios avisos. Inténtalo de nuevo un poco más tarde.",
+      "changed": "Esta reserva cambió. Recarga para ver cómo va.",
+      "unknown": "No funcionó. Inténtalo de nuevo."
+    }
   }
 }

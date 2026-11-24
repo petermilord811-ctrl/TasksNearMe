@@ -1,10 +1,13 @@
 import { z } from 'zod';
-import type { ActionHandler, ActionResult, QueryHandler } from './actions';
+import type { BookingActionId } from './action-ids';
+import type { ActionDescriptor, ActionHandler, ActionResult, QueryHandler } from './actions';
+import type { AvailabilitySlotView } from './availability';
+import { LATE_BY_MINUTES } from './bookings';
 import type { HelpSummary } from './assistant';
 import type { PlanCode } from './billing';
 import type { SparkLevel } from './sparks';
 import { requestKeyField } from './forms';
-import type { Cents, ISODateTime, Photo } from './common';
+import type { CategorySlug, Cents, ISODateTime, Photo, TimeZone } from './common';
 import type { AppLocale } from './locale';
 import type { PersonSummary, PresenceState } from './people';
 import type { PhotoUploadResult } from './posting';
@@ -13,6 +16,7 @@ import type { ReportInput, ReportSubject } from './support';
 import type { TimelineEvent } from './timeline';
 import type { ProposableChangeType } from './changes';
 import type { PricingInput } from './money';
+import type { TaskSchedule } from './tasks';
 import type { ChangeStatus, InviteStatus } from './status';
 
 /**
@@ -277,8 +281,20 @@ export interface ThreadPageData {
    * change dialog (`routes.app.bookingProposeChange`), and the proposal shows here as a card (2026-11-23).
    */
   canProposeChange?: boolean;
-  /** A direct conversation's "+" menu (2026-11-23); absent when it has nothing to offer. */
+  /** A direct conversation's "+" menu (2026-11-23); absent when it has nothing to offer. Share times for a helper (2026-11-24). */
   requestOptions?: ConversationRequestOptions;
+  /**
+   * A booking's conversation (2026-11-24, owner: "implement others all one by one"): "What we agreed", pinned on top of
+   * the messages. When it's there, its "Propose a change" (with `canProposeChange`) takes the place of the hint line.
+   */
+  agreement?: BookingAgreement;
+  /**
+   * A booking's conversation: the day-of updates the viewer can send right now, as chips above the composer. The booking
+   * page's own actions (`BookingView.actions`), only the enabled ones of `BOOKING_CHAT_ACTION_IDS`, in its order; absent
+   * when there's none. Each runs with `ThreadHandlers.onBookingAction`, except `submit_completion`, which opens the
+   * completion form over the page (`routes.app.bookingComplete`).
+   */
+  bookingActions?: ActionDescriptor<BookingChatActionId>[];
 }
 
 // ---- Cards in a conversation (2026-11-23, owner: "plan all and implement") ---------------------------------------------
@@ -339,6 +355,28 @@ export interface OfferAskCard {
   href: string;
 }
 
+/**
+ * A helper's open times, shared in a direct or offer conversation (2026-11-24): a slot of their availability
+ * (`AvailabilitySlotView`) with where it stands now. Open slots link the client to the request dialog with that slot
+ * chosen (`routes.app.requestHelper(helperHandle, { slotId })`); a slot someone requested or booked is `taken`, one that
+ * started or expired `past`, one the helper took down `withdrawn`.
+ */
+export interface SharedSlot extends AvailabilitySlotView {
+  state: 'open' | 'taken' | 'past' | 'withdrawn';
+}
+
+/** "Shared open times" (`times_shared`), as one of the conversation's two people sees it. */
+export interface SharedTimesCard {
+  /** The helper shared them (`helper`); the other person picks one (`client`). */
+  viewerRole: 'helper' | 'client';
+  /** For the request dialog's link. */
+  helperHandle: string;
+  /** The slots' market: their times read on its clock. */
+  timeZone: TimeZone;
+  /** In the order shared (soonest first). */
+  slots: SharedSlot[];
+}
+
 export interface ConversationCards {
   /** By invite id. */
   requests?: Record<string, TaskRequestCard>;
@@ -346,6 +384,8 @@ export interface ConversationCards {
   changes?: Record<string, ChangeCard>;
   /** By the line's message id (one task may be asked about twice). */
   offerAsks?: Record<string, OfferAskCard>;
+  /** By the line's message id (2026-11-24). */
+  sharedTimes?: Record<string, SharedTimesCard>;
 }
 
 /** An open task to choose in a conversation's "+" menu. */
@@ -363,10 +403,72 @@ export interface ConversationRequestOptions {
   requestHandle?: string;
   myOpenTasks: TaskChoice[];
   theirOpenTasks: TaskChoice[];
+  /**
+   * Share times (2026-11-24): a helper's open slots, soonest first, to share `SHARE_TIMES_MIN` to `SHARE_TIMES_MAX` of
+   * in a direct conversation, or in an offer conversation about their open offer. Absent below `SHARE_TIMES_MIN`.
+   */
+  shareableSlots?: AvailabilitySlotView[];
 }
 
 export const askForOfferInputSchema = z.object({ taskId: z.string('required').trim().min(1, 'required').max(80, 'too_long') });
 export type AskForOfferInput = z.input<typeof askForOfferInputSchema>;
+
+/** A helper shares two or three of their open times at once (2026-11-24). */
+export const SHARE_TIMES_MIN = 2;
+export const SHARE_TIMES_MAX = 3;
+export const shareTimesInputSchema = z.object({
+  slotIds: z
+    .array(z.string('required').trim().min(1, 'required').max(80, 'too_long'), 'required')
+    .min(SHARE_TIMES_MIN, 'too_short')
+    .max(SHARE_TIMES_MAX, 'too_long')
+    .refine((ids) => new Set(ids).size === ids.length, 'invalid'),
+});
+export type ShareTimesInput = z.input<typeof shareTimesInputSchema>;
+
+// ---- A booking's conversation (2026-11-24, owner: "implement others all one by one") ------------------------------------
+
+/**
+ * The day-of updates a booking's conversation offers as chips above the composer: the booking page's own actions, with
+ * its rules (docs/ui/ui-contract.md §6, docs/blueprint/03-state-machines.md).
+ */
+export const BOOKING_CHAT_ACTION_IDS = ['on_my_way', 'running_late', 'arrived', 'im_here', 'submit_completion'] as const satisfies readonly BookingActionId[];
+export type BookingChatActionId = (typeof BOOKING_CHAT_ACTION_IDS)[number];
+
+/** A chip: `running_late` says by how many minutes (`LATE_BY_MINUTES`, as the booking page's sheet asks). */
+export const bookingChatActionInputSchema = z
+  .object({
+    action: z.enum(BOOKING_CHAT_ACTION_IDS, 'invalid'),
+    minutes: z.union(LATE_BY_MINUTES.map((minutes) => z.literal(minutes)), 'invalid').optional(),
+  })
+  .refine((input) => input.action !== 'running_late' || input.minutes !== undefined, { path: ['minutes'], message: 'required' });
+export type BookingChatActionInput = z.input<typeof bookingChatActionInputSchema>;
+
+/**
+ * "What we agreed": a booking's terms on top of its conversation, as this viewer sees them (ui-contract §5): the client's
+ * total or the helper's earnings, never the other's; the scope masked for the helper until it's paid, as on the booking
+ * page. Never the address (the booking page's `ExactAddressPanel` has it).
+ */
+export interface BookingAgreement {
+  bookingId: string;
+  title: string;
+  categorySlug: CategorySlug;
+  /** The agreed start, and the task's window around it. */
+  start: ISODateTime;
+  window: TaskSchedule;
+  /** Remote work (no place to go). */
+  remote: boolean;
+  /** The booking's market: every time reads on its clock. */
+  timeZone: TimeZone;
+  pricing: PricingInput;
+  /** The viewer's side of the money: what the client pays in all, or what the helper earns. */
+  money: { kind: 'client_total' | 'helper_earnings'; amountCents: Cents };
+  /** What's included: the agreed scope. */
+  scope: string;
+  /** Agreed expenses the client covers on top (receipts). */
+  expenseAllowance?: { amountCents: Cents; description: string };
+  /** The category's evidence checklist (`EVIDENCE_CHECKLISTS` keys): what the helper confirms when sending the work. */
+  checklist: string[];
+}
 
 /**
  * A task request card's buttons (the invites' own actions, with `{ inviteId }`): ok `booked` (accept, with `redirectTo` the
@@ -492,6 +594,19 @@ export interface ThreadHandlers {
    * with `onSend`. Errors: `unsupported_type` (unknown, not an animated GIF), `too_large`, `rate_limited`, `unknown`.
    */
   onAttachGif?: QueryHandler<AttachGifInput, PhotoUploadResult>;
+  /**
+   * A booking's day-of chip (2026-11-24): the booking page's action, run from its conversation. ok as there: `on_the_way`,
+   * `arrived` or `updated` (the status line shows in the conversation). Errors: `validation_failed` (`minutes`),
+   * `not_allowed` (not now, or not the viewer's), `version_conflict` (the booking moved on: reload), `rate_limited`
+   * (running late, with `retryAt`), `unknown`.
+   */
+  onBookingAction?: ActionHandler<BookingChatActionInput>;
+  /**
+   * Share two or three of the helper's open times (2026-11-24): ok `sent` (the card shows in the conversation). Errors:
+   * `validation_failed` (`slotIds`: one isn't open any more), `not_allowed` (not a helper here, or blocked),
+   * `rate_limited`, `unknown`.
+   */
+  onShareTimes?: ActionHandler<ShareTimesInput>;
 }
 
 // ---- Direct conversations (2026-11-21) -----------------------------------------------------------------------
@@ -733,4 +848,7 @@ export interface ChatThreadHandlers {
   /** GIFs (2026-11-24), as on the conversation page; absent when they're off. */
   onSearchGifs?: QueryHandler<GifSearchInput, GifSearchResult>;
   onAttachGif?: QueryHandler<AttachGifInput, PhotoUploadResult>;
+  /** A booking's day-of chip and Share times (2026-11-24), as on the conversation page. */
+  onBookingAction(threadId: string, input: BookingChatActionInput): Promise<ActionResult>;
+  onShareTimes(threadId: string, input: ShareTimesInput): Promise<ActionResult>;
 }

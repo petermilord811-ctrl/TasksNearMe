@@ -353,6 +353,22 @@
       "view": "View task",
       "makeOffer": "Make an offer",
       "yourOffer": "See your offer"
+    },
+    "times": {
+      "label": "Shared open times",
+      "fromYou": "You shared open times",
+      "fromThem": "{name} shared open times",
+      "openCount": "{count} open",
+      "noneOpen": "None open now",
+      "pick": "Pick one to send a request for that time.",
+      "choose": "Choose",
+      "state": {
+        "open": "Open",
+        "taken": "Taken",
+        "past": "Past",
+        "withdrawn": "No longer offered"
+      },
+      "zone": "Times in {zone}"
     }
   },
   "plus": {
@@ -374,7 +390,19 @@
     "failed": "That didn't work. Try again.",
     "theirTitle": "{name}'s open tasks",
     "theirDescription": "Make an offer on one: the form opens right here.",
-    "makeOffer": "Make an offer"
+    "makeOffer": "Make an offer",
+    "share": "Share times",
+    "shareHint": "Two or three of your open times: {name} picks one",
+    "shareTitle": "Share times with {name}",
+    "shareDescription": "Choose {min} or {max} of your open times. {name} gets them here as a card and can request one.",
+    "shareLegend": "Your open times",
+    "shareChosen": "{count} of {max} chosen · {zone}",
+    "shareSend": "Share",
+    "shared": "Shared: {name} can pick a time from your conversation",
+    "shareGone": "One of those times isn't open any more. Choose again.",
+    "shareRateLimited": "You've shared times a lot this hour. Try again a little later.",
+    "shareNotAllowed": "You can't share times here now.",
+    "hourly": "{rate}/hr · about {hours} h"
   },
   "delivery": {
     "sent": "Sent",
@@ -405,5 +433,54 @@
     "failed": "Couldn’t make a summary right now. Try again in a little while.",
     "retry": "Try again",
     "dismiss": "Dismiss the summary"
+  },
+  "agreement": {
+    "title": "What we agreed",
+    "summary": "{when} · {amount}",
+    "task": "Task",
+    "when": "When",
+    "anyTime": "Any time on {day}",
+    "window": "Window {range}",
+    "remote": "Remote",
+    "money": {
+      "client_total": "Your total",
+      "helper_earnings": "You earn"
+    },
+    "hourly": "{rate}/hr · about {hours} h (up to {cap} h)",
+    "expenses": "Expenses",
+    "included": "What's included",
+    "checklist": "Checked when the work is sent",
+    "changeHint": "Need a different time, price or scope?",
+    "propose": "Propose a change"
+  },
+  "dayOf": {
+    "label": "Booking updates",
+    "labels": {
+      "on_my_way": "On my way",
+      "running_late": "Running late",
+      "arrived": "I've arrived",
+      "im_here": "I'm here",
+      "submit_completion": "Finish the job"
+    },
+    "done": {
+      "on_my_way": "Sent: you're on your way",
+      "running_late": "Sent: you're running late",
+      "arrived": "Sent: you've arrived",
+      "im_here": "Sent: you're there",
+      "submit_completion": "Opened"
+    },
+    "late": {
+      "title": "How late will you be?",
+      "minutes": "{minutes} min",
+      "hint": "The client hears it right away, and their wait before reporting a no-show grows by the same minutes."
+    },
+    "confirm": "Send “{action}”?",
+    "send": "Send",
+    "cancel": "Cancel",
+    "errors": {
+      "rate_limited": "You've sent a few updates already. Try again a little later.",
+      "changed": "This booking moved on. Reload to see where it stands.",
+      "unknown": "That didn't work. Try again."
+    }
   }
 }

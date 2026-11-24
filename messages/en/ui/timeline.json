@@ -37,5 +37,7 @@
   "reviews_published": "Reviews published",
   "support_note": "Support added a note",
   "sample_profile_notice": "This is a sample profile that shows how TasksNearMe works, so it won't reply. Post a task to reach real helpers near you.",
-  "offer_requested": "Asked for an offer"
+  "offer_requested": "Asked for an offer",
+  "client_present": "Client is there",
+  "times_shared": "Shared open times"
 }

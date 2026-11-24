@@ -41,6 +41,8 @@ import { noteSampleRecipient } from './samples';
 import { CATCH_UP_UNREAD, chatAssistOffered } from './assist';
 import { cardsFor } from './cards';
 import { requestOptionsFor } from './asks';
+import { shareableSlotsFor } from './times';
+import { bookingChatToolsOf } from '@/modules/bookings/chat-tools';
 import { allowedChangeTypes } from '@/modules/bookings/changes-domain';
 import { isSampleId, samplesHiddenInThisBuild } from '@/shared/sample-data';
 import { messageReactions, messages, savedReplies, threadParticipants, threads } from './schema';
@@ -547,6 +549,11 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   const firstLeft = await directFirstMessagesLeft(db, thread, userId);
   const disabledReason: ComposerDisabledReason | undefined = blocked ? 'blocked' : otherGone || found.context.closed ? 'closed' : firstLeft === 0 ? 'awaiting_reply' : undefined;
   const closedReason = disabledReason === 'closed' && !otherGone ? found.context.closedReason : undefined;
+  // Share times from the "+" (2026-11-24): a helper's open slots, in a direct conversation or their open offer's.
+  const shareable = !disabledReason && (thread.kind === 'direct' || thread.kind === 'offer') ? await shareableSlotsFor(db, userId, thread, now) : [];
+  const options = requestOptions || shareable.length ? { ...(requestOptions ?? { myOpenTasks: [], theirOpenTasks: [] }), ...(shareable.length ? { shareableSlots: shareable } : {}) } : null;
+  // A booking's conversation (2026-11-24): "What we agreed" on top, and the day-of updates the viewer can send now.
+  const bookingTools = thread.kind === 'booking' ? await bookingChatToolsOf(db, userId, thread.linkedId, found.summary.title, now) : null;
   // A booking that can still change: "Propose a change" from its conversation.
   // Price and scope can change while it's confirmed or under way (bookings/changes-domain.ts); the dialog says what else.
   const [changeable] = thread.kind === 'booking' && !disabledReason ? await db.select({ status: bookings.status }).from(bookings).where(eq(bookings.id, thread.linkedId)).limit(1) : [];
@@ -591,7 +598,9 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
     ...(assist.summarize && newlyRead.length >= CATCH_UP_UNREAD ? { catchUp: { unread: newlyRead.length } } : {}),
     ...(cards ? { cards } : {}),
     ...(canProposeChange ? { canProposeChange: true } : {}),
-    ...(requestOptions ? { requestOptions } : {}),
+    ...(options ? { requestOptions: options } : {}),
+    ...(bookingTools ? { agreement: bookingTools.agreement } : {}),
+    ...(bookingTools?.actions.length ? { bookingActions: bookingTools.actions } : {}),
     ...(presence ? { presence } : {}),
     ...(mutual && lastMine && theirs?.lastReadAt && theirs.lastReadAt >= lastMine.createdAt ? { seenMessageId: lastMine.id } : {}),
     // Ticks (2026-11-24): how far they've read, under the same rule as "Seen".

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowUp, Check, CheckCheck, Expand, Play } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionHandler, ConversationCards, ISODateTime, MessageReaction, MessageTranslation, MessageView, PersonSummary, Photo, RequestCardHandlers } from '@/contracts';
-import { ChangeCardView, OfferAskCardView, TaskRequestCardView } from '@/ui/components/messaging/conversation-cards';
+import { ChangeCardView, OfferAskCardView, SharedTimesCardView, TaskRequestCardView } from '@/ui/components/messaging/conversation-cards';
 import { MESSAGE_REACTIONS } from '@/contracts/messaging';
 import { Languages, Reply, SmilePlus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -392,11 +392,13 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
           const requestCard = isNotice && message.event?.type === 'invite_sent' && message.event.params?.inviteId ? cards?.requests?.[message.event.params.inviteId] : undefined;
           const changeCard = isNotice && message.event?.type === 'change_proposed' && message.event.params?.changeId ? cards?.changes?.[message.event.params.changeId] : undefined;
           const askCard = isNotice && message.event?.type === 'offer_requested' ? cards?.offerAsks?.[message.id] : undefined;
+          const timesCard = isNotice && message.event?.type === 'times_shared' ? cards?.sharedTimes?.[message.id] : undefined;
           const firstName = otherParty.displayName.split(' ')[0] ?? otherParty.displayName;
-          if (requestCard || changeCard || askCard) return <Fragment key={message.id}>{divider}<li data-message-id={message.id} className="flex min-w-0 justify-center">
+          if (requestCard || changeCard || askCard || timesCard) return <Fragment key={message.id}>{divider}<li data-message-id={message.id} className="flex min-w-0 justify-center">
             {requestCard
               ? <TaskRequestCardView card={requestCard} name={firstName} createdAt={message.createdAt} {...(requestCardHandlers ? { handlers: requestCardHandlers } : {})} {...(onRefresh ? { onDone: onRefresh } : {})} />
               : askCard ? <OfferAskCardView card={askCard} name={firstName} createdAt={message.createdAt} />
+                : timesCard ? <SharedTimesCardView card={timesCard} name={firstName} createdAt={message.createdAt} />
                 : <ChangeCardView card={changeCard!} name={firstName} createdAt={message.createdAt} />}
           </li></Fragment>;
           // Updates ("On the way", an offer received…) are small notes between the bubbles.

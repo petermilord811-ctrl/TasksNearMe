@@ -2,13 +2,14 @@
 
 import { refresh } from 'next/cache';
 import { cookies } from 'next/headers';
-import { catchUpInputSchema, translateManyInputSchema, type ActionResult, type AskForOfferInput, type CatchUpInput, type ConversationFlagInput, type ConversationSearchData, type ConversationSummary, type DirectMessageSetting, type MessageReaction, type MessageSavedReplyInput, type MessageTranslation, type MessageTranslations, type PhotoUploadResult, type ReplySuggestions, type SendMessageInput, type StartDirectChatInput, type TranslateManyInput } from '@/contracts';
+import { catchUpInputSchema, translateManyInputSchema, type ActionResult, type AskForOfferInput, type CatchUpInput, type ConversationFlagInput, type ConversationSearchData, type ConversationSummary, type DirectMessageSetting, type MessageReaction, type MessageSavedReplyInput, type MessageTranslation, type MessageTranslations, type PhotoUploadResult, type ReplySuggestions, type SendMessageInput, type ShareTimesInput, type StartDirectChatInput, type TranslateManyInput } from '@/contracts';
 import { AI_STAND_IN_COOKIE, wantsAiStandIn } from '@/integrations/ai';
 import { createFakeReplySuggester } from '@/integrations/ai/reply-suggester';
 import { createFakeConversationSummarizer } from '@/integrations/ai/conversation-summarizer';
 import { createFakeBatchTranslator, createFakeTranslator } from '@/integrations/ai/translator';
 import { catchUp, suggestReplies, translateMessage, translateMessages } from './assist';
 import { askForOffer } from './asks';
+import { shareTimes } from './times';
 import { storePhoto } from '@/modules/files/uploads';
 import { fileStorage } from '@/modules/tasks/server';
 import { getViewer } from '@/platform/auth/viewer';
@@ -207,4 +208,20 @@ export async function askForOfferFromWindowAction(threadId: string, input: AskFo
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
   return askForOffer(db, userId, String(threadId), input, await requestNow());
+}
+
+/** Share two or three of the helper's open times in a direct or offer conversation (2026-11-24): ok `sent`. */
+export async function shareTimesAction(threadId: string, input: ShareTimesInput): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  const result = await shareTimes(db, userId, String(threadId), input, await requestNow());
+  if (result.ok) refresh();
+  return result;
+}
+
+/** The chat window's: the same, without refreshing the page behind it (the window reads the conversation again). */
+export async function shareTimesFromWindowAction(threadId: string, input: ShareTimesInput): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  return shareTimes(db, userId, String(threadId), input, await requestNow());
 }

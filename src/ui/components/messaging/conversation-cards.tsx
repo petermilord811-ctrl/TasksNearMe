@@ -4,10 +4,11 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { ArrowRight, CalendarClock, Check, ClipboardList, HandHelping, Repeat2, X } from 'lucide-react';
-import { routes, type ChangeCard, type ISODateTime, type OfferAskCard, type RequestCardHandlers, type TaskRequestCard } from '@/contracts';
+import { routes, type ChangeCard, type ISODateTime, type OfferAskCard, type RequestCardHandlers, type SharedSlot, type SharedTimesCard, type TaskRequestCard } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 import { cn } from '@/ui/lib/utils';
 import { Badge } from '@/ui/primitives/badge';
 import { buttonVariants } from '@/ui/primitives/button';
@@ -124,6 +125,49 @@ export function OfferAskCardView({ card, name, createdAt }: { card: OfferAskCard
     </header>
     <h3 className="font-heading text-base leading-snug font-semibold [overflow-wrap:anywhere]">{card.title}</h3>
     {(card.open || card.offered || card.viewerRole === 'poster') && <Link href={card.href} className={link}>{action}<ArrowRight aria-hidden="true" className="size-4" /></Link>}
+    <p className="sr-only">{formatDateTime(createdAt)}</p>
+  </article>;
+}
+
+/**
+ * "Shared open times" (2026-11-24): a helper's open slots, on their market's clock. The other person taps one and the
+ * request dialog opens over the page with that slot chosen; a slot that's taken, past or taken down says so.
+ */
+export function SharedTimesCardView({ card, name, createdAt }: { card: SharedTimesCard; name: string; createdAt: ISODateTime }) {
+  return <TimeZoneProvider timeZone={card.timeZone}><SharedTimes card={card} name={name} createdAt={createdAt} /></TimeZoneProvider>;
+}
+
+function SharedTimes({ card, name, createdAt }: { card: SharedTimesCard; name: string; createdAt: ISODateTime }) {
+  const t = useTranslations('thread.cards.times');
+  const categories = useTranslations('taskCard.categories');
+  const { formatDate, formatDateTime, formatTimeRange, zoneName } = useFormat();
+  const price = usePrice();
+  const client = card.viewerRole === 'client';
+  const open = card.slots.filter((slot) => slot.state === 'open').length;
+  const lines = (slot: SharedSlot) => <span className="min-w-0">
+    <span className="block font-medium tabular-nums">{formatDate(slot.start)} · {formatTimeRange(slot.start, slot.end)}</span>
+    <span className="block text-xs text-muted-foreground">{categories(slot.categorySlug)} · {price(slot.pricing)}</span>
+  </span>;
+  return <article aria-label={t('label')} data-shared-times="" className={frame}>
+    <header className="flex items-center justify-between gap-2">
+      <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase"><CalendarClock aria-hidden="true" className="size-3.5" />{client ? t('fromThem', { name }) : t('fromYou', { name })}</p>
+      <Badge variant={open > 0 ? 'secondary' : 'outline'}>{open > 0 ? t('openCount', { count: open }) : t('noneOpen')}</Badge>
+    </header>
+    {client && open > 0 && <p className="text-sm text-muted-foreground">{t('pick')}</p>}
+    <ul className="space-y-1.5">
+      {card.slots.map((slot) => <li key={slot.id}>
+        {client && slot.state === 'open'
+          ? <Link href={routes.app.requestHelper(card.helperHandle, { slotId: slot.id })} data-slot-id={slot.id} className="group/slot flex min-h-12 items-center justify-between gap-3 rounded-xl border border-primary/30 bg-brand-soft/40 px-3 py-2 text-sm hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-ring">
+            {lines(slot)}
+            <span className="inline-flex shrink-0 items-center gap-1 font-semibold text-primary">{t('choose')}<ArrowRight aria-hidden="true" className="size-4 transition-transform group-hover/slot:translate-x-0.5 motion-reduce:transition-none" /></span>
+          </Link>
+          : <div data-slot-id={slot.id} className={cn('flex min-h-12 items-center justify-between gap-3 rounded-xl border border-foreground/[0.08] px-3 py-2 text-sm dark:border-white/[0.08]', slot.state !== 'open' && 'text-muted-foreground')}>
+            {lines(slot)}
+            <Badge variant={slot.state === 'open' ? 'secondary' : 'outline'} className="shrink-0">{t(`state.${slot.state}`)}</Badge>
+          </div>}
+      </li>)}
+    </ul>
+    <p className="text-xs text-muted-foreground">{t('zone', { zone: zoneName })}</p>
     <p className="sr-only">{formatDateTime(createdAt)}</p>
   </article>;
 }

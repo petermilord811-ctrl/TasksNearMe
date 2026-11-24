@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, ArrowUpRight, LockKeyhole } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useShownPerson } from '@/ui/lib/shown-person';
 import { routes, type ConversationListHandlers, type HelpSummary, type ISODateTime, type ReportHandlers, type ReportSubject, type ThreadHandlers, type ThreadPageData, type ThreadSubject, type ThreadSummary } from '@/contracts';
+import { AgreementCard, BookingDayChips } from '@/ui/components/messaging/booking-chat-tools';
 import { ConversationActionsMenu } from '@/ui/components/messaging/conversation-actions';
 import { ConversationMarks, ConversationMenu, RequestBanner } from '@/ui/components/messaging/conversation-tools';
 import { HelpRow } from '@/ui/components/messaging/help-row';
@@ -135,7 +136,7 @@ export function ThreadContent({ data, handlers, now, safety, composerState, assi
     </header>
     {thread.contactMasking && <p className="flex items-start gap-2.5 rounded-2xl bg-secondary/70 px-4 py-2.5 text-sm leading-6 text-secondary-foreground"><LockKeyhole aria-hidden="true" className="mt-1 size-4 shrink-0" /><span>{thread.kind === 'direct' ? t('direct.masking') : t('masking')}</span></p>}
     {/* A booking that can still change (2026-11-23): the proposal shows in the conversation as a card. */}
-    {data.canProposeChange && thread.subject.kind === 'booking' && <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-2xl border border-foreground/[0.07] bg-card px-4 py-2 text-sm dark:border-white/[0.06]">
+    {data.canProposeChange && thread.subject.kind === 'booking' && !data.agreement && <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-2xl border border-foreground/[0.07] bg-card px-4 py-2 text-sm dark:border-white/[0.06]">
       <span className="text-muted-foreground">{t('cards.change.hint')}</span>
       <Link href={routes.app.bookingProposeChange(thread.subject.bookingId)} className="group/change inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary underline-offset-4 hover:underline">{t('cards.change.propose')}<ArrowRight aria-hidden="true" className="size-4 transition-transform duration-200 group-hover/change:translate-x-0.5 motion-reduce:transition-none" /></Link>
     </p>}
@@ -145,13 +146,17 @@ export function ThreadContent({ data, handlers, now, safety, composerState, assi
     </p>}
     {/* Photos dropped anywhere on the conversation attach to the message (2026-11-23). */}
     <div data-drop-photos="" className={cn('relative flex flex-col overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06]', thread.contactMasking ? 'h-[max(24rem,calc(100dvh-var(--app-header-offset,4.25rem)-13rem))]' : 'h-[max(24rem,calc(100dvh-var(--app-header-offset,4.25rem)-9rem))]', 'lg:h-[max(32rem,calc(100dvh-var(--app-header-offset,4.25rem)-10rem))]')}>
+      {/* What we agreed, on top of a booking's messages (2026-11-24). */}
+      {data.agreement && <AgreementCard agreement={data.agreement} threadId={thread.id} canProposeChange={Boolean(data.canProposeChange)} />}
       <ReplyProvider>
       <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier) } : {})} otherParty={other} now={now} readUpTo={data.readUpTo} firstUnreadId={data.firstUnreadId} focusId={focusId} canReply={composer.canSend} {...(composer.canSend && handlers.onReact ? { onReact: handlers.onReact } : {})} {...(data.assist?.translate && handlers.onTranslate ? { onTranslate: handlers.onTranslate } : {})} {...(data.cards ? { cards: data.cards } : {})} {...(handlers.requestCards ? { requestCardHandlers: handlers.requestCards } : {})} className="min-h-0 flex-1" />
       {/* A stranger's first message (2026-11-23): Accept, Ignore or Block; answering accepts too. */}
       {composer.disabledReason !== 'blocked' && <RequestBanner thread={thread} name={firstName} handlers={handlers} {...(safety ? { onBlock: safety.handlers.onBlock } : {})} />}
       {composer.canSend && composer.firstMessagesLeft !== undefined && <p role="note" className="border-t border-foreground/[0.07] bg-muted/40 px-4 py-2 text-xs text-muted-foreground dark:border-white/[0.06]">{t('direct.firstMessagesLeft', { count: composer.firstMessagesLeft, name: firstName })}</p>}
+      {/* The booking's day-of updates the app offers now, one tap each (2026-11-24). */}
+      {data.bookingActions && thread.subject.kind === 'booking' && <BookingDayChips actions={data.bookingActions} bookingId={thread.subject.bookingId} {...(handlers.onBookingAction ? { onAction: handlers.onBookingAction } : {})} />}
       {composer.canSend
-        ? <MessageComposerContent key={`composer-${thread.id}`} rules={composer} handlers={handlers} savedReplies={data.savedReplies} template={{ firstName, task: thread.title }} {...(suggestFor ? { suggestFor } : {})} {...(data.requestOptions ? { actionsMenu: <ConversationActionsMenu options={data.requestOptions} name={firstName} {...(handlers.onAskForOffer ? { onAskForOffer: handlers.onAskForOffer } : {})} /> } : {})} {...composerState} />
+        ? <MessageComposerContent key={`composer-${thread.id}`} rules={composer} handlers={handlers} savedReplies={data.savedReplies} template={{ firstName, task: thread.title }} {...(suggestFor ? { suggestFor } : {})} {...(data.requestOptions ? { actionsMenu: <ConversationActionsMenu options={data.requestOptions} name={firstName} {...(handlers.onAskForOffer ? { onAskForOffer: handlers.onAskForOffer } : {})} {...(handlers.onShareTimes ? { onShareTimes: handlers.onShareTimes } : {})} /> } : {})} {...composerState} />
         : <div role="status" className="border-t border-foreground/[0.07] bg-muted/60 px-4 py-3.5 pb-[max(0.875rem,env(safe-area-inset-bottom))] text-center text-sm dark:border-white/[0.06]">
           {/* Why it closed and the way on (audit L13): the offer, the task, the booking or the visits it was about. */}
           <p className="font-medium">{closedReason ? t(`closed.${thread.subject.kind}.${closedReason}`, { name: other.displayName }) : t(`disabled.${composer.disabledReason ?? 'unavailable'}`, { name: firstName })}</p>

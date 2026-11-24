@@ -3,7 +3,8 @@ import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
-import { acceptMessageRequestAction, askForOfferAction, catchUpAction, deleteReplyAction, reactToMessageAction, saveReplyAction, searchConversationAction, sendMessageAction, setConversationFlagAction, suggestRepliesAction, translateMessageAction, translateMessagesAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
+import { acceptMessageRequestAction, askForOfferAction, catchUpAction, deleteReplyAction, reactToMessageAction, saveReplyAction, searchConversationAction, sendMessageAction, setConversationFlagAction, shareTimesAction, suggestRepliesAction, translateMessageAction, translateMessagesAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
+import { bookingChatAction } from '@/modules/bookings/chat-actions';
 import { supportAssistantForRequest } from '@/modules/assist/assistant-choice';
 import { attachGifAction, searchGifsAction } from '@/modules/messaging/gif-actions';
 import { gifsOn } from '@/integrations/gifs';
@@ -82,6 +83,9 @@ async function Thread({ params, searchParams, wide }: Pick<PageProps<'/[locale]/
         onAskForOffer: askForOfferAction.bind(null, threadId),
         // GIFs (2026-11-24): only with a KLIPY key, or the samples outside production.
         ...(gifsOn() ? { onSearchGifs: searchGifsAction, onAttachGif: attachGifAction } : {}),
+        // A booking's day-of chips and Share times (2026-11-24).
+        onBookingAction: bookingChatAction.bind(null, threadId),
+        onShareTimes: shareTimesAction.bind(null, threadId),
       }}
       {...(subject ? { safety: { subject, handlers: { onReport: reportUserAction.bind(null, threadId), onBlock: blockUserAction.bind(null, threadId) } } } : {})}
     />

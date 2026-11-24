@@ -42,6 +42,10 @@ export const TIMELINE_EVENT_TYPES = [
   'sample_profile_notice',
   /** A client asked the helper they're talking to for an offer on one of their tasks (2026-11-23); `params.taskId`. */
   'offer_requested',
+  /** The client answered "Couldn't get in": they're there (`im_here`, 2026-11-24). */
+  'client_present',
+  /** A helper shared open times in the conversation (2026-11-24); `params.slotIds`. */
+  'times_shared',
 ] as const;
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];
 
@@ -64,5 +68,7 @@ export interface TimelineEvent {
     changeId?: string;
     /** "Asked for an offer" (`offer_requested`): the task. */
     taskId?: string;
+    /** "Shared open times" (`times_shared`): the helper's slots. */
+    slotIds?: string[];
   };
 }

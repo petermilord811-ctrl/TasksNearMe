@@ -1,4 +1,8 @@
 import type {
+  ActionDescriptor,
+  AvailabilitySlotView,
+  BookingAgreement,
+  BookingChatActionId,
   ConversationSearchData,
   ConversationSummary,
   MessageTranslations,
@@ -6,6 +10,7 @@ import type {
   MessageSegment,
   MessageView,
   PhotoUploadResult,
+  SharedSlot,
   ThreadHandlers,
   ThreadPageData,
   ThreadSummary,
@@ -300,8 +305,11 @@ export const changeCardThreadPageData: ThreadPageData = {
 };
 
 /** Fake handlers for the chat's new tools: everything works, "desk" finds two messages, Translate marks the text. */
-export const fakeConversationHandlers: Pick<ThreadHandlers, 'onFlag' | 'onAccept' | 'onSearch' | 'onTranslate' | 'onSuggest' | 'onTranslateMany' | 'onCatchUp' | 'requestCards' | 'onAskForOffer'> = {
+export const fakeConversationHandlers: Pick<ThreadHandlers, 'onFlag' | 'onAccept' | 'onSearch' | 'onTranslate' | 'onSuggest' | 'onTranslateMany' | 'onCatchUp' | 'requestCards' | 'onAskForOffer' | 'onBookingAction' | 'onShareTimes'> = {
   onAskForOffer: () => wait({ ok: true, code: 'sent' }),
+  // A booking's day-of chips and Share times (2026-11-24): everything works.
+  onBookingAction: (input) => wait({ ok: true, code: input.action === 'on_my_way' ? 'on_the_way' : input.action === 'arrived' ? 'arrived' : 'updated' }),
+  onShareTimes: () => wait({ ok: true, code: 'sent' }),
   onFlag: () => wait({ ok: true, code: 'updated' }),
   onAccept: () => wait({ ok: true, code: 'updated' }),
   onSearch: (query) => wait({ ...conversationSearchData, query, hits: query.toLowerCase().includes('desk') ? conversationSearchData.hits : [] }),
@@ -419,4 +427,117 @@ export const luciaCatchUpSummary: ConversationSummary = {
   count: 9,
   from: '2026-11-21T15:00:00.000Z',
   to: '2026-11-21T15:20:00.000Z',
+};
+
+// ---- A booking's conversation: day-of chips and "What we agreed" (2026-11-24) -------------------------------------------
+
+/** What Maya and Jordan agreed for the desk, as Maya sees it: her $63.00 total, never Jordan's earnings; no address. */
+export const deskAgreementForClient: BookingAgreement = {
+  bookingId: 'bkg_desk',
+  title: 'Assemble a desk (flat-pack, 1 item)',
+  categorySlug: 'furniture-assembly',
+  start: DESK_TIMES.agreedStart,
+  window: { windowStart: DESK_TIMES.windowStart, windowEnd: DESK_TIMES.windowEnd, flexible: false },
+  remote: false,
+  timeZone: 'America/Chicago',
+  pricing: { type: 'fixed', priceCents: 6000 },
+  money: { kind: 'client_total', amountCents: 6300 },
+  scope: 'Flat-pack desk, about 40 parts, still in the box in my living room. 2nd floor with an elevator.',
+  checklist: ['all_parts_used', 'level_and_stable', 'anchored_if_asked', 'packaging_cleared'],
+};
+
+/** The same, as Jordan sees it: his $60.00 earnings, never Maya's total. */
+export const deskAgreementForHelper: BookingAgreement = { ...deskAgreementForClient, money: { kind: 'helper_earnings', amountCents: 6000 } };
+
+const chip = (id: BookingChatActionId, kind: ActionDescriptor['kind'] = 'secondary'): ActionDescriptor<BookingChatActionId> => ({ id, kind, enabled: true });
+const flipped = (list: MessageView[]): MessageView[] => list.map((message) => (message.sender === 'me' ? { ...message, sender: 'them' as const } : message.sender === 'them' ? { ...message, sender: 'me' as const } : message));
+const line = (id: string, type: 'on_my_way' | 'running_late' | 'arrived' | 'cant_access' | 'client_present', createdAt: string, minutes?: number): MessageView => ({ id, sender: 'system', kind: 'status', segments: [], attachments: [], event: { type, ...(minutes ? { params: { minutes } } : {}) }, createdAt });
+const deskBeforeTheDay = deskBookingMessages.filter((message) => message.event?.type !== 'on_my_way');
+
+/** Maya's view of the desk booking's conversation: what they agreed on top, with Propose a change; no chips for her now. */
+export const agreementThreadPageData: ThreadPageData = { ...deskBookingThreadPageData, agreement: deskAgreementForClient, canProposeChange: true };
+
+/** Remote work paid by the hour, any time that day, with agreed expenses and no checklist (computer help has none here). */
+export const agreementRemoteHourlyThreadPageData: ThreadPageData = {
+  ...agreementThreadPageData,
+  agreement: { ...deskAgreementForClient, remote: true, window: { ...deskAgreementForClient.window, flexible: true }, pricing: { type: 'hourly', rateCents: 3000, estimatedHours: 2, hoursCap: 3 }, money: { kind: 'client_total', amountCents: 9450 }, expenseAllowance: { amountCents: 2000, description: 'Wall anchors from the hardware store' }, checklist: [] },
+};
+
+const jordanDeskThread: ThreadSummary = { ...deskBookingThread, otherParty: maya, unreadCount: 0 };
+
+/** Jordan an hour before the start: On my way and Running late, one tap each. */
+export const dayOfBeforeThreadPageData: ThreadPageData = {
+  thread: jordanDeskThread,
+  messages: flipped(deskBeforeTheDay),
+  composer,
+  agreement: deskAgreementForHelper,
+  canProposeChange: true,
+  bookingActions: [chip('on_my_way', 'primary'), chip('running_late')],
+};
+
+/** Jordan on the way (its line shows): I've arrived, and Running late still. */
+export const dayOfOnTheWayThreadPageData: ThreadPageData = {
+  ...dayOfBeforeThreadPageData,
+  messages: [...flipped(deskBeforeTheDay), line('msg_dy1', 'on_my_way', '2026-11-21T15:58:00.000Z'), line('msg_dy2', 'running_late', '2026-11-21T16:05:00.000Z', 10)],
+  bookingActions: [chip('arrived', 'primary'), chip('running_late')],
+};
+
+/** Jordan at work: Finish the job opens the completion form over the page. */
+export const dayOfWorkingThreadPageData: ThreadPageData = {
+  ...dayOfOnTheWayThreadPageData,
+  messages: [...dayOfOnTheWayThreadPageData.messages, line('msg_dy3', 'arrived', DESK_TIMES.arrived)],
+  canProposeChange: true,
+  bookingActions: [chip('submit_completion', 'primary')],
+};
+
+/** Maya when Jordan couldn't get in: I'm here, while her 30 minutes run. */
+export const dayOfImHereThreadPageData: ThreadPageData = {
+  ...agreementThreadPageData,
+  messages: [...deskBookingMessages, line('msg_dy4', 'arrived', DESK_TIMES.arrived), line('msg_dy5', 'cant_access', '2026-11-21T16:50:00.000Z')],
+  bookingActions: [chip('im_here', 'primary')],
+};
+
+// ---- Shared open times (2026-11-24) -------------------------------------------------------------------------------------
+
+/** Jordan's open slots (Austin time), soonest first: what the "+" offers him to share. */
+export const jordanOpenSlots: AvailabilitySlotView[] = [
+  { id: 'avl_jordan_sat', categorySlug: 'furniture-assembly', start: '2026-11-28T15:00:00.000Z', end: '2026-11-28T19:00:00.000Z', pricing: { type: 'hourly', rateCents: 3000, estimatedHours: 2, hoursCap: 3 } },
+  { id: 'avl_jordan_sun', categorySlug: 'furniture-assembly', start: '2026-11-29T20:00:00.000Z', end: '2026-11-29T23:00:00.000Z', pricing: { type: 'fixed', priceCents: 6000 } },
+  { id: 'avl_jordan_tue', categorySlug: 'yard-cleanup', start: '2026-12-01T15:00:00.000Z', end: '2026-12-01T18:00:00.000Z', pricing: { type: 'hourly', rateCents: 3000, estimatedHours: 3, hoursCap: 4 } },
+  { id: 'avl_jordan_wed', categorySlug: 'furniture-assembly', start: '2026-12-02T23:00:00.000Z', end: '2026-12-03T01:00:00.000Z', pricing: { type: 'fixed', priceCents: 6000 } },
+];
+
+const sharedSlots: SharedSlot[] = [
+  { ...jordanOpenSlots[0]!, state: 'open' },
+  { ...jordanOpenSlots[1]!, state: 'open' },
+  { ...jordanOpenSlots[2]!, state: 'taken' },
+];
+const sharedLines: MessageView[] = [
+  wrote('msg_t1', 'them', text('Here are a few times that work for me this week.'), '2026-11-21T15:55:00.000Z'),
+  { id: 'msg_t2', sender: 'system', kind: 'status', segments: [], attachments: [], event: { type: 'times_shared', params: { slotIds: sharedSlots.map((slot) => slot.id) } }, createdAt: '2026-11-21T15:56:00.000Z' },
+];
+
+/** Maya talking to Jordan: he shared three times; two are open (tap one: the request dialog with it chosen), one is taken. */
+export const sharedTimesThreadPageData: ThreadPageData = {
+  ...directThreadPageData,
+  messages: [...directThreadPageData.messages, ...sharedLines],
+  composer,
+  cards: { sharedTimes: { msg_t2: { viewerRole: 'client', helperHandle: 'jordan-t', timeZone: 'America/Chicago', slots: sharedSlots } } },
+};
+
+/** The same card as Jordan sees it (one past now, one he took down), and Share times in his "+". */
+export const sharedTimesForHelperPageData: ThreadPageData = {
+  ...sharedTimesThreadPageData,
+  thread: { ...sharedTimesThreadPageData.thread, title: 'Maya R.', otherParty: maya, subject: { kind: 'person', canRequest: false } },
+  messages: flipped(sharedTimesThreadPageData.messages),
+  requestOptions: { myOpenTasks: [], theirOpenTasks: [], shareableSlots: jordanOpenSlots },
+  cards: { sharedTimes: { msg_t2: { viewerRole: 'helper', helperHandle: 'jordan-t', timeZone: 'America/Chicago', slots: [sharedSlots[0]!, { ...sharedSlots[1]!, state: 'past' }, { ...sharedSlots[2]!, state: 'withdrawn' }] } } },
+};
+
+/** Jordan in the offer conversation about his open offer: Share times is in his "+" there too. */
+export const shareTimesInOfferThreadPageData: ThreadPageData = {
+  thread: movingOfferThreadForHelper,
+  messages: [{ id: 'msg_o1', sender: 'me', kind: 'text', segments: text('I can bring a dolly. Which day suits you?'), attachments: [], createdAt: '2026-11-21T15:40:00.000Z' }],
+  composer,
+  requestOptions: { myOpenTasks: [], theirOpenTasks: [], shareableSlots: jordanOpenSlots.slice(0, 2) },
 };
