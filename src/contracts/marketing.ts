@@ -107,12 +107,35 @@ export type LandingAiSuggestResult =
   | { ok: false; code: 'unavailable' | 'rate_limited' | 'prohibited' | 'too_short' };
 
 /**
+ * One city's part of the landing page, so the live map can switch there without leaving the page (owner,
+ * 2026-11-23: "This platform is not for only Gainesville"): the market (name, status, zone, radius) and its map
+ * (center, service area, neighborhoods, open tasks, and the same `cities` list as every city's).
+ */
+export interface LandingCity {
+  market: MarketView;
+  map: LandingMapData;
+}
+
+/**
+ * - `not_found`: the city isn't open or opening (any more), or this visitor can't see it (a demo city).
+ * - `unavailable`: it couldn't be loaded just now; trying again may work.
+ */
+export type LandingCityResult = { ok: true; city: LandingCity } | { ok: false; code: 'not_found' | 'unavailable' };
+
+/**
  * Handlers the landing page receives from its route (signed-out visitors). `onSuggestWithAi` runs only on an
  * explicit click (never per keystroke), is rate-limited per visitor and per day, and stores nothing it's given.
  * Absent (previews without a stand-in, tests): the assistant offers the wizard's "Draft it with AI" instead.
  */
 export interface LandingHandlers {
   onSuggestWithAi?: QueryHandler<{ text: string; category: CategorySlug }, LandingAiSuggestResult>;
+  /**
+   * Another city's map, for the city switcher and for the city the visitor turns out to be in (their location is
+   * compared with `MapCity` on the device: only the city's slug is sent). `remember`: the visitor picked it, so the
+   * landing opens on it next time (a cookie holding the slug; never a location), and the page is drawn again for it
+   * (the hero and the sections follow). Absent (previews): the switcher offers each city's own page instead.
+   */
+  onLoadCity?: QueryHandler<{ slug: string; remember: boolean }, LandingCityResult>;
 }
 
 /**
@@ -174,17 +197,26 @@ export interface LandingMapData {
   attribution: string;
   areas: MapArea[];
   pins: TaskMapPin[];
-  /** Every city open or opening, for the minimap's view of the country (the demo marketplace's only for testers). */
+  /**
+   * Every city open or opening, alphabetical (the demo marketplace's only for testers): the map's city switcher, and
+   * the city a visitor's location falls in.
+   */
   cities: MapCity[];
 }
 
-/** A city TasksNearMe is open in or opening in, by its center: the landing map's minimap shows the country with them. */
+/**
+ * A city TasksNearMe is open in or opening in, by its center and service radius: a visitor whose location falls
+ * inside it (worked out on the device) is shown that city's map.
+ */
 export interface MapCity {
   slug: string;
   name: string;
   state: string;
   status: 'live' | 'prelaunch';
   point: { lat: number; lng: number };
+  serviceRadiusMiles: number;
+  /** Its IANA zone (the switcher shows each city's hour). */
+  timeZone: TimeZone;
 }
 
 export interface MarketPageData {

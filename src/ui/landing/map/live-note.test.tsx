@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TaskPublicView } from '@/contracts';
-import { austinMapPins, deskPublicTask } from '@/fixtures';
+import { austinMapPins, deskPublicTask, homePageData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { LandingProvider } from '../landing-state';
 import { MapExplorerProvider, useMapExplorer } from './explorer-state';
@@ -55,7 +55,7 @@ describe('the note about a task posted just now', () => {
   it('shows the new task with Show, and goes once dismissed', async () => {
     render(
       <NextIntlClientProvider locale="en" timeZone="America/New_York" messages={messages}>
-        <LandingProvider>
+        <LandingProvider initialCity={{ market: homePageData.market, map: homePageData.map }}>
           <MapExplorerProvider pins={austinMapPins.slice(0, 2)} marketSlug="gainesville" timeZone="America/New_York">
             <Near />
             <Shown />

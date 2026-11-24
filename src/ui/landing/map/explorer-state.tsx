@@ -41,11 +41,9 @@ export interface MapLayers {
   driveTimes: boolean;
   /** The map's light follows the market's clock (warm at sunset, roads lit at night). */
   clock: boolean;
-  /** The minimap of the whole service area (wide screens with a mouse, and full screen). */
-  minimap: boolean;
 }
 
-export const DEFAULT_LAYERS: MapLayers = { mode: 'pins', buildings: false, serviceArea: true, driveTimes: false, clock: true, minimap: true };
+export const DEFAULT_LAYERS: MapLayers = { mode: 'pins', buildings: false, serviceArea: true, driveTimes: false, clock: true };
 
 interface ExplorerState {
   /** The visitor's pick, or null to follow the location (nearest once it's shared, newest before). */
@@ -63,7 +61,18 @@ interface ExplorerState {
   /** The live map is up (its own controls only make sense then). */
   liveReady: boolean;
   setLiveReady: (ready: boolean) => void;
-  /** The market's time zone (the minimap's hour). */
+  /**
+   * The visitor has started using the map (a drag, a zoom, a turn, a group opened, a task shown): the heading's card
+   * folds to one line on wide screens so the map has the room, until the visitor opens it again.
+   */
+  engaged: boolean;
+  setEngaged: (engaged: boolean) => void;
+  /** Wide screens: the explorer folded to its search and count (the map takes its side). */
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean) => void;
+  /** The city's live stream is open (the map's "Live" dot says so); false before it opens and while it reconnects. */
+  connected: boolean;
+  /** The market's time zone (the map's hour). */
   timeZone?: TimeZone;
   /** The visitor has come to the map (it's loading, or up): the tasks are kept live from then on. */
   setNear: (near: boolean) => void;
@@ -108,6 +117,7 @@ export function MapExplorerProvider({
   pins: initialPins = EMPTY_PINS,
   marketSlug,
   timeZone,
+  initialView,
 }: {
   children: ReactNode;
   /** The open tasks the page loaded with. */
@@ -116,18 +126,30 @@ export function MapExplorerProvider({
   marketSlug?: string;
   /** The market's zone: "today" and "this weekend" are on its calendar. */
   timeZone?: TimeZone;
+  /** Previews: the map already in use (the card folded) and the explorer folded. */
+  initialView?: { engaged?: boolean; collapsed?: boolean };
 }) {
   const [sortChoice, setSortChoice] = useState<ListSort | null>(null);
   const [withinMiles, setWithinMiles] = useState<number | null>(null);
   const [followMap, setFollowMap] = useState(true);
   const [view, setViewState] = useState<ViewBounds | null>(null);
   const [liveReady, setLiveReady] = useState(false);
+  const [engaged, setEngaged] = useState(initialView?.engaged ?? false);
+  const [collapsed, setCollapsed] = useState(initialView?.collapsed ?? false);
   const [near, setNear] = useState(false);
   const [request, setRequest] = useState<MapFocusRequest | null>(null);
   const [layers, setLayers] = useState<MapLayers>(DEFAULT_LAYERS);
   const [when, setWhen] = useState<TaskBoardWhen>('any');
   const [drawing, setDrawing] = useState(false);
   const [watchAreas, setWatchAreas] = useState<MapArea[] | null>(null);
+  // Another city: an outline drawn on the last one, and what the map showed there, don't carry over.
+  const [shownMarket, setShownMarket] = useState(marketSlug);
+  if (shownMarket !== marketSlug) {
+    setShownMarket(marketSlug);
+    setDrawing(false);
+    setWatchAreas(null);
+    setViewState(null);
+  }
   const reduced = usePrefersReducedMotion();
   // The stream opens once the visitor comes to the map (a visit that never scrolls down opens nothing); the list
   // follows it even where the live map can't run (no WebGL: the drawn map stays).
@@ -182,6 +204,11 @@ export function MapExplorerProvider({
       setView,
       liveReady,
       setLiveReady,
+      engaged,
+      setEngaged,
+      collapsed,
+      setCollapsed,
+      connected: live.connected,
       timeZone,
       setNear,
       request,
@@ -202,7 +229,7 @@ export function MapExplorerProvider({
       watchAreas,
       setWatchAreas,
     }),
-    [sortChoice, withinMiles, followMap, view, setView, liveReady, timeZone, request, requestFocus, layers, live.pins, live.arrivals, live.pulses, live.latest, live.dismissLatest, when, whenRange, mapPins, drawing, watchAreas],
+    [sortChoice, withinMiles, followMap, view, setView, liveReady, engaged, collapsed, live.connected, timeZone, request, requestFocus, layers, live.pins, live.arrivals, live.pulses, live.latest, live.dismissLatest, when, whenRange, mapPins, drawing, watchAreas],
   );
   return <ExplorerContext.Provider value={value}>{children}</ExplorerContext.Provider>;
 }

@@ -185,6 +185,27 @@ test.describe('public pages', () => {
     // One line over the map: how far, and the city's list (owner, 2026-11-21: fewer elements there).
     await expect(map.getByText(/^You're [\d,]+ mi from Gainesville: we're opening city by city\.$/)).toBeVisible();
     await expect(map.getByRole('link', { name: "Join your city's list" })).toHaveAttribute('href', '/waitlist');
+    // Another city is open nearer than this one (Austin, in the test world): it's one press away.
+    await expect(map.getByText(/^The nearest open city is Austin, [\d,]+ mi away\.$/)).toBeVisible();
+  });
+
+  test('home map: a visitor in another open city sees that city, with the way back (owner, 2026-11-23: "If I am in Austin, you are still showing Gainesville")', async ({ page, context }) => {
+    await context.grantPermissions(['geolocation']);
+    await context.setGeolocation({ latitude: 30.2989, longitude: -97.7064 }); // Mueller, Austin
+    await page.goto('/');
+    const map = page.locator('#tasks-near-you');
+    // Found without a press (allowed before); the device works out the city, and only its name is asked for.
+    await expect(map.getByText('Showing Austin, where you are.')).toBeVisible();
+    await expect(map.getByRole('button', { name: 'City: Austin, TX. Show another city' })).toBeVisible();
+    await landOnMap(page);
+    await expect(map.getByRole('status').filter({ hasText: /open tasks? around/ })).toContainText('around Austin');
+    // Not remembered: it was the location, not a pick.
+    expect((await context.cookies()).find((cookie) => cookie.name === 'tnm_city')).toBeUndefined();
+    // Back to the page's own city: a pick, remembered (so the location doesn't move the map again).
+    await map.getByRole('button', { name: 'Back to Gainesville' }).click();
+    await expect(map.getByRole('button', { name: 'City: Gainesville, FL. Show another city' })).toBeVisible();
+    await expect(map.getByRole('status').filter({ hasText: /open tasks? around/ })).toContainText('around Gainesville');
+    await expect.poll(async () => (await context.cookies()).find((cookie) => cookie.name === 'tnm_city')?.value).toBe('gainesville');
   });
 
   test('home map: today, this weekend or this week, and one neighborhood at a time', async ({ page }) => {

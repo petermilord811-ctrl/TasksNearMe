@@ -12,9 +12,11 @@ export const CHIP_ZOOM = 10.4;
 /**
  * One task on the live map: a price chip with its category's icon where there's room for it (close in, and
  * not over another chip), otherwise a small dot (they cross-fade). Lit (pointed at, or picked) it's always a
- * chip, lifts and fills with its category's color;
- * quiet (another category, or outside the chosen distance) it fades back. Decorative: the list beside the map
- * is the accessible way to the same tasks.
+ * chip, lifts and fills with its category's color. Two ways of stepping back: quiet (another category, outside the
+ * chosen distance or neighborhood: a filter) fades it well back; dimmed (the visitor is looking at another task or an
+ * open group) only a little, so the rest of the map still reads (owner, 2026-11-23: "other tasks are too opacity"). A
+ * task posted in the last few hours breathes a soft halo (`fresh`). Decorative: the list beside the map is the
+ * accessible way to the same tasks.
  */
 export function PinMarker({
   pin,
@@ -24,6 +26,7 @@ export function PinMarker({
   picked,
   quiet,
   dimmed = false,
+  fresh = false,
   hidden,
   appear,
   onEnter,
@@ -37,8 +40,10 @@ export function PinMarker({
   lit: boolean;
   picked: boolean;
   quiet: boolean;
-  /** Another task is pointed at: this one steps back a little, so that one stands out. */
+  /** Another task is pointed at or picked, or a group is open: this one steps back a little, so that one stands out. */
   dimmed?: boolean;
+  /** Posted in the last few hours: a soft halo breathes behind it (not with reduced motion). */
+  fresh?: boolean;
   hidden: boolean;
   /** How it comes onto the map: `drop` (a task posted just now), `fade` (a filter brought it back), or simply there. */
   appear?: 'drop' | 'fade';
@@ -74,8 +79,8 @@ export function PinMarker({
       ref={rootRef}
       className={cn(
         'relative grid place-items-center transition-[opacity,filter,transform] duration-300 ease-[var(--ease-out)]',
-        quiet && !on && 'opacity-25 saturate-50',
-        dimmed && !quiet && !on && 'opacity-45',
+        quiet && !on && 'opacity-40 saturate-[0.6]',
+        dimmed && !quiet && !on && 'opacity-[0.72] saturate-[0.85]',
         hidden && 'pointer-events-none scale-75 opacity-0',
       )}
       onPointerEnter={onEnter}
@@ -85,6 +90,10 @@ export function PinMarker({
         onPick();
       }}
     >
+      {/* New in the last few hours: a soft halo breathes behind it, so a live map shows what just came in. */}
+      {fresh && !quiet && !hidden && (
+        <span aria-hidden="true" className="pointer-events-none absolute size-3.5 rounded-full opacity-0 motion-safe:animate-[live-ping_2.8s_var(--ease-out)_infinite]" style={{ background: color }} />
+      )}
       {/* Far out: a dot with a white ring. */}
       <span
         className={cn(
@@ -159,9 +168,9 @@ export function ClusterMarker({
       className={cn(
         'inline-flex cursor-pointer items-center rounded-full bg-card shadow-[0_10px_26px_-12px_rgb(0_0_0/0.55)] transition-[opacity,transform] duration-300 ease-[var(--ease-out)] hover:scale-[1.05] active:scale-95',
         named && 'gap-1.5 py-1 pr-3 pl-1',
-        activeCount === 0 && 'opacity-35',
+        activeCount === 0 && 'opacity-45',
         blooming && 'scale-90 ring-2 ring-violet/60',
-        dimmed && !blooming && 'opacity-30 saturate-50',
+        dimmed && !blooming && 'opacity-[0.68] saturate-[0.8]',
         hidden && 'pointer-events-none scale-75 opacity-0',
       )}
     >
@@ -252,7 +261,7 @@ export function BloomBadge({
       className={cn(
         'pointer-events-auto absolute top-0 left-0 grid size-[34px] cursor-pointer place-items-center rounded-full border-[2.5px] bg-card shadow-[0_8px_18px_-8px_rgb(0_0_0/0.55)] transition-[box-shadow,background-color,color,opacity,scale] duration-200',
         lit && 'z-[1] scale-[1.18] text-white shadow-[0_12px_26px_-8px_rgb(0_0_0/0.65)]',
-        dimmed && !lit && 'opacity-40',
+        dimmed && !lit && 'opacity-[0.72]',
       )}
       style={{ transform: `translate(-50%, -50%) translate(${at.x}px, ${at.y}px)`, borderColor: color, ...(lit ? { background: `color-mix(in oklab, ${color} 68%, black)` } : { color }) }}
     >

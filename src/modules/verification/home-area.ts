@@ -1,7 +1,7 @@
 import 'server-only';
 import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import type { MapHome } from '@/contracts';
-import { areas } from '@/modules/markets/schema';
+import { areas, markets } from '@/modules/markets/schema';
 import type { Db } from '@/platform/db/connect';
 import { addressVerifications } from './schema';
 
@@ -20,4 +20,20 @@ export async function findHomeArea(db: Db, userId: string): Promise<MapHome | nu
     .orderBy(desc(addressVerifications.createdAt))
     .limit(1);
   return row ? { areaName: row.name, point: { lat: row.lat, lng: row.lng } } : null;
+}
+
+/**
+ * The city of that same home neighborhood (its market's slug), so the landing opens on the city the helper lives in.
+ * Null without a home neighborhood.
+ */
+export async function findHomeMarketSlug(db: Db, userId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ slug: markets.slug })
+    .from(addressVerifications)
+    .innerJoin(areas, eq(areas.id, addressVerifications.areaId))
+    .innerJoin(markets, eq(markets.id, areas.marketId))
+    .where(and(eq(addressVerifications.userId, userId), inArray(addressVerifications.status, ['in_review', 'verified']), isNotNull(addressVerifications.areaId)))
+    .orderBy(desc(addressVerifications.createdAt))
+    .limit(1);
+  return row?.slug ?? null;
 }

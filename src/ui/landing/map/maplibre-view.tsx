@@ -33,12 +33,6 @@ export interface MapControls {
   zoomBy: (delta: number) => void;
   /** Turns the map back to north (and flat again, unless the 3D buildings are on). */
   resetNorth: () => void;
-  /** What the map shows: its four corners ([lng, lat], clockwise from the top left), for the minimap. */
-  corners: () => [number, number][];
-  /** Runs `listener` after the camera moves (once a frame at most); returns the way to stop. */
-  onMove: (listener: () => void) => () => void;
-  /** Brings a point to the middle of the map (the minimap's press or drag). */
-  centerOn: (point: LatLng, animate?: boolean) => void;
 }
 
 /** How the drive times are doing: off, worked out, or nothing to show (no roads near the visitor on the map). */
@@ -71,8 +65,22 @@ export interface MapViewProps {
   onReady: () => void;
   /** WebGL or the tiles failed: show the drawn map instead. */
   onFailed: () => void;
-  /** Room the page's panels take over the map (fractions of its size): the camera keeps clear of them. */
+  /**
+   * Room the page's panels take over the map (pixels, or fractions of its size up to 1): the camera keeps clear of
+   * them, and "the middle of the map" (where a task or a group is brought) is the middle of what's left.
+   */
   padding?: Padding;
+  /**
+   * More room the city view keeps clear, on top of `padding` (pixels): the heading's card over the map's top left, so
+   * the first view of a city doesn't put tasks under it. Bringing a task or a group to the middle ignores it.
+   */
+  homeInsets?: { top?: number; left?: number };
+  /** The visitor used the map (a drag, a zoom, a turn, a group opened, a task picked): the page can make room. */
+  onEngage?: () => void;
+  /** A drag of the map starts or ends (the page's panels step back meanwhile). */
+  onDragging?: (dragging: boolean) => void;
+  /** Which city the map shows (its slug): a new one flies the map there, out and across and in. */
+  cityKey?: string;
   /**
    * `all`: soft on every side; `vertical`: soft at the top and bottom only (full width); `top`: soft at the top only
    * (the page fades the bottom); `none`: full screen.
@@ -142,6 +150,15 @@ const CARD_GLIDE_MS = 280;
 const EASE_OUT = 'cubic-bezier(0.22, 1, 0.36, 1)';
 /** How close a pick may zoom: the picked tasks come apart, but their areas don't fill the map. */
 const FIT_MAX_ZOOM = 13;
+/** The farthest the map zooms out (a city flight may rise past it for a moment). */
+const MIN_ZOOM = 8.5;
+/** A flight to another city takes at most this long; farther, it's a jump (MapLibre's `maxDuration`). */
+const CITY_FLIGHT_MAX_MS = 4200;
+/** The panels' room changing (the explorer folded, full screen): the map's middle glides this long. */
+const PADDING_GLIDE_MS = 450;
+/** Tasks posted this recently breathe a halo on the map, the newest few only. */
+const FRESH_MS = 3 * 3_600_000;
+const FRESH_MAX = 4;
 /** The arrival's first view: close over the task's area, tilted like the town (seen from the south-east). */
 const ARRIVAL = { zoom: 14.2, pitch: 52, bearing: -45 };
 /** Going to the visitor: at least this close (their streets, and the tasks around them). */
@@ -200,7 +217,17 @@ function paddingFor(room: Padding | undefined, width: number, height: number) {
 }
 
 /**
- * The page's panels over the map (`data-map-panel`: the heading's card, the explorer, the controls, the minimap), as
+ * How far below the middle of the free map a task is brought, so the task and its card (which opens above it) sit in
+ * the middle together: half the card's room, or less where the free map is short.
+ */
+function cardLift(live: MapLibreMap): number {
+  const room = live.getPadding();
+  const height = live.getContainer().clientHeight - (room.top ?? 0) - (room.bottom ?? 0);
+  return Math.round(Math.max(0, Math.min(CARD_ROOM_PX / 2, height / 2 - 48)));
+}
+
+/**
+ * The page's panels over the map (`data-map-panel`: the heading's card, the explorer, the controls), as
  * rectangles on the map: the marker that points to the visitor steps around them. Hidden ones (full screen) don't count.
  */
 const panelCache = new WeakMap<HTMLElement, { at: number; rects: ScreenRect[] }>();
@@ -282,6 +309,10 @@ export function MapLibreView({
   onReady,
   onFailed,
   padding,
+  homeInsets,
+  onEngage,
+  onDragging,
+  cityKey,
   fade = 'all',
   homeZoom = 10.3,
   arrival = null,
@@ -334,10 +365,14 @@ export function MapLibreView({
   const homeView = useRef<MapCamera | null>(null);
   const labels = { map: label ?? t('layerTasks'), twoFingers: t('twoFingers'), ctrlZoom: t('ctrlZoom'), cmdZoom: t('cmdZoom') };
   const perHour = (rate: string) => t('perHour', { rate });
-  const latest = useRef({ onHighlight, onPick, onReady, onFailed, onControls, onView, onBearing, onBlockedWheel, onPickArea, onDrawn, onDriveTimes, pins, padding, reduced, arrival, arrivalSource, edgeInsets, userPoint, withinMiles, homeZoom, labels, perHour, layers, selectedArea, drawing, picked: pickedTaskId, lit: litTaskId, first: [] as string[] });
+  const latest = useRef({ map, onHighlight, onPick, onReady, onFailed, onControls, onView, onBearing, onBlockedWheel, onPickArea, onDrawn, onDriveTimes, onEngage, onDragging, pins, padding, homeInsets, reduced, arrival, arrivalSource, edgeInsets, userPoint, withinMiles, homeZoom, labels, perHour, layers, selectedArea, drawing, picked: pickedTaskId, lit: litTaskId, first: [] as string[] });
   useEffect(() => {
-    latest.current = { onHighlight, onPick, onReady, onFailed, onControls, onView, onBearing, onBlockedWheel, onPickArea, onDrawn, onDriveTimes, pins, padding, reduced, arrival, arrivalSource, edgeInsets, userPoint, withinMiles, homeZoom, labels, perHour, layers, selectedArea, drawing, picked: pickedTaskId, lit: litTaskId, first: [litTaskId, pickedTaskId, arrivalLit].filter((id): id is string => Boolean(id)) };
+    latest.current = { map, onHighlight, onPick, onReady, onFailed, onControls, onView, onBearing, onBlockedWheel, onPickArea, onDrawn, onDriveTimes, onEngage, onDragging, pins, padding, homeInsets, reduced, arrival, arrivalSource, edgeInsets, userPoint, withinMiles, homeZoom, labels, perHour, layers, selectedArea, drawing, picked: pickedTaskId, lit: litTaskId, first: [litTaskId, pickedTaskId, arrivalLit].filter((id): id is string => Boolean(id)) };
   });
+  /** The city view for the city the map shows now (set once the map is up). */
+  const frameHomeRef = useRef<() => MapCamera | null>(() => null);
+  /** The map's light, worked out again for the city it shows now (set once the map is up). */
+  const relight = useRef<() => void>(() => {});
   /** The neighborhoods' areas on this map (their order is their feature ids). */
   const cells = useMemo(() => areaCells(map.areas, map.center, map.serviceRadiusMiles * 1.15), [map.areas, map.center, map.serviceRadiusMiles]);
   const cellsRef = useRef<AreaCell[]>(cells);
@@ -375,6 +410,7 @@ export function MapLibreView({
       window.open(localeHref(routes.publicTask(pin.slug), locale), '_blank', 'noopener');
       return;
     }
+    latest.current.onEngage?.();
     onPick?.(pin.id);
   };
   // A bloom whose tasks went (a new time filter, a booking) is closed.
@@ -394,7 +430,7 @@ export function MapLibreView({
     const progressNow = () => source?.get() ?? 1;
     let first = opening ? arrivalCamera(progressNow(), opening, home) : home;
     // The map's light follows the market's clock (warm at sunset, roads lit at night), unless switched off.
-    let light: ClockLight = lightAt(new Date(), map.center);
+    let light: ClockLight = lightAt(new Date(), latest.current.map.center);
     const palette = (): MapColors => {
       const base = readMapColors(container);
       return latest.current.layers.clock ? clockColors(base, light, isDarkColor(base.land)) : base;
@@ -414,7 +450,7 @@ export function MapLibreView({
         validateStyle: process.env.NODE_ENV !== 'production',
         refreshExpiredTiles: false,
         ...arrived(first),
-        minZoom: 8.5,
+        minZoom: MIN_ZOOM,
         maxZoom: 17,
         maxPitch: 60,
         attributionControl: false,
@@ -501,11 +537,18 @@ export function MapLibreView({
       if (!bearingFrame) bearingFrame = requestAnimationFrame(reportBearing);
     });
     if (arriving && source) unfollow = source.subscribe(followArrival);
-    // Any gesture on the map is the visitor taking over.
+    // Any gesture on the map is the visitor taking over (and using the map: the page makes room).
     const takeOver = (event: { originalEvent?: unknown }) => {
-      if (event.originalEvent) stopArrival.current();
+      if (!event.originalEvent) return;
+      stopArrival.current();
+      latest.current.onEngage?.();
     };
-    instance.on('dragstart', () => stopArrival.current());
+    instance.on('dragstart', () => {
+      stopArrival.current();
+      latest.current.onEngage?.();
+      latest.current.onDragging?.(true);
+    });
+    instance.on('dragend', () => latest.current.onDragging?.(false));
     instance.on('zoomstart', takeOver);
     instance.on('rotatestart', takeOver);
     instance.on('pitchstart', takeOver);
@@ -518,13 +561,17 @@ export function MapLibreView({
     const applyPadding = () => {
       instance.setPadding(paddingFor(latest.current.padding, container.clientWidth, container.clientHeight));
     };
-    /** The city view framed on the open tasks, in the room the panels leave (no tighter than `homeZoom` + 0.8). */
+    /**
+     * The city view framed on the open tasks, in the room the panels leave and clear of the heading's card (no tighter
+     * than `homeZoom` + 0.8). Always the city the map shows now (the switcher can change it).
+     */
     const frameHome = (): MapCamera => {
-      const { pins: list, homeZoom: zoom } = latest.current;
+      const { pins: list, homeZoom: zoom, map: shown, homeInsets: insets } = latest.current;
+      const room = { top: 56 + (insets?.top ?? 0), right: 56, bottom: 56, left: 56 + (insets?.left ?? 0) };
       if (list.length >= 2) {
         const bounds = new LngLatBounds();
         for (const pin of list) bounds.extend([pin.point.lng, pin.point.lat]);
-        const camera = instance.cameraForBounds(bounds, { padding: 56, maxZoom: zoom + 0.8 });
+        const camera = instance.cameraForBounds(bounds, { padding: room, maxZoom: zoom + 0.8 });
         if (camera?.center && camera.zoom !== undefined) {
           const center = LngLat.convert(camera.center);
           return { center: { lat: center.lat, lng: center.lng }, zoom: Math.max(zoom - 1.2, camera.zoom), pitch: 0, bearing: 0 };
@@ -532,16 +579,17 @@ export function MapLibreView({
       }
       // No tasks to frame (a city before it opens, or none yet): the service area itself, whole, in the room the
       // panels leave (audit M8: the ring ran off the map's edge beside the explorer).
-      if (map.serviceRadiusMiles > 0) {
-        const box = circleBounds(map.center, map.serviceRadiusMiles * METERS_PER_MILE);
-        const camera = instance.cameraForBounds([box.west, box.south, box.east, box.north], { padding: 40, maxZoom: zoom + 0.8 });
+      if (shown.serviceRadiusMiles > 0) {
+        const box = circleBounds(shown.center, shown.serviceRadiusMiles * METERS_PER_MILE);
+        const camera = instance.cameraForBounds([box.west, box.south, box.east, box.north], { padding: { ...room, top: room.top - 16, right: 40, bottom: 40, left: room.left - 16 }, maxZoom: zoom + 0.8 });
         if (camera?.center && camera.zoom !== undefined) {
           const center = LngLat.convert(camera.center);
           return { center: { lat: center.lat, lng: center.lng }, zoom: Math.max(zoom - 2, camera.zoom), pitch: 0, bearing: 0 };
         }
       }
-      return { center: map.center, zoom, pitch: 0, bearing: 0 };
+      return { center: shown.center, zoom, pitch: 0, bearing: 0 };
     };
+    frameHomeRef.current = frameHome;
     applyPadding();
     home = frameHome();
     homeView.current = home;
@@ -869,7 +917,8 @@ export function MapLibreView({
         const hit = instance.queryRenderedFeatures(event.point, { layers: ['areas-fill'] })[0];
         const cell = typeof hit?.id === 'number' ? cellsRef.current[hit.id] : undefined;
         if (!cell) return;
-        const area = map.areas.find((item) => item.name === cell.name) ?? null;
+        const area = latest.current.map.areas.find((item) => item.name === cell.name) ?? null;
+        latest.current.onEngage?.();
         pickArea(area && area.name === latest.current.selectedArea ? null : area);
       });
 
@@ -914,11 +963,18 @@ export function MapLibreView({
         paintOverlays();
       };
       clockTimer = window.setInterval(() => {
-        const next = lightAt(new Date(), map.center);
+        const next = lightAt(new Date(), latest.current.map.center);
         if (sameLight(next, light)) return;
         light = next;
         if (latest.current.layers.clock) repaintLight.current();
       }, CLOCK_CHECK_MS);
+      // Another city: its own hour's light (a city two zones away can be at dusk while this one isn't).
+      relight.current = () => {
+        const next = lightAt(new Date(), latest.current.map.center);
+        if (sameLight(next, light)) return;
+        light = next;
+        if (latest.current.layers.clock) repaintLight.current();
+      };
 
       // The theme can change while the map is open (the page's switch, or the system's setting): repaint the
       // base and the overlays (the pins use CSS colors).
@@ -943,34 +999,6 @@ export function MapLibreView({
         resetNorth: () => {
           stopArrival.current();
           instance.easeTo({ bearing: 0, ...(lastBuildings.current ? {} : { pitch: 0 }), duration: latest.current.reduced ? 0 : 520 });
-        },
-        corners: () => {
-          const box = instance.getContainer();
-          const width = box.clientWidth;
-          const height = box.clientHeight;
-          return ([[0, 0], [width, 0], [width, height], [0, height]] as [number, number][]).map(([x, y]) => {
-            const at = instance.unproject([x, y]);
-            return [at.lng, at.lat] as [number, number];
-          });
-        },
-        onMove: (listener) => {
-          let frame = 0;
-          const onMoved = () => {
-            if (!frame)
-              frame = requestAnimationFrame(() => {
-                frame = 0;
-                listener();
-              });
-          };
-          instance.on('move', onMoved);
-          return () => {
-            cancelAnimationFrame(frame);
-            instance.off('move', onMoved);
-          };
-        },
-        centerOn: (point, animate = false) => {
-          stopArrival.current();
-          instance.easeTo({ center: [point.lng, point.lat], duration: animate && !latest.current.reduced ? 450 : 0 });
         },
       });
       latest.current.onReady();
@@ -1005,6 +1033,8 @@ export function MapLibreView({
       window.clearInterval(clockTimer);
       stopHover();
       repaintLight.current = () => {};
+      relight.current = () => {};
+      frameHomeRef.current = () => null;
       themeWatch?.disconnect();
       stopSystemTheme();
       sized.disconnect();
@@ -1032,6 +1062,55 @@ export function MapLibreView({
     (live.getSource(TASKS) as GeoJSONSource | undefined)?.setData(taskFeatures(pins));
     (live.getSource(HEAT) as GeoJSONSource | undefined)?.setData(taskFeatures(pins));
   }, [live, pins]);
+
+  // Another city's neighborhoods (the switcher): their areas replace the last city's.
+  const drawnCells = useRef(cells);
+  useEffect(() => {
+    if (!live || live !== mapRef.current || drawnCells.current === cells) return;
+    drawnCells.current = cells;
+    (live.getSource(AREAS) as GeoJSONSource | undefined)?.setData({
+      type: 'FeatureCollection',
+      features: cells.map((cell, index) => ({ type: 'Feature' as const, id: index, properties: { name: cell.name }, geometry: { type: 'Polygon' as const, coordinates: [cell.ring] } })),
+    });
+  }, [live, cells]);
+
+  // Another city (the switcher, or the city the visitor turned out to be in): the map flies there, out far enough to
+  // see the way, across and back in over its tasks (a picked category's, if it has some there), in its own light. A
+  // group, a card or the arrival in the last city closes.
+  const shownCity = useRef(cityKey);
+  useEffect(() => {
+    if (!live || live !== mapRef.current || shownCity.current === cityKey) return;
+    const from = live.getCenter();
+    shownCity.current = cityKey;
+    // (An open group closes by itself: its tasks aren't on the new city's map.)
+    stopArrival.current();
+    relight.current();
+    const home = frameHomeRef.current();
+    if (!home) return;
+    homeView.current = home;
+    const chosen = selectedCategory ? pins.filter((pin) => pin.categorySlug === selectedCategory) : [];
+    flownCategory.current = selectedCategory;
+    const far = distanceMiles({ lat: from.lat, lng: from.lng }, home.center) > 60;
+    if (reduced) {
+      live.jumpTo({ center: [home.center.lng, home.center.lat], zoom: home.zoom, pitch: 0, bearing: 0 });
+    } else {
+      // The flight may rise higher than the map's own farthest zoom, to show where the new city is.
+      if (far) {
+        live.setMinZoom(3.5);
+        live.once('moveend', () => live.setMinZoom(MIN_ZOOM));
+      }
+      live.flyTo({ center: [home.center.lng, home.center.lat], zoom: home.zoom, pitch: 0, bearing: 0, speed: far ? 1.1 : 1.4, curve: 1.5, maxDuration: CITY_FLIGHT_MAX_MS, essential: true });
+    }
+    if (chosen.length >= 2) {
+      const bounds = new LngLatBounds();
+      for (const pin of chosen) bounds.extend([pin.point.lng, pin.point.lat]);
+      live.once('moveend', () => {
+        if (shownCity.current === cityKey) live.fitBounds(bounds, { padding: 64, maxZoom: FIT_MAX_ZOOM, duration: reduced ? 0 : 700 });
+      });
+    }
+    // The city's pins are the props' own (the effect above set them); only the camera moves here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live, cityKey]);
 
   // The service area: a dashed circle, and everything beyond it softened.
   useEffect(() => {
@@ -1065,10 +1144,22 @@ export function MapLibreView({
     gate.current?.setFree(fullscreen);
     if (fullscreen) live.cooperativeGestures.disable();
     else live.cooperativeGestures.enable();
+  }, [live, fullscreen]);
+
+  // The room the panels take changes (full screen, the explorer folded or opened, a resize of the panels): the map's
+  // middle glides into the new free part, rather than jumping. While the arrival follows the scroll, it's set at once.
+  useEffect(() => {
+    if (!live || live !== mapRef.current) return;
     const container = live.getContainer();
     live.resize();
-    live.setPadding(paddingFor(padding, container.clientWidth, container.clientHeight));
-  }, [live, fullscreen, padding]);
+    const next = paddingFor(padding, container.clientWidth, container.clientHeight);
+    const now = live.getPadding();
+    const same = (['top', 'right', 'bottom', 'left'] as const).every((side) => Math.abs((now[side] ?? 0) - next[side]) < 1);
+    if (same) return;
+    const following = Boolean(latest.current.arrivalSource && !latest.current.arrivalSource.finished());
+    if (reduced || following || live.isMoving()) live.setPadding(next);
+    else live.easeTo({ padding: next, duration: PADDING_GLIDE_MS });
+  }, [live, fullscreen, padding, reduced]);
 
   // A picked category flies the map to its tasks; clearing it flies back out to the whole area. Only a change of
   // pick does: the map coming up (or anything else re-running this) must not undo where the visitor moved it.
@@ -1227,12 +1318,20 @@ export function MapLibreView({
     live.on('move', schedule);
     live.on('resize', schedule);
     window.addEventListener('resize', schedule, { passive: true });
+    // A panel that grows or folds (the card's notes, the explorer folding) moves what the marker must step around.
+    const container = live.getContainer();
+    const panelsResized = typeof ResizeObserver === 'function' ? new ResizeObserver(() => {
+      panelCache.delete(container);
+      schedule();
+    }) : null;
+    for (const panel of (container.closest('section') ?? document).querySelectorAll<HTMLElement>('[data-map-panel]')) panelsResized?.observe(panel);
     return () => {
       cancelAnimationFrame(frame);
       placeEdge.current = () => {};
       live.off('move', schedule);
       live.off('resize', schedule);
       window.removeEventListener('resize', schedule);
+      panelsResized?.disconnect();
     };
   }, [live, userPoint, settled, padding, edgeInsets?.top, edgeInsets?.bottom, fullscreen]);
   // Shown only while the visitor is off the map, the camera has settled, and their place is known.
@@ -1512,12 +1611,16 @@ export function MapLibreView({
   };
 
   // The explorer asked to show a neighborhood, or one task (its card opens), or to peek at a task (keyboard
-  // focus in the list): the map glides to it only if it's out of sight (behind the panels counts as out).
+  // focus in the list): the map glides to it only if it's out of sight (behind the panels counts as out). Each request
+  // once: new tasks coming in (the stream) or another city's must not replay the last one; a task's request waits
+  // for its task to be on the map.
+  const handledRequest = useRef(0);
   useEffect(() => {
-    if (!live || live !== mapRef.current || !request) return;
+    if (!live || live !== mapRef.current || !request || request.nonce === handledRequest.current) return;
     if (request.kind === 'peek') {
       const pin = pins.find((item) => item.id === request.id);
       if (!pin) return;
+      handledRequest.current = request.nonce;
       const at = live.project([pin.point.lng, pin.point.lat]);
       const room = live.getPadding();
       const box = live.getContainer();
@@ -1528,9 +1631,11 @@ export function MapLibreView({
       return;
     }
     if (request.kind === 'you') {
+      handledRequest.current = request.nonce;
       showYouRef.current(request.point);
       return;
     }
+    if (request.kind === 'area') handledRequest.current = request.nonce;
     stopArrival.current();
     const duration = reduced ? 0 : 1000;
     if (request.kind === 'area') {
@@ -1552,7 +1657,11 @@ export function MapLibreView({
     }
     const pin = pins.find((item) => item.id === request.id);
     if (!pin) return;
-    live.flyTo({ center: [pin.point.lng, pin.point.lat], zoom: Math.max(live.getZoom(), FIT_MAX_ZOOM + 0.6), duration });
+    handledRequest.current = request.nonce;
+    // To the middle of what's seen (the panels' room is the map's padding), a little low, so the pin and the card that
+    // opens above it sit in the middle together.
+    live.flyTo({ center: [pin.point.lng, pin.point.lat], zoom: Math.max(live.getZoom(), FIT_MAX_ZOOM + 0.6), offset: [0, cardLift(live)], duration });
+    latest.current.onEngage?.();
     latest.current.onPick?.(pin.id);
     // The request's nonce makes a repeat of the same request count.
   }, [live, request, pins, reduced]);
@@ -1654,6 +1763,22 @@ export function MapLibreView({
     };
   }, [pins, reduced, arrivals]);
 
+  // The few newest tasks posted in the last hours breathe a halo (the cut-off is moved on every few minutes).
+  const [freshSince, setFreshSince] = useState<number | null>(null);
+  useEffect(() => {
+    const move = () => setFreshSince(Date.now() - FRESH_MS);
+    const first = window.setTimeout(move, 0);
+    const timer = window.setInterval(move, 5 * 60_000);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(timer);
+    };
+  }, []);
+  const freshIds = useMemo(
+    () => (freshSince === null ? new Set<string>() : new Set(pins.filter((pin) => Date.parse(pin.postedAt) >= freshSince).slice(0, FRESH_MAX).map((pin) => pin.id))),
+    [pins, freshSince],
+  );
+
   const outside = useMemo(() => {
     if (!userPoint || !withinMiles || !milesById) return null;
     return new Set(pins.filter((pin) => (milesById.get(pin.id) ?? 0) > withinMiles).map((pin) => pin.id));
@@ -1682,6 +1807,7 @@ export function MapLibreView({
                 const source = live?.getSource(TASKS) as GeoJSONSource | undefined;
                 if (!live || !source || view.clusterId === undefined) return;
                 stopArrival.current();
+                latest.current.onEngage?.();
                 // A few tasks fan out around the cluster (a second press, or a big cluster, zooms in as before).
                 if (bloom?.key !== view.key && (view.total ?? 0) <= BLOOM_MAX) {
                   try {
@@ -1715,8 +1841,10 @@ export function MapLibreView({
             chip={band === 'near' && chips.has(pin.id)}
             lit={pin.id === shownId}
             picked={pin.id === pickedTaskId}
-            quiet={(activeCategory !== null && pin.categorySlug !== activeCategory) || Boolean(outside?.has(pin.id)) || (Boolean(selectedArea) && pin.areaName !== selectedArea) || Boolean(bloom)}
-            dimmed={Boolean(litTaskId) && litTaskId !== pin.id}
+            quiet={(activeCategory !== null && pin.categorySlug !== activeCategory) || Boolean(outside?.has(pin.id)) || (Boolean(selectedArea) && pin.areaName !== selectedArea)}
+            // Looking at another task, or at an open group: a small step back, never so far the map stops reading.
+            dimmed={(Boolean(litTaskId) && litTaskId !== pin.id) || Boolean(bloom)}
+            fresh={freshIds.has(pin.id)}
             hidden={heat || Boolean(bloom?.ids.includes(pin.id))}
             appear={arrivals?.has(pin.id) ? 'drop' : entering.has(pin.id) ? 'fade' : undefined}
             onEnter={() => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_MARKET_SLUG, homeMarketOverridable, homeMarketSlug } from './default-market';
+import { DEFAULT_MARKET_SLUG, homeMarketOverridable, homeMarketOverride, homeMarketSlug, landingCityCandidates, validMarketSlug } from './default-market';
 
 const headers = (values: Record<string, string>) => (name: string) => values[name] ?? null;
 /** A browser or test runner on this machine. */
@@ -24,5 +24,29 @@ describe('the home page’s market', () => {
     expect(homeMarketSlug('zz-not-open', true)).toBe('zz-not-open');
     expect(homeMarketSlug('../admin', true)).toBe(DEFAULT_MARKET_SLUG);
     expect(homeMarketSlug('a'.repeat(41), true)).toBe(DEFAULT_MARKET_SLUG);
+  });
+});
+
+describe('the cities the landing may open on (owner, 2026-11-23: "This platform is not for only Gainesville")', () => {
+  it('the visitor’s pick first, then their own city, then the default, each once', () => {
+    expect(landingCityCandidates('austin', 'houston')).toEqual(['austin', 'houston', DEFAULT_MARKET_SLUG]);
+    expect(landingCityCandidates(undefined, 'houston')).toEqual(['houston', DEFAULT_MARKET_SLUG]);
+    expect(landingCityCandidates(null, null)).toEqual([DEFAULT_MARKET_SLUG]);
+    expect(landingCityCandidates(DEFAULT_MARKET_SLUG, DEFAULT_MARKET_SLUG)).toEqual([DEFAULT_MARKET_SLUG]);
+  });
+
+  it('ignores a cookie that isn’t a plain slug', () => {
+    expect(landingCityCandidates('../admin', undefined)).toEqual([DEFAULT_MARKET_SLUG]);
+    expect(landingCityCandidates('Austin', undefined)).toEqual([DEFAULT_MARKET_SLUG]);
+    expect(landingCityCandidates('a'.repeat(41), 'austin')).toEqual(['austin', DEFAULT_MARKET_SLUG]);
+    expect(validMarketSlug('san-antonio')).toBe(true);
+    expect(validMarketSlug('')).toBe(false);
+    expect(validMarketSlug(undefined)).toBe(false);
+  });
+
+  it('a test’s override replaces them only where the request may name the market', () => {
+    expect(homeMarketOverride('zz-not-open', true)).toBe('zz-not-open');
+    expect(homeMarketOverride('zz-not-open', false)).toBeNull();
+    expect(homeMarketOverride(undefined, true)).toBeNull();
   });
 });

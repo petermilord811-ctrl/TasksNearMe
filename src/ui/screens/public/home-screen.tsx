@@ -23,6 +23,8 @@ export interface HomeScreenProps {
   season?: Season;
   /** A signed-in helper's home neighborhood: the map starts from it instead of asking the browser where they are. */
   home?: MapHome;
+  /** The page is drawn for the city the visitor picked on the map before: their location doesn't move the map away. */
+  cityPicked?: boolean;
 }
 
 /**
@@ -34,11 +36,11 @@ export interface HomeScreenProps {
  * card follow it, and the task assistant's examples are the season's. The brand, the words and the data don't
  * change.
  */
-export function HomeScreen({ data, now, mapMode = 'interactive', initialLocation, initialCategory, season: chosen, home }: HomeScreenProps) {
+export function HomeScreen({ data, now, mapMode = 'interactive', initialLocation, initialCategory, season: chosen, home, cityPicked = false }: HomeScreenProps) {
   const season = chosen ?? seasonAt(now, data.market.timeZone);
   return (
     <SeasonProvider season={season}>
-      <LandingProvider initialLocation={initialLocation} initialCategory={initialCategory} home={home}>
+      <LandingProvider initialCity={{ market: data.market, map: data.map }} cityPicked={cityPicked} initialLocation={initialLocation} initialCategory={initialCategory} home={home}>
         <MotionRoot />
         {/* One paper under the whole page (a faint marble), so no section starts or stops a background. */}
         <div className="paper" data-season={season}>

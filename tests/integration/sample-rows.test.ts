@@ -8,6 +8,7 @@ import {
   getCategorySupply,
   getHelperProfilePageData,
   getHomePageData,
+  getLandingCity,
   getMarketPageData,
   getPublicTaskPageData,
   getTaskBoardPageData,
@@ -177,12 +178,38 @@ describe('the market and home pages', () => {
     expect(shown.map.areas.reduce((sum, area) => sum + area.helperCount, 0)).toBe(shown.helpers.verified);
     expect(testers.map.areas.reduce((sum, area) => sum + area.helperCount, 0)).toBe(testers.helpers.verified);
     expect(shown.categories).toEqual(testers.categories);
-    // The minimap's cities: open or opening, and the demo marketplace's only for testers.
+    // The map's cities (its switcher, and the city a visitor's location falls in): open or opening, each with its
+    // radius and zone, and the demo marketplace's only for testers.
     const demo = (await db.select({ slug: markets.slug }).from(markets).where(like(markets.id, 'mkt_demo_%'))).map((row) => row.slug);
     expect(shown.map.cities.length).toBeGreaterThanOrEqual(1);
     expect(shown.map.cities.filter((city) => demo.includes(city.slug))).toEqual([]);
     expect(shown.map.cities.every((city) => city.status === 'live' || city.status === 'prelaunch')).toBe(true);
+    expect(shown.map.cities.every((city) => city.serviceRadiusMiles > 0 && /^[A-Za-z]+\/[A-Za-z_]+/.test(city.timeZone))).toBe(true);
     if (demo.length > 0) expect(testers.map.cities.some((city) => demo.includes(city.slug))).toBe(true);
+  });
+
+  it("is drawn for any open city (owner, 2026-11-23: \"not only Gainesville\"), and the map switches to another city's own", async () => {
+    // Austin's landing: its own map, real rows only for the public.
+    const austin = (await getHomePageData(PUBLIC, MARKET))!.data;
+    expect(austin.market.slug).toBe(MARKET);
+    expect(allReal(austin.map.pins.map((pin) => pin.id))).toBe(true);
+    const [row] = await db.select().from(markets).where(eq(markets.slug, MARKET));
+    expect(austin.map.center).toEqual({ lat: row!.centerLat, lng: row!.centerLng });
+    // The switcher's load of the same city: the same map.
+    const city = (await getLandingCity(MARKET, PUBLIC))!;
+    expect(city.market.slug).toBe(MARKET);
+    expect(city.map).toEqual(austin.map);
+    expect(city.map.cities.find((item) => item.slug === MARKET)).toMatchObject({ timeZone: row!.timeZone, point: { lat: row!.centerLat, lng: row!.centerLng } });
+    // A city that isn't open: nothing.
+    expect(await getLandingCity('zz-not-open', PUBLIC)).toBeNull();
+    expect(await getHomePageData(PUBLIC, 'zz-not-open')).toBeNull();
+    // A demo city: only for testers.
+    const demo = (await db.select({ slug: markets.slug }).from(markets).where(and(like(markets.id, 'mkt_demo_%'), inArray(markets.status, ['live', 'prelaunch']))).limit(1))[0]?.slug;
+    if (demo) {
+      expect(await getLandingCity(demo, PUBLIC)).toBeNull();
+      expect(await getHomePageData(PUBLIC, demo)).toBeNull();
+      expect((await getLandingCity(demo, TESTERS))?.market.slug).toBe(demo);
+    }
   });
 });
 

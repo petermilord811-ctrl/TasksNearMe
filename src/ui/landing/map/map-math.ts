@@ -1,4 +1,4 @@
-import type { LandingMapData, TaskMapPin } from '@/contracts';
+import type { LandingMapData, MapCity, TaskMapPin } from '@/contracts';
 import { distanceMiles, roundMiles, type LatLng } from '@/shared/geo';
 
 /**
@@ -108,6 +108,41 @@ const NEARBY_MARGIN_MILES = 15;
 export function listOrigin(map: Pick<LandingMapData, 'center' | 'serviceRadiusMiles'>, point: LatLng | undefined): LatLng | undefined {
   if (!point) return undefined;
   return distanceMiles(map.center, point) <= map.serviceRadiusMiles + NEARBY_MARGIN_MILES ? point : undefined;
+}
+
+/**
+ * The open (or opening) city a point is in: inside its service area, or just past it (the same margin as
+ * `listOrigin`); the nearest such city when two reach. Null when the point is in none (someone in a city we haven't
+ * opened). Worked out on the device: the point goes nowhere.
+ */
+export function cityAt(cities: readonly MapCity[], point: LatLng): MapCity | null {
+  let best: { city: MapCity; miles: number } | null = null;
+  for (const city of cities) {
+    const miles = distanceMiles(city.point, point);
+    if (miles > city.serviceRadiusMiles + NEARBY_MARGIN_MILES) continue;
+    if (!best || miles < best.miles) best = { city, miles };
+  }
+  return best?.city ?? null;
+}
+
+/** The nearest city to a point and how far it is (straight-line miles, unrounded), or null without any city. */
+export function nearestCity(cities: readonly MapCity[], point: LatLng): { city: MapCity; miles: number } | null {
+  let best: { city: MapCity; miles: number } | null = null;
+  for (const city of cities) {
+    const miles = distanceMiles(city.point, point);
+    if (!best || miles < best.miles) best = { city, miles };
+  }
+  return best;
+}
+
+/**
+ * The cities in the order the switcher lists them: nearest first once the visitor's place is known, otherwise the
+ * open ones, then the ones opening soon, each alphabetical.
+ */
+export function citiesInOrder(cities: readonly MapCity[], from?: LatLng): MapCity[] {
+  const list = [...cities];
+  if (from) return list.sort((a, b) => distanceMiles(from, a.point) - distanceMiles(from, b.point) || a.name.localeCompare(b.name));
+  return list.sort((a, b) => (a.status === b.status ? a.name.localeCompare(b.name) : a.status === 'live' ? -1 : 1));
 }
 
 export const METERS_PER_MILE = 1609.344;

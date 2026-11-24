@@ -16,6 +16,7 @@ import type {
   TaskBoardPageData,
   WaitlistDemand,
   WaitlistPageData,
+  LandingCity,
   LandingMapData,
   MapCity,
   TaskMapPin,
@@ -47,6 +48,7 @@ import { buildBecomeHelperPageData, buildPricingPageData, landingFeeExamples } f
 import { quoteBreakdown } from '@/modules/payments/fees';
 import { citiesComingNext, WAITLIST_TAG, waitlistDemand } from './waitlist';
 import { neighborhoodsOnly } from '@/modules/markets/city-areas';
+import { findHomeMarketSlug } from '@/modules/verification/home-area';
 
 /**
  * Public marketing page data. Cached (Cache Components) so the pages prerender and stay fast;
@@ -82,15 +84,22 @@ async function loadMarketPage(slug: string, rows: RowScope): Promise<WithNow<Mar
   return { data: { market: view, categories, recentTasks, featuredHelpers }, now: now.toISOString() };
 }
 
+/**
+ * The landing page drawn for one city (the default one, the city a visitor picked, or a signed-in person's own): its
+ * own map, helpers, flags and published fees (the default market's fees when it has none yet). Null when the city
+ * isn't open or opening, or is a demo city and `rows` hides samples.
+ */
 export async function getHomePageData(rows: RowScope, slug: string = DEFAULT_MARKET_SLUG): Promise<WithNow<HomePageData> | null> {
   'use cache';
   cacheLife('minutes');
   cacheTag(marketTag(slug));
+  const market = await findPublicMarket(slug);
+  if (!market || !cityVisible(market.id, rows)) return null;
   const page = await loadMarketPage(slug, rows);
   if (!page) return null;
   // Pricing transparency and the founding reward, from the same sources as /pricing and /become-a-helper.
-  const { market, policy } = await defaultMarketPolicy();
-  const [flags, helpers] = await Promise.all([getFlags(market.id), countLandingHelpers(market.id, new Date(page.now), rows)]);
+  const policy = (await getPublishedPolicy(market.id)) ?? (await defaultMarketPolicy()).policy;
+  const [flags, helpers, map] = await Promise.all([getFlags(market.id), countLandingHelpers(market.id, new Date(page.now), rows), landingMap(market, rows)]);
   const helper = buildBecomeHelperPageData({ fees: policy.fees, flags });
   const reward = helper.welcomeReward;
   return {
@@ -100,12 +109,43 @@ export async function getHomePageData(rows: RowScope, slug: string = DEFAULT_MAR
       feeExample: buildPricingPageData(policy).examples.held,
       feeExamples: landingFeeExamples(policy.fees),
       ...(reward ? { welcomeReward: { amountCents: reward.amountCents, checks: reward.checks } } : {}),
-      map: await landingMap(market, rows),
+      map,
       // The wizard drafts with AI only when the market allows it and a writer is set up (as on /app/tasks/new).
       aiDraftingEnabled: Boolean(flags.ai_drafting) && taskDrafter !== null,
       helpers,
     },
   };
+}
+
+/**
+ * A signed-in person's own city, which the landing opens on for them: where their home neighborhood is (a helper's
+ * address check), else their account's home market. Read per request for that person only (never cached). Null
+ * without one.
+ */
+export async function ownCitySlug(userId: string): Promise<string | null> {
+  const home = await findHomeMarketSlug(db, userId);
+  if (home) return home;
+  const [row] = await db.select({ slug: marketTable.slug }).from(users).innerJoin(marketTable, eq(marketTable.id, users.homeMarketId)).where(eq(users.id, userId)).limit(1);
+  return row?.slug ?? null;
+}
+
+/** The demo marketplace's cities (`mkt_demo_<key>`) aren't real: only testers (`rows` of 'all') see them. */
+function cityVisible(marketId: string, rows: RowScope): boolean {
+  return rows === 'all' || !marketId.startsWith('mkt_demo_');
+}
+
+/**
+ * One city's market and map, for the landing map's city switcher (`LandingHandlers.onLoadCity`): the same map the
+ * landing draws for it. Null when it isn't open or opening, or the visitor can't see it.
+ */
+export async function getLandingCity(slug: string, rows: RowScope): Promise<LandingCity | null> {
+  'use cache';
+  cacheLife('minutes');
+  cacheTag(marketTag(slug));
+  const market = await findPublicMarket(slug);
+  if (!market || !cityVisible(market.id, rows)) return null;
+  const [view, map] = await Promise.all([getMarketView(market), landingMap(market, rows)]);
+  return { market: view, map };
 }
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -163,9 +203,20 @@ async function landingMap(market: { id: string; centerLat: number; centerLng: nu
       .innerJoin(areaTable, eq(areaTable.id, helperProfiles.areaId))
       .where(and(eq(areaTable.marketId, market.id), eq(helperProfiles.status, 'active'), isNotNull(helperProfiles.idVerifiedAt), eq(users.status, 'active'), rowScopeCondition(rows, users.id)))
       .groupBy(helperProfiles.areaId),
-    // The cities for the minimap's view of the country: open or opening (a paused one isn't offered anywhere).
+    // The cities for the map's switcher (and the one a visitor is in): open or opening (a paused one isn't offered
+    // anywhere).
     db
-      .select({ id: marketTable.id, slug: marketTable.slug, name: marketTable.name, state: marketTable.state, status: marketTable.status, lat: marketTable.centerLat, lng: marketTable.centerLng })
+      .select({
+        id: marketTable.id,
+        slug: marketTable.slug,
+        name: marketTable.name,
+        state: marketTable.state,
+        status: marketTable.status,
+        lat: marketTable.centerLat,
+        lng: marketTable.centerLng,
+        serviceRadiusKm: marketTable.serviceRadiusKm,
+        timeZone: marketTable.timeZone,
+      })
       .from(marketTable)
       .where(inArray(marketTable.status, ['live', 'prelaunch']))
       .orderBy(asc(marketTable.name)),
@@ -182,8 +233,16 @@ async function landingMap(market: { id: string; centerLat: number; centerLng: nu
     areas: areaRows.map((row) => ({ name: row.name, slug: row.slug, point: { lat: row.lat, lng: row.lng }, helperCount: helpersByArea.get(row.id) ?? 0 })),
     pins,
     cities: cityRows
-      .filter((row) => rows === 'all' || !row.id.startsWith('mkt_demo_'))
-      .map((row) => ({ slug: row.slug, name: row.name, state: row.state, status: row.status as MapCity['status'], point: { lat: row.lat, lng: row.lng } })),
+      .filter((row) => cityVisible(row.id, rows))
+      .map((row) => ({
+        slug: row.slug,
+        name: row.name,
+        state: row.state,
+        status: row.status as MapCity['status'],
+        point: { lat: row.lat, lng: row.lng },
+        serviceRadiusMiles: Math.round(row.serviceRadiusKm / KM_PER_MILE),
+        timeZone: row.timeZone,
+      })),
   };
 }
 

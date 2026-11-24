@@ -1,8 +1,10 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
-import type { CategorySlug, MapArea, MapHome } from '@/contracts';
+import type { CategorySlug, LandingCity, MapArea, MapCity, MapHome } from '@/contracts';
 import { distanceMiles, type LatLng } from '@/shared/geo';
+import { useLandingHandlers } from './landing-handlers';
+import { cityAt } from './map/map-math';
 
 export type VisitorLocation =
   | { status: 'idle' }
@@ -35,6 +37,18 @@ export { MAP_SECTION_ID };
 
 /** Who the hero speaks to: someone who needs help (posts tasks), or someone who can help (a helper). */
 export type Audience = 'poster' | 'helper';
+
+/**
+ * Why the map moves to another city: the visitor picked it (remembered for next time), their location falls in it (the
+ * device worked that out; nothing is remembered), or a task of the page's own city asked for it (the hero's town).
+ */
+export type CityMove = 'pick' | 'location' | 'page';
+
+/** A switch to another city that didn't work: which city, and why (`LandingCityResult`). */
+export interface CityIssue {
+  slug: string;
+  code: 'not_found' | 'unavailable';
+}
 
 interface LandingState {
   /** The category picked with a click (the map's filter): it stays until another click. */
@@ -90,6 +104,25 @@ interface LandingState {
   /** Counts picks, so picking the same neighborhood again still flies the map there. */
   areaPicks: number;
   pickArea: (area: MapArea | null) => void;
+  /**
+   * The city the map, its explorer and the hero's market line show now: the one the page was drawn for, or one the
+   * visitor switched to (owner, 2026-11-23: "This platform is not for only Gainesville").
+   */
+  city: LandingCity;
+  /** Every city open or opening, alphabetical (the switcher). */
+  cities: MapCity[];
+  /** The city the page was drawn for: the hero's town and the sections below the map are about it. */
+  pageCitySlug: string;
+  /** Cities can be switched in place (the route gave a way to load one; previews link to each city's page instead). */
+  canSwitchCity: boolean;
+  /** The city being loaded, while it loads. */
+  cityLoading: string | null;
+  /** The last switch that didn't work. */
+  cityIssue: CityIssue | null;
+  /** The map moved to the visitor's own city by itself: the city it showed before (the note offers to go back). */
+  cityMovedFrom: MapCity | null;
+  /** Shows another city: its tasks, neighborhoods and service area, in place. */
+  switchCity: (slug: string, how: CityMove) => void;
 }
 
 const LandingContext = createContext<LandingState | null>(null);
@@ -146,8 +179,30 @@ function markAsked(): void {
  * press the button, and it never leaves the browser. The hero's switch says who the page speaks to (someone who
  * needs help, or a helper), and a neighborhood picked in the hero or the map's explorer is the same pick: the
  * map flies there and the hero's counts narrow to it.
+ *
+ * The map shows one city at a time (`city`): the one the page was drawn for, the one the visitor's location falls in
+ * (worked out here: only that city's slug is asked for, through the route's `onLoadCity`), or one picked in the
+ * map's switcher (remembered, and the page is drawn again for it, so the hero and the sections follow). A city the
+ * location found changes the map only: the hero and the sections below stay about the page's city, and a task or a
+ * neighborhood of theirs, picked while the map shows another city, brings the map back first.
  */
-export function LandingProvider({ children, initialLocation, initialCategory = null, home = null }: { children: ReactNode; initialLocation?: LatLng; initialCategory?: CategorySlug | null; home?: MapHome | null }) {
+export function LandingProvider({
+  children,
+  initialCity,
+  cityPicked = false,
+  initialLocation,
+  initialCategory = null,
+  home = null,
+}: {
+  children: ReactNode;
+  /** The city the page was drawn for (its market and map). */
+  initialCity: LandingCity;
+  /** The visitor picked that city on an earlier visit: their location doesn't move the map away from it. */
+  cityPicked?: boolean;
+  initialLocation?: LatLng;
+  initialCategory?: CategorySlug | null;
+  home?: MapHome | null;
+}) {
   const [selectedCategory, setSelectedCategory] = useState<CategorySlug | null>(initialCategory);
   const [previewCategory, setPreviewCategory] = useState<CategorySlug | null>(null);
   const [highlightedTaskId, setHighlightedTaskId] = useState<string | null>(null);
@@ -193,14 +248,104 @@ export function LandingProvider({ children, initialLocation, initialCategory = n
     setFocusedTaskId(null);
   }, []);
 
-  const focusTask = useCallback((task: { id: string; categorySlug: CategorySlug }) => {
-    setSelectedCategory((current) => (current === null || current === task.categorySlug ? current : null));
-    setFocusedTaskId(task.id);
-    scrollToMap();
-  }, []);
+  // ---- The city: the page's own, or one the visitor switched to ----
+  const { onLoadCity } = useLandingHandlers();
+  // The page's own city (the hero's town and the sections below are about it), and the city the map shows.
+  const [pageCity, setPageCity] = useState<LandingCity>(initialCity);
+  const [city, setCity] = useState<LandingCity>(initialCity);
+  const cityRef = useRef(city);
+  useEffect(() => {
+    cityRef.current = city;
+  }, [city]);
+  const [cityLoading, setCityLoading] = useState<string | null>(null);
+  const [cityIssue, setCityIssue] = useState<CityIssue | null>(null);
+  const [cityMovedFrom, setCityMovedFrom] = useState<MapCity | null>(null);
+  /** The visitor picked a city (in this visit, or the page's own on an earlier one): their location no longer moves the
+   * map to another. */
+  const pickedCity = useRef(cityPicked);
+  /** Each request's number: an answer that comes after a newer request is dropped. */
+  const cityTicket = useRef(0);
+  /** A neighborhood of the page's city picked (the hero, the coverage section) while the map showed another city. */
+  const pendingArea = useRef<MapArea | null>(null);
+  // A pick is remembered in a cookie, and setting it draws the page again on the server for the picked city: the
+  // page's city follows, and the map shows it (it's the city just picked).
+  if (initialCity.market.slug !== pageCity.market.slug) {
+    setPageCity(initialCity);
+    setCity(initialCity);
+    setCityMovedFrom(null);
+  }
+  const cities = city.map.cities.length > 0 ? city.map.cities : pageCity.map.cities;
+  const switchCity = useCallback(
+    (slug: string, how: CityMove) => {
+      if (how === 'pick') pickedCity.current = true;
+      const current = cityRef.current;
+      const sameCity = slug === current.market.slug;
+      // Already there: a pick is still remembered (the cookie), and a note about having moved goes.
+      if (sameCity && how !== 'pick') return;
+      if (!onLoadCity) return;
+      cityTicket.current += 1;
+      const ticket = cityTicket.current;
+      if (!sameCity) setCityLoading(slug);
+      setCityIssue(null);
+      void onLoadCity({ slug, remember: how === 'pick' })
+        .then((result) => {
+          if (ticket !== cityTicket.current) return;
+          setCityLoading(null);
+          if (!result.ok) {
+            if (!sameCity) setCityIssue({ slug, code: result.code });
+            return;
+          }
+          if (sameCity) {
+            setCityMovedFrom(null);
+            return;
+          }
+          const from = current.map.cities.find((item) => item.slug === current.market.slug) ?? null;
+          setCity(result.city);
+          // Another city's neighborhoods: the pick and the lit tasks were the last city's. A task of the page's own city
+          // (the hero's town) stays picked: it's why the map came back.
+          const nextArea = how === 'page' ? pendingArea.current : null;
+          pendingArea.current = null;
+          setArea((value) => ({ value: nextArea, picks: value.picks + 1 }));
+          setHighlightedTaskId(null);
+          if (how !== 'page') setFocusedTaskId(null);
+          setCityMovedFrom(how === 'location' ? from : null);
+        })
+        .catch(() => {
+          if (ticket !== cityTicket.current) return;
+          setCityLoading(null);
+          if (!sameCity) setCityIssue({ slug, code: 'unavailable' });
+        });
+    },
+    [onLoadCity],
+  );
+
+  const focusTask = useCallback(
+    (task: { id: string; categorySlug: CategorySlug }) => {
+      setSelectedCategory((current) => (current === null || current === task.categorySlug ? current : null));
+      setFocusedTaskId(task.id);
+      // A task of the page's own city (the hero's town) while the map shows another: back to the page's city.
+      const current = cityRef.current;
+      if (current.market.slug !== pageCity.market.slug && !current.map.pins.some((pin) => pin.id === task.id)) switchCity(pageCity.market.slug, 'page');
+      scrollToMap();
+    },
+    [pageCity.market.slug, switchCity],
+  );
 
   const pickTask = useCallback((id: string | null) => setFocusedTaskId(id), []);
-  const pickArea = useCallback((value: MapArea | null) => setArea((current) => ({ value, picks: current.picks + 1 })), []);
+  const pickArea = useCallback(
+    (value: MapArea | null) => {
+      // A neighborhood of the page's own city (the hero's market line, the coverage section) while the map shows another
+      // city: back to the page's city first, then there.
+      const current = cityRef.current;
+      if (value && current.market.slug !== pageCity.market.slug && !current.map.areas.some((item) => item.name === value.name) && pageCity.map.areas.some((item) => item.name === value.name)) {
+        pendingArea.current = value;
+        switchCity(pageCity.market.slug, 'page');
+        return;
+      }
+      setArea((previous) => ({ value, picks: previous.picks + 1 }));
+    },
+    [pageCity, switchCity],
+  );
 
   // ---- Where the visitor is: found once they've reached the map (or at once if they've allowed it before), kept
   // current while the page is open (a walk across town moves the dot), and never sent anywhere ----
@@ -339,6 +484,21 @@ export function LandingProvider({ children, initialLocation, initialCategory = n
     });
   }, [watch]);
 
+  // The visitor's location falls in another open city (worked out here, on the device; only the city's slug is asked
+  // for): the map goes there by itself, once per city in a visit, unless the visitor picked a city themselves.
+  const autoMoved = useRef(new Set<string>());
+  useEffect(() => {
+    if (location.status !== 'granted' || pickedCity.current || !onLoadCity) return;
+    const here = cityAt(cities, location.point);
+    if (!here || here.slug === cityRef.current.market.slug || autoMoved.current.has(here.slug)) return;
+    const timer = window.setTimeout(() => {
+      if (pickedCity.current || autoMoved.current.has(here.slug)) return;
+      autoMoved.current.add(here.slug);
+      switchCity(here.slug, 'location');
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [location, cities, onLoadCity, switchCity]);
+
   const value = useMemo<LandingState>(
     () => ({
       selectedCategory,
@@ -366,8 +526,43 @@ export function LandingProvider({ children, initialLocation, initialCategory = n
       area: area.value,
       areaPicks: area.picks,
       pickArea,
+      city,
+      cities,
+      pageCitySlug: pageCity.market.slug,
+      canSwitchCity: Boolean(onLoadCity),
+      cityLoading,
+      cityIssue,
+      cityMovedFrom,
+      switchCity,
     }),
-    [selectedCategory, selectCategory, previewCategory, highlightedTaskId, focusedTaskId, focusTask, pickTask, location, requestLocation, locatePicks, locateDevice, locating, locateIssue, homeValue, autoLocate, audience, area, pickArea],
+    [
+      selectedCategory,
+      selectCategory,
+      previewCategory,
+      highlightedTaskId,
+      focusedTaskId,
+      focusTask,
+      pickTask,
+      location,
+      requestLocation,
+      locatePicks,
+      locateDevice,
+      locating,
+      locateIssue,
+      homeValue,
+      autoLocate,
+      audience,
+      area,
+      pickArea,
+      city,
+      cities,
+      pageCity.market.slug,
+      onLoadCity,
+      cityLoading,
+      cityIssue,
+      cityMovedFrom,
+      switchCity,
+    ],
   );
   return <LandingContext.Provider value={value}>{children}</LandingContext.Provider>;
 }

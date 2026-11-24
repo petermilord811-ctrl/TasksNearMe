@@ -8,6 +8,7 @@ import type {
   CategoryView,
   HomePageData,
   LandingAiSuggestResult,
+  LandingCity,
   LandingMapData,
   MarketPageData,
   MarketView,
@@ -242,9 +243,34 @@ export const austinLandingMap: LandingMapData = {
   areas: austinMapAreas,
   pins: austinMapPins,
   cities: [
-    { slug: 'austin', name: 'Austin', state: 'TX', status: 'prelaunch', point: { lat: 30.2672, lng: -97.7431 } },
-    { slug: 'gainesville', name: 'Gainesville', state: 'FL', status: 'live', point: { lat: 29.6516, lng: -82.3248 } },
+    { slug: 'austin', name: 'Austin', state: 'TX', status: 'prelaunch', point: { lat: 30.2672, lng: -97.7431 }, serviceRadiusMiles: 15, timeZone: 'America/Chicago' },
+    { slug: 'gainesville', name: 'Gainesville', state: 'FL', status: 'live', point: { lat: 29.6516, lng: -82.3248 }, serviceRadiusMiles: 16, timeZone: 'America/New_York' },
+    { slug: 'houston', name: 'Houston', state: 'TX', status: 'prelaunch', point: { lat: 29.7604, lng: -95.3698 }, serviceRadiusMiles: 22, timeZone: 'America/Chicago' },
   ],
+};
+
+/**
+ * Gainesville's part of the landing, as the map's city switcher loads it (`LandingCity`): its market and a few open
+ * tasks around its neighborhoods (the switcher's previews and tests).
+ */
+export const gainesvilleLandingCity: LandingCity = {
+  market: { slug: 'gainesville', name: 'Gainesville', state: 'FL', status: 'live', areaNames: ['Duckpond', 'Haile Plantation', 'Midtown', 'Northwest'], serviceRadiusMiles: 15, timeZone: 'America/New_York' },
+  map: {
+    ...austinLandingMap,
+    center: { lat: 29.6516, lng: -82.3248 },
+    serviceRadiusMiles: 16,
+    areas: [
+      { name: 'Duckpond', slug: 'duckpond', point: { lat: 29.6577, lng: -82.3195 }, helperCount: 3 },
+      { name: 'Haile Plantation', slug: 'haile-plantation', point: { lat: 29.6155, lng: -82.4302 }, helperCount: 2 },
+      { name: 'Midtown', slug: 'midtown', point: { lat: 29.6498, lng: -82.3367 }, helperCount: 4 },
+      { name: 'Northwest', slug: 'northwest', point: { lat: 29.6903, lng: -82.3779 }, helperCount: 1 },
+    ],
+    pins: [
+      pin('tsk_gnv_shelf_map', 'Hang three picture frames', 'furniture-assembly', 'Duckpond', { lat: 29.6589, lng: -82.3171 }, { type: 'fixed', priceCents: 4500 }, '2026-11-24T15:00:00.000Z', 1, '2026-11-17T15:30:00.000Z'),
+      pin('tsk_gnv_move_map', 'Move a couch to a second floor', 'moving-help', 'Midtown', { lat: 29.6481, lng: -82.3389 }, { type: 'hourly', rateCents: 3500, estimatedHours: 2, hoursCap: 3 }, '2026-11-25T18:00:00.000Z', 0, '2026-11-17T12:10:00.000Z'),
+      pin('tsk_gnv_leaves_map', 'Rake a corner lot', 'yard-cleanup', 'Haile Plantation', { lat: 29.6131, lng: -82.4277 }, { type: 'fixed', priceCents: 9000 }, '2026-11-26T14:00:00.000Z', 2, '2026-11-16T19:45:00.000Z'),
+    ],
+  },
 };
 
 export const homePageData: HomePageData = {

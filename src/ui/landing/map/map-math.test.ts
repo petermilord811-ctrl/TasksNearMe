@@ -5,6 +5,8 @@ import {
   arrivalCamera,
   BLOOM_MAX,
   bloomOffsets,
+  citiesInOrder,
+  cityAt,
   circleBounds,
   circleRing,
   donutArcs,
@@ -18,6 +20,7 @@ import {
   type MapCamera,
   medianCents,
   nearbyPins,
+  nearestCity,
   outsideCircle,
   pinIdsMatching,
   pinnedArrivalProgress,
@@ -284,5 +287,49 @@ describe('drive estimates from a straight-line distance', () => {
     // About 1,060 miles away (the owner's case): around 19 hours on the road.
     expect(driveMinutes(1060)).toBeGreaterThan(16 * 60);
     expect(driveMinutes(1060)).toBeLessThan(21 * 60);
+  });
+});
+
+describe('the city a visitor is in (owner, 2026-11-23: "If I am in Austin, you are still showing Gainesville")', () => {
+  const cities = austinLandingMap.cities;
+  const inAustin: LatLng = { lat: 30.2672, lng: -97.7431 };
+  const inRoundRock: LatLng = { lat: 30.5083, lng: -97.6789 }; // about 17 mi out: past the 15-mile area, within its margin
+  const inBatonRouge: LatLng = { lat: 30.4515, lng: -91.1871 };
+
+  it('is the open city whose service area (or the margin just past it) holds the point', () => {
+    expect(cityAt(cities, inAustin)?.slug).toBe('austin');
+    expect(cityAt(cities, inMueller)?.slug).toBe('austin');
+    expect(cityAt(cities, inRoundRock)?.slug).toBe('austin');
+    expect(cityAt(cities, { lat: 29.6516, lng: -82.3248 })?.slug).toBe('gainesville');
+  });
+
+  it('is none where no city is open: Dallas, Baton Rouge', () => {
+    expect(cityAt(cities, inDallas)).toBeNull();
+    expect(cityAt(cities, inBatonRouge)).toBeNull();
+    expect(cityAt([], inAustin)).toBeNull();
+  });
+
+  it('two cities in reach: the nearer one', () => {
+    const twins = [
+      { ...cities[0]!, slug: 'east', point: { lat: 30.2672, lng: -97.6 } },
+      { ...cities[0]!, slug: 'west', point: { lat: 30.2672, lng: -97.9 } },
+    ];
+    expect(cityAt(twins, { lat: 30.2672, lng: -97.65 })?.slug).toBe('east');
+    expect(cityAt(twins, { lat: 30.2672, lng: -97.85 })?.slug).toBe('west');
+  });
+
+  it('the nearest city, however far, with its distance', () => {
+    const nearest = nearestCity(cities, inBatonRouge)!;
+    expect(nearest.city.slug).toBe('houston');
+    expect(nearest.miles).toBeCloseTo(distanceMiles(inBatonRouge, { lat: 29.7604, lng: -95.3698 }), 6);
+    expect(nearestCity([], inBatonRouge)).toBeNull();
+  });
+
+  it('the switcher lists open cities first, then those opening, alphabetically; nearest first once the place is known', () => {
+    expect(citiesInOrder(cities).map((city) => city.slug)).toEqual(['gainesville', 'austin', 'houston']);
+    expect(citiesInOrder(cities, inBatonRouge).map((city) => city.slug)).toEqual(['houston', 'austin', 'gainesville']);
+    expect(citiesInOrder(cities, inDallas).map((city) => city.slug)).toEqual(['austin', 'houston', 'gainesville']);
+    // The list it was given is left as it was.
+    expect(cities.map((city) => city.slug)).toEqual(['austin', 'gainesville', 'houston']);
   });
 });

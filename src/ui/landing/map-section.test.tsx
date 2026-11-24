@@ -1,11 +1,12 @@
 /** @vitest-environment jsdom */
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createTranslator, NextIntlClientProvider } from 'next-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { routes } from '@/contracts';
-import { homePageData } from '@/fixtures';
+import { routes, type LandingCityResult, type LandingHandlers } from '@/contracts';
+import { gainesvilleLandingCity, homePageData } from '@/fixtures';
 import { distanceMiles, type LatLng } from '@/shared/geo';
 import messages from '../../../messages/en/ui';
+import { LandingHandlersProvider } from './landing-handlers';
 import { LandingProvider } from './landing-state';
 import { MapSection } from './map-section';
 import { shownAmountCents } from './map/map-math';
@@ -41,7 +42,7 @@ afterEach(() => {
 function show(location?: LatLng) {
   return render(
     <NextIntlClientProvider locale="en" messages={messages}>
-      <LandingProvider initialLocation={location}>
+      <LandingProvider initialCity={{ market: homePageData.market, map: homePageData.map }} initialLocation={location}>
         <MapSection data={homePageData} mapMode="static" />
       </LandingProvider>
     </NextIntlClientProvider>,
@@ -108,5 +109,89 @@ describe('the map explorer', () => {
     expect(drawing.textContent).toContain(price);
     // Areas only: the drawing never names a street address.
     expect(drawing.textContent).not.toMatch(/\d+ (Example|Sample) (Lane|Street|Road)/);
+  });
+});
+
+/** The page drawn for Austin, with a way to load another city (a stand-in for the route's server action). */
+function showCities(handlers: LandingHandlers, options: { location?: LatLng; cityPicked?: boolean } = {}) {
+  return render(
+    <NextIntlClientProvider locale="en" messages={messages}>
+      <LandingHandlersProvider handlers={handlers}>
+        <LandingProvider initialCity={{ market: homePageData.market, map: homePageData.map }} initialLocation={options.location} cityPicked={options.cityPicked}>
+          <MapSection data={homePageData} mapMode="static" />
+        </LandingProvider>
+      </LandingHandlersProvider>
+    </NextIntlClientProvider>,
+  );
+}
+
+const austinCity = { market: homePageData.market, map: homePageData.map };
+const loads = (results: Record<string, LandingCityResult>) =>
+  vi.fn(async ({ slug }: { slug: string; remember: boolean }): Promise<LandingCityResult> => results[slug] ?? { ok: false, code: 'not_found' });
+/** A visitor in Gainesville's Duckpond. */
+const inGainesville: LatLng = { lat: 29.6577, lng: -82.3195 };
+
+describe('one city at a time (owner, 2026-11-23: "If I am in Austin, you are still showing Gainesville")', () => {
+  it('a visitor whose location falls in another open city sees that city, and one press goes back (remembered)', async () => {
+    const onLoadCity = loads({ gainesville: { ok: true, city: gainesvilleLandingCity }, austin: { ok: true, city: austinCity } });
+    showCities({ onLoadCity }, { location: inGainesville });
+    expect(await screen.findByText(t('cityMoved', { city: 'Gainesville' }))).toBeInTheDocument();
+    // Only the city's slug was asked for, and not remembered (the location found it, the visitor didn't pick it).
+    expect(onLoadCity).toHaveBeenCalledWith({ slug: 'gainesville', remember: false });
+    expect(screen.getByRole('button', { name: t('cityButton', { city: t('cityName', { city: 'Gainesville', state: 'FL' }) }) })).toBeInTheDocument();
+    // Its tasks, nearest first.
+    const near = hrefs(screen.getByRole('list', { name: t('listNearYou') }));
+    expect(near[0]).toBe(routes.publicTask(gainesvilleLandingCity.map.pins[0]!.slug));
+    expect(near).toHaveLength(gainesvilleLandingCity.map.pins.length);
+
+    fireEvent.click(screen.getByRole('button', { name: t('cityBack', { city: 'Austin' }) }));
+    await waitFor(() => expect(onLoadCity).toHaveBeenLastCalledWith({ slug: 'austin', remember: true }));
+    // Back in Austin, newest first: the visitor is in another city, so distances from them mean nothing here.
+    expect(await screen.findByRole('list', { name: t('listNewest') })).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText(t('cityMoved', { city: 'Gainesville' }))).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: t('cityButton', { city: t('cityName', { city: 'Austin', state: 'TX' }) }) })).toBeInTheDocument();
+  });
+
+  it('a city the visitor picked before stays, wherever they are', async () => {
+    const onLoadCity = loads({ gainesville: { ok: true, city: gainesvilleLandingCity } });
+    showCities({ onLoadCity }, { location: inGainesville, cityPicked: true });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(onLoadCity).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: t('cityButton', { city: t('cityName', { city: 'Austin', state: 'TX' }) }) })).toBeInTheDocument();
+  });
+
+  it('far from every city: how far this one is, and the nearest open city to show instead', async () => {
+    const onLoadCity = loads({ houston: { ok: false, code: 'unavailable' } });
+    // Baton Rouge: no city there; Houston is nearer than Austin.
+    showCities({ onLoadCity }, { location: { lat: 30.4515, lng: -91.1871 } });
+    expect(screen.getByText(/^You're [\d,]+ mi from Austin: we're opening city by city\.$/)).toBeInTheDocument();
+    expect(screen.getByText(/^The nearest open city is Houston, [\d,]+ mi away\.$/)).toBeInTheDocument();
+    expect(onLoadCity).not.toHaveBeenCalled();
+    // Houston can't be loaded just now: the card says so, with a way to try again.
+    fireEvent.click(screen.getByRole('button', { name: t('outsideShow', { city: 'Houston' }) }));
+    expect(await screen.findByText(t('cityFailed', { city: 'Houston' }))).toBeInTheDocument();
+    expect(onLoadCity).toHaveBeenCalledWith({ slug: 'houston', remember: true });
+    expect(screen.getByRole('button', { name: t('cityRetry') })).toBeInTheDocument();
+  });
+
+  it('the switcher lists every open city with its status; a pick moves the map there', async () => {
+    const onLoadCity = loads({ gainesville: { ok: true, city: gainesvilleLandingCity } });
+    showCities({ onLoadCity });
+    fireEvent.click(screen.getByRole('button', { name: t('cityButton', { city: t('cityName', { city: 'Austin', state: 'TX' }) }) }));
+    const list = await screen.findByRole('group', { name: t('citiesTitle') });
+    const rows = within(list).getAllByRole('button');
+    // Open now first, then opening soon, each alphabetical.
+    expect(rows.map((row) => row.textContent)).toEqual([
+      expect.stringContaining('Gainesville, FL'),
+      expect.stringContaining('Austin, TX'),
+      expect.stringContaining('Houston, TX'),
+    ]);
+    expect(rows[0]).toHaveTextContent(t('cityOpen'));
+    expect(rows[1]).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(rows[0]!);
+    await waitFor(() => expect(onLoadCity).toHaveBeenCalledWith({ slug: 'gainesville', remember: true }));
+    expect(await screen.findByRole('button', { name: t('cityButton', { city: t('cityName', { city: 'Gainesville', state: 'FL' }) }) })).toBeInTheDocument();
+    // A pick isn't a move by location: no note about it.
+    expect(screen.queryByText(t('cityMoved', { city: 'Gainesville' }))).not.toBeInTheDocument();
   });
 });

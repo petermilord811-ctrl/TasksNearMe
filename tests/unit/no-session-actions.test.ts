@@ -109,6 +109,7 @@ const PUBLIC: Record<string, string> = {
   'marketing/actions#unsubscribeWaitlistByLinkAction': 'the waitlist email’s unsubscribe page (8.3), with its signed token; 20 an hour per token',
   'marketing/actions#resubscribeWaitlistByLinkAction': 'undoing it on the same page, with the same token',
   'marketing/assistant-actions#suggestTaskWithAi': 'the landing page’s assistant (rate-limited per visitor and site-wide)',
+  'marketing/landing-city-actions#loadLandingCity': 'the landing map’s city switcher: an open city’s map from the landing’s own cache (the demo cities only for testers); a pick sets a cookie with the city’s slug, never a location',
   'support/public-actions#submitPublicSupportAction': 'the signed-out contact form at /help/contact (5.22): Turnstile, 3 a day per address, 5 an hour per IP; opens a case for the typed address, never as an account',
   'accounts/contact-revert-actions#confirmContactRevertAction': 'the “Not you?” link in a contact change notice (5.23): a signed, single-use, 7-day link, 10 tries an hour per IP and 5 per link; it secures the account it names and never signs anyone in',
   'notifications/unsubscribe-actions#unsubscribeByLinkAction': 'the unsubscribe page, with the email’s signed token',

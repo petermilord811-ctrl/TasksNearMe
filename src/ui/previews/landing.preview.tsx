@@ -31,9 +31,11 @@ const gainesville: HomePageData = {
     areaNames: ['Downtown', 'Duckpond', 'Pleasant Street', 'University Heights', 'Midtown', 'Golfview', 'Thornebrook', 'Millhopper'],
   },
 };
-/** A visitor in Mueller (inside the service area) and one in Dallas (outside it). */
+/** A visitor in Mueller (inside the service area), one in Dallas (outside it), and one in Baton Rouge (no city there,
+ * Houston nearer than Austin). */
 const inMueller: LatLng = { lat: 30.2989, lng: -97.7064 };
 const inDallas: LatLng = { lat: 32.7767, lng: -96.797 };
+const inBatonRouge: LatLng = { lat: 30.4515, lng: -91.1871 };
 
 function landing(id: string, title: string, data: HomePageData, theme: 'light' | 'dark' = 'light', season?: Season): PreviewEntry {
   return {
@@ -53,7 +55,7 @@ function landing(id: string, title: string, data: HomePageData, theme: 'light' |
   };
 }
 
-function map(id: string, title: string, options: { location?: LatLng; category?: CategorySlug } = {}): PreviewEntry {
+function map(id: string, title: string, options: { location?: LatLng; category?: CategorySlug; folded?: boolean } = {}): PreviewEntry {
   return {
     id,
     group: copy.previews.group,
@@ -61,8 +63,8 @@ function map(id: string, title: string, options: { location?: LatLng; category?:
     layout: 'fullscreen',
     render: () => (
       <div data-theme="light" className="bg-background text-foreground">
-        <LandingProvider initialLocation={options.location} initialCategory={options.category}>
-          <MapSection data={homePageData} mapMode="static" />
+        <LandingProvider initialCity={{ market: homePageData.market, map: homePageData.map }} initialLocation={options.location} initialCategory={options.category}>
+          <MapSection data={homePageData} mapMode="static" initialView={options.folded ? { engaged: true, collapsed: true } : undefined} />
         </LandingProvider>
       </div>
     ),
@@ -78,7 +80,7 @@ function rail(id: string, title: string, theme: 'light' | 'dark' = 'light'): Pre
     layout: 'fullscreen',
     render: () => (
       <div data-theme={theme} className="bg-background text-foreground">
-        <LandingProvider>
+        <LandingProvider initialCity={{ market: homePageData.market, map: homePageData.map }}>
           <MapExplorerProvider>
             <div className="paper relative h-[34rem]">
               <MapCardRail map={homePageData.map} className="absolute inset-x-0 bottom-0" />
@@ -122,6 +124,8 @@ export const landingPreviews: PreviewEntry[] = [
   map('component-landing-map/near-you', copy.previews.mapNearYou, { location: inMueller }),
   map('component-landing-map/outside-area', copy.previews.mapOutside, { location: inDallas }),
   map('component-landing-map/category', copy.previews.mapCategory, { category: 'yard-cleanup' }),
+  map('component-landing-map/folded', copy.previews.mapFolded, { folded: true }),
+  map('component-landing-map/nearest-city', copy.previews.mapNearestCity, { location: inBatonRouge }),
   rail('component-landing-map/card-row', copy.previews.mapRail),
   // The home page while its city isn't open (launch rehearsal J-L1): no counts or map, the cities, the waitlist.
   ...(['light', 'dark'] as const).map((theme) => ({

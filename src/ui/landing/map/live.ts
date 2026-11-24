@@ -36,6 +36,8 @@ export interface LiveTasks {
   /** The newest arrival, for the note on the map (cleared after `NOTE_MS`, or when dismissed). */
   latest: TaskMapPin | null;
   dismissLatest: () => void;
+  /** The stream is open now (false before it opens, while it reconnects, and without one). */
+  connected: boolean;
 }
 
 /** A tab in the background lets its stream go after this long, and opens it again when it's back. */
@@ -55,8 +57,20 @@ export function useLiveTasks(initial: TaskMapPin[], marketSlug: string | undefin
   const [arrivals, setArrivals] = useState<ReadonlySet<string>>(() => new Set());
   const [pulses, setPulses] = useState<MapPulse[]>([]);
   const [latest, setLatest] = useState<TaskMapPin | null>(null);
+  const [connected, setConnected] = useState(false);
   const timers = useRef(new Set<number>());
   const pulseKey = useRef(0);
+  // Another city (the map's city switcher): what the last city's stream brought doesn't carry over.
+  const [streamOf, setStreamOf] = useState(marketSlug);
+  if (streamOf !== marketSlug) {
+    setStreamOf(marketSlug);
+    setAdded([]);
+    setGone(new Set());
+    setOffers(new Map());
+    setArrivals(new Set());
+    setPulses([]);
+    setLatest(null);
+  }
 
   const pins = useMemo(() => {
     const known = new Set(initial.map((pin) => pin.id));
@@ -157,7 +171,7 @@ export function useLiveTasks(initial: TaskMapPin[], marketSlug: string | undefin
       });
     };
     const open = () => {
-      if (!stream) stream = retryingEventSource(`/api/realtime/market/${encodeURIComponent(marketSlug)}`, listen);
+      if (!stream) stream = retryingEventSource(`/api/realtime/market/${encodeURIComponent(marketSlug)}`, listen, setConnected);
     };
     const close = () => {
       stream?.close();
@@ -178,5 +192,5 @@ export function useLiveTasks(initial: TaskMapPin[], marketSlug: string | undefin
   }, [options.enabled, marketSlug]);
 
   const dismissLatest = useMemo(() => () => setLatest(null), []);
-  return { pins, arrivals, pulses, latest, dismissLatest };
+  return { pins, arrivals, pulses, latest, dismissLatest, connected };
 }

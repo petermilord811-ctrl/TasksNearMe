@@ -1,14 +1,14 @@
 'use client';
 
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
-import { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import { AnimatePresence, LazyMotion, domMax, m } from 'motion/react';
 import { useTranslations } from 'next-intl';
-import { ArrowDownUp, ChevronDown, House, LocateFixed, Loader2, MapPin, Moon, Navigation, ShieldCheck, Sparkles, Sun, Sunrise, Sunset, X } from 'lucide-react';
+import { ArrowDownUp, ChevronDown, ChevronsDownUp, ChevronsUpDown, MapPin, Moon, Navigation, Sparkles, Sun, Sunrise, Sunset, X } from 'lucide-react';
 import { CATEGORY_SLUGS, routes, type CategorySlug, type HomePageData, type LandingMapData, type MapArea, type TaskBoardWhen } from '@/contracts';
-import { distanceMiles } from '@/shared/geo';
 import { readTaskIntent } from '@/shared/task-intent';
 import { useFormat } from '@/ui/lib/format';
+import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 import { Reveal, spring, usePrefersReducedMotion } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
 import { CATEGORY_ICONS } from './category-icons';
@@ -16,16 +16,24 @@ import { MAP_LANDED_ATTRIBUTE, MAP_SECTION_ID, useLanding } from './landing-stat
 import { useArrivalDriver, WIDE_QUERY } from './map/arrival';
 import { lightAt, type ClockPhase } from './map/clock';
 import { MapExplorerProvider, useMapExplorer } from './map/explorer-state';
-import { aboutMiles, effectiveSort, insideServiceArea, listOrigin, nearbyPins, type ListSort } from './map/map-math';
+import { LiveCard } from './map/live-card';
+import { effectiveSort, listOrigin, nearbyPins, type ListSort } from './map/map-math';
 import { LIST_VIEWPORT_ATTRIBUTE, NearbyList } from './map/nearby-list';
 import { LiveTaskNote, TaskMap, type MapMode } from './map/task-map';
 
 /**
- * Room the panels take over the full-width map on wide screens, as fractions of the map (pixels above 1): the camera
- * keeps tasks clear of the heading's card (top left), the explorer (right: measured, as it sits at the window's edge),
- * and the controls and minimap (bottom left).
+ * Wide screens: where the panels over the full-width map sit (owner, 2026-11-23: the heading and the map's buttons sat
+ * far in on the left while the explorer hugged the window's right edge). One frame for both sides: the page's gutter in
+ * from the window's edges, inside a centred 96rem band on very wide screens, so the heading, the buttons and the
+ * explorer keep the same margin left and right.
  */
-const WIDE_PADDING = { top: 0.42, right: 0.36, bottom: 0.08, left: 0.1 };
+const MAP_EDGE = 'lg:[--map-edge:max(var(--page-gutter),calc((100%_-_96rem)/2_+_var(--page-gutter)))]';
+/** The camera's own margin inside the free part of the map (pixels). */
+const FREE_MARGIN = 16;
+/** A gap kept between the explorer and what the camera brings to the middle (pixels). */
+const EXPLORER_GAP = 20;
+/** How wide the map's tool bars are (a 44 px button in a bar with a 4 px inset, and its border). */
+const TOOLS_WIDTH = 54;
 const DISTANCES = [1, 3, 5] as const;
 /** Room kept clear for the marker that points to the visitor: the top bar and the attribution (wide; the panels are
  * stepped around as they are), or the "Explore the map" button (phones). */
@@ -47,17 +55,29 @@ const EXPLORER_IN = {
   opacity: 'var(--explorer-in)',
   translate: 'calc((1 - var(--explorer-in)) * 2.5rem) 0',
 } as CSSProperties;
+/** Wide screens: while the visitor drags the map, the panels over it step back, so the map under them shows. */
+const STEP_BACK = 'lg:transition-[top,opacity] lg:duration-300 lg:ease-[var(--ease-out)] lg:group-data-[map-dragging]/stage:opacity-[0.58]';
 
 /**
- * Tasks near you: the real map, full width, right under the hero's town, with the heading over its top-left and the
+ * Tasks near you: the real map, full width, right under the hero's town, with the live card over its top-left and the
  * explorer (find in your own words, the category filter, the order, the distance, a neighborhood to go to, the count
- * and the list) in a glass panel on its right. On phones: the heading, the map, then the explorer.
+ * and the list) in a glass panel on its right. On phones: the card, the map, then the explorer.
+ *
+ * It shows one city at a time (owner, 2026-11-23: "This platform is not for only Gainesville. If I am in Austin, you
+ * are still showing Gainesville"): the one the page was drawn for, the one the visitor's location falls in (the map
+ * moves there by itself, worked out on the device), or one picked in the card's city switcher. A new city flies the
+ * map there and swaps the tasks, the neighborhoods, the stream and the clock in place.
  *
  * Wide screens: the section is a sheet that slides up over the pinned hero carrying the map, still close and tilted
  * over the town's first task. Once it covers the screen, the map stays pinned while the next stretch of scrolling
  * pulls the camera back and flattens it into the whole city, and the explorer slides in beside it; the map then stays
  * a little longer, ready to use, before the page moves on. Only the camera moves while the map is pinned: never the
  * map and its camera at once. Phones: the same arrival plays once by itself when the map is in view.
+ *
+ * Flexible, not fixed (owner, 2026-11-23: "Components in live map are looking stuck"): once the visitor uses the map,
+ * the card folds to one line; the explorer folds to its search and count with a press, and its list grows with the
+ * screen; while the map is dragged the panels step back; and the camera always brings a task or a group to the middle
+ * of the part of the map that's actually free (the explorer's side measured), with the task's card above it.
  *
  * Where the visitor is: found without a press once they reach the map (silently if they allowed it before, otherwise
  * the browser asks once per visit), shown as a live dot, and when it's off the map a pill on the map's edge points
@@ -66,14 +86,18 @@ const EXPLORER_IN = {
  * count rolls to the new number, the list glides into its new order, the map flies to those tasks, and the town's
  * pins quiet down to the category.
  */
-export function MapSection({ data, mapMode }: { data: HomePageData; mapMode: MapMode }) {
+export function MapSection({ data, mapMode, initialView }: { data: HomePageData; mapMode: MapMode; /** Previews: the card and the explorer folded. */ initialView?: { engaged?: boolean; collapsed?: boolean } }) {
+  const { city } = useLanding();
   return (
-    // The open tasks stay live through the market's stream once the live map is up (static previews: as loaded).
-    <MapExplorerProvider pins={data.map.pins} marketSlug={mapMode === 'interactive' ? data.market.slug : undefined} timeZone={data.market.timeZone}>
-      <AreaBridge />
-      <LocateBridge />
-      <MapSectionContent data={data} mapMode={mapMode} />
-    </MapExplorerProvider>
+    // The open tasks stay live through the city's stream once the live map is up (static previews: as loaded). Dates
+    // read on the city's own clock.
+    <TimeZoneProvider timeZone={city.market.timeZone}>
+      <MapExplorerProvider pins={city.map.pins} marketSlug={mapMode === 'interactive' ? city.market.slug : undefined} timeZone={city.market.timeZone} initialView={initialView}>
+        <AreaBridge />
+        <LocateBridge />
+        <MapSectionContent data={data} mapMode={mapMode} />
+      </MapExplorerProvider>
+    </TimeZoneProvider>
   );
 }
 
@@ -108,24 +132,25 @@ function LocateBridge() {
 
 function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: MapMode }) {
   const t = useTranslations('landing.map');
-  const { location, requestLocation, autoLocate, locateDevice, locating, locateIssue } = useLanding();
-  const fromHome = location.status === 'granted' && location.source === 'home';
+  const { autoLocate, city, pageCitySlug, cityLoading } = useLanding();
   const explorer = useMapExplorer();
   const reduced = usePrefersReducedMotion();
-  const market = data.market.name;
-  const outside = location.status === 'granted' && !insideServiceArea(data.map, location.point);
+  const market = city.market.name;
+  const map = city.map;
   const wide = useMediaQuery(WIDE_QUERY);
-  // The map opens on the hero's first task (the town's first card), so the story carries on from there.
+  // The map opens on the hero's first task (the town's first card), so the story carries on from there; in another
+  // city than the page's, on its newest task.
   const arrival = useMemo(() => {
-    const onMap = new Map(data.map.pins.map((pin) => [pin.id, pin]));
-    const fromHero = data.recentTasks.find((task) => task.location.kind === 'local' && onMap.has(task.id));
-    const pin = (fromHero ? onMap.get(fromHero.id) : undefined) ?? data.map.pins[0];
+    const onMap = new Map(map.pins.map((pin) => [pin.id, pin]));
+    const fromHero = city.market.slug === pageCitySlug ? data.recentTasks.find((task) => task.location.kind === 'local' && onMap.has(task.id)) : undefined;
+    const pin = (fromHero ? onMap.get(fromHero.id) : undefined) ?? map.pins[0];
     return pin ? { taskId: pin.id, point: pin.point } : null;
-  }, [data.map.pins, data.recentTasks]);
+  }, [map.pins, data.recentTasks, city.market.slug, pageCitySlug]);
   const sheetRef = useAlignedPaper();
   const stageRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLDivElement>(null);
   const arrivalSource = useArrivalDriver({
     track: sheetRef,
     stage: stageRef,
@@ -136,21 +161,50 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
     liveReady: explorer.liveReady,
     reduced,
   });
-  // Wide screens: the explorer sits at the window's right edge, so the room it takes from the map is measured (its
-  // layout box: the slide-in's translate doesn't count).
-  const [explorerRoom, setExplorerRoom] = useState<number | null>(null);
+  // Wide screens: the room the panels take from the map, measured (their layout boxes: the slide-in's translate doesn't
+  // count): the explorer's side, for the camera's middle, and the bottom of the heading's card, which the city view
+  // keeps its tasks clear of.
+  const [room, setRoom] = useState<{ right: number; headingBottom: number; toolsRight: number } | null>(null);
   useEffect(() => {
     const panel = panelRef.current;
     const stage = stageRef.current;
+    const heading = headingRef.current;
     if (!wide || !panel || !stage || typeof ResizeObserver === 'undefined') return;
-    const measure = () => setExplorerRoom(Math.round(stage.clientWidth - panel.offsetLeft + 24));
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      const next = {
+        right: Math.round(stage.clientWidth - panel.offsetLeft + EXPLORER_GAP),
+        headingBottom: heading ? Math.round(heading.offsetTop + heading.offsetHeight) : 0,
+        // The map's tool bars stand under the card, on its left edge.
+        toolsRight: heading ? Math.round(heading.offsetLeft + TOOLS_WIDTH) : 0,
+      };
+      setRoom((current) => (current && current.right === next.right && current.headingBottom === next.headingBottom && current.toolsRight === next.toolsRight ? current : next));
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(measure);
+    };
     measure();
-    const observer = new ResizeObserver(measure);
+    const observer = new ResizeObserver(schedule);
     observer.observe(stage);
-    return () => observer.disconnect();
+    observer.observe(panel);
+    if (heading) observer.observe(heading);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
   }, [wide]);
-  const widePadding = useMemo(() => (explorerRoom ? { ...WIDE_PADDING, right: explorerRoom } : WIDE_PADDING), [explorerRoom]);
-  const outsideMiles = outside && location.status === 'granted' ? aboutMiles(distanceMiles(location.point, data.map.center)) : null;
+  // The camera's room: the explorer's side (or only its margin while it's folded to a strip along the top), and a
+  // margin all round; the middle of the rest is where a task or a group is brought.
+  const folded = wide && explorer.collapsed;
+  const padding = useMemo(() => {
+    if (!wide) return undefined;
+    const right = folded || !room ? (room ? FREE_MARGIN : 0.32) : room.right;
+    return { top: FREE_MARGIN, right, bottom: FREE_MARGIN, left: FREE_MARGIN };
+  }, [wide, folded, room]);
+  // The city view keeps its tasks clear of the heading's card (its top-left corner) and of the tool bars under it, on
+  // top of that margin.
+  const homeInsets = useMemo(() => (wide && room ? { top: Math.max(0, room.headingBottom + 8 - FREE_MARGIN), left: Math.max(0, room.toolsRight + 12 - FREE_MARGIN) } : undefined), [wide, room]);
 
   // The visitor has reached the map (it crosses the middle of the window): find them, without a press. Wide screens
   // measure the sheet, since the map itself is fixed to the window behind it.
@@ -181,6 +235,25 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
     return stop;
   }, [mapMode, autoLocate, sheetRef]);
 
+  // A task of the page's own city (the hero's town) asked for while another city showed: once the map is back there,
+  // it shows that task.
+  const { focusedTaskId } = useLanding();
+  const requestFocus = explorer.requestFocus;
+  const shownCity = useRef(city.market.slug);
+  useEffect(() => {
+    if (shownCity.current === city.market.slug) return;
+    shownCity.current = city.market.slug;
+    if (focusedTaskId && map.pins.some((pin) => pin.id === focusedTaskId)) requestFocus({ kind: 'task', id: focusedTaskId });
+  }, [city.market.slug, focusedTaskId, map.pins, requestFocus]);
+
+  // While the visitor drags the map, the panels step back (a mark on the stage, read by their CSS; no re-render).
+  const onDragging = useCallback((dragging: boolean) => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    if (dragging) stage.setAttribute('data-map-dragging', '');
+    else stage.removeAttribute('data-map-dragging');
+  }, []);
+
   return (
     <LazyMotion features={domMax}>
       <section
@@ -203,139 +276,169 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
         {/* Where the map has landed (wide screens: past the pinned arrival): "see it on the map" scrolls here. */}
         <div {...{ [MAP_LANDED_ATTRIBUTE]: '' }} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 h-px w-px scroll-mt-20 lg:top-[var(--arrival-scroll,0svh)] lg:scroll-mt-0" />
 
-        {/* The stage: on wide screens, one window tall and pinned to it for the whole stretch, with the heading and the
+        {/* The stage: on wide screens, one window tall and pinned to it for the whole stretch, with the card and the
             explorer on it, and the map fixed to the window behind them, seen only through the stage (its clip): the
             sheet's rising edge uncovers the map (which doesn't move), and at the end the page below covers it the same
-            way. Full screen lifts the clip. On phones and tablets: the heading, the map and the explorer in turn. */}
+            way. Full screen lifts the clip. On phones and tablets: the card, the map and the explorer in turn. */}
         <div
           ref={stageRef}
-          className="group/stage relative grid grid-cols-1 lg:sticky lg:top-0 lg:h-svh lg:min-h-[36rem] lg:grid-cols-[minmax(var(--page-gutter),1fr)_minmax(0,38rem)_minmax(0,31rem)_minmax(var(--page-gutter),1fr)] lg:gap-x-10 lg:[clip-path:inset(0_round_2.75rem_2.75rem_0_0)] lg:has-[[aria-modal=true]]:[clip-path:none]"
+          data-map-stage=""
+          className={cn(
+            'group/stage relative flex flex-col lg:sticky lg:top-0 lg:block lg:h-svh lg:min-h-[36rem] lg:[clip-path:inset(0_round_2.75rem_2.75rem_0_0)] lg:has-[[aria-modal=true]]:[clip-path:none]',
+            MAP_EDGE,
+          )}
         >
-          {/* The real map: between the heading and the list on phones; on wide screens fixed to the window, under
+          {/* The real map: between the card and the list on phones; on wide screens fixed to the window, under
               everything. */}
           <div ref={frameRef} className="relative order-2 mt-6 h-[62svh] max-h-[36rem] min-h-[24rem] lg:fixed lg:inset-0 lg:order-none lg:mt-0 lg:h-auto lg:max-h-none lg:min-h-0">
             {/* Below 1024 px the caption goes under the map, not over its bottom edge, where "Explore the map" sits. */}
             <figure className="m-0 size-full max-lg:flex max-lg:flex-col">
               <p className="sr-only">{t('mapLabel', { market })}</p>
               <TaskMap
-                map={data.map}
+                map={map}
                 market={market}
-                marketSlug={data.market.slug}
+                marketSlug={city.market.slug}
                 mode={mapMode}
                 variant="fill"
                 className="max-lg:min-h-0 max-lg:flex-1"
-                padding={wide ? widePadding : undefined}
+                padding={padding}
+                homeInsets={homeInsets}
                 arrival={arrival}
                 arrivalSource={arrivalSource}
                 edgeInsets={wide ? WIDE_EDGE : PHONE_EDGE}
+                onDragging={onDragging}
                 fillFade={wide ? 'top' : 'vertical'}
                 watchRef={stageRef}
-                controlsClassName="right-[var(--page-gutter)] bottom-[16%] lg:right-auto lg:bottom-[max(1.25rem,2.5svh)] lg:left-[max(var(--page-gutter),calc(50%-35.5rem))] lg:items-start"
-                minimapClassName="lg:bottom-[max(1.25rem,2.5svh)] lg:left-[calc(max(var(--page-gutter),calc(50%-35.5rem))+3.5rem)]"
+                // (Their own transition already eases opacity: only the drag's step back is added.)
+                controlsClassName="right-[var(--page-gutter)] bottom-[16%] lg:right-auto lg:bottom-[max(1.25rem,2.5svh)] lg:left-[var(--map-edge)] lg:group-data-[map-dragging]/stage:opacity-[0.58]"
                 noteClassName="top-3 left-1/2 -translate-x-1/2 justify-center lg:top-[calc(var(--top-bar-offset,5.5rem)+1rem)]"
               />
               <figcaption className="pointer-events-none flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-gutter pt-2 text-xs text-muted-foreground lg:hidden">
-                <MapCaption attribution={data.map.attribution} map={data.map} market={market} timeZone={data.market.timeZone} />
+                <MapCaption attribution={map.attribution} map={map} market={market} timeZone={city.market.timeZone} />
               </figcaption>
             </figure>
           </div>
-          {/* Wide screens: whose map it is, small, in the bottom right corner (what the map shows went into the explorer,
-              the market's hour into the minimap). Full screen has its own. */}
-          <p className="pointer-events-none absolute right-[max(1rem,calc(var(--page-gutter)/2))] bottom-[max(0.5rem,1svh)] hidden text-[11px] text-foreground/70 lg:block lg:group-has-[[aria-modal=true]]/stage:invisible">
-            <span className="glass rounded-full px-2.5 py-1">{data.map.attribution}</span>
+          {/* Wide screens: whose map it is, small, in the bottom right corner, under the explorer. Full screen has its
+              own. */}
+          <p className="pointer-events-none absolute right-[var(--map-edge)] bottom-[max(0.5rem,1svh)] hidden text-[11px] text-foreground/70 lg:block lg:group-has-[[aria-modal=true]]/stage:invisible">
+            <span className="glass rounded-full px-2.5 py-1">{map.attribution}</span>
           </p>
 
-          {/* The heading: on wide screens a card of its own in the top left corner (no map runs under its words),
-              matching the explorer's on the right; on phones, above the map. */}
-          <div data-map-heading="" data-map-panel="" className="relative order-1 px-gutter pt-14 sm:pt-20 lg:absolute lg:top-[calc(var(--top-bar-offset,5.5rem)+1rem)] lg:left-[max(var(--page-gutter),calc(50%-35.5rem))] lg:order-none lg:w-[min(26.5rem,calc(50%-2.5rem))] lg:p-0 lg:transition-[top] lg:duration-500 lg:ease-[var(--ease-out)] lg:group-has-[[aria-modal=true]]/stage:invisible">
-            <Reveal className="max-w-xl lg:glass lg:rounded-[1.75rem] lg:px-6 lg:py-5">
-              <p className="inline-flex items-center gap-2 text-xs font-semibold tracking-[0.18em] text-primary uppercase">
-                <span aria-hidden="true" className="relative inline-flex size-2">
-                  <span className="absolute inset-0 animate-[live-ping_2.6s_var(--ease-out)_infinite] rounded-full bg-primary/60 motion-reduce:animate-none" />
-                  <span className="relative size-2 rounded-full bg-primary" />
-                </span>
-                {t('eyebrow')}
-              </p>
-              <h2 id="map-title" className="mt-3 font-display text-4xl leading-[1.02] font-semibold tracking-[-0.035em] sm:text-5xl lg:text-[2.75rem]">
-                {/* "right now" on a line of its own (balanced wrapping split it as "Tasks near / you, right now"). */}
-                {t('title')} <span className="block font-accent font-normal tracking-[-0.01em] text-violet italic">{t('titleAccent')}</span>
-              </h2>
-              <p className="mt-3 text-lg text-muted-foreground lg:text-base">{t('body', { market })}</p>
-              <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
-                <m.button
-                  layout
-                  transition={reduced ? { duration: 0 } : spring.bloom}
-                  type="button"
-                  onClick={requestLocation}
-                  disabled={location.status === 'locating'}
-                  // Given as a style so Motion keeps the pill's corners round while it resizes.
-                  style={{ borderRadius: 9999 }}
-                  className={cn(
-                    'pointer-events-auto inline-flex min-h-12 items-center gap-2 rounded-full px-5 text-sm font-semibold transition-[background-color,box-shadow,color] duration-300 active:scale-[0.97] disabled:opacity-70',
-                    location.status === 'granted' ? 'glass text-foreground' : 'bg-foreground text-background hover:shadow-[0_12px_28px_-12px_rgb(0_0_0/0.45)]',
-                  )}
-                >
-                  <m.span layout="position" className="inline-flex items-center gap-2">
-                    {location.status === 'locating' ? <Loader2 aria-hidden="true" className="size-4 animate-spin" /> : fromHome ? <House aria-hidden="true" className="size-4 text-violet" /> : <LocateFixed aria-hidden="true" className={cn('size-4', location.status === 'granted' && 'text-violet')} />}
-                    {location.status === 'locating' ? t('locating') : location.status === 'granted' ? (fromHome ? (outside ? t('showHome') : t('nearHome')) : outside ? t('showMe') : t('nearYou')) : t('useLocation')}
-                  </m.span>
-                </m.button>
-                {location.status !== 'granted' && <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck aria-hidden="true" className="size-3.5" />{t('privacy')}</p>}
-              </div>
-              <div role="status" aria-live="polite" className="text-sm [&:not(:empty)]:mt-3">
-                {/* A helper's home neighborhood: the map starts there, and "where I am now" is a press away. */}
-                {fromHome && (
-                  <p className="text-muted-foreground">
-                    {locateIssue === 'denied' ? t('homeDenied') : t('homeNote', { area: location.areaName ?? '' })}{' '}
-                    <button type="button" onClick={locateDevice} disabled={locating} className="pointer-events-auto font-semibold text-primary underline-offset-4 hover:underline disabled:opacity-60">
-                      {locating ? t('locating') : t('homeUseDevice')}
-                    </button>
-                  </p>
-                )}
-                {location.status === 'denied' && <p className="text-muted-foreground">{t('denied', { market })}</p>}
-                {location.status === 'unavailable' && <p className="text-muted-foreground">{t('unavailable', { market })}</p>}
-                {outside && outsideMiles !== null && (
-                  <p className="text-foreground">
-                    <span>{t('outsideFar', { miles: outsideMiles, market })}</span>{' '}
-                    <Link href={routes.waitlist()} className="pointer-events-auto font-semibold text-primary underline-offset-4 hover:underline">{t('waitlist')}</Link>
-                  </p>
-                )}
-              </div>
+          {/* The live card: on wide screens over the map's top left (no map runs under its words), matching the
+              explorer on the right; on phones, above the map. */}
+          <div
+            ref={headingRef}
+            data-map-heading=""
+            data-map-panel=""
+            className={cn(
+              'relative order-1 px-gutter pt-14 sm:pt-20 lg:absolute lg:top-[calc(var(--top-bar-offset,5.5rem)+1rem)] lg:left-[var(--map-edge)] lg:order-none lg:w-[min(24rem,calc(50%-var(--map-edge)-1.5rem))] lg:p-0 lg:group-has-[[aria-modal=true]]/stage:invisible',
+              STEP_BACK,
+            )}
+          >
+            <Reveal className="max-w-xl">
+              <LiveCard wide={wide} />
             </Reveal>
           </div>
 
           {/* The explorer: find, pick a category, order and narrow, see how many, and the tasks themselves (the map's
-              accessible twin). On wide screens it keeps one size whatever the list holds (its rows scroll in a fixed
-              viewport), sits just under the top bar (following the bar as it slips away and comes back), and slides
-              in as the map arrives. */}
-          <div ref={panelRef} data-map-explorer="" data-map-panel="" className="relative order-3 px-gutter pt-6 pb-16 sm:pb-20 lg:absolute lg:top-[calc(var(--top-bar-offset,5.5rem)+1rem)] lg:right-[max(1rem,calc(var(--page-gutter)/2))] lg:order-none lg:w-[26.5rem] lg:px-0 lg:py-0 lg:transition-[top] lg:duration-500 lg:ease-[var(--ease-out)] lg:group-has-[[aria-modal=true]]/stage:invisible">
+              accessible twin). On wide screens it sits under the top bar (following the bar as it slips away and comes
+              back), grows with its list up to the screen's height (its rows scroll past that), folds to its search
+              and count with a press, and slides in as the map arrives. */}
+          <div
+            ref={panelRef}
+            data-map-explorer=""
+            data-map-panel=""
+            data-folded={folded ? '' : undefined}
+            className={cn(
+              'relative order-3 px-gutter pt-6 pb-16 sm:pb-20 lg:absolute lg:top-[calc(var(--top-bar-offset,5.5rem)+1rem)] lg:right-[var(--map-edge)] lg:order-none lg:w-[24rem] lg:px-0 lg:py-0 xl:w-[26.5rem] lg:group-has-[[aria-modal=true]]/stage:invisible',
+              STEP_BACK,
+            )}
+          >
             <div style={EXPLORER_IN}>
-              <Reveal variant="bloom" origin="100% 50%" className="lg:glass lg:rounded-[1.75rem] lg:p-2.5">
-                <SmartSearch />
-                <ChipScroller className="mt-2">
-                  <CategoryFilter />
-                </ChipScroller>
-                <ExplorerTools data={data} />
-                <WhenFilter />
-                {/* A task posted just now (wide screens; phones show it on the map). */}
-                <LiveTaskNote className="hidden lg:mt-2 lg:block lg:px-1" />
-                <div className="lg:px-1.5"><OpenCount data={data} /></div>
-                <div {...{ [LIST_VIEWPORT_ATTRIBUTE]: '' }} className="lg:h-[min(19rem,calc(100svh-30.75rem))] lg:min-h-[10rem] lg:overflow-y-auto lg:overscroll-contain lg:[scrollbar-width:thin]">
-                  <NearbyList map={liveMap(data.map, explorer.pins)} fill={wide} />
-                </div>
-                {data.map.pins.length > 0 && (
-                  <div className="mt-1 px-3 lg:-mb-1">
-                    <Link href={routes.taskBoard(data.market.slug)} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline">{t('browseAll')}</Link>
+              <Reveal variant="bloom" origin="100% 50%" className="lg:glass lg:flex lg:max-h-[calc(100svh-var(--top-bar-offset,5.5rem)-1rem-max(1.25rem,2.5svh)-2rem)] lg:flex-col lg:rounded-[1.75rem] lg:p-2.5">
+                <div className="flex items-start gap-1 lg:shrink-0">
+                  <div className="min-w-0 flex-1">
+                    <SmartSearch />
                   </div>
-                )}
-                {/* What the map shows and doesn't (wide screens; phones read it under the map). */}
-                <p className="hidden px-3 pb-1.5 text-[11px] leading-4 text-muted-foreground lg:flex lg:items-start lg:gap-1.5"><MapPin aria-hidden="true" className="mt-px size-3 shrink-0" />{t('caption')}</p>
+                  {wide && <FoldExplorer />}
+                </div>
+                <ExplorerFold open={!folded} className="lg:shrink-0">
+                  <ChipScroller className="mt-2">
+                    <CategoryFilter />
+                  </ChipScroller>
+                  <ExplorerTools />
+                  <WhenFilter />
+                  {/* A task posted just now (wide screens; phones show it on the map). */}
+                  <LiveTaskNote className="hidden lg:mt-2 lg:block lg:px-1" />
+                </ExplorerFold>
+                <div className="lg:shrink-0 lg:px-1.5"><OpenCount /></div>
+                <ExplorerFold open={!folded} grow>
+                  {/* While another city loads, its list-to-be is on its way: the current one steps back. */}
+                  <div
+                    {...{ [LIST_VIEWPORT_ATTRIBUTE]: '' }}
+                    aria-busy={cityLoading ? true : undefined}
+                    className={cn('transition-opacity duration-300 lg:min-h-0 lg:flex-initial lg:overflow-y-auto lg:overscroll-contain lg:[scrollbar-width:thin]', cityLoading && 'opacity-45')}
+                  >
+                    <NearbyList map={liveMap(map, explorer.pins)} />
+                  </div>
+                  {map.pins.length > 0 && (
+                    <div className="mt-1 px-3 lg:-mb-1 lg:shrink-0">
+                      <Link href={routes.taskBoard(city.market.slug)} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline">{t('browseAll')}</Link>
+                    </div>
+                  )}
+                  {/* What the map shows and doesn't (wide screens; phones read it under the map). */}
+                  <p className="hidden px-3 pb-1.5 text-[11px] leading-4 text-muted-foreground lg:flex lg:shrink-0 lg:items-start lg:gap-1.5"><MapPin aria-hidden="true" className="mt-px size-3 shrink-0" />{t('caption')}</p>
+                </ExplorerFold>
               </Reveal>
             </div>
           </div>
         </div>
       </section>
     </LazyMotion>
+  );
+}
+
+/**
+ * Wide screens: a part of the explorer that folds away with its list (CSS only: the grid's row eases between its
+ * content and nothing; out of reach while folded). `grow`: the list's part, which takes the panel's height and scrolls
+ * past it.
+ */
+function ExplorerFold({ open, grow = false, className, children }: { open: boolean; grow?: boolean; className?: string; children: ReactNode }) {
+  return (
+    <div
+      className={cn(
+        // One column that may be narrower than its content (`minmax(0, 1fr)`): a row of chips scrolls inside it rather
+        // than widening the panel past the screen.
+        'grid grid-cols-1 transition-[grid-template-rows,opacity] duration-[380ms] ease-[var(--ease-out)] motion-reduce:transition-none',
+        open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+        grow && 'lg:min-h-0 lg:flex-initial',
+        className,
+      )}
+    >
+      {/* Open, it clips a little past its edges (a row's shadow, a focus ring); folded, at them. */}
+      <div className={cn('min-h-0 min-w-0', open ? 'overflow-clip [overflow-clip-margin:12px]' : 'overflow-hidden', grow && 'lg:flex lg:flex-col')} inert={!open || undefined}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/** Wide screens: folds the explorer to its search and count (the map takes its side), and opens it again. */
+function FoldExplorer() {
+  const t = useTranslations('landing.map');
+  const explorer = useMapExplorer();
+  const folded = explorer.collapsed;
+  return (
+    <button
+      type="button"
+      onClick={() => explorer.setCollapsed(!folded)}
+      aria-expanded={!folded}
+      aria-label={folded ? t('explorerOpen') : t('explorerFold')}
+      title={folded ? t('explorerOpen') : t('explorerFold')}
+      className="mt-0.5 grid size-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-[background-color,color,rotate] duration-300 hover:bg-foreground/[0.07] hover:text-foreground"
+    >
+      {folded ? <ChevronsUpDown aria-hidden="true" className="size-4" /> : <ChevronsDownUp aria-hidden="true" className="size-4" />}
+    </button>
   );
 }
 
@@ -607,11 +710,11 @@ function CategoryFilter() {
  * distance from the visitor; a neighborhood to go to on the map; and whether the list follows the map. The map
  * controls appear once the live map is up.
  */
-function ExplorerTools({ data }: { data: HomePageData }) {
+function ExplorerTools() {
   const t = useTranslations('landing.map');
-  const { location, area, pickArea } = useLanding();
+  const { location, area, pickArea, city } = useLanding();
   const explorer = useMapExplorer();
-  const from = listOrigin(data.map, location.status === 'granted' ? location.point : undefined);
+  const from = listOrigin(city.map, location.status === 'granted' ? location.point : undefined);
   // Measured from a helper's home neighborhood, or from the device.
   const withinLabel = location.status === 'granted' && location.source === 'home' ? t('withinHomeLabel') : t('withinLabel');
   const sort = effectiveSort(explorer.sortChoice ?? undefined, from);
@@ -633,7 +736,7 @@ function ExplorerTools({ data }: { data: HomePageData }) {
           <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 size-3.5 text-muted-foreground lg:right-2.5" />
         </label>
         {/* There from the start (a pick before the live map is up waits for it), so nothing shifts when it comes. */}
-        {data.map.areas.length > 0 && <NeighborhoodPicker areas={data.map.areas} current={area} onPick={pickArea} onClear={() => pickArea(null)} />}
+        {city.map.areas.length > 0 && <NeighborhoodPicker areas={city.map.areas} current={area} onPick={pickArea} onClear={() => pickArea(null)} />}
       </div>
       {from && (
         <div role="group" aria-label={withinLabel} className="flex flex-wrap items-center gap-1.5">
@@ -809,23 +912,23 @@ function WhenFilter() {
  * How many open tasks the pick shows, rolling to the new number; announced politely. Then how many the list shows
  * (on the map, or within the distance), on a line that always keeps its room, so the panel never changes size.
  */
-function OpenCount({ data }: { data: HomePageData }) {
+function OpenCount() {
   const t = useTranslations('landing.map');
   const categories = useTranslations('helperCard.categories');
-  const { selectedCategory, location, area } = useLanding();
+  const { selectedCategory, location, area, city } = useLanding();
   const explorer = useMapExplorer();
   const reduced = usePrefersReducedMotion();
   const pins = explorer.pins;
   const areaName = area?.name ?? null;
   // The tasks the filters keep (category, time, neighborhood), wherever they are on the map.
   const count = nearbyPins(pins, { category: selectedCategory, when: explorer.whenRange, areaName }).length;
-  const from = listOrigin(data.map, location.status === 'granted' ? location.point : undefined);
+  const from = listOrigin(city.map, location.status === 'granted' ? location.point : undefined);
   const bounds = explorer.followMap ? explorer.view : null;
   const withinMiles = from ? explorer.withinMiles : null;
   const shown = bounds || withinMiles ? nearbyPins(pins, { from, category: selectedCategory, withinMiles, bounds, when: explorer.whenRange, areaName }).length : count;
   // Narrowed by the time or a neighborhood, none is "none here", not "none yet".
   const narrowed = explorer.when !== 'any' || areaName !== null;
-  const base = selectedCategory ? t('countCategory', { category: categories(selectedCategory), count }) : t(narrowed ? 'countMatching' : 'countAll', { count, market: areaName ?? data.market.name });
+  const base = selectedCategory ? t('countCategory', { category: categories(selectedCategory), count }) : t(narrowed ? 'countMatching' : 'countAll', { count, market: areaName ?? city.market.name });
   const total = [base, explorer.when !== 'any' ? t(`when.${explorer.when}`) : null, selectedCategory && areaName ? areaName : null].filter(Boolean).join(' · ');
   // How many of them the list shows (on the map, or within the distance) rides on the same line.
   const text = shown < count ? `${total} · ${t('inView', { shown, total: count })}` : total;
