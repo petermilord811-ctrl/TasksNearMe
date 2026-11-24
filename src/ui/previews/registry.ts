@@ -88,6 +88,7 @@ import { inviteCardPreviews } from './invite-card.preview';
 import { requestHelperPreviews } from './request-helper.preview';
 import { availabilityPreviews } from './availability.preview';
 import { neighborhoodDayPreviews } from './neighborhood-days.preview';
+import { neighborGroupPreviews } from './neighbor-groups.preview';
 import { availabilitySlotPreviews } from './availability-slots.preview';
 import { myClientsPreviews } from './my-clients.preview';
 import { proposeRebookPreviews } from './propose-rebook.preview';
@@ -174,6 +175,7 @@ export const previews: PreviewEntry[] = [
   ...requestHelperPreviews,
   ...availabilityPreviews,
   ...neighborhoodDayPreviews,
+  ...neighborGroupPreviews,
   ...availabilitySlotPreviews,
   ...myClientsPreviews,
   ...proposeRebookPreviews,

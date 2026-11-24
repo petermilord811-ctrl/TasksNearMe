@@ -24,6 +24,20 @@ import {
   uploadCommunityPhotoAction,
 } from '@/modules/community/actions';
 import { confirmPhoneChangeAction, startPhoneChangeAction } from '@/modules/accounts/account-actions';
+import {
+  createNeighborGroupAction,
+  deleteNeighborGroupMessageAction,
+  inviteToNeighborGroupAction,
+  joinNeighborGroupAction,
+  leaveNeighborGroupAction,
+  muteNeighborGroupAction,
+  openNeighborGroupAction,
+  previewNeighborGroupInviteAction,
+  removeNeighborGroupMemberAction,
+  revokeNeighborGroupInviteAction,
+  sendNeighborGroupMessageAction,
+} from '@/modules/community/group-actions';
+import { getNeighborGroupsData } from '@/modules/community/groups';
 import { getPortal } from '@/modules/community/portal';
 import { communityViewerOf } from '@/modules/community/request-viewer';
 import { localeOrDefault } from '@/contracts';
@@ -56,9 +70,13 @@ async function Portal({ searchParams }: Pick<PageProps<'/[locale]/app/community'
   const viewer = await getViewer();
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.community()));
   const [search, now, locale] = await Promise.all([searchParams, requestNow(), getLocale()]);
-  const data = await getPortal(db, await communityViewerOf(viewer.user, localeOrDefault(locale)), search, now);
+  const portal = await getPortal(db, await communityViewerOf(viewer.user, localeOrDefault(locale)), search, now);
   // Missing what Neighbors needs (its home city): said here, not a silent trip to Home (2026-11-23).
-  if (!data) return <PageUnavailableScreen />;
+  if (!portal) return <PageUnavailableScreen />;
+  // Building and street groups (2026-11-24) on the Neighbors tab: `?group=` opens one of theirs, `?join=` an invite.
+  const one = (value: string | string[] | undefined) => (typeof value === 'string' && value ? value : undefined);
+  const groups = portal.query.type === 'task' ? null : await getNeighborGroupsData(db, viewer.user.id, { ...(one(search.group) ? { groupId: one(search.group) } : {}), ...(one(search.join) ? { code: one(search.join) } : {}) }, now);
+  const data = groups ? { ...portal, groups } : portal;
   return (
     <PortalScreen
       data={data}
@@ -82,6 +100,23 @@ async function Portal({ searchParams }: Pick<PageProps<'/[locale]/app/community'
         ...(data.samples ? { onShowSamples: setNeighborsSamplesAction } : {}),
         // "Verify your phone" in a dialog over the page (2026-11-23), while posting waits for it.
         ...(data.postBlocked === 'phone_required' ? { onStartPhoneChange: startPhoneChangeAction, onConfirmPhoneChange: confirmPhoneChangeAction } : {}),
+        ...(groups
+          ? {
+              groups: {
+                onOpen: openNeighborGroupAction,
+                onCreate: createNeighborGroupAction,
+                onPreviewInvite: previewNeighborGroupInviteAction,
+                onJoin: joinNeighborGroupAction,
+                onSend: sendNeighborGroupMessageAction,
+                onDeleteMessage: deleteNeighborGroupMessageAction,
+                onInvite: inviteToNeighborGroupAction,
+                onRevokeInvite: revokeNeighborGroupInviteAction,
+                onRemoveMember: removeNeighborGroupMemberAction,
+                onLeave: leaveNeighborGroupAction,
+                onMute: muteNeighborGroupAction,
+              },
+            }
+          : {}),
       }}
     />
   );

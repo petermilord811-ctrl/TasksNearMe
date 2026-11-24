@@ -176,7 +176,7 @@ export const routes = {
     confirmOffer: (taskId: string, offerId: string) => `/app/tasks/${enc(taskId)}/offers/${enc(offerId)}/confirm`,
     /** Report a task, a helper's profile or a review (B-059). `id` is the task id, the helper's handle or the review id. */
     /** `answer`: the answer on a task question, by the question's id. */
-    report: (kind: 'task' | 'helper' | 'review' | 'post' | 'reply' | 'question' | 'answer' | 'thanks', id: string) => `/app/report/${kind}/${enc(id)}`,
+    report: (kind: 'task' | 'helper' | 'review' | 'post' | 'reply' | 'question' | 'answer' | 'thanks' | 'group_message', id: string) => `/app/report/${kind}/${enc(id)}`,
     /** Browse and search helpers: category, the area they serve, open times this week, name. */
     helpers: (query: HelperBrowseQuery = {}) => withQuery('/app/helpers', { category: query.category, area: query.area, q: query.q, open: query.openTimes ? '1' : undefined }),
     /** `taskId`: one of the client's open tasks, chosen to start with ("Invite helpers" on that task, 2026-11-23). */
@@ -278,6 +278,10 @@ export const routes = {
       });
     },
     communityPost: (postId: string) => `/app/community/${enc(postId)}`,
+    /** A building or street group (2026-11-24), open over Neighbors: members only, never its own page. */
+    neighborGroup: (groupId: string) => withQuery('/app/community', { group: groupId }),
+    /** An invite to a group: Neighbors opens the join dialog with it (2026-11-24). */
+    joinNeighborGroup: (code: string) => withQuery('/app/community', { join: code }),
     /** A reply in its post's thread (the reply's `reply-<id>` anchor). */
     communityReply: (postId: string, replyId: string) => `/app/community/${enc(postId)}#reply-${enc(replyId)}`,
     /** `booking`: "Thank Sam on Neighbors" from a finished booking (plan 10.12), chosen in the thanks form. */

@@ -9,6 +9,7 @@ import type { AppLocale } from './locale';
 import type { ExactAddress } from './location';
 import type { PriceBreakdown } from './money';
 import type { AdminCaseThanks } from './thanks';
+import type { AdminCaseGroupMessage } from './neighbor-groups';
 import type { CommunityModerationInput } from './community';
 import type { PersonSummary } from './people';
 import type { PublicReviewView } from './profiles';
@@ -193,6 +194,8 @@ export interface AdminCasePageData {
   question?: AdminCaseQuestion;
   /** A reported thank-you note (2026-11-24), as written. */
   thanks?: AdminCaseThanks;
+  /** A reported message in a building or street group (2026-11-24), as written. */
+  groupMessage?: AdminCaseGroupMessage;
   /** What the viewer can do now (pure domain rules; the UI never decides). */
   actions: AdminCaseActionId[];
   /** Where `set_status` can move the case. */
@@ -362,6 +365,8 @@ export interface AdminCaseHandlers {
   onModerateQuestion: ActionHandler<CommunityModerationInput>;
   /** Hide the reported thank-you note, or show it again (`thanks.canModerate`; a reason of 10 to 1,000 characters). ok `updated`. */
   onModerateThanks?: ActionHandler<ReviewModerationInput>;
+  /** Remove the reported group message, or restore it (`groupMessage.canModerate`; a reason of 10 to 1,000 characters). ok `updated`. */
+  onModerateGroupMessage?: ActionHandler<ReviewModerationInput>;
 }
 
 // ---- The staff booking page (UI-019) -------------------------------------------------------------------

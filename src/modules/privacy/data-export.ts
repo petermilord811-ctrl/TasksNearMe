@@ -16,7 +16,7 @@ import { helperProfiles, helperServices, helperWorkSamples } from '@/modules/pro
 import { reviews, savedHelpers } from '@/modules/reviews/schema';
 import { rewardGrants } from '@/modules/rewards/schema';
 import { supportCases } from '@/modules/support/schema';
-import { communityPosts, communityReplies } from '@/modules/community/schema';
+import { communityPosts, communityReplies, neighborGroupMessages, neighborGroups } from '@/modules/community/schema';
 import { taskQuestions } from '@/modules/questions/schema';
 import { savedSearches } from '@/modules/searches/schema';
 import { savedReplies } from '@/modules/messaging/schema';
@@ -198,6 +198,13 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
   const caseRows = await db.select().from(supportCases).where(eq(supportCases.openedByUserId, userId)).orderBy(asc(supportCases.createdAt));
   const notificationRows = await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt)).limit(NOTIFICATION_LIMIT);
   // Part 7: what they wrote in the community and on tasks, and what they keep (saved searches and replies).
+  // Their messages in building and street groups (2026-11-24), with each group's name.
+  const groupMessageRows = await db
+    .select({ group: neighborGroups.name, body: neighborGroupMessages.body, status: neighborGroupMessages.status, createdAt: neighborGroupMessages.createdAt })
+    .from(neighborGroupMessages)
+    .innerJoin(neighborGroups, eq(neighborGroups.id, neighborGroupMessages.groupId))
+    .where(eq(neighborGroupMessages.authorUserId, userId))
+    .orderBy(asc(neighborGroupMessages.createdAt));
   const [postRows, replyRows, questionRows, searchRows, cannedRows] = await Promise.all([
     db.select().from(communityPosts).where(eq(communityPosts.authorUserId, userId)).orderBy(asc(communityPosts.createdAt)),
     db.select().from(communityReplies).where(eq(communityReplies.authorUserId, userId)).orderBy(asc(communityReplies.createdAt)),
@@ -330,6 +337,7 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
     community: {
       posts: postRows.map((row) => ({ kind: row.kind, title: row.title, body: row.body, status: row.status, postedAt: iso(row.createdAt) })),
       replies: replyRows.map((row) => ({ body: row.body, status: row.status, repliedAt: iso(row.createdAt) })),
+      groupMessages: groupMessageRows.map((row) => ({ group: row.group, body: row.body, status: row.status, sentAt: iso(row.createdAt) })),
     },
     taskQuestions: questionRows.map(({ question, title }) => ({ task: title, question: question.body, answer: question.answerBody, status: question.status, askedAt: iso(question.createdAt) })),
     savedSearches: searchRows.map((row) => ({ name: row.name, filters: row.params, alerts: row.alert, savedAt: iso(row.createdAt) })),

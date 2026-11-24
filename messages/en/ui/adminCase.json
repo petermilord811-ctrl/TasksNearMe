@@ -333,5 +333,34 @@
       "hideSubmit": "Hide note",
       "showSubmit": "Show note"
     }
+  },
+  "groupMessage": {
+    "title": "Reported group message",
+    "about": "{author} wrote it in {group} ({area}, {count, plural, one {# member} other {# members}}) on {date}. Groups are private: this message is all of the group that staff see.",
+    "statuses": {
+      "visible": "Shows in the group",
+      "deleted": "Deleted by its author",
+      "removed": "Removed"
+    },
+    "removedReason": "Why it was removed:",
+    "deletedByAuthor": "Its author deleted it, so there's nothing to remove.",
+    "remove": "Remove this message",
+    "restore": "Restore this message",
+    "whoCan": "Trust and safety, support leads and admins can remove it.",
+    "dialog": {
+      "removeTitle": "Remove this message?",
+      "restoreTitle": "Restore this message?",
+      "removeDescription": "Members of {group} see “Removed by our team” in its place. Its author can’t bring it back.",
+      "restoreDescription": "It shows in {group} again as written, contact details still hidden.",
+      "reason": "Reason",
+      "hint": "Kept in the audit log and as an internal note on this case (10 to 1,000 characters).",
+      "required": "Give a reason of at least 10 characters.",
+      "tooLong": "Keep the reason under 1,000 characters.",
+      "notAllowed": "You can't change this message.",
+      "cancel": "Cancel",
+      "pending": "Saving…",
+      "removeSubmit": "Remove message",
+      "restoreSubmit": "Restore message"
+    }
   }
 }

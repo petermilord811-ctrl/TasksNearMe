@@ -199,7 +199,8 @@
         "booking_review": "Go to the reviews",
         "saved_searches": "Open your saved searches",
         "new_task": "Post a task",
-        "community": "Open Neighbors"
+        "community": "Open Neighbors",
+        "neighbor_group": "Open the group"
       },
       "next": {
         "offer_received": "Compare the offers on your task and book the one that fits. Each offer says whether you pay the helper directly or upfront.",
@@ -268,6 +269,7 @@
         "community_mention": "See their reply, and answer if it helps.",
         "community_recommended": "A thank-you in the thread goes a long way.",
         "community_thanked": "Neighbors see who recommends you on your profile.",
+        "group_message": "Open the group on Neighbors.",
         "community_ask_match": "Answer if you can help. Neighbors see the helpers others recommend first.",
         "community_question_match": "Answer if you can help. Neighbors mark the answers that help, and they show on your profile.",
         "community_task_posted": "Make an offer while it's open.",
@@ -357,6 +359,7 @@
       "community_mention": "{actorName} replied to you on: {title}.",
       "community_recommended": "{actorName} recommended you to a neighbor: {title}.",
       "community_thanked": "{actorName} thanked you on Neighbors: {title}.",
+      "group_message": "{count, plural, one {{actorName} wrote in your group {title}.} other {{actorName} and others: # new messages in your group {title}.}}",
       "community_ask_match": "A neighbor in {area} asks for a recommendation: {title}.",
       "community_question_match": "A neighbor in {area} has a question about your services: {title}.",
       "community_task_posted": "{actorName} posted a task from the thread where you were recommended: {title}.",

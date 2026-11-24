@@ -96,6 +96,7 @@ import {
   type StaffCaseFacts,
 } from './staff-domain';
 import { thankYouNotes } from '@/modules/thanks/schema';
+import { reportedGroupMessageOf, setGroupMessageRemoved } from '@/modules/community/groups';
 
 /**
  * Staff working support cases (UI-018; blueprint 03 §9, B-052, B-054): the queues, the case list, a
@@ -407,6 +408,8 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
   const reportedReview = row.context?.reviewId ? await reportedReviewOf(db, staff, row.context.reviewId) : null;
   const reportedQuestion = row.context?.questionId ? await reportedQuestionOf(db, staff, row.context.questionId, row.context.answer === true) : null;
   const reportedThanks = row.context?.thanksId ? await reportedThanksOf(db, staff, row.context.thanksId) : null;
+  // A reported group message (2026-11-24): its words as written, never the rest of its group's conversation.
+  const reportedGroupMessage = row.context?.groupMessageId ? await reportedGroupMessageOf(db, row.context.groupMessageId, canModerateTasks(staff.roles)) : null;
   // A reported community post or reply: members' public words, read and moderated on the community page.
   const [reportedPost] = row.context?.postId
     ? await db.select({ id: communityPosts.id, title: communityPosts.title }).from(communityPosts).where(eq(communityPosts.id, row.context.postId)).limit(1)
@@ -497,6 +500,7 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
     ...(reportedReview ? { review: reportedReview } : {}),
     ...(reportedQuestion ? { question: reportedQuestion } : {}),
     ...(reportedThanks ? { thanks: reportedThanks } : {}),
+    ...(reportedGroupMessage ? { groupMessage: reportedGroupMessage } : {}),
     ...(reportedPost ? { post: { id: reportedPost.id, title: reportedPost.title, ...(row.context?.replyId ? { replyId: row.context.replyId } : {}) } } : {}),
     actions: staffCaseActions(facts),
     nextStatuses: nextCaseStatuses(facts),
@@ -637,6 +641,28 @@ export async function moderateReportedThanks(db: Db, staff: StaffActor, caseId: 
     await audit(tx, staff, visible ? 'thanks.shown' : 'thanks.hidden', ctx.row.id, now, { reason, targetType: 'thank_you_note', targetId: note.id });
     const [profile] = await tx.select({ handle: helperProfiles.handle }).from(helperProfiles).where(eq(helperProfiles.userId, note.helperUserId)).limit(1);
     return { ok: true, code: 'updated', ...(profile?.handle ? { helperHandle: profile.handle } : {}) } as const;
+  });
+}
+
+/**
+ * Removes the case's reported group message (its members then read "Removed by our team"), or restores it. Community
+ * content: trust and safety, support leads and admins (as posts). The reason goes in the audit log and, as an internal
+ * note, on the case. Never a message staff wrote themselves.
+ */
+export async function moderateReportedGroupMessage(db: Db, staff: StaffActor, caseId: string, input: ReviewModerationInput, now: Date): Promise<ActionResult> {
+  const parsed = reviewModerationInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailed(parsed.error);
+  const ctx = await loadCase(db, staff, caseId);
+  const messageId = ctx?.row.context?.groupMessageId;
+  if (!ctx || !messageId || !canModerateTasks(staff.roles)) return { ok: false, code: 'not_allowed' };
+  const { visible, reason } = parsed.data;
+  return db.transaction(async (tx) => {
+    const changed = await setGroupMessageRemoved(tx, messageId, { removed: !visible, staffId: staff.id, reason }, now);
+    if (!changed) return { ok: false, code: 'not_allowed' } as const;
+    if (!changed.changed) return { ok: true, code: 'updated' } as const;
+    await tx.insert(supportCaseEvents).values({ id: newId('cev'), caseId: ctx.row.id, kind: 'note', authorUserId: staff.id, visibility: 'internal', body: reason, meta: { groupMessageAction: visible ? 'restored' : 'removed' }, createdAt: now });
+    await audit(tx, staff, visible ? 'group_message.restored' : 'group_message.removed', ctx.row.id, now, { reason, targetType: 'neighbor_group_message', targetId: messageId });
+    return { ok: true, code: 'updated' } as const;
   });
 }
 

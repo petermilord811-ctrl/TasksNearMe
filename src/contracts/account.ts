@@ -138,6 +138,11 @@ export const NOTIFICATION_TYPES = [
   /** `actorName` thanked the helper on Neighbors (`title`: the thanks post; plan 10.11). */
   'community_thanked',
   /**
+   * New messages in one of the person's building or street groups (`title`: the group; `actorName`: who wrote the latest;
+   * `params.count`: how many since they last looked; 2026-11-24). In the app only, one unread at a time a group.
+   */
+  'group_message',
+  /**
    * A neighbor in `params.area` (absent: somewhere in the city) asks for a recommendation in one of the helper's
    * services: `title` (plan 10.11; at most 3 a day).
    */

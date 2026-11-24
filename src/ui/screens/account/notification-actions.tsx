@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlarmClock, ArrowLeftRight, AtSign, Award, BadgeCheck, BellRing, CalendarCheck, CalendarClock, CalendarOff, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, CircleHelp, CirclePause, CirclePlay, ClipboardCheck, ClipboardPenLine, ClipboardX, Clock, CreditCard, DoorOpen, Download, EyeOff, Gift, HandCoins, HandHeart, Headset, Hourglass, LifeBuoy, MapPin, MapPinned, MessageCircle, MessageCircleQuestion, MessageSquarePlus, MessagesSquare, Navigation, Newspaper, PenLine, Pin, RefreshCw, Repeat, RotateCcw, ShieldAlert, ShieldCheck, SkipForward, Star, ThumbsUp, Timer, UserSearch, Users, X, type LucideIcon } from 'lucide-react';
+import { AlarmClock, ArrowLeftRight, AtSign, Award, BadgeCheck, BellRing, CalendarCheck, CalendarClock, CalendarOff, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, CircleHelp, CirclePause, CirclePlay, ClipboardCheck, ClipboardPenLine, ClipboardX, Clock, CreditCard, DoorOpen, Download, EyeOff, Gift, HandCoins, HandHeart, Headset, Hourglass, LifeBuoy, MapPin, MapPinned, MessageCircle, MessageCircleQuestion, MessageSquarePlus, MessagesSquare, Navigation, Newspaper, PenLine, Pin, RefreshCw, Repeat, RotateCcw, ShieldAlert, ShieldCheck, SkipForward, Star, ThumbsUp, Timer, UserSearch, Users, UsersRound, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType, NotificationView } from '@/contracts';
 import { formatDatePhrase, formatMoney } from '@/shared/format';
@@ -72,6 +72,7 @@ const icons: Record<NotificationType, LucideIcon> = {
   community_mention: AtSign,
   community_recommended: Award,
   community_thanked: HandHeart,
+  group_message: UsersRound,
   community_ask_match: UserSearch,
   community_question_match: MessageCircleQuestion,
   community_task_posted: ClipboardPenLine,

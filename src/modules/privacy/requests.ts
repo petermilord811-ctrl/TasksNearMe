@@ -1,3 +1,4 @@
+import { forgetGroupMember } from '@/modules/community/groups';
 import { communityAnnouncementDismissals, communityFollows, communityPosts, communityReactions, communityReplies, communityWelcomes } from '@/modules/community/schema';
 import { messageReactions, savedReplies } from '@/modules/messaging/schema';
 import { taskQuestions } from '@/modules/questions/schema';
@@ -421,6 +422,8 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     await tx.delete(communityAnnouncementDismissals).where(eq(communityAnnouncementDismissals.userId, userId));
     // Their latest move's welcome (2026-11-24): a neighborhood, like `home_area_id`.
     await tx.delete(communityWelcomes).where(eq(communityWelcomes.userId, userId));
+    // Their building and street groups (2026-11-24): their messages come down, they leave each group, their invites stop.
+    await forgetGroupMember(tx, userId, now);
     const takenDown = await tx
       .update(communityReplies)
       .set({ status: 'removed', moderationReason: 'account_deleted', moderatedAt: now, updatedAt: now })

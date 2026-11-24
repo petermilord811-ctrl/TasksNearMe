@@ -199,7 +199,8 @@
         "booking_review": "Ir a las reseñas",
         "saved_searches": "Abrir tus búsquedas guardadas",
         "new_task": "Publicar una tarea",
-        "community": "Abrir Vecinos"
+        "community": "Abrir Vecinos",
+        "neighbor_group": "Abrir el grupo"
       },
       "next": {
         "offer_received": "Compara las ofertas de tu tarea y reserva la que mejor te convenga. Cada oferta dice si le pagas al ayudante directamente o por adelantado.",
@@ -268,6 +269,7 @@
         "community_mention": "Mira su respuesta y contesta si ayuda.",
         "community_recommended": "Un agradecimiento en la conversación ayuda mucho.",
         "community_thanked": "En tu perfil, los vecinos ven quién te recomienda.",
+        "group_message": "Abre el grupo en Vecinos.",
         "community_ask_match": "Responde si puedes ayudar. Los vecinos ven primero a quienes otros recomiendan.",
         "community_question_match": "Responde si puedes ayudar. Los vecinos marcan las respuestas útiles, y se muestran en tu perfil.",
         "community_task_posted": "Haz una oferta mientras esté abierta.",
@@ -357,6 +359,7 @@
       "community_mention": "{actorName} te respondió en: {title}.",
       "community_recommended": "{actorName} te recomendó a alguien del vecindario: {title}.",
       "community_thanked": "{actorName} te dio las gracias en Vecinos: {title}.",
+      "group_message": "{count, plural, one {{actorName} escribió en tu grupo {title}.} other {{actorName} y otros: # mensajes nuevos en tu grupo {title}.}}",
       "community_ask_match": "Alguien en {area} pide una recomendación: {title}.",
       "community_question_match": "Alguien en {area} tiene una pregunta sobre tus servicios: {title}.",
       "community_task_posted": "{actorName} publicó una tarea desde la conversación donde te recomendaron: {title}.",

@@ -30,6 +30,8 @@ export function notificationPath(target: AttentionTarget): string {
       return routes.app.account();
     case 'community_post':
       return routes.app.communityPost(target.postId);
+    case 'neighbor_group':
+      return routes.app.neighborGroup(target.groupId);
     case 'saved_search':
       return routes.app.savedSearch(target.searchId);
     case 'booking_review':

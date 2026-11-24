@@ -1,4 +1,4 @@
-import { and, asc, count, eq, gte, inArray, isNull, lt, lte, ne, or } from 'drizzle-orm';
+import { and, asc, count, eq, gte, inArray, isNull, lt, lte, ne, notInArray, or } from 'drizzle-orm';
 import { createTranslator } from 'next-intl';
 import type { AppLocale, NotificationTopic, NotificationType, NotificationView, QuietHoursSetting, TimeZone } from '@/contracts';
 import { DEFAULT_LOCALE, localeOrDefault } from '@/contracts';
@@ -15,7 +15,7 @@ import { safeErrorText } from '@/platform/redact';
 import { formatDatePhrase, formatMoney } from '@/shared/format';
 import { localizedPath } from '@/shared/locale';
 import { pushSenderFromEnv, type PushMessage, type PushSender } from '@/integrations/push/web-push';
-import { channelsFor, missingAddressReason, NOTIFICATION_TOPIC, planDelivery, preferenceOn, pushOn, RETRY_MINUTES, URGENT_TYPES, type DeliveryChannel } from './delivery-domain';
+import { channelsFor, IN_APP_ONLY_TYPES, missingAddressReason, NOTIFICATION_TOPIC, planDelivery, preferenceOn, pushOn, RETRY_MINUTES, URGENT_TYPES, type DeliveryChannel } from './delivery-domain';
 import { renderNotificationEmail } from './emails';
 import { quietHoursOf, threadBookingStarts } from './own-quiet-hours';
 import { quietUntil } from './quiet-hours';
@@ -286,7 +286,8 @@ export async function deliverNotifications(db: Db, now: Date, providers: Deliver
     .select({ notification: notifications })
     .from(notifications)
     .leftJoin(notificationDeliveries, eq(notificationDeliveries.notificationId, notifications.id))
-    .where(and(isNull(notificationDeliveries.id), gte(notifications.createdAt, new Date(now.getTime() - RECENT_MS))))
+    // In-app-only ones (a group's messages) never get a channel: left out, so they never crowd this batch.
+    .where(and(isNull(notificationDeliveries.id), gte(notifications.createdAt, new Date(now.getTime() - RECENT_MS)), notInArray(notifications.type, [...IN_APP_ONLY_TYPES])))
     .orderBy(asc(notifications.createdAt))
     .limit(limit);
   const people = await peopleOf(db, [...new Set(fresh.map(({ notification }) => notification.userId))]);

@@ -596,6 +596,13 @@
       "when": 1795504239616,
       "tag": "0084_family_followers",
       "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1795504349208,
+      "tag": "0085_neighbor_groups",
+      "breakpoints": true
     }
   ]
 }

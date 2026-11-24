@@ -82,6 +82,8 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   community_mention: 'community',
   community_recommended: 'community',
   community_thanked: 'community',
+  // Building and street groups (2026-11-24): in the app only (`IN_APP_ONLY_TYPES`).
+  group_message: 'community',
   community_ask_match: 'community',
   community_question_match: 'community',
   community_auto_hidden: 'community',
@@ -209,8 +211,14 @@ export const pushOn = (topic: NotificationTopic) => topic !== 'tips_and_news';
  */
 export const NO_SMS_TYPES: ReadonlySet<NotificationType> = new Set<NotificationType>(['review_prompt', 'review_reminder', 'payment_refunded', 'address_recheck', 'city_live_client', 'city_live_helper']);
 
+/**
+ * Types that stay in the bell: never an email, a text or a push, whatever the person's preferences. A group's new
+ * messages (2026-11-24, the owner's call: "in-app notification only"); the delivery planner never picks them up.
+ */
+export const IN_APP_ONLY_TYPES: ReadonlySet<NotificationType> = new Set<NotificationType>(['group_message']);
+
 export const channelsFor = (type: NotificationType): readonly DeliveryChannel[] =>
-  EMAIL_ONLY_TYPES.has(type) ? ['email'] : NO_SMS_TYPES.has(type) ? DELIVERY_CHANNELS.filter((channel) => channel !== 'sms') : DELIVERY_CHANNELS;
+  IN_APP_ONLY_TYPES.has(type) ? [] : EMAIL_ONLY_TYPES.has(type) ? ['email'] : NO_SMS_TYPES.has(type) ? DELIVERY_CHANNELS.filter((channel) => channel !== 'sms') : DELIVERY_CHANNELS;
 
 export type DeliveryPlan =
   | { action: 'send' }

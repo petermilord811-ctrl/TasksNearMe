@@ -53,7 +53,9 @@ export type AttentionTarget =
   /** Posting a task (`routes.app.newTask()`): where a city's launch message sends its clients (J-L2). */
   | { kind: 'new_task' }
   /** Neighbors (`routes.app.community()`): the weekly digest (plan 10.14). */
-  | { kind: 'community' };
+  | { kind: 'community' }
+  /** A building or street group, open over Neighbors (`routes.app.neighborGroup(groupId)`, 2026-11-24). */
+  | { kind: 'neighbor_group'; groupId: string };
 
 export const ATTENTION_KINDS = [
   /** Client: approve the submitted work (or report a problem) before the deadline. */

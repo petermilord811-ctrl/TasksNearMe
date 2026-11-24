@@ -255,3 +255,98 @@ export const communityWelcomes = pgTable('community_welcomes', {
   /** They closed this move's welcome ("Got it"): it stays closed on every device. */
   dismissedAt: timestamp('dismissed_at', { withTimezone: true }),
 });
+
+/**
+ * Building and street groups (2026-11-24, the owner's chat ideas): a small private circle for one building or one street
+ * in one neighborhood (`area_id`), with its own members and messages. Never listed or searched; members join only by an
+ * invite they accept, from the group's neighborhood. Its creator is its admin; at most 3 created a person, 50 members a
+ * group. `closed` once its last member leaves (the rows stay for reports).
+ */
+export const neighborGroups = pgTable(
+  'neighbor_groups',
+  {
+    id: text('id').primaryKey(),
+    marketId: text('market_id')
+      .notNull()
+      .references(() => markets.id),
+    areaId: text('area_id')
+      .notNull()
+      .references(() => areas.id),
+    kind: text('kind').notNull(), // building | street
+    name: text('name').notNull(),
+    createdByUserId: text('created_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    status: text('status').notNull().default('active'), // active | closed
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    closedAt: timestamp('closed_at', { withTimezone: true }),
+  },
+  (t) => [index('neighbor_groups_creator_idx').on(t.createdByUserId)],
+);
+
+/** Who is in a group: its admin and members, what they last read, and whether they muted it. */
+export const neighborGroupMembers = pgTable(
+  'neighbor_group_members',
+  {
+    groupId: text('group_id')
+      .notNull()
+      .references(() => neighborGroups.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    role: text('role').notNull().default('member'), // admin | member
+    joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
+    lastReadAt: timestamp('last_read_at', { withTimezone: true }).notNull().defaultNow(),
+    /** Muted: no notifications for this group. */
+    mutedAt: timestamp('muted_at', { withTimezone: true }),
+    /** The member whose invite they accepted (none for the creator). */
+    invitedByUserId: text('invited_by_user_id').references(() => users.id),
+  },
+  (t) => [primaryKey({ columns: [t.groupId, t.userId] }), index('neighbor_group_members_user_idx').on(t.userId)],
+);
+
+/** Invite links and codes: 7 days each, revoked by the group's admin. */
+export const neighborGroupInvites = pgTable(
+  'neighbor_group_invites',
+  {
+    id: text('id').primaryKey(),
+    groupId: text('group_id')
+      .notNull()
+      .references(() => neighborGroups.id, { onDelete: 'cascade' }),
+    code: text('code').notNull(),
+    createdByUserId: text('created_by_user_id')
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revokedByUserId: text('revoked_by_user_id').references(() => users.id),
+  },
+  (t) => [uniqueIndex('neighbor_group_invites_code_idx').on(t.code), index('neighbor_group_invites_group_idx').on(t.groupId, t.createdAt)],
+);
+
+/**
+ * A group's messages, kept as written; masked when read (always: no booking unlocks a group). `deleted` by their author,
+ * `removed` by our team from a report (with who, when and why). The words stay for the report's staff.
+ */
+export const neighborGroupMessages = pgTable(
+  'neighbor_group_messages',
+  {
+    id: text('id').primaryKey(),
+    groupId: text('group_id')
+      .notNull()
+      .references(() => neighborGroups.id, { onDelete: 'cascade' }),
+    authorUserId: text('author_user_id')
+      .notNull()
+      .references(() => users.id),
+    body: text('body').notNull(),
+    status: text('status').notNull().default('visible'), // visible | deleted | removed
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    moderatedByUserId: text('moderated_by_user_id').references(() => users.id),
+    moderationReason: text('moderation_reason'),
+    moderatedAt: timestamp('moderated_at', { withTimezone: true }),
+  },
+  (t) => [index('neighbor_group_messages_group_idx').on(t.groupId, t.createdAt), index('neighbor_group_messages_author_idx').on(t.authorUserId, t.createdAt)],
+);

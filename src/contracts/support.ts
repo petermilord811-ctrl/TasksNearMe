@@ -233,7 +233,7 @@ export interface ReportHandlers {
  * (7.7), or a question on a task or its answer (7.9). An `answer` is reported by its question's id, and the case is
  * about the poster who wrote it (sweep QA3).
  */
-export const REPORT_TARGET_KINDS = ['task', 'helper', 'review', 'post', 'reply', 'question', 'answer', 'thanks'] as const;
+export const REPORT_TARGET_KINDS = ['task', 'helper', 'review', 'post', 'reply', 'question', 'answer', 'thanks', 'group_message'] as const;
 export type ReportTargetKind = (typeof REPORT_TARGET_KINDS)[number];
 
 /** `routes.app.report(kind, id)`: the report form for one task, helper or review. */

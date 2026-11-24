@@ -90,6 +90,7 @@ const attentionTargets: Record<AttentionTarget['kind'], { target: AttentionTarge
   booking_review: { target: { kind: 'booking_review', bookingId: 'booking / one' }, href: routes.app.bookingReview('booking / one') },
   saved_searches: { target: { kind: 'saved_searches' }, href: routes.app.savedSearches() },
   community: { target: { kind: 'community' }, href: routes.app.community() },
+  neighbor_group: { target: { kind: 'neighbor_group', groupId: 'group / one' }, href: routes.app.neighborGroup('group / one') },
   new_task: { target: { kind: 'new_task' }, href: routes.app.newTask() },
 };
 

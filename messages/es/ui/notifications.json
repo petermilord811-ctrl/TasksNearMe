@@ -86,6 +86,7 @@
     "community_mention": "{actorName} te respondió en: {title}",
     "community_recommended": "{actorName} te recomendó a alguien del vecindario: {title}",
     "community_thanked": "{actorName} te dio las gracias en Vecinos: {title}",
+    "group_message": "{count, plural, one {{actorName} escribió en {title}} other {# mensajes nuevos en {title}, el último de {actorName}}}",
     "community_ask_match": "Alguien en {area} pide una recomendación: {title}",
     "community_question_match": "Alguien en {area} tiene una pregunta sobre tus servicios: {title}",
     "community_task_posted": "{actorName} publicó una tarea desde la conversación donde te recomendaron: {title}",

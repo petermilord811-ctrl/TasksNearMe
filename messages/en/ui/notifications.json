@@ -86,6 +86,7 @@
     "community_mention": "{actorName} replied to you on: {title}",
     "community_recommended": "{actorName} recommended you to a neighbor: {title}",
     "community_thanked": "{actorName} thanked you on Neighbors: {title}",
+    "group_message": "{count, plural, one {{actorName} wrote in {title}} other {# new messages in {title}, the latest from {actorName}}}",
     "community_ask_match": "A neighbor in {area} asks for a recommendation: {title}",
     "community_question_match": "A neighbor in {area} has a question about your services: {title}",
     "community_task_posted": "{actorName} posted a task from the thread where you were recommended: {title}",

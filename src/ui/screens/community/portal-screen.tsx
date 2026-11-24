@@ -16,6 +16,7 @@ import { PortalPhoneBar } from '@/ui/components/portal/portal-phone-bar';
 import { PortalRail, YourStuffStrip } from '@/ui/components/portal/portal-rail';
 import { PortalStream } from '@/ui/components/portal/portal-stream';
 import { NeighborhoodDaysStrip } from '@/ui/components/portal/neighborhood-days-strip';
+import { NeighborGroupsCard } from '@/ui/components/portal/neighbor-groups-card';
 import { BoardComposer } from '@/ui/components/tasks/board-composer';
 
 export interface PortalScreenProps { data: PortalPageData; handlers: PortalHandlers; now: ISODateTime }
@@ -58,6 +59,8 @@ export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
         {data.announcement && <AnnouncementCard announcement={data.announcement} {...(handlers.onDismissAnnouncement ? { onDismiss: handlers.onDismissAnnouncement } : {})} />}
         {data.askArea && handlers.onSetArea && <AskAreaCard areas={data.areas} marketName={data.market.name} onSetArea={handlers.onSetArea} />}
         <YourStuffStrip rail={data.rail} query={query} />
+        {/* Building and street groups (2026-11-24): the viewer's own, opened over the page. */}
+        {!tasks && data.groups && handlers.groups && <NeighborGroupsCard data={data.groups} handlers={handlers.groups} now={now} />}
         {!tasks && data.neighborhoodDays && data.neighborhoodDays.length > 0 && <NeighborhoodDaysStrip days={data.neighborhoodDays} />}
         <div className="space-y-2">
           {/* The kinds of posts are Neighbors' own; Open tasks is one kind already. */}

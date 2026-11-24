@@ -7,7 +7,8 @@
     "reply": "Reportar una respuesta",
     "question": "Reportar una pregunta",
     "answer": "Reportar una respuesta",
-    "thanks": "Reportar una nota de agradecimiento"
+    "thanks": "Reportar una nota de agradecimiento",
+    "group_message": "Reportar un mensaje del grupo"
   },
   "subject": {
     "task": "{name}",
@@ -17,7 +18,8 @@
     "reply": "Una respuesta de {name}",
     "question": "Una pregunta de {name}",
     "answer": "Una respuesta de {name}",
-    "thanks": "Una nota de agradecimiento para {name}"
+    "thanks": "Una nota de agradecimiento para {name}",
+    "group_message": "Un mensaje de {name}"
   },
   "back": {
     "task": "Volver a la tarea",
@@ -27,7 +29,8 @@
     "reply": "Volver a la publicación",
     "question": "Volver a la tarea",
     "answer": "Volver a la tarea",
-    "thanks": "Volver"
+    "thanks": "Volver",
+    "group_message": "Volver al grupo"
   },
   "intro": "Cuéntale a soporte qué pasa. A la persona que reportes no se le dice quién la reportó.",
   "formTitle": "Tu reporte",

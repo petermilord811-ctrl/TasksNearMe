@@ -19,6 +19,7 @@ import type { OfferBlockedReason } from './helper-work';
 import type { OfferStatus } from './status';
 import type { TaskBoardPricePreset, TaskBoardTime, TaskBoardWhen, TaskPublicView } from './tasks';
 import type { NeighborhoodDayCardView } from './neighborhood-days';
+import type { NeighborGroupHandlers, NeighborGroupsData } from './neighbor-groups';
 
 /**
  * The neighborhood portal (completion plan 9.10, docs/ui/portal-9.10.md): the community's posts and the open tasks
@@ -334,6 +335,8 @@ export interface PortalPageData {
    * Absent on the Open tasks tab and when there are none.
    */
   neighborhoodDays?: NeighborhoodDayCardView[];
+  /** The viewer's building and street groups (2026-11-24), on the Neighbors tab (absent on Open tasks). */
+  groups?: NeighborGroupsData;
   /** The card staff pinned for the market (plan 10.16), unless the viewer closed it. */
   announcement?: CommunityAnnouncementView;
   /** "Welcome to Mueller" for someone who just moved or joined (2026-11-24), until they close it. */
@@ -411,4 +414,6 @@ export interface PortalHandlers extends Partial<PhoneVerifyHandlers> {
   onDismissWelcome?: ActionHandler<{ id: string }>;
   /** Staff's switch for the demo marketplace here (`samples`). ok `updated`. */
   onShowSamples?: ActionHandler<{ shown: boolean }>;
+  /** Building and street groups (2026-11-24), with `groups`. */
+  groups?: NeighborGroupHandlers;
 }

@@ -44,6 +44,7 @@ export * from './changes';
 export * from './invites';
 export * from './availability';
 export * from './neighborhood-days';
+export * from './neighbor-groups';
 export * from './rebook';
 export * from './series';
 export * from './admin-people';

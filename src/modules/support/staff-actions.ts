@@ -8,7 +8,7 @@ import { createPaymentProvider } from '@/integrations/payments';
 import { getViewer } from '@/platform/auth/viewer';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { db } from '@/platform/db/client';
-import { addCaseNote, assignCase, closeCase, moderateCaseQuestion, moderateReportedReview, moderateReportedThanks, previewResolution, reopenCase, revealCaseConversation, setCaseStatus, staffActorOf, staffEmailContact, staffReply, type StaffActor } from './staff';
+import { addCaseNote, assignCase, closeCase, moderateCaseQuestion, moderateReportedGroupMessage, moderateReportedReview, moderateReportedThanks, previewResolution, reopenCase, revealCaseConversation, setCaseStatus, staffActorOf, staffEmailContact, staffReply, type StaffActor } from './staff';
 import { archiveSavedReply, createSavedReply, updateSavedReply } from './saved-replies';
 import { decideRefundRequest, resolveCaseWithMoney, revealBookingAddress, revealBookingConversation, staffRefund } from './staff-money';
 import { requestNow } from '@/platform/clock';
@@ -85,6 +85,13 @@ export async function moderateThanksAction(caseId: string, input: ReviewModerati
   const { helperHandle, ...result } = await moderateReportedThanks(db, actor, String(caseId), input, await requestNow());
   if (result.ok && helperHandle) updateTag(`helper:${helperHandle}`);
   return refreshed(result);
+}
+
+/** Removes the case's reported group message, or restores it (2026-11-24). */
+export async function moderateGroupMessageAction(caseId: string, input: ReviewModerationInput): Promise<ActionResult> {
+  const actor = await staff();
+  if (!actor) return { ok: false, code: 'not_allowed' };
+  return refreshed(await moderateReportedGroupMessage(db, actor, String(caseId), input, await requestNow()));
 }
 
 /** Hides, removes or restores the case's reported question on its task (sweep QA2). */

@@ -7,7 +7,8 @@
     "reply": "Report a reply",
     "question": "Report a question",
     "answer": "Report an answer",
-    "thanks": "Report a thank-you note"
+    "thanks": "Report a thank-you note",
+    "group_message": "Report a group message"
   },
   "subject": {
     "task": "{name}",
@@ -17,7 +18,8 @@
     "reply": "A reply by {name}",
     "question": "A question by {name}",
     "answer": "An answer by {name}",
-    "thanks": "A thank-you note to {name}"
+    "thanks": "A thank-you note to {name}",
+    "group_message": "A message by {name}"
   },
   "back": {
     "task": "Back to the task",
@@ -27,7 +29,8 @@
     "reply": "Back to the post",
     "question": "Back to the task",
     "answer": "Back to the task",
-    "thanks": "Go back"
+    "thanks": "Go back",
+    "group_message": "Back to the group"
   },
   "intro": "Tell support what's wrong. The person you report isn't told who reported them.",
   "formTitle": "Your report",

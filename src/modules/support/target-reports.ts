@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import type { ActionResult, ReportInput, ReportPageData, ReportReason, ReportTargetKind } from '@/contracts';
 import { REPORT_TARGET_KINDS, reportInputSchema, routes } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
+import { groupMessageReportTarget } from '@/modules/community/groups';
 import { hideAfterReports } from '@/modules/community/moderation';
 import { communityPosts, communityReplies } from '@/modules/community/schema';
 import { taskQuestions } from '@/modules/questions/schema';
@@ -30,7 +31,7 @@ const HIGH_PRIORITY: ReadonlySet<ReportReason> = new Set(['harassment', 'scam_or
 interface Target {
   page: ReportPageData;
   subjectUserId: string;
-  context: { taskId?: string; reviewId?: string; postId?: string; replyId?: string; questionId?: string; answer?: boolean; thanksId?: string };
+  context: { taskId?: string; reviewId?: string; postId?: string; replyId?: string; questionId?: string; answer?: boolean; thanksId?: string; groupMessageId?: string };
 }
 
 async function targetOf(db: Db, userId: string, kind: string, id: string): Promise<Target | null> {
@@ -97,6 +98,13 @@ async function targetOf(db: Db, userId: string, kind: string, id: string): Promi
     if (!isHelper && !note.shown) return null;
     const back = isHelper || !note.handle ? routes.app.booking(note.bookingId) : routes.helperProfile(note.handle);
     return { page: { target: { kind: target, id: note.id, name: note.helper }, backHref: back }, subjectUserId: note.authorUserId, context: { thanksId: note.id } };
+  }
+  if (target === 'group_message') {
+    // A message in a building or street group (2026-11-24): only a member who can see it reports it, never its author.
+    // The case is about its author; "Go back" reopens the group over Neighbors.
+    const message = await groupMessageReportTarget(db, userId, id);
+    if (!message) return null;
+    return { page: { target: { kind: target, id: message.id, name: message.author }, backHref: routes.app.neighborGroup(message.groupId) }, subjectUserId: message.authorUserId, context: { groupMessageId: message.id } };
   }
   if (target === 'reply') {
     const [reply] = await db

@@ -1,0 +1,435 @@
+'use client';
+
+import { useEffect, useEffectEvent, useId, useRef, useState, useTransition } from 'react';
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
+import { Bell, BellOff, Copy, Flag, Link2, LogOut, ShieldCheck, Trash2, UserMinus, X } from 'lucide-react';
+import {
+  NEIGHBOR_GROUP_MESSAGE_MAX,
+  routes,
+  type ActionResult,
+  type NeighborGroupHandlers,
+  type NeighborGroupInviteView,
+  type NeighborGroupMemberView,
+  type NeighborGroupMessageView,
+  type NeighborGroupView,
+} from '@/contracts';
+import { FormFeedback } from '@/ui/components/forms/form-feedback';
+import { MaskedText } from '@/ui/components/messaging/masked-text';
+import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
+import { LocaleLink as Link } from '@/ui/lib/locale-link';
+import { useFormat } from '@/ui/lib/format';
+import { useRealtime } from '@/ui/lib/realtime';
+import { cn } from '@/ui/lib/utils';
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
+import { Badge } from '@/ui/primitives/badge';
+import { Button } from '@/ui/primitives/button';
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/ui/primitives/sheet';
+import { Spinner } from '@/ui/primitives/spinner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/primitives/tabs';
+import { Textarea } from '@/ui/primitives/textarea';
+import { GroupKindIcon } from './neighbor-group-dialogs';
+
+export type NeighborGroupTab = 'chat' | 'members';
+const failed = { ok: false as const, code: 'unknown' as const };
+
+/** Runs a handler, turning a throw into `unknown` (never assume success). */
+async function run<T>(handler: (input: T) => Promise<ActionResult>, input: T): Promise<ActionResult> {
+  try {
+    return await handler(input);
+  } catch {
+    return failed;
+  }
+}
+
+/**
+ * A building or street group, open over Neighbors (2026-11-24): a bottom sheet on phones, a panel at the side on wide
+ * screens, never a trip away. It loads when opened (`onOpen`, which also reads it) and again when a member writes
+ * (the live `group.message` notice), and after anything done in it. `initialView` is for previews.
+ */
+export function NeighborGroupSheet({ groupId, onClose, handlers, initialView, initialTab = 'chat' }: {
+  groupId: string | null;
+  /** `changed`: something here changed the list (read, left, muted), so the page refreshes it. */
+  onClose: (changed: boolean) => void;
+  handlers: NeighborGroupHandlers;
+  initialView?: NeighborGroupView;
+  initialTab?: NeighborGroupTab;
+}) {
+  const t = useTranslations('neighborGroups.group');
+  const [view, setView] = useState<NeighborGroupView | null | undefined>(initialView);
+  const [shownFor, setShownFor] = useState<string | null>(initialView ? initialView.group.id : null);
+  const ticket = useRef(0);
+  // A different group: start again (adjusted while rendering, not in an effect).
+  if (groupId !== shownFor) {
+    setShownFor(groupId);
+    setView(undefined);
+  }
+
+  const load = async (id: string) => {
+    const mine = ++ticket.current;
+    let next: NeighborGroupView | null;
+    try {
+      next = await handlers.onOpen({ groupId: id });
+    } catch {
+      next = null;
+    }
+    if (mine === ticket.current) setView(next);
+  };
+
+  const loadSoon = useEffectEvent((id: string) => void load(id));
+  useEffect(() => {
+    if (!groupId || view !== undefined) return;
+    // Deferred: never a state change straight from the effect.
+    const timer = window.setTimeout(() => loadSoon(groupId), 0);
+    return () => window.clearTimeout(timer);
+  }, [groupId, view]);
+
+  useRealtime('update', (notice) => {
+    if (notice.event !== 'group.message' || !groupId || notice.group !== groupId) return;
+    void load(groupId);
+    // Not handled: the page refreshes too, for the bell and the list.
+  });
+
+  const title = view?.group.name ?? t('loading');
+  return <Sheet open={groupId !== null} onOpenChange={(open) => { if (!open) onClose(true); }}>
+    <SheetContent
+      side="bottom"
+      showCloseButton={false}
+      className="flex h-[92dvh] max-h-[92dvh] flex-col gap-0 rounded-t-2xl p-0 sm:inset-y-0 sm:left-auto sm:right-0 sm:h-dvh sm:max-h-dvh sm:w-full sm:max-w-lg sm:rounded-none sm:border-l"
+    >
+      {/* Loaded, the group's own heading names the sheet (`inSheet`). */}
+      {!view && <SheetTitle className="sr-only">{title}</SheetTitle>}
+      {!view && <SheetDescription className="sr-only">{t('loading')}</SheetDescription>}
+      {view
+        ? <NeighborGroupPanel key={view.group.id} view={view} handlers={handlers} initialTab={initialTab} inSheet onReload={() => groupId && load(groupId)} onClose={(changed) => onClose(changed)} />
+        : <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+          {view === null
+            ? <>
+              <p className="text-sm text-muted-foreground">{t('gone')}</p>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" className="min-h-11" onClick={() => { if (groupId) { setView(undefined); } }}>{t('retry')}</Button>
+                <Button type="button" className="min-h-11" onClick={() => onClose(true)}>{t('close')}</Button>
+              </div>
+            </>
+            : <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><Spinner aria-hidden="true" />{t('loading')}</p>}
+        </div>}
+    </SheetContent>
+  </Sheet>;
+}
+
+/** The group itself: its header, the chat (newest at the bottom, the composer under it) and its members. */
+export function NeighborGroupPanel({ view, handlers, initialTab = 'chat', inSheet = false, onReload, onClose }: {
+  view: NeighborGroupView;
+  handlers: NeighborGroupHandlers;
+  initialTab?: NeighborGroupTab;
+  /** Inside its sheet: its heading and line name the dialog. */
+  inSheet?: boolean;
+  onReload: () => void;
+  onClose: (changed: boolean) => void;
+}) {
+  const t = useTranslations('neighborGroups.group');
+  const kinds = useTranslations('neighborGroups.kinds');
+  const [tab, setTab] = useState<NeighborGroupTab>(initialTab);
+  const [muting, startMuting] = useTransition();
+  const { group, you } = view;
+  const subtitle = t('subtitle', { kind: kinds(group.kind), area: group.areaName, count: group.memberCount });
+
+  const toggleMute = () => startMuting(async () => {
+    const result = await run(handlers.onMute, { groupId: group.id, muted: !you.muted });
+    if (result.ok) {
+      toast.success(t(you.muted ? 'unmutedToast' : 'mutedToast'));
+      onReload();
+    } else toast.error(t('retry'));
+  });
+
+  return <Tabs value={tab} onValueChange={(value) => setTab(value as NeighborGroupTab)} className="flex min-h-0 flex-1 flex-col gap-0">
+    <header className="space-y-3 border-b px-4 pb-3 pt-4">
+      <div className="flex items-start gap-3">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><GroupKindIcon kind={group.kind} className="size-5" /></span>
+        <div className="min-w-0 flex-1">
+          {inSheet
+            ? <>
+              <SheetTitle className="truncate text-lg font-semibold leading-tight">{group.name}</SheetTitle>
+              <SheetDescription className="text-sm text-muted-foreground">{subtitle}</SheetDescription>
+            </>
+            : <>
+              <h2 className="truncate text-lg font-semibold leading-tight">{group.name}</h2>
+              <p className="text-sm text-muted-foreground">{subtitle}</p>
+            </>}
+        </div>
+        <Button type="button" variant="ghost" size="icon" className="size-11" aria-pressed={you.muted} aria-label={t(you.muted ? 'unmute' : 'mute')} disabled={muting} onClick={toggleMute}>
+          {muting ? <Spinner aria-hidden="true" /> : you.muted ? <BellOff aria-hidden="true" /> : <Bell aria-hidden="true" />}
+        </Button>
+        <Button type="button" variant="ghost" size="icon" className="size-11" aria-label={t('close')} onClick={() => onClose(true)}><X aria-hidden="true" /></Button>
+      </div>
+      <TabsList className="w-full">
+        <TabsTrigger value="chat" className="min-h-10 flex-1">{t('tabs.chat')}</TabsTrigger>
+        <TabsTrigger value="members" className="min-h-10 flex-1">{t('tabs.members')}</TabsTrigger>
+      </TabsList>
+    </header>
+    <TabsContent value="chat" className="flex min-h-0 flex-1 flex-col">
+      <GroupStream view={view} handlers={handlers} onReload={onReload} onReport={() => onClose(false)} />
+      {you.canSend
+        ? <GroupComposer groupId={group.id} groupName={group.name} onSend={handlers.onSend} onSent={onReload} />
+        : <p className="border-t px-4 py-3 text-sm text-muted-foreground">{t('cantSend')}</p>}
+    </TabsContent>
+    <TabsContent value="members" className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <GroupMembers view={view} handlers={handlers} onReload={onReload} onLeft={() => onClose(true)} />
+    </TabsContent>
+  </Tabs>;
+}
+
+function GroupStream({ view, handlers, onReload, onReport }: { view: NeighborGroupView; handlers: NeighborGroupHandlers; onReload: () => void; onReport: () => void }) {
+  const t = useTranslations('neighborGroups.group');
+  const list = useRef<HTMLDivElement>(null);
+  const newest = view.messages[view.messages.length - 1]?.id;
+  // Newest at the bottom: the stream opens there, and follows each new message.
+  useEffect(() => {
+    const element = list.current;
+    if (element) element.scrollTop = element.scrollHeight;
+  }, [newest]);
+
+  return <div ref={list} className="min-h-0 flex-1 overflow-y-auto px-4 py-3" aria-live="polite" aria-relevant="additions">
+    {view.hasEarlier && <p className="pb-3 text-center text-xs text-muted-foreground">{t('earlier')}</p>}
+    {view.messages.length === 0
+      ? <p className="py-10 text-center text-sm text-muted-foreground">{t('empty')}</p>
+      : <ol className="space-y-3">{view.messages.map((message) => <GroupMessage key={message.id} message={message} onDelete={handlers.onDeleteMessage} onDeleted={onReload} onReport={onReport} />)}</ol>}
+    {view.blockedHidden > 0 && <p className="pt-3 text-center text-xs text-muted-foreground">{t('blockedHidden', { count: view.blockedHidden })}</p>}
+  </div>;
+}
+
+function GroupMessage({ message, onDelete, onDeleted, onReport }: { message: NeighborGroupMessageView; onDelete: NeighborGroupHandlers['onDeleteMessage']; onDeleted: () => void; onReport: () => void }) {
+  const t = useTranslations('neighborGroups.group');
+  const { formatDateTime } = useFormat();
+  const [confirming, setConfirming] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const { author } = message;
+  const mine = author.isYou;
+  const remove = () => startTransition(async () => {
+    const result = await run(onDelete, { messageId: message.id });
+    if (result.ok) {
+      setConfirming(false);
+      onDeleted();
+    } else toast.error(t('retry'));
+  });
+
+  return <li className={cn('flex gap-2', mine && 'flex-row-reverse')}>
+    {!mine && <InitialsAvatar initials={author.initials} size="sm" {...(author.photo ? { photo: author.photo } : {})} />}
+    <div className={cn('min-w-0 max-w-[85%] space-y-1 rounded-2xl px-3 py-2', mine ? 'bg-primary/10' : 'bg-muted/60', message.status !== 'visible' && 'bg-transparent ring-1 ring-border')}>
+      <p className="text-xs text-muted-foreground">
+        <span className="font-semibold text-foreground">{mine ? t('you') : author.displayName}</span>
+        {!mine && author.areaName ? ` · ${author.areaName}` : ''}
+        {' · '}<time dateTime={message.createdAt}>{formatDateTime(message.createdAt)}</time>
+      </p>
+      {message.status === 'visible'
+        ? <MaskedText segments={message.segments} links={false} className="whitespace-pre-wrap text-[15px] leading-6 [overflow-wrap:anywhere]" />
+        : <p className="text-sm italic text-muted-foreground">{t(message.status)}</p>}
+      {(message.reportedByYou || message.canReport || message.canDelete) && <div className="flex flex-wrap items-center gap-1 pt-0.5">
+        {message.reportedByYou && <Badge variant="secondary">{t('reported')}</Badge>}
+        {message.canReport && <Button asChild variant="ghost" size="sm" className="h-9 px-2 text-muted-foreground">
+          <Link href={routes.app.report('group_message', message.id)} aria-label={t('reportLabel', { name: author.displayName })} onClick={onReport}><Flag aria-hidden="true" />{t('report')}</Link>
+        </Button>}
+        {message.canDelete && <Button type="button" variant="ghost" size="sm" className="h-9 px-2 text-muted-foreground" aria-label={t('deleteLabel')} onClick={() => setConfirming(true)}><Trash2 aria-hidden="true" />{t('delete')}</Button>}
+      </div>}
+    </div>
+    {message.canDelete && <AlertDialog open={confirming} onOpenChange={(open) => { if (!pending) setConfirming(open); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t('deleteTitle')}</AlertDialogTitle>
+          <AlertDialogDescription>{t('deleteDescription')}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>{t('cancel')}</AlertDialogCancel>
+          <Button type="button" variant="destructive" disabled={pending} aria-busy={pending} onClick={remove}>{pending && <Spinner aria-hidden="true" />}{t(pending ? 'deleting' : 'deleteConfirm')}</Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>}
+  </li>;
+}
+
+function GroupComposer({ groupId, groupName, onSend, onSent }: { groupId: string; groupName: string; onSend: NeighborGroupHandlers['onSend']; onSent: () => void }) {
+  const t = useTranslations('neighborGroups.group');
+  const fieldCopy = useTranslations('forms.fieldErrors');
+  const id = useId();
+  const [body, setBody] = useState('');
+  const [result, setResult] = useState<ActionResult | undefined>();
+  const [pending, startTransition] = useTransition();
+  const empty = body.trim().length === 0;
+  const fieldError = result && !result.ok ? result.fieldErrors?.body?.[0] : undefined;
+  const send = () => startTransition(async () => {
+    const next = await run(onSend, { groupId, body });
+    if (next.ok) {
+      setBody('');
+      setResult(undefined);
+      onSent();
+    } else setResult(next);
+  });
+
+  return <form noValidate aria-busy={pending} className="space-y-2 border-t bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]" onSubmit={(event) => { event.preventDefault(); if (!pending && !empty) send(); }}>
+    <div className="flex items-end gap-2">
+      <label htmlFor={`${id}-body`} className="sr-only">{t('messageLabel', { name: groupName })}</label>
+      <Textarea
+        id={`${id}-body`}
+        value={body}
+        onChange={(event) => setBody(event.target.value)}
+        onKeyDown={(event) => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); if (!pending && !empty) send(); } }}
+        placeholder={t('placeholder')}
+        maxLength={NEIGHBOR_GROUP_MESSAGE_MAX}
+        rows={2}
+        className="max-h-40 min-h-11 resize-none"
+        aria-describedby={`${id}-note`}
+        aria-invalid={Boolean(fieldError)}
+      />
+      <Button type="submit" className="min-h-11 shrink-0" disabled={pending || empty} aria-busy={pending}>{pending && <Spinner aria-hidden="true" />}{t(pending ? 'sending' : 'send')}</Button>
+    </div>
+    <p id={`${id}-note`} className="text-xs text-muted-foreground">{t('masked')}</p>
+    {fieldError && <p className="text-sm text-destructive">{fieldCopy(fieldCopy.has(fieldError) ? fieldError : 'invalid')}</p>}
+    <FormFeedback result={result && !result.ok && !fieldError ? result : undefined} />
+  </form>;
+}
+
+function GroupMembers({ view, handlers, onReload, onLeft }: { view: NeighborGroupView; handlers: NeighborGroupHandlers; onReload: () => void; onLeft: () => void }) {
+  const t = useTranslations('neighborGroups.people');
+  const g = useTranslations('neighborGroups.group');
+  const [leaving, setLeaving] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const { group, you } = view;
+  const last = view.members.length <= 1;
+  const leave = () => startTransition(async () => {
+    const result = await run(handlers.onLeave, { groupId: group.id });
+    if (result.ok) {
+      toast.success(g('left', { group: group.name }));
+      setLeaving(false);
+      onLeft();
+    } else toast.error(g('retry'));
+  });
+
+  return <div className="space-y-6">
+    <GroupInvites view={view} handlers={handlers} onReload={onReload} />
+    <section aria-labelledby={`${group.id}-members`} className="space-y-2">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 id={`${group.id}-members`} className="text-base font-semibold">{t('title')}</h3>
+        <p className="text-sm text-muted-foreground">{t('count', { count: view.members.length, limit: view.memberLimit })}</p>
+      </div>
+      <ul className="divide-y rounded-xl border">
+        {view.members.map((member) => <GroupMember key={member.userId} member={member} groupId={group.id} onRemove={handlers.onRemoveMember} onRemoved={onReload} />)}
+      </ul>
+    </section>
+    <div className="space-y-2">
+      <Button type="button" variant="outline" className="min-h-11 w-full text-destructive" onClick={() => setLeaving(true)}><LogOut aria-hidden="true" />{g('leave')}</Button>
+    </div>
+    <AlertDialog open={leaving} onOpenChange={(open) => { if (!pending) setLeaving(open); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{g('leaveTitle', { group: group.name })}</AlertDialogTitle>
+          <AlertDialogDescription>{last ? g('leaveLast') : you.role === 'admin' ? `${g('leaveDescription')} ${g('leaveAdmin')}` : g('leaveDescription')}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>{g('cancel')}</AlertDialogCancel>
+          <Button type="button" variant="destructive" disabled={pending} aria-busy={pending} onClick={leave}>{pending && <Spinner aria-hidden="true" />}{g('leaveConfirm')}</Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </div>;
+}
+
+function GroupMember({ member, groupId, onRemove, onRemoved }: { member: NeighborGroupMemberView; groupId: string; onRemove: NeighborGroupHandlers['onRemoveMember']; onRemoved: () => void }) {
+  const t = useTranslations('neighborGroups.people');
+  const g = useTranslations('neighborGroups.group');
+  const [confirming, setConfirming] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const remove = () => startTransition(async () => {
+    const result = await run(onRemove, { groupId, userId: member.userId });
+    if (result.ok) {
+      toast.success(t('removed', { name: member.displayName }));
+      setConfirming(false);
+      onRemoved();
+    } else toast.error(g('retry'));
+  });
+
+  return <li className="flex items-center gap-3 px-3 py-2">
+    <InitialsAvatar initials={member.initials} size="sm" {...(member.photo ? { photo: member.photo } : {})} />
+    <div className="min-w-0 flex-1">
+      <p className="truncate text-sm font-medium">{member.displayName}{member.isYou && <span className="text-muted-foreground"> ({t('you')})</span>}</p>
+      {member.areaName && <p className="truncate text-xs text-muted-foreground">{member.areaName}</p>}
+    </div>
+    {member.role === 'admin' && <Badge variant="secondary" className="gap-1"><ShieldCheck aria-hidden="true" className="size-3" />{t('admin')}</Badge>}
+    {member.canRemove && <Button type="button" variant="ghost" size="sm" className="min-h-11" aria-label={t('removeLabel', { name: member.displayName })} onClick={() => setConfirming(true)}><UserMinus aria-hidden="true" />{t('remove')}</Button>}
+    {member.canRemove && <AlertDialog open={confirming} onOpenChange={(open) => { if (!pending) setConfirming(open); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t('removeTitle', { name: member.displayName })}</AlertDialogTitle>
+          <AlertDialogDescription>{t('removeDescription')}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>{g('cancel')}</AlertDialogCancel>
+          <Button type="button" variant="destructive" disabled={pending} aria-busy={pending} onClick={remove}>{pending && <Spinner aria-hidden="true" />}{t('removeConfirm')}</Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>}
+  </li>;
+}
+
+function GroupInvites({ view, handlers, onReload }: { view: NeighborGroupView; handlers: NeighborGroupHandlers; onReload: () => void }) {
+  const t = useTranslations('neighborGroups.invites');
+  const [result, setResult] = useState<ActionResult | undefined>();
+  const [pending, startTransition] = useTransition();
+  const make = () => startTransition(async () => {
+    let next;
+    try {
+      next = await handlers.onInvite({ groupId: view.group.id });
+    } catch {
+      next = failed;
+    }
+    if (next.ok) {
+      setResult(undefined);
+      onReload();
+    } else setResult({ ok: false, code: next.code });
+  });
+
+  return <section aria-labelledby={`${view.group.id}-invites`} className="space-y-3">
+    <div className="space-y-1">
+      <h3 id={`${view.group.id}-invites`} className="text-base font-semibold">{t('title')}</h3>
+      <p className="text-sm text-muted-foreground">{t('intro', { area: view.group.areaName })}</p>
+    </div>
+    {view.canInvite
+      ? <Button type="button" className="min-h-11" disabled={pending} aria-busy={pending} onClick={make}>{pending ? <Spinner aria-hidden="true" /> : <Link2 aria-hidden="true" />}{t(pending ? 'making' : 'make')}</Button>
+      : <p className="text-sm text-muted-foreground">{t('full')}</p>}
+    <FormFeedback result={result} />
+    {view.invites.length > 0 && <ul className="space-y-2">{view.invites.map((invite) => <GroupInvite key={invite.id} invite={invite} onRevoke={handlers.onRevokeInvite} onRevoked={onReload} />)}</ul>}
+  </section>;
+}
+
+function GroupInvite({ invite, onRevoke, onRevoked }: { invite: NeighborGroupInviteView; onRevoke: NeighborGroupHandlers['onRevokeInvite']; onRevoked: () => void }) {
+  const t = useTranslations('neighborGroups.invites');
+  const g = useTranslations('neighborGroups.group');
+  const { formatDateTime } = useFormat();
+  const [pending, startTransition] = useTransition();
+  const copy = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(t('copied'));
+    } catch {
+      toast.error(t('copyFailed'));
+    }
+  };
+  const revoke = () => startTransition(async () => {
+    const result = await run(onRevoke, { inviteId: invite.id });
+    if (result.ok) {
+      toast.success(t('revoked'));
+      onRevoked();
+    } else toast.error(g('retry'));
+  });
+
+  return <li className="space-y-2 rounded-xl border bg-muted/30 p-3">
+    <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <p className="font-mono text-base font-semibold tracking-wider">{t('code', { code: invite.code })}</p>
+      <p className="text-xs text-muted-foreground">{t('expires', { date: formatDateTime(invite.expiresAt) })} · {t('by', { name: invite.createdBy })}</p>
+    </div>
+    <div className="flex flex-wrap gap-2">
+      <Button type="button" variant="outline" size="sm" className="min-h-11" onClick={() => void copy(new URL(invite.href, window.location.origin).toString())}><Link2 aria-hidden="true" />{t('copyLink')}</Button>
+      <Button type="button" variant="outline" size="sm" className="min-h-11" onClick={() => void copy(invite.code)}><Copy aria-hidden="true" />{t('copyCode')}</Button>
+      {invite.canRevoke && <Button type="button" variant="ghost" size="sm" className="min-h-11 text-destructive" disabled={pending} aria-busy={pending} aria-label={t('revokeLabel', { code: invite.code })} onClick={revoke}>{pending && <Spinner aria-hidden="true" />}{t('revoke')}</Button>}
+    </div>
+  </li>;
+}

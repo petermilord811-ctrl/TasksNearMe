@@ -109,6 +109,16 @@ Result: the task is `open`. Matching helpers (category, service area, alert sett
    - **Who can take one:** the trip goes to the task's place, so the request must be for one of the client's open tasks whose place is in that neighborhood (not the client's home area, which can be blank, stale, or not where the work is). Everyone sees the card.
    - The card reads **open**, **filling up**, **full** (no visit open), **past** (every visit has started), or **canceled**. Jordan can cancel the visits still open or requested (a waiting request is declined and its hold released); booked visits follow the normal cancellation rules.
 
+### J3b — Building and street groups (owner, 2026-11-24)
+
+Small private group chats on **Neighbors**, with the same masking and reporting as other chats. Maya lives in Mueller.
+1. Under **Your groups** on Neighbors she taps **Create a group**: a name ("Aldrich St 1900 block") and whether it's for a building or a street. It belongs to her own neighborhood; she's its admin. At most 3 groups created a person, 50 members a group.
+2. In the group (a sheet over Neighbors, never another page) she taps **Make an invite**: a link and an 8-character code that work for 7 days. She shares them herself; we never list, suggest or search groups, and nobody is added without accepting.
+3. Ben, also in Mueller, opens the link: Neighbors opens **Join a group** with the group's name, kind, area and size, and what members will see of him (first name, last initial, neighborhood; never his address, phone or email). He taps **Join group**. Someone from another neighborhood sees why they can't join; an expired or turned-off code names nothing.
+4. The chat is newest at the bottom, the composer under it; phone numbers, emails, links and payment handles are hidden, always (no booking unlocks a group). Each message can be reported (the report form over the page; staff see only that message and can remove it) and deleted by its author. People who blocked one another don't see each other's messages.
+5. A new message is a notification **in the app only** (never email, text or push), one unread a group that later messages join; a member can mute the group. The admin removes members and turns invites off; anyone can leave (the admin role passes to the member who joined first; the last one out closes the group).
+6. Text only for now: photos in groups wait for their own file access rule.
+
 ### J4 — Confirm and pay (poster accepts an offer)
 
 1. **Book Jordan** opens the confirmation screen. It shows the scope summary, schedule, helper, and price breakdown (below), the cancellation policy summary, "Jordan will see your exact address after you book", and the terms checkbox.
