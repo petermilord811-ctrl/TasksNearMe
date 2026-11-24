@@ -2,11 +2,12 @@
 
 import { refresh } from 'next/cache';
 import { cookies } from 'next/headers';
-import type { ActionResult, AskForOfferInput, ConversationFlagInput, ConversationSearchData, DirectMessageSetting, MessageReaction, MessageSavedReplyInput, MessageTranslation, PhotoUploadResult, ReplySuggestions, SendMessageInput, StartDirectChatInput } from '@/contracts';
+import { catchUpInputSchema, translateManyInputSchema, type ActionResult, type AskForOfferInput, type CatchUpInput, type ConversationFlagInput, type ConversationSearchData, type ConversationSummary, type DirectMessageSetting, type MessageReaction, type MessageSavedReplyInput, type MessageTranslation, type MessageTranslations, type PhotoUploadResult, type ReplySuggestions, type SendMessageInput, type StartDirectChatInput, type TranslateManyInput } from '@/contracts';
 import { AI_STAND_IN_COOKIE, wantsAiStandIn } from '@/integrations/ai';
 import { createFakeReplySuggester } from '@/integrations/ai/reply-suggester';
-import { createFakeTranslator } from '@/integrations/ai/translator';
-import { suggestReplies, translateMessage } from './assist';
+import { createFakeConversationSummarizer } from '@/integrations/ai/conversation-summarizer';
+import { createFakeBatchTranslator, createFakeTranslator } from '@/integrations/ai/translator';
+import { catchUp, suggestReplies, translateMessage, translateMessages } from './assist';
 import { askForOffer } from './asks';
 import { storePhoto } from '@/modules/files/uploads';
 import { fileStorage } from '@/modules/tasks/server';
@@ -169,6 +170,27 @@ export async function suggestRepliesAction(threadId: string): Promise<ReplySugge
   const userId = await signedInUserId();
   if (!userId) return null;
   return suggestReplies(db, userId, String(threadId), await requestNow(), (await aiStandIn()) ? createFakeReplySuggester() : undefined);
+}
+
+/**
+ * "Translate this conversation" (2026-11-24): several of the other person's messages in the viewer's language at once (at
+ * most 20 ids). Called with the conversation's id, from the page and the chat window alike (nothing to refresh).
+ */
+export async function translateMessagesAction(threadId: string, input: TranslateManyInput): Promise<MessageTranslations | null> {
+  const userId = await signedInUserId();
+  if (!userId) return null;
+  const parsed = translateManyInputSchema.safeParse(input);
+  if (!parsed.success) return null;
+  return translateMessages(db, userId, String(threadId), parsed.data.messageIds, await requestNow(), (await aiStandIn()) ? createFakeBatchTranslator() : undefined);
+}
+
+/** "Catch me up" (2026-11-24): a summary of what the viewer missed, never stored. Called with the conversation's id. */
+export async function catchUpAction(threadId: string, input: CatchUpInput): Promise<ConversationSummary | null> {
+  const userId = await signedInUserId();
+  if (!userId) return null;
+  const parsed = catchUpInputSchema.safeParse(input ?? {});
+  if (!parsed.success) return null;
+  return catchUp(db, userId, String(threadId), parsed.data.fromId ? { fromId: parsed.data.fromId } : {}, await requestNow(), (await aiStandIn()) ? createFakeConversationSummarizer() : undefined);
 }
 
 /** Ask the helper of a direct conversation for an offer on one of the viewer's open tasks (2026-11-23): ok `sent`. */

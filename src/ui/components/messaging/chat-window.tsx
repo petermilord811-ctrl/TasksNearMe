@@ -30,6 +30,7 @@ import { buttonVariants } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
 import { MessageComposerContent } from '@/ui/screens/messages/message-composer';
 import { MessageLog } from '@/ui/screens/messages/message-log';
+import { ChatAssistProvider } from '@/ui/screens/messages/chat-assist';
 import { ReplyProvider } from '@/ui/screens/messages/reply-context';
 import { subjectHref } from '@/ui/screens/messages/thread-screen';
 import { ThreadPresence } from '@/ui/screens/messages/thread-presence';
@@ -143,6 +144,8 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
     onSuggest: () => handlers.onSuggest(id),
     // GIFs (2026-11-24): only where the app offers them.
     ...(handlers.onSearchGifs && handlers.onAttachGif ? { onSearchGifs: handlers.onSearchGifs, onAttachGif: handlers.onAttachGif } : {}),
+    onTranslateMany: (input) => handlers.onTranslateMany(id, input),
+    onCatchUp: (input) => handlers.onCatchUp(id, input),
   };
   // Suggest replies answers the other person's latest message, when they wrote last (2026-11-23).
   const lastWritten = [...messages].reverse().find((message) => message.kind === 'text');
@@ -150,7 +153,13 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
   const safetyMenu = safety ? { subject: safety, handlers: { onReport: (input: Parameters<ChatThreadHandlers['onReport']>[1]) => handlers.onReport(id, input), onBlock: (input: { blocked: boolean }) => handlers.onBlock(id, input) } } : undefined;
   // The header never overlaps itself, however narrow (2026-11-23, owner: "bugs in header"): the name and its line below
   // take what's left after the buttons and wrap; the way to what it's about lives in the menu, with search and the rest.
-  return <section aria-label={w('conversation', { name: other.displayName })} data-drop-photos="" className="@container/thread relative flex min-h-0 flex-1 flex-col">
+  // The conversation translated and "Catch me up" (2026-11-24): the menu turns them on, the messages show them.
+  return <ChatAssistProvider key={id} threadId={id} otherId={thread.otherParty.id}
+    {...(data.assist ? { offered: data.assist, ...(data.assist.language ? { language: data.assist.language } : {}) } : {})}
+    {...(data.firstUnreadId ? { firstUnreadId: data.firstUnreadId } : {})}
+    {...(data.catchUp ? { catchUp: data.catchUp } : {})}
+    onTranslateMany={(input) => handlers.onTranslateMany(id, input)} onCatchUp={(input) => handlers.onCatchUp(id, input)}>
+  <section aria-label={w('conversation', { name: other.displayName })} data-drop-photos="" className="@container/thread relative flex min-h-0 flex-1 flex-col">
     <header className="flex min-w-0 items-center gap-2 border-b border-foreground/[0.07] px-2.5 py-1.5 dark:border-white/[0.06]">
       <InitialsAvatar initials={other.initials} photo={other.photo} size="sm" />
       <div className="min-w-0 flex-1 overflow-hidden">
@@ -190,7 +199,8 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
           {closedReason && subjectLink && <Link href={subjectLink} className="mt-1 inline-flex min-h-9 items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">{t(`wayOn.${thread.subject.kind}`)}<ArrowRight aria-hidden="true" className="size-4" /></Link>}
         </div>}
     </ReplyProvider>
-  </section>;
+  </section>
+  </ChatAssistProvider>;
 }
 
 /** The conversations, with Help pinned on top. */

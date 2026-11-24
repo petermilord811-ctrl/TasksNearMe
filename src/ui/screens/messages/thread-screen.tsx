@@ -15,6 +15,7 @@ import { Badge } from '@/ui/primitives/badge';
 import { buttonVariants } from '@/ui/primitives/button';
 import { MessageComposerContent } from './message-composer';
 import { MessageLog } from './message-log';
+import { ChatAssistProvider, type ChatAssistSeed } from './chat-assist';
 import { ReplyProvider } from './reply-context';
 import { ThreadPresence } from './thread-presence';
 
@@ -74,8 +75,10 @@ export function ThreadPanes({ inbox, currentId, now, help, listHandlers, childre
  *
  * State seeds keep async outcomes reproducible in the preview gallery.
  */
-export function ThreadContent({ data, handlers, now, safety, composerState, focusId, wide = false }: ThreadScreenProps & {
+export function ThreadContent({ data, handlers, now, safety, composerState, assistState, focusId, wide = false }: ThreadScreenProps & {
   composerState?: Pick<ComponentProps<typeof MessageComposerContent>, 'initialResult' | 'initialPending' | 'initialBody' | 'initialSuggestions'>;
+  /** "Translate this conversation" on, translations in, or a "Catch me up" card's state (2026-11-24). */
+  assistState?: ChatAssistSeed;
   /** Beside the conversation list: it fills its column instead of the reading width. */
   wide?: boolean;
 }) {
@@ -93,8 +96,16 @@ export function ThreadContent({ data, handlers, now, safety, composerState, focu
   const suggestFor = data.assist?.suggest && handlers.onSuggest && lastWritten?.sender === 'them' ? lastWritten.id : undefined;
 
   // One line on top (back, who, what it's about, the way to it), then the chat panel, which takes the rest of the
-  // screen so its composer sits at the bottom (audit M40; the page has no tab dock).
-  return <div className={cn('mx-auto flex w-full flex-col gap-3', wide ? 'max-w-reading lg:max-w-none' : 'max-w-reading')}>
+  // screen so its composer sits at the bottom (audit M40; the page has no tab dock). The conversation translated and
+  // "Catch me up" (2026-11-24) span both: the menu turns them on, the messages show them.
+  return <ChatAssistProvider key={thread.id} threadId={thread.id} otherId={thread.otherParty.id}
+    {...(data.assist ? { offered: data.assist, ...(data.assist.language ? { language: data.assist.language } : {}) } : {})}
+    {...(data.firstUnreadId ? { firstUnreadId: data.firstUnreadId } : {})}
+    {...(data.catchUp ? { catchUp: data.catchUp } : {})}
+    {...(handlers.onTranslateMany ? { onTranslateMany: handlers.onTranslateMany } : {})}
+    {...(handlers.onCatchUp ? { onCatchUp: handlers.onCatchUp } : {})}
+    {...(assistState ? { initial: assistState } : {})}>
+  <div className={cn('mx-auto flex w-full flex-col gap-3', wide ? 'max-w-reading lg:max-w-none' : 'max-w-reading')}>
     <header className="flex min-w-0 items-center gap-2 sm:gap-3">
       <Link href={routes.app.messages()} aria-label={t('back')} title={t('back')} className={buttonVariants({ variant: 'ghost', size: 'icon', className: cn('-ml-2 size-11 shrink-0 rounded-full', wide && 'lg:hidden') })}><ArrowLeft aria-hidden="true" className="size-5" /></Link>
       <InitialsAvatar initials={other.initials} photo={other.photo} />
@@ -148,5 +159,6 @@ export function ThreadContent({ data, handlers, now, safety, composerState, focu
         </div>}
       </ReplyProvider>
     </div>
-  </div>;
+  </div>
+  </ChatAssistProvider>;
 }

@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 import { Popover, PopoverAnchor } from '@/ui/primitives/popover';
 import { PickerAction, ReactionBurst, ReactionPicker, useBubbleGestures } from './message-reactions';
 import { REACTION_EMOJI, useReply } from './reply-context';
+import { useChatAssist } from './chat-assist';
+import { CatchUpCard, TranslatingBar, TranslationNote } from './chat-assist-views';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { useRealtimeConnected } from '@/ui/lib/realtime';
@@ -189,6 +191,17 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
       return next;
     }));
   };
+  // The whole conversation translated, and "Catch me up" (2026-11-24): from the conversation's provider, where it has one.
+  const assist = useChatAssist();
+  const translating = assist?.translating ?? false;
+  const translatePaused = assist?.paused ?? false;
+  const wantTranslations = assist?.want;
+  const otherFirstName = otherParty.displayName.split(' ')[0] ?? otherParty.displayName;
+  const catchUpState = assist && assist.catchUp.status !== 'idle' ? assist.catchUp : undefined;
+  // Above "New messages" (where the summary starts), or after the latest messages when nothing was unread.
+  const cardBefore = catchUpState && assist?.catchUpFrom && messages.some((message) => message.id === assist.catchUpFrom) ? assist.catchUpFrom : undefined;
+  const cardAtEnd = Boolean(catchUpState) && !cardBefore;
+  const catchUpCard = assist && catchUpState ? <CatchUpCard state={catchUpState} name={otherFirstName} compact={compact} onAsk={assist.askCatchUp} onDismiss={assist.dismissCatchUp} /> : null;
   // Translations asked for in this visit (never stored): each message's, shown under it until "Show original" (2026-11-23).
   const [translations, setTranslations] = useState<Record<string, { status: 'loading' | 'error' } | { status: 'ready'; text: string; shown: boolean }>>({});
   const translate = (messageId: string) => {
@@ -280,6 +293,39 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
     };
   }, [focusId, messages]);
 
+  // "Catch me up" in view as it's offered, asked for or answered (2026-11-24): above "New messages", the card on top with
+  // the first unread under it; after the latest messages, the newest still in view above it. Only the log scrolls.
+  const catchUpStatus = catchUpState?.status;
+  useLayoutEffect(() => {
+    const log = logRef.current;
+    const card = catchUpStatus ? log?.querySelector<HTMLElement>('[data-catch-up]') : null;
+    if (!log || !card) return;
+    const box = log.getBoundingClientRect();
+    const rect = card.getBoundingClientRect();
+    if (rect.top >= box.top && rect.bottom <= box.bottom) return;
+    log.scrollTop += cardAtEnd && rect.height < box.height ? rect.bottom - box.bottom + 12 : rect.top - box.top - 12;
+    shown.current.height = log.scrollHeight;
+  }, [catchUpStatus, cardAtEnd]);
+
+  // "Translate this conversation" (2026-11-24): the other person's messages as they come into view (and a screen's worth
+  // around), newest first, a few at a time; each once a visit (the provider keeps what's asked).
+  useEffect(() => {
+    const log = logRef.current;
+    if (!translating || translatePaused || !wantTranslations || !log) return;
+    const ids = (nodes: Iterable<Element>) => [...nodes].map((node) => (node as HTMLElement).dataset.translateId ?? '').filter(Boolean).reverse();
+    const nodes = log.querySelectorAll('[data-translate-id]');
+    if (typeof IntersectionObserver === 'undefined') {
+      wantTranslations(ids(nodes));
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      const inView = ids(entries.filter((entry) => entry.isIntersecting).map((entry) => entry.target));
+      if (inView.length > 0) wantTranslations(inView);
+    }, { root: log, rootMargin: '480px 0px' });
+    nodes.forEach((node) => observer.observe(node));
+    return () => observer.disconnect();
+  }, [translating, translatePaused, wantTranslations, messages]);
+
   // The message box grows under the log (photos to send, a reply, more lines) and the log gets shorter: a reader at the
   // bottom stays there, the newest message in full view (2026-11-23, owner: "unable to scroll to bottom to see photo").
   useEffect(() => {
@@ -304,6 +350,7 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
   }
 
   return <>
+  <TranslatingBar name={otherFirstName} compact={compact} />
   <div aria-live="polite" aria-relevant="additions" className="sr-only">
     {heard.announcements.map((item) => <p key={item.key}>{item.message ? <>{item.message.sender === 'them' ? otherParty.displayName : t('system')}: <MessageContent message={item.message} /></> : t('loadedEarlier', { count: item.earlierCount ?? 0 })}</p>)}
   </div>
@@ -330,9 +377,11 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
           const previous = entries[index - 1];
           // The same person, a moment later: no name again, closer to the one before.
           const grouped = Boolean(previous && previous.kind === 'text' && message.kind === 'text' && previous.sender === message.sender && Date.parse(message.createdAt) - Date.parse(previous.createdAt) < GROUP_MS && message.id !== unreadFrom);
-          const divider = message.id === unreadFrom
+          const newLine = message.id === unreadFrom
             ? <li><p className="flex items-center gap-3 py-1 text-xs font-semibold text-primary"><span aria-hidden="true" className="h-px flex-1 bg-primary/40" />{t('newMessages')}<span aria-hidden="true" className="h-px flex-1 bg-primary/40" /></p></li>
             : null;
+          // "Catch me up" goes above "New messages" (2026-11-24).
+          const divider = message.id === cardBefore ? <><li className="py-1">{catchUpCard}</li>{newLine}</> : newLine;
           const sender = message.sender === 'me' ? t('you') : message.sender === 'them' ? otherParty.displayName : t('system');
           const isNotice = message.kind !== 'text';
           const mine = message.sender === 'me';
@@ -359,7 +408,11 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
             </article>
           </li></Fragment>;
           const replyTo = () => setReplyTo({ id: message.id, name: sender, text: message.segments.map((segment) => (segment.kind === 'text' ? segment.text : segment.kind === 'mention' ? `@${segment.name}` : '•••')).join('').slice(0, 120) });
-          const canTranslate = Boolean(onTranslate) && message.sender === 'them';
+          // The whole conversation translated (2026-11-24): its translation in the bubble, "Show original" under it. One
+          // message's Translate steps aside meanwhile.
+          const auto = translating && message.sender === 'them' ? assist?.translations[message.id] : undefined;
+          const autoText = auto?.status === 'ready' && !assist?.originals.has(message.id) ? auto.text : undefined;
+          const canTranslate = Boolean(onTranslate) && message.sender === 'them' && !translating;
           const translation = translations[message.id];
           const showingTranslation = translation?.status === 'ready' && translation.shown;
           const plainText = message.segments.map((segment) => (segment.kind === 'text' ? segment.text : segment.kind === 'mention' ? `@${segment.name}` : '')).join('');
@@ -372,7 +425,7 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
             return count > 0 ? [{ emoji, count, mine: mineNow }] : [];
           });
           const hasActions = canReply || Boolean(onReact) || canTranslate;
-          return <Fragment key={message.id}>{divider}<li data-message-id={message.id} className={cn('group/msg flex min-w-0 flex-col rounded-[1.5rem] transition-[background-color,box-shadow] duration-700', mine ? 'items-end' : 'items-start', grouped && (compact ? '-mt-1' : '-mt-1.5'), marked === message.id && 'bg-primary/10 ring-2 ring-primary/40')}>
+          return <Fragment key={message.id}>{divider}<li data-message-id={message.id} {...(translating && message.sender === 'them' && plainText.trim() ? { 'data-translate-id': message.id } : {})} className={cn('group/msg flex min-w-0 flex-col rounded-[1.5rem] transition-[background-color,box-shadow] duration-700', mine ? 'items-end' : 'items-start', grouped && (compact ? '-mt-1' : '-mt-1.5'), marked === message.id && 'bg-primary/10 ring-2 ring-primary/40')}>
             <Popover open={picker?.id === message.id} onOpenChange={(open) => { if (!open) setPicker(null); }}>
             <PopoverAnchor asChild>
             <article {...gestures(message.id)} className={cn(
@@ -387,8 +440,9 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
               {message.replyTo && <blockquote className="border-l-2 border-primary/50 pl-2.5 text-[13px] leading-5 text-muted-foreground [overflow-wrap:anywhere]">
                 <span className="font-semibold">{message.replyTo.sender === 'me' ? t('you') : otherParty.displayName}: </span><MaskedText segments={message.replyTo.segments} />
               </blockquote>}
-              <p className={compact ? 'text-[14px] leading-[1.35rem]' : 'text-[15px] leading-6'}><MessageContent message={message} /></p>
-              {translation && translation.status !== 'loading' && (translation.status !== 'ready' || translation.shown) && <div className="space-y-0.5 border-t border-foreground/[0.08] pt-1.5 dark:border-white/[0.08]">
+              <p className={compact ? 'text-[14px] leading-[1.35rem]' : 'text-[15px] leading-6'}>{autoText !== undefined ? <span lang={assist?.language} className="whitespace-pre-wrap">{autoText}</span> : <MessageContent message={message} />}</p>
+              {auto && <TranslationNote messageId={message.id} translation={auto} />}
+              {!translating && translation && translation.status !== 'loading' && (translation.status !== 'ready' || translation.shown) && <div className="space-y-0.5 border-t border-foreground/[0.08] pt-1.5 dark:border-white/[0.08]">
                 <p className="text-xs font-semibold text-muted-foreground">{t('translate.label')}</p>
                 {translation.status === 'ready' ? <p className="text-[15px] leading-6 whitespace-pre-wrap">{translation.text}</p> : <p role="alert" className="text-sm text-destructive">{t('translate.failed')}</p>}
               </div>}
@@ -444,6 +498,7 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
         })}
       </ol>
     </section>)}
+    {cardAtEnd && <div className="pt-1">{catchUpCard}</div>}
   </div>
   </>;
 }

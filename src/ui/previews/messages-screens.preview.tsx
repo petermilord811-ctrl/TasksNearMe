@@ -4,11 +4,13 @@ import {
 } from '@/contracts';
 import {
   blockedThreadPageData, closedThreadPageData, deskBookingThreadPageData, deskOfferThreadPageData, directThreadAwaitingReplyData, directThreadPageData, earlierThreadPageData, expiredOfferThreadPageData,
+  luciaCatchUpSummary, luciaReadThreadPageData, luciaThreadPageData, luciaTranslations,
   mayaInboxWithDirectData, plusMenuForHelperPageData, plusMenuThreadPageData, changeCardThreadPageData, fakeConversationHandlers, mayaFoldersInboxData, requestCardForHelperPageData, requestCardThreadPageData, requestThreadPageData, sampleThreadPageData,
   fakeGifHandlers, fakeHandler, fakeThreadHandlers, gifPanelStates, gifThreadPageData, inboxEmptyData, jordanInboxPageData, jordanShell, mayaInboxPageData,
   mayaShell, movingOfferThreadForHelper, taskCanceledOfferThreadPageData, taskCanceledThreadForHelperPageData,
 } from '@/fixtures';
 import { InboxScreen } from '@/ui/screens/messages';
+import type { ChatAssistSeed } from '@/ui/screens/messages/chat-assist';
 import { ThreadContent, ThreadScreen } from '@/ui/screens/messages/thread-screen';
 import { GifPickerPanel } from '@/ui/screens/messages/gif-picker';
 import { AppShell } from '@/ui/shells/app-shell';
@@ -17,6 +19,8 @@ import threadCopy from '../../../messages/en/ui/thread.json';
 
 const now = '2026-11-21T16:05:00.000Z';
 const beforeBooking = '2026-11-17T15:00:00.000Z';
+/** Just after Lucía's last message (2026-11-24 previews). */
+const luciaNow = '2026-11-21T15:30:00.000Z';
 const shellHandlers: AppShellHandlers = {
   onModeChange: fakeHandler({ ok: true, code: 'updated' }),
   onSignOut: fakeHandler({ ok: true, code: 'updated' }),
@@ -31,6 +35,8 @@ function inboxPreview(id: keyof typeof inboxCopy.previews, data: InboxPageData, 
 
 function threadPreview(id: string, title: string, data: ThreadPageData, options: {
   result?: ActionResult; pending?: boolean; helper?: boolean; suggestions?: string[]; gifs?: boolean;
+  /** "Translate this conversation" and "Catch me up" (2026-11-24), and the time the preview reads as now. */
+  assist?: ChatAssistSeed; now?: string;
 } = {}): PreviewEntry {
   const handlers: ThreadHandlers = {
     ...fakeThreadHandlers,
@@ -41,7 +47,7 @@ function threadPreview(id: string, title: string, data: ThreadPageData, options:
   return {
     id: `screen-thread/${id}`, group: threadCopy.previews.group, title, layout: 'fullscreen',
     render: () => <AppShell viewer={options.helper ? jordanShell : mayaShell} handlers={shellHandlers} currentPath={routes.app.thread(data.thread.id)} layout="flow">
-      <ThreadContent data={data} handlers={handlers} now={data.thread.contactMasking ? beforeBooking : now} composerState={{
+      <ThreadContent data={data} handlers={handlers} now={options.now ?? (data.thread.contactMasking ? beforeBooking : now)} {...(options.assist ? { assistState: options.assist } : {})} composerState={{
         initialResult: options.result, initialPending: options.pending,
         initialBody: options.pending || (options.result && !options.result.ok) ? threadCopy.previews.draft : undefined,
         ...(options.suggestions ? { initialSuggestions: options.suggestions } : {}),
@@ -132,6 +138,12 @@ export const messagesScreenPreviews: PreviewEntry[] = [
     messages: [{ id: 'preview-helper-message', sender: 'me', kind: 'text', segments: movingOfferThreadForHelper.lastMessage!.preview, attachments: [], createdAt: movingOfferThreadForHelper.lastMessage!.createdAt }],
   }, { helper: true }),
   threadPreview('empty', threadCopy.previews.empty, { ...deskBookingThreadPageData, messages: [] }),
+  // The whole conversation translated, and "Catch me up" as it's offered, read, answered and failed (2026-11-24).
+  threadPreview('translated', threadCopy.previews.translated, luciaReadThreadPageData, { now: luciaNow, assist: { translating: true, translations: luciaTranslations } }),
+  threadPreview('catch-up-offered', threadCopy.previews.catchUpOffered, luciaThreadPageData, { now: luciaNow }),
+  threadPreview('catch-up-loading', threadCopy.previews.catchUpLoading, luciaThreadPageData, { now: luciaNow, assist: { catchUp: { status: 'loading' } } }),
+  threadPreview('catch-up-ready', threadCopy.previews.catchUpReady, luciaThreadPageData, { now: luciaNow, assist: { catchUp: { status: 'ready', summary: luciaCatchUpSummary } } }),
+  threadPreview('catch-up-failed', threadCopy.previews.catchUpFailed, luciaThreadPageData, { now: luciaNow, assist: { catchUp: { status: 'failed' } } }),
   threadPreview('sending', threadCopy.previews.sending, deskBookingThreadPageData, { pending: true }),
   threadPreview('result-sent', threadCopy.previews.sent, deskBookingThreadPageData, { result: { ok: true, code: 'sent' } }),
   ...ACTION_ERROR_CODES.map((code) => threadPreview(`result-${code.replaceAll('_', '-')}`, threadCopy.previews.results[code], deskBookingThreadPageData, {

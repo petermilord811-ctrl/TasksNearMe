@@ -4,7 +4,7 @@ import { useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { Archive, ArchiveRestore, ArrowUpRight, Ban, Bell, BellOff, MoreHorizontal, PanelLeft, PanelRight, Pin, PinOff, Search, UserCheck, X } from 'lucide-react';
+import { Archive, ArchiveRestore, ArrowUpRight, Ban, Bell, BellOff, Languages, MoreHorizontal, PanelLeft, PanelRight, Pin, PinOff, Search, Sparkles, UserCheck, X } from 'lucide-react';
 import { routes, type ActionResult, type ConversationFlag, type ConversationSearchData, type ISODateTime, type ReportHandlers, type ReportSubject, type ThreadHandlers, type ThreadSummary } from '@/contracts';
 import { ReportBlockMenu } from '@/ui/components/safety';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
@@ -14,6 +14,7 @@ import { Button, buttonVariants } from '@/ui/primitives/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/ui/primitives/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/ui/primitives/dropdown-menu';
 import { Spinner } from '@/ui/primitives/spinner';
+import { useChatAssist } from '@/ui/screens/messages/chat-assist';
 import { MaskedText } from './masked-text';
 
 type Handlers = Pick<ThreadHandlers, 'onFlag' | 'onAccept' | 'onSearch'>;
@@ -47,10 +48,14 @@ export interface ConversationMenuProps {
 
 /**
  * A conversation's ⋯ menu (2026-11-23, owner: "plan all and implement"): search it, pin it on top of Messages, mute it,
- * archive it, then Report and Block. One menu on the conversation page and in the chat window.
+ * archive it, then Report and Block. One menu on the conversation page and in the chat window. Since 2026-11-24 also
+ * "Translate this conversation" (on and off) and "Catch me up", where the conversation's provider offers them.
  */
 export function ConversationMenu({ thread, handlers, safety, name, onJump, onOpenBeside, onShowInWindow, subject, now }: ConversationMenuProps) {
   const t = useTranslations('thread.tools');
+  const translateCopy = useTranslations('thread.translateAll');
+  const catchUpCopy = useTranslations('thread.catchUp');
+  const assist = useChatAssist();
   const said = useFlagResult();
   const [pending, setPending] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -76,6 +81,9 @@ export function ConversationMenu({ thread, handlers, safety, name, onJump, onOpe
     {subject && <DropdownMenuItem asChild><Link href={subject.href}><ArrowUpRight aria-hidden="true" />{subject.label}</Link></DropdownMenuItem>}
     {/* The dialog opens once the menu has closed and given focus back to its button (no focus tug of war). */}
     {handlers.onSearch && <DropdownMenuItem onSelect={() => { window.setTimeout(() => setSearching(true), 0); }}><Search aria-hidden="true" />{t('search')}</DropdownMenuItem>}
+    {/* The other person's messages in the reader's language, and a summary of what was missed (2026-11-24). */}
+    {assist?.translateOffered && <DropdownMenuItem onSelect={() => assist.setTranslating(!assist.translating)}><Languages aria-hidden="true" />{translateCopy(assist.translating ? 'stop' : 'menu')}</DropdownMenuItem>}
+    {assist?.catchUpOffered && <DropdownMenuItem onSelect={assist.askCatchUp}><Sparkles aria-hidden="true" />{catchUpCopy('menu')}</DropdownMenuItem>}
     {onOpenBeside && <DropdownMenuItem onSelect={onOpenBeside}><PanelLeft aria-hidden="true" />{t('openBeside')}</DropdownMenuItem>}
     {onShowInWindow && <DropdownMenuItem onSelect={onShowInWindow}><PanelRight aria-hidden="true" />{t('showInWindow')}</DropdownMenuItem>}
     {handlers.onFlag && <>
@@ -91,7 +99,7 @@ export function ConversationMenu({ thread, handlers, safety, name, onJump, onOpe
     <ReportBlockMenu key={safety.subject.userId} subject={safety.subject} handlers={safety.handlers} items={items} label={label} />
     {search}
   </span>;
-  if (!handlers.onFlag && !handlers.onSearch && !onOpenBeside && !onShowInWindow && !subject) return null;
+  if (!handlers.onFlag && !handlers.onSearch && !onOpenBeside && !onShowInWindow && !subject && !assist?.translateOffered && !assist?.catchUpOffered) return null;
   return <span ref={box} className="contents">
     <DropdownMenu>
       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={label} disabled={pending} aria-busy={pending}>{pending ? <Spinner aria-hidden="true" /> : <MoreHorizontal aria-hidden="true" />}</Button></DropdownMenuTrigger>

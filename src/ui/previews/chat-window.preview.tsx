@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { routes, type AppShellHandlers, type AssistantTranscript, type ChatLoad, type ChatThreadData, type ChatView, type DirectChatStart, type HelpChatData, type PreviewEntry } from '@/contracts';
 import {
   answeredTranscript,
+  chatCatchUpThreadData,
   chatInboxData,
   chatInboxEmptyData,
   chatInboxFoldersData,
@@ -161,6 +162,8 @@ export const chatWindowPreviews: PreviewEntry[] = [
   windowPreview('thread-request', 'Chat window: a message request (Accept, Ignore, Block)', { view: { kind: 'thread', threadId: chatRequestThreadData.data.thread.id }, thread: { status: 'ready', data: chatRequestThreadData } }),
   windowPreview('thread-request-card', 'Chat window: a task request card in the conversation', { view: { kind: 'thread', threadId: chatRequestCardThreadData.data.thread.id }, thread: { status: 'ready', data: chatRequestCardThreadData } }),
   windowPreview('docked', 'Chat window with two conversations docked beside it, one minimized', { docked: true }),
+  // "Catch me up" (2026-11-24): nine unread in Spanish, offered above "New messages" in the window's compact card.
+  windowPreview('thread-catch-up', 'Chat window: nine unread messages, “Catch me up” offered above “New messages”', { view: { kind: 'thread', threadId: chatCatchUpThreadData.data.thread.id }, thread: { status: 'ready', data: chatCatchUpThreadData } }),
   helpPagePreview('answer', `${copy.page}: ${copy.answer}`, helpChatAssistantData, suggestTranscript),
   helpPagePreview('live-waiting', `${copy.page}: ${copy.liveWaiting}`, helpChatLiveWaitingData, emptyTranscript),
   helpPagePreview('live-joined', `${copy.page}: ${copy.liveJoined}`, helpChatLiveJoinedData, emptyTranscript),

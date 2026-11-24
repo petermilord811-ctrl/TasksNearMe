@@ -101,7 +101,12 @@
     "withList": "Conversation beside the list, with new messages marked",
     "repliesReactions": "Replies quoting a message, reactions and saved replies",
     "loading": "Conversation · loading",
-    "earlier": "Long conversation, with earlier messages to load"
+    "earlier": "Long conversation, with earlier messages to load",
+    "translated": "Conversation translated: Lucía’s messages in English, one shown as written",
+    "catchUpOffered": "Catch me up: offered above “New messages” (nine unread)",
+    "catchUpLoading": "Catch me up: reading what was missed",
+    "catchUpReady": "Catch me up: the summary, what it covers, and that it may be wrong",
+    "catchUpFailed": "Catch me up: the summary failed (Try again)"
   },
   "composer": {
     "label": "Message",
@@ -374,5 +379,31 @@
   "delivery": {
     "sent": "Sent",
     "read": "Read"
+  },
+  "translateAll": {
+    "menu": "Translate this conversation",
+    "stop": "Stop translating this conversation",
+    "on": "Showing {name}’s messages in {language, select, es {Spanish} other {English}}",
+    "off": "Turn off",
+    "paused": "Translation is paused for now. Try again in a little while.",
+    "retry": "Try again",
+    "translating": "Translating…",
+    "showTranslation": "Show translation",
+    "notTranslated": "Not translated"
+  },
+  "catchUp": {
+    "menu": "Catch me up",
+    "label": "Catch-up summary",
+    "title": "Catch me up",
+    "readyTitle": "In short",
+    "offer": "{name} sent you {count, plural, one {# new message} other {# new messages}}. Want a quick summary first?",
+    "ask": "Summarize",
+    "loading": "Reading what you missed…",
+    "disclaimer": "AI summary, may be wrong",
+    "range": "{count, plural, one {# message} other {# messages}}, {from} – {to}",
+    "rangeDay": "{count, plural, one {# message} other {# messages}}, {day}, {from} – {to}",
+    "failed": "Couldn’t make a summary right now. Try again in a little while.",
+    "retry": "Try again",
+    "dismiss": "Dismiss the summary"
   }
 }

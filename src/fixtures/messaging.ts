@@ -1,5 +1,7 @@
 import type {
   ConversationSearchData,
+  ConversationSummary,
+  MessageTranslations,
   InboxPageData,
   MessageSegment,
   MessageView,
@@ -298,13 +300,16 @@ export const changeCardThreadPageData: ThreadPageData = {
 };
 
 /** Fake handlers for the chat's new tools: everything works, "desk" finds two messages, Translate marks the text. */
-export const fakeConversationHandlers: Pick<ThreadHandlers, 'onFlag' | 'onAccept' | 'onSearch' | 'onTranslate' | 'onSuggest' | 'requestCards' | 'onAskForOffer'> = {
+export const fakeConversationHandlers: Pick<ThreadHandlers, 'onFlag' | 'onAccept' | 'onSearch' | 'onTranslate' | 'onSuggest' | 'onTranslateMany' | 'onCatchUp' | 'requestCards' | 'onAskForOffer'> = {
   onAskForOffer: () => wait({ ok: true, code: 'sent' }),
   onFlag: () => wait({ ok: true, code: 'updated' }),
   onAccept: () => wait({ ok: true, code: 'updated' }),
   onSearch: (query) => wait({ ...conversationSearchData, query, hits: query.toLowerCase().includes('desk') ? conversationSearchData.hits : [] }),
   onTranslate: () => wait({ text: '¡Hola Maya! Jordan T. dijo que quizá necesitas ayuda para mover un sofá el sábado.' }),
   onSuggest: () => wait({ replies: ['Sounds good to me!', 'What day and time work best for you?', 'Let me check and get back to you today.'] }),
+  // "Translate this conversation" and "Catch me up" (2026-11-24): Lucía's messages in English, and her summary.
+  onTranslateMany: (input) => wait(translationsFor(input.messageIds)),
+  onCatchUp: () => wait(luciaCatchUpSummary),
   requestCards: {
     onAccept: () => wait({ ok: true, code: 'booked' }),
     onDecline: () => wait({ ok: true, code: 'updated' }),
@@ -334,4 +339,84 @@ export const plusMenuForHelperPageData: ThreadPageData = {
   messages: plusMenuThreadPageData.messages.map((message) => (message.sender === 'me' ? { ...message, sender: 'them' as const } : message.sender === 'them' ? { ...message, sender: 'me' as const } : message)),
   requestOptions: { myOpenTasks: [], theirOpenTasks: [{ id: 'tsk_shelves', title: 'Hang three shelves in the hallway' }, { id: 'tsk_leaves', title: 'Clear leaves from the backyard' }] },
   cards: { offerAsks: { msg_d7: { taskId: 'tsk_shelves', title: 'Hang three shelves in the hallway', open: true, viewerRole: 'helper', offered: false, href: '/app/find-work/tsk_shelves/offer' } } },
+};
+
+// ---- A whole conversation translated, and "Catch me up" (2026-11-24, owner: "implement others all one by one") ------------
+
+const lucia = { id: 'usr_lucia_m', displayName: 'Lucía M.', initials: 'LM', memberSince: '2026-10-02T15:00:00.000Z', phoneVerified: true };
+
+/** Maya and Lucía talk directly; Lucía writes in Spanish. Maya hadn't read Lucía's last nine messages (one of them hides a number). */
+export const luciaThread: ThreadSummary = {
+  id: 'thr_direct_maya_lucia',
+  kind: 'direct',
+  title: 'Lucía M.',
+  otherParty: lucia,
+  subject: { kind: 'person', canRequest: false },
+  lastMessage: { sender: 'them', kind: 'text', preview: text('👍'), createdAt: '2026-11-21T15:20:00.000Z' },
+  unreadCount: 9,
+  contactMasking: true,
+};
+
+const luciaMessages: MessageView[] = [
+  wrote('msg_lu1', 'me', text('Hi Lucía! Could you help me move a couch on Saturday?'), '2026-11-20T15:00:00.000Z'),
+  wrote('msg_lu2', 'them', text('¡Hola Maya! Sí, claro. ¿A qué hora te viene bien?'), '2026-11-20T15:10:00.000Z'),
+  wrote('msg_lu3', 'me', text('Around 10 in the morning works for me.'), '2026-11-20T15:12:00.000Z'),
+  wrote('msg_lu4', 'them', text('Perfecto, llego a las 10.'), '2026-11-21T15:00:00.000Z'),
+  wrote('msg_lu5', 'them', text('¿El sofá pasa por la puerta o hay que quitarle las patas?'), '2026-11-21T15:02:00.000Z'),
+  wrote('msg_lu6', 'them', text('Llevo una carretilla y correas, no te preocupes.'), '2026-11-21T15:04:00.000Z'),
+  wrote('msg_lu7', 'them', text('¿Hay estacionamiento cerca de tu casa?'), '2026-11-21T15:06:00.000Z'),
+  wrote('msg_lu8', 'them', text('Si quieres, también puedo llevar las cajas al garaje.'), '2026-11-21T15:08:00.000Z'),
+  wrote('msg_lu9', 'them', [{ kind: 'text', text: 'Mi número es ' }, { kind: 'masked', detail: 'phone', hint: '0178' }, { kind: 'text', text: ' por si acaso.' }], '2026-11-21T15:10:00.000Z'),
+  wrote('msg_lu10', 'them', text('Avísame si cambia algo.'), '2026-11-21T15:12:00.000Z'),
+  wrote('msg_lu11', 'them', text('¡Nos vemos el sábado!'), '2026-11-21T15:14:00.000Z'),
+  wrote('msg_lu12', 'them', text('👍'), '2026-11-21T15:20:00.000Z'),
+];
+
+/** Maya opens it: "New messages" above Lucía's first unread one, and "Catch me up" offered at once (nine unread). */
+export const luciaThreadPageData: ThreadPageData = {
+  thread: { ...luciaThread, unreadCount: 0 },
+  messages: luciaMessages,
+  composer: { ...composer },
+  firstUnreadId: 'msg_lu4',
+  assist: { translate: true, suggest: true, summarize: true, language: 'en' },
+  catchUp: { unread: 9 },
+};
+
+/** The same conversation once read: nothing unread, so "Catch me up" (from the ⋯ menu) covers the latest messages. */
+export const luciaReadThreadPageData: ThreadPageData = { ...luciaThreadPageData, firstUnreadId: undefined, catchUp: undefined };
+
+/** Lucía's messages in English, as "Translate this conversation" shows them; the thumbs-up has no words to translate. */
+export const luciaTranslations: MessageTranslations = {
+  texts: {
+    msg_lu2: 'Hi Maya! Yes, of course. What time works for you?',
+    msg_lu4: 'Perfect, I’ll be there at 10.',
+    msg_lu5: 'Does the couch fit through the door, or do the legs need to come off?',
+    msg_lu6: 'I’m bringing a dolly and straps, don’t worry.',
+    msg_lu7: 'Is there parking near your place?',
+    msg_lu8: 'If you want, I can also carry the boxes to the garage.',
+    msg_lu9: 'My number is [hidden] just in case.',
+    msg_lu10: 'Let me know if anything changes.',
+    msg_lu11: 'See you Saturday!',
+  },
+  same: ['msg_lu12'],
+};
+
+/** Only the asked-for messages of `luciaTranslations` (the fake handlers' answer). */
+export function translationsFor(ids: readonly string[]): MessageTranslations {
+  return {
+    texts: Object.fromEntries(Object.entries(luciaTranslations.texts).filter(([id]) => ids.includes(id))),
+    same: luciaTranslations.same.filter((id) => ids.includes(id)),
+  };
+}
+
+/** "Catch me up" on Lucía's nine unread messages. */
+export const luciaCatchUpSummary: ConversationSummary = {
+  points: [
+    'Lucía will arrive at 10 on Saturday with a dolly and straps.',
+    'She asked whether the couch fits through the door or the legs need to come off, and whether there’s parking near your place.',
+    'She offered to carry the boxes to the garage too.',
+  ],
+  count: 9,
+  from: '2026-11-21T15:00:00.000Z',
+  to: '2026-11-21T15:20:00.000Z',
 };

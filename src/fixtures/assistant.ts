@@ -11,7 +11,7 @@ import type {
   LiveChatHours,
   SupportAgentView,
 } from '@/contracts';
-import { conversationSearchData, deskBookingThreadPageData, inboxEmptyData, mayaFoldersInboxData, mayaInboxWithDirectData, requestCardThreadPageData, requestThreadPageData } from './messaging';
+import { conversationSearchData, deskBookingThreadPageData, inboxEmptyData, luciaCatchUpSummary, luciaThreadPageData, mayaFoldersInboxData, mayaInboxWithDirectData, requestCardThreadPageData, requestThreadPageData, translationsFor } from './messaging';
 import { jordanSparks } from './sparks';
 
 /**
@@ -269,6 +269,8 @@ export const fakeChatThreadHandlers: ChatThreadHandlers = {
   onSearch: async (_threadId, query) => ({ ...conversationSearchData, query, hits: query.toLowerCase().includes('desk') ? conversationSearchData.hits : [] }),
   onTranslate: async () => ({ text: '¡Hola Maya! Jordan T. dijo que quizá necesitas ayuda para mover un sofá el sábado.' }),
   onSuggest: async () => ({ replies: ['Sounds good to me!', 'What day and time work best for you?', 'Let me check and get back to you today.'] }),
+  onTranslateMany: async (_threadId, input) => translationsFor(input.messageIds),
+  onCatchUp: async () => luciaCatchUpSummary,
   requestCards: { onAccept: async () => ({ ok: true, code: 'booked' }), onDecline: async () => ({ ok: true, code: 'updated' }), onCancel: async () => ({ ok: true, code: 'updated' }) },
   onAskForOffer: async () => ({ ok: true, code: 'sent' }),
 };
@@ -278,3 +280,5 @@ export const chatInboxFoldersData: ChatInboxData = { ...mayaFoldersInboxData, he
 /** A message request in the window, and a conversation with a task request card. */
 export const chatRequestThreadData: ChatThreadData = { data: requestThreadPageData };
 export const chatRequestCardThreadData: ChatThreadData = { data: requestCardThreadPageData };
+/** Lucía's conversation in the window (2026-11-24): nine unread in Spanish, "Catch me up" offered above "New messages". */
+export const chatCatchUpThreadData: ChatThreadData = { data: luciaThreadPageData };

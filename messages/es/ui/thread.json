@@ -101,7 +101,12 @@
     "withList": "Conversación junto a la lista, con los mensajes nuevos marcados",
     "repliesReactions": "Respuestas que citan un mensaje, reacciones y respuestas guardadas",
     "loading": "Conversación · cargando",
-    "earlier": "Conversación larga, con mensajes anteriores por cargar"
+    "earlier": "Conversación larga, con mensajes anteriores por cargar",
+    "translated": "Conversación traducida: los mensajes de Lucía en inglés, uno tal como lo escribió",
+    "catchUpOffered": "Ponme al día: ofrecido encima de “Mensajes nuevos” (nueve sin leer)",
+    "catchUpLoading": "Ponme al día: leyendo lo que se perdió",
+    "catchUpReady": "Ponme al día: el resumen, lo que abarca y que puede tener errores",
+    "catchUpFailed": "Ponme al día: el resumen falló (Intentar de nuevo)"
   },
   "composer": {
     "label": "Mensaje",
@@ -374,5 +379,31 @@
   "delivery": {
     "sent": "Enviado",
     "read": "Leído"
+  },
+  "translateAll": {
+    "menu": "Traducir esta conversación",
+    "stop": "Dejar de traducir esta conversación",
+    "on": "Mostrando los mensajes de {name} en {language, select, es {español} other {inglés}}",
+    "off": "Desactivar",
+    "paused": "La traducción está en pausa por ahora. Inténtalo de nuevo en un rato.",
+    "retry": "Intentar de nuevo",
+    "translating": "Traduciendo…",
+    "showTranslation": "Ver traducción",
+    "notTranslated": "Sin traducir"
+  },
+  "catchUp": {
+    "menu": "Ponme al día",
+    "label": "Resumen para ponerte al día",
+    "title": "Ponme al día",
+    "readyTitle": "En resumen",
+    "offer": "{name} te envió {count, plural, one {# mensaje nuevo} other {# mensajes nuevos}}. ¿Quieres un resumen rápido primero?",
+    "ask": "Resumir",
+    "loading": "Leyendo lo que te perdiste…",
+    "disclaimer": "Resumen hecho con IA, puede tener errores",
+    "range": "{count, plural, one {# mensaje} other {# mensajes}}, {from} – {to}",
+    "rangeDay": "{count, plural, one {# mensaje} other {# mensajes}}, {day}, {from} – {to}",
+    "failed": "No se pudo hacer el resumen ahora. Inténtalo de nuevo en un rato.",
+    "retry": "Intentar de nuevo",
+    "dismiss": "Cerrar el resumen"
   }
 }

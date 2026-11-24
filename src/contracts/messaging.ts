@@ -5,6 +5,7 @@ import type { PlanCode } from './billing';
 import type { SparkLevel } from './sparks';
 import { requestKeyField } from './forms';
 import type { Cents, ISODateTime, Photo } from './common';
+import type { AppLocale } from './locale';
 import type { PersonSummary, PresenceState } from './people';
 import type { PhotoUploadResult } from './posting';
 import type { AttachGifInput, GifSearchInput, GifSearchResult } from './gifs';
@@ -259,9 +260,16 @@ export interface ThreadPageData {
   savedReplies?: MessageSavedReply[];
   /**
    * Help from the free models (2026-11-23), where this server offers it: Translate on the other person's messages, and
-   * Suggest replies in the composer when they wrote last.
+   * Suggest replies in the composer when they wrote last. Since 2026-11-24 (owner: "implement others all one by one"):
+   * `translate` also offers "Translate this conversation" in the ⋯ menu, `summarize` offers "Catch me up", and `language`
+   * is the reader's (`users.locale`), the one both translate into.
    */
-  assist?: { translate: boolean; suggest: boolean };
+  assist?: { translate: boolean; suggest: boolean; summarize?: boolean; language?: AppLocale };
+  /**
+   * The conversation opened with this many unread messages from the other person, enough (8 or more) that "Catch me up"
+   * is offered at once, as a card above "New messages" (2026-11-24). Only where summaries are offered (`assist.summarize`).
+   */
+  catchUp?: { unread: number };
   /** The cards its status lines show: task requests and booking changes (2026-11-23). */
   cards?: ConversationCards;
   /**
@@ -380,6 +388,44 @@ export interface ReplySuggestions {
   replies: string[];
 }
 
+// ---- A whole conversation in the reader's language, and "Catch me up" (2026-11-24, owner: "implement others all one by one")
+
+/**
+ * "Translate this conversation": the other person's written messages in the reader's language as they load and arrive,
+ * asked for a few at a time (the ones on screen, at most `TRANSLATE_MANY_MAX` ids a request). Made on request, never
+ * stored; the viewer's choice is remembered in their browser only.
+ */
+export const TRANSLATE_MANY_MAX = 20;
+export const translateManyInputSchema = z.object({ messageIds: z.array(z.string().min(1).max(80)).min(1).max(TRANSLATE_MANY_MAX) });
+export type TranslateManyInput = z.input<typeof translateManyInputSchema>;
+
+/**
+ * The answer, by message id: each translated text (masked details as "[hidden]", as Translate shows them), and the
+ * messages already in the reader's language. An id in neither (not the other person's, not a written message, or no
+ * translation came back) shows as written.
+ */
+export interface MessageTranslations {
+  texts: Record<string, string>;
+  same: string[];
+}
+
+/**
+ * "Catch me up": a short summary of what the viewer missed, from `fromId` on (the first message they hadn't read when
+ * the conversation opened, its "New messages" line), or of the latest messages without one. Made on request, never
+ * stored, in the reader's language.
+ */
+export const catchUpInputSchema = z.object({ fromId: z.string().min(1).max(80).optional() });
+export type CatchUpInput = z.input<typeof catchUpInputSchema>;
+
+export interface ConversationSummary {
+  /** One to four short points, in the reader's language. */
+  points: string[];
+  /** The written messages it read: how many, and the first and the last one's times. */
+  count: number;
+  from: ISODateTime;
+  to: ISODateTime;
+}
+
 export const sendMessageInputSchema = z
   .object({
     body: z.string('required').trim().max(2000, 'too_long'),
@@ -422,6 +468,13 @@ export interface ThreadHandlers {
   onTranslate?: QueryHandler<string, MessageTranslation | null>;
   /** Replies to the other person's latest message (null: not now: no model, the hour's 30 used, nothing to answer). */
   onSuggest?: () => Promise<ReplySuggestions | null>;
+  /**
+   * "Translate this conversation" (2026-11-24): several of the other person's messages in the reader's language, by id
+   * (null: not now: no model, or the day's 100 requests used).
+   */
+  onTranslateMany?: QueryHandler<TranslateManyInput, MessageTranslations | null>;
+  /** "Catch me up" (2026-11-24): a summary of what was missed (null: not now: no model, the hour's 20 used, nothing written). */
+  onCatchUp?: QueryHandler<CatchUpInput, ConversationSummary | null>;
   /** A task request card's Accept, Decline and Cancel (2026-11-23). */
   requestCards?: RequestCardHandlers;
   /**
@@ -672,6 +725,9 @@ export interface ChatThreadHandlers {
   onSearch(threadId: string, query: string): Promise<ConversationSearchData | null>;
   onTranslate(threadId: string, messageId: string): Promise<MessageTranslation | null>;
   onSuggest(threadId: string): Promise<ReplySuggestions | null>;
+  /** "Translate this conversation" and "Catch me up" (2026-11-24), as on the conversation page. */
+  onTranslateMany(threadId: string, input: TranslateManyInput): Promise<MessageTranslations | null>;
+  onCatchUp(threadId: string, input: CatchUpInput): Promise<ConversationSummary | null>;
   requestCards: RequestCardHandlers;
   onAskForOffer(threadId: string, input: AskForOfferInput): Promise<ActionResult>;
   /** GIFs (2026-11-24), as on the conversation page; absent when they're off. */

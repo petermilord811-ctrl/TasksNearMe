@@ -38,7 +38,7 @@ import { presenceOf } from '@/modules/realtime/presence';
 import { firstMessagesLeft } from './direct-rules';
 import { mentionsOf } from './mentions';
 import { noteSampleRecipient } from './samples';
-import { chatAssistOffered } from './assist';
+import { CATCH_UP_UNREAD, chatAssistOffered } from './assist';
 import { cardsFor } from './cards';
 import { requestOptionsFor } from './asks';
 import { allowedChangeTypes } from '@/modules/bookings/changes-domain';
@@ -521,7 +521,7 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   const [blocked, otherSparks] = await Promise.all([isBlocked(db, userId, found.other.id), sparksSummaryOf(db, found.other.id)]);
   // Mutual (WhatsApp's rule, completion plan 7.1): someone who hides their own activity doesn't see anyone
   // else's or "Seen", and reading their messages sends no "Seen" either.
-  const [viewer] = await db.select({ showActivity: users.showActivity }).from(users).where(eq(users.id, userId)).limit(1);
+  const [viewer] = await db.select({ showActivity: users.showActivity, locale: users.locale }).from(users).where(eq(users.id, userId)).limit(1);
   // Only once it's a real conversation (the research report's rule 10): a booking's or regular visits' thread,
   // or an offer or invite thread where both people have written. Any verified helper opens a thread by making
   // an offer, so a poster who never answered never shows their activity to them.
@@ -584,8 +584,11 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
     messages: rows.map(withExtras),
     ...(earlier ? { earlier: { from: earlier.id } } : {}),
     ...(replies.length ? { savedReplies: replies } : {}),
-    // Translate and Suggest replies, where a model (or, outside production, the stand-in) answers (2026-11-23).
-    ...(assist.translate || assist.suggest ? { assist } : {}),
+    // Translate and Suggest replies, where a model (or, outside production, the stand-in) answers (2026-11-23); since
+    // 2026-11-24 also the whole conversation translated and "Catch me up", into the reader's language.
+    ...(assist.translate || assist.suggest || assist.summarize ? { assist: { ...assist, language: viewer?.locale === 'es' ? ('es' as const) : ('en' as const) } } : {}),
+    // Many unread on opening (2026-11-24): "Catch me up" waits above "New messages".
+    ...(assist.summarize && newlyRead.length >= CATCH_UP_UNREAD ? { catchUp: { unread: newlyRead.length } } : {}),
     ...(cards ? { cards } : {}),
     ...(canProposeChange ? { canProposeChange: true } : {}),
     ...(requestOptions ? { requestOptions } : {}),

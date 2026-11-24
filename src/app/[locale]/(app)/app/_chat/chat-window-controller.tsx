@@ -9,6 +9,7 @@ import type {
   GifSearchResult,
   ActionResult,
   AskForOfferInput,
+  CatchUpInput,
   ChatInboxData,
   ChatLoad,
   ChatThreadData,
@@ -18,6 +19,7 @@ import type {
   ConversationFlagInput,
   ConversationListHandlers,
   ConversationSearchData,
+  ConversationSummary,
   DirectChatStart,
   DirectChatTarget,
   HandOffInput,
@@ -26,6 +28,7 @@ import type {
   MessageReaction,
   MessageSavedReplyInput,
   MessageTranslation,
+  MessageTranslations,
   NewChatHandlers,
   PhotoUploadResult,
   RateSupportInput,
@@ -34,6 +37,7 @@ import type {
   SendMessageInput,
   StartDirectChatInput,
   SupportReplyInput,
+  TranslateManyInput,
 } from '@/contracts';
 import { chatViewHref, chatViewOfHref, directChatTargetKey } from '@/shared/chat-links';
 import { OPEN_IN_CHAT_EVENT, type OpenInChatDetail } from '@/ui/lib/chat-window-open';
@@ -84,6 +88,9 @@ export interface ChatActions {
   /** Translate a message, suggest replies (2026-11-23). */
   translate(threadId: string, messageId: string): Promise<MessageTranslation | null>;
   suggest(threadId: string): Promise<ReplySuggestions | null>;
+  /** The whole conversation translated, a few messages at a time, and "Catch me up" (2026-11-24). */
+  translateMany(threadId: string, input: TranslateManyInput): Promise<MessageTranslations | null>;
+  catchUp(threadId: string, input: CatchUpInput): Promise<ConversationSummary | null>;
   /** Ask the helper of a direct conversation for an offer on one of your open tasks (2026-11-23). */
   askForOffer(threadId: string, input: AskForOfferInput): Promise<ActionResult>;
   /** A task request card's buttons: the invites' own actions (2026-11-23). */
@@ -530,6 +537,8 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
       onSearch: actions.searchThread,
       onTranslate: actions.translate,
       onSuggest: actions.suggest,
+      onTranslateMany: actions.translateMany,
+      onCatchUp: actions.catchUp,
       requestCards: { onAccept: actions.acceptInvite, onDecline: actions.declineInvite, onCancel: actions.cancelInvite },
       onAskForOffer: async (threadId, input) => {
         const result = await actions.askForOffer(threadId, input);
