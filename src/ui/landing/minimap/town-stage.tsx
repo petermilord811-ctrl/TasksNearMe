@@ -201,6 +201,13 @@ export function TownStage({
   const reduced = usePrefersReducedMotion();
   const paused = useHeroPaused();
   const layout = useTownLayout();
+  // Read inside the town's frame callback (set once per town), so kept in refs.
+  const reducedRef = useRef(reduced);
+  const pausedRef = useRef(paused);
+  useEffect(() => {
+    reducedRef.current = reduced;
+    pausedRef.current = paused;
+  }, [reduced, paused]);
   // The town is built once per layout; a new season repaints it (below) rather than building it again.
   const seasonRef = useRef(season);
   const paintedFor = useRef(season);
@@ -213,6 +220,10 @@ export function TownStage({
   const cardRefs = useRef(new Map<string, HTMLDivElement>());
   const lineRefs = useRef(new Map<string, SVGPathElement>());
   const viewRef = useRef<TownView | null>(null);
+  /** The canvas's box on the screen and the viewport's size (kept on resize and scroll: never read in the frame loop). */
+  const boxRef = useRef<{ left: number; top: number; width: number; height: number; viewportWidth: number; viewportHeight: number } | null>(null);
+  /** Where each card and leader line was last put (written only when it moved). */
+  const placedRef = useRef(new Map<string, string>());
   const hoveredRef = useRef<string | null>(null);
   const leaveTimer = useRef(0);
   // Each of these belongs to a layout, so the moment the screen crosses into the other one, everything below
@@ -355,6 +366,8 @@ export function TownStage({
     const resize = new ResizeObserver(() => {
       const measured = measureView(view, stage);
       viewRef.current = measured;
+      const box = view.getBoundingClientRect();
+      boxRef.current = { left: box.left, top: box.top, width: box.width, height: box.height, viewportWidth: window.innerWidth, viewportHeight: window.innerHeight };
       town.setSize(measured.width, measured.height, pixelRatio(measured.width, measured.height, coarse));
       town.setView(measured);
       town.renderOnce();
@@ -427,13 +440,14 @@ export function TownStage({
     const update = () => {
       frame = 0;
       const viewport = window.innerHeight || 1;
+      const box = view.getBoundingClientRect();
+      boxRef.current = { left: box.left, top: box.top, width: box.width, height: box.height, viewportWidth: window.innerWidth, viewportHeight: window.innerHeight };
       let progress: number;
       if (sheet) {
         const top = sheet.getBoundingClientRect().top;
         progress = Math.max(0, Math.min(1, 1 - top / viewport));
         setCovered(top <= 0);
       } else {
-        const box = view.getBoundingClientRect();
         const top = box.top + window.scrollY;
         const start = Math.max(0, top - viewport * 0.35);
         const end = Math.max(start + 1, top + box.height - viewport * 0.15);
@@ -484,14 +498,21 @@ export function TownStage({
   useEffect(() => {
     if (!town) return;
     const pointer = landing?.pointer;
+    const placed = placedRef.current;
+    placed.clear();
     let drawn = false;
     let cards = false;
     let done = false;
     town.onFrame(() => {
-      if (!hoveredRef.current) {
-        const sample = pointer?.current;
-        town.setPointer(sample?.active ? sample.x * 2 - 1 : 0, sample?.active ? sample.y * 2 - 1 : 0, Boolean(sample?.active));
-      }
+      const sample = pointer?.current;
+      if (!hoveredRef.current) town.setPointer(sample?.active ? sample.x * 2 - 1 : 0, sample?.active ? sample.y * 2 - 1 : 0, Boolean(sample?.active));
+      // The pointer over the town itself (its canvas): the town reacts where it points. Not with reduced motion or paused.
+      const box = boxRef.current;
+      if (box && sample?.active && !reducedRef.current && !pausedRef.current) {
+        const fx = (sample.x * box.viewportWidth - box.left) / Math.max(1, box.width);
+        const fy = (sample.y * box.viewportHeight - box.top) / Math.max(1, box.height);
+        town.setHover(fx * 2 - 1, 1 - fy * 2, fx >= 0 && fx <= 1 && fy >= 0 && fy <= 1);
+      } else town.setHover(0, 0, false);
       const view = viewRef.current;
       if (view) {
         for (const slotId of SLOT_IDS) {
@@ -500,14 +521,31 @@ export function TownStage({
           if (!element) continue;
           const rest = town.pinAt(slotId, true);
           if (!rest) continue;
-          element.style.left = `${(((rest.x * view.width - view.stage.left) / view.stage.width) * 100).toFixed(3)}%`;
-          element.style.top = `${(((rest.y * view.height - view.stage.top) / view.stage.height) * 100).toFixed(3)}%`;
+          // Moved by transform from the stage's corner (no layout), and only when it has moved.
+          const at = `translate3d(${(rest.x * view.width - view.stage.left).toFixed(1)}px, ${(rest.y * view.height - view.stage.top).toFixed(1)}px, 0)`;
+          // A card element new to this (its first frame, or mounted again) switches from its left/top to the transform.
+          if (!element.hasAttribute('data-town-placed')) {
+            element.setAttribute('data-town-placed', '');
+            element.style.left = '0';
+            element.style.top = '0';
+            placed.delete(key);
+            placed.delete(`${key}:line`);
+          }
+          if (placed.get(key) !== at) {
+            placed.set(key, at);
+            element.style.transform = at;
+          }
           const line = lineRefs.current.get(key);
           const now = town.pinAt(slotId);
           const placement = CARD_PLACEMENTS[layout][slotId];
           if (line && now && placement) {
             const attach = attachPoint(placement.dx, placement.dy);
-            line.setAttribute('d', `M${((now.x - rest.x) * view.width).toFixed(1)} ${((now.y - rest.y) * view.height).toFixed(1)}L${attach.x} ${attach.y}`);
+            const d = `M${((now.x - rest.x) * view.width).toFixed(1)} ${((now.y - rest.y) * view.height).toFixed(1)}L${attach.x} ${attach.y}`;
+            const lineKey = `${key}:line`;
+            if (placed.get(lineKey) !== d) {
+              placed.set(lineKey, d);
+              line.setAttribute('d', d);
+            }
           }
         }
       }

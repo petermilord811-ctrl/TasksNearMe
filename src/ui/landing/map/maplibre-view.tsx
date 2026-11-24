@@ -265,12 +265,14 @@ function readPanelRects(container: HTMLElement): ScreenRect[] {
 }
 
 /**
- * The canvas's pixel ratio: the screen's, up to 2, but a big canvas stays under about 5 million pixels (a
+ * The canvas's pixel ratio: the screen's, up to 2, but a big canvas stays under about 4 million pixels (a
  * full-width map on a 4K screen would otherwise draw four times that every frame).
  */
 function mapPixelRatio(width: number, height: number): number {
   const screen = typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
-  return Math.max(1, Math.min(screen, 2, Math.sqrt(5_000_000 / Math.max(1, width * height))));
+  // At most about 4 million pixels a frame (it redraws every frame of a move or of the scroll-linked arrival): still
+  // sharp on high-density screens (1.75× for a 1440-wide map), a fifth fewer pixels than before.
+  return Math.max(1, Math.min(screen, 2, Math.sqrt(4_000_000 / Math.max(1, width * height))));
 }
 
 /** How often the markers are matched to the task source while the zoom changes (clusters split and merge). */
@@ -1400,19 +1402,46 @@ export function MapLibreView({
       settleTimer = window.setTimeout(fresh, 420);
     };
     const panelsResized = typeof ResizeObserver === 'function' ? new ResizeObserver(fresh) : null;
-    for (const panel of section.querySelectorAll<HTMLElement>('[data-map-panel]')) panelsResized?.observe(panel);
+    const watchPanels = () => {
+      for (const panel of section.querySelectorAll<HTMLElement>('[data-map-panel]')) panelsResized?.observe(panel);
+    };
+    watchPanels();
+    // The camera can settle before the panels do (a heading still revealing, a card mounting later; with the map's
+    // opening move now quicker, 2026-11-24): placed again once the map is idle and twice more as the panels settle,
+    // when a panel joins the section, and when a panel's own animation ends.
+    const settleChecks: number[] = [];
+    const afterSettle = () => {
+      fresh();
+      for (const id of settleChecks.splice(0)) window.clearTimeout(id);
+      settleChecks.push(window.setTimeout(fresh, 250), window.setTimeout(fresh, 800));
+    };
+    live.on('idle', afterSettle);
+    const joined = typeof MutationObserver === 'function'
+      ? new MutationObserver((records) => {
+        const added = records.some((record) => [...record.addedNodes].some((node) => node instanceof HTMLElement && (node.matches('[data-map-panel]') || node.querySelector('[data-map-panel]') !== null)));
+        if (!added) return;
+        watchPanels();
+        afterSettle();
+      })
+      : null;
+    joined?.observe(section, { childList: true, subtree: true });
     window.addEventListener('scroll', onScroll, { passive: true });
     section.addEventListener('transitionend', fresh);
+    section.addEventListener('animationend', fresh);
     return () => {
       cancelAnimationFrame(frame);
       window.clearTimeout(settleTimer);
+      for (const id of settleChecks) window.clearTimeout(id);
       placeEdge.current = () => {};
       live.off('move', schedule);
       live.off('resize', schedule);
+      live.off('idle', afterSettle);
       window.removeEventListener('resize', schedule);
       window.removeEventListener('scroll', onScroll);
       section.removeEventListener('transitionend', fresh);
+      section.removeEventListener('animationend', fresh);
       panelsResized?.disconnect();
+      joined?.disconnect();
     };
   }, [live, userPoint, settled, padding, edgeInsets?.top, edgeInsets?.bottom, fullscreen]);
   // Shown only while the visitor is off the map, the camera has settled, and their place is known.

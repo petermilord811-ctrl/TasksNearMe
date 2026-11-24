@@ -27,11 +27,13 @@ import {
   Object3D,
   PCFShadowMap,
   PerspectiveCamera,
+  Plane,
   PlaneGeometry,
   PMREMGenerator,
   Points,
   PointsMaterial,
   Quaternion,
+  Raycaster,
   RingGeometry,
   Scene,
   ShadowMaterial,
@@ -47,8 +49,11 @@ import {
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { dueFrame } from '../frame-clock';
 import { BUILD_UP } from './build-up';
 import { cameraPose } from './camera';
+import { nearness, turnToward } from './pointer-react';
+import { HOUSE_RISE, houseShaders, treeVertex } from './react-shaders';
 import { GROUND, PIN_HEAD, PIN_LIFT, PIN_SCALE, UNIT, WATER_LEVEL, townScene, type TownLayout, type TownModel, type WaterGrid } from './scene';
 import {
   addBench,
@@ -159,6 +164,12 @@ export interface TownController {
   setPins(pins: TownPin[]): void;
   /** The pointer over the page, -1..1 on both axes (the camera leans toward it). */
   setPointer(x: number, y: number, active: boolean): void;
+  /**
+   * The pointer over the town itself, in the canvas's -1..1 (y up), and whether it's over it: the town reacts where it
+   * points (the trees lean away, the houses near it stand a touch taller with their windows aglow, people turn to
+   * look, a pin there rises). Off: it all settles back.
+   */
+  setHover(x: number, y: number, active: boolean): void;
   /** How far the hero has scrolled away (0–1): the camera tilts toward a view from above and pulls back. */
   setTilt(tilt: number): void;
   /** Whether the frame loop has something to show: the build-up, a tilt or a lean still settling. */
@@ -190,6 +201,17 @@ const easeOutBack = (t: number) => {
 
 /** How long the build-up takes (seconds). */
 const INTRO = BUILD_UP.seconds;
+
+/**
+ * How far the town notices the pointer (world units; a house is 30–60 across): trees lean within `TREE_REACH`, houses
+ * rise and glow within `HOUSE_REACH`, people turn within `PEOPLE_REACH`, a pin lifts within `PIN_REACH`. Full
+ * strength inside the first part of each (the rest fades out smoothly).
+ */
+const TREE_REACH = 230;
+const HOUSE_REACH = 170;
+const PEOPLE_REACH = 200;
+const PIN_REACH = 150;
+
 /** A phase of the build-up (`[from, length]`, fractions of it) at overall progress `t`, 0–1. */
 const phase = ([from, length]: readonly [number, number], t: number) => clamp01((t - from) / length);
 
@@ -336,8 +358,56 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
     }
     attribute.needsUpdate = true;
   };
-  /** Merges painted parts into one geometry colored per vertex (repainted when the theme changes). */
-  const tint = (parts: Part[]): BufferGeometry | null => {
+  // The pointer over the town: where it touches the ground (x, z) and how present it is (0–1), for the shaders that
+  // react to it, and how far each kind of thing notices it (full strength within the first number).
+  const reactAt = { value: new Vector3(0, 0, 0) };
+  const treeReach = { value: new Vector2(TREE_REACH * 0.2, TREE_REACH) };
+  const houseReach = { value: new Vector2(HOUSE_REACH * 0.25, HOUSE_REACH) };
+  /** Each building's parts and windows, by the building's middle on the ground: they react to the pointer as one. */
+  const anchorOf = new Map<Part | BufferGeometry, [number, number]>();
+  const nowhere: [number, number] = [1e6, 1e6];
+  const anchorAttribute = (count: number, at: [number, number]) => {
+    const values = new Float32Array(count * 2);
+    for (let v = 0; v < count; v += 1) {
+      values[v * 2] = at[0];
+      values[v * 2 + 1] = at[1];
+    }
+    return new BufferAttribute(values, 2);
+  };
+  /**
+   * A material that reacts to the pointer. Trees (instanced, at the scene's root) lean away from it; buildings (merged,
+   * with a `reactAnchor` per vertex: their middle) stand a touch taller near it, and glow (`glow`) a little, their
+   * windows more. All in the shaders: the main thread only sets one uniform a frame. The glow is a uniform of each
+   * material, so materials of a kind share one shader program (fewer to compile while the town loads).
+   */
+  const reactive = <M extends Material>(material: M, kind: 'tree' | 'house', glow = 0): M => {
+    const before = material.onBeforeCompile;
+    const baseKey = material.customProgramCacheKey();
+    const ownGlow = { value: glow };
+    material.onBeforeCompile = (shader, renderer) => {
+      before.call(material, shader, renderer);
+      if (kind === 'tree') {
+        const vertex = treeVertex(shader.vertexShader, GROUND);
+        if (!vertex) return;
+        shader.uniforms.uReact = reactAt;
+        shader.uniforms.uReach = treeReach;
+        shader.vertexShader = vertex;
+        return;
+      }
+      const house = houseShaders(shader.vertexShader, shader.fragmentShader, GROUND);
+      if (!house) return;
+      shader.uniforms.uReact = reactAt;
+      shader.uniforms.uReach = houseReach;
+      shader.uniforms.uGlow = ownGlow;
+      shader.vertexShader = house.vertex;
+      shader.fragmentShader = house.fragment;
+    };
+    material.customProgramCacheKey = () => `${baseKey}|react-${kind}`;
+    return material;
+  };
+
+  /** Merges painted parts into one geometry colored per vertex (repainted when the theme changes); `anchored`: with each part's building's middle (`anchorOf`), for the pointer. */
+  const tint = (parts: Part[], anchored = false): BufferGeometry | null => {
     if (!parts.length) return null;
     const ranges: TintRange[] = [];
     let start = 0;
@@ -345,6 +415,7 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
       const geometry = normalized(part.geometry);
       const count = geometry.getAttribute('position').count;
       geometry.setAttribute('color', new BufferAttribute(new Float32Array(count * 3), 3));
+      if (anchored) geometry.setAttribute('reactAnchor', anchorAttribute(count, anchorOf.get(part) ?? nowhere));
       ranges.push({ start, count, paint: part.paint, shade: part.shade ?? 1, lift: part.lift ?? 0 });
       start += count;
       return geometry;
@@ -435,7 +506,13 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
   // The still town, in a few batches: every building and place, bridges, the garden, benches, pools, docks, tables.
   const batches = emptyBatches();
   const { fountainTop } = addGarden(data.garden, batches);
-  for (const house of data.houses) addBuilding(house, batches);
+  for (const house of data.houses) {
+    const from = { walls: batches.walls.length, roofs: batches.roofs.length, props: batches.props.length, shiny: batches.shiny.length, windows: batches.windows.length };
+    addBuilding(house, batches);
+    const at: [number, number] = [house.x + house.type.w / 2, house.y + house.type.d / 2];
+    for (const key of ['walls', 'roofs', 'props', 'shiny'] as const) for (let k = from[key]; k < batches[key].length; k += 1) anchorOf.set(batches[key][k]!, at);
+    for (let k = from.windows; k < batches.windows.length; k += 1) anchorOf.set(batches.windows[k]!, at);
+  }
   await step();
   for (const bridge of data.bridges) addBridge(bridge.from, bridge.to, batches);
   for (const bench of data.benches) addBench(bench, batches);
@@ -445,15 +522,25 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
   for (const table of data.tables) addTable(table, batches);
   for (const meadow of data.meadows) batches.flats.push({ geometry: flat(meadow, GROUND + 0.32), paint: 'meadow' });
   await step();
-  addMesh(tint(batches.walls), plain({ vertexColors: true, roughness: 0.82 }), town);
+  addMesh(tint(batches.walls, true), reactive(plain({ vertexColors: true, roughness: 0.82 }), 'house', 0.12), town);
   await step();
-  addMesh(tint(batches.roofs), plain({ vertexColors: true, roughness: 0.72 }), town);
+  addMesh(tint(batches.roofs, true), reactive(plain({ vertexColors: true, roughness: 0.72 }), 'house', 0.08), town);
   await step();
-  addMesh(tint(batches.props), plain({ vertexColors: true, roughness: 0.62 }), town);
-  addMesh(tint(batches.shiny), plain({ vertexColors: true, roughness: 0.28, metalness: 0.25 }), town);
+  addMesh(tint(batches.props, true), reactive(plain({ vertexColors: true, roughness: 0.62 }), 'house'), town);
+  addMesh(tint(batches.shiny, true), reactive(plain({ vertexColors: true, roughness: 0.28, metalness: 0.25 }), 'house'), town);
   addMesh(tint(batches.flats), plain({ vertexColors: true, roughness: 0.95, polygonOffset: true, polygonOffsetFactor: -1 }), land, false);
-  const windowMaterial = paint('window', { roughness: 0.25, metalness: 0.1, emissiveIntensity: palette.windowGlow }, true);
-  const windowGeometry = merge(batches.windows);
+  const windowMaterial = reactive(paint('window', { roughness: 0.25, metalness: 0.1, emissiveIntensity: palette.windowGlow }, true), 'house', 0.9);
+  // The windows, merged, each with its building's middle (they rise and light up with it).
+  const windowGeometry = batches.windows.length
+    ? mergeGeometries(batches.windows.map((part) => {
+        const at = anchorOf.get(part) ?? nowhere;
+        const geometry = normalized(part);
+        geometry.setAttribute('reactAnchor', anchorAttribute(geometry.getAttribute('position').count, at));
+        return geometry;
+      }), false)
+    : null;
+  // Merged: let go of the parts (the closures here live as long as the town, and this map would keep them all).
+  anchorOf.clear();
   addMesh(windowGeometry && track(windowGeometry), windowMaterial, town, false);
   const poolGeometry = merge(batches.pools);
   addMesh(poolGeometry && track(poolGeometry), paint('pool', { roughness: 0.08, metalness: 0.1, normalMap: ripples, normalScale: new Vector2(0.3, 0.3) }), land, false);
@@ -466,6 +553,10 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
     wheel.rotation.order = 'YXZ';
     wheel.rotation.y = windmillFacing();
   }
+  // Where the wheel's tower stands (its middle) and the hub's height: the tower rises near the pointer, and the
+  // wheel with it.
+  const windmillAt = windmill ? { x: windmill.x + windmill.type.w / 2, z: windmill.y + windmill.type.d / 2 } : null;
+  const hubHeight = wheel ? wheel.position.y : GROUND;
   await step();
 
   const matrix = new Matrix4();
@@ -628,12 +719,13 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
     );
   };
   leafMaterial.customProgramCacheKey = () => 'leaf-sway';
-  const crownMesh = instancedMesh(crownGeometry(), leafMaterial, crowns.length, scene, true);
-  const trunkMesh = instancedMesh(new CylinderGeometry(0.7, 1, 1, 6), paint('trunk', { roughness: 0.9 }), trunks.length, scene, true);
-  const coneMesh = instancedMesh(coneGeometry(), paint('conifer', { roughness: 0.8 }), cones.length, scene, true);
-  const frondMesh = instancedMesh(frondGeometry(), paint('palm', { roughness: 0.75, side: DoubleSide }), fronds.length, scene, true);
-  const agaveMesh = instancedMesh(agaveGeometry(), paint('agave', { roughness: 0.7 }), agaves.length, scene, true);
-  const cactusMesh = instancedMesh(cactusGeometry(), paint('cactus', { roughness: 0.75 }), cacti.length, scene, true);
+  // Every part of a tree leans the same way from the pointer (crowns, trunks, fronds, moss), so none comes apart.
+  const crownMesh = instancedMesh(crownGeometry(), reactive(leafMaterial, 'tree'), crowns.length, scene, true);
+  const trunkMesh = instancedMesh(new CylinderGeometry(0.7, 1, 1, 6), reactive(paint('trunk', { roughness: 0.9 }), 'tree'), trunks.length, scene, true);
+  const coneMesh = instancedMesh(coneGeometry(), reactive(paint('conifer', { roughness: 0.8 }), 'tree'), cones.length, scene, true);
+  const frondMesh = instancedMesh(frondGeometry(), reactive(paint('palm', { roughness: 0.75, side: DoubleSide }), 'tree'), fronds.length, scene, true);
+  const agaveMesh = instancedMesh(agaveGeometry(), reactive(paint('agave', { roughness: 0.7 }), 'tree'), agaves.length, scene, true);
+  const cactusMesh = instancedMesh(cactusGeometry(), reactive(paint('cactus', { roughness: 0.75 }), 'tree'), cacti.length, scene, true);
   // Spanish moss: thin strands hanging from their top (the strand's tip sways, its top stays put).
   const mossMaterial = paint('moss', { roughness: 0.95 });
   mossMaterial.onBeforeCompile = (shader) => {
@@ -651,6 +743,7 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
     );
   };
   mossMaterial.customProgramCacheKey = () => 'moss-sway';
+  reactive(mossMaterial, 'tree');
   const strand = new ConeGeometry(1, 1, 5, 1);
   strand.rotateX(Math.PI);
   strand.translate(0, -0.5, 0);
@@ -935,8 +1028,19 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
   let introDone = !options.buildUp;
   let shadowAge = 0;
   const pointer = { x: 0, y: 0, active: false };
-  const look = { yaw: 0, pitch: 0, tilt: 0, goalTilt: 0 };
+  const look = { yaw: 0, pitch: 0, tilt: 0, goalTilt: 0, goalYaw: 0, goalPitch: 0 };
   let afterFrame: (() => void) | null = null;
+  /** The pointer over the town (canvas -1..1) and where it touches the ground, followed softly, fading in and out. */
+  const hover = { x: 0, y: 0, active: false };
+  const react = { x: 0, z: 0, goalX: 0, goalZ: 0, strength: 0, goal: 0, known: false };
+  const raycaster = new Raycaster();
+  const groundPlane = new Plane(new Vector3(0, 1, 0), -GROUND);
+  const hoverAt = new Vector2();
+  const touched = new Vector3();
+  /** How near the pointer is to a spot on the ground (0–1, eased out at `reach`; 0 without a pointer). */
+  const nearPointer = (x: number, z: number, reach: number) => (react.strength <= 0 ? 0 : nearness(react.strength, Math.hypot(react.x - x, react.z - z), reach));
+  /** Someone at (x, z) facing `yaw` turns toward the pointer (`share` of the way at most: walkers only glance). */
+  const lookToPointer = (x: number, z: number, yaw: number, near: number, share: number) => turnToward(yaw, x, z, react.x, react.z, near, share);
 
   const placeCamera = () => {
     // Scrolling away tilts the camera toward a view from above and pulls it back: the town becomes a map.
@@ -959,24 +1063,34 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
     placeTrees(t >= 1 ? 1 : phase(BUILD_UP.trees, t));
   };
 
+  // The lean is compared with its whole goal (the slow drift included: compared with the pointer's part alone, a
+  // drifting camera counted as settling for good, and the town drew at 60 frames a second whenever a mouse was over
+  // the page); the pointer's reaction counts while it fades in or out or follows a move.
   const isSettling = () =>
     !introDone ||
     Math.abs(look.goalTilt - look.tilt) > 0.002 ||
-    (pointer.active && (Math.abs(pointer.x * 2.4 - look.yaw) > 0.05 || Math.abs(-pointer.y * 1.4 - look.pitch) > 0.05)) ||
+    Math.abs(look.goalYaw - look.yaw) > 0.03 ||
+    Math.abs(look.goalPitch - look.pitch) > 0.03 ||
+    Math.abs(react.goal - react.strength) > 0.01 ||
+    (react.strength > 0.01 && Math.abs(react.goalX - react.x) + Math.abs(react.goalZ - react.z) > 3) ||
     // A pin lifting or settling (its spring), or fading with a category pick: drawn at 60 frames a second.
-    pinState.some((state, index) => Math.abs((state?.lit ? 1 : 0) - pinLift[index]!) > 0.004 || Math.abs(pinLiftSpeed[index]!) > 0.02 || Math.abs((state?.dim ? 0.35 : 1) - pinPresence[index]!) > 0.01);
+    pinState.some((state, index) => Math.abs(Math.max(state?.lit ? 1 : 0, nearPointer(data.slots[index]!.at.x, data.slots[index]!.at.y, PIN_REACH) * 0.75) - pinLift[index]!) > 0.004 || Math.abs(pinLiftSpeed[index]!) > 0.02 || Math.abs((state?.dim ? 0.35 : 1) - pinPresence[index]!) > 0.01);
 
-  /** Where a mover is along its path (with a fade at either end), as a matrix. */
+  /** The last `moverAt`'s fade (0–1): its matrix is returned, the fade kept here (no object a call, every frame). */
+  let moverFade = 0;
+  /** Where a mover is along its path (with a fade at either end), as a matrix (`out`). */
   const moverAt = (item: (typeof moving)[number], level: number, size: number, appear: number, out: Matrix4, bob = 0) => {
     const u = (item.mover.phase + clock / item.mover.duration) % 1;
     item.curve.getPointAt(u, position);
     item.curve.getTangentAt(Math.min(0.999, u), tangent);
     const yaw = Math.atan2(-tangent.z, tangent.x);
-    const fade = smooth(0, 0.04, u) * smooth(1, 0.95, u) * appear;
+    moverFade = smooth(0, 0.04, u) * smooth(1, 0.95, u) * appear;
     euler.set(bob, yaw, 0, 'YXZ');
     quaternion.setFromEuler(euler);
-    return { matrix: out.compose(scratch.set(position.x, level, position.z), quaternion, scaleVector.setScalar(size * Math.max(0.0001, fade))), yaw, fade };
+    return out.compose(scratch.set(position.x, level, position.z), quaternion, scaleVector.setScalar(size * Math.max(0.0001, moverFade)));
   };
+  const moverMeshes = () => [carBodies, carCabins, carWheels, bikeMesh, crateMesh, boatMesh, wakeMesh, sailMesh, kayakMesh, paddleMesh];
+  let movers: InstancedMesh[] | null = null;
   const moverMatrix = new Matrix4();
   const partMatrix = new Matrix4();
   const riderBody = new Matrix4().compose(new Vector3(-0.6, 12, 0), new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), -0.35), new Vector3(0.88, 0.8, 0.88));
@@ -1001,21 +1115,48 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
     // The camera holds still while the town builds up (it grows out of the skeleton drawn from this very view),
     // then leans toward the pointer and drifts a little.
     const lean = pointer.active && introDone;
-    const goalYaw = (lean ? pointer.x * 2.4 : 0) + (introDone ? Math.sin(clock * 0.09) * 0.6 : 0);
-    const goalPitch = (lean ? -pointer.y * 1.4 : 0) + (introDone ? Math.sin(clock * 0.07 + 1) * 0.3 : 0);
+    look.goalYaw = (lean ? pointer.x * 2.4 : 0) + (introDone ? Math.sin(clock * 0.09) * 0.6 : 0);
+    look.goalPitch = (lean ? -pointer.y * 1.4 : 0) + (introDone ? Math.sin(clock * 0.07 + 1) * 0.3 : 0);
     const ease = 1 - Math.exp(-dt * 2.4);
-    look.yaw += (goalYaw - look.yaw) * ease;
-    look.pitch += (goalPitch - look.pitch) * ease;
+    look.yaw += (look.goalYaw - look.yaw) * ease;
+    look.pitch += (look.goalPitch - look.pitch) * ease;
     look.tilt += (look.goalTilt - look.tilt) * (dt === 0 ? 1 : 1 - Math.exp(-dt * 7));
     placeCamera();
+
+    // Where the pointer touches the town: one ray to the ground plane (no meshes tested), followed softly; the town's
+    // reaction fades in over it and out when it leaves (not while the town builds up, or seen from too far above).
+    react.goal = 0;
+    if (hover.active && introDone && look.tilt < 0.85) {
+      raycaster.setFromCamera(hoverAt.set(hover.x, hover.y), camera);
+      if (raycaster.ray.intersectPlane(groundPlane, touched)) {
+        react.goalX = touched.x;
+        react.goalZ = touched.z;
+        react.goal = 1;
+        if (!react.known) {
+          react.x = touched.x;
+          react.z = touched.z;
+          react.known = true;
+        }
+      }
+    }
+    const follow = dt === 0 ? 1 : 1 - Math.exp(-dt * 10);
+    react.x += (react.goalX - react.x) * follow;
+    react.z += (react.goalZ - react.z) * follow;
+    react.strength += (react.goal - react.strength) * (dt === 0 ? 1 : 1 - Math.exp(-dt * (react.goal > react.strength ? 5 : 3)));
+    if (react.goal === 0 && react.strength < 0.003) {
+      react.strength = 0;
+      react.known = false;
+    }
+    reactAt.value.set(react.x, react.z, react.strength);
 
     ripples.offset.set((clock * 0.011) % 1, (clock * 0.017) % 1);
     const appear = introDone ? 1 : smooth(0, 1, phase(BUILD_UP.movers, intro / INTRO));
 
     // Cars and bikes on the roads, boats and kayaks on the river.
-    cars.forEach((item, i) => placeCar(i, moverAt(item, GROUND + 0.4, 1.1 * UNIT, appear, moverMatrix).matrix));
+    cars.forEach((item, i) => placeCar(i, moverAt(item, GROUND + 0.4, 1.1 * UNIT, appear, moverMatrix)));
     bikes.forEach((item, i) => {
-      const { matrix: world, fade } = moverAt(item, GROUND + 0.4, 1.45 * UNIT, appear, moverMatrix);
+      const world = moverAt(item, GROUND + 0.4, 1.45 * UNIT, appear, moverMatrix);
+      const fade = moverFade;
       bikeMesh.setMatrixAt(i, world);
       crateMesh.setMatrixAt(i, item.mover.tone === 1 ? partMatrix.multiplyMatrices(world, crateAt) : hidden);
       const person = riderStart + i;
@@ -1027,13 +1168,13 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
       }
     });
     boats.forEach((item, i) => {
-      const { matrix: world } = moverAt(item, WATER_LEVEL + Math.sin(clock * 2.1 + item.mover.phase * 9) * 0.4, 1.55 * UNIT, appear, moverMatrix, Math.sin(clock * 1.4 + item.mover.phase * 7) * 0.035);
+      const world = moverAt(item, WATER_LEVEL + Math.sin(clock * 2.1 + item.mover.phase * 9) * 0.4, 1.55 * UNIT, appear, moverMatrix, Math.sin(clock * 1.4 + item.mover.phase * 7) * 0.035);
       boatMesh.setMatrixAt(i, world);
       wakeMesh.setMatrixAt(i, world);
     });
-    sails.forEach((item, i) => sailMesh.setMatrixAt(i, moverAt(item, WATER_LEVEL + Math.sin(clock * 1.7 + 2) * 0.4, 1.6 * UNIT, appear, moverMatrix, Math.sin(clock * 1.1 + 1) * 0.04).matrix));
+    sails.forEach((item, i) => sailMesh.setMatrixAt(i, moverAt(item, WATER_LEVEL + Math.sin(clock * 1.7 + 2) * 0.4, 1.6 * UNIT, appear, moverMatrix, Math.sin(clock * 1.1 + 1) * 0.04)));
     kayaks.forEach((item, i) => {
-      const { matrix: world } = moverAt(item, WATER_LEVEL + 0.3 + Math.sin(clock * 2.6 + i) * 0.25, kayakScale, appear, moverMatrix);
+      const world = moverAt(item, WATER_LEVEL + 0.3 + Math.sin(clock * 2.6 + i) * 0.25, kayakScale, appear, moverMatrix);
       kayakMesh.setMatrixAt(i, world);
       const stroke = Math.sin(clock * 3.2 + i * 1.3);
       euler.set(stroke * 0.55, stroke * 0.25, 0, 'YXZ');
@@ -1042,7 +1183,8 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
       bodyMesh.setMatrixAt(paddlerStart + i, partMatrix.multiplyMatrices(world, paddlerBody));
       headMeshes.setMatrixAt(paddlerStart + i, partMatrix.multiplyMatrices(world, paddlerHead));
     });
-    for (const mesh of [carBodies, carCabins, carWheels, bikeMesh, crateMesh, boatMesh, wakeMesh, sailMesh, kayakMesh, paddleMesh]) mesh.instanceMatrix.needsUpdate = true;
+    movers ??= moverMeshes();
+    for (const mesh of movers) mesh.instanceMatrix.needsUpdate = true;
 
     // People: walkers there and back, people at tables and stalls, the vignettes' crews at work.
     const size = Math.max(0.0001, appear) * UNIT * 0.9;
@@ -1054,11 +1196,15 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
       curve.getTangentAt(u, tangent);
       const heading = Math.atan2(-tangent.z, tangent.x) + (cycle < 1 ? 0 : Math.PI);
       const stride = Math.abs(Math.sin(clock * 7 + i)) * 0.9;
-      placePerson(walkerStart + i, position.x, GROUND + stride, position.z, heading, size);
+      const near = nearPointer(position.x, position.z, PEOPLE_REACH);
+      placePerson(walkerStart + i, position.x, GROUND + stride, position.z, lookToPointer(position.x, position.z, heading, near, 0.55), size);
     });
     data.idle.forEach((person, i) => {
       const sway = Math.sin(clock * 0.8 + i * 1.7) * 0.25;
-      placePerson(idleStart + i, person.at.x, GROUND, person.at.y, -person.angle + sway * 0.4, size, person.pose);
+      const near = nearPointer(person.at.x, person.at.y, PEOPLE_REACH);
+      // Close to the pointer, someone standing gives a little hop, as if waving at it.
+      const hop = near > 0.4 && person.pose !== 'sit' ? Math.max(0, Math.sin(clock * 7 + i * 1.9)) * 1.6 * (near - 0.4) / 0.6 : 0;
+      placePerson(idleStart + i, person.at.x, GROUND + hop, person.at.y, lookToPointer(person.at.x, person.at.y, -person.angle + sway * 0.4, near, 1), size, person.pose);
     });
     let handheld = 0;
     crewList.forEach((entry, k) => {
@@ -1086,7 +1232,8 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
         lift = Math.abs(Math.sin(clock * 3.4 + k)) * 0.6;
       }
       position.set(x, 0, z).applyMatrix4(item.placement);
-      const yaw = item.mesh.rotation.y + angle;
+      // At work, they only glance up at the pointer.
+      const yaw = lookToPointer(position.x, position.z, item.mesh.rotation.y + angle, nearPointer(position.x, position.z, PEOPLE_REACH), 0.45);
       placePerson(index, position.x, GROUND + lift, position.z, yaw, size, member.pose, lean);
       if (member.motion === 'carry' && !member.partner) {
         // The box between the two carriers, at hand height.
@@ -1121,7 +1268,12 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
       mesh.scale.setScalar(balloonSize * Math.max(0.0001, appear));
     });
 
-    if (wheel) wheel.rotation.z = -clock * 1.4;
+    if (wheel) {
+      wheel.rotation.z = -clock * 1.4;
+      // On its tower as the tower rises near the pointer (the same sum as the buildings' shader).
+      const lift = windmillAt && react.strength > 0 ? react.strength * (1 - smooth(houseReach.value.x, houseReach.value.y, Math.hypot(windmillAt.x - react.x, windmillAt.z - react.z))) : 0;
+      wheel.position.y = GROUND + (hubHeight - GROUND) * (1 + lift * HOUSE_RISE);
+    }
 
     for (let k = 0; k < dropCount; k += 1) {
       const life = (clock * 0.9 + k / dropCount) % 1;
@@ -1152,7 +1304,7 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
       }
       // Lit (its card or row is pointed at): a gentle lift and a little growth on a critically damped spring,
       // so it starts and settles softly; quieted (another category): it fades back, eased.
-      const goal = state.lit ? 1 : 0;
+      const goal = Math.max(state.lit ? 1 : 0, nearPointer(slot.at.x, slot.at.y, PIN_REACH) * 0.75);
       const presenceGoal = state.dim ? 0.35 : 1;
       if (dt === 0) {
         pinLift[index] = goal;
@@ -1202,8 +1354,9 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
   const loop = (now: number) => {
     if (!running) return;
     frame = requestAnimationFrame(loop);
-    // About 30 frames a second while the town just lives; 60 while the camera moves or the town builds up.
-    if (last && now - last < (isSettling() ? 15 : 31)) return;
+    // About 30 frames a second while the town just lives (on the frames the weather above it draws too); 60 while the
+    // camera moves, the pointer's reaction settles or the town builds up.
+    if (!dueFrame(now, last, isSettling() ? 60 : 30)) return;
     const dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
     last = now;
     update(dt);
@@ -1289,6 +1442,8 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
     stop() {
       running = false;
       cancelAnimationFrame(frame);
+      // Stopped (paused, out of sight), the town shows itself settled: no reaction to a pointer it no longer follows.
+      hover.active = false;
     },
     renderOnce() {
       // Running, the loop animates the change; this only redraws the current frame (a resize clears it).
@@ -1333,6 +1488,11 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
       pointer.x = x;
       pointer.y = y;
       pointer.active = active;
+    },
+    setHover(x, y, active) {
+      hover.x = x;
+      hover.y = y;
+      hover.active = active;
     },
     setTilt(tilt) {
       look.goalTilt = clamp01(tilt);

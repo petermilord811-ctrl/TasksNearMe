@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Season } from '@/shared/seasons';
 import { cn } from '@/ui/lib/utils';
 import { usePrefersReducedMotion } from '@/ui/motion';
+import { dueFrame } from './frame-clock';
 import { useHeroPaused } from './hero-pause';
 import { whenHeroReady } from './hero-ready';
 import { mapleRadius } from './leaf-shape';
@@ -359,19 +360,23 @@ export function SeasonWeather({ season, still = false, className }: { season: Se
         if (gone || mote.x > width + margin || mote.x < -margin - width) motes[index] = make(false);
       }
     };
+    // About 30 frames a second, in step with the town under it (the motes drift slowly: 60 would only double the
+    // drawing of a canvas the size of the hero).
     const loop = (now: number) => {
+      frame = requestAnimationFrame(loop);
+      if (!dueFrame(now, last, 30)) return;
       const dt = last ? Math.min(0.05, Math.max(0, (now - last) / 1000)) : 1 / 60;
       last = now;
       step(dt);
       draw();
-      frame = requestAnimationFrame(loop);
     };
     const resize = () => {
       const box = canvas.getBoundingClientRect();
       if (box.width < 1 || box.height < 1) return;
       width = box.width;
       height = box.height;
-      ratio = Math.max(1, Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(3_000_000 / (width * height))));
+      // Soft motes: 1.5× the CSS pixels is as sharp as they look (at most about 1.4 million pixels in all).
+      ratio = Math.max(1, Math.min(window.devicePixelRatio || 1, 1.5, Math.sqrt(1_400_000 / (width * height))));
       canvas.width = Math.round(width * ratio);
       canvas.height = Math.round(height * ratio);
       fill();
@@ -471,9 +476,13 @@ export function SeasonWeather({ season, still = false, className }: { season: Se
       className={cn(
         'pointer-events-none transition-opacity duration-[1200ms] ease-out motion-reduce:transition-none',
         // Never over the words (audit M6): on phones the air starts below them, over the town's band; on wide
-        // screens it keeps to the town's side. It still fades out before the hero's bottom edge.
-        '[mask-image:linear-gradient(to_bottom,transparent_0%,transparent_50%,#000_62%,#000_80%,transparent)]',
-        'lg:[mask-image:linear-gradient(to_right,transparent_0%,transparent_34%,#000_50%),linear-gradient(to_bottom,#000,#000_78%,transparent)] lg:[mask-composite:intersect]',
+        // screens it keeps to the town's side. It still fades out before the hero's bottom edge. The canvas covers
+        // only the part its mask shows (the hero's lower half on phones, its right 66% on wide screens; the
+        // gradients are the hero-wide ones rescaled), so no frame draws air nobody sees. Prefixed, so they win
+        // over the hero's `inset-0 size-full`.
+        'max-lg:top-1/2 max-lg:h-1/2 lg:left-[34%] lg:w-[66%]',
+        '[mask-image:linear-gradient(to_bottom,transparent_0%,#000_24%,#000_60%,transparent)]',
+        'lg:[mask-image:linear-gradient(to_right,transparent_0%,#000_24.24%),linear-gradient(to_bottom,#000,#000_78%,transparent)] lg:[mask-composite:intersect]',
         ready ? 'opacity-100' : 'opacity-0',
         className,
       )}
