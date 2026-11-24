@@ -90,7 +90,13 @@
     "community_question_match": "A neighbor in {area} has a question about your services: {title}",
     "community_task_posted": "{actorName} posted a task from the thread where you were recommended: {title}",
     "community_auto_hidden": "Your {on, select, reply {reply} other {post}} on {title} is hidden while our team reviews reports about it",
-    "community_digest": "This week in {area}: {count, plural, one {# post} other {# posts}}{waiting, plural, =0 {} one {, # waiting for an answer} other {, # waiting for an answer}}"
+    "community_digest": "This week in {area}: {count, plural, one {# post} other {# posts}}{waiting, plural, =0 {} one {, # waiting for an answer} other {, # waiting for an answer}}",
+    "follow_added": "{actorName} added you to follow a booking: {title}",
+    "followed_on_the_way": "Following: {actorName} is on the way for {title}",
+    "followed_arrived": "Following: {actorName} has arrived for {title}",
+    "followed_completed": "Following: {title} is done",
+    "followed_canceled": "Following: {title} was canceled",
+    "followed_time_changed": "Following: {title} has a new time"
   },
   "previews": {
     "group": "Notifications",

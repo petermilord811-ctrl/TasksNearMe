@@ -4,8 +4,8 @@ import { useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { Archive, ArchiveRestore, ArrowUpRight, Ban, Bell, BellOff, Languages, MoreHorizontal, PanelLeft, PanelRight, Pin, PinOff, Search, Sparkles, UserCheck, X } from 'lucide-react';
-import { routes, type ActionResult, type ConversationFlag, type ConversationSearchData, type ISODateTime, type ReportHandlers, type ReportSubject, type ThreadHandlers, type ThreadSummary } from '@/contracts';
+import { Archive, ArchiveRestore, ArrowUpRight, Ban, Bell, BellOff, Languages, MoreHorizontal, PanelLeft, PanelRight, Pin, PinOff, Search, Sparkles, UserCheck, UserPlus, X } from 'lucide-react';
+import { routes, type ActionResult, type BookingFollowersPanel, type ConversationFlag, type FollowerHandlers, type ConversationSearchData, type ISODateTime, type ReportHandlers, type ReportSubject, type ThreadHandlers, type ThreadSummary } from '@/contracts';
 import { ReportBlockMenu } from '@/ui/components/safety';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { useFormat } from '@/ui/lib/format';
@@ -16,6 +16,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Spinner } from '@/ui/primitives/spinner';
 import { useChatAssist } from '@/ui/screens/messages/chat-assist';
 import { MaskedText } from './masked-text';
+import { FollowersDialog } from '@/ui/components/family/followers-dialog';
 
 type Handlers = Pick<ThreadHandlers, 'onFlag' | 'onAccept' | 'onSearch'>;
 
@@ -43,6 +44,8 @@ export interface ConversationMenuProps {
   onShowInWindow?: () => void;
   /** Where the conversation's subject lives (the person's profile, the booking, the offer): the menu's first item. */
   subject?: { href: string; label: string };
+  /** A booking's client (2026-11-24): "Add a family member" opens the followers dialog. `helperName`: the helper's first name. */
+  family?: { panel: BookingFollowersPanel; handlers: FollowerHandlers; helperName: string; onDone?: () => void };
   now: ISODateTime;
 }
 
@@ -51,7 +54,7 @@ export interface ConversationMenuProps {
  * archive it, then Report and Block. One menu on the conversation page and in the chat window. Since 2026-11-24 also
  * "Translate this conversation" (on and off) and "Catch me up", where the conversation's provider offers them.
  */
-export function ConversationMenu({ thread, handlers, safety, name, onJump, onOpenBeside, onShowInWindow, subject, now }: ConversationMenuProps) {
+export function ConversationMenu({ thread, handlers, safety, name, onJump, onOpenBeside, onShowInWindow, subject, family, now }: ConversationMenuProps) {
   const t = useTranslations('thread.tools');
   const translateCopy = useTranslations('thread.translateAll');
   const catchUpCopy = useTranslations('thread.catchUp');
@@ -59,6 +62,7 @@ export function ConversationMenu({ thread, handlers, safety, name, onJump, onOpe
   const said = useFlagResult();
   const [pending, setPending] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [addingFamily, setAddingFamily] = useState(false);
   // The menu's button, mine or Report and Block's: the search dialog opens from the menu (state, no trigger of its own), so
   // focus goes back to that button when it closes.
   const box = useRef<HTMLSpanElement>(null);
@@ -84,6 +88,8 @@ export function ConversationMenu({ thread, handlers, safety, name, onJump, onOpe
     {/* The other person's messages in the reader's language, and a summary of what was missed (2026-11-24). */}
     {assist?.translateOffered && <DropdownMenuItem onSelect={() => assist.setTranslating(!assist.translating)}><Languages aria-hidden="true" />{translateCopy(assist.translating ? 'stop' : 'menu')}</DropdownMenuItem>}
     {assist?.catchUpOffered && <DropdownMenuItem onSelect={assist.askCatchUp}><Sparkles aria-hidden="true" />{catchUpCopy('menu')}</DropdownMenuItem>}
+    {/* A booking's client lets a family member follow it (2026-11-24). */}
+    {family && <DropdownMenuItem onSelect={() => { window.setTimeout(() => setAddingFamily(true), 0); }}><UserPlus aria-hidden="true" />{t('family')}</DropdownMenuItem>}
     {onOpenBeside && <DropdownMenuItem onSelect={onOpenBeside}><PanelLeft aria-hidden="true" />{t('openBeside')}</DropdownMenuItem>}
     {onShowInWindow && <DropdownMenuItem onSelect={onShowInWindow}><PanelRight aria-hidden="true" />{t('showInWindow')}</DropdownMenuItem>}
     {handlers.onFlag && <>
@@ -93,17 +99,19 @@ export function ConversationMenu({ thread, handlers, safety, name, onJump, onOpe
     </>}
   </>;
   const label = t('menu', { name });
-  const search = handlers.onSearch && <SearchDialog open={searching} onOpenChange={setSearching} onSearch={handlers.onSearch} threadId={thread.id} name={name} now={now} restoreFocus={restoreFocus} {...(onJump ? { onJump } : {})} />;
+  const searchDialog = handlers.onSearch && <SearchDialog open={searching} onOpenChange={setSearching} onSearch={handlers.onSearch} threadId={thread.id} name={name} now={now} restoreFocus={restoreFocus} {...(onJump ? { onJump } : {})} />;
+  const familyDialog = family && <FollowersDialog open={addingFamily} onOpenChange={(next) => { setAddingFamily(next); if (!next) window.setTimeout(restoreFocus, 0); }} panel={family.panel} handlers={family.handlers} helperName={family.helperName} {...(family.onDone ? { onDone: family.onDone } : {})} />;
+  const search = <>{searchDialog}{familyDialog}</>;
 
   if (safety) return <span ref={box} className="contents">
     <ReportBlockMenu key={safety.subject.userId} subject={safety.subject} handlers={safety.handlers} items={items} label={label} />
     {search}
   </span>;
-  if (!handlers.onFlag && !handlers.onSearch && !onOpenBeside && !onShowInWindow && !subject && !assist?.translateOffered && !assist?.catchUpOffered) return null;
+  if (!handlers.onFlag && !handlers.onSearch && !onOpenBeside && !onShowInWindow && !subject && !family && !assist?.translateOffered && !assist?.catchUpOffered) return null;
   return <span ref={box} className="contents">
     <DropdownMenu>
       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" aria-label={label} disabled={pending} aria-busy={pending}>{pending ? <Spinner aria-hidden="true" /> : <MoreHorizontal aria-hidden="true" />}</Button></DropdownMenuTrigger>
-      <DropdownMenuContent align="end" onCloseAutoFocus={(event) => { if (searching) event.preventDefault(); }}>{items}</DropdownMenuContent>
+      <DropdownMenuContent align="end" onCloseAutoFocus={(event) => { if (searching || addingFamily) event.preventDefault(); }}>{items}</DropdownMenuContent>
     </DropdownMenu>
     {search}
   </span>;
@@ -261,10 +269,12 @@ export function RequestBanner({ thread, name, handlers, onBlock, onIgnored, comp
 }
 
 /** The marks on a conversation's row and header: pinned, muted. */
-export function ConversationMarks({ thread, className }: { thread: Pick<ThreadSummary, 'pinned' | 'muted'>; className?: string }) {
+export function ConversationMarks({ thread, className }: { thread: Pick<ThreadSummary, 'pinned' | 'muted' | 'following'>; className?: string }) {
   const t = useTranslations('thread.tools');
-  if (!thread.pinned && !thread.muted) return null;
+  if (!thread.pinned && !thread.muted && !thread.following) return null;
   return <span className={cn('inline-flex shrink-0 items-center gap-1 text-muted-foreground', className)}>
+    {/* A booking the viewer follows as a family member, read-only (2026-11-24). */}
+    {thread.following && <span data-following-mark="" className="rounded-full border border-primary/25 bg-brand-soft px-1.5 py-px text-[11px] leading-4 font-medium text-foreground">{t('followingMark')}</span>}
     {thread.pinned && <Pin aria-label={t('pinnedMark')} role="img" className="size-3.5" />}
     {thread.muted && <BellOff aria-label={t('mutedMark')} role="img" className="size-3.5" />}
   </span>;

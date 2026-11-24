@@ -25,6 +25,10 @@ import { BookingHubSkeleton } from '@/ui/screens/bookings/booking-hub-skeleton';
 import { appPageMetadata } from '@/i18n/metadata';
 import { taskMapFor } from '@/modules/task-map/service';
 import { db } from '@/platform/db/client';
+import { addFollowerAction, leaveFollowAction, removeFollowerAction } from '@/modules/followers/actions';
+import { getFollowedBookingView } from '@/modules/followers/service';
+import { FollowedBookingScreen } from '@/ui/screens/bookings/followed-booking-screen';
+import { MarketTime } from '@/ui/lib/market-time';
 
 export async function generateMetadata(): Promise<Metadata> {
   return appPageMetadata('booking');
@@ -44,7 +48,12 @@ async function Booking({ params }: Pick<PageProps<'/[locale]/app/bookings/[booki
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.booking(bookingId)));
   const now = await requestNow();
   const data = await getBookingView(hubDeps(), viewer.user.id, bookingId, now);
-  if (!data) notFound();
+  if (!data) {
+    // A family member who follows it (2026-11-24): the read-only page, on the booking's market clock. Anyone else: not found.
+    const followed = await getFollowedBookingView(db, viewer.user.id, bookingId, now);
+    if (!followed) notFound();
+    return <MarketTime timeZone={followed.timeZone}><FollowedBookingScreen data={followed} now={now.toISOString()} handlers={{ onLeave: leaveFollowAction }} /></MarketTime>;
+  }
   // The task map: the trip there (the helper's from home or where they are), the weather for the booking, what's around.
   const map = await taskMapFor(db, { task: { ...data.task, location: data.location }, viewer: { kind: data.viewerRole, userId: viewer.user.id }, now });
   return (
@@ -64,6 +73,7 @@ async function Booking({ params }: Pick<PageProps<'/[locale]/app/bookings/[booki
       tip={{ onTip: tipAction.bind(null, bookingId), onFinishTipVerification: finishTipVerificationAction.bind(null, bookingId), onRemoveCard: removeCardAction }}
       scheduledPayment={{ onPayNow: payScheduledAction.bind(null, bookingId), onFinishPayVerification: finishScheduledVerificationAction.bind(null, bookingId), onRemoveCard: removeCardAction }}
       thanks={{ onSave: saveThanksAction.bind(null, 'page'), onDelete: deleteThanksAction.bind(null, 'page'), onShowOnProfile: showThanksOnProfileAction.bind(null, 'page'), onHideName: hideThanksNameAction.bind(null, 'page') }}
+      followers={{ onAdd: addFollowerAction.bind(null, 'page'), onRemove: removeFollowerAction.bind(null, 'page') }}
     />
   );
 }

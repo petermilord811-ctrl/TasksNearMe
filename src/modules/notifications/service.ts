@@ -13,7 +13,7 @@ import { accountProfileInputSchema, BADGE_CODES, CONTACT_SHARING_SETTINGS, DIREC
 import { smsAvailable } from '@/integrations/sms';
 import { staffRoles, users } from '@/modules/accounts/schema';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
-import { bookingSeries, bookings } from '@/modules/bookings/schema';
+import { bookingChangeRequests, bookingSeries, bookings } from '@/modules/bookings/schema';
 import { messages, threadParticipants } from '@/modules/messaging/schema';
 import { offers } from '@/modules/offers/schema';
 import { avatarPhoto, MAX_PHOTO_BYTES } from '@/modules/files/photos';
@@ -54,6 +54,8 @@ import { publishRealtime } from '@/modules/realtime/reactions';
 import { userChannel } from '@/platform/realtime/hub';
 import { publishNotices } from '@/platform/realtime/publish';
 import { marketTimeZone } from '@/modules/markets/time-zone';
+import { followerNotificationFor } from '@/modules/followers/domain';
+import { followerIdsOf } from '@/modules/followers/access';
 
 /**
  * Notifications from outbox events (the dispatcher), the notifications page, and the account page
@@ -375,6 +377,13 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
       const poster = text(p.posterUserId);
       return taskId && poster ? [{ userId: poster, type: 'task_expired', target: { kind: 'task', taskId }, title: await taskTitle(db, taskId) }] : [];
     }
+    case 'booking.follower_added': {
+      // The client let a family member follow their booking (2026-11-24): the follower hears it, once.
+      const booking = await bookingContext(db, text(p.bookingId) ?? event.aggregateId);
+      const follower = text(p.followerUserId);
+      if (!booking || !follower) return [];
+      return [{ userId: follower, type: 'follow_added', target: { kind: 'booking', bookingId: booking.id }, title: booking.title, actorName: await nameOf(db, booking.posterUserId) }];
+    }
     case 'booking.confirmed':
     case 'booking.on_my_way':
     case 'booking.running_late':
@@ -395,6 +404,9 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
       const posterName = await nameOf(db, booking.posterUserId);
       const forHelper = (type: NotificationType, extra: Partial<Planned> = {}): Planned => ({ userId: booking.helperUserId, type, target, title: booking.title, actorName: posterName, ...extra });
       const forPoster = (type: NotificationType, extra: Partial<Planned> = {}): Planned => ({ userId: booking.posterUserId, type, target, title: booking.title, actorName: helperName, ...extra });
+      // Family members who follow the booking (2026-11-24) hear its key moments: on the way, arrived, done, canceled.
+      const followerType = followerNotificationFor(event.type);
+      const forFollowers: Planned[] = followerType ? (await followerIdsOf(db, booking.id)).map((userId) => ({ userId, type: followerType, target, title: booking.title, actorName: helperName })) : [];
       switch (event.type) {
         case 'booking.confirmed': {
           // A booking from the helper's own proposal: rebook_accepted says it, with the date, so the helper hears it once
@@ -405,17 +417,17 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
           return [forHelper('booking_confirmed', { params: { at: booking.startAt.toISOString(), timeZone: await marketTimeZone(db, booking.marketId) } })];
         }
         case 'booking.on_my_way':
-          return [forPoster('helper_on_the_way')];
+          return [forPoster('helper_on_the_way'), ...forFollowers];
         case 'booking.running_late':
           return [forPoster('helper_running_late', typeof p.minutes === 'number' ? { params: { minutes: p.minutes } } : {})];
         case 'booking.cant_access':
           return [forPoster('cant_access')];
         case 'booking.arrived':
-          return [forPoster('helper_arrived')];
+          return [forPoster('helper_arrived'), ...forFollowers];
         case 'booking.completion_submitted':
           return [forPoster('work_submitted')];
         case 'booking.completed':
-          return [forHelper('work_approved')];
+          return [forHelper('work_approved'), ...forFollowers];
         case 'booking.disputed':
           return [forHelper('problem_reported')];
         case 'booking.start_reminder': {
@@ -431,7 +443,7 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
           // Not the person who canceled: they did it on screen, and an urgent text or push about it was noise (sweep
           // MN10). A cancel by the system (unpaid, a missed deadline) names nobody and tells both.
           const actor = text(p.actorUserId);
-          const told = [forPoster('booking_canceled'), forHelper('booking_canceled')].filter((item) => item.userId !== actor);
+          const told = [forPoster('booking_canceled'), forHelper('booking_canceled')].filter((item) => item.userId !== actor).concat(forFollowers);
           // The one who canceled gets a receipt by email instead (the owner's choice, 2026-11-20): what was canceled, on
           // the booking's clock, and what happens to the money.
           const by = actor === booking.posterUserId ? 'poster' : actor === booking.helperUserId ? 'helper' : null;
@@ -472,9 +484,16 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
       const ctx = await bookingContext(db, bookingId);
       if (!ctx || !bookingId) return [];
       // Not the person who accepted it (sweep MN10); a change applied with no one named tells both.
-      return [ctx.posterUserId, ctx.helperUserId]
+      const told = [ctx.posterUserId, ctx.helperUserId]
         .filter((userId) => userId !== text(p.actorUserId))
-        .map((userId) => ({ userId, type: 'change_applied' as const, target: { kind: 'booking', bookingId } as AttentionTarget, title: ctx.title }));
+        .map((userId): Planned => ({ userId, type: 'change_applied' as const, target: { kind: 'booking', bookingId } as AttentionTarget, title: ctx.title }));
+      // A new time reaches the family members who follow the booking too (2026-11-24), on the booking's clock.
+      const changeId = text(p.changeId);
+      const [change] = changeId ? await db.select({ types: bookingChangeRequests.types }).from(bookingChangeRequests).where(eq(bookingChangeRequests.id, changeId)).limit(1) : [];
+      const followerType = followerNotificationFor(event.type, { timeChanged: Boolean(change?.types.includes('schedule')) });
+      if (!followerType) return told;
+      const params = { at: ctx.startAt.toISOString(), timeZone: await marketTimeZone(db, ctx.marketId) };
+      return [...told, ...(await followerIdsOf(db, bookingId)).map((userId): Planned => ({ userId, type: followerType, target: { kind: 'booking', bookingId }, title: ctx.title, params }))];
     }
     case 'rebook.proposed':
     case 'rebook.accepted':

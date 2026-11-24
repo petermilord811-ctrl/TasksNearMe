@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import {
   routes, type ActionResult, type BadgeTone, type BookingActionId, type BookingHubHandlers,
   type BookingPaymentLine, type BookingSheetHandlers, type BookingTipHandlers, type BookingView, type ISODateTime,
-  type ScheduledPaymentHandlers, type TaskMapBundle, type ThankYouHandlers,
+  type FollowerHandlers, type ScheduledPaymentHandlers, type TaskMapBundle, type ThankYouHandlers,
 } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
@@ -32,6 +32,7 @@ import { ScheduledPaymentCard, type ScheduledPaymentPreviewState } from './sched
 import { BookingHubWithoutSheetHandlers } from './booking-hub-with-sheets';
 import { RichText } from '@/ui/components/rich-text/rich-text';
 import { ThanksPanelView } from '@/ui/components/thanks/thank-you-note';
+import { FamilyCard } from '@/ui/components/family/followers-dialog';
 
 export interface BookingHubScreenProps {
   data: BookingView;
@@ -44,6 +45,8 @@ export interface BookingHubScreenProps {
   scheduledPayment?: ScheduledPaymentHandlers;
   /** A completed booking's thank-you note (2026-11-24). Without it the note shows without its buttons. */
   thanks?: ThankYouHandlers;
+  /** The client's "Add a family member" and Remove (2026-11-24). Without it the card shows who follows, without buttons. */
+  followers?: FollowerHandlers;
   now: ISODateTime;
   /** The task map (the area, the trip there, the weather for the booking and what's around). */
   map?: TaskMapBundle | null;
@@ -125,7 +128,7 @@ function BookingPayment({ payment }: { payment: BookingPaymentLine }) {
 }
 
 /** Initial result/pending states belong to the preview gallery. App pages use BookingHubScreen. */
-export function BookingHubContent({ data, handlers, sheets, tip, scheduledPayment, thanks, now, initialResult, initialPending, tipPreview, scheduledPreview, map }: Omit<BookingHubScreenProps, 'sheets'> & {
+export function BookingHubContent({ data, handlers, sheets, tip, scheduledPayment, thanks, followers, now, initialResult, initialPending, tipPreview, scheduledPreview, map }: Omit<BookingHubScreenProps, 'sheets'> & {
   sheets: BookingSheetHandlers;
   initialResult?: ActionResult;
   initialPending?: BookingActionId;
@@ -223,6 +226,9 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
         <VerificationBadges badges={{ phoneVerified: data.poster.phoneVerified }} compact />
       </div>}
     </section>
+
+    {/* Family followers (2026-11-24): the client's card to add or remove them; the helper always sees who follows. */}
+    {data.family && <FamilyCard {...(data.family.manage ? { manage: data.family.manage } : {})} {...(data.family.followedBy ? { followedBy: data.family.followedBy } : {})} {...(followers ? { handlers: followers } : {})} helperName={helper.displayName.split(' ')[0] ?? helper.displayName} viewer={data.viewerRole === 'poster' ? 'client' : 'helper'} />}
 
     <section aria-label={t('whenWhere')} className="space-y-4">
       <h2 className={sectionTitle}>{t('whenWhere')}</h2>

@@ -48,6 +48,12 @@ export const TIMELINE_EVENT_TYPES = [
   'times_shared',
   /** The client sent the helper a thank-you note (2026-11-24); `params.noteId`. Its card shows in the conversation. */
   'thanks_sent',
+  /** The client let a family member follow the booking (2026-11-24); `params.name`: the follower's display name. */
+  'follower_added',
+  /** The client removed a follower (`params.name`). */
+  'follower_removed',
+  /** A follower stopped following (`params.name`). */
+  'follower_left',
 ] as const;
 export type TimelineEventType = (typeof TIMELINE_EVENT_TYPES)[number];
 
@@ -74,5 +80,7 @@ export interface TimelineEvent {
     slotIds?: string[];
     /** A thank-you note (`thanks_sent`). */
     noteId?: string;
+    /** A family follower's display name (`follower_added`, `follower_removed`, `follower_left`). */
+    name?: string;
   };
 }

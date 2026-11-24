@@ -50,6 +50,8 @@ import { isSampleId, samplesHiddenInThisBuild } from '@/shared/sample-data';
 import { messageReactions, messages, savedReplies, threadParticipants, threads } from './schema';
 import { deletedLabelFor, shownPerson } from '@/modules/accounts/shown-name';
 import { sparksSummaryOf } from '@/modules/sparks/service';
+import { bookingAccess, familyViewFor, followedBookingIds } from '@/modules/followers/access';
+import { followerEventParams, followerSeesEvent, followOpen } from '@/modules/followers/domain';
 
 /**
  * Threads between the two people on an offer or a booking (blueprint 02 J2 step 6, 06, 08). Bodies are
@@ -452,7 +454,10 @@ export async function getInbox(db: Db, userId: string, now: Date): Promise<Inbox
     .where(eq(threadParticipants.userId, userId))
     .orderBy(desc(sql`coalesce(${threads.lastMessageAt}, ${threads.createdAt})`));
   const summaries = await summariesOf(db, rows.map(({ thread }) => thread), userId, now);
-  const list = rows.flatMap(({ thread }) => { const found = summaries.get(thread.id); return found ? [found.summary] : []; });
+  const own = rows.flatMap(({ thread }) => { const found = summaries.get(thread.id); return found ? [found.summary] : []; });
+  // Conversations of bookings the viewer follows as a family member (2026-11-24), marked "Following", in by latest activity.
+  const followed = await followedThreadSummaries(db, userId, now);
+  const list = followed.length ? mergeByActivity(own, followed) : own;
   // Pinned ones on top (2026-11-23), then conversations waiting on the viewer (audit M33), each group by latest activity
   // (the query's order; sort is stable).
   return { threads: list.sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) || Number(b.unreadCount > 0) - Number(a.unreadCount > 0)) };
@@ -499,20 +504,9 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   const [thread] = await db.select().from(threads).where(eq(threads.id, threadId)).limit(1);
   if (!thread) return null;
   const found = await summaryOf(db, thread, userId, now);
-  if (!found) return null;
-  // Another conversation's message, or none: the latest page, as without one.
-  const [from] = page.from ? await db.select({ id: messages.id }).from(messages).where(and(eq(messages.id, String(page.from)), eq(messages.threadId, thread.id))).limit(1) : [];
-  const rows = (
-    await db
-      .select()
-      .from(messages)
-      .where(and(eq(messages.threadId, thread.id), ...(from ? [fromMessage(from.id)] : [])))
-      .orderBy(desc(messages.createdAt), desc(messages.id))
-      .limit(from ? MAX_SHOWN : PAGE_SIZE)
-  ).reverse();
-  const earlier = rows[0]
-    ? (await db.select({ id: messages.id }).from(messages).where(and(eq(messages.threadId, thread.id), beforeMessage(rows[0].id))).orderBy(desc(messages.createdAt), desc(messages.id)).limit(PAGE_SIZE)).at(-1)
-    : undefined;
+  // Not one of its two people: a family member who follows the booking reads it, read-only (2026-11-24).
+  if (!found) return followerThreadPage(db, userId, thread, now, page);
+  const { rows, earlier } = await pageRows(db, thread.id, page);
   const fileIds = [...new Set(rows.flatMap((row) => row.attachmentFileIds))];
   const photoRows = fileIds.length ? await db.select().from(files).where(inArray(files.id, fileIds)) : [];
   const photos = new Map(photoRows.map((file) => [file.id, file]));
@@ -565,6 +559,9 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
   // A completed booking's thank-you note (2026-11-24): the client's "Send a thank-you note" above the message box.
   const [thanksBooking] = thread.kind === 'booking' && !otherGone ? await db.select({ id: bookings.id, status: bookings.status, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId, confirmedAt: bookings.confirmedAt }).from(bookings).where(eq(bookings.id, thread.linkedId)).limit(1) : [];
   const thanks = thanksBooking && !blocked ? await thanksPanelFor(db, userId, thanksBooking, now) : null;
+  // Family followers of a booking (2026-11-24): the client's panel, and who follows, for both of its people.
+  const [familyBooking] = thread.kind === 'booking' ? await db.select({ id: bookings.id, posterUserId: bookings.posterUserId, helperUserId: bookings.helperUserId, status: bookings.status, completedAt: bookings.completedAt, seriesId: bookings.seriesId }).from(bookings).where(eq(bookings.id, thread.linkedId)).limit(1) : [];
+  const family = familyBooking ? await familyViewFor(db, familyBooking, userId, now) : undefined;
   const canProposeChange = changeable ? allowedChangeTypes({ status: changeable.status, pricingType: 'fixed', startAt: now, now }).length > 0 : false;
   // Quotes (a replied-to message may be older than this page) and reactions, then the viewer's saved replies (7.3).
   const quotedIds = [...new Set(rows.flatMap((row) => (row.replyToMessageId ? [row.replyToMessageId] : [])))];
@@ -611,6 +608,7 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
     ...(bookingTools?.actions.length ? { bookingActions: bookingTools.actions } : {}),
     ...(quietUntil ? { quietHours: { until: quietUntil.toISOString() } } : {}),
     ...(thanks ? { thanks } : {}),
+    ...(family ? { family } : {}),
     ...(presence ? { presence } : {}),
     ...(mutual && lastMine && theirs?.lastReadAt && theirs.lastReadAt >= lastMine.createdAt ? { seenMessageId: lastMine.id } : {}),
     // Ticks (2026-11-24): how far they've read, under the same rule as "Seen".
@@ -625,6 +623,133 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
       maxAttachments: 4,
       maxPhotoMegabytes: Math.round(MAX_PHOTO_BYTES / (1024 * 1024)),
     },
+  };
+}
+
+/** One page of a conversation: its latest 100 messages, or everything from `page.from` on (up to 1,000), oldest first. */
+async function pageRows(db: Db, threadId: string, page: { from?: string }) {
+  // Another conversation's message, or none: the latest page, as without one.
+  const [from] = page.from ? await db.select({ id: messages.id }).from(messages).where(and(eq(messages.id, String(page.from)), eq(messages.threadId, threadId))).limit(1) : [];
+  const rows = (
+    await db
+      .select()
+      .from(messages)
+      .where(and(eq(messages.threadId, threadId), ...(from ? [fromMessage(from.id)] : [])))
+      .orderBy(desc(messages.createdAt), desc(messages.id))
+      .limit(from ? MAX_SHOWN : PAGE_SIZE)
+  ).reverse();
+  const earlier = rows[0]
+    ? (await db.select({ id: messages.id }).from(messages).where(and(eq(messages.threadId, threadId), beforeMessage(rows[0].id))).orderBy(desc(messages.createdAt), desc(messages.id)).limit(PAGE_SIZE)).at(-1)
+    : undefined;
+  return { rows, earlier };
+}
+
+// ---- Family followers (2026-11-24) ------------------------------------------------------------------------
+//
+// A follower is never a participant: everything above that reads or writes for a conversation's two people (sending,
+// reactions, typing, search, translations, read marks, "Seen") finds no row for them and refuses. They get their own
+// read-only projection here, as the client sees the conversation: the client's messages are `me`, the helper's `them`,
+// masked the same way, and only the status lines a follower may see (followers/domain.ts: no money, no change cards).
+
+type BookingRow = typeof bookings.$inferSelect;
+
+/** A message as the client sees it, for a follower; null for a status line a follower doesn't see. */
+function followerView(row: typeof messages.$inferSelect, booking: BookingRow, masking: boolean, photos: Map<string, typeof files.$inferSelect>, mentions?: Mentions): MessageView | null {
+  if (row.kind !== 'text') {
+    if (!row.event || !followerSeesEvent(row.event.type)) return null;
+    const params = followerEventParams(row.event.params);
+    return { ...toView({ ...row, event: { type: row.event.type, ...(params ? { params } : {}) } }, booking.posterUserId, masking, photos, mentions) };
+  }
+  return toView(row, booking.posterUserId, masking, photos, mentions);
+}
+
+/** The booking a follower reads through this conversation, when they follow it now; null otherwise. */
+async function followedBookingOf(db: Db, userId: string, thread: ThreadRow, now: Date): Promise<BookingRow | null> {
+  if (thread.kind !== 'booking') return null;
+  const [booking] = await db.select().from(bookings).where(eq(bookings.id, thread.linkedId)).limit(1);
+  if (!booking) return null;
+  return (await bookingAccess(db, booking, userId, now)) === 'follower' ? booking : null;
+}
+
+async function followerSummary(db: Db, thread: ThreadRow, booking: BookingRow, latest: typeof messages.$inferSelect | undefined): Promise<ThreadSummary | null> {
+  const [[task], [helper]] = await Promise.all([
+    db.select({ title: tasks.title }).from(tasks).where(eq(tasks.id, booking.taskId)).limit(1),
+    db.select({ user: users, username: usernames.username }).from(users).leftJoin(usernames, eq(usernames.userId, users.id)).where(eq(users.id, booking.helperUserId)).limit(1),
+  ]);
+  if (!task || !helper) return null;
+  const masking = booking.confirmedAt === null;
+  // In the list, the client's words aren't the follower's own: no "You:" before them.
+  const latestView = latest ? followerView(latest, booking, masking, new Map()) : null;
+  return {
+    id: thread.id,
+    kind: 'booking',
+    title: task.title,
+    otherParty: personOf(helper.user, await deletedLabelFor([helper.user]), helper.username),
+    subject: { kind: 'booking', bookingId: booking.id },
+    ...(latestView ? { lastMessage: { sender: latestView.sender === 'me' ? 'them' : latestView.sender, kind: latestView.kind, preview: latestView.segments, ...(latestView.event ? { event: latestView.event } : {}), createdAt: latestView.createdAt } } : {}),
+    unreadCount: 0,
+    contactMasking: masking,
+    following: true,
+  };
+}
+
+/** The conversations of the bookings the viewer follows now, for their Messages and the chat window. */
+async function followedThreadSummaries(db: Db, userId: string, now: Date): Promise<ThreadSummary[]> {
+  const ids = await followedBookingIds(db, userId);
+  if (ids.length === 0) return [];
+  const followed = (await db.select().from(bookings).where(inArray(bookings.id, ids))).filter((booking) => booking.posterUserId !== userId && booking.helperUserId !== userId && followOpen(booking, now));
+  if (followed.length === 0) return [];
+  const threadRows = await db.select().from(threads).where(and(eq(threads.kind, 'booking'), inArray(threads.linkedId, followed.map((booking) => booking.id))));
+  const out: ThreadSummary[] = [];
+  for (const thread of threadRows) {
+    const booking = followed.find((row) => row.id === thread.linkedId);
+    if (!booking) continue;
+    // The latest message a follower may see (a payment's line is skipped).
+    const recent = await db.select().from(messages).where(eq(messages.threadId, thread.id)).orderBy(desc(messages.createdAt), desc(messages.id)).limit(10);
+    const latest = recent.find((row) => row.kind === 'text' || (row.event && followerSeesEvent(row.event.type)));
+    const summary = await followerSummary(db, thread, booking, latest);
+    if (summary) out.push(summary);
+  }
+  return out;
+}
+
+/** Followed conversations among the viewer's own, by latest activity (the own list keeps its order). */
+function mergeByActivity(own: ThreadSummary[], followed: ThreadSummary[]): ThreadSummary[] {
+  const at = (summary: ThreadSummary) => summary.lastMessage?.createdAt ?? '';
+  const out = [...own];
+  for (const summary of [...followed].sort((a, b) => at(b).localeCompare(at(a)))) {
+    const index = out.findIndex((row) => at(row) < at(summary));
+    out.splice(index < 0 ? out.length : index, 0, summary);
+  }
+  return out;
+}
+
+/**
+ * A booking's conversation for a family member who follows it (null for anyone else): read-only. Opening it marks
+ * nothing read and tells nobody (no "Seen"); no composer, reactions, cards, menus of the two people's own, or money.
+ */
+async function followerThreadPage(db: Db, userId: string, thread: ThreadRow, now: Date, page: { from?: string }): Promise<ThreadPageData | null> {
+  const booking = await followedBookingOf(db, userId, thread, now);
+  if (!booking) return null;
+  const { rows, earlier } = await pageRows(db, thread.id, page);
+  const masking = booking.confirmedAt === null;
+  const fileIds = [...new Set(rows.flatMap((row) => row.attachmentFileIds))];
+  const photoRows = fileIds.length ? await db.select().from(files).where(inArray(files.id, fileIds)) : [];
+  const photos = new Map(photoRows.map((file) => [file.id, file]));
+  const mentions = await mentionsOf(db, rows.filter((row) => row.kind === 'text').map((row) => row.body), booking.posterUserId);
+  const shown = rows.flatMap((row) => {
+    const view = followerView(row, booking, masking, photos, mentions);
+    return view ? [view] : [];
+  });
+  const summary = await followerSummary(db, thread, booking, [...rows].reverse().find((row) => row.kind === 'text' || (row.event && followerSeesEvent(row.event.type))));
+  const [client] = await db.select({ name: users.name }).from(users).where(eq(users.id, booking.posterUserId)).limit(1);
+  if (!summary || !client) return null;
+  return {
+    thread: summary,
+    messages: shown,
+    ...(earlier ? { earlier: { from: earlier.id } } : {}),
+    family: { following: { bookingId: booking.id, clientName: client.name } },
+    composer: { canSend: false, disabledReason: 'following', maxLength: 2000, maxAttachments: 4, maxPhotoMegabytes: Math.round(MAX_PHOTO_BYTES / (1024 * 1024)) },
   };
 }
 
@@ -800,5 +925,13 @@ export async function canViewMessageFile(db: Db, fileId: string, userId: string)
     .innerJoin(threadParticipants, and(eq(threadParticipants.threadId, messages.threadId), eq(threadParticipants.userId, userId)))
     .where(sql`${messages.attachmentFileIds} @> ${JSON.stringify([fileId])}::jsonb`)
     .limit(1);
-  return Boolean(row);
+  if (row) return true;
+  // A family member who follows the booking sees its conversation's photos, as its client does (2026-11-24).
+  const [inBooking] = await db
+    .select({ thread: threads })
+    .from(messages)
+    .innerJoin(threads, eq(threads.id, messages.threadId))
+    .where(and(eq(threads.kind, 'booking'), sql`${messages.attachmentFileIds} @> ${JSON.stringify([fileId])}::jsonb`))
+    .limit(1);
+  return inBooking ? (await followedBookingOf(db, userId, inBooking.thread, new Date())) !== null : false;
 }

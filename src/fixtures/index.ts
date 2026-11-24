@@ -66,3 +66,4 @@ export * from './assistant';
 export * from './peek';
 export * from './task-map';
 export * from './thanks';
+export * from './followers';

@@ -4,6 +4,7 @@
 import type { PreviewEntry } from '@/contracts/preview';
 import { moneyPreviews } from './money.preview';
 import { thanksPreviews } from './thanks.preview';
+import { followersPreviews } from './followers.preview';
 import { brandPreviews } from './brand.preview';
 import { statusPreviews } from './status.preview';
 import { deadlinePreviews } from './deadline.preview';
@@ -188,4 +189,5 @@ export const previews: PreviewEntry[] = [
   ...inPlacePreviews,
   ...peekPreviews,
   ...thanksPreviews,
+  ...followersPreviews,
 ];

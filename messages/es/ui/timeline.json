@@ -45,5 +45,8 @@
   "offer_requested": "Pidió una oferta",
   "client_present": "El cliente está ahí",
   "times_shared": "Compartió horarios libres",
-  "thanks_sent": "Envió una nota de agradecimiento"
+  "thanks_sent": "Envió una nota de agradecimiento",
+  "follower_added": "{name} ahora sigue esta reserva (familia)",
+  "follower_removed": "{name} ya no sigue esta reserva",
+  "follower_left": "{name} dejó de seguir esta reserva"
 }

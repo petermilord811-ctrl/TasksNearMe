@@ -1,7 +1,7 @@
 import Link from 'next/link';
-import { CircleAlert, Clock, MapPin, Monitor } from 'lucide-react';
+import { CircleAlert, Clock, Eye, MapPin, Monitor } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type BookingListRow, type BookingsPageData, type ISODateTime } from '@/contracts';
+import { routes, type BookingListRow, type BookingsPageData, type FollowedBookingRow, type ISODateTime } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
@@ -66,6 +66,41 @@ export function BookingRow({ row, tab, now, headingLevel = 2, showRole = false }
   />;
 }
 
+/**
+ * "Bookings you follow" (2026-11-24): bookings the viewer follows as a family member, read-only. Whose booking, with
+ * whom, when and where; no money. Each opens the booking's read-only page.
+ */
+export function FollowedBookingsSection({ rows, now }: { rows?: FollowedBookingRow[]; now: ISODateTime }) {
+  const t = useTranslations('family.list');
+  if (!rows?.length) return null;
+  return <section aria-labelledby="bookings-following" className="space-y-2">
+    <ListGroupLabel id="bookings-following"><span className="inline-flex items-center gap-1.5"><Eye aria-hidden="true" className="size-4" />{t('title')}</span></ListGroupLabel>
+    <CompactList>{rows.map((row) => <li key={row.id}><FollowedRow row={row} now={now} /></li>)}</CompactList>
+  </section>;
+}
+
+function FollowedRow({ row, now }: { row: FollowedBookingRow; now: ISODateTime }) {
+  const t = useTranslations('family.list');
+  const card = useTranslations('taskCard');
+  const { formatTime, formatRelative } = useFormat();
+  const status = useBookingStatus(row.status, 'poster');
+  const CategoryIcon = CATEGORY_ICONS[row.categorySlug];
+  return <CompactRow
+    titleId={`following-${row.id}`}
+    title={row.title}
+    href={routes.app.booking(row.id)}
+    leading={<DayTile at={row.start} />}
+    facts={<>
+      <StatusBadge size="sm" {...status} />
+      <StatusBadge size="sm" tone="neutral" label={t('whose', { client: row.clientName })} />
+      <RowFact icon={CategoryIcon}>{card(`categories.${row.categorySlug}`)}</RowFact>
+      <RowFact icon={Clock} className="tabular-nums"><time dateTime={row.start}>{formatTime(row.start)}</time><span>{' · '}{formatRelative(row.start, now)}</span></RowFact>
+      <RowFact icon={row.place.kind === 'remote' ? Monitor : MapPin}>{row.place.kind === 'remote' ? t('remote') : row.place.areaName}</RowFact>
+      <span className="inline-flex min-w-0 items-center gap-1.5"><InitialsAvatar initials={row.helper.initials} photo={row.helper.photo} size="xs" /><span className="truncate">{row.helper.displayName}</span></span>
+    </>}
+  />;
+}
+
 /** Bookings as client or helper: what needs the viewer first (with the step), then upcoming by day, then past. */
 export function BookingsScreen({ data, now }: BookingsScreenProps) {
   const t = useTranslations('bookings');
@@ -78,6 +113,7 @@ export function BookingsScreen({ data, now }: BookingsScreenProps) {
   return <div className="mx-auto w-full max-w-content space-y-6">
     <PageHeader title={t('title')} description={t('description')} />
     <RegularVisitsSection regular={data.regular} />
+    <FollowedBookingsSection rows={data.following} now={now} />
     <Tabs defaultValue={initialTab} className="gap-6">
       <TabsList aria-label={t('tabsLabel')} className="w-full sm:w-fit">
         {tabs.map((tab) => <TabsTrigger key={tab} value={tab} className="min-w-0 tabular-nums max-sm:flex-auto max-sm:px-2.5 max-sm:whitespace-normal max-sm:[text-wrap:balance] sm:min-w-28 sm:whitespace-nowrap">{t('tabCount', { label: t(`tabs.${tab}`), count: data[tab].length })}</TabsTrigger>)}

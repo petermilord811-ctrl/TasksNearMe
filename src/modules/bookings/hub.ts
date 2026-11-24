@@ -50,6 +50,8 @@ import { scheduledPaymentViewOf } from './scheduled';
 import { seriesOfBooking, seriesSummaries, skipVisit } from './series';
 import { bookingTerms, bookings } from './schema';
 import { shownPaymentStatus } from '@/modules/payments/shown-status';
+import { familyViewFor } from '@/modules/followers/access';
+import { followedBookingRows } from '@/modules/followers/service';
 
 /**
  * The booking page and the bookings list (blueprint 03 §4; ui-contract §5–6), projected for the
@@ -220,7 +222,7 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     paymentLines.sort((a, b) => a.at.localeCompare(b.at));
   }
 
-  const [dispute, openChange, tip, series, scheduledPayment, thankHref, thanks] = await Promise.all([
+  const [dispute, openChange, tip, series, scheduledPayment, thankHref, thanks, family] = await Promise.all([
     getBookingDispute(db, booking.id, userId, role),
     bookingOpenChange(db, booking.id, userId, role, now),
     tipViewOf(deps, booking, role, completion?.finalBreakdown.taskPriceCents ?? terms.breakdown.taskPriceCents, now),
@@ -230,6 +232,8 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     role === 'poster' ? thankOnNeighborsHref(db, booking) : Promise.resolve(undefined),
     // The thank-you note (2026-11-24): written here or in the conversation, read by both.
     thanksPanelFor(db, userId, booking, now),
+    // Family followers (2026-11-24): the client's panel; who follows, for both.
+    familyViewFor(db, booking, userId, now),
   ]);
 
   const helperBeforePayment = role === 'helper' && !booking.confirmedAt;
@@ -288,6 +292,7 @@ export async function getBookingView(deps: HubDeps, userId: string, bookingId: s
     ...(tip ? { tip } : {}),
     ...(thankHref ? { thankOnNeighborsHref: thankHref } : {}),
     ...(thanks ? { thanks } : {}),
+    ...(family?.manage || family?.followedBy ? { family: { ...(family.manage ? { manage: family.manage } : {}), ...(family.followedBy ? { followedBy: family.followedBy } : {}) } } : {}),
     ...(series ? { series } : {}),
     // The helper canceled and the task is open for offers again: the client's page links to it.
     ...(role === 'poster' && booking.status === 'canceled' && facts.task?.reopened && facts.task.status === 'open' ? { taskReopened: true } : {}),
@@ -301,8 +306,9 @@ const FINAL: string[] = ['completed', 'canceled'];
 /** `/app/bookings`: the viewer's bookings as client and helper. Holds that ran out are left out. */
 export async function getBookingsPage(db: Db, userId: string, now: Date): Promise<BookingsPageData> {
   await autoApproveDue(db, now);
-  const regular = await seriesSummaries(db, userId, now);
-  const withRegular = (page: BookingsPageData): BookingsPageData => (regular.length > 0 ? { ...page, regular } : page);
+  const [regular, following] = await Promise.all([seriesSummaries(db, userId, now), followedBookingRows(db, userId, now)]);
+  // Regular visits, and the bookings the viewer follows as a family member (2026-11-24).
+  const withRegular = (page: BookingsPageData): BookingsPageData => ({ ...page, ...(regular.length > 0 ? { regular } : {}), ...(following.length > 0 ? { following } : {}) });
   const rows = await db
     .select({ booking: bookings, terms: bookingTerms })
     .from(bookings)

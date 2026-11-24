@@ -19,6 +19,7 @@ import type { PricingInput } from './money';
 import type { TaskSchedule } from './tasks';
 import type { ChangeStatus, InviteStatus } from './status';
 import type { ThankYouHandlers, ThankYouNoteView, ThanksPanel } from './thanks';
+import type { BookingFamilyView, FollowerHandlers } from './followers';
 
 /**
  * Message text arrives already split into segments. Contact details are detected and masked by the
@@ -146,6 +147,11 @@ export interface ThreadSummary {
    * answered, from someone they haven't talked to about a task. Under Requests, not in the Messages badge.
    */
   request?: boolean;
+  /**
+   * The viewer follows this booking's conversation as the client's family member (2026-11-24): read-only, marked
+   * "Following". Its messages read as the client sees them (`sender: 'me'` is the client), masked the same way.
+   */
+  following?: boolean;
 }
 
 // ---- The viewer's own list (2026-11-23, owner: "plan all and implement"): pinned, muted, archived; message requests --
@@ -205,6 +211,8 @@ export const COMPOSER_DISABLED_REASONS = [
    * hasn't answered yet. Sending opens again as soon as they do.
    */
   'awaiting_reply',
+  /** The viewer follows this booking as the client's family member (2026-11-24): read-only. */
+  'following',
 ] as const;
 export type ComposerDisabledReason = (typeof COMPOSER_DISABLED_REASONS)[number];
 
@@ -307,6 +315,11 @@ export interface ThreadPageData {
    * `canWrite` (a card above the message box). A sent note shows as a card in the log (`cards.thanks`).
    */
   thanks?: ThanksPanel;
+  /**
+   * A booking's family followers (2026-11-24): the client's panel ("Add a family member" in the ⋯ menu), the note both
+   * people see ("Maya's family member Lia follows this booking"), or, for a follower, that they're following.
+   */
+  family?: BookingFamilyView;
 }
 
 // ---- Cards in a conversation (2026-11-23, owner: "plan all and implement") ---------------------------------------------
@@ -623,6 +636,8 @@ export interface ThreadHandlers {
   onShareTimes?: ActionHandler<ShareTimesInput>;
   /** A booking's thank-you note (2026-11-24): write, edit, delete, "Show on my profile", "Don't show my name". */
   thanks?: ThankYouHandlers;
+  /** The client's "Add a family member" and Remove (2026-11-24), from the ⋯ menu. */
+  followers?: FollowerHandlers;
 }
 
 // ---- Direct conversations (2026-11-21) -----------------------------------------------------------------------
@@ -869,4 +884,6 @@ export interface ChatThreadHandlers {
   onShareTimes(threadId: string, input: ShareTimesInput): Promise<ActionResult>;
   /** A booking's thank-you note (2026-11-24), as on the conversation page. */
   thanks?: ThankYouHandlers;
+  /** A booking's client: "Add a family member" and Remove (2026-11-24), bound to the window. */
+  followers?: FollowerHandlers;
 }

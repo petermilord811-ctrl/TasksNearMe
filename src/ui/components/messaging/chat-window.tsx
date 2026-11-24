@@ -37,6 +37,7 @@ import { ThreadPresence } from '@/ui/screens/messages/thread-presence';
 import { AgreementCard, BookingDayChips } from './booking-chat-tools';
 import { ConversationActionsMenu } from './conversation-actions';
 import { ConversationMarks, ConversationMenu, RequestBanner } from './conversation-tools';
+import { FamilyNote } from '@/ui/components/family/family-note';
 import { HelpChat } from './help-chat';
 import { HelpAvatar, HelpRow } from './help-row';
 import { InboxList } from './inbox-list';
@@ -153,7 +154,11 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
   // Suggest replies answers the other person's latest message, when they wrote last (2026-11-23).
   const lastWritten = [...messages].reverse().find((message) => message.kind === 'text');
   const suggestFor = data.assist?.suggest && lastWritten?.sender === 'them' ? lastWritten.id : undefined;
-  const safetyMenu = safety ? { subject: safety, handlers: { onReport: (input: Parameters<ChatThreadHandlers['onReport']>[1]) => handlers.onReport(id, input), onBlock: (input: { blocked: boolean }) => handlers.onBlock(id, input) } } : undefined;
+  // A family member following the booking (2026-11-24): read-only, so the menu offers only the way to the booking.
+  const following = Boolean(data.family?.following);
+  const menuHandlers: ThreadHandlers = following ? { onSend: bound.onSend, onUploadPhoto: bound.onUploadPhoto } : bound;
+  const family = !following && data.family?.manage && handlers.followers ? { panel: data.family.manage, handlers: handlers.followers, helperName: firstName, ...(onRefresh ? { onDone: onRefresh } : {}) } : undefined;
+  const safetyMenu = !following && safety ? { subject: safety, handlers: { onReport: (input: Parameters<ChatThreadHandlers['onReport']>[1]) => handlers.onReport(id, input), onBlock: (input: { blocked: boolean }) => handlers.onBlock(id, input) } } : undefined;
   // The header never overlaps itself, however narrow (2026-11-23, owner: "bugs in header"): the name and its line below
   // take what's left after the buttons and wrap; the way to what it's about lives in the menu, with search and the rest.
   // The conversation translated and "Catch me up" (2026-11-24): the menu turns them on, the messages show them.
@@ -178,11 +183,12 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
       </div>
       <div className="flex shrink-0 items-center">
         {/* What it's about, search, side by side, pin, mute, archive, then Report and Block (2026-11-23). */}
-        <ConversationMenu thread={thread} handlers={bound} safety={safetyMenu} name={other.displayName} onJump={onJump} now={now} {...(subjectLink ? { subject: { href: subjectLink, label: t(`subject.${thread.subject.kind}`) } } : {})} {...(onOpenBeside ? { onOpenBeside } : {})} {...(onShowInWindow ? { onShowInWindow } : {})} />
+        <ConversationMenu thread={thread} handlers={menuHandlers} safety={safetyMenu} name={other.displayName} onJump={onJump} now={now} {...(subjectLink ? { subject: { href: subjectLink, label: t(`subject.${thread.subject.kind}`) } } : {})} {...(onOpenBeside ? { onOpenBeside } : {})} {...(onShowInWindow ? { onShowInWindow } : {})} {...(family ? { family } : {})} />
         {controls}
       </div>
     </header>
     {thread.contactMasking && <p className="flex items-start gap-2 border-b border-foreground/[0.07] bg-secondary/60 px-2.5 py-1.5 text-[11px] leading-4 text-secondary-foreground dark:border-white/[0.06]"><LockKeyhole aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" /><span>{thread.kind === 'direct' ? t('direct.masking') : t('masking')}</span></p>}
+    <FamilyNote family={data.family} compact />
     {data.agreement && <AgreementCard agreement={data.agreement} threadId={thread.id} canProposeChange={Boolean(data.canProposeChange)} compact />}
     {data.canProposeChange && thread.subject.kind === 'booking' && !data.agreement && <p className="flex flex-wrap items-center justify-between gap-x-3 border-b border-foreground/[0.07] px-3 py-1.5 text-xs dark:border-white/[0.06]">
       <span className="text-muted-foreground">{t('cards.change.hint')}</span>

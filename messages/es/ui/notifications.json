@@ -90,7 +90,13 @@
     "community_question_match": "Alguien en {area} tiene una pregunta sobre tus servicios: {title}",
     "community_task_posted": "{actorName} publicó una tarea desde la conversación donde te recomendaron: {title}",
     "community_auto_hidden": "Tu {on, select, reply {respuesta} other {publicación}} en {title} está oculta mientras nuestro equipo revisa los reportes",
-    "community_digest": "Esta semana en {area}: {count, plural, one {# publicación} other {# publicaciones}}{waiting, plural, =0 {} one {, # espera respuesta} other {, # esperan respuesta}}"
+    "community_digest": "Esta semana en {area}: {count, plural, one {# publicación} other {# publicaciones}}{waiting, plural, =0 {} one {, # espera respuesta} other {, # esperan respuesta}}",
+    "follow_added": "{actorName} te agregó para seguir una reserva: {title}",
+    "followed_on_the_way": "Sigues: {actorName} va en camino para {title}",
+    "followed_arrived": "Sigues: {actorName} llegó para {title}",
+    "followed_completed": "Sigues: {title} está terminada",
+    "followed_canceled": "Sigues: {title} se canceló",
+    "followed_time_changed": "Sigues: {title} tiene una nueva hora"
   },
   "previews": {
     "group": "Notificaciones",

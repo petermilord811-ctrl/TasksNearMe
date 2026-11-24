@@ -103,6 +103,12 @@ const copy: Record<NotificationType, RegExp> = {
   saved_searches_digest: /new tasks? for your saved searches, including/,
   payment_refunded: /We refunded/,
   address_recheck: /checking your home address again/,
+  follow_added: /added you to follow a booking/,
+  followed_on_the_way: /Following: .* is on the way/,
+  followed_arrived: /Following: .* has arrived/,
+  followed_completed: /Following: .* is done/,
+  followed_canceled: /Following: .* was canceled/,
+  followed_time_changed: /Following: .* has a new time/,
 };
 const targets: Record<AttentionTarget['kind'], { target: AttentionTarget; href: string }> = {
   booking: { target: { kind: 'booking', bookingId: 'booking / one' }, href: routes.app.booking('booking / one') },

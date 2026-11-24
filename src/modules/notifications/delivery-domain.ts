@@ -58,6 +58,13 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   reward_ready: 'account',
   task_match: 'task_alerts',
   data_export_ready: 'account',
+  // A family member's booking (2026-11-24): booking news, as for the client.
+  follow_added: 'bookings',
+  followed_on_the_way: 'bookings',
+  followed_arrived: 'bookings',
+  followed_completed: 'bookings',
+  followed_canceled: 'bookings',
+  followed_time_changed: 'bookings',
   series_started: 'bookings',
   series_visit_skipped: 'bookings',
   series_paused: 'bookings',

@@ -1,0 +1,72 @@
+{
+  "dialog": {
+    "title": "Family members",
+    "description": "Let someone in your family follow this booking: an adult child, a parent, a partner. {helper} will see who follows.",
+    "sees": "They'll see the booking's status and time, {helper}'s profile, and your conversation as you see it, with its updates.",
+    "cant": "They can't send messages, pay, change or cancel anything, and never see your address or payments.",
+    "following": "Following ({count} of {max})",
+    "remove": "Remove",
+    "removeNamed": "Remove {name}",
+    "removed": "{name} doesn't follow this booking any more.",
+    "label": "Their username or email",
+    "placeholder": "@username or name@example.com",
+    "hint": "They need a TasksNearMe account. We'll let them know you added them.",
+    "add": "Add",
+    "added": "Added {who}. They can follow this booking now.",
+    "close": "Done",
+    "blocked": {
+      "limit": "{max} people follow this booking: the most it can have. Remove one to add someone else.",
+      "ended": "This booking is over, so no one new can follow it.",
+      "series": "Regular visits can't be followed yet."
+    },
+    "errors": {
+      "invalid": "Enter a username (like @maya) or an email address.",
+      "notFound": "We couldn't find a TasksNearMe account with that username or email. Ask them to sign up first.",
+      "notAllowed": "That person can't follow this booking.",
+      "limit": "{max} people follow this booking already. Remove one first.",
+      "expired": "This booking is over, so no one new can follow it."
+    }
+  },
+  "card": {
+    "title": "Family members",
+    "add": "Add a family member",
+    "manage": "Manage",
+    "empty": "Let a family member follow this booking. They can read along but can't change anything, and {helper} will see who follows."
+  },
+  "note": {
+    "client": "{names} {count, plural, one {follows} other {follow}} this booking as your family. They can read along, and your helper sees this too.",
+    "helper": "{client}'s family {count, plural, one {member} other {members}} {names} {count, plural, one {follows} other {follow}} this booking. They can read the conversation but can't write in it.",
+    "following": "You're following {client}'s booking (read-only). {client}'s messages are on the right."
+  },
+  "followed": {
+    "back": "Back to bookings",
+    "intro": "You're following {client}'s booking, with {helper} helping. You can read along; only the two of them can change it.",
+    "ended": "Following has ended: this booking with {client} is over.",
+    "whenWhere": "When and where",
+    "when": "When",
+    "where": "Where",
+    "remote": "Remote",
+    "addressPrivate": "The exact address stays between {client} and the helper.",
+    "today": "Updates",
+    "moments": {
+      "onTheWay": "{helper} is on the way",
+      "arrived": "{helper} arrived",
+      "done": "Done",
+      "canceled": "Canceled"
+    },
+    "helper": "Helper",
+    "conversation": {
+      "title": "The conversation",
+      "body": "Read what {client} and {helper} write to each other. You can't write in it.",
+      "open": "Read the conversation"
+    },
+    "endsAt": "Following ends on {date}.",
+    "leave": "Stop following",
+    "left": "You stopped following this booking."
+  },
+  "list": {
+    "title": "Bookings you follow",
+    "whose": "{client}'s booking",
+    "remote": "Remote"
+  }
+}

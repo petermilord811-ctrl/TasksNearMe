@@ -179,7 +179,13 @@
     "community_question_match": "Community question match",
     "community_task_posted": "Community task posted",
     "community_auto_hidden": "Community auto-hidden",
-    "community_digest": "Neighbors digest"
+    "community_digest": "Neighbors digest",
+    "follow_added": "Added as a family follower",
+    "followed_on_the_way": "Followed booking: on the way",
+    "followed_arrived": "Followed booking: arrived",
+    "followed_completed": "Followed booking: done",
+    "followed_canceled": "Followed booking: canceled",
+    "followed_time_changed": "Followed booking: new time"
   },
   "signIns": {
     "title": "Sign-ins",

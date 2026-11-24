@@ -21,6 +21,7 @@ import { QuietHoursNote } from '@/ui/components/messaging/quiet-hours-note';
 import { ThanksOffer } from '@/ui/components/thanks/thank-you-note';
 import { ReplyProvider } from './reply-context';
 import { ThreadPresence } from './thread-presence';
+import { FamilyNote } from '@/ui/components/family/family-note';
 
 export interface ThreadScreenProps {
   data: ThreadPageData;
@@ -97,6 +98,10 @@ export function ThreadContent({ data, handlers, now, safety, composerState, assi
   // Suggest replies answers the other person's latest message, when they wrote last (2026-11-23).
   const lastWritten = [...messages].reverse().find((message) => message.kind === 'text');
   const suggestFor = data.assist?.suggest && handlers.onSuggest && lastWritten?.sender === 'them' ? lastWritten.id : undefined;
+  // A family member following the booking (2026-11-24): read-only, so the menu offers only the way to the booking.
+  const following = Boolean(data.family?.following);
+  const menuHandlers: ThreadHandlers = following ? { onSend: handlers.onSend, onUploadPhoto: handlers.onUploadPhoto } : handlers;
+  const family = !following && data.family?.manage && handlers.followers ? { panel: data.family.manage, handlers: handlers.followers, helperName: firstName } : undefined;
 
   // One line on top (back, who, what it's about, the way to it), then the chat panel, which takes the rest of the
   // screen so its composer sits at the bottom (audit M40; the page has no tab dock). The conversation translated and
@@ -134,9 +139,11 @@ export function ThreadContent({ data, handlers, now, safety, composerState, assi
         <span className="max-sm:sr-only">{t(`subject.${thread.subject.kind}`)}</span><ArrowUpRight aria-hidden="true" className="size-4 transition-transform duration-200 group-hover/subject:-translate-y-0.5 group-hover/subject:translate-x-0.5 motion-reduce:transition-none" />
       </Link>}
       {/* Search, pin, mute, archive, then Report and Block (2026-11-23). */}
-      <ConversationMenu thread={thread} handlers={handlers} safety={safety} name={other.displayName} now={now} />
+      <ConversationMenu thread={thread} handlers={menuHandlers} safety={following ? undefined : safety} name={other.displayName} now={now} {...(family ? { family } : {})} />
     </header>
     {thread.contactMasking && <p className="flex items-start gap-2.5 rounded-2xl bg-secondary/70 px-4 py-2.5 text-sm leading-6 text-secondary-foreground"><LockKeyhole aria-hidden="true" className="mt-1 size-4 shrink-0" /><span>{thread.kind === 'direct' ? t('direct.masking') : t('masking')}</span></p>}
+    {/* Who follows the booking as the client's family (the helper always sees it), or that the viewer follows it. */}
+    <FamilyNote family={data.family} />
     {/* A booking that can still change (2026-11-23): the proposal shows in the conversation as a card. */}
     {data.canProposeChange && thread.subject.kind === 'booking' && !data.agreement && <p className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-2xl border border-foreground/[0.07] bg-card px-4 py-2 text-sm dark:border-white/[0.06]">
       <span className="text-muted-foreground">{t('cards.change.hint')}</span>

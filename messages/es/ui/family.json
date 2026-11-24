@@ -1,0 +1,72 @@
+{
+  "dialog": {
+    "title": "Familiares",
+    "description": "Deja que alguien de tu familia siga esta reserva: un hijo adulto, un padre, tu pareja. {helper} verá quién la sigue.",
+    "sees": "Verá el estado y la hora de la reserva, el perfil de {helper} y su conversación tal como la ves tú, con sus avisos.",
+    "cant": "No puede enviar mensajes, pagar, cambiar ni cancelar nada, y nunca ve tu dirección ni tus pagos.",
+    "following": "La siguen ({count} de {max})",
+    "remove": "Quitar",
+    "removeNamed": "Quitar a {name}",
+    "removed": "{name} ya no sigue esta reserva.",
+    "label": "Su nombre de usuario o correo",
+    "placeholder": "@usuario o nombre@ejemplo.com",
+    "hint": "Necesita una cuenta de TasksNearMe. Le avisaremos de que lo agregaste.",
+    "add": "Agregar",
+    "added": "Agregaste a {who}. Ya puede seguir esta reserva.",
+    "close": "Listo",
+    "blocked": {
+      "limit": "{max} personas siguen esta reserva: el máximo. Quita a una para agregar a otra.",
+      "ended": "Esta reserva terminó, así que nadie nuevo puede seguirla.",
+      "series": "Las visitas regulares aún no se pueden seguir."
+    },
+    "errors": {
+      "invalid": "Escribe un nombre de usuario (como @maya) o un correo electrónico.",
+      "notFound": "No encontramos una cuenta de TasksNearMe con ese usuario o correo. Pídele que se registre primero.",
+      "notAllowed": "Esa persona no puede seguir esta reserva.",
+      "limit": "Ya hay {max} personas siguiendo esta reserva. Quita a una primero.",
+      "expired": "Esta reserva terminó, así que nadie nuevo puede seguirla."
+    }
+  },
+  "card": {
+    "title": "Familiares",
+    "add": "Agregar a un familiar",
+    "manage": "Administrar",
+    "empty": "Deja que un familiar siga esta reserva. Puede leer, pero no cambiar nada, y {helper} verá quién la sigue."
+  },
+  "note": {
+    "client": "{names} {count, plural, one {sigue} other {siguen}} esta reserva como tu familia. Puede leer, y tu ayudante también lo ve.",
+    "helper": "{count, plural, one {El familiar} other {Los familiares}} de {client}, {names}, {count, plural, one {sigue} other {siguen}} esta reserva. Puede leer la conversación, pero no escribir.",
+    "following": "Sigues la reserva de {client} (solo lectura). Los mensajes de {client} están a la derecha."
+  },
+  "followed": {
+    "back": "Volver a reservas",
+    "intro": "Sigues la reserva de {client} (ayuda {helper}): puedes leer, pero solo ellos dos pueden cambiarla.",
+    "ended": "Ya no la sigues: esta reserva con {client} terminó.",
+    "whenWhere": "Cuándo y dónde",
+    "when": "Cuándo",
+    "where": "Dónde",
+    "remote": "A distancia",
+    "addressPrivate": "La dirección exacta queda entre {client} y el ayudante.",
+    "today": "Avisos",
+    "moments": {
+      "onTheWay": "{helper} va en camino",
+      "arrived": "{helper} llegó",
+      "done": "Terminada",
+      "canceled": "Cancelada"
+    },
+    "helper": "Ayudante",
+    "conversation": {
+      "title": "La conversación",
+      "body": "Lee lo que {client} y {helper} se escriben. Tú no puedes escribir en ella.",
+      "open": "Leer la conversación"
+    },
+    "endsAt": "Dejarás de seguirla el {date}.",
+    "leave": "Dejar de seguir",
+    "left": "Dejaste de seguir esta reserva."
+  },
+  "list": {
+    "title": "Reservas que sigues",
+    "whose": "Reserva de {client}",
+    "remote": "A distancia"
+  }
+}

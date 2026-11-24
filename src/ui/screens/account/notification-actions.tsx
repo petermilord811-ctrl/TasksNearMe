@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlarmClock, ArrowLeftRight, AtSign, Award, BadgeCheck, BellRing, CalendarCheck, CalendarClock, CalendarOff, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, CircleHelp, CirclePause, CirclePlay, ClipboardCheck, ClipboardPenLine, ClipboardX, Clock, CreditCard, DoorOpen, Download, EyeOff, Gift, HandCoins, HandHeart, Headset, Hourglass, LifeBuoy, MapPin, MapPinned, MessageCircle, MessageCircleQuestion, MessageSquarePlus, MessagesSquare, Navigation, Newspaper, PenLine, Pin, RefreshCw, Repeat, RotateCcw, ShieldAlert, ShieldCheck, SkipForward, Star, ThumbsUp, Timer, UserSearch, X, type LucideIcon } from 'lucide-react';
+import { AlarmClock, ArrowLeftRight, AtSign, Award, BadgeCheck, BellRing, CalendarCheck, CalendarClock, CalendarOff, CalendarPlus, CalendarX, CheckCheck, ChevronRight, CircleAlert, CircleCheck, CircleDollarSign, CircleHelp, CirclePause, CirclePlay, ClipboardCheck, ClipboardPenLine, ClipboardX, Clock, CreditCard, DoorOpen, Download, EyeOff, Gift, HandCoins, HandHeart, Headset, Hourglass, LifeBuoy, MapPin, MapPinned, MessageCircle, MessageCircleQuestion, MessageSquarePlus, MessagesSquare, Navigation, Newspaper, PenLine, Pin, RefreshCw, Repeat, RotateCcw, ShieldAlert, ShieldCheck, SkipForward, Star, ThumbsUp, Timer, UserSearch, Users, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionResult, ISODateTime, NotificationHandlers, NotificationType, NotificationView } from '@/contracts';
 import { formatDatePhrase, formatMoney } from '@/shared/format';
@@ -91,6 +91,13 @@ const icons: Record<NotificationType, LucideIcon> = {
   scheduled_payment_failed: CreditCard,
   replacement_needed: LifeBuoy,
   replacement_search_started: UserSearch,
+  // A booking the person follows as family (2026-11-24).
+  follow_added: Users,
+  followed_on_the_way: Navigation,
+  followed_arrived: MapPin,
+  followed_completed: CircleCheck,
+  followed_canceled: CalendarX,
+  followed_time_changed: CalendarClock,
 };
 
 /**

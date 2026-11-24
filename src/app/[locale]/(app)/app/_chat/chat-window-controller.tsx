@@ -5,6 +5,7 @@ import { useSelectedLayoutSegments } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   ThankYouHandlers,
+  FollowerHandlers,
   AttachGifInput,
   GifSearchInput,
   GifSearchResult,
@@ -108,6 +109,8 @@ export interface ChatActions {
   attachGif?: (input: AttachGifInput) => Promise<PhotoUploadResult>;
   /** A booking's thank-you note (2026-11-24), bound to the window (no page refresh). */
   thanks: ThankYouHandlers;
+  /** A booking's family followers (2026-11-24), bound to the window. */
+  followers?: FollowerHandlers;
 }
 
 const WIDE = '(min-width: 1024px)';
@@ -582,6 +585,8 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
         onShowOnProfile: async (input) => afterThanks(await actions.thanks.onShowOnProfile(input)),
         onHideName: async (input) => afterThanks(await actions.thanks.onHideName(input)),
       },
+      // "Add a family member" and Remove (2026-11-24): the conversation reads again after each.
+      ...(actions.followers ? { followers: { onAdd: async (input) => afterThanks(await actions.followers!.onAdd(input)), onRemove: async (input) => afterThanks(await actions.followers!.onRemove(input)) } } : {}),
     }),
     [actions, threadAgain, soon, loadInbox, afterThanks],
   );

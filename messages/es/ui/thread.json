@@ -17,7 +17,8 @@
     "blocked": "No pueden enviarse mensajes",
     "closed": "Esta conversación está cerrada",
     "unavailable": "Los mensajes no están disponibles en esta conversación",
-    "awaiting_reply": "Podrás escribir de nuevo cuando {name} responda."
+    "awaiting_reply": "Podrás escribir de nuevo cuando {name} responda.",
+    "following": "Sigues esta reserva (solo lectura)"
   },
   "closed": {
     "offer_for_client": {
@@ -248,7 +249,9 @@
       "accepted": "Solicitud aceptada"
     },
     "openBeside": "Abrir al lado",
-    "showInWindow": "Ver en la ventana del chat"
+    "showInWindow": "Ver en la ventana del chat",
+    "family": "Agregar a un familiar",
+    "followingMark": "Siguiendo"
   },
   "request": {
     "label": "Solicitud de mensaje",

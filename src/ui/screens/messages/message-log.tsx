@@ -80,6 +80,8 @@ function MessageContent({ message }: { message: MessageView }) {
     hasMinutes: params?.minutes !== undefined ? 'yes' : 'no', minutes: params?.minutes ?? 0,
     hasHours: params?.hours !== undefined ? 'yes' : 'no', hours: params?.hours !== undefined ? formatHours(params.hours) : '',
     hasTime: params?.at !== undefined ? 'yes' : 'no', time: params?.at !== undefined ? formatTime(params.at) : '',
+    // A family follower's name (2026-11-24).
+    name: params?.name ?? '',
   })}</>;
 }
 

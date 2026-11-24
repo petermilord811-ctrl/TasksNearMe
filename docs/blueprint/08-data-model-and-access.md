@@ -93,6 +93,7 @@ ledger_journals ─1:N─ ledger_entries ─N:1─ ledger_accounts   (journals r
 | `booking_events` | booking_id, type, actor_user_id, actor_role, data | Append-only timeline |
 | `completion_submissions` | booking_id, submitted_by, note, hours_worked, status; `completion_files` (submission_id, file_id, kind `photo`/`receipt`) | — |
 | `expense_items` | booking_id, submission_id, description, amount_cents, receipt_file_id, status, decided_by, decided_at | Sum of approved items ≤ the terms' allowance |
+| `booking_followers` (2026-11-24) | booking_id, follower_user_id, added_by_user_id, created_at, ended_at, ended_by (`client`, `follower`) | Partial unique (booking, follower) where ended_at is null; at most 2 open per booking, checked with the booking row locked. Family followers (§4.1) |
 | `booking_series` (phase 2) | poster/helper ids, category_id, location_id, cadence, weekday, window, per_visit_terms, status, paused_until, next_visit_date, payment_method_ref | — |
 
 ### payments
@@ -152,6 +153,17 @@ Enforced in each module's `policies.ts`. Integration tests in `tests/integration
 | Cases | — | — | Own cases (participant-visible events) | Own cases | By role |
 | Config, policies, fees, flags | Published fees and policies | Same | — | — | Admin only; versioned; audited. Every staff role reads which markets are open and who waits for them (plan 8.2) |
 | Audit log | — | — | — | — | Read: admin and support lead. Nobody can edit |
+| A booking, for a **family follower** (2026-11-24, §4.1) | — | **Read only, for the people its client added**: status and time, the helper's public profile, the conversation as the client sees it (masked the same way), day-of status lines | Adds (by @username or email of an existing account) and removes followers | Always sees who follows (display names) | As for the booking |
+
+### 4.1 Family followers (2026-11-24, owner's chat ideas)
+
+This changes who can read a booking. A booking's client may let up to **2** existing accounts follow it: an adult child following a parent's booking, or the reverse (01 personas: "an adult child arranging help for a parent").
+
+- **A follower reads, never acts.** They see the booking's status and time on the market's clock, the general area (never the exact address), the helper's public profile, the conversation's messages as the client sees them (masked until payment, the same way), and its day-of status lines (on the way, arrived, done, canceled; never a line about payments, tips, refunds, earnings, changes or reviews). They can't send messages, react, pay, change, cancel, review, report, or see any money or payment detail.
+- **Never a participant.** A follower is not a thread participant and never resolves to the booking's client or helper role, so every check meant for those two (sending, read marks and "Seen", booking actions, the exact address, money) refuses them by construction. Their page and conversation are separate, read-only projections (`followers/service.ts`, `messaging/service.ts` `followerThreadPage`).
+- **Transparency.** The helper always sees that someone follows ("Maya's family member Lia follows this booking") and gets a status line when a follower is added, removed or leaves. A follower's contact details are never shown to anyone; only their display name.
+- **Notifications.** The follower is told once when added, then about the key moments only: on the way, arrived, done, canceled, a new time.
+- **Ending.** The client removes a follower at any time; a follower can leave. Following ends on its own when the booking is canceled, or 7 days after it's done. Regular visits (series) can't be followed yet.
 
 ### Staff roles and limits (configurable)
 

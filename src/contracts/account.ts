@@ -180,6 +180,18 @@ export const NOTIFICATION_TYPES = [
    * 2026-11-21): nothing to do, we'll say when it's checked.
    */
   'address_recheck',
+  /** `actorName` (the client) let the person follow their booking `title` as a family member (2026-11-24). */
+  'follow_added',
+  /** A booking the person follows: its helper `actorName` is on the way for `title`. */
+  'followed_on_the_way',
+  /** A booking the person follows: its helper `actorName` has arrived for `title`. */
+  'followed_arrived',
+  /** A booking the person follows (`title`) is done. Following ends 7 days later. */
+  'followed_completed',
+  /** A booking the person follows (`title`) was canceled. Following ends with it. */
+  'followed_canceled',
+  /** A booking the person follows (`title`) has a new time (`params.at` on the clock of `params.timeZone`). */
+  'followed_time_changed',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

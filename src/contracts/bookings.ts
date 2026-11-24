@@ -14,6 +14,7 @@ import type { BookingStatus, CancelReason, CaseResolution, CaseStatus, Completed
 import type { TaskPublicView, TaskSchedule } from './tasks';
 import type { TimelineEvent } from './timeline';
 import type { ThanksPanel } from './thanks';
+import type { BookingFamilyView, FollowedBookingRow } from './followers';
 
 /**
  * Bookings. This file starts with booking an offer: the confirmation and payment page
@@ -246,6 +247,11 @@ export interface BookingView {
    */
   thanks?: ThanksPanel;
   /**
+   * Family followers (2026-11-24): the client's "Family members" panel (`manage`) and, for both people, who follows
+   * (`followedBy`, display names only). Absent for the helper while nobody follows.
+   */
+  family?: Pick<BookingFamilyView, 'manage' | 'followedBy'>;
+  /**
    * Clients, on a booking the helper canceled: the task is open for offers again (on its own, or by "Find a
    * replacement"), so the page links to it (`routes.app.task(task.id)`).
    */
@@ -323,6 +329,8 @@ export interface BookingsPageData {
   past: BookingListRow[];
   /** Regular visits the viewer has (as client or helper): running ones, and ended ones with visits still ahead. */
   regular?: SeriesSummary[];
+  /** Bookings the viewer follows as a family member (2026-11-24), soonest first; read-only, no money. */
+  following?: FollowedBookingRow[];
 }
 
 /**

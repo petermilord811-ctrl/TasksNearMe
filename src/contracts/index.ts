@@ -67,4 +67,5 @@ export * from './sparks';
 export * from './routes';
 export * from './peek';
 export * from './thanks';
+export * from './followers';
 export type { PreviewEntry } from './preview';

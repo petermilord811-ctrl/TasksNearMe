@@ -17,7 +17,8 @@
     "blocked": "You can't message each other",
     "closed": "This conversation is closed",
     "unavailable": "Messaging is unavailable in this conversation",
-    "awaiting_reply": "You can write again when {name} replies."
+    "awaiting_reply": "You can write again when {name} replies.",
+    "following": "You're following this booking (read-only)"
   },
   "closed": {
     "offer_for_client": {
@@ -248,7 +249,9 @@
       "accepted": "Request accepted"
     },
     "openBeside": "Open beside",
-    "showInWindow": "Show in the chat window"
+    "showInWindow": "Show in the chat window",
+    "family": "Add a family member",
+    "followingMark": "Following"
   },
   "request": {
     "label": "Message request",
