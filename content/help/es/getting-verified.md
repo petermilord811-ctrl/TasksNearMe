@@ -3,14 +3,14 @@ title: Cómo verificarte como ayudante
 summary: Verificación de identidad y domicilio, configuración de pagos, verificación de antecedentes para ayuda dentro del hogar y tu teléfono cuando te lo pidamos.
 topic: helpers
 order: 1
-updated: 2026-11-14
+updated: 2026-11-24
 ---
 Antes de que puedas enviar ofertas, revisamos algunas cosas. Los pasos toman unos 10 minutos; nuestro equipo revisa algunos, normalmente en un día.
 
 ## Los pasos
 
 1. **Tu perfil**: tus servicios, precios y la zona que cubres, y el acuerdo de ayudantes.
-2. **Teléfono**, cuando te lo pidamos: te enviamos un código por mensaje de texto. Los clientes nunca ven tu número.
+2. **Teléfono**, cuando te lo pidamos: te enviamos un código por mensaje de texto. Los clientes no ven tu número, salvo que decidas compartirlo en tu perfil (consulta [escribirle a alguien directamente](/help/direct-messages)).
 3. **Verificación de identidad**, en dos partes: fotos de tu identificación oficial y una selfie en vivo, que nuestro equipo compara (normalmente en un día), y después una segunda verificación rápida con nuestro socio de identidad. Después, los clientes ven una insignia de identidad verificada con la fecha.
 4. **Domicilio**: un documento reciente (de los últimos 90 días) con tu nombre y tu dirección, que revisa nuestro equipo de confianza y seguridad. Los clientes solo ven tu vecindario.
 5. **Configuración de pagos**: tus datos bancarios, que guarda nuestro proveedor de pagos, no nosotros.

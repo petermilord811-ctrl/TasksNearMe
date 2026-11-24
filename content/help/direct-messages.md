@@ -3,7 +3,7 @@ title: Messaging someone directly
 summary: Start a conversation with anyone who accepts messages, without a task. How many you can start a day depends on your Sparks and your plan.
 topic: getting-started
 order: 3
-updated: 2026-11-23
+updated: 2026-11-24
 ---
 You can write to a neighbor or a helper without posting a task. Choose **Message** on a helper's profile or on someone's Neighbors card, or start a new message from **Messages** and find them by their @username.
 
@@ -11,7 +11,7 @@ You can write to a neighbor or a helper without posting a task. Choose **Message
 
 The limit is on **new conversations**, counted over any 24 hours:
 
-- **Starter** (no plan): 3 a day. Sparks raise it as you reach each level: 10, 25, 40 and then 60 a day.
+- **Starter** (no plan): 3 a day. Sparks raise it as you reach each level: 10, 25, 30, 40 and then 60 a day.
 - **Plus**: 25 a day, or your level's if that's more.
 - **Pro**: 100 a day.
 
@@ -38,3 +38,7 @@ In your account, under **Direct messages**, choose who can start a conversation 
 ## What stays private
 
 Phone numbers, emails and links in messages stay hidden until you've booked together. Keep the conversation on TasksNearMe so there's a record if you ever need help. More in [staying safe](/help/staying-safe).
+
+## Helpers who share their contact details
+
+A helper can choose, in their account under **Contact details on your profile**, to share their email, their phone number or both. Only neighbors who've earned 2,000 Sparks, the Pillar and Local legend levels, see them, on the helper's profile after choosing **Show**. Bought Sparks don't count toward it. We keep a record of who sees them, and the helper can stop sharing at any time. Book and pay through TasksNearMe all the same: we protect only payments we hold ([terms](/legal/terms#off-platform)).

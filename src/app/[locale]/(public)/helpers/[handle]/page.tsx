@@ -7,6 +7,10 @@ import { JsonLd } from '@/modules/seo/json-ld';
 import { helperProfileIndexable, KEEP_OUT_OF_SEARCH } from '@/modules/seo/indexable';
 import { helperProfileNode } from '@/modules/seo/structured-data';
 import { requestRows } from '@/platform/auth/audience';
+import { getViewer } from '@/platform/auth/viewer';
+import { db } from '@/platform/db/client';
+import { revealHelperContactAction } from '@/modules/profiles/actions';
+import { getHelperContactAccess } from '@/modules/profiles/contact-sharing';
 import { searchEngineRows } from '@/shared/sample-data';
 import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
 import { HelperProfileScreen } from '@/ui/screens/public/helper-profile-screen';
@@ -61,7 +65,11 @@ async function HelperProfile({ handle }: { handle: string }) {
   const data = await getHelperProfilePageData(handle, await requestRows());
   // A sample person for the public. The page is already streaming, so this answers 200 with noindex (Next adds it).
   if (!data) notFound();
-  return <MarketTime timeZone={data.timeZone}><HelperProfileScreen data={data} /></MarketTime>;
+  // The contact details the helper shares with top Sparks levels (2026-11-24): worked out for this viewer, never
+  // cached with the profile; the details themselves come only from "Show".
+  const viewer = await getViewer();
+  const contact = await getHelperContactAccess(db, viewer.kind === 'user' ? viewer.user.id : null, data.helper.id);
+  return <MarketTime timeZone={data.timeZone}><HelperProfileScreen data={data} {...(contact ? { contact, onRevealContact: revealHelperContactAction } : {})} /></MarketTime>;
 }
 
 export default withClientMessages('[locale]/(public)/helpers/[handle]/page.tsx', HelperProfilePage);

@@ -9,7 +9,6 @@
   "total": {
     "heading": "Your Sparks",
     "split": "{earned} earned · {bought} bought",
-    "progressLabel": "Progress to {level}",
     "toNext": "{count, plural, one {# more Spark} other {# more Sparks}} to reach {level}",
     "top": "You’ve reached the top level.",
     "allowance": "You can start {count, plural, one {# new direct conversation} other {# new direct conversations}} a day.",
@@ -29,25 +28,36 @@
       "reviews": "A review you write"
     }
   },
-  "levelsHeading": "Levels",
-  "levelsCaption": "Each level, the Sparks it starts at, and the new direct conversations it allows a day",
-  "levelColumns": {
-    "level": "Level",
-    "from": "From",
-    "chats": "Chats a day"
-  },
   "levels": {
     "newcomer": "Newcomer",
     "neighbor": "Neighbor",
     "good_neighbor": "Good neighbor",
+    "friendly_face": "Friendly face",
     "pillar": "Pillar",
     "local_legend": "Local legend"
+  },
+  "milestones": {
+    "label": "Milestones",
+    "from": "From {at}",
+    "chats": "{count, plural, one {# chat a day} other {# chats a day}}",
+    "state": {
+      "done": "Reached",
+      "current": "Your milestone",
+      "ahead": "Not reached yet"
+    }
+  },
+  "contactBadge": "Contact details",
+  "contact": {
+    "heading": "Contact details helpers share",
+    "body": "Pillars and Local legends also see the email or phone number a helper chooses to share on their profile. Only earned Sparks count toward it, so it can’t be bought.",
+    "unlocked": "You’ve earned {earned}, so you can see them.",
+    "progress": "You’ve earned {earned} of {at}."
   },
   "planNote": "Plus allows at least {plus} new conversations a day and Pro {pro}, whatever your level.",
   "planLink": "See the plans",
   "buy": {
     "heading": "Get more Sparks",
-    "description": "Bought Sparks count toward your level right away.",
+    "description": "Bought Sparks count toward your level right away, but not toward seeing the contact details helpers share.",
     "action": "Buy {points} for {price}",
     "unavailable": "Buying Sparks isn’t available here yet.",
     "terms": "A one-time payment through Stripe, not a subscription. Wherever others see your Sparks, they also see how many you bought. Sparks can’t be spent, moved or cashed out. If something’s wrong with a purchase, contact support."

@@ -1,5 +1,5 @@
 import type { AccountHandlers, AccountPageData, ContactRevertHandlers, ContactRevertPageData, EmailUnsubscribeHandlers, EmailUnsubscribePageData, NotificationHandlers, NotificationsPageData, NotificationView } from '@/contracts';
-import { routes } from '@/contracts';
+import { HELPER_CONTACT_EARNED_MIN, routes } from '@/contracts';
 import { DESK_TIMES } from './timeline';
 
 /** Notifications and the account page (UI-017). Maya's view on Sat, Nov 21, 2026, around midday. */
@@ -75,6 +75,8 @@ export const jordanAccountData: AccountPageData = {
   language: 'en',
   // Jordan keeps his activity to himself (completion plan 7.1).
   activity: { shown: false },
+  // Jordan shares their email and phone with neighbors who've earned 2,000 Sparks (2026-11-24).
+  contactSharing: { setting: 'email_phone', phoneVerified: true, at: HELPER_CONTACT_EARNED_MIN },
 };
 
 /** A new account: no phone yet; deletion asked for, happening in a week. */
@@ -111,6 +113,7 @@ export const fakeAccountHandlers: AccountHandlers = {
   onSaveProfile: () => wait({ ok: true, code: 'saved' }),
   onSaveUsername: () => wait({ ok: true, code: 'updated' }),
   onSaveActivity: () => wait({ ok: true, code: 'updated' }),
+  onSaveContactSharing: () => wait({ ok: true, code: 'updated' }),
   onSavePreference: ({ topic, channel }) =>
     wait((topic === 'bookings' || topic === 'payments') && channel === 'email' ? { ok: false, code: 'not_allowed' } : { ok: true, code: 'updated' }),
   onRequestExport: () => wait({ ok: true, code: 'submitted' }),

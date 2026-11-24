@@ -7,6 +7,7 @@ const levelTone: Record<SparkLevel, string> = {
   newcomer: 'bg-badge-neutral text-badge-neutral-foreground',
   neighbor: 'bg-badge-info text-badge-info-foreground',
   good_neighbor: 'bg-badge-success text-badge-success-foreground',
+  friendly_face: 'bg-badge-reward text-badge-reward-foreground',
   pillar: 'bg-badge-brand text-badge-brand-foreground',
   local_legend: 'bg-badge-warning text-badge-warning-foreground',
 };

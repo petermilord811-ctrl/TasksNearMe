@@ -11,6 +11,7 @@ import type { VerificationTrack } from './onboarding';
 import type { AccountVerification } from './helper-standing';
 import type { BadgeCode, OwnBadgesData } from './badges';
 import type { DirectMessageSetting } from './messaging';
+import type { ContactSharingSetting } from './profiles';
 import type { SparksSummary } from './sparks';
 
 /**
@@ -306,6 +307,12 @@ export interface AccountPageData {
   activity?: { shown: boolean };
   /** Who may start a direct conversation with them (2026-11-21): everyone, people they've talked to about a task, or nobody. */
   directMessages?: { setting: DirectMessageSetting };
+  /**
+   * "Contact details on your profile" (2026-11-24), for people with a helper profile: what they share with neighbors
+   * who've earned `at` Sparks (Pillar and Local legend; bought Sparks don't count). `phoneVerified`: false when their
+   * phone isn't verified, so it can't show yet whatever they choose.
+   */
+  contactSharing?: { setting: ContactSharingSetting; phoneVerified: boolean; at: number };
   /** Their Sparks (2026-11-21), for the card that links to `routes.app.sparks()`. */
   sparks?: SparksSummary;
   /**
@@ -451,6 +458,8 @@ export interface AccountHandlers extends PushHandlers {
   onSaveActivity?: ActionHandler<{ shown: boolean }>;
   /** Who may start a direct conversation with them. ok `updated`. Errors: `validation_failed`. */
   onSaveDirectMessages?: ActionHandler<{ setting: DirectMessageSetting }>;
+  /** What their helper profile shares with top Sparks levels. ok `updated`. Errors: `validation_failed`, `not_allowed` (no helper profile). */
+  onSaveContactSharing?: ActionHandler<{ setting: ContactSharingSetting }>;
   onSavePreference: ActionHandler<{ topic: NotificationTopic; channel: NotificationChannel; enabled: boolean }>;
   onRequestExport: () => Promise<ActionResult>;
   onRequestDeletion: () => Promise<ActionResult>;

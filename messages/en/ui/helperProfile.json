@@ -32,7 +32,10 @@
     "jordanNew": "Jordan · new founding helper",
     "leeRemote": "Lee · remote help available",
     "withSlots": "Jordan · open times",
-    "samPhoto": "Sam, with a profile photo"
+    "samPhoto": "Sam, with a profile photo",
+    "contactReveal": "Jordan · contact details for a top neighbor",
+    "contactRevealed": "Jordan · contact details shown",
+    "contactLocked": "Jordan · contact details locked"
   },
   "recommendedBy": "{count, plural, one {Recommended by # neighbor} other {Recommended by # neighbors}}",
   "message": "Message {name}"

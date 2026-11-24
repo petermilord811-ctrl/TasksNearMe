@@ -1,0 +1,26 @@
+{
+  "heading": "Contact details",
+  "reveal": {
+    "body": "{name} shares their {shares, select, email {email} phone {phone number} other {email and phone number}} with neighbors who’ve earned a top Sparks level, like you.",
+    "action": "Show {shares, select, email {email} phone {phone number} other {email and phone}}"
+  },
+  "locked": {
+    "body": "{name} shares their {shares, select, email {email} phone {phone number} other {email and phone number}} with neighbors who’ve earned {at} Sparks (Pillar and Local legend). Bought Sparks don’t count.",
+    "progressLabel": "Earned Sparks toward contact details",
+    "progress": "You’ve earned {earned} of {at}.",
+    "link": "How to earn Sparks"
+  },
+  "revealed": {
+    "note": "Please keep them to yourself. We protect only payments made through TasksNearMe:",
+    "terms": "paying outside TasksNearMe"
+  },
+  "emailLabel": "Email:",
+  "phoneLabel": "Phone:",
+  "opensInNewTab": "opens in a new tab",
+  "errors": {
+    "not_allowed": "These details can’t be shown anymore. Reload the page to check.",
+    "rate_limited": "You’ve reached today’s limit for showing contact details. Try again after {time}.",
+    "rate_limited_later": "You’ve reached today’s limit for showing contact details. Try again tomorrow.",
+    "unknown": "Something went wrong. Try again."
+  }
+}

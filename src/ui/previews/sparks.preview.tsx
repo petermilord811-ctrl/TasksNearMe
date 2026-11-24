@@ -1,7 +1,7 @@
 import { routes, type ActionResult, type AppShellHandlers, type NewDirectMessagePageData, type PeopleSearchData, type PreviewEntry, type SparksHandlers, type SparksPageData } from '@/contracts';
 import {
   fakeHandler, fakeNewChatHandlers, jordanShell, mayaShell, newDirectMessageClientData, newDirectMessageContactsOnlyData, newDirectMessageData, newDirectMessageLimitData, newDirectMessageSampleData,
-  peopleSearchData, peopleSearchEmptyData, peopleSearchLimitData, peopleSearchNoMatchData, peopleSearchProData, sparksActiveData, sparksNewData, sparksPlanPendingData, sparksTopData, sparksUnavailableData,
+  peopleSearchData, peopleSearchEmptyData, peopleSearchLimitData, peopleSearchNoMatchData, peopleSearchProData, sparksActiveData, sparksNewData, sparksPillarBoughtData, sparksPlanPendingData, sparksTopData, sparksUnavailableData,
 } from '@/fixtures';
 import { NewChat } from '@/ui/components/messaging/new-chat';
 import { SparksScreen } from '@/ui/screens/sparks/sparks-screen';
@@ -59,6 +59,7 @@ export const sparksPreviews: PreviewEntry[] = [
   sparksPreview('active', 'Sparks: earned and bought, back from checkout', sparksActiveData),
   sparksPreview('plan-pending', 'Sparks: with a plan, a checkout confirming', sparksPlanPendingData),
   sparksPreview('top', 'Sparks: the top level', sparksTopData),
+  sparksPreview('pillar-bought', 'Sparks: a Pillar with bought Sparks, contact details still locked', sparksPillarBoughtData),
   sparksPreview('unavailable', 'Sparks: buying not offered here', sparksUnavailableData, false),
   sparksPreview('result-rate-limited', 'Sparks: too many checkouts', sparksNewData, false, { ok: false, code: 'rate_limited', retryAt: '2026-11-21T16:20:00.000Z' }),
   directPreview('helper', 'New message: to a helper, with a task request', newDirectMessageData),

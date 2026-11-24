@@ -1,11 +1,12 @@
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { Check, Clock3, Flag, Hammer, Laptop, Leaf, MapPin, MessageCircle, Package, Sparkles, type LucideIcon, ThumbsUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { CategorySlug, HelperProfilePageData, HelperServiceDetail } from '@/contracts';
+import type { CategorySlug, HelperContactAccess, HelperContactReveal, HelperProfilePageData, HelperServiceDetail, RevealHelperContactHandler } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { AvailabilitySlotList } from '@/ui/components/availability/availability-slot-list';
+import { HelperContactPanel } from '@/ui/components/people/helper-contact-panel';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { RatingStars } from '@/ui/components/people/rating-stars';
 import { SparksBadge } from '@/ui/components/people/sparks-badge';
@@ -18,6 +19,14 @@ import { buttonVariants } from '@/ui/primitives/button';
 
 export interface HelperProfileScreenProps {
   data: HelperProfilePageData;
+  /**
+   * The contact details the helper shares with top Sparks levels, for this viewer (2026-11-24): worked out per visit,
+   * never part of the cached `data`. Shown with `onRevealContact`.
+   */
+  contact?: HelperContactAccess;
+  onRevealContact?: RevealHelperContactHandler;
+  /** Seeds for the preview gallery: "Show" already answered. */
+  initialContactReveal?: HelperContactReveal;
 }
 
 const categoryIcons: Record<CategorySlug, LucideIcon> = {
@@ -53,7 +62,7 @@ function ServiceCard({ service }: { service: HelperServiceDetail }) {
   );
 }
 
-export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
+export function HelperProfileScreen({ data, contact, onRevealContact, initialContactReveal }: HelperProfileScreenProps) {
   const { formatMonthYear } = useFormat();
   const t = useTranslations('helperProfile');
   const report = useTranslations('report');
@@ -108,6 +117,7 @@ export function HelperProfileScreen({ data }: HelperProfileScreenProps) {
             {data.sparks && <SparksBadge sparks={data.sparks} />}
             <Link href={routes.app.requestHelper(helper.handle)} className={cn(buttonVariants({ size: 'lg' }), 'h-auto min-h-11 w-full whitespace-normal py-2.5 lg:mt-auto')}>{t('requestBooking', { name: helper.displayName })}</Link>
             {data.acceptsMessages && <Link href={routes.app.newMessage({ helper: helper.handle })} className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'h-auto min-h-11 w-full whitespace-normal py-2.5')}><MessageCircle aria-hidden="true" className="size-4" />{t('message', { name: helper.displayName })}</Link>}
+            {contact && onRevealContact && <HelperContactPanel helperId={helper.id} name={helper.displayName} access={contact} onReveal={onRevealContact} {...(initialContactReveal ? { initialReveal: initialContactReveal } : {})} />}
           </div>
         </div>
       </header>

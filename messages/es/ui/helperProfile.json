@@ -32,7 +32,10 @@
     "jordanNew": "Jordan · nuevo ayudante fundador",
     "leeRemote": "Lee · ayuda remota disponible",
     "withSlots": "Jordan · horarios abiertos",
-    "samPhoto": "Sam, con foto de perfil"
+    "samPhoto": "Sam, con foto de perfil",
+    "contactReveal": "Jordan · datos de contacto para un vecino de nivel alto",
+    "contactRevealed": "Jordan · datos de contacto visibles",
+    "contactLocked": "Jordan · datos de contacto bloqueados"
   },
   "recommendedBy": "{count, plural, one {# recomendación de vecinos} other {# recomendaciones de vecinos}}",
   "message": "Escribirle a {name}"

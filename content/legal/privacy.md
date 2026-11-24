@@ -3,7 +3,7 @@ title: Privacy policy
 summary: What we collect, why, who we share it with, and the choices you have.
 version: Draft 0.1
 status: draft
-updated: 2026-11-22
+updated: 2026-11-24
 ---
 > [!warning] This is a working draft for review. It has not been reviewed by a lawyer and is not in effect.
 
@@ -21,6 +21,7 @@ To run bookings and payments, verify helpers, prevent fraud and abuse, provide s
 
 ## 3. Who sees what {#sharing}
 - Other people see your first name and last initial, never your last name.
+- If you're a helper and choose to share your email or phone number on your profile (account settings, **Contact details on your profile**; off unless you turn it on), members who've earned 2,000 Sparks can see them there. We record each time someone does, and you can stop sharing at any time; people who already saw them may have kept them.
 - Your exact address goes only to the helper you book, after the booking is confirmed, and is hidden again 48 hours after the task. We delete it 180 days after the last booking there, or after the task closes if nobody booked it.
 - We share data with service providers that help us run TasksNearMe (payments, identity checks, email and text messages, hosting), under contracts that limit their use.
 - When our staff check where an account signs in from, ipinfo.io receives that sign-in's IP address, and nothing else, and tells us roughly where it is. We don't store its answer.

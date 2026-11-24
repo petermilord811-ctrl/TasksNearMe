@@ -341,6 +341,32 @@
     "hint": "Conversations already going on carry on. To stop one, block the person from the conversation.",
     "failed": "That didn’t save. Try again."
   },
+  "contactSharing": {
+    "title": "Contact details on your profile",
+    "description": "Let neighbors with the top Sparks levels reach you directly.",
+    "legend": "What your profile shares with top neighbors",
+    "options": {
+      "none": {
+        "label": "Don’t share",
+        "hint": "Your email and phone number stay private."
+      },
+      "email": {
+        "label": "My email",
+        "hint": "They can email you."
+      },
+      "phone": {
+        "label": "My phone number",
+        "hint": "They can call or text you."
+      },
+      "email_phone": {
+        "label": "My email and phone number",
+        "hint": "They can email, call or text you."
+      }
+    },
+    "hint": "Only neighbors who’ve earned {at} Sparks (Pillar and Local legend) can see them on your profile, and we keep a record of who does. Bought Sparks don’t count, and no one else sees them. You can stop sharing at any time, though people who already saw them may have kept them.",
+    "phoneUnverified": "Your phone number shows once you’ve verified it.",
+    "failed": "That didn’t save. Try again."
+  },
   "sparks": {
     "title": "Sparks",
     "description": "Your community score: how it’s earned, your level, and the conversations a day it allows.",

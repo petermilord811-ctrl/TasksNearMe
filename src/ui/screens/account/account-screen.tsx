@@ -14,6 +14,7 @@ import { AccountPreferences } from './account-preferences';
 import { AccountPrivacy, AccountSignOut } from './account-privacy';
 import { AccountLanguage } from './account-language';
 import { AccountActivity } from './account-activity';
+import { AccountContactSharing } from './account-contact-sharing';
 import { AccountDirectMessages } from './account-direct-messages';
 import { SparksBadge } from '@/ui/components/people/sparks-badge';
 import { AccountPasskeys } from './account-passkeys';
@@ -106,6 +107,7 @@ export function AccountScreen({ data, handlers, initialDialog }: {
         <AccountGroupSection id="privacy" title={t('groups.privacy')} summary={t('groups.summaries.privacy')}>
           {data.activity && handlers.onSaveActivity && <div className={cardClass}><Section headingLevel={3} title={t('activity.title')} description={t('activity.description')}><AccountActivity shown={data.activity.shown} onSave={handlers.onSaveActivity} /></Section></div>}
           {data.directMessages && handlers.onSaveDirectMessages && <div className={cardClass}><Section headingLevel={3} title={t('directMessages.title')} description={t('directMessages.description')}><AccountDirectMessages setting={data.directMessages.setting} onSave={handlers.onSaveDirectMessages} /></Section></div>}
+          {data.contactSharing && handlers.onSaveContactSharing && <div className={cardClass}><Section headingLevel={3} title={t('contactSharing.title')} description={t('contactSharing.description')}><AccountContactSharing sharing={data.contactSharing} onSave={handlers.onSaveContactSharing} /></Section></div>}
           <div className={cardClass}><Section headingLevel={3} title={t('privacy.title')} description={t('privacy.description')}><AccountPrivacy privacy={data.privacy} handlers={handlers} /></Section></div>
           <AccountSignOut onSignOut={handlers.onSignOut} onRemovePushSubscription={handlers.onRemovePushSubscription} />
         </AccountGroupSection>

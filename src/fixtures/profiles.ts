@@ -1,4 +1,4 @@
-import type { HelperProfilePageData, PublicReviewView } from '@/contracts';
+import { HELPER_CONTACT_EARNED_MIN, type HelperContactAccess, type HelperContactReveal, type HelperProfilePageData, type PublicReviewView } from '@/contracts';
 import { jordan, lee, sam } from './people';
 
 /** Public helper profiles (`/helpers/[handle]`). Images are placeholders in /public/samples. */
@@ -120,3 +120,11 @@ export const leeProfilePageData: HelperProfilePageData = {
   ],
   workSamples: [],
 };
+
+/**
+ * The contact panel on Jordan's profile (2026-11-24): Jordan shares their email and phone with neighbors who've earned
+ * 2,000 Sparks. `helperContactRevealData`: the answer to "Show" (a fictional 555-01xx number).
+ */
+export const helperContactRevealAccess: HelperContactAccess = { state: 'reveal', shares: ['email', 'phone'] };
+export const helperContactLockedAccess: HelperContactAccess = { state: 'locked', shares: ['email', 'phone'], earned: 212, at: HELPER_CONTACT_EARNED_MIN };
+export const helperContactRevealData: HelperContactReveal = { ok: true, email: 'jordan@example.test', phone: '+15125550201' };

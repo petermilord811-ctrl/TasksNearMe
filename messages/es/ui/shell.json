@@ -243,7 +243,7 @@
       "address": "Verifica tu domicilio"
     },
     "checkDescriptions": {
-      "phone": "Un código por mensaje de texto confirma tu número. Los clientes nunca lo ven.",
+      "phone": "Un código por mensaje de texto confirma tu número. Los clientes no lo ven, salvo que decidas compartirlo.",
       "address": "Envía un documento que muestre tu domicilio. Nuestro equipo lo revisa y con eso empiezas a ayudar."
     },
     "elsewhere": "Primero falta otro paso de la configuración.",

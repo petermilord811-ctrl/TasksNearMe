@@ -243,7 +243,7 @@
       "address": "Verify your home address"
     },
     "checkDescriptions": {
-      "phone": "A texted code confirms your number. Clients never see it.",
+      "phone": "A texted code confirms your number. Clients don’t see it unless you choose to share it.",
       "address": "Send a document that shows your home address. Our team checks it, and it opens helping."
     },
     "elsewhere": "Setup needs another step first.",

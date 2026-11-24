@@ -1,9 +1,9 @@
-import { DIRECT_CHATS_PER_DAY, normalizeUsername, PLAN_DIRECT_CHATS_PER_DAY, routes, SPARK_LEVEL_THRESHOLDS, SPARK_LEVELS, SPARK_PACK_OFFERS, SPARK_PACKS, SPARK_RULES, SPARK_SOURCES, type NewChatHandlers, type NewDirectMessagePageData, type PeopleSearchData, type SparksPageData, type SparksSummary } from '@/contracts';
+import { CONTACT_LEVELS, DIRECT_CHATS_PER_DAY, HELPER_CONTACT_EARNED_MIN, normalizeUsername, PLAN_DIRECT_CHATS_PER_DAY, routes, SPARK_LEVEL_THRESHOLDS, SPARK_LEVELS, SPARK_PACK_OFFERS, SPARK_PACKS, SPARK_RULES, SPARK_SOURCES, type NewChatHandlers, type NewDirectMessagePageData, type PeopleSearchData, type SparksPageData, type SparksSummary } from '@/contracts';
 import { jordan, maya } from './people';
 
 /** Sparks and direct conversations (2026-11-21): the canonical states for the previews and tests. */
 
-const levels = SPARK_LEVELS.map((level) => ({ level, at: SPARK_LEVEL_THRESHOLDS[level], directChatsPerDay: DIRECT_CHATS_PER_DAY[level] }));
+const levels = SPARK_LEVELS.map((level) => ({ level, at: SPARK_LEVEL_THRESHOLDS[level], directChatsPerDay: DIRECT_CHATS_PER_DAY[level], ...((CONTACT_LEVELS as readonly string[]).includes(level) ? { helperContact: true as const } : {}) }));
 const rules = SPARK_SOURCES.map((source) => ({ source, points: SPARK_RULES[source].points, ...(SPARK_RULES[source].dailyCap ? { dailyCap: SPARK_RULES[source].dailyCap } : {}) }));
 const packs = SPARK_PACKS.map((pack) => ({ pack, ...SPARK_PACK_OFFERS[pack] }));
 
@@ -19,6 +19,7 @@ export const sparksNewData: SparksPageData = {
   breakdown: SPARK_SOURCES.map((source) => ({ source, count: 0, points: 0 })),
   nextLevel: { level: 'neighbor', at: 50 },
   levels,
+  helperContact: { at: HELPER_CONTACT_EARNED_MIN, unlocked: false },
   directChatsPerDay: 10,
   planDirectChatsPerDay: PLAN_DIRECT_CHATS_PER_DAY,
   hasPlan: false,
@@ -40,7 +41,7 @@ export const sparksActiveData: SparksPageData = {
     { source: 'bookings', count: 7, points: 70 },
     { source: 'reviews', count: 5, points: 10 },
   ],
-  nextLevel: { level: 'pillar', at: 1000 },
+  nextLevel: { level: 'friendly_face', at: 750 },
   directChatsPerDay: 25,
   purchases: [{ id: 'spk_jordan_1', pack: 'small', points: 100, priceCents: 99, status: 'paid', createdAt: '2026-11-21T15:00:00.000Z' }],
   notice: 'purchased',
@@ -62,8 +63,30 @@ export const sparksTopData: SparksPageData = {
   ...active,
   summary: { total: 5_240, bought: 1_200, level: 'local_legend' },
   earned: 4_040,
+  helperContact: { at: HELPER_CONTACT_EARNED_MIN, unlocked: true },
   directChatsPerDay: 60,
   purchases: [],
+};
+
+/**
+ * A Pillar by total whose earned part is short of 2,000 (2026-11-24): the level and its chats a day, but not the contact
+ * details helpers share, since bought Sparks don't count toward them.
+ */
+export const sparksPillarBoughtData: SparksPageData = {
+  ...active,
+  summary: { total: 2_300, bought: 1_200, level: 'pillar' },
+  earned: 1_100,
+  breakdown: [
+    { source: 'posts', count: 60, points: 300 },
+    { source: 'replies', count: 150, points: 300 },
+    { source: 'helpful', count: 80, points: 240 },
+    { source: 'thanks', count: 50, points: 100 },
+    { source: 'bookings', count: 14, points: 140 },
+    { source: 'reviews', count: 10, points: 20 },
+  ],
+  nextLevel: { level: 'local_legend', at: 5_000 },
+  directChatsPerDay: 40,
+  purchases: [{ id: 'spk_jordan_3', pack: 'large', points: 1_200, priceCents: 999, status: 'paid', createdAt: '2026-11-23T15:00:00.000Z' }],
 };
 
 /** Buying isn't offered (no payment provider). */

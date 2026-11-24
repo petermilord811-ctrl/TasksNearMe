@@ -31,6 +31,7 @@ import {
 import { cancelAccountDeletionAction, requestAccountDeletionAction, requestDataExportAction } from '@/modules/privacy/actions';
 import { getAccountPage } from '@/modules/notifications/service';
 import { saveDirectMessagesAction } from '@/modules/messaging/actions';
+import { saveContactSharingAction } from '@/modules/profiles/actions';
 import { sparksSummaryOf } from '@/modules/sparks/service';
 import { accountVerificationFor } from '@/modules/badges/standing';
 import { ownBadges } from '@/modules/badges/service';
@@ -90,6 +91,7 @@ async function Account({ searchParams }: Pick<PageProps<'/[locale]/app/account'>
         onSaveLanguage: saveLanguageAction,
         onSaveActivity: saveActivityAction,
         onSaveDirectMessages: saveDirectMessagesAction,
+        onSaveContactSharing: saveContactSharingAction,
         onUploadPhoto: uploadProfilePhotoAction,
         onRemovePhoto: removeProfilePhotoAction,
         onStartEmailChange: startEmailChangeAction,

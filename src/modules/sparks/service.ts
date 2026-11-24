@@ -1,6 +1,8 @@
 import { and, desc, eq, inArray, ne, or, sql } from 'drizzle-orm';
 import {
+  CONTACT_LEVELS,
   DIRECT_CHATS_PER_DAY,
+  HELPER_CONTACT_EARNED_MIN,
   PLAN_DIRECT_CHATS_PER_DAY,
   routes,
   SPARK_LEVEL_THRESHOLDS,
@@ -266,7 +268,9 @@ export async function sparksPageData(db: Db, provider: BillingProvider | null, u
     earned,
     breakdown,
     ...(next ? { nextLevel: next } : {}),
-    levels: SPARK_LEVELS.map((level) => ({ level, at: SPARK_LEVEL_THRESHOLDS[level], directChatsPerDay: DIRECT_CHATS_PER_DAY[level] })),
+    levels: SPARK_LEVELS.map((level) => ({ level, at: SPARK_LEVEL_THRESHOLDS[level], directChatsPerDay: DIRECT_CHATS_PER_DAY[level], ...((CONTACT_LEVELS as readonly string[]).includes(level) ? { helperContact: true as const } : {}) })),
+    // Seeing the contact details helpers share (2026-11-24) counts earned Sparks only.
+    helperContact: { at: HELPER_CONTACT_EARNED_MIN, unlocked: earned >= HELPER_CONTACT_EARNED_MIN },
     directChatsPerDay: directChatsPerDay(total, plans.keys()),
     planDirectChatsPerDay: PLAN_DIRECT_CHATS_PER_DAY,
     hasPlan,

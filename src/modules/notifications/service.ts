@@ -9,7 +9,7 @@ import type {
   NotificationView,
   OnboardingStep,
 } from '@/contracts';
-import { accountProfileInputSchema, BADGE_CODES, DIRECT_MESSAGE_SETTINGS, localeOrDefault, NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS, type BadgeCode, type DirectMessageSetting } from '@/contracts';
+import { accountProfileInputSchema, BADGE_CODES, CONTACT_SHARING_SETTINGS, DIRECT_MESSAGE_SETTINGS, HELPER_CONTACT_EARNED_MIN, localeOrDefault, NOTIFICATION_CHANNELS, NOTIFICATION_TOPICS, type BadgeCode, type ContactSharingSetting, type DirectMessageSetting } from '@/contracts';
 import { smsAvailable } from '@/integrations/sms';
 import { staffRoles, users } from '@/modules/accounts/schema';
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
@@ -901,6 +901,8 @@ export async function getAccountPage(db: Db, userId: string, returned: { connect
     language: localeOrDefault(user.locale),
     activity: { shown: user.showActivity },
     directMessages: { setting: (DIRECT_MESSAGE_SETTINGS as readonly string[]).includes(user.directMessages) ? (user.directMessages as DirectMessageSetting) : 'everyone' },
+    // What their helper profile shares with top Sparks levels (2026-11-24): only for someone with a helper profile.
+    ...(profile ? { contactSharing: { setting: (CONTACT_SHARING_SETTINGS as readonly string[]).includes(user.contactSharing) ? (user.contactSharing as ContactSharingSetting) : 'none', phoneVerified: user.phoneVerifiedAt !== null && Boolean(user.phone), at: HELPER_CONTACT_EARNED_MIN } } : {}),
     // A "Not you?" link holds the email, phone and ways to sign in until staff clear it (completion plan 5.23).
     ...(user.contactHoldAt ? { contactChangesHeld: true } : {}),
   };

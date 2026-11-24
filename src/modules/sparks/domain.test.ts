@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CONTACT_LEVELS, HELPER_CONTACT_EARNED_MIN, SPARK_LEVELS } from '@/contracts';
 import { directChatsPerDay, earnedSparks, nextSparkLevel, sparkLevel, sparksSummary } from './domain';
 
 const none = { postsPerDay: [], repliesPerDay: [], helpful: 0, thanks: 0, bookings: 0, reviews: 0 };
@@ -9,21 +10,34 @@ describe('Sparks (2026-11-21)', () => {
     expect(sparkLevel(49)).toBe('newcomer');
     expect(sparkLevel(50)).toBe('neighbor');
     expect(sparkLevel(250)).toBe('good_neighbor');
-    expect(sparkLevel(999)).toBe('good_neighbor');
-    expect(sparkLevel(1000)).toBe('pillar');
+    expect(sparkLevel(749)).toBe('good_neighbor');
+    // Six milestones since 2026-11-24: Friendly face at 750, Pillar moved from 1,000 to 2,000.
+    expect(sparkLevel(750)).toBe('friendly_face');
+    expect(sparkLevel(1999)).toBe('friendly_face');
+    expect(sparkLevel(2000)).toBe('pillar');
+    expect(sparkLevel(4999)).toBe('pillar');
     expect(sparkLevel(5000)).toBe('local_legend');
     expect(nextSparkLevel(0)).toEqual({ level: 'neighbor', at: 50 });
-    expect(nextSparkLevel(300)).toEqual({ level: 'pillar', at: 1000 });
+    expect(nextSparkLevel(300)).toEqual({ level: 'friendly_face', at: 750 });
+    expect(nextSparkLevel(1000)).toEqual({ level: 'pillar', at: 2000 });
     expect(nextSparkLevel(5000)).toBeUndefined();
+  });
+
+  it('opens shared contact details at the top two levels, from where Pillar starts', () => {
+    expect(CONTACT_LEVELS).toEqual(['pillar', 'local_legend']);
+    expect(HELPER_CONTACT_EARNED_MIN).toBe(2000);
+    expect(SPARK_LEVELS.slice(-2)).toEqual([...CONTACT_LEVELS]);
   });
 
   it('allows more direct conversations a day by level, and at least 25 with Plus and 100 with Pro', () => {
     expect(directChatsPerDay(0, [])).toBe(3);
     expect(directChatsPerDay(60, [])).toBe(10);
     expect(directChatsPerDay(300, [])).toBe(25);
+    expect(directChatsPerDay(800, [])).toBe(30);
     expect(directChatsPerDay(0, ['plus'])).toBe(25);
     // A plan never lowers a level's allowance.
-    expect(directChatsPerDay(1000, ['plus'])).toBe(40);
+    expect(directChatsPerDay(800, ['plus'])).toBe(30);
+    expect(directChatsPerDay(2000, ['plus'])).toBe(40);
     expect(directChatsPerDay(6000, ['plus'])).toBe(60);
     expect(directChatsPerDay(0, ['pro'])).toBe(100);
     expect(directChatsPerDay(6000, ['plus', 'pro'])).toBe(100);

@@ -1,3 +1,4 @@
+import type { QueryHandler } from './actions';
 import type { CategorySlug, ISODateTime, Photo, TimeZone } from './common';
 import type { AvailabilitySlotView } from './availability';
 import type { HelperSummary, ServiceSummary } from './people';
@@ -70,3 +71,37 @@ export interface HelperProfilePageData {
   /** Their @username (2026-11-22), under their name. */
   username?: string;
 }
+
+/**
+ * What a helper shares on their profile with neighbors who've earned a top Sparks level (`CONTACT_LEVELS`, owner
+ * 2026-11-24): nothing (the default), their email, their phone number, or both. Set on the account page. A phone
+ * number that isn't verified never shows.
+ */
+export const CONTACT_SHARING_SETTINGS = ['none', 'email', 'phone', 'email_phone'] as const;
+export type ContactSharingSetting = (typeof CONTACT_SHARING_SETTINGS)[number];
+
+/** One kind of contact detail a helper shares. */
+export type SharedContactKind = 'email' | 'phone';
+
+/**
+ * The contact panel on `/helpers/[handle]`, worked out for the viewer on every visit (never cached with the profile):
+ * - `reveal`: the viewer has earned `HELPER_CONTACT_EARNED_MIN` Sparks. A button shows the details (`onRevealContact`);
+ *   they're never in the page until then.
+ * - `locked`: a signed-in viewer who hasn't earned that many yet: `earned` of `at`, with a way to see how to earn more.
+ * Absent: the helper shares nothing that can show, the viewer isn't signed in or is the helper, either has blocked the
+ * other, or the viewer's account is limited.
+ */
+export type HelperContactAccess =
+  | { state: 'reveal'; shares: SharedContactKind[] }
+  | { state: 'locked'; shares: SharedContactKind[]; earned: number; at: number };
+
+/**
+ * The details a helper shares, for a viewer who may see them: `phone` in E.164 (the UI writes it out and dials it).
+ * Errors: `not_allowed` (no longer shared, or the viewer can't see them), `rate_limited` with `retryAt` (a day's
+ * allowance of reveals is used up), `unknown`.
+ */
+export type HelperContactReveal =
+  | { ok: true; email?: string; phone?: string }
+  | { ok: false; code: 'not_allowed' | 'rate_limited' | 'unknown'; retryAt?: ISODateTime };
+
+export type RevealHelperContactHandler = QueryHandler<{ helperId: string }, HelperContactReveal>;

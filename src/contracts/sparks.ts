@@ -13,15 +13,29 @@ import type { Cents, ISODateTime } from './common';
  * nothing and can't be spent, moved or cashed out.
  */
 
-/** Levels by total Sparks, lowest first. */
-export const SPARK_LEVELS = ['newcomer', 'neighbor', 'good_neighbor', 'pillar', 'local_legend'] as const;
+/**
+ * Levels (the milestones) by total Sparks, lowest first. Six since 2026-11-24 (owner: "Make milestones by neighbor
+ * score . maybe 5 or 6 milestones and name them"): Friendly face joined between Good neighbor and Pillar, and Pillar
+ * moved from 1,000 to 2,000 so the top two take real time to earn.
+ */
+export const SPARK_LEVELS = ['newcomer', 'neighbor', 'good_neighbor', 'friendly_face', 'pillar', 'local_legend'] as const;
 export type SparkLevel = (typeof SPARK_LEVELS)[number];
 
 /** The total at which each level starts. */
-export const SPARK_LEVEL_THRESHOLDS: Record<SparkLevel, number> = { newcomer: 0, neighbor: 50, good_neighbor: 250, pillar: 1000, local_legend: 5000 };
+export const SPARK_LEVEL_THRESHOLDS: Record<SparkLevel, number> = { newcomer: 0, neighbor: 50, good_neighbor: 250, friendly_face: 750, pillar: 2000, local_legend: 5000 };
 
 /** New direct conversations a person can start in any 24 hours, by level. */
-export const DIRECT_CHATS_PER_DAY: Record<SparkLevel, number> = { newcomer: 3, neighbor: 10, good_neighbor: 25, pillar: 40, local_legend: 60 };
+export const DIRECT_CHATS_PER_DAY: Record<SparkLevel, number> = { newcomer: 3, neighbor: 10, good_neighbor: 25, friendly_face: 30, pillar: 40, local_legend: 60 };
+
+/**
+ * The top two levels also see the email and phone number a helper chose to share on their profile (owner,
+ * 2026-11-24: "last two top milestone can see helper's profile: email and phone number", shared only by helpers who
+ * turn it on). Counted on **earned** Sparks only: a bought total raises the level and the chat allowance, but never
+ * opens anyone's contact details.
+ */
+export const CONTACT_LEVELS = ['pillar', 'local_legend'] as const satisfies readonly SparkLevel[];
+/** The earned Sparks that open shared contact details: where the lowest of `CONTACT_LEVELS` starts (2,000). */
+export const HELPER_CONTACT_EARNED_MIN = SPARK_LEVEL_THRESHOLDS[CONTACT_LEVELS[0]];
 
 /**
  * With a plan, at least this many (a plan never lowers a level's allowance): Plus 25, Pro 100 (the plans' ladder,
@@ -85,8 +99,16 @@ export interface SparksPageData {
   breakdown: { source: SparkSource; count: number; points: number }[];
   /** The next level and the total it starts at; absent at the top. */
   nextLevel?: { level: SparkLevel; at: number };
-  /** Every level, lowest first, with the direct conversations a day it allows. */
-  levels: { level: SparkLevel; at: number; directChatsPerDay: number }[];
+  /**
+   * Every level, lowest first, with the direct conversations a day it allows. `helperContact`: the level also sees the
+   * contact details helpers share (`CONTACT_LEVELS`), on earned Sparks.
+   */
+  levels: { level: SparkLevel; at: number; directChatsPerDay: number; helperContact?: true }[];
+  /**
+   * Seeing the contact details helpers share (2026-11-24): `at` the earned Sparks it takes (`HELPER_CONTACT_EARNED_MIN`),
+   * `unlocked` once `earned` reaches it. Bought Sparks don't count toward it.
+   */
+  helperContact: { at: number; unlocked: boolean };
   /** The viewer's allowance now (their level, or their plan's when that's more). */
   directChatsPerDay: number;
   /** Plus and Pro allow at least this many each (`PLAN_DIRECT_CHATS_PER_DAY`). */

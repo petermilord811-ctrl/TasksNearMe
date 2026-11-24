@@ -3,7 +3,7 @@ title: Escribirle a alguien directamente
 summary: Inicia una conversación con cualquier persona que acepte mensajes, sin una tarea. Cuántas puedes iniciar al día depende de tus Chispas y de tu plan.
 topic: getting-started
 order: 3
-updated: 2026-11-23
+updated: 2026-11-24
 ---
 Puedes escribirle a un vecino o a un ayudante sin publicar una tarea. Elige **Escribirle** en el perfil de un ayudante o en la tarjeta de alguien en Vecinos, o empieza un mensaje nuevo desde **Mensajes** y búscalo por su @usuario.
 
@@ -11,7 +11,7 @@ Puedes escribirle a un vecino o a un ayudante sin publicar una tarea. Elige **Es
 
 El límite es de **conversaciones nuevas**, contadas en cualquier periodo de 24 horas:
 
-- **Starter** (sin plan): 3 al día. Las Chispas lo suben a medida que llegas a cada nivel: 10, 25, 40 y luego 60 al día.
+- **Starter** (sin plan): 3 al día. Las Chispas lo suben a medida que llegas a cada nivel: 10, 25, 30, 40 y luego 60 al día.
 - **Plus**: 25 al día, o las de tu nivel si son más.
 - **Pro**: 100 al día.
 
@@ -38,3 +38,7 @@ En tu cuenta, en **Mensajes directos**, elige quién puede iniciar una conversac
 ## Qué se mantiene privado
 
 Los teléfonos, correos y enlaces en los mensajes se mantienen ocultos hasta que reserven juntos. Mantén la conversación en TasksNearMe para que quede un registro si alguna vez necesitas ayuda. Más en [cómo mantenerte seguro](/help/staying-safe).
+
+## Ayudantes que comparten sus datos de contacto
+
+Un ayudante puede decidir, en su cuenta en **Datos de contacto en tu perfil**, compartir su correo, su teléfono o ambos. Solo los vecinos que ganaron 2,000 Chispas, los niveles Pilar y Leyenda local, los ven en el perfil del ayudante después de elegir **Mostrar**. Las Chispas compradas no cuentan. Guardamos un registro de quién los ve, y el ayudante puede dejar de compartirlos cuando quiera. Aun así, reserva y paga a través de TasksNearMe: solo protegemos los pagos que retenemos ([términos](/legal/terms#off-platform)).

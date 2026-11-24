@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "contact_sharing" text DEFAULT 'none' NOT NULL;

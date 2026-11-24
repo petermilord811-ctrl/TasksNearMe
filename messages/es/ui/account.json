@@ -341,6 +341,32 @@
     "hint": "Las conversaciones que ya tienes siguen igual. Para detener una, bloquea a la persona desde la conversación.",
     "failed": "No se guardó. Inténtalo de nuevo."
   },
+  "contactSharing": {
+    "title": "Datos de contacto en tu perfil",
+    "description": "Deja que los vecinos con los niveles más altos de Chispas te contacten directamente.",
+    "legend": "Qué comparte tu perfil con los vecinos de nivel más alto",
+    "options": {
+      "none": {
+        "label": "No compartir",
+        "hint": "Tu correo y tu teléfono se mantienen privados."
+      },
+      "email": {
+        "label": "Mi correo",
+        "hint": "Pueden escribirte un correo."
+      },
+      "phone": {
+        "label": "Mi teléfono",
+        "hint": "Pueden llamarte o enviarte mensajes de texto."
+      },
+      "email_phone": {
+        "label": "Mi correo y mi teléfono",
+        "hint": "Pueden escribirte un correo, llamarte o enviarte mensajes de texto."
+      }
+    },
+    "hint": "Solo los vecinos que ganaron {at} Chispas (Pilar y Leyenda local) pueden verlos en tu perfil, y guardamos un registro de quién lo hace. Las Chispas compradas no cuentan y nadie más los ve. Puedes dejar de compartirlos cuando quieras, aunque quienes ya los vieron podrían haberlos guardado.",
+    "phoneUnverified": "Tu teléfono se mostrará cuando lo verifiques.",
+    "failed": "No se guardó. Inténtalo de nuevo."
+  },
   "sparks": {
     "title": "Chispas",
     "description": "Tu puntuación en la comunidad: cómo se gana, tu nivel y las conversaciones al día que permite.",

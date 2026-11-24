@@ -34,7 +34,7 @@ ledger_journals ─1:N─ ledger_entries ─N:1─ ledger_accounts   (journals r
 ### accounts
 | Table | Key fields | Constraints and notes |
 |---|---|---|
-| `users` | id, email (citext), email_verified_at, phone_e164, phone_verified_at, first_name, last_name (private), avatar_file_id, default_mode (`poster`/`helper`), home_market_id, status (`active`/`restricted`/`suspended`/`banned`/`deleted`), adult_attested_at | Unique email; unique phone when not null. Public display name = first name + last initial |
+| `users` | id, email (citext), email_verified_at, phone_e164, phone_verified_at, first_name, last_name (private), avatar_file_id, default_mode (`poster`/`helper`), home_market_id, status (`active`/`restricted`/`suspended`/`banned`/`deleted`), adult_attested_at, contact_sharing (`none`/`email`/`phone`/`email_phone`, 2026-11-24) | Unique email; unique phone when not null. Public display name = first name + last initial |
 | Auth tables (Better Auth) | sessions, accounts, verifications, two-factor | Managed by the library's Drizzle adapter; staff sessions are shorter and require TOTP. `accounts` holds connected Google and Microsoft sign-ins (provider tokens encrypted at rest). An email from a provider creates or joins an account only when the provider confirms it |
 | `staff_roles` | user_id, role (`support_agent`/`support_lead`/`trust_safety`/`finance`/`admin`), granted_by, granted_at | PK (user_id, role); every change is audited |
 | `usernames` | user_id (PK), username (lowercase), changed_at | Unique on lower(username); 3–20 of a–z, 0–9, `_`, starting with a letter; changed at most once in 30 days; deleted with the account (2026-11-22) |
@@ -142,6 +142,7 @@ Enforced in each module's `policies.ts`. Integration tests in `tests/integration
 | Offers | — | Count only | Read on own tasks | Own offers read/write | Read |
 | Booking terms, timeline, evidence | — | — | Read; actions per state (03 §4) | Read; actions per state | Read; actions per role |
 | Messages | — | — | Own threads | Own threads | Read only when handling a case or report on that thread, with a reason; logged |
+| Helper's email and phone, shared on their profile (2026-11-24) | — | **Only with 2,000 earned Sparks**, when the helper turned sharing on (verified details only); shown on tap, 20 a day, every reveal logged | — | Own setting (off by default) | Audit log |
 | Poster payments and receipts | — | — | Own | Helper-side amounts only (never the poster's payment method) | Support: summary. Finance: full |
 | Helper earnings, transfers, payouts | — | — | — | Own | Support: read. Finance: read and act |
 | Bank, SSN/TIN, ID documents, selfies, background reports | **Never stored in our app** | — | — | Own data only in the provider-hosted dashboard | Status fields only. Provider dashboards restricted to named finance or trust & safety leads (**F15**) |

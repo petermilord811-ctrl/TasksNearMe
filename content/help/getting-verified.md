@@ -3,7 +3,7 @@ title: Getting verified as a helper
 summary: ID and home address checks, payout setup, a background check for in-home help, and your phone when we ask for it.
 topic: helpers
 order: 1
-updated: 2026-11-14
+updated: 2026-11-24
 action: become_helper
 ---
 Before you can send offers, we check a few things. The steps take about 10 minutes; our team reviews some of them, usually within a day.
@@ -11,7 +11,7 @@ Before you can send offers, we check a few things. The steps take about 10 minut
 ## The steps
 
 1. **Your profile**: your services, prices, and the area you cover, and the helper agreement.
-2. **Phone**, when we ask for it: we text you a code. Clients never see your number.
+2. **Phone**, when we ask for it: we text you a code. Clients don't see your number unless you choose to share it on your profile (see [messaging someone directly](/help/direct-messages)).
 3. **ID check**, in two parts: photos of your government ID and a live selfie, which our team compares (usually within a day), then a quick double check with our ID partner. Clients then see an ID-verified badge with the date.
 4. **Home address**: a recent document (from the last 90 days) with your name and address, which our trust and safety team checks. Clients only ever see your neighborhood.
 5. **Payout setup**: your bank details, held by our payment provider, not by us.

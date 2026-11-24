@@ -60,6 +60,11 @@ export const users = pgTable(
      */
     directMessages: text('direct_messages').notNull().default('everyone'),
     /**
+     * What their helper profile shares with neighbors who've earned a top Sparks level (2026-11-24;
+     * `CONTACT_SHARING_SETTINGS`): `none` (the default), `email`, `phone` or `email_phone`. Only the helper turns it on.
+     */
+    contactSharing: text('contact_sharing').notNull().default('none'),
+    /**
      * Since when the account's sign-in details are held (completion plan 5.23): someone used the "Not you?" link
      * in a contact change notice. Until trust and safety or an admin clears it on the person page, the email and
      * phone can't change and no passkey or Google or Microsoft sign-in can be added. Signing in still works.

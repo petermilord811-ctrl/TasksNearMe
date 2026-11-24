@@ -1,0 +1,26 @@
+{
+  "heading": "Datos de contacto",
+  "reveal": {
+    "body": "{name} comparte su {shares, select, email {correo} phone {teléfono} other {correo y teléfono}} con los vecinos que ganaron uno de los niveles más altos de Chispas, como tú.",
+    "action": "Mostrar {shares, select, email {correo} phone {teléfono} other {correo y teléfono}}"
+  },
+  "locked": {
+    "body": "{name} comparte su {shares, select, email {correo} phone {teléfono} other {correo y teléfono}} con los vecinos que ganaron {at} Chispas (Pilar y Leyenda local). Las Chispas compradas no cuentan.",
+    "progressLabel": "Chispas ganadas para ver los datos de contacto",
+    "progress": "Ganaste {earned} de {at}.",
+    "link": "Cómo ganar Chispas"
+  },
+  "revealed": {
+    "note": "Por favor, guárdalos para ti. Solo protegemos los pagos hechos a través de TasksNearMe:",
+    "terms": "pagar fuera de TasksNearMe"
+  },
+  "emailLabel": "Correo:",
+  "phoneLabel": "Teléfono:",
+  "opensInNewTab": "se abre en una pestaña nueva",
+  "errors": {
+    "not_allowed": "Ya no se pueden mostrar estos datos. Vuelve a cargar la página para comprobarlo.",
+    "rate_limited": "Llegaste al límite de hoy para ver datos de contacto. Inténtalo de nuevo después de {time}.",
+    "rate_limited_later": "Llegaste al límite de hoy para ver datos de contacto. Inténtalo de nuevo mañana.",
+    "unknown": "Algo salió mal. Inténtalo de nuevo."
+  }
+}
