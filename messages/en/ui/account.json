@@ -134,6 +134,12 @@
     "hint": "The page reloads in the language you choose.",
     "failed": "We couldn't change your language. Try again."
   },
+  "pointer": {
+    "title": "Pointer",
+    "description": "On computers with a mouse, TasksNearMe draws its own pointer: a small speech bubble.",
+    "system": "Use the system pointer",
+    "hint": "Keeps your computer’s usual pointer, for example a larger one you’ve set up. It applies on this device."
+  },
   "plan": {
     "title": "Plan",
     "description": "Optional: money back on fees and AI search. Everything works without a plan.",

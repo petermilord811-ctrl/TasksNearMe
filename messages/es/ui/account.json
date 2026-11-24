@@ -134,6 +134,12 @@
     "hint": "La página se vuelve a cargar en el idioma que elijas.",
     "failed": "No pudimos cambiar tu idioma. Inténtalo de nuevo."
   },
+  "pointer": {
+    "title": "Puntero",
+    "description": "En computadoras con mouse, TasksNearMe dibuja su propio puntero: una pequeña burbuja de diálogo.",
+    "system": "Usar el puntero del sistema",
+    "hint": "Mantiene el puntero habitual de tu computadora, por ejemplo uno más grande que hayas configurado. Se aplica en este dispositivo."
+  },
   "plan": {
     "title": "Plan",
     "description": "Opcional: dinero de vuelta en las tarifas y búsqueda con IA. Todo funciona sin un plan.",

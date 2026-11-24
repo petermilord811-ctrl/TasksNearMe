@@ -4,6 +4,7 @@ import * as rootParams from 'next/root-params';
 import Script from 'next/script';
 import { APP_LOCALES, isAppLocale } from '@/contracts/locale';
 import { AppToaster } from '@/ui/components/feedback/app-toaster';
+import { BubbleCursor } from '@/ui/components/cursor/bubble-cursor';
 import { MapTilesProvider } from '@/ui/components/map/map-tiles';
 import { mapTiles } from '@/modules/markets/map-tiles';
 import { fontVariables } from '@/ui/theme/fonts';
@@ -88,6 +89,8 @@ export default async function RootLayout({ children, modal }: LayoutProps<'/[loc
           {/* A page opened as a dialog over this one (src/app/[locale]/@modal), or nothing. */}
           {modal}
           <AppToaster />
+          {/* TasksNearMe's own pointer on computers with a mouse (2026-11-24); off with "Use the system pointer". */}
+          <BubbleCursor />
         </ClientMessages>
       </body>
     </html>

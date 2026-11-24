@@ -13,6 +13,7 @@ import { AccountUsernameForm } from './account-username-form';
 import { AccountPreferences } from './account-preferences';
 import { AccountPrivacy, AccountSignOut } from './account-privacy';
 import { AccountLanguage } from './account-language';
+import { AccountPointer } from './account-pointer';
 import { AccountActivity } from './account-activity';
 import { AccountContactSharing } from './account-contact-sharing';
 import { AccountDirectMessages } from './account-direct-messages';
@@ -86,6 +87,8 @@ export function AccountScreen({ data, handlers, initialDialog }: {
           <div className={cardClass}><Section headingLevel={3} title={t('preferences.title')} description={t('preferences.description')}><AccountPreferences preferences={data.preferences} onSave={handlers.onSavePreference} /></Section></div>
           <div className={cardClass}><Section headingLevel={3} title={push('device.title')}><PushDeviceSetting push={data.push} handlers={handlers} /></Section></div>
           {handlers.onSaveLanguage && <div className={cardClass}><Section headingLevel={3} title={t('language.title')} description={t('language.description')}><AccountLanguage language={data.language} onSave={handlers.onSaveLanguage} /></Section></div>}
+          {/* On devices with a mouse only, where the Bubble cursor is drawn (2026-11-24). */}
+          <div className={`${cardClass} hidden [@media(hover:hover)_and_(pointer:fine)]:block`}><Section headingLevel={3} title={t('pointer.title')} description={t('pointer.description')}><AccountPointer /></Section></div>
         </AccountGroupSection>
         <AccountGroupSection id="helping" title={t('groups.helping')} summary={t('groups.summaries.helping')}>
           {/* Two short cards side by side where there's room; a card on its own takes the row. */}
