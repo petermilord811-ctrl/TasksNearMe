@@ -3,7 +3,7 @@ import { Activity } from 'react';
 import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { LandingPageMarker } from '@/ui/shells/landing-page-marker';
-import { restoreDocumentMarks } from './theme-script';
+import { restoreDocumentMarks, themeInitScript } from './theme-script';
 
 /**
  * What a page switch must not lose (owner, 2026-11-22): the head script's marks on <html> when a language switch makes
@@ -29,6 +29,16 @@ describe('restoreDocumentMarks', () => {
     expect(root.getAttribute('data-theme')).toBe('light');
     expect(root.getAttribute('data-motion')).toBe('on');
     expect(root.hasAttribute('data-logo-settled')).toBe(false);
+  });
+
+  it('keeps “Use the system pointer” (the Bubble cursor stays off), and the head script sets it before the first paint', () => {
+    const root = document.createElement('html');
+    restoreDocumentMarks(root, { savedTheme: null, reducedMotion: false, settled: false, savedPointer: 'system' });
+    expect(root.getAttribute('data-pointer')).toBe('system');
+    const other = document.createElement('html');
+    restoreDocumentMarks(other, { savedTheme: null, reducedMotion: false, settled: false, savedPointer: null });
+    expect(other.hasAttribute('data-pointer')).toBe(false);
+    expect(themeInitScript).toContain("localStorage.getItem('tnm-pointer')==='system'");
   });
 
   it('follows the system when nothing valid was saved', () => {

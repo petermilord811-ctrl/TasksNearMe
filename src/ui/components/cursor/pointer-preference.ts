@@ -1,6 +1,7 @@
 /**
  * "Use the system pointer" (2026-11-24): a choice kept on this device, like the theme. Without it, computers with a
- * mouse get TasksNearMe's own pointer (the Bubble cursor); with it, the system's.
+ * mouse get TasksNearMe's own pointer (the Bubble cursor); with it, the system's. The CSS reads it from
+ * `data-pointer="system"` on <html>, which theme-script.ts sets before the first paint.
  */
 export const POINTER_STORAGE_KEY = 'tnm-pointer';
 /** Fired on this window when the choice changes here; other tabs hear the storage event. */
@@ -17,6 +18,8 @@ export function readPointerPreference(): PointerPreference {
 }
 
 export function savePointerPreference(value: PointerPreference): void {
+  if (value === 'system') document.documentElement.setAttribute('data-pointer', 'system');
+  else document.documentElement.removeAttribute('data-pointer');
   try {
     if (value === 'system') window.localStorage.setItem(POINTER_STORAGE_KEY, 'system');
     else window.localStorage.removeItem(POINTER_STORAGE_KEY);

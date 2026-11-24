@@ -1,44 +1,8 @@
 /**
- * What the Bubble cursor makes of the element under it (2026-11-24). Plain DOM functions, no React, so they're tested
- * on their own. The CSS in bubble-cursor.css hides the system pointer except over TEXT_ZONE and NATIVE_ZONE, where the
- * bubble steps aside instead: keep the two lists in step.
+ * What the Bubble cursor's moving moments read from the page (2026-11-24): which part of the page the pointer is in,
+ * and whether a click switches pages. Plain DOM functions, tested on their own. Which cursor an element shows is CSS
+ * (cursor-rules.ts); the moments read it back from the computed style (cursor-art.ts, kindOfCursor).
  */
-
-/** Text you type into: the system's text cursor places the caret better. */
-export const TEXT_ZONE =
-  'input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="file"]):not([type="color"]):not([type="image"]), textarea, [contenteditable=""], [contenteditable="true"]';
-
-/** Things you drag or resize (maps, the photo crop, the minimap's frame) and anything marked native: the system pointer. */
-export const NATIVE_ZONE =
-  '.maplibregl-map, [data-cursor="native"], [class*="cursor-grab"], [class*="cursor-move"], [class*="cursor-crosshair"], [class*="-resize"], [class*="cursor-zoom"], [class*="cursor-text"]';
-
-/** Things you press. */
-export const PRESSABLE =
-  'a[href], button, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="option"], [role="switch"], [role="checkbox"], [role="radio"], label, select, summary, input[type="checkbox"], input[type="radio"], input[type="submit"], input[type="button"], input[type="reset"], input[type="file"]';
-
-/** What the bubble says over a link: it opens over the page, it opens in a new tab, or it isn't available yet. */
-export type CursorHint = 'sheet' | 'tab' | 'off';
-export type CursorZone = 'bubble' | 'text' | 'native';
-
-export function zoneOf(target: Element | null): CursorZone {
-  if (!target) return 'bubble';
-  if (target.closest(TEXT_ZONE)) return 'text';
-  if (target.closest(NATIVE_ZONE)) return 'native';
-  return 'bubble';
-}
-
-/** Over something you can press: `press`, or `off` when it's disabled; and what it would say, if anything. */
-export function pressStateOf(target: Element | null): { hover: 'press' | 'off' | null; hint: CursorHint | null } {
-  const pressable = target?.closest(PRESSABLE) ?? null;
-  if (!pressable) return { hover: null, hint: null };
-  const control = pressable.closest('[aria-disabled="true"]') ?? (pressable.matches(':disabled') ? pressable : null);
-  if (control) return { hover: 'off', hint: 'off' };
-  const marked = pressable.closest('[data-cursor]')?.getAttribute('data-cursor');
-  if (marked === 'sheet' || marked === 'tab' || marked === 'off') return { hover: 'press', hint: marked };
-  if (pressable.matches('a[target="_blank"]')) return { hover: 'press', hint: 'tab' };
-  if (pressable.matches('[aria-haspopup="dialog"]')) return { hover: 'press', hint: 'sheet' };
-  return { hover: 'press', hint: null };
-}
 
 const LANDMARK = 'header, footer, nav, aside, main, [role="banner"], [role="contentinfo"], [role="navigation"], [role="complementary"], [role="main"], [role="dialog"], [role="alertdialog"], [data-cursor-section]';
 

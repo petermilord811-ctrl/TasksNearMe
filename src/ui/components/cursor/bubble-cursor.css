@@ -1,61 +1,12 @@
 /*
- * The Bubble cursor (2026-11-24): TasksNearMe's own pointer on computers with a mouse. A speech bubble whose tail is
- * the point, drawn on a 24-unit grid at 26 px. Every motion pivots on the tip (2.5, 2.5), so the point never moves.
- * The behavior is in cursor-engine.ts; the areas that keep the system pointer are listed in cursor-targets.ts.
+ * The words beside a link that says what it does (2026-11-24): "New tab", "Opens here", "Not yet". The cursors
+ * themselves are images (bubble-cursor.generated.css); this small label is the only thing drawn in the page.
  */
-
-@property --bcur-sx { syntax: '<number>'; inherits: false; initial-value: 1; }
-@property --bcur-sy { syntax: '<number>'; inherits: false; initial-value: 1; }
-
-/* The system pointer goes only once the bubble is in place, and never over text fields or things you drag. */
-@media (hover: hover) and (pointer: fine) {
-  html[data-pointer="bubble"],
-  html[data-pointer="bubble"] *:not(:is(
-    input:not([type="checkbox"], [type="radio"], [type="range"], [type="button"], [type="submit"], [type="reset"], [type="file"], [type="color"], [type="image"]),
-    textarea, [contenteditable=""], [contenteditable="true"], [contenteditable=""] *, [contenteditable="true"] *,
-    .maplibregl-map, .maplibregl-map *, [data-cursor="native"], [data-cursor="native"] *,
-    [class*="cursor-grab"], [class*="cursor-grab"] *, [class*="cursor-move"], [class*="cursor-crosshair"], [class*="-resize"], [class*="cursor-zoom"], [class*="cursor-text"]
-  )) { cursor: none; }
-}
-
-.bcur {
-  --bcur-fill: var(--primary);
-  --bcur-hi: var(--sun);
-  --bcur-edge: var(--background);
-  --bcur-mark: var(--primary-foreground);
-  --bcur-mark-hi: var(--sun-foreground);
-  --bcur-shadow: rgb(23 18 14 / 0.28);
-  --bcur-spring: cubic-bezier(0.2, 0.8, 0.2, 1.15);
-  --bcur-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+.bcur-label {
   position: fixed;
   left: 0;
   top: 0;
   z-index: 2147483647;
-  width: 26px;
-  height: 26px;
-  pointer-events: none;
-  contain: layout style;
-  will-change: transform;
-}
-.dark .bcur, [data-theme="dark"] .bcur { --bcur-shadow: rgb(0 0 0 / 0.5); }
-.bcur[hidden] { display: none; }
-.bcur[data-away] { opacity: 0; }
-.bcur svg { width: 26px; height: 26px; overflow: visible; display: block; filter: drop-shadow(0 1px 1.4px var(--bcur-shadow)); }
-.bcur svg * { transform-box: view-box; }
-.bcur-motion, .bcur-dir, .bcur-shape { transform-origin: 2.5px 2.5px; }
-.bcur-edge > * { fill: var(--bcur-edge); stroke: var(--bcur-edge); stroke-width: 2.6px; stroke-linejoin: round; }
-.bcur-fill > * { fill: var(--bcur-fill); transition: fill 120ms; }
-.bcur-body { rx: 8.5px; ry: 8.5px; }
-.bcur-mark { fill: none; stroke: var(--bcur-mark); stroke-width: 1.7px; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transition: opacity 120ms; }
-.bcur-dots circle { fill: var(--bcur-mark); stroke: none; }
-.bcur-shine { fill: #fff; opacity: 0; }
-.bcur-spin { transform-origin: 12.5px 12.5px; stroke-dasharray: 70 30; }
-.bcur-check { stroke-dasharray: 12; stroke-dashoffset: 12; }
-.bcur-shape { transition: transform 200ms var(--bcur-spring); }
-.bcur-label {
-  position: absolute;
-  left: 25px;
-  top: 15px;
   height: 20px;
   padding: 0 8px;
   border-radius: 999px;
@@ -63,68 +14,12 @@
   color: var(--background);
   font: 600 11px/20px var(--font-sans, system-ui), system-ui, sans-serif;
   white-space: nowrap;
+  pointer-events: none;
   opacity: 0;
-  transform: translateX(-4px) scale(0.92);
+  translate: -4px 0;
+  scale: 0.92;
   transform-origin: left center;
-  transition: opacity 140ms, transform 160ms var(--bcur-out);
+  transition: opacity 140ms, translate 160ms cubic-bezier(0.2, 0.8, 0.2, 1), scale 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.bcur[data-label] .bcur-label { opacity: 1; transform: none; }
-
-/* Over something you can press: gold and a touch fuller, its marks in ink. Disabled: faded. */
-.bcur[data-hover="press"] .bcur-fill > * { fill: var(--bcur-hi); }
-.bcur[data-hover="press"] .bcur-mark { stroke: var(--bcur-mark-hi); }
-.bcur[data-hover="press"] .bcur-dots circle { fill: var(--bcur-mark-hi); }
-.bcur[data-hover="press"] .bcur-shape { transform: scale(1.05); }
-.bcur[data-hover="off"] svg { opacity: 0.5; }
-
-/* It says what a link will do: fuller, with a sign inside; the words follow after a moment. */
-.bcur[data-say] .bcur-shape { transform: scale(1.18); }
-.bcur[data-say="tab"] .bcur-tab, .bcur[data-say="sheet"] .bcur-sheet, .bcur[data-say="off"] .bcur-off { opacity: 1; }
-
-/* Press: squeeze toward the tip while held, release with a small overshoot. */
-@keyframes bcur-squeeze { from { transform: scale(1); } to { transform: scale(0.82); } }
-@keyframes bcur-release { 0% { transform: scale(0.82); } 55% { transform: scale(1.07); } 100% { transform: scale(1); } }
-.bcur[data-press="down"] .bcur-motion { animation: bcur-squeeze 90ms var(--bcur-out) both; }
-.bcur[data-press="up"] .bcur-motion { animation: bcur-release 260ms var(--bcur-out) both; }
-
-/* Into a new section ("Surface"): it stretches the way you're moving, as if through a soap film, settles with one soft
-   wobble, and a shine crosses it. Two identical copies (a, b) so a second crossing restarts it. */
-.bcur-dir { transform: rotate(var(--bcur-dir, 90deg)) scale(var(--bcur-sx), var(--bcur-sy)) rotate(calc(-1 * var(--bcur-dir, 90deg))); }
-@keyframes bcur-surface-a { 0% { --bcur-sx: 1; --bcur-sy: 1; } 28% { --bcur-sx: 1.2; --bcur-sy: 0.84; } 55% { --bcur-sx: 0.94; --bcur-sy: 1.05; } 78% { --bcur-sx: 1.02; --bcur-sy: 0.99; } 100% { --bcur-sx: 1; --bcur-sy: 1; } }
-@keyframes bcur-surface-b { 0% { --bcur-sx: 1; --bcur-sy: 1; } 28% { --bcur-sx: 1.2; --bcur-sy: 0.84; } 55% { --bcur-sx: 0.94; --bcur-sy: 1.05; } 78% { --bcur-sx: 1.02; --bcur-sy: 0.99; } 100% { --bcur-sx: 1; --bcur-sy: 1; } }
-@keyframes bcur-shine-a { 0% { opacity: 0; transform: translate(-6px, -6px); } 30% { opacity: 0.75; } 100% { opacity: 0; transform: translate(7px, 7px); } }
-@keyframes bcur-shine-b { 0% { opacity: 0; transform: translate(-6px, -6px); } 30% { opacity: 0.75; } 100% { opacity: 0; transform: translate(7px, 7px); } }
-.bcur[data-cross="a"] .bcur-dir { animation: bcur-surface-a 400ms linear both; }
-.bcur[data-cross="b"] .bcur-dir { animation: bcur-surface-b 400ms linear both; }
-.bcur[data-cross="a"] .bcur-shine { animation: bcur-shine-a 380ms var(--bcur-out) both; }
-.bcur[data-cross="b"] .bcur-shine { animation: bcur-shine-b 380ms var(--bcur-out) both; }
-
-/* A page switch: the round body grows a little and squares its corners, with a spinner inside; on arrival the ring
-   closes into a check and it turns round again. */
-@keyframes bcur-to-square { from { rx: 8.5px; ry: 8.5px; } to { rx: 4.8px; ry: 4.8px; } }
-@keyframes bcur-to-round { from { rx: 4.8px; ry: 4.8px; } to { rx: 8.5px; ry: 8.5px; } }
-@keyframes bcur-grow { from { transform: scale(1); } to { transform: scale(1.08); } }
-@keyframes bcur-shrink { from { transform: scale(1.08); } to { transform: scale(1); } }
-@keyframes bcur-spin { from { transform: rotate(0); opacity: 1; } to { transform: rotate(360deg); opacity: 1; } }
-@keyframes bcur-appear { from { opacity: 0; } to { opacity: 1; } }
-@keyframes bcur-ring-close { 0% { stroke-dasharray: 70 30; opacity: 1; } 60% { stroke-dasharray: 100 0; opacity: 1; } 100% { stroke-dasharray: 100 0; opacity: 0; } }
-@keyframes bcur-check-draw { 0% { stroke-dashoffset: 12; opacity: 1; } 60% { stroke-dashoffset: 0; opacity: 1; } 85% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
-.bcur[data-load="loading"] .bcur-body { animation: bcur-to-square 180ms var(--bcur-out) both; }
-.bcur[data-load="loading"] .bcur-shape { animation: bcur-grow 180ms var(--bcur-spring) both; }
-.bcur[data-load="loading"] .bcur-spin { animation: bcur-appear 120ms linear 140ms both, bcur-spin 800ms linear 140ms infinite; }
-.bcur[data-load="arrive"] .bcur-body { animation: bcur-to-round 220ms var(--bcur-spring) 300ms both; }
-.bcur[data-load="arrive"] .bcur-shape { animation: bcur-shrink 220ms var(--bcur-spring) 300ms both; }
-.bcur[data-load="arrive"] .bcur-spin { animation: bcur-ring-close 160ms var(--bcur-out) both; }
-.bcur[data-load="arrive"] .bcur-check { animation: bcur-check-draw 480ms var(--bcur-out) 90ms both; }
-
-/* Reduce motion: every state still changes, without movement; loading shows three still dots in the square. */
-@media (prefers-reduced-motion: reduce) {
-  .bcur *, .bcur { animation: none !important; transition: none !important; }
-  .bcur[data-load="loading"] .bcur-body { rx: 4.8px; ry: 4.8px; }
-  .bcur[data-load="loading"] .bcur-dots { opacity: 1; }
-  .bcur[data-load="loading"] .bcur-spin { opacity: 0; }
-}
-html[data-motion="off"] .bcur *, html[data-motion="off"] .bcur { animation: none !important; transition: none !important; }
-html[data-motion="off"] .bcur[data-load="loading"] .bcur-body { rx: 4.8px; ry: 4.8px; }
-html[data-motion="off"] .bcur[data-load="loading"] .bcur-dots { opacity: 1; }
-html[data-motion="off"] .bcur[data-load="loading"] .bcur-spin { opacity: 0; }
+.bcur-label[data-shown] { opacity: 1; translate: 0 0; scale: 1; }
+@media (prefers-reduced-motion: reduce) { .bcur-label { transition: none; } }
