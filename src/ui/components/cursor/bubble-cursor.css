@@ -1,19 +1,23 @@
 /*
- * The words beside a link that says what it does (2026-11-24): "New tab", "Opens here", "Not yet". The cursors
- * themselves are images (bubble-cursor.generated.css); this small label is the only thing drawn in the page.
+ * The words beside the cursor (2026-11-24): an element's own tip (its title, or a component's `data-cursor-tip`) or
+ * what a link does ("New tab", "Opens here", "Not yet"). The cursors themselves are images
+ * (bubble-cursor.generated.css); this small label is the only thing drawn in the page. One line is a pill; a longer tip
+ * wraps, up to 18rem wide.
  */
 .bcur-label {
   position: fixed;
   left: 0;
   top: 0;
   z-index: 2147483647;
-  height: 20px;
-  padding: 0 8px;
-  border-radius: 999px;
+  max-width: min(18rem, calc(100vw - 16px));
+  padding: 2px 8px;
+  border-radius: 10px;
   background: var(--foreground);
   color: var(--background);
-  font: 600 11px/20px var(--font-sans, system-ui), system-ui, sans-serif;
-  white-space: nowrap;
+  font: 600 11px/16px var(--font-sans, system-ui), system-ui, sans-serif;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
   pointer-events: none;
   opacity: 0;
   translate: -4px 0;

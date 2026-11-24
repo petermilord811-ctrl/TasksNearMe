@@ -77,6 +77,27 @@ test('a field takes the text cursor, never “Not yet”, while someone is in it
   await expect(page.locator('.bcur-label[data-shown]')).toHaveCount(0);
 });
 
+test('the cursor is the one tooltip: a title shows beside it, never in the browser’s own box', async ({ page }, testInfo) => {
+  // Owner, 2026-11-24: "you are showing tips for some buttons, but you are also showing cursor's animated styled tip
+  // together, so it's conflicted. only show customized cursor's".
+  test.skip(testInfo.project.name !== 'app-desktop', 'a mouse is a desktop thing; phones never get it');
+  await page.goto('/pricing');
+  const toggle = page.getByRole('button', { name: /^Switch to (dark|light) mode$/ }).filter({ visible: true }).first();
+  await expect(toggle).toBeVisible();
+  const title = await toggle.getAttribute('title');
+  expect(title).toBeTruthy();
+  const box = await toggle.boundingBox();
+  if (!box) throw new Error('The theme switch is missing');
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 4 });
+  // Set aside at once (the browser's box never opens), and said beside the cursor after a moment.
+  await expect(toggle).not.toHaveAttribute('title');
+  await expect(page.locator('.bcur-label[data-shown]')).toHaveText(title!);
+  // Moving off it puts the title back and the words away.
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height + 220, { steps: 4 });
+  await expect(toggle).toHaveAttribute('title', title!);
+  await expect(page.locator('.bcur-label[data-shown]')).toHaveCount(0);
+});
+
 test('phones never get the Bubble cursors', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-mobile', 'phones only');
   await page.goto('/pricing');

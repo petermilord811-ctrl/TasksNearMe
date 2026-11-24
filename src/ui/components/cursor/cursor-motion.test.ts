@@ -85,6 +85,129 @@ describe('the Bubble cursor’s moments', () => {
     pointer('pointerover', $('#text'));
     expect(label.hasAttribute('data-shown')).toBe(false);
   });
+});
+
+describe('the cursor’s tips (the one tooltip with a mouse)', () => {
+  // Owner, 2026-11-24: "you are showing tips for some buttons, but you are also showing cursor's animated styled tip
+  // together, so it's conflicted. only show customized cursor's".
+  beforeEach(() => {
+    $('#main').insertAdjacentHTML('beforeend', [
+      '<button id="reply" title="Reply" aria-label="Reply to Ruth"><svg id="reply-icon"></svg></button>',
+      '<button id="bare" title="Close the chat"><svg></svg></button>',
+      '<a id="help" href="/help" target="_blank" title="Help, in a new tab">Help</a>',
+      '<button id="later" disabled title="Add a photo first">Send</button>',
+      '<button id="badge" data-cursor-tip="ID checked by our partner">ID</button>',
+      '<div id="card" title="Windsor Park"><span id="quiet" title="">No tip here</span><span id="inside">A tip from the card</span></div>',
+    ].join(''));
+    shown.set($('#reply'), 'press');
+    shown.set($('#bare'), 'press');
+    shown.set($('#help'), 'tab');
+    shown.set($('#later'), 'off');
+    shown.set($('#badge'), 'press');
+  });
+  const label = () => document.querySelector<HTMLElement>('.bcur-label');
+  const shownWords = () => (label()?.hasAttribute('data-shown') ? label()!.textContent : null);
+
+  it('says the title in place of the browser’s box, and puts the title back as the pointer leaves', () => {
+    pointer('pointerover', $('#reply-icon'));
+    // Set aside at once, so the browser's own box never opens; the name stays.
+    expect($('#reply').hasAttribute('title')).toBe(false);
+    expect($('#reply').getAttribute('data-bcur-title')).toBe('Reply');
+    expect($('#reply').getAttribute('aria-label')).toBe('Reply to Ruth');
+    vi.advanceTimersByTime(599);
+    expect(shownWords()).toBeNull();
+    vi.advanceTimersByTime(1);
+    expect(shownWords()).toBe('Reply');
+    // Within the same button: the same tip goes on showing.
+    pointer('pointerover', $('#reply'));
+    expect(shownWords()).toBe('Reply');
+    pointer('pointerover', $('#text'));
+    expect(shownWords()).toBeNull();
+    expect($('#reply').getAttribute('title')).toBe('Reply');
+    expect($('#reply').hasAttribute('data-bcur-title')).toBe(false);
+  });
+
+  it('keeps the name of an icon button whose title was all it had while the title is away', () => {
+    pointer('pointerover', $('#bare'));
+    expect($('#bare').getAttribute('aria-label')).toBe('Close the chat');
+    vi.advanceTimersByTime(600);
+    expect(shownWords()).toBe('Close the chat');
+    pointer('pointerover', $('#text'));
+    expect($('#bare').getAttribute('title')).toBe('Close the chat');
+    expect($('#bare').hasAttribute('aria-label')).toBe(false);
+  });
+
+  it('prefers the element’s own words to what it does, takes a component’s tip, and follows the nearest title', () => {
+    pointer('pointerover', $('#help'));
+    vi.advanceTimersByTime(600);
+    expect(shownWords()).toBe('Help, in a new tab');
+    pointer('pointerover', $('#later'));
+    vi.advanceTimersByTime(600);
+    expect(shownWords()).toBe('Add a photo first');
+    pointer('pointerover', $('#badge'));
+    vi.advanceTimersByTime(600);
+    expect(shownWords()).toBe('ID checked by our partner');
+    expect($('#badge').hasAttribute('data-bcur-title')).toBe(false);
+    pointer('pointerover', $('#inside'));
+    vi.advanceTimersByTime(600);
+    expect(shownWords()).toBe('Windsor Park');
+    // An empty title means no tip there, as with the browser's own.
+    pointer('pointerover', $('#quiet'));
+    vi.advanceTimersByTime(600);
+    expect(shownWords()).toBeNull();
+    // Without a title of its own, what it does.
+    pointer('pointerover', $('#tab'));
+    vi.advanceTimersByTime(600);
+    expect(shownWords()).toBe('New tab');
+  });
+
+  it('puts the tip away on a press, a scroll or a key until the pointer moves on', () => {
+    pointer('pointerover', $('#reply'));
+    vi.advanceTimersByTime(600);
+    expect(shownWords()).toBe('Reply');
+    pointer('pointerdown', $('#reply-icon'));
+    expect(shownWords()).toBeNull();
+    pointer('pointerover', $('#reply'));
+    vi.advanceTimersByTime(600);
+    expect(shownWords()).toBeNull();
+    // Another control: its tip again.
+    pointer('pointerover', $('#bare'));
+    vi.advanceTimersByTime(600);
+    expect(shownWords()).toBe('Close the chat');
+    window.dispatchEvent(new Event('scroll'));
+    expect(shownWords()).toBeNull();
+    pointer('pointerover', $('#reply'));
+    vi.advanceTimersByTime(600);
+    expect(shownWords()).toBe('Reply');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    expect(shownWords()).toBeNull();
+  });
+
+  it('silences only the control pressed, never the area around it (a log, a group)', () => {
+    $('#main').setAttribute('role', 'log');
+    pointer('pointerdown', $('#text'));
+    window.dispatchEvent(new MouseEvent('pointerup'));
+    pointer('pointerover', $('#reply'));
+    vi.advanceTimersByTime(600);
+    expect(shownWords()).toBe('Reply');
+  });
+
+  it('sets a re-rendered title aside again, and gives every title back for the system pointer', async () => {
+    pointer('pointerover', $('#reply'));
+    vi.advanceTimersByTime(600);
+    $('#reply').setAttribute('title', 'Reply to this');
+    await Promise.resolve();
+    expect($('#reply').hasAttribute('title')).toBe(false);
+    vi.advanceTimersByTime(600);
+    expect(shownWords()).toBe('Reply to this');
+    savePointerPreference('system');
+    expect($('#reply').getAttribute('title')).toBe('Reply to this');
+    expect(shownWords()).toBeNull();
+    savePointerPreference('bubble');
+  });
+});
+
+describe('the Bubble cursor’s moments, continued', () => {
 
   it('turns into the loading square only when a page switch takes longer than 120 ms, and stops after 10 s', () => {
     pointer('pointerover', $('#link'));

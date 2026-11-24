@@ -20,7 +20,7 @@ import { REACTION_EMOJI } from './reply-context';
 export const QUICK_REACTIONS: readonly MessageReaction[] = MESSAGE_REACTIONS.slice(0, 7);
 
 /** The picker's content (in a Popover anchored to the bubble): the emoji, then, on phones, the message's other actions. */
-export function ReactionPicker({ chosen, onPick, actions, label, onCloseFocus, reactionsOff = false }: {
+export function ReactionPicker({ chosen, onPick, actions, label, onCloseFocus, reactionsOff = false, side = 'top' }: {
   /** Which of them the viewer already gave (picking one again takes it back). */
   chosen: (emoji: MessageReaction) => boolean;
   onPick(emoji: MessageReaction): void;
@@ -31,6 +31,11 @@ export function ReactionPicker({ chosen, onPick, actions, label, onCloseFocus, r
   onCloseFocus?: () => HTMLElement | null;
   /** No reactions here (a closed conversation): only the actions. */
   reactionsOff?: boolean;
+  /**
+   * Which side of the bubble it opens on (it moves to the other where there's no room): below for the React button,
+   * which sits under the bubble, so it opens where the click was; above for a long press, clear of the finger.
+   */
+  side?: 'top' | 'bottom';
 }) {
   const t = useTranslations('thread.reactions');
   const [all, setAll] = useState(false);
@@ -45,7 +50,7 @@ export function ReactionPicker({ chosen, onPick, actions, label, onCloseFocus, r
     event.preventDefault();
     buttons[(next + buttons.length) % buttons.length]?.focus();
   };
-  return <PopoverContent side="top" align="center" sideOffset={6} collisionPadding={8} aria-label={label} onCloseAutoFocus={(event) => {
+  return <PopoverContent side={side} align="center" sideOffset={6} collisionPadding={8} aria-label={label} onCloseAutoFocus={(event) => {
     // Opened by state (no trigger): focus goes back to the React button by hand, or stays where the long press was.
     event.preventDefault();
     onCloseFocus?.()?.focus();

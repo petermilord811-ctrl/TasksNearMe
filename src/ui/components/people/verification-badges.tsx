@@ -25,6 +25,8 @@ function VerificationTooltip({ Icon, label, meaning, line = false }: { Icon: Luc
       <TooltipTrigger asChild>
         <button
           type="button"
+          // With the Bubble cursor, a mouse reads the meaning beside the cursor; a tap or the keyboard opens the box.
+          data-cursor-tip={meaning}
           onClick={() => setOpen(true)}
           // A slim chip that wraps inline with the others (two fit a 360 px card row) and still answers a full 44 px
           // tap: the area reaches 6 px above and below it. In a line: the word and its icon, the same reach.

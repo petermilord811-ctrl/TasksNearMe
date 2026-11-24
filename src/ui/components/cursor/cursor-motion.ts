@@ -9,7 +9,9 @@ import { pageSwitchOf, sectionOf } from './cursor-targets';
  * - a press squeezes it, and the release springs back (a disabled control shakes "no");
  * - entering another part of the page by your own movement swings it from its tip, away from the way you're going,
  *   and lets it settle (moving up or down, it squashes and settles instead) — motion, no change of color;
- * - a link that says what it does (new tab, opens here) pops its sign in, and after a moment the words show beside it;
+ * - a link that says what it does (new tab, opens here) pops its sign in;
+ * - after a moment, words beside it: the element's own tip (its title, instead of the browser's box) or what it does
+ *   (the cursor is the page's one tooltip with a mouse: see "Tips" below);
  * - a page switch that isn't there after 120 ms turns it into a rounded square with a spinner; on arrival the ring
  *   closes into a check and it rounds again.
  * It listens only to the pointer entering elements, presses and clicks: never to plain movement. Browsers redraw a
@@ -124,14 +126,34 @@ export function startCursorMotion(labels: CursorLabels): () => void {
     step();
   }
 
-  // ---- The words beside a link that says what it does ----------------------------------------------------------------
+  // ---- Tips: the words beside the cursor ------------------------------------------------------------------------------
+  // With a mouse, the cursor is the page's one tooltip (2026-11-24, round three; owner: "you are showing tips for some
+  // buttons, but you are also showing cursor's animated styled tip together, so it's conflicted. only show customized
+  // cursor's"). It says the element's own tip when it has one: the `title` the browser would show (set aside while the
+  // pointer is on it, so the browser's own box never opens, and put back as the pointer leaves) or a component's
+  // `data-cursor-tip` (tooltip.tsx then keeps its own box closed for a mouse). Otherwise, what a link or button does:
+  // "New tab", "Opens here", "Not yet". A press, a scroll or a key puts it away until the pointer moves on.
   let labelEl: HTMLElement | null = null;
-  let labelKind: CursorKind | null = null;
+  let labelText: string | null = null;
   let labelTimer = 0;
   let labelFrame = 0;
+  let labelWidth = 0;
+  let labelHeight = 0;
+  /** Pressed (or scrolled or typed over): no tip on it again until the pointer moves to something else. */
+  let dismissed: Element | null = null;
+  /** The element whose `title` is set aside while the pointer is on it. */
+  let stash: { el: Element; title: string; named: boolean } | null = null;
+  let stashWatch: MutationObserver | null = null;
+
   const placeLabel = () => {
     labelFrame = 0;
-    if (labelEl) labelEl.style.transform = `translate3d(${lastX + 22}px, ${lastY + 18}px, 0)`;
+    if (!labelEl) return;
+    // Beside and below the point; on its other side near the window's right or bottom edge.
+    let x = lastX + 22;
+    let y = lastY + 18;
+    if (x + labelWidth > window.innerWidth - 8) x = Math.max(8, lastX - 12 - labelWidth);
+    if (y + labelHeight > window.innerHeight - 8) y = Math.max(8, lastY - 12 - labelHeight);
+    labelEl.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0)`;
   };
   const followLabel = (event: PointerEvent) => {
     lastX = event.clientX;
@@ -140,27 +162,96 @@ export function startCursorMotion(labels: CursorLabels): () => void {
   };
   function hideLabel() {
     window.clearTimeout(labelTimer);
+    labelTimer = 0;
+    labelText = null;
     if (labelEl) delete labelEl.dataset.shown;
     document.removeEventListener('pointermove', followLabel, { capture: true });
   }
-  function sayFor(kind: CursorKind | null) {
-    const say = kind === 'tab' || kind === 'sheet' || kind === 'off' ? kind : null;
-    if (say === labelKind) return;
-    labelKind = say;
+  function showLabel() {
+    labelTimer = 0;
+    if (!labelText) return;
+    if (!labelEl) {
+      labelEl = document.createElement('div');
+      labelEl.className = 'bcur-label';
+      labelEl.setAttribute('aria-hidden', 'true');
+      document.body.append(labelEl);
+    }
+    labelEl.textContent = labelText;
+    // Its size, once per tip (fixed, alone, small), keeps it on screen as it follows the pointer.
+    labelWidth = labelEl.offsetWidth;
+    labelHeight = labelEl.offsetHeight;
+    placeLabel();
+    labelEl.dataset.shown = '';
+    document.addEventListener('pointermove', followLabel, { capture: true, passive: true });
+  }
+  /** Shows these words after a moment (the same words go on showing, from one element to the next). */
+  function say(text: string | null) {
+    if (text === labelText) return;
     hideLabel();
-    if (!say) return;
-    labelTimer = window.setTimeout(() => {
-      if (!labelEl) {
-        labelEl = document.createElement('div');
-        labelEl.className = 'bcur-label';
-        labelEl.setAttribute('aria-hidden', 'true');
-        document.body.append(labelEl);
-      }
-      labelEl.textContent = labels[say];
-      placeLabel();
-      labelEl.dataset.shown = '';
-      document.addEventListener('pointermove', followLabel, { capture: true, passive: true });
-    }, LABEL_DELAY_MS);
+    labelText = text;
+    if (text) labelTimer = window.setTimeout(showLabel, LABEL_DELAY_MS);
+  }
+
+  /** Puts back the `title` set aside while the pointer was on its element. */
+  function release() {
+    stashWatch?.disconnect();
+    stashWatch = null;
+    if (!stash) return;
+    const { el, named } = stash;
+    stash = null;
+    const title = el.getAttribute('data-bcur-title');
+    el.removeAttribute('data-bcur-title');
+    if (title !== null && !el.hasAttribute('title')) el.setAttribute('title', title);
+    if (named) el.removeAttribute('aria-label');
+  }
+  /** The words of the tip `holder` carries; its `title` is set aside while the pointer is on it. */
+  function hold(holder: Element): string {
+    if (stash?.el === holder) return stash.title;
+    release();
+    const title = holder.getAttribute('title');
+    if (title === null) return holder.getAttribute('data-cursor-tip') ?? holder.getAttribute('data-bcur-title') ?? '';
+    // A title that was all its name (an icon button without a label): the name stays while the title is away.
+    const named = Boolean(title.trim()) && !holder.hasAttribute('aria-label') && !holder.hasAttribute('aria-labelledby') && !holder.textContent?.trim();
+    const current = { el: holder, title, named };
+    stash = current;
+    const setAside = (words: string) => {
+      holder.setAttribute('data-bcur-title', words);
+      holder.removeAttribute('title');
+      if (current.named) holder.setAttribute('aria-label', words);
+    };
+    setAside(title);
+    // A render that writes a (new) title while the pointer is still on it: aside again, and the tip follows it.
+    if (typeof MutationObserver === 'function') {
+      stashWatch = new MutationObserver(() => {
+        const again = holder.getAttribute('title');
+        if (again === null || stash !== current) return;
+        current.title = again;
+        setAside(again);
+        if (labelText !== null) say(again.trim() || null);
+      });
+      stashWatch.observe(holder, { attributes: true, attributeFilter: ['title'] });
+    }
+    return title;
+  }
+  const TIP_HOLDER = '[title], [data-bcur-title], [data-cursor-tip]';
+  /** What the cursor says over `el`: its own tip (the nearest title, as the browser would pick), else what it does. */
+  function tipFor(el: Element, kind: CursorKind | null): string | null {
+    const holder = el.closest(TIP_HOLDER);
+    const own = holder ? hold(holder).trim() : '';
+    if (!holder) release();
+    if (dismissed) {
+      if (dismissed.contains(el)) return null;
+      dismissed = null;
+    }
+    if (own) return own;
+    return kind === 'tab' || kind === 'sheet' || kind === 'off' ? labels[kind] : null;
+  }
+  /** Controls a tip belongs to (not regions such as a log or a group: a press there mustn't silence a whole area). */
+  const CONTROL = 'a[href], button, [role="button"], [role="link"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"], [role="option"], [role="switch"], [role="checkbox"], [role="radio"], label, summary, select, input, textarea';
+  /** Puts the tip away until the pointer moves to something else than `el`'s control. */
+  function dismiss(el: Element | null) {
+    hideLabel();
+    dismissed = el ? el.closest(TIP_HOLDER) ?? el.closest(CONTROL) ?? el : null;
   }
 
   // ---- Page switches --------------------------------------------------------------------------------------------------
@@ -205,7 +296,6 @@ export function startCursorMotion(labels: CursorLabels): () => void {
       if (switching === null) return;
       stop();
       pressed = null;
-      labelKind = null;
       hideLabel();
       loading = true;
       spin = 0;
@@ -229,6 +319,7 @@ export function startCursorMotion(labels: CursorLabels): () => void {
       broken = true;
       stop();
       hideLabel();
+      release();
     }
   };
 
@@ -244,9 +335,14 @@ export function startCursorMotion(labels: CursorLabels): () => void {
     if (!on()) {
       stop();
       hideLabel();
+      release();
       return;
     }
     if (loading) {
+      // No words while loading, and no browser box either.
+      const holder = el.closest(TIP_HOLDER);
+      if (holder) hold(holder);
+      else release();
       paintLoading();
       return;
     }
@@ -263,7 +359,7 @@ export function startCursorMotion(labels: CursorLabels): () => void {
       } else stop();
     }
     const kind = sequence?.el === el ? sequence.kind : kindAt(el);
-    sayFor(kind);
+    say(tipFor(el, kind));
     if (!kind || !BUBBLES.has(kind) || calm()) {
       lastKind = kind;
       return;
@@ -277,9 +373,11 @@ export function startCursorMotion(labels: CursorLabels): () => void {
   });
 
   const onDown = guard((event: PointerEvent) => {
-    if (event.pointerType !== 'mouse' || event.button !== 0 || !on() || loading) return;
+    if (event.pointerType !== 'mouse') return;
     const el = event.target instanceof Element ? event.target : null;
-    if (!el) return;
+    // Any press puts the tip away: a click opens or changes something, a right click opens a menu.
+    dismiss(el);
+    if (event.button !== 0 || !on() || loading || !el) return;
     const kind = kindAt(el);
     if (!kind || !BUBBLES.has(kind)) return;
     window.clearTimeout(timer);
@@ -304,20 +402,25 @@ export function startCursorMotion(labels: CursorLabels): () => void {
   });
   const onScroll = () => {
     scrolled = true;
+    if (labelText !== null) dismiss(over);
+  };
+  const onKey = () => {
+    if (labelText !== null) dismiss(over);
   };
   const onPopState = guard(() => {
     if (switching !== null) endSwitch(true);
   });
   const onLeave = guard((event: PointerEvent) => {
     if (event.relatedTarget === null) {
-      labelKind = null;
       hideLabel();
+      release();
     }
   });
 
   const unsubscribe = subscribePointerPreference(() => {
     stop();
     hideLabel();
+    release();
   });
   document.addEventListener('pointerover', onOver, { capture: true, passive: true });
   document.addEventListener('pointerdown', onDown, { capture: true, passive: true });
@@ -326,6 +429,7 @@ export function startCursorMotion(labels: CursorLabels): () => void {
   document.addEventListener('click', onClick, { capture: true });
   document.addEventListener('pointerout', onLeave, { capture: true, passive: true });
   window.addEventListener('scroll', onScroll, { capture: true, passive: true });
+  document.addEventListener('keydown', onKey, { capture: true, passive: true });
   window.addEventListener('popstate', onPopState);
 
   return () => {
@@ -337,11 +441,13 @@ export function startCursorMotion(labels: CursorLabels): () => void {
     document.removeEventListener('click', onClick, { capture: true });
     document.removeEventListener('pointerout', onLeave, { capture: true });
     window.removeEventListener('scroll', onScroll, { capture: true });
+    document.removeEventListener('keydown', onKey, { capture: true });
     window.removeEventListener('popstate', onPopState);
     for (const id of [switchTimer, limitTimer, pollTimer, loadTimer]) window.clearTimeout(id);
     window.cancelAnimationFrame(labelFrame);
     stop();
     hideLabel();
+    release();
     labelEl?.remove();
   };
 }

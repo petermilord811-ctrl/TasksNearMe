@@ -3,6 +3,7 @@
 import * as React from "react"
 import { cn } from "@/ui/lib/utils"
 import { Tooltip as TooltipPrimitive } from "radix-ui"
+import { bubbleCursorActive } from "@/ui/components/cursor/pointer-preference"
 
 function TooltipProvider({
   delayDuration = 0,
@@ -23,10 +24,25 @@ function Tooltip({
   return <TooltipPrimitive.Root data-slot="tooltip" {...props} />
 }
 
+/**
+ * With the Bubble cursor, a mouse resting on a trigger that carries `data-cursor-tip` gets those words from the cursor
+ * (cursor-motion.ts), so this box stays closed on hover: one tip, not two (owner, 2026-11-24). Keyboard focus and a
+ * tap or click still open it.
+ */
 function TooltipTrigger({
+  onPointerMove,
   ...props
 }: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />
+  return (
+    <TooltipPrimitive.Trigger
+      data-slot="tooltip-trigger"
+      onPointerMove={(event) => {
+        onPointerMove?.(event)
+        if (event.pointerType === "mouse" && event.currentTarget.hasAttribute("data-cursor-tip") && bubbleCursorActive()) event.preventDefault()
+      }}
+      {...props}
+    />
+  )
 }
 
 function TooltipContent({

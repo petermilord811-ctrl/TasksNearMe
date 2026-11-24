@@ -50,7 +50,7 @@ export async function messageAction(bubble: Locator, name: string): Promise<void
 }
 
 /**
- * React to a message (its `article`) as a person would: with a mouse, the React button that comes up beside the bubble;
+ * React to a message (its `article`) as a person would: with a mouse, the React button that comes up under the bubble;
  * on a phone, a long press. Then the reaction from the picker (its name, e.g. "Thumbs up"; "More reactions" first for the
  * last three).
  */

@@ -302,7 +302,17 @@ test('reactions come from a picker, photos attach by the paperclip or a drop, an
     await page.goto(threadPath);
     const log = page.getByRole('log');
     const bubble = log.locator('li', { hasText: 'Sure, Saturday works for me.' }).locator('article');
-    // With a mouse: the React button beside the bubble, then one of the three under "More reactions".
+    // The row comes up under the bubble (owner, 2026-11-24: "show on the bottom side"), and its buttons' tips are the
+    // cursor's, never the browser's own box as well.
+    await bubble.hover();
+    const react = bubble.getByRole('button', { name: 'React', exact: true });
+    const bubbleBox = await bubble.boundingBox();
+    const reactBox = await react.boundingBox();
+    expect(reactBox!.y).toBeGreaterThan(bubbleBox!.y + bubbleBox!.height - 12);
+    await react.hover();
+    await expect(react).not.toHaveAttribute('title');
+    await expect(page.locator('.bcur-label[data-shown]')).toHaveText('React');
+    // With a mouse: the React button under the bubble, then one of the three under "More reactions".
     await reactTo(bubble, 'Celebrate');
     await expect(bubble.getByRole('list', { name: 'Reactions' }).getByRole('button', { name: /Celebrate/ })).toBeVisible({ timeout: 30_000 });
 

@@ -52,6 +52,8 @@ test('a conversation updates live: typing, new messages, then presence and Seen'
     // A professional chat (completion plan 7.3): Lee quotes Ruth's message in his reply and gives hers a thumbs up;
     // Ruth sees both without a reload.
     const ruthsMessage = lee.getByRole('log').getByRole('listitem').filter({ hasText: 'Perfect, see you then' }).first();
+    // The row of React and Reply comes up under the bubble with the mouse on the message (hidden, it takes no clicks).
+    await ruthsMessage.locator('article').hover();
     await ruthsMessage.getByRole('button', { name: 'Reply', exact: true }).click();
     await expect(lee.getByText('Replying to Ruth A.')).toBeVisible();
     await lee.getByRole('textbox', { name: 'Message' }).fill('Great, ten it is');

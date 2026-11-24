@@ -513,9 +513,14 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
                   </li>;
                 })}
               </ul>}
-              {/* Wide screens: React, Reply and Translate float over the bubble's top corner while the pointer or the
-                  keyboard is near; touch screens use a long press instead (the picker carries the same actions). */}
-              {hasActions && <div role="group" aria-label={t('actions.label', { name: sender })} className={cn('absolute -top-4 z-10 flex items-center gap-0.5 rounded-full border border-foreground/[0.08] bg-card p-0.5 opacity-0 shadow-[0_6px_18px_-8px_rgb(40_20_5/0.45)] transition-opacity group-hover/msg:opacity-100 focus-within:opacity-100 [@media(pointer:coarse)]:hidden dark:border-white/[0.1]', mine ? 'left-2' : 'right-2', picker?.id === message.id && 'opacity-100')}>
+              {/* Wide screens: React, Reply and Translate come up under the bubble while the pointer or the keyboard is
+                  near (owner, 2026-11-24: "show on the bottom side"); touch screens use a long press instead (the
+                  picker carries the same actions). Under its outer side, the side the bubble is aligned to, so the row
+                  never runs off a narrow bubble; just over the bubble's bottom padding (never over its time, ticks or
+                  reactions), so the pointer moves onto it without leaving the message. Hidden, it takes no clicks: it
+                  would sit over the next message. While its picker is open the picker takes its place (opening under
+                  the bubble from React), and focus comes back to React as it closes. */}
+              {hasActions && <div role="group" aria-label={t('actions.label', { name: sender })} className={cn('pointer-events-none absolute z-10 flex items-center gap-0.5 rounded-full border border-foreground/[0.08] bg-card p-0.5 opacity-0 shadow-[0_6px_18px_-8px_rgb(40_20_5/0.45)] transition-opacity group-hover/msg:pointer-events-auto group-hover/msg:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100 [@media(pointer:coarse)]:hidden dark:border-white/[0.1]', compact ? 'top-[calc(100%-0.375rem)]' : 'top-[calc(100%-0.5rem)]', mine ? 'right-2' : 'left-2', picker?.id === message.id && 'invisible')}>
                 {onReact && <button type="button" aria-label={t('reactions.react')} title={t('reactions.react')} aria-haspopup="dialog" aria-expanded={picker?.id === message.id} onClick={(event) => { pickerFrom.current = event.currentTarget; setPicker({ id: message.id, via: 'button' }); }} className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring">
                   <SmilePlus aria-hidden="true" className="size-4" />
                 </button>}
@@ -531,6 +536,7 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
             </PopoverAnchor>
             {picker?.id === message.id && (Boolean(onReact) || canReply || canTranslate || plainText.length > 0) && <ReactionPicker
               label={mine ? t('reactions.pickerMine') : t('reactions.picker', { name: sender })}
+              side={picker.via === 'button' ? 'bottom' : 'top'}
               chosen={(emoji) => mineAlready(message, emoji)}
               onPick={(emoji) => {
                 if (onReact) react(message.id, emoji, !mineAlready(message, emoji));

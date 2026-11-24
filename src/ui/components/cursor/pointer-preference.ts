@@ -29,6 +29,18 @@ export function savePointerPreference(value: PointerPreference): void {
   window.dispatchEvent(new Event(POINTER_EVENT));
 }
 
+/**
+ * Whether the Bubble cursor is what this pointer shows now: a mouse, no forced colors, and not "Use the system pointer"
+ * (the same conditions as bubble-cursor.generated.css). Components that would open a hover tip of their own leave it
+ * to the cursor then (its tips, cursor-motion.ts).
+ */
+export function bubbleCursorActive(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+  return window.matchMedia('(hover: hover) and (pointer: fine)').matches
+    && !window.matchMedia('(forced-colors: active)').matches
+    && document.documentElement.getAttribute('data-pointer') !== 'system';
+}
+
 /** Calls back when the choice changes, in this tab or another. Returns the unsubscribe. */
 export function subscribePointerPreference(callback: () => void): () => void {
   const onStorage = (event: StorageEvent) => {
