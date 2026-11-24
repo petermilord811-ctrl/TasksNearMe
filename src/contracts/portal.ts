@@ -330,6 +330,8 @@ export interface PortalPageData {
   openTasks?: { items: PortalTaskView[]; count: number };
   /** The card staff pinned for the market (plan 10.16), unless the viewer closed it. */
   announcement?: CommunityAnnouncementView;
+  /** "Welcome to Mueller" for someone who just moved or joined (2026-11-24), until they close it. */
+  welcome?: NeighborsWelcomeView;
   /**
    * We don't know the viewer's neighborhood (plan 10.15): no choice of theirs, no area they help in, no task with one.
    * The page asks for it above the stream (`areas` lists the choices).
@@ -340,6 +342,22 @@ export interface PortalPageData {
    * this page shows it, for the switch that turns it on or off. Absent for everyone else.
    */
   samples?: { shown: boolean };
+}
+
+/**
+ * The welcome at the top of Neighbors for new movers (2026-11-24): once per move (choosing or changing their
+ * neighborhood, their market changing) or when a new account joins a market, until they close it (on every device) or
+ * `WELCOME_DAYS` pass. Only for the person who moved: nobody else hears about it.
+ */
+export interface NeighborsWelcomeView {
+  /** Which welcome it is: "Got it" names it, so a page from before a newer move can't close that one. */
+  id: string;
+  /** The neighborhood, or the city when we only know that. */
+  placeName: string;
+  /** The place's best-rated active helpers (at most 4): rated first, then by rating and completed work. Never the viewer or anyone blocked. */
+  helpers: PortalHelper[];
+  /** The most helpful local tips (at most 3): `tip` posts near them first, then the rest of the city, most Helpful first. */
+  tips: { id: string; title: string; helpfulCount: number; areaName?: string }[];
 }
 
 /** One more page of the same stream (the Feed's "Show more", and the List by day). */
@@ -383,6 +401,8 @@ export interface PortalHandlers extends Partial<PhoneVerifyHandlers> {
   onLoadReactors?: QueryHandler<{ target: 'post' | 'reply'; id: string }, CommunityReactorsView | null>;
   onSetArea?: ActionHandler<CommunityAreaInput>;
   onDismissAnnouncement?: ActionHandler<{ id: string }>;
+  /** "Got it" on the welcome (`welcome.id`): closed for good, on every device. ok `updated`. */
+  onDismissWelcome?: ActionHandler<{ id: string }>;
   /** Staff's switch for the demo marketplace here (`samples`). ok `updated`. */
   onShowSamples?: ActionHandler<{ shown: boolean }>;
 }

@@ -34,7 +34,7 @@ import { kindIcons } from './post-card';
 import { useSparksMessage, useSparksToast } from './sparks-toast';
 
 export interface CommunityPostFormProps {
-  data: CommunityComposerData & { bookingId?: string };
+  data: CommunityComposerData & { bookingId?: string; categorySlug?: string };
   initialKind: CommunityPostKind;
   onPost: ActionHandler<CommunityPostInput>;
   /** Photos (plan 10.1); without it, the form takes none. */
@@ -103,7 +103,7 @@ export function CommunityPostForm({ data, initialKind, onPost, onUploadPhoto, la
   const [kind, setKind] = useState<CommunityPostKind>(initialKind);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [categorySlug, setCategorySlug] = useState('');
+  const [categorySlug, setCategorySlug] = useState<string>(data.categorySlug ?? '');
   const [areaSlug, setAreaSlug] = useState(data.yourArea?.slug ?? '');
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [bookingId, setBookingId] = useState(data.bookingId ?? data.thankOptions[0]?.bookingId ?? '');
@@ -303,6 +303,9 @@ export function CommunityPostForm({ data, initialKind, onPost, onUploadPhoto, la
         </select>
       </span>
     </div>
+
+    {/* An ask with a service reaches the helpers who do it nearby (plan 10.11; questions too since 2026-11-24). */}
+    {(kind === 'question' || kind === 'recommendation') && <p className="-mt-1 text-xs text-muted-foreground">{categorySlug ? t('newPost.askHelpers.on', { service: card(`categories.${categorySlug}`) }) : t('newPost.askHelpers.off')}</p>}
 
     {reminder && <KindnessReminder busy={pending} onEdit={() => { const onTitle = Boolean(result && !result.ok && result.fieldErrors?.title); setResult(undefined); (onTitle && !untitled ? titleRef : bodyRef).current?.focus(); }} onSendAnyway={() => submit(true)} />}
     {result && !result.ok && !result.fieldErrors && <FormFeedback result={result} />}

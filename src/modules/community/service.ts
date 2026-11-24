@@ -79,7 +79,9 @@ import {
   SAVE_RULE,
   soundsUnkind,
   startersFor,
+  isHomeMove,
 } from './domain';
+import { noteHomeMove } from './welcome-moves';
 import { sparksSummariesOf } from '@/modules/sparks/service';
 import { marketDayKey } from '@/shared/format';
 import { autoFollow, followStatesOf, setFollowState } from './follows';
@@ -1134,6 +1136,7 @@ export async function setCommunityArea(db: Db, viewer: CommunityViewer, input: C
     const placed = zip && state ? await placeByZip(db, facts.market.id, { zip, city: tidyCityName(parsed.data.city) ?? '', state }) : null;
     if (!placed) return { ok: false, code: 'validation_failed', fieldErrors: { zip: ['not_supported'] } };
     await db.update(users).set({ homeAreaId: placed.areaId, ...(placed.marketId !== facts.market.id ? { homeMarketId: placed.marketId } : {}), updatedAt: now }).where(eq(users.id, viewer.id));
+    await welcomeTheMove(db, viewer.id, facts, { marketId: placed.marketId, areaId: placed.areaId }, now);
     return { ok: true, code: 'updated' };
   }
   if (parsed.data.areaSlug === '') {
@@ -1143,7 +1146,13 @@ export async function setCommunityArea(db: Db, viewer: CommunityViewer, input: C
   const [area] = await db.select({ id: areas.id }).from(areas).where(and(eq(areas.marketId, facts.market.id), eq(areas.slug, parsed.data.areaSlug))).limit(1);
   if (!area) return { ok: false, code: 'validation_failed', fieldErrors: { areaSlug: ['invalid'] } };
   await db.update(users).set({ homeAreaId: area.id, updatedAt: now }).where(eq(users.id, viewer.id));
+  await welcomeTheMove(db, viewer.id, facts, { marketId: facts.market.id, areaId: area.id }, now);
   return { ok: true, code: 'updated' };
+}
+
+/** A new neighborhood (or market) is a move: its welcome waits at the top of Neighbors (2026-11-24). Forgetting one isn't. */
+async function welcomeTheMove(db: Db, userId: string, facts: ViewerFacts, after: { marketId: string; areaId: string | null }, now: Date): Promise<void> {
+  if (isHomeMove({ marketId: facts.market.id, areaId: facts.area?.id ?? null }, after)) await noteHomeMove(db, userId, after, now);
 }
 
 /** A visible post the viewer can read now, with who they blocked (or who blocked them), for reads outside the pages. */

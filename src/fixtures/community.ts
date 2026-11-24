@@ -260,3 +260,6 @@ export const communityNewThanksData: CommunityNewPostPageData = { ...communityNe
 
 /** "Thank Sam on Neighbors" from the finished booking (plan 10.12): the thanks form with that booking chosen. */
 export const communityNewThanksFromBookingData: CommunityNewPostPageData = { ...communityNewPostPageData, kind: 'thanks', bookingId: 'bkg_wardrobe' };
+
+/** A question that picked a service ("Ask helpers who do this", 2026-11-24): the helpers who do it nearby hear about it. */
+export const communityNewQuestionServiceData: CommunityNewPostPageData = { ...communityNewPostPageData, kind: 'question', categorySlug: 'moving-help' };

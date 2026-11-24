@@ -269,6 +269,7 @@
         "community_recommended": "Un agradecimiento en la conversación ayuda mucho.",
         "community_thanked": "En tu perfil, los vecinos ven quién te recomienda.",
         "community_ask_match": "Responde si puedes ayudar. Los vecinos ven primero a quienes otros recomiendan.",
+        "community_question_match": "Responde si puedes ayudar. Los vecinos marcan las respuestas útiles, y se muestran en tu perfil.",
         "community_task_posted": "Haz una oferta mientras esté abierta.",
         "community_auto_hidden": "No tienes que hacer nada. La volveremos a mostrar si cumple las normas de la comunidad.",
         "community_digest": "Mira lo que tus vecinos preguntan y comparten."
@@ -357,6 +358,7 @@
       "community_recommended": "{actorName} te recomendó a alguien del vecindario: {title}.",
       "community_thanked": "{actorName} te dio las gracias en Vecinos: {title}.",
       "community_ask_match": "Alguien en {area} pide una recomendación: {title}.",
+      "community_question_match": "Alguien en {area} tiene una pregunta sobre tus servicios: {title}.",
       "community_task_posted": "{actorName} publicó una tarea desde la conversación donde te recomendaron: {title}.",
       "community_auto_hidden": "Tu {on, select, reply {respuesta} other {publicación}} en {title} está oculta mientras nuestro equipo revisa los reportes.",
       "community_digest": "Esta semana en {area}: {count, plural, one {# publicación} other {# publicaciones}}{waiting, plural, =0 {} one {, # espera respuesta} other {, # esperan respuesta}}."

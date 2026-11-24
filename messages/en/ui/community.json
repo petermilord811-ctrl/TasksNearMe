@@ -121,6 +121,10 @@
     "bodyCount": "{count} of {max}",
     "category": "Service",
     "categoryNone": "Not about one service",
+    "askHelpers": {
+      "on": "{service}: helpers nearby who do it hear about your post and can answer.",
+      "off": "Pick a service to ask the helpers who do it too."
+    },
     "area": "Neighborhood",
     "areaHint": "Neighbors near it see it first; anyone in {market} can find it.",
     "areaEverywhere": "All of {market}",
@@ -182,7 +186,8 @@
     "newThanksBooking": "Community · thanks from a finished booking",
     "postGeneral": "A general post (words and a photo, no title)",
     "newDialog": "New post",
-    "newDialogRecommendation": "New post: a recommendation"
+    "newDialogRecommendation": "New post: a recommendation",
+    "newQuestionService": "New question · asking helpers who do it"
   },
   "sinceVisit": {
     "badge": "New",

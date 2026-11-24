@@ -17,6 +17,7 @@ import { AccountPointer } from './account-pointer';
 import { AccountActivity } from './account-activity';
 import { AccountContactSharing } from './account-contact-sharing';
 import { AccountQuietHours } from './account-quiet-hours';
+import { AccountAskAlerts } from './account-ask-alerts';
 import { AccountDirectMessages } from './account-direct-messages';
 import { SparksBadge } from '@/ui/components/people/sparks-badge';
 import { AccountPasskeys } from './account-passkeys';
@@ -87,6 +88,7 @@ export function AccountScreen({ data, handlers, initialDialog }: {
         <AccountGroupSection id="notifications" title={t('groups.notifications')} summary={t('groups.summaries.notifications')}>
           <div className={cardClass}><Section headingLevel={3} title={t('preferences.title')} description={t('preferences.description')}><AccountPreferences preferences={data.preferences} onSave={handlers.onSavePreference} /></Section></div>
           {data.quietHours && handlers.onSaveQuietHours && <div className={cardClass}><Section headingLevel={3} title={t('ownQuietHours.title')} description={t('ownQuietHours.description')}><AccountQuietHours setting={data.quietHours} onSave={handlers.onSaveQuietHours} /></Section></div>}
+          {data.askAlerts && handlers.onSaveAskAlerts && <div className={cardClass}><Section headingLevel={3} title={t('askAlerts.title')} description={t('askAlerts.description')}><AccountAskAlerts enabled={data.askAlerts.enabled} onSave={handlers.onSaveAskAlerts} /></Section></div>}
           <div className={cardClass}><Section headingLevel={3} title={push('device.title')}><PushDeviceSetting push={data.push} handlers={handlers} /></Section></div>
           {handlers.onSaveLanguage && <div className={cardClass}><Section headingLevel={3} title={t('language.title')} description={t('language.description')}><AccountLanguage language={data.language} onSave={handlers.onSaveLanguage} /></Section></div>}
           {/* On devices with a mouse only, where the Bubble cursor is drawn (2026-11-24). */}

@@ -76,6 +76,7 @@ export const NOTIFICATION_TOPIC: Record<NotificationType, NotificationTopic> = {
   community_recommended: 'community',
   community_thanked: 'community',
   community_ask_match: 'community',
+  community_question_match: 'community',
   community_auto_hidden: 'community',
   // A task a helper was recommended for is new work they could take (plan 10.12): as task alerts.
   community_task_posted: 'task_alerts',

@@ -235,3 +235,23 @@ export const communityAnnouncementDismissals = pgTable(
   },
   (t) => [primaryKey({ columns: [t.userId, t.announcementId] })],
 );
+
+/**
+ * "Welcome to Mueller" (2026-11-24): a person's latest move, for the welcome at the top of Neighbors. Written when they
+ * choose or change their neighborhood (a ZIP that moves their market too); a new account has no row until it closes
+ * its first welcome. One row a person: the next move replaces it, so its welcome comes back once. Only that person
+ * ever sees it.
+ */
+export const communityWelcomes = pgTable('community_welcomes', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  marketId: text('market_id')
+    .notNull()
+    .references(() => markets.id),
+  /** The neighborhood they moved to; null when only the market is known. No foreign key, like `users.home_area_id`. */
+  areaId: text('area_id'),
+  movedAt: timestamp('moved_at', { withTimezone: true }).notNull(),
+  /** They closed this move's welcome ("Got it"): it stays closed on every device. */
+  dismissedAt: timestamp('dismissed_at', { withTimezone: true }),
+});

@@ -575,6 +575,13 @@
       "when": 1795496502915,
       "tag": "0081_quiet_hours_thanks",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1795497791031,
+      "tag": "0082_neighbors_welcome",
+      "breakpoints": true
     }
   ]
 }

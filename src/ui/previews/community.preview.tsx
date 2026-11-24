@@ -3,6 +3,7 @@ import type { AppShellHandlers, CommunityNewPostHandlers, CommunityPostHandlers,
 import { routes } from '@/contracts/routes';
 import {
   communityNewPostPageData,
+  communityNewQuestionServiceData,
   communityNewThanksData,
   communityNewThanksFromBookingData,
   communityGeneralPostPageData,
@@ -48,6 +49,8 @@ export const communityPreviews: PreviewEntry[] = [
   page('post-general', p.postGeneral, routes.app.communityPost(communityGeneralPostPageData.post.id), () => <CommunityPostScreen data={communityGeneralPostPageData} handlers={postHandlers} now={now} />),
   page('post-staff', p.postStaff, routes.app.communityPost(communityPostStaffData.post.id), () => <CommunityPostScreen data={communityPostStaffData} handlers={postHandlers} now={now} />),
   page('new', p.newPost, routes.app.newCommunityPost(), () => <CommunityNewPostScreen data={communityNewPostPageData} handlers={newHandlers} />),
+  // A question with a service: the helpers who do it nearby hear about it (2026-11-24).
+  page('new-question-service', p.newQuestionService, routes.app.newCommunityPost('question'), () => <CommunityNewPostScreen data={communityNewQuestionServiceData} handlers={newHandlers} />),
   page('new-thanks', p.newThanks, routes.app.newCommunityPost('thanks'), () => <CommunityNewPostScreen data={communityNewThanksData} handlers={newHandlers} />),
   page('new-thanks-booking', p.newThanksBooking, routes.app.newCommunityPost('thanks', 'bkg_wardrobe'), () => <CommunityNewPostScreen data={communityNewThanksFromBookingData} handlers={newHandlers} />),
 ];

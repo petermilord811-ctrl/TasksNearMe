@@ -329,3 +329,78 @@ export function startersFor(prompts: readonly PromptConfig[] | null | undefined,
 export const UNANSWERED_KINDS = ASK_FOR_HELP_KINDS;
 /** "Waiting for an answer" looks this far back. */
 export const UNANSWERED_DAYS = 7;
+
+// ---- Helpers answer on Neighbors (2026-11-24, owner: "implement others all one by one") ---------------------------
+
+/**
+ * The asks that alert the helpers who offer the post's service nearby (plan 10.11, then 2026-11-24): a recommendation
+ * request, and a question that picked a service ("Ask helpers who do this"). Each kind has its own notification type;
+ * both share `ASK_MATCH_LIMITS` (a helper hears about at most 3 asks a day, whatever their kind).
+ */
+export const ASK_ALERT_TYPES = { recommendation: 'community_ask_match', question: 'community_question_match' } as const;
+export type AskAlertType = (typeof ASK_ALERT_TYPES)[keyof typeof ASK_ALERT_TYPES];
+export const ASK_ALERT_TYPE_LIST: readonly AskAlertType[] = Object.values(ASK_ALERT_TYPES);
+
+/** The alert a new post sends helpers: only an ask with a service picked. */
+export function askAlertTypeFor(post: { kind: string; categorySlug: string | null | undefined }): AskAlertType | null {
+  if (!post.categorySlug) return null;
+  return post.kind === 'recommendation' || post.kind === 'question' ? ASK_ALERT_TYPES[post.kind] : null;
+}
+
+/**
+ * Where a helper's "Neighbors asking about my services" switch is kept: a `notification_preferences` row of its own
+ * (not one of the email and text topics, since it stops the alert itself, in the app too). No row: on.
+ */
+export const ASK_ALERTS_PREFERENCE = { topic: 'neighbors_asks', channel: 'app' } as const;
+
+/** Whether ask alerts reach a helper, from their stored preference (`'true'` | `'false'`, or none). */
+export function askAlertsOn(stored: string | null | undefined): boolean {
+  return stored !== 'false';
+}
+
+/** An answer as the helper's profile quotes it: whole words up to `max` characters, "…" when cut, on one line. */
+export function answerExcerpt(body: string, max = 160): string {
+  const flat = body.replace(/\s+/g, ' ').trim();
+  if (flat.length <= max) return flat;
+  const cut = flat.slice(0, max - 1);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > max * 0.6 ? cut.slice(0, space) : cut).replace(/[\s,.;:!?-]+$/, '')}…`;
+}
+
+// ---- The welcome for new movers (2026-11-24) -----------------------------------------------------------------------
+
+/** A welcome stays at the top of Neighbors this long after the move (or the account's start), unless closed sooner. */
+export const WELCOME_DAYS = 30;
+/** Helpers and tips the welcome shows at most. */
+export const WELCOME_HELPERS_SHOWN = 4;
+export const WELCOME_TIPS_SHOWN = 3;
+
+/** A person's latest move as kept (`community_welcomes`): where to, when, and when they closed its welcome. */
+export interface WelcomeRecord {
+  marketId: string;
+  areaId: string | null;
+  movedAt: Date;
+  dismissedAt: Date | null;
+}
+
+/**
+ * The welcome due now, if any, and its id (what "Got it" names):
+ * - their latest move, in the market they're in now: until closed, for `WELCOME_DAYS`;
+ * - a move kept for another market: they've changed market since (a ZIP, a verified home address, a market opening),
+ *   so the new one welcomes them until they close it;
+ * - nothing kept: a new account (younger than `WELCOME_DAYS`) joining its market.
+ */
+export function welcomeDue(input: { record: WelcomeRecord | null; marketId: string; accountCreatedAt: Date; now: Date }): { id: string } | null {
+  const { record, marketId, now } = input;
+  const fresh = (since: Date) => now.getTime() - since.getTime() < WELCOME_DAYS * DAY_SECONDS * 1000;
+  if (!record) return fresh(input.accountCreatedAt) ? { id: `${marketId}:joined` } : null;
+  if (record.marketId !== marketId) return { id: `${marketId}:moved` };
+  if (record.dismissedAt || !fresh(record.movedAt)) return null;
+  return { id: `${marketId}:${record.movedAt.toISOString()}` };
+}
+
+/** Whether a change of place is a move that brings a welcome: a new market, or a neighborhood other than the one before. */
+export function isHomeMove(before: { marketId: string; areaId: string | null }, after: { marketId: string; areaId: string | null }): boolean {
+  if (before.marketId !== after.marketId) return true;
+  return after.areaId !== null && after.areaId !== before.areaId;
+}

@@ -71,6 +71,8 @@ export const jordanAccountData: AccountPageData = {
   signIn: { email: 'jordan@example.test', providers: [{ provider: 'google' }, { provider: 'microsoft', connectedAt: '2026-11-20T17:55:00.000Z' }], notice: { provider: 'microsoft', result: 'connected' }, passkeys: [{ id: 'pky_jordan_phone', name: 'iPhone', createdAt: '2026-11-18T15:00:00.000Z', backedUp: true }] },
   preferences,
   helper: { status: 'active' },
+  // "Neighbors asking about my services" (2026-11-24): on.
+  askAlerts: { enabled: true },
   privacy: { export: { status: 'preparing', requestedAt: '2026-11-20T18:00:00.000Z' } },
   language: 'en',
   // Jordan keeps his activity to himself (completion plan 7.1).
@@ -114,6 +116,7 @@ export const fakeAccountHandlers: AccountHandlers = {
   onSaveUsername: () => wait({ ok: true, code: 'updated' }),
   onSaveActivity: () => wait({ ok: true, code: 'updated' }),
   onSaveContactSharing: () => wait({ ok: true, code: 'updated' }),
+  onSaveAskAlerts: () => wait({ ok: true, code: 'updated' }),
   onSavePreference: ({ topic, channel }) =>
     wait((topic === 'bookings' || topic === 'payments') && channel === 'email' ? { ok: false, code: 'not_allowed' } : { ok: true, code: 'updated' }),
   onRequestExport: () => wait({ ok: true, code: 'submitted' }),
@@ -196,6 +199,18 @@ export const jordanRebookNotificationsData: NotificationsPageData = {
   notifications: [
     { id: 'ntf_rebook_accepted', type: 'rebook_accepted', title: 'Assemble a desk (flat-pack, 1 item)', actorName: 'Maya R.', target: { kind: 'booking', bookingId: 'bkg_desk_again' }, createdAt: '2026-12-08T18:00:00.000Z' },
     { id: 'ntf_rebook_declined', type: 'rebook_declined', title: 'Help loading a moving truck', actorName: 'Chris D.', target: { kind: 'proposal', proposalId: 'prp_moving' }, createdAt: '2026-12-08T17:30:00.000Z', readAt: '2026-12-08T17:45:00.000Z' },
+  ],
+  unreadCount: 1,
+};
+
+/** Jordan turned off neighbors' asks (2026-11-24). */
+export const jordanAskAlertsOffData: AccountPageData = { ...jordanAccountData, askAlerts: { enabled: false } };
+
+/** Jordan hears about neighbors' asks in his services (2026-11-24): a question and a recommendation request. */
+export const jordanAskNotificationsData: NotificationsPageData = {
+  notifications: [
+    { id: 'ntf_question_match', type: 'community_question_match', title: 'Can two people move a sleeper sofa up one flight?', params: { area: 'Mueller' }, target: { kind: 'community_post', postId: 'cpo_sofa_question' }, createdAt: '2026-11-25T15:30:00.000Z' },
+    { id: 'ntf_ask_match', type: 'community_ask_match', title: 'Who do you recommend for moving help?', params: { area: 'Windsor Park' }, target: { kind: 'community_post', postId: 'cpo_moving_ask' }, createdAt: '2026-11-25T12:00:00.000Z', readAt: '2026-11-25T13:00:00.000Z' },
   ],
   unreadCount: 1,
 };

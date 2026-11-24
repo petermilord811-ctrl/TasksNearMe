@@ -1,5 +1,5 @@
 import { routes, type AccountHandlers, type AccountPageData, type AppShellHandlers, type PreviewEntry, type SignedInViewer } from '@/contracts';
-import { accountSignInNotices, contactRevertPages, deletionWaitingPrivacy, exportReadyPrivacy, samplePushSetup, fakeAccountHandlers, fakeContactRevertHandlers, fakeHandler, fakeUnsubscribeHandlers, heldAccountData, jordanAccountData, jordanShell, mayaAccountData, mayaShell, newAccountData, publicViewer, unsubscribePages } from '@/fixtures';
+import { accountSignInNotices, contactRevertPages, deletionWaitingPrivacy, exportReadyPrivacy, samplePushSetup, fakeAccountHandlers, fakeContactRevertHandlers, fakeHandler, fakeUnsubscribeHandlers, heldAccountData, jordanAccountData, jordanAskAlertsOffData, jordanShell, mayaAccountData, mayaShell, newAccountData, publicViewer, unsubscribePages } from '@/fixtures';
 import { AccountScreen } from '@/ui/screens/account/account-screen';
 import { ContactRevertContent } from '@/ui/screens/account/contact-revert-screen';
 import { EmailUnsubscribeScreen } from '@/ui/screens/account/email-unsubscribe-screen';
@@ -40,6 +40,7 @@ const typedValues: Partial<Record<AccountPreviewInteraction, string>> = {
 export const accountPreviews: PreviewEntry[] = [
   preview('client', copy.previews.client),
   preview('helper', copy.previews.helper, jordanAccountData, jordanShell),
+  preview('ask-alerts-off', copy.previews.askAlertsOff, jordanAskAlertsOffData, jordanShell),
   preview('export-ready', copy.previews.exportReady, { ...jordanAccountData, privacy: exportReadyPrivacy }, jordanShell),
   preview('push-device', copy.previews.pushDevice, { ...mayaAccountData, push: samplePushSetup }),
   preview('deletion-waiting', copy.previews.deletionWaiting, { ...newAccountData, privacy: deletionWaitingPrivacy }, { ...mayaShell, unreadMessages: 0, unreadNotifications: 0 }),

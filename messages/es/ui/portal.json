@@ -202,6 +202,9 @@
     "launch": "Vecinos · semana de lanzamiento: aviso fijado y la pregunta del vecindario",
     "unanswered": "Vecinos · preguntas que esperan respuesta",
     "staffSamples": "Vecinos · vista del equipo donde no se ven publicaciones de muestra",
+    "welcome": "Bienvenida para quien se muda",
+    "welcomeEmpty": "Bienvenida · todavía nada cerca",
+    "welcomeClosing": "Bienvenida · cerrando",
     "openTasks": "Tareas abiertas · el tablero dentro de Vecinos, por vecindario",
     "openTasksFiltered": "Tareas abiertas · los filtros del tablero (precio, hora del día, pocas ofertas)",
     "openTasksByDay": "Tareas abiertas · por el día en que son",
@@ -224,6 +227,19 @@
   "announcement": {
     "eyebrow": "Del equipo de TasksNearMe",
     "dismiss": "Cerrar este aviso"
+  },
+  "welcome": {
+    "eyebrow": "Recién llegado",
+    "title": "Bienvenido a {place}",
+    "intro": "Aquí tienes a quienes los vecinos califican mejor y los consejos que más les sirvieron. Pregunta lo que quieras: responden vecinos y quienes hacen el trabajo.",
+    "empty": "Todavía no hay ayudantes ni consejos en {place}. Haz una pregunta y los ayudantes de la zona que hacen ese trabajo se enterarán.",
+    "helpers": "Ayudantes mejor calificados cerca",
+    "tips": "Consejos locales más útiles",
+    "helpful": "{count, plural, one {A # le resultó útil} other {A # les resultó útil}}",
+    "ask": "Haz una pregunta",
+    "dismiss": "Entendido",
+    "dismissing": "Cerrando…",
+    "failed": "No se cerró. Inténtalo de nuevo."
   },
   "askArea": {
     "title": "¿En qué vecindario estás?",

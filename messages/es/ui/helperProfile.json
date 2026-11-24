@@ -35,8 +35,16 @@
     "samPhoto": "Sam, con foto de perfil",
     "contactReveal": "Jordan · datos de contacto para un vecino de nivel alto",
     "contactRevealed": "Jordan · datos de contacto visibles",
-    "contactLocked": "Jordan · datos de contacto bloqueados"
+    "contactLocked": "Jordan · datos de contacto bloqueados",
+    "answers": "Sam · respuestas en Vecinos"
   },
   "recommendedBy": "{count, plural, one {# recomendación de vecinos} other {# recomendaciones de vecinos}}",
-  "message": "Escribirle a {name}"
+  "message": "Escribirle a {name}",
+  "neighborsHelped": "{count, plural, one {Ayudó a # vecino} other {Ayudó a # vecinos}} en Vecinos",
+  "neighborsAnswers": {
+    "title": "Respuestas en Vecinos",
+    "description": "{count, plural, one {Los vecinos marcaron como útil una respuesta suya en # pregunta.} other {Los vecinos marcaron como útiles respuestas suyas en # preguntas.}}",
+    "askedIn": "Preguntado en {place}",
+    "helpful": "{count, plural, one {A # le resultó útil} other {A # les resultó útil}}"
+  }
 }

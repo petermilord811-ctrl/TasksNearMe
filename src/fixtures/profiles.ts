@@ -1,4 +1,4 @@
-import { HELPER_CONTACT_EARNED_MIN, type HelperContactAccess, type HelperContactReveal, type HelperProfilePageData, type PublicReviewView } from '@/contracts';
+import { HELPER_CONTACT_EARNED_MIN, type HelperContactAccess, type HelperContactReveal, type HelperProfilePageData, type NeighborsAnswersView, type PublicReviewView } from '@/contracts';
 import { jordan, lee, sam } from './people';
 
 /** Public helper profiles (`/helpers/[handle]`). Images are placeholders in /public/samples. */
@@ -128,3 +128,14 @@ export const leeProfilePageData: HelperProfilePageData = {
 export const helperContactRevealAccess: HelperContactAccess = { state: 'reveal', shares: ['email', 'phone'] };
 export const helperContactLockedAccess: HelperContactAccess = { state: 'locked', shares: ['email', 'phone'], earned: 212, at: HELPER_CONTACT_EARNED_MIN };
 export const helperContactRevealData: HelperContactReveal = { ok: true, email: 'jordan@example.test', phone: '+15125550201' };
+/** Sam's answers neighbors marked Helpful on Neighbors (2026-11-24): "Helped 4 neighbors on Neighbors", the best three. */
+export const samNeighborsAnswers: NeighborsAnswersView = {
+  helpedCount: 4,
+  answers: [
+    { id: 'crp_sam_dresser', questionTitle: 'Is it worth anchoring a short dresser?', excerpt: 'Yes. Anything with drawers that comes up past your waist can tip once two drawers are open. A strap kit costs a few dollars and takes ten minutes; screw it into a stud…', placeName: 'Mueller', helpfulCount: 7 },
+    { id: 'crp_sam_pax', questionTitle: 'How long should a PAX wardrobe take to build?', excerpt: 'About three hours for a two-door frame with doors on your own, closer to two with a second person. Leveling the frame takes the longest.', placeName: 'Windsor Park', helpfulCount: 4 },
+    { id: 'crp_sam_brick', questionTitle: 'Can a TV go on a brick wall?', excerpt: 'It can: masonry anchors and a hammer drill make it straightforward. Ask whoever you hire to bring both.', placeName: 'Austin', helpfulCount: 2 },
+  ],
+};
+
+export const samProfileWithAnswersData: HelperProfilePageData = { ...samProfilePageData, neighborsAnswers: samNeighborsAnswers };

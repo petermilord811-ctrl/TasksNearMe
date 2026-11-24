@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
-import { helpArticlePeek, helpCenterPeek, helperPeek, helperSelfPeek, legalPeek } from '@/fixtures';
+import { helpArticlePeek, helpCenterPeek, helperAnswersPeek, helperPeek, helperSelfPeek, legalPeek } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { PeekSheet, type PeekSheetProps } from './peek-sheet';
 
@@ -47,6 +47,15 @@ describe('PeekSheet', () => {
     await user.click(save);
     await waitFor(() => expect(props.onToggleSaved).toHaveBeenCalledWith(helperPeek.kind === 'helper' ? helperPeek.data.profile.helper.id : '', true));
     expect(within(sheet).getByRole('button', { name: 'Saved' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('credits a helper’s answers on Neighbors (2026-11-24)', () => {
+    renderSheet({ load: { status: 'ready', data: helperAnswersPeek } });
+    const sheet = screen.getByRole('dialog', { name: 'Sam K.' });
+    expect(within(sheet).getByText('Helped 4 neighbors on Neighbors')).toBeInTheDocument();
+    const answers = within(sheet).getByRole('region', { name: 'Answers on Neighbors' });
+    expect(within(answers).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(answers).getByText('Is it worth anchoring a short dresser?')).toBeInTheDocument();
   });
 
   it('shows your own profile without the buttons that act on it', () => {

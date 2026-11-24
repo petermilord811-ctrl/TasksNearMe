@@ -142,6 +142,11 @@ export const NOTIFICATION_TYPES = [
    * services: `title` (plan 10.11; at most 3 a day).
    */
   'community_ask_match',
+  /**
+   * A neighbor in `params.area` (absent: somewhere in the city) asks a question about one of the helper's services:
+   * `title` ("Ask helpers who do this", 2026-11-24). Same rules and caps as `community_ask_match`, which it shares.
+   */
+  'community_question_match',
   /** `actorName` posted `title` as a task from the recommendation thread that named the helper (plan 10.12). */
   'community_task_posted',
   /** The person's post or reply (`params.on`) on `title` is hidden while our team looks at reports about it (plan 10.21). */
@@ -298,6 +303,12 @@ export interface AccountPageData {
   privacy: AccountPrivacyView;
   /** Notifications on this device (Web Push), when push is set up. */
   push?: PushSetup;
+  /**
+   * "Neighbors asking about my services" (2026-11-24): whether neighbors' recommendation requests and questions in the
+   * helper's services reach them (in the app, on devices, and by email or text where `community` is on). Helpers only
+   * (an active or paused profile); on until they turn it off.
+   */
+  askAlerts?: { enabled: boolean };
   /** The language they use the app in; emails and texts go out in it too. */
   language: AppLocale;
   /**
@@ -489,6 +500,8 @@ export interface AccountHandlers extends PushHandlers {
   /** Quiet hours on or off, and their times. ok `updated`. Errors: `validation_failed` (`startsAt`, `endsAt`: `invalid`). */
   onSaveQuietHours?: ActionHandler<QuietHoursInput>;
   onSavePreference: ActionHandler<{ topic: NotificationTopic; channel: NotificationChannel; enabled: boolean }>;
+  /** `askAlerts` on or off. ok `updated`. Errors: `validation_failed`. */
+  onSaveAskAlerts?: ActionHandler<{ enabled: boolean }>;
   onRequestExport: () => Promise<ActionResult>;
   onRequestDeletion: () => Promise<ActionResult>;
   onCancelDeletion: () => Promise<ActionResult>;

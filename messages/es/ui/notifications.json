@@ -87,6 +87,7 @@
     "community_recommended": "{actorName} te recomendó a alguien del vecindario: {title}",
     "community_thanked": "{actorName} te dio las gracias en Vecinos: {title}",
     "community_ask_match": "Alguien en {area} pide una recomendación: {title}",
+    "community_question_match": "Alguien en {area} tiene una pregunta sobre tus servicios: {title}",
     "community_task_posted": "{actorName} publicó una tarea desde la conversación donde te recomendaron: {title}",
     "community_auto_hidden": "Tu {on, select, reply {respuesta} other {publicación}} en {title} está oculta mientras nuestro equipo revisa los reportes",
     "community_digest": "Esta semana en {area}: {count, plural, one {# publicación} other {# publicaciones}}{waiting, plural, =0 {} one {, # espera respuesta} other {, # esperan respuesta}}"
@@ -95,6 +96,7 @@
     "group": "Notificaciones",
     "client": "Notificaciones del cliente",
     "helper": "Notificaciones del ayudante",
+    "helperAsks": "Ayudante · preguntas de vecinos sobre sus servicios",
     "support": "Respuestas de soporte y decisiones de casos",
     "empty": "Sin notificaciones",
     "allTypes": "Todos los tipos de notificación",

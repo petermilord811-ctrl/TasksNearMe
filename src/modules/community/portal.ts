@@ -53,6 +53,7 @@ import { ENGAGEMENT, HOT_SECONDS, initialsOf, parsePortalQuery, portalSince, sea
 import { communityPosts, communitySaves } from './schema';
 import { composerData, hydrate, nearbyAreaIds, previewsOf, viewerFacts, type CommunityViewer, type PostRow, type ViewerFacts } from './service';
 import { announcementFor } from './announcements';
+import { portalHelperOf, welcomeFor } from './welcome';
 import { isRealRecordId, rowScopeCondition, samplesHiddenInThisBuild } from '@/shared/sample-data';
 
 /**
@@ -492,20 +493,7 @@ async function railOf(db: Db, scope: Scope): Promise<PortalRail> {
   const helpers: PortalHelper[] = [...summaries.values()]
     .sort((a, b) => (b.recommendedBy ?? 0) - (a.recommendedBy ?? 0) || b.completedCount - a.completedCount || (b.rating?.count ?? 0) - (a.rating?.count ?? 0))
     .slice(0, 4)
-    .map((helper) => ({
-      handle: helper.handle,
-      displayName: helper.displayName,
-      initials: helper.initials,
-      ...(helper.photo ? { photo: helper.photo } : {}),
-      ...(helper.headline ? { headline: helper.headline } : {}),
-      ...(helper.areaName ? { areaName: helper.areaName } : {}),
-      verified: Boolean(helper.badges.idVerifiedAt),
-      ...(helper.rating ? { rating: helper.rating } : {}),
-      completedCount: helper.completedCount,
-      recommendedBy: helper.recommendedBy ?? 0,
-      ...(helper.responseTime ? { responseTime: helper.responseTime } : {}),
-      requestHref: routes.app.requestHelper(helper.handle),
-    }));
+    .map(portalHelperOf);
   const trendingIds = trending.rows.map((row) => row.id);
   const trendingRows = trendingIds.length > 0
     ? await db
@@ -638,7 +626,7 @@ export async function getPortal(db: Db, viewer: CommunityViewer, params: Params,
   if (!scope) return null;
   const { query, facts } = scope;
   const locale = localeOrDefault(viewer.locale);
-  const [listing, { facets, areaCounts }, stats, rail, composer, announcement, openTasks] = await Promise.all([
+  const [listing, { facets, areaCounts }, stats, rail, composer, announcement, openTasks, welcome] = await Promise.all([
     sectioned(scope)
       ? sectionsOf(db, scope).then((sections) => ({ sections, items: sections.flatMap((section) => section.items), totalCount: sections.reduce((sum, section) => sum + section.count, 0) }))
       : itemPage(db, scope, query.page, pageSize(query)).then((page) => ({ sections: undefined, ...page })),
@@ -649,6 +637,8 @@ export async function getPortal(db: Db, viewer: CommunityViewer, params: Params,
     announcementFor(db, viewer.id, facts.market.id, locale, now),
     // The Neighbors tab's look at the other tab (2026-11-23); Open tasks is that list itself.
     query.type === 'task' ? Promise.resolve(undefined) : openTasksOf(db, scope),
+    // "Welcome to Mueller" for someone who just moved or joined (2026-11-24), on the Neighbors tab.
+    query.type === 'task' ? Promise.resolve(null) : welcomeFor(db, viewer, facts, now),
   ]);
   // Staff in production get a switch for the demo marketplace, which members don't see here (plan 10, D1).
   const samplesSwitch = viewer.staff && samplesHiddenInThisBuild() && isRealRecordId(viewer.id) ? { samples: { shown: (viewer.rows ?? 'all') === 'all' } } : {};
@@ -675,6 +665,7 @@ export async function getPortal(db: Db, viewer: CommunityViewer, params: Params,
     boardHref: boardHrefOf(scope),
     ...(openTasks ? { openTasks: { items: openTasks, count: stats.openTasks } } : {}),
     ...(announcement ? { announcement } : {}),
+    ...(welcome ? { welcome } : {}),
     // We don't know their neighborhood (plan 10.15): the page asks, above the stream.
     ...(!facts.area && scope.marketAreas.length > 0 ? { askArea: true } : {}),
     ...samplesSwitch,

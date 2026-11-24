@@ -5,7 +5,7 @@ import {
 import {
   bookshelfInviteAcceptedPoster, bookshelfInviteCounteredPoster, bookshelfInviteSentHelper,
   deskChairChangeAppliedData, deskChairChangeCounterpartyData,
-  fakeHandler, fakeNotificationHandlers, jordanNotificationsData, jordanRebookNotificationsData, jordanShell,
+  fakeHandler, fakeNotificationHandlers, jordanAskNotificationsData, jordanNotificationsData, jordanRebookNotificationsData, jordanShell,
   mayaNotificationsData, mayaRebookNotificationsData, mayaShell, notificationsEmptyData, supportNotificationsData,
 } from '@/fixtures';
 import { NotificationsScreen } from '@/ui/screens/account/notifications-screen';
@@ -91,6 +91,7 @@ const updatedNotificationHandlers: NotificationHandlers = {
 export const notificationPreviews: PreviewEntry[] = [
   preview('client', copy.previews.client, mayaNotificationsData),
   preview('helper', copy.previews.helper, jordanNotificationsData, jordanShell),
+  preview('helper-asks', copy.previews.helperAsks, jordanAskNotificationsData, jordanShell),
   preview('support', copy.previews.support, supportNotificationsData, mayaShell, fakeNotificationHandlers, false, '2026-11-24T18:00:00.000Z'),
   preview('empty', copy.previews.empty, notificationsEmptyData),
   preview('all-types', copy.previews.allTypes, allTypes),

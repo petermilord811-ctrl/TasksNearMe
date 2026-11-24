@@ -11,6 +11,7 @@ import { PortalHeader } from '@/ui/components/portal/portal-header';
 import { neighborsHref, openTasksHref } from '@/ui/components/portal/portal-href';
 import { PortalLive } from '@/ui/components/portal/portal-live';
 import { AnnouncementCard, AskAreaCard, SamplesNote } from '@/ui/components/portal/portal-notes';
+import { NeighborsWelcomeCard } from '@/ui/components/portal/neighbors-welcome';
 import { PortalPhoneBar } from '@/ui/components/portal/portal-phone-bar';
 import { PortalRail, YourStuffStrip } from '@/ui/components/portal/portal-rail';
 import { PortalStream } from '@/ui/components/portal/portal-stream';
@@ -49,6 +50,7 @@ export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
     <div className="max-sm:hidden"><AreaStrip data={data} {...(handlers.onSetArea ? { onSetArea: handlers.onSetArea } : {})} /></div>
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_17.5rem] xl:gap-x-5 2xl:grid-cols-[minmax(0,1fr)_20rem] 2xl:gap-x-6">
       <div className="min-w-0 space-y-3">
+        {!tasks && data.welcome && <NeighborsWelcomeCard key={data.welcome.id} welcome={data.welcome} {...(handlers.onDismissWelcome ? { onDismiss: handlers.onDismissWelcome } : {})} />}
         {tasks
           ? <BoardComposer market={data.market.name} {...(query.category && query.category !== PORTAL_GENERAL ? { category: query.category } : {})} />
           : <PortalComposer data={data} handlers={handlers} />}

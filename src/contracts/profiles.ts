@@ -76,6 +76,34 @@ export interface HelperProfilePageData {
    * from the reviews and the rating.
    */
   thanks?: PublicThankYouNote[];
+  /** "Helped 12 neighbors on Neighbors" and their most-marked answers (2026-11-24); absent until one is marked Helpful. */
+  neighborsAnswers?: NeighborsAnswersView;
+}
+
+/**
+ * A helper's answers on Neighbors that neighbors marked Helpful (2026-11-24, owner: "Helpers answer on Neighbors"). Only
+ * visible posts and replies count, never the helper's own post nor their own mark, and never sample rows where those
+ * are hidden. Credit only: it never feeds rewards, Sparks or ranking (blueprint principle 6).
+ */
+export interface NeighborsAnswersView {
+  /** Distinct posts where a neighbor marked their answer Helpful. At least 1. */
+  helpedCount: number;
+  /** Their most-marked answers, most Helpful first (at most `NEIGHBORS_ANSWERS_SHOWN`). */
+  answers: NeighborsAnswerView[];
+}
+
+export const NEIGHBORS_ANSWERS_SHOWN = 3;
+
+export interface NeighborsAnswerView {
+  /** The reply. */
+  id: string;
+  /** What was asked: the post's title (never who asked). */
+  questionTitle: string;
+  /** Their answer, shortened (whole words, "…" when cut). Masked like every post. */
+  excerpt: string;
+  /** The post's neighborhood, or the city for a citywide one. */
+  placeName: string;
+  helpfulCount: number;
 }
 
 /**

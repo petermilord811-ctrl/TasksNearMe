@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { routes, type AppShellHandlers, type PreviewEntry } from '@/contracts';
-import { fakeHandler, helpArticlePeek, helpCenterPeek, helperPeek, helperSelfPeek, legalPeek, mayaShell } from '@/fixtures';
+import { fakeHandler, helpArticlePeek, helpCenterPeek, helperAnswersPeek, helperPeek, helperSelfPeek, legalPeek, mayaShell } from '@/fixtures';
 import { IdentityCheckDialog } from '@/ui/components/layout/identity-check-dialog';
 import { RouteDialogFrame } from '@/ui/components/layout/route-dialog-frame';
 import { AppShell } from '@/ui/shells/app-shell';
@@ -33,6 +33,7 @@ export const peekPreviews: PreviewEntry[] = [
   entry('helper', peek.previews.helper, <PeekExample target={{ kind: 'helper', handle: 'sam-k' }} data={helperPeek} />),
   entry('helper-beside-chat', peek.previews.helperBesideChat, <PeekExample target={{ kind: 'helper', handle: 'sam-k' }} data={helperPeek} side="left" modal={false} />),
   entry('helper-self', peek.previews.helperSelf, <PeekExample target={{ kind: 'helper', handle: 'sam-k' }} data={helperSelfPeek} />),
+  entry('helper-answers', peek.previews.helperAnswers, <PeekExample target={{ kind: 'helper', handle: 'sam-k' }} data={helperAnswersPeek} />),
   entry('help-center', peek.previews.helpCenter, <PeekExample target={{ kind: 'help' }} data={helpCenterPeek} />),
   entry('help-article', peek.previews.helpArticle, <PeekExample target={{ kind: 'help', slug: 'when-am-i-charged' }} data={helpArticlePeek} />),
   entry('legal', peek.previews.legal, <PeekExample target={{ kind: 'legal', doc: 'terms' }} data={legalPeek} />),

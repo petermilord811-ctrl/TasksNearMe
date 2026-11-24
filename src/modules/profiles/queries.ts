@@ -1,3 +1,4 @@
+import { neighborsAnswersOf } from '@/modules/community/answers';
 import { recommendedByCounts } from '@/modules/community/service';
 import { sparksSummaryOf } from '@/modules/sparks/service';
 import { responseTimeRange } from '@/shared/response-time';
@@ -259,12 +260,15 @@ export async function getHelperProfile(handle: string, database: Db = db, rows: 
   const username = (await usernamesOf(database, [userId])).get(userId);
   // Thank-you notes they chose to show (2026-11-24), apart from the reviews and the rating.
   const thanks = await publicThanksOf(database, userId, rows);
+  // Their answers neighbors marked Helpful (2026-11-24): credit on the profile only, never a ranking or reward signal.
+  const neighborsAnswers = await neighborsAnswersOf(database, userId, rows);
   return {
     timeZone,
     ...(sparks ? { sparks } : {}),
     acceptsMessages: row.user.directMessages !== 'nobody',
     ...(username ? { username } : {}),
     ...(thanks.length > 0 ? { thanks } : {}),
+    ...(neighborsAnswers ? { neighborsAnswers } : {}),
     helper: withRecommended(toHelperSummary(
       row.profile,
       row.user,

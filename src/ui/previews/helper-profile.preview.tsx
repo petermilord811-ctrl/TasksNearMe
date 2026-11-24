@@ -1,5 +1,5 @@
 import { routes, type HelperContactAccess, type HelperContactReveal, type HelperProfilePageData, type PreviewEntry } from '@/contracts';
-import { helperContactLockedAccess, helperContactRevealAccess, helperContactRevealData, jordanProfilePageData, jordanProfileWithSlotsData, leeProfilePageData, publicViewer, samProfilePageData, samProfilePhoto } from '@/fixtures';
+import { helperContactLockedAccess, helperContactRevealAccess, helperContactRevealData, jordanProfilePageData, jordanProfileWithSlotsData, leeProfilePageData, publicViewer, samProfilePageData, samProfilePhoto, samProfileWithAnswersData } from '@/fixtures';
 import { HelperProfileScreen } from '@/ui/screens/public/helper-profile-screen';
 import { PublicShell } from '@/ui/shells/public-shell';
 import copy from '../../../messages/en/ui/helperProfile.json';
@@ -31,4 +31,6 @@ export const helperProfilePreviews: PreviewEntry[] = [
   profile('screen-helper-profile/contact-reveal', copy.preview.contactReveal, jordanProfileWithSlotsData, { access: helperContactRevealAccess }),
   profile('screen-helper-profile/contact-revealed', copy.preview.contactRevealed, jordanProfileWithSlotsData, { access: helperContactRevealAccess, revealed: helperContactRevealData }),
   profile('screen-helper-profile/contact-locked', copy.preview.contactLocked, jordanProfileWithSlotsData, { access: helperContactLockedAccess }),
+  // "Helped 4 neighbors on Neighbors" and their answers (2026-11-24).
+  profile('screen-helper-profile/answers', copy.preview.answers, samProfileWithAnswersData),
 ];

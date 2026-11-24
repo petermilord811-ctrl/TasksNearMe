@@ -90,6 +90,7 @@ const copy: Record<NotificationType, RegExp> = {
   community_recommended: /recommended you to a neighbor/,
   community_thanked: /thanked you on Neighbors/,
   community_ask_match: /asks for a recommendation/,
+  community_question_match: /has a question about your services/,
   community_task_posted: /posted a task from the thread/,
   community_auto_hidden: /hidden while our team reviews/,
   community_digest: /This week in/,

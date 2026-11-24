@@ -192,6 +192,7 @@
     "group": "Cuenta",
     "client": "Cuenta de cliente",
     "helper": "Cuenta de ayudante",
+    "askAlertsOff": "Ayudante · avisos de preguntas desactivados",
     "new": "Cuenta nueva",
     "saving": "Guardando el perfil",
     "validationFailed": "Falló la validación del perfil",
@@ -286,6 +287,15 @@
     "on": "Activado: ven “En línea ahora” o “Se conectó hoy”, y dos marcas azules en los mensajes que leyeron.",
     "off": "Desactivado: nadie ve tu actividad, y tú tampoco ves la suya.",
     "hint": "Solo lo ven las personas con las que tienes una conversación o una reserva, nunca con la hora exacta y nunca en tu perfil público.",
+    "failed": "No se guardó. Inténtalo de nuevo."
+  },
+  "askAlerts": {
+    "title": "Vecinos que preguntan por tus servicios",
+    "description": "Cuando un vecino cercano pregunta a quién contratar, o hace una pregunta, sobre uno de tus servicios.",
+    "label": "Avísame cuando pregunten",
+    "on": "Activado: hasta 3 preguntas al día, en la app y en tus dispositivos.",
+    "off": "Desactivado: no te enterarás de lo que preguntan los vecinos. Igual puedes responder lo que quieras en Vecinos.",
+    "hint": "Los correos y mensajes de texto sobre ellas siguen a Comunidad, arriba.",
     "failed": "No se guardó. Inténtalo de nuevo."
   },
   "notMe": {

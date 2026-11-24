@@ -1,5 +1,6 @@
 'use server';
 
+import { saveAskAlerts } from '@/modules/community/ask-alerts';
 import { refresh } from 'next/cache';
 import { headers } from 'next/headers';
 import type { AccountProfileInput, ActionResult, NotificationChannel, NotificationTopic, PushSubscriptionInput, QuietHoursInput } from '@/contracts';
@@ -64,6 +65,13 @@ export async function saveNotificationPreferenceAction(input: { topic: Notificat
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
   return refreshed(await saveNotificationPreference(db, userId, input, await requestNow()));
+}
+
+/** AccountHandlers.onSaveAskAlerts: "Neighbors asking about my services" on or off (2026-11-24). */
+export async function saveAskAlertsAction(input: { enabled: boolean }): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  return refreshed(await saveAskAlerts(db, userId, { enabled: input?.enabled }, await requestNow()));
 }
 
 export async function savePushSubscriptionAction(input: PushSubscriptionInput): Promise<ActionResult> {

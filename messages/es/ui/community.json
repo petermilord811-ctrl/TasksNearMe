@@ -121,6 +121,10 @@
     "bodyCount": "{count} de {max}",
     "category": "Servicio",
     "categoryNone": "No es sobre un servicio",
+    "askHelpers": {
+      "on": "{service}: los ayudantes de la zona que lo hacen se enteran de tu publicación y pueden responder.",
+      "off": "Elige un servicio para preguntar también a quienes lo hacen."
+    },
     "area": "Vecindario",
     "areaHint": "Los vecinos cercanos lo ven primero; cualquiera en {market} puede encontrarlo.",
     "areaEverywhere": "Todo {market}",
@@ -182,7 +186,8 @@
     "newThanksBooking": "Comunidad · agradecimiento desde una reserva terminada",
     "postGeneral": "Una publicación general (texto y una foto, sin título)",
     "newDialog": "Nueva publicación",
-    "newDialogRecommendation": "Nueva publicación: una recomendación"
+    "newDialogRecommendation": "Nueva publicación: una recomendación",
+    "newQuestionService": "Nueva pregunta · preguntando a quienes lo hacen"
   },
   "sinceVisit": {
     "badge": "Nueva",

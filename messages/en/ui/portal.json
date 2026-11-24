@@ -202,6 +202,9 @@
     "launch": "Neighbors · launch week: a pinned card and the neighborhood question",
     "unanswered": "Neighbors · asks waiting for an answer",
     "staffSamples": "Neighbors · staff view where members don't see sample posts",
+    "welcome": "Welcome for a new mover",
+    "welcomeEmpty": "Welcome · nothing nearby yet",
+    "welcomeClosing": "Welcome · closing",
     "openTasks": "Open tasks · the board inside Neighbors, by neighborhood",
     "openTasksFiltered": "Open tasks · the board's filters (price, time of day, few offers)",
     "openTasksByDay": "Open tasks · by the day they're on",
@@ -224,6 +227,19 @@
   "announcement": {
     "eyebrow": "From the TasksNearMe team",
     "dismiss": "Close this note"
+  },
+  "welcome": {
+    "eyebrow": "New here",
+    "title": "Welcome to {place}",
+    "intro": "Here are the helpers neighbors rate best and the tips they found most useful. Ask anything: neighbors and helpers who do the work answer.",
+    "empty": "No helpers or tips in {place} yet. Ask a question, and helpers who do the work nearby hear about it.",
+    "helpers": "Top-rated helpers nearby",
+    "tips": "Most helpful local tips",
+    "helpful": "{count, plural, one {# found it helpful} other {# found it helpful}}",
+    "ask": "Ask a question",
+    "dismiss": "Got it",
+    "dismissing": "Closing…",
+    "failed": "That didn't close. Try again."
   },
   "askArea": {
     "title": "Which neighborhood are you in?",

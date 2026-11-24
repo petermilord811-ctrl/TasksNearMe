@@ -258,6 +258,8 @@ export interface CommunityNewPostPageData extends CommunityComposerData {
   kind: CommunityPostKind;
   /** "Thank Sam on Neighbors" from a finished booking (plan 10.12): that booking, chosen. */
   bookingId?: string;
+  /** The service already chosen (2026-11-24): an ask with one reaches the helpers who do it nearby. */
+  categorySlug?: CategorySlug;
 }
 
 export const COMMUNITY_TITLE_MAX = 120;

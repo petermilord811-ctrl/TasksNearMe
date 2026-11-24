@@ -29,7 +29,8 @@ import { invites } from '@/modules/invites/schema';
 import { rebookProposals } from '@/modules/rebook/schema';
 import { outboxEvents } from '@/platform/outbox/schema';
 import { communityPosts, communityReplies } from '@/modules/community/schema';
-import { helpersForAsk } from '@/modules/community/ask-alerts';
+import { askAlertsEnabled, helpersForAsk } from '@/modules/community/ask-alerts';
+import { askAlertTypeFor } from '@/modules/community/domain';
 import { followNoticeKey } from '@/modules/community/domain';
 import { followersOf, mutedOf } from '@/modules/community/follows';
 import { areas, markets } from '@/modules/markets/schema';
@@ -179,11 +180,13 @@ async function plan(db: Db, event: EventRow, onlyUserId?: string): Promise<Plann
         if ((await mutedOf(db, post.id, [post.helperUserId])).size > 0) return [];
         return [{ userId: post.helperUserId, type: 'community_thanked', target, title: post.title, actorName: await nameOf(db, post.authorUserId) }];
       }
-      if (post.kind !== 'recommendation' || !post.categorySlug) return [];
+      // A recommendation request, or a question that picked a service ("Ask helpers who do this", 2026-11-24).
+      const askType = askAlertTypeFor(post);
+      if (!askType) return [];
       // Where it was asked: the neighborhood, or the city for a citywide post.
       const [area] = post.areaId ? await db.select({ name: areas.name }).from(areas).where(eq(areas.id, post.areaId)).limit(1) : await db.select({ name: markets.name }).from(markets).where(eq(markets.id, post.marketId)).limit(1);
       const helpers = await helpersForAsk(db, post, new Date(event.createdAt));
-      return helpers.map((userId) => ({ userId, type: 'community_ask_match' as const, target, title: post.title, params: { area: area?.name ?? '' } }));
+      return helpers.map((userId) => ({ userId, type: askType, target, title: post.title, params: { area: area?.name ?? '' } }));
     }
     // "Ask for help" made the thread a task (plan 10.12): the helpers neighbors named in it hear about it, unless a task
     // alert told them already.
@@ -897,6 +900,8 @@ export async function getAccountPage(db: Db, userId: string, returned: { connect
       }),
     ),
     helper: { status: (profile?.status as AccountPageData['helper']['status'] | undefined) ?? 'none' },
+    // "Neighbors asking about my services" (2026-11-24): for helpers who offer services (active or paused).
+    ...(profile?.status === 'active' || profile?.status === 'paused' ? { askAlerts: { enabled: await askAlertsEnabled(db, userId) } } : {}),
     privacy,
     ...(pushSetup() ? { push: pushSetup()! } : {}),
     language: localeOrDefault(user.locale),

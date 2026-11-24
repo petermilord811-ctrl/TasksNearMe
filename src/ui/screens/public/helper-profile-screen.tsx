@@ -1,5 +1,5 @@
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
-import { Check, Clock3, Flag, Hammer, Laptop, Leaf, MapPin, MessageCircle, Package, Sparkles, type LucideIcon, ThumbsUp } from 'lucide-react';
+import { Check, Clock3, Flag, Hammer, Laptop, Leaf, MapPin, MessageCircle, MessagesSquare, Package, Sparkles, type LucideIcon, ThumbsUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { CategorySlug, HelperContactAccess, HelperContactReveal, HelperProfilePageData, HelperServiceDetail, RevealHelperContactHandler } from '@/contracts';
 import { routes } from '@/contracts/routes';
@@ -8,6 +8,7 @@ import { useFormat } from '@/ui/lib/format';
 import { AvailabilitySlotList } from '@/ui/components/availability/availability-slot-list';
 import { HelperContactPanel } from '@/ui/components/people/helper-contact-panel';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
+import { NeighborsAnswers } from '@/ui/components/people/neighbors-answers';
 import { RatingStars } from '@/ui/components/people/rating-stars';
 import { SparksBadge } from '@/ui/components/people/sparks-badge';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
@@ -110,6 +111,10 @@ export function HelperProfileScreen({ data, contact, onRevealContact, initialCon
                 <ThumbsUp aria-hidden="true" className="mb-1 size-4 text-primary" />
                 <span>{t('recommendedBy', { count: helper.recommendedBy })}</span>
               </li>}
+              {data.neighborsAnswers && <li className="rounded-xl bg-muted/60 p-3">
+                <MessagesSquare aria-hidden="true" className="mb-1 size-4 text-primary" />
+                <span>{t('neighborsHelped', { count: data.neighborsAnswers.helpedCount })}</span>
+              </li>}
               {helper.responseTime !== undefined && <li className="rounded-xl bg-muted/60 p-3">
                 <Clock3 aria-hidden="true" className="mb-1 size-4 text-muted-foreground" />
                 <span>{t('responseTime', { range: helper.responseTime })}</span>
@@ -135,6 +140,8 @@ export function HelperProfileScreen({ data, contact, onRevealContact, initialCon
         <h2 id="helper-services-heading" className="font-display text-xl/7 font-semibold tracking-[-0.015em] md:text-[22px]/7.5">{t('services')}</h2>
         <ul className="grid gap-4 md:grid-cols-2">{data.services.map((service) => <ServiceCard key={service.categorySlug} service={service} />)}</ul>
       </section>
+
+      {data.neighborsAnswers && <NeighborsAnswers answers={data.neighborsAnswers} headingId="helper-answers-heading" />}
 
       {(data.tools.length > 0 || data.languages.length > 0) && (
         <div className="grid gap-6 md:grid-cols-2">

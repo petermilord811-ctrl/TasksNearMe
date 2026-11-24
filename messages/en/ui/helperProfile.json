@@ -35,8 +35,16 @@
     "samPhoto": "Sam, with a profile photo",
     "contactReveal": "Jordan · contact details for a top neighbor",
     "contactRevealed": "Jordan · contact details shown",
-    "contactLocked": "Jordan · contact details locked"
+    "contactLocked": "Jordan · contact details locked",
+    "answers": "Sam · answers on Neighbors"
   },
   "recommendedBy": "{count, plural, one {Recommended by # neighbor} other {Recommended by # neighbors}}",
-  "message": "Message {name}"
+  "message": "Message {name}",
+  "neighborsHelped": "{count, plural, one {Helped # neighbor} other {Helped # neighbors}} on Neighbors",
+  "neighborsAnswers": {
+    "title": "Answers on Neighbors",
+    "description": "{count, plural, one {Neighbors marked an answer of theirs helpful on # question.} other {Neighbors marked answers of theirs helpful on # questions.}}",
+    "askedIn": "Asked in {place}",
+    "helpful": "{count, plural, one {# found it helpful} other {# found it helpful}}"
+  }
 }

@@ -2,12 +2,13 @@
 
 import { useState, type MouseEvent, type ReactNode } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { ArrowLeft, Bookmark, BookmarkCheck, Check, Clock3, ExternalLink, Hammer, Languages, Laptop, Leaf, MapPin, MessageCircle, Package, RotateCcw, Sparkles, ThumbsUp, TriangleAlert, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, Bookmark, BookmarkCheck, Check, Clock3, ExternalLink, Hammer, Languages, Laptop, Leaf, MapPin, MessageCircle, MessagesSquare, Package, RotateCcw, Sparkles, ThumbsUp, TriangleAlert, type LucideIcon } from 'lucide-react';
 import { routes, type CategorySlug, type HelperPeekData, type HelperServiceDetail, type HelpPeekData, type LegalPeekData, type PeekData, type PeekTarget } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
 import { peekHref } from '@/shared/peek-links';
 import { ContentBlocks } from '@/ui/components/content/content-blocks';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
+import { NeighborsAnswers } from '@/ui/components/people/neighbors-answers';
 import { RatingStars } from '@/ui/components/people/rating-stars';
 import { SparksBadge } from '@/ui/components/people/sparks-badge';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
@@ -100,6 +101,7 @@ function HelperPeek({ data, onToggleSaved }: { data: HelperPeekData; onToggleSav
       <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-sm tabular-nums">
         <li className="inline-flex items-center gap-1.5"><Check aria-hidden="true" className="size-4 text-success" />{t('completed', { count: helper.completedCount })}</li>
         {helper.recommendedBy !== undefined && <li className="inline-flex items-center gap-1.5"><ThumbsUp aria-hidden="true" className="size-4 text-primary" />{t('recommendedBy', { count: helper.recommendedBy })}</li>}
+        {profile.neighborsAnswers && <li className="inline-flex items-center gap-1.5"><MessagesSquare aria-hidden="true" className="size-4 text-primary" />{t('neighborsHelped', { count: profile.neighborsAnswers.helpedCount })}</li>}
         {helper.responseTime !== undefined && <li className="inline-flex items-center gap-1.5"><Clock3 aria-hidden="true" className="size-4 text-muted-foreground" />{t('responseTime', { range: helper.responseTime })}</li>}
       </ul>
       <VerificationBadges badges={helper.badges} compact />
@@ -115,6 +117,7 @@ function HelperPeek({ data, onToggleSaved }: { data: HelperPeekData; onToggleSav
       <h3 className={sectionTitle}>{t('services')}</h3>
       <ul className="grid gap-2">{profile.services.map((service) => <ServiceLine key={service.categorySlug} service={service} />)}</ul>
     </section>}
+    {profile.neighborsAnswers && <NeighborsAnswers answers={profile.neighborsAnswers} headingId={`peek-answers-${helper.id}`} heading="h3" compact />}
     {latest && <section aria-label={peek('latestReview')} className="space-y-2">
       <h3 className={sectionTitle}>{peek('latestReview')}</h3>
       <ReviewCard review={latest} reportHref={routes.app.report('review', latest.id)} />

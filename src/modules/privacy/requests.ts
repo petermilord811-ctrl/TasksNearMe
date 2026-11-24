@@ -1,4 +1,4 @@
-import { communityAnnouncementDismissals, communityFollows, communityPosts, communityReactions, communityReplies } from '@/modules/community/schema';
+import { communityAnnouncementDismissals, communityFollows, communityPosts, communityReactions, communityReplies, communityWelcomes } from '@/modules/community/schema';
 import { messageReactions, savedReplies } from '@/modules/messaging/schema';
 import { taskQuestions } from '@/modules/questions/schema';
 import { savedSearches } from '@/modules/searches/schema';
@@ -418,6 +418,8 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     // What they followed and the cards they closed go (plan 10); their community photos go with their files below.
     await tx.delete(communityFollows).where(eq(communityFollows.userId, userId));
     await tx.delete(communityAnnouncementDismissals).where(eq(communityAnnouncementDismissals.userId, userId));
+    // Their latest move's welcome (2026-11-24): a neighborhood, like `home_area_id`.
+    await tx.delete(communityWelcomes).where(eq(communityWelcomes.userId, userId));
     const takenDown = await tx
       .update(communityReplies)
       .set({ status: 'removed', moderationReason: 'account_deleted', moderatedAt: now, updatedAt: now })

@@ -29,7 +29,7 @@ const requestClass = 'inline-flex min-h-8 shrink-0 items-center justify-center r
  * One helper who works in the place: their photo, name and checks, rating and neighbors' word, and Request. In the
  * rail the name and Request share the first line and the rest uses the card's whole width; in the Feed, a tile.
  */
-function HelperItem({ helper, layout }: { helper: PortalHelper; layout: 'rail' | 'tile' }) {
+export function HelperItem({ helper, layout }: { helper: PortalHelper; layout: 'rail' | 'tile' }) {
   const t = useTranslations('portal.rail');
   const card = useTranslations('helperCard');
   const name = <p className="flex min-w-0 items-center gap-1 text-sm font-semibold">

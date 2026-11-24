@@ -34,6 +34,7 @@ import { COMMUNITY_PHOTO_KIND } from './photos';
 import { getPortalMore, visibleFreshKeys } from './portal';
 import { communityViewerOf } from './request-viewer';
 import { NEIGHBORS_SAMPLES_COOKIE } from './samples';
+import { dismissWelcome } from './welcome';
 import {
   createCommunityPost,
   deleteOwnCommunityItem,
@@ -229,6 +230,15 @@ export async function dismissAnnouncementAction(input: { id: string }): Promise<
   const viewer = await communityViewer();
   if (!viewer) return { ok: false, code: 'not_allowed' };
   const result = await dismissAnnouncement(db, viewer.id, String(input?.id ?? ''), await requestNow());
+  if (result.ok) refresh();
+  return result;
+}
+
+/** "Got it" on the welcome for new movers (2026-11-24): closed for good, on every device. */
+export async function dismissWelcomeAction(input: { id: string }): Promise<ActionResult> {
+  const viewer = await communityViewer();
+  if (!viewer) return { ok: false, code: 'not_allowed' };
+  const result = await dismissWelcome(db, viewer, { id: String(input?.id ?? '') }, await requestNow());
   if (result.ok) refresh();
   return result;
 }

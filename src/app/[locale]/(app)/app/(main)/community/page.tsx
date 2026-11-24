@@ -10,6 +10,7 @@ import {
   createCommunityPostAction,
   deleteOwnCommunityItemAction,
   dismissAnnouncementAction,
+  dismissWelcomeAction,
   editCommunityItemAction,
   followCommunityPostAction,
   loadCommunityReactorsAction,
@@ -77,6 +78,7 @@ async function Portal({ searchParams }: Pick<PageProps<'/[locale]/app/community'
         onLoadReactors: loadCommunityReactorsAction,
         onSetArea: setCommunityAreaAction,
         onDismissAnnouncement: dismissAnnouncementAction,
+        ...(data.welcome ? { onDismissWelcome: dismissWelcomeAction } : {}),
         ...(data.samples ? { onShowSamples: setNeighborsSamplesAction } : {}),
         // "Verify your phone" in a dialog over the page (2026-11-23), while posting waits for it.
         ...(data.postBlocked === 'phone_required' ? { onStartPhoneChange: startPhoneChangeAction, onConfirmPhoneChange: confirmPhoneChangeAction } : {}),

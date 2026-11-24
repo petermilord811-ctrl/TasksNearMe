@@ -7,6 +7,7 @@ import {
   type CommunityReplyView,
   type PortalArea,
   type PortalFacets,
+  type NeighborsWelcomeView,
   type PortalHelper,
   type PortalItem,
   type PortalPageData,
@@ -545,3 +546,17 @@ export const portalSpanishData: PortalPageData = {
   ],
   totalCount: 5,
 };
+
+/** "Welcome to Mueller" (2026-11-24): Maya just moved here; the best-rated helpers nearby and the most helpful tips. */
+export const portalWelcome: NeighborsWelcomeView = {
+  id: 'mkt_austin:2026-11-16T18:00:00.000Z',
+  placeName: 'Mueller',
+  helpers: [...helpers].sort((a, b) => (b.rating?.average ?? 0) - (a.rating?.average ?? 0) || b.completedCount - a.completedCount),
+  tips: [
+    { id: fenceTip.id, title: fenceTip.title, helpfulCount: 9, areaName: 'Windsor Park' },
+    { id: tip.id, title: tip.title, helpfulCount: 5, areaName: 'Mueller' },
+  ],
+};
+export const portalWelcomeData: PortalPageData = { ...base, welcome: portalWelcome };
+/** A new account in a place with nothing yet: no helpers, no tips, the question to ask. */
+export const portalWelcomeEmptyData: PortalPageData = { ...portalEmptyData, welcome: { id: 'mkt_austin:joined', placeName: 'Austin', helpers: [], tips: [] } };

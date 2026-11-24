@@ -26,6 +26,7 @@ import {
   removePushSubscriptionAction,
   savePushSubscriptionAction,
   saveAccountProfileAction,
+  saveAskAlertsAction,
   saveNotificationPreferenceAction,
   saveQuietHoursAction,
 } from '@/modules/notifications/actions';
@@ -78,6 +79,7 @@ async function Account({ searchParams }: Pick<PageProps<'/[locale]/app/account'>
         onSaveProfile: saveAccountProfileAction,
         onSaveUsername: saveUsernameAction,
         onSavePreference: saveNotificationPreferenceAction,
+        ...(data.askAlerts ? { onSaveAskAlerts: saveAskAlertsAction } : {}),
         onRequestExport: requestDataExportAction,
         onRequestDeletion: requestAccountDeletionAction,
         onCancelDeletion: cancelAccountDeletionAction,

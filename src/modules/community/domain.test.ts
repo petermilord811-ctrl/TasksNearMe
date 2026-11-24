@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { marketDayKey, marketLocalToUtc } from '@/shared/format';
 import {
+  answerExcerpt,
+  askAlertsOn,
+  askAlertTypeFor,
+  isHomeMove,
+  WELCOME_DAYS,
+  welcomeDue,
   authorRole,
   bodyFits,
   bodyRequired,
@@ -244,5 +250,61 @@ describe('the demo marketplace on Neighbors (plan 10, D1)', () => {
     expect(shownUnder('real', 'cpo_demo_1')).toBe(false);
     expect(shownUnder('real', 'cpo_0123456789abcdef0123456789abcdef')).toBe(true);
     expect(shownUnder(undefined, 'cpo_demo_1')).toBe(true);
+  });
+});
+
+describe('helpers answer on Neighbors (2026-11-24)', () => {
+  it('alerts helpers about a recommendation request or a question with a service, nothing else', () => {
+    expect(askAlertTypeFor({ kind: 'recommendation', categorySlug: 'moving-help' })).toBe('community_ask_match');
+    expect(askAlertTypeFor({ kind: 'question', categorySlug: 'moving-help' })).toBe('community_question_match');
+    expect(askAlertTypeFor({ kind: 'question', categorySlug: null })).toBeNull();
+    expect(askAlertTypeFor({ kind: 'tip', categorySlug: 'moving-help' })).toBeNull();
+    expect(askAlertTypeFor({ kind: 'general', categorySlug: 'moving-help' })).toBeNull();
+  });
+
+  it('keeps ask alerts on until a helper turns them off', () => {
+    expect(askAlertsOn(undefined)).toBe(true);
+    expect(askAlertsOn('true')).toBe(true);
+    expect(askAlertsOn('false')).toBe(false);
+  });
+
+  it('shortens an answer on whole words', () => {
+    expect(answerExcerpt('  Short   answer.\nThanks! ')).toBe('Short answer. Thanks!');
+    const long = 'Call the county first, they pick up bulky items on Tuesdays if you book by Friday, and the fee is small. '.repeat(3);
+    const excerpt = answerExcerpt(long, 80);
+    expect(excerpt.length).toBeLessThanOrEqual(80);
+    expect(excerpt.endsWith('…')).toBe(true);
+    expect(long.startsWith(excerpt.slice(0, -1))).toBe(true);
+    expect(excerpt).not.toMatch(/[ ,]…$/);
+  });
+});
+
+describe('the welcome for new movers (2026-11-24)', () => {
+  const now = new Date('2026-11-24T15:00:00Z');
+  const daysAgo = (days: number) => new Date(now.getTime() - days * 86_400_000);
+  const moved = (patch: Partial<{ marketId: string; areaId: string | null; movedAt: Date; dismissedAt: Date | null }> = {}) => ({ marketId: 'mkt_gainesville', areaId: 'are_duckpond', movedAt: daysAgo(2), dismissedAt: null, ...patch });
+
+  it('welcomes a new account to its market, not an old one', () => {
+    expect(welcomeDue({ record: null, marketId: 'mkt_gainesville', accountCreatedAt: daysAgo(1), now })).toEqual({ id: 'mkt_gainesville:joined' });
+    expect(welcomeDue({ record: null, marketId: 'mkt_gainesville', accountCreatedAt: daysAgo(WELCOME_DAYS + 1), now })).toBeNull();
+  });
+
+  it('shows a move until it is closed or old', () => {
+    expect(welcomeDue({ record: moved(), marketId: 'mkt_gainesville', accountCreatedAt: daysAgo(400), now })).toEqual({ id: `mkt_gainesville:${daysAgo(2).toISOString()}` });
+    expect(welcomeDue({ record: moved({ dismissedAt: daysAgo(1) }), marketId: 'mkt_gainesville', accountCreatedAt: daysAgo(400), now })).toBeNull();
+    expect(welcomeDue({ record: moved({ movedAt: daysAgo(WELCOME_DAYS + 1) }), marketId: 'mkt_gainesville', accountCreatedAt: daysAgo(400), now })).toBeNull();
+  });
+
+  it('welcomes someone whose market changed since their last welcome, even one they closed', () => {
+    expect(welcomeDue({ record: moved({ dismissedAt: daysAgo(1) }), marketId: 'mkt_austin', accountCreatedAt: daysAgo(400), now })).toEqual({ id: 'mkt_austin:moved' });
+  });
+
+  it('counts a new market or another neighborhood as a move, never forgetting one', () => {
+    const before = { marketId: 'mkt_gainesville', areaId: 'are_duckpond' };
+    expect(isHomeMove(before, { marketId: 'mkt_gainesville', areaId: 'are_springhill' })).toBe(true);
+    expect(isHomeMove({ ...before, areaId: null }, before)).toBe(true);
+    expect(isHomeMove(before, { marketId: 'mkt_austin', areaId: null })).toBe(true);
+    expect(isHomeMove(before, before)).toBe(false);
+    expect(isHomeMove(before, { marketId: 'mkt_gainesville', areaId: null })).toBe(false);
   });
 });

@@ -192,6 +192,7 @@
     "group": "Account",
     "client": "Client account",
     "helper": "Helper account",
+    "askAlertsOff": "Helper · ask alerts off",
     "new": "New account",
     "saving": "Saving profile",
     "validationFailed": "Profile validation failed",
@@ -286,6 +287,15 @@
     "on": "On: they see “Active now” or “Active today”, and two blue ticks on messages they've read.",
     "off": "Off: nobody sees your activity, and you don't see theirs.",
     "hint": "Only people you share a conversation or booking with ever see it, never exact times, and never on your public profile.",
+    "failed": "That didn't save. Try again."
+  },
+  "askAlerts": {
+    "title": "Neighbors asking about your services",
+    "description": "When a neighbor near you asks who to hire, or asks a question, in one of your services.",
+    "label": "Tell me when neighbors ask",
+    "on": "On: up to 3 asks a day, in the app and on your devices.",
+    "off": "Off: you won't hear about neighbors' asks. You can still answer anything on Neighbors.",
+    "hint": "Emails and texts about them follow Community above.",
     "failed": "That didn't save. Try again."
   },
   "notMe": {
