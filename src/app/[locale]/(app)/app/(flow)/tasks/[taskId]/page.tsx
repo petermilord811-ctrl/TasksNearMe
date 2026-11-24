@@ -21,6 +21,7 @@ import { TaskManageScreen } from '@/ui/screens/tasks';
 import { requestNow } from '@/platform/clock';
 import { TaskManageSkeleton } from '@/ui/screens/tasks/task-detail-skeletons';
 import { appPageMetadata } from '@/i18n/metadata';
+import { taskMapFor } from '@/modules/task-map/service';
 
 export async function generateMetadata(): Promise<Metadata> {
   return appPageMetadata('task');
@@ -44,12 +45,18 @@ async function ManageTask({ params }: Pick<PageProps<'/[locale]/app/tasks/[taskI
     ? await Promise.all([getTaskOwnerView(deps, viewer.user.id, taskId, now), invitesForTask(db, bookingDeps()?.payments ?? null, viewer.user.id, taskId, now)])
     : [null, []];
   if (!data) notFound();
-  const [questions, discussion] = await Promise.all([getTaskQuestions(db, { id: viewer.user.id, staff: staffActorOf(viewer.user) }, taskId, now), communityPostOfTask(db, taskId)]);
+  const [questions, discussion, map] = await Promise.all([
+    getTaskQuestions(db, { id: viewer.user.id, staff: staffActorOf(viewer.user) }, taskId, now),
+    communityPostOfTask(db, taskId),
+    // The task map: the area as helpers see it, the weather for the task and what's around.
+    taskMapFor(db, { task: data.task, viewer: { kind: 'poster', userId: viewer.user.id }, now }),
+  ]);
   return (
     <div className="space-y-6">
     <TaskManageScreen
       data={{ ...data, invites }}
       now={now.toISOString()}
+      map={map}
       inviteHandlers={inviteHandlers}
       handlers={{
         onOfferAction: posterOfferAction,

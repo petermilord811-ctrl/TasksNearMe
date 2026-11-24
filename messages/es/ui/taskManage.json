@@ -66,5 +66,6 @@
     "allowance": "Tarea con asignación para gastos",
     "push-prompt": "Esperando ofertas, con notificaciones sugeridas",
     "loading": "Una tarea · cargando"
-  }
+  },
+  "where": "Dónde la ven los ayudantes"
 }

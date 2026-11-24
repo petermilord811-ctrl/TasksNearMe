@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ArrowLeft, CalendarDays, CheckCircle2, ChevronRight, Hammer, Hourglass, Laptop, Leaf, Package, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type ActionResult, type CategorySlug, type InviteHandlers, type ISODateTime, type OfferStatus, type TaskOwnerHandlers, type TaskOwnerView } from '@/contracts';
+import { routes, type ActionResult, type CategorySlug, type InviteHandlers, type ISODateTime, type OfferStatus, type TaskOwnerHandlers, type TaskOwnerView, type TaskMapBundle } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
@@ -21,6 +21,8 @@ export interface TaskManageScreenProps {
   now: ISODateTime;
   /** Supplied by routes that include direct invites. */
   inviteHandlers?: InviteHandlers;
+  /** The task map (its area as helpers see it, the weather for the task and what's around). */
+  map?: TaskMapBundle | null;
   /** Preview-only starting state. */
   initialSelectedOfferIds?: string[];
   initialCancelOpen?: boolean;
@@ -32,7 +34,7 @@ const categoryIcons: Record<CategorySlug, LucideIcon> = { 'furniture-assembly': 
 /** Offers the client can still act on, or the one they booked; expired, declined and withdrawn ones are earlier. */
 const CURRENT_OFFER_STATUSES: ReadonlySet<OfferStatus> = new Set(['pending', 'stale', 'accepted']);
 
-export function TaskManageScreen({ data, handlers, inviteHandlers, now, initialSelectedOfferIds, initialCancelOpen, initialCancelResult }: TaskManageScreenProps) {
+export function TaskManageScreen({ data, handlers, inviteHandlers, now, initialSelectedOfferIds, initialCancelOpen, initialCancelResult, map }: TaskManageScreenProps) {
   const { formatDate, formatDateTime, formatRelative, formatTimeRange, dayKey } = useFormat();
   const t = useTranslations('taskManage');
   const card = useTranslations('taskCard');
@@ -84,6 +86,6 @@ export function TaskManageScreen({ data, handlers, inviteHandlers, now, initialS
         <ul className="mt-3 grid min-w-0 gap-4 lg:grid-cols-2">{earlier.map((offer) => <li key={offer.id} className="min-w-0"><OfferCard offer={offer} now={now} onAction={handlers.onOfferAction} /></li>)}</ul>
       </details>}
     </section>}
-    <TaskDetails data={data} />
+    <TaskDetails data={data} map={map} />
   </div>;
 }

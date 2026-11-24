@@ -48,6 +48,7 @@ export * from './admin-people';
 export * from './admin-verification';
 export * from './admin-support-tools';
 export * from './analytics';
+export * from './task-map';
 export * from './badges';
 export * from './helper-standing';
 export * from './admin-webhooks';

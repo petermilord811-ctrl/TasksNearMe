@@ -66,5 +66,6 @@
     "allowance": "Task with an expense allowance",
     "push-prompt": "Waiting for offers, with notifications offered",
     "loading": "A task · loading"
-  }
+  },
+  "where": "Where helpers see it"
 }

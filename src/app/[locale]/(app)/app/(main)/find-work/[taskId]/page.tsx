@@ -19,6 +19,7 @@ import { PageSkeleton } from '@/ui/components';
 import { HelperTaskScreen } from '@/ui/screens/work';
 import { requestNow } from '@/platform/clock';
 import { appPageMetadata } from '@/i18n/metadata';
+import { taskMapFor } from '@/modules/task-map/service';
 
 export async function generateMetadata(): Promise<Metadata> {
   return appPageMetadata('findWorkTask');
@@ -39,11 +40,14 @@ async function HelperTask({ params }: Pick<PageProps<'/[locale]/app/find-work/[t
   const now = await requestNow();
   const [data, botCheck, questions, discussion] = await Promise.all([getHelperTaskView(db, viewer.user.id, taskId, now), botCheckForPage(), getTaskQuestions(db, { id: viewer.user.id, staff: staffActorOf(viewer.user) }, taskId, now), communityPostOfTask(db, taskId)]);
   if (!data) notFound();
+  // The task map: the trip from the helper's home neighborhood or where they are, the weather, what's around, tasks nearby.
+  const map = await taskMapFor(db, { task: data.task, viewer: { kind: 'helper', userId: viewer.user.id }, now });
   return (
     <div className="space-y-6">
     <HelperTaskScreen
       data={botCheck ? { ...data, botCheck } : data}
       now={now.toISOString()}
+      map={map}
       handlers={{
         onQuote: quoteOfferAction,
         onDraftOfferMessage: draftOfferMessageAction.bind(null, taskId),

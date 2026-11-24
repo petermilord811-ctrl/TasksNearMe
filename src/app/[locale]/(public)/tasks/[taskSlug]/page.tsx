@@ -1,5 +1,6 @@
 import { withClientMessages } from '@/i18n/client-messages';
 import { publicTaskDetailsFor } from '@/modules/tasks/public-details';
+import { taskMapFor, taskMapViewer } from '@/modules/task-map/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import type { Metadata } from 'next';
@@ -70,12 +71,15 @@ async function PublicTaskPage({ params }: PageProps<'/[locale]/tasks/[taskSlug]'
 }
 
 async function PublicTask({ slug }: { slug: string }) {
-  const [page, viewer] = await Promise.all([requestRows().then((rows) => getPublicTaskPageData(slug, rows)), getViewer()]);
+  const [{ rows, page }, viewer] = await Promise.all([requestRows().then(async (rows) => ({ rows, page: await getPublicTaskPageData(slug, rows) })), getViewer()]);
   // A sample task for the public. The page is already streaming, so this answers 200 with noindex (Next adds it).
   if (!page) notFound();
   // The full description, answers and photos for a helper who can offer and for the poster (never cached with the page).
-  const extra = await publicTaskDetailsFor(db, page.data.task.id, viewer.kind === 'user' ? viewer.user.id : null);
-  return <MarketTime timeZone={page.data.market.timeZone}><PublicTaskScreen data={{ ...page.data, ...extra }} now={page.now} /></MarketTime>;
+  const viewerId = viewer.kind === 'user' ? viewer.user.id : null;
+  const extra = await publicTaskDetailsFor(db, page.data.task.id, viewerId);
+  // The task map: the area, the trip there, the weather for its time and what's around (the last two stream in).
+  const map = await taskMapFor(db, { task: page.data.task, viewer: taskMapViewer(extra.viewer ?? 'visitor', viewerId), now: new Date(page.now), rows });
+  return <MarketTime timeZone={page.data.market.timeZone}><PublicTaskScreen data={{ ...page.data, ...extra }} now={page.now} map={map} /></MarketTime>;
 }
 
 export default withClientMessages('[locale]/(public)/tasks/[taskSlug]/page.tsx', PublicTaskPage);

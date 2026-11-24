@@ -2,12 +2,13 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ArrowLeft, BarChart3, CalendarDays, CircleDollarSign, Flag, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type ActionResult, type HelperTaskView, type HelperWorkHandlers, type ISODateTime } from '@/contracts';
+import { routes, type ActionResult, type HelperTaskView, type HelperWorkHandlers, type ISODateTime, type TaskMapBundle } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
 import { WideRouteDialog } from '@/ui/components/layout/wide-route-dialog';
 import { GeneralArea } from '@/ui/components/location/general-area';
+import { TaskMapPanel } from '@/ui/components/map/task-map-panel';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
 import { buttonVariants } from '@/ui/primitives/button';
@@ -22,12 +23,14 @@ export interface HelperTaskScreenProps {
   now: ISODateTime;
   /** Previews and tests: the drawn map only. */
   liveMap?: boolean;
+  /** The task map (its area, the trip there, the weather and what's around); the area's plain map without it. */
+  map?: TaskMapBundle | null;
   /** Preview-only starting state. */
   initialRevising?: boolean;
   initialResult?: ActionResult;
 }
 
-export function HelperTaskScreen({ data, handlers, now, initialRevising, initialResult, liveMap = true }: HelperTaskScreenProps) {
+export function HelperTaskScreen({ data, handlers, now, initialRevising, initialResult, liveMap = true, map }: HelperTaskScreenProps) {
   const t = useTranslations('helperTask');
   return <div className="mx-auto min-w-0 max-w-reading space-y-6">
     <header className="space-y-3">
@@ -35,7 +38,7 @@ export function HelperTaskScreen({ data, handlers, now, initialRevising, initial
       <TaskKind data={data} now={now} />
       <h1 className="font-display text-[1.75rem]/9 font-semibold tracking-[-0.02em] text-balance [overflow-wrap:anywhere] md:text-[2rem]/10">{data.task.title}</h1>
     </header>
-    <HelperTaskBody data={data} handlers={handlers} now={now} initialRevising={initialRevising} initialResult={initialResult} liveMap={liveMap} />
+    <HelperTaskBody data={data} handlers={handlers} now={now} initialRevising={initialRevising} initialResult={initialResult} liveMap={liveMap} map={map} />
   </div>;
 }
 
@@ -45,7 +48,7 @@ export function HelperTaskScreen({ data, handlers, now, initialRevising, initial
  * from here, and the task's questions and its Neighbors post follow it (`children`). The area's drawn map: a live one
  * in a dialog would take the scroll from it.
  */
-export function HelperTaskDialogScreen({ data, handlers, now, initialRevising, initialResult, children }: Omit<HelperTaskScreenProps, 'liveMap'> & { children?: ReactNode }) {
+export function HelperTaskDialogScreen({ data, handlers, now, initialRevising, initialResult, children }: Omit<HelperTaskScreenProps, 'liveMap' | 'map'> & { children?: ReactNode }) {
   return <>
     <WideRouteDialog />
     <RouteDialogHeader title={data.task.title}><TaskKind data={data} now={now} /></RouteDialogHeader>
@@ -68,7 +71,7 @@ function TaskKind({ data, now }: { data: HelperTaskView; now: ISODateTime }) {
 }
 
 /** What decides an offer, the photos, the task in the client's words, the area, the client, then the offer. */
-function HelperTaskBody({ data, handlers, now, initialRevising, initialResult, liveMap = true }: HelperTaskScreenProps) {
+function HelperTaskBody({ data, handlers, now, initialRevising, initialResult, liveMap = true, map }: HelperTaskScreenProps) {
   const { formatDate, formatMonthYear, formatTimeRange, dayKey } = useFormat();
   const t = useTranslations('helperTask');
   const report = useTranslations('report');
@@ -104,8 +107,12 @@ function HelperTaskBody({ data, handlers, now, initialRevising, initialResult, l
     </section>}
     <section aria-labelledby="helper-task-where" className="space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
       <h2 id="helper-task-where" className="font-display text-lg font-semibold">{t('where')}</h2>
-      <GeneralArea location={task.location} showMap liveMap={liveMap} />
-      {task.location.kind === 'local' && <p className="flex items-start gap-2 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('privacy')}</p>}
+      {map && task.location.kind === 'local'
+        ? <><GeneralArea location={task.location} privacyNote={false} /><TaskMapPanel map={map} {...(liveMap ? {} : { live: false })} /></>
+        : <>
+          <GeneralArea location={task.location} showMap liveMap={liveMap} />
+          {task.location.kind === 'local' && <p className="flex items-start gap-2 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('privacy')}</p>}
+        </>}
     </section>
     <section aria-labelledby="helper-task-client" className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
       <h2 id="helper-task-client" className="font-display text-lg font-semibold">{t('posterTitle')}</h2>

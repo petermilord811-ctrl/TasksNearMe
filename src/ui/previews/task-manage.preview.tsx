@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
 import { routes, type AppShellHandlers, type PreviewEntry, type TaskOwnerHandlers, type TaskOwnerView } from '@/contracts';
-import { bookAgainOwnerView, bookshelfOwnerWithInviteView, deskOwnerView, deskOwnerNoOffersView, deskOwnerStaleView, deskOwnerBookedView, deskOwnerExpiredView, deskOwnerSomeExpiredView, remoteOwnerView, fakeHandler, fakeInviteHandlers, mayaShell, movingDraft, samplePushSetup } from '@/fixtures';
+import { bookAgainOwnerView, bookshelfOwnerWithInviteView, deskOwnerView, deskOwnerNoOffersView, deskOwnerStaleView, deskOwnerBookedView, deskOwnerExpiredView, deskOwnerSomeExpiredView, remoteOwnerView, fakeHandler, fakeInviteHandlers, mayaShell, movingDraft, samplePushSetup, taskMapLaterBundle } from '@/fixtures';
 import { TaskManageScreen } from '@/ui/screens/tasks/task-manage-screen';
 import { AppShell } from '@/ui/shells/app-shell';
 import copy from '../../../messages/en/ui/taskManage.json';
@@ -30,7 +30,7 @@ export const taskManagePreviews: PreviewEntry[] = [
     id: 'screen-task-owner/book-again', group: copy.previews.group, title: copy.previews.bookAgain, layout: 'fullscreen',
     render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.task(bookAgainOwnerView.task.id)} layout="flow"><TaskManageScreen data={bookAgainOwnerView} handlers={handlers} inviteHandlers={fakeInviteHandlers} now="2026-12-08T17:00:00.000Z" /></AppShell>,
   },
-  preview('offers', deskOwnerView),
+  preview('offers', deskOwnerView, { map: taskMapLaterBundle }),
   preview('expired-offers', deskOwnerExpiredView),
   preview('some-expired', deskOwnerSomeExpiredView),
   preview('no-offers', deskOwnerNoOffersView),

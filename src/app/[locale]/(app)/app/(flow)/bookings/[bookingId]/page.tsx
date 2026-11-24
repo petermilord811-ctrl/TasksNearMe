@@ -22,6 +22,8 @@ import { BookingHubScreen } from '@/ui/screens/bookings';
 import { requestNow } from '@/platform/clock';
 import { BookingHubSkeleton } from '@/ui/screens/bookings/booking-hub-skeleton';
 import { appPageMetadata } from '@/i18n/metadata';
+import { taskMapFor } from '@/modules/task-map/service';
+import { db } from '@/platform/db/client';
 
 export async function generateMetadata(): Promise<Metadata> {
   return appPageMetadata('booking');
@@ -42,10 +44,13 @@ async function Booking({ params }: Pick<PageProps<'/[locale]/app/bookings/[booki
   const now = await requestNow();
   const data = await getBookingView(hubDeps(), viewer.user.id, bookingId, now);
   if (!data) notFound();
+  // The task map: the trip there (the helper's from home or where they are), the weather for the booking, what's around.
+  const map = await taskMapFor(db, { task: { ...data.task, location: data.location }, viewer: { kind: data.viewerRole, userId: viewer.user.id }, now });
   return (
     <BookingHubScreen
       data={data}
       now={now.toISOString()}
+      map={map}
       handlers={{ onAction: bookingActionHandler.bind(null, bookingId) }}
       sheets={{
         onPreviewCancel: previewCancelAction.bind(null, bookingId),

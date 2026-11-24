@@ -4,8 +4,7 @@ import { useTranslations } from 'next-intl';
 import {
   routes, type ActionResult, type BadgeTone, type BookingActionId, type BookingHubHandlers,
   type BookingPaymentLine, type BookingSheetHandlers, type BookingTipHandlers, type BookingView, type ISODateTime,
-  type ScheduledPaymentHandlers,
-} from '@/contracts';
+  type ScheduledPaymentHandlers, type TaskMapBundle } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { CompletionSummary } from '@/ui/components/bookings/completion-summary';
@@ -13,6 +12,7 @@ import { backArrow, backLink, note, sectionTitle, surface, surfacePad } from '@/
 import { PageHeader } from '@/ui/components/layout/page-header';
 import { ExactAddressPanel } from '@/ui/components/location/exact-address-panel';
 import { GeneralArea } from '@/ui/components/location/general-area';
+import { TaskMapPanel } from '@/ui/components/map/task-map-panel';
 import { PriceBreakdown } from '@/ui/components/money/price-breakdown';
 import { PaymentMethodLabel } from '@/ui/components/payments';
 import { HelperCard } from '@/ui/components/people/helper-card';
@@ -41,6 +41,8 @@ export interface BookingHubScreenProps {
   /** A booking paid later (`scheduled`): the client pays now. Without it the card only says when it's charged. */
   scheduledPayment?: ScheduledPaymentHandlers;
   now: ISODateTime;
+  /** The task map (the area, the trip there, the weather for the booking and what's around). */
+  map?: TaskMapBundle | null;
 }
 
 export function BookingHubScreen({ sheets, ...props }: BookingHubScreenProps) {
@@ -119,7 +121,7 @@ function BookingPayment({ payment }: { payment: BookingPaymentLine }) {
 }
 
 /** Initial result/pending states belong to the preview gallery. App pages use BookingHubScreen. */
-export function BookingHubContent({ data, handlers, sheets, tip, scheduledPayment, now, initialResult, initialPending, tipPreview, scheduledPreview }: Omit<BookingHubScreenProps, 'sheets'> & {
+export function BookingHubContent({ data, handlers, sheets, tip, scheduledPayment, now, initialResult, initialPending, tipPreview, scheduledPreview, map }: Omit<BookingHubScreenProps, 'sheets'> & {
   sheets: BookingSheetHandlers;
   initialResult?: ActionResult;
   initialPending?: BookingActionId;
@@ -231,6 +233,7 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
           </div>
         </dl>
         <div className="border-t border-foreground/[0.07] pt-5 dark:border-white/[0.07]"><GeneralArea location={data.location} privacyNote={!(data.addressVisibility === 'visible' && data.exactAddress)} /></div>
+        {map && <TaskMapPanel map={map} />}
         {data.addressVisibility !== 'visible' && <p className="flex items-start gap-2 rounded-2xl bg-muted/70 px-3.5 py-3 text-sm">
           <Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" /><span>{t(`address.${data.addressVisibility}`)}</span>
         </p>}

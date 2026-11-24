@@ -1,13 +1,14 @@
 import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type TaskOwnerView } from '@/contracts';
+import { routes, type TaskMapBundle, type TaskOwnerView } from '@/contracts';
 import { formatMoney } from '@/shared/format';
 import { ExactAddressPanel } from '@/ui/components/location/exact-address-panel';
+import { TaskMapPanel } from '@/ui/components/map/task-map-panel';
 import { RichText } from '@/ui/components/rich-text/rich-text';
 import { TaskPhotoCarousel } from '@/ui/components/tasks/task-photo-carousel';
 import { TaskSpec } from '@/ui/components/tasks/task-spec';
 
-export function TaskDetails({ data }: { data: TaskOwnerView }) {
+export function TaskDetails({ data, map }: { data: TaskOwnerView; map?: TaskMapBundle | null }) {
   const t = useTranslations('taskManage');
   return <section aria-labelledby="your-task-title">
     <details open className="group overflow-hidden rounded-[1.375rem] border border-foreground/[0.07] bg-card shadow-card dark:border-white/[0.06]">
@@ -17,6 +18,7 @@ export function TaskDetails({ data }: { data: TaskOwnerView }) {
         <div className="space-y-3"><h3 className="font-semibold">{t('details')}</h3><TaskSpec category={data.task.categorySlug} answers={data.details} /></div>
         {data.photos.length > 0 && <div className="space-y-3"><h3 className="font-semibold">{t('photos')}</h3><TaskPhotoCarousel photos={data.photos} posterName={data.task.poster.displayName} /></div>}
         <div className="space-y-2"><h3 className="font-semibold">{t('allowance')}</h3>{data.expenseAllowance ? <><p className="font-semibold tabular-nums">{formatMoney(data.expenseAllowance.amountCents)}</p><p className="break-words text-sm">{data.expenseAllowance.description}</p></> : <p className="text-sm text-muted-foreground">{t('noAllowance')}</p>}</div>
+        {map && <div className="space-y-3"><h3 className="font-semibold">{t('where')}</h3><TaskMapPanel map={map} /></div>}
         {data.exactAddress && <ExactAddressPanel address={data.exactAddress} mapsHref={routes.external.googleMapsSearch(data.exactAddress)} />}
         {data.task.location.kind === 'remote' ? <p className="text-sm text-muted-foreground">{t('remoteAddress')}</p> : !data.bookingId && <p className="text-sm text-muted-foreground">{t('privacy')}</p>}
       </div>

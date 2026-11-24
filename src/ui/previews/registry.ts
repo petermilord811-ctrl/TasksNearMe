@@ -23,6 +23,7 @@ import { betaPreviews } from './beta.preview';
 import { waitlistPreviews } from './waitlist.preview';
 import { contentPreviews } from './content.preview';
 import { taskPagePreviews } from './task-pages.preview';
+import { taskMapPreviews } from './task-map.preview';
 import { helperProfilePreviews } from './helper-profile.preview';
 import { reviewsWorkSamplesPreviews } from './reviews-work-samples.preview';
 import { postingPreviews } from './posting.preview';
@@ -113,6 +114,7 @@ export const previews: PreviewEntry[] = [
   ...waitlistPreviews,
   ...contentPreviews,
   ...taskPagePreviews,
+  ...taskMapPreviews,
   ...helperProfilePreviews,
   ...reviewsWorkSamplesPreviews,
   ...postingPreviews,

@@ -1,0 +1,126 @@
+{
+  "map": {
+    "label": "Mapa de {area}: la zona general de la tarea",
+    "expand": "Abrir mapa",
+    "dialogDescription": "La zona general de la tarea, el trayecto hasta allí y lo que hay alrededor.",
+    "privacy": "El círculo es la zona general. La dirección exacta solo se comparte cuando alguien queda reservado.",
+    "layers": "Qué muestra el mapa",
+    "threeD": "Edificios en 3D",
+    "places": "Lugares",
+    "tasks": "Tareas cercanas",
+    "origin": "Estás aquí",
+    "home": "Tu zona de casa",
+    "task": "Tarea abierta: {title}, {price}, a {miles} mi"
+  },
+  "trip": {
+    "title": "Cómo llegar",
+    "from": "Salir desde",
+    "fromDevice": "Mi ubicación",
+    "fromHome": "Casa: {area}",
+    "use": "Usar mi ubicación",
+    "useBody": "Mira cuánto se tarda en auto, en bici y a pie desde donde estás. Tu ubicación no sale de este dispositivo.",
+    "locating": "Buscándote…",
+    "denied": "La ubicación está desactivada para este sitio. Actívala en la configuración del sitio de tu navegador para ver el trayecto desde donde estás.",
+    "unavailable": "No pudimos encontrar tu ubicación.",
+    "retry": "Intentar de nuevo",
+    "modesLabel": "Cómo llegarías",
+    "modes": {
+      "drive": "Auto",
+      "bike": "Bici",
+      "walk": "A pie"
+    },
+    "minutes": "{hours, plural, =0 {{minutes} min} other {# h{minutes, plural, =0 {} other { # min}}}}",
+    "miles": "{miles} mi",
+    "estimate": "Estimaciones hasta el centro de la zona, calculadas en este dispositivo. La dirección está en algún lugar del círculo.",
+    "estimateHome": "Del centro de {area} al centro de la zona de la tarea: estimaciones calculadas en este dispositivo.",
+    "rush": "Empieza a las {time} en un día laborable: calcula unos {minutes} min por la hora pico."
+  },
+  "weather": {
+    "title": "El clima para la tarea",
+    "conditions": {
+      "clear": "Despejado",
+      "partly-cloudy": "Parcialmente nublado",
+      "cloudy": "Nublado",
+      "fog": "Niebla",
+      "drizzle": "Llovizna",
+      "rain": "Lluvia",
+      "showers": "Chubascos",
+      "thunderstorm": "Tormentas",
+      "snow": "Nieve",
+      "sleet": "Aguanieve",
+      "wind": "Ventoso",
+      "haze": "Bruma"
+    },
+    "range": "{low}°–{high}°F",
+    "single": "{temp}°F",
+    "rain": "Lluvia {chance}%",
+    "feelsLike": "Sensación de {temp}°",
+    "wind": "Viento de hasta {mph} mph",
+    "sunset": "Atardecer {time}",
+    "hourly": "Hora por hora",
+    "hour": "{time}: {temp}°F, {condition}, {chance}% de probabilidad de lluvia",
+    "flags": {
+      "heat": "Trabajo con calor: lleva agua y planea descansos a la sombra.",
+      "cold": "Hace frío: vístete en capas.",
+      "rain": "Es probable que llueva: pregunta por un lugar techado u otro horario.",
+      "storm": "Puede haber tormentas: el trabajo al aire libre podría tener que pausarse.",
+      "wind": "Hay viento: asegura las cosas sueltas y las cargas ligeras.",
+      "dark": "El atardecer es a las {time} y el horario sigue después de oscurecer: lleva una linterna."
+    },
+    "alerts": "Alertas del clima",
+    "until": "hasta {time}",
+    "later": "El pronóstico llega a una semana: el clima de esta tarea aparece desde el {from}.",
+    "unavailable": "El pronóstico no está disponible ahora.",
+    "source": "Pronóstico: Servicio Meteorológico Nacional",
+    "sample": "Pronóstico de muestra (desarrollo)"
+  },
+  "around": {
+    "title": "Alrededor de la zona",
+    "landmarks": "Puntos de referencia",
+    "forJob": "Útil para este trabajo",
+    "kinds": {
+      "hardware": "Ferretería",
+      "garden": "Vivero",
+      "truck-rental": "Alquiler de camiones",
+      "storage": "Bodegas de almacenaje",
+      "recycling": "Reciclaje y descarte",
+      "donation": "Donaciones y segunda mano",
+      "supermarket": "Supermercado",
+      "electronics": "Tienda de electrónica",
+      "fuel": "Gasolinera",
+      "park": "Parque",
+      "school": "Escuela",
+      "university": "Universidad",
+      "hospital": "Hospital",
+      "library": "Biblioteca",
+      "mall": "Centro comercial"
+    },
+    "miles": "{miles} mi",
+    "place": "{kind}: {name}, {miles} mi",
+    "homes": {
+      "houses": "Sobre todo casas",
+      "apartments": "Sobre todo edificios de apartamentos",
+      "mixed": "Casas y edificios de apartamentos"
+    },
+    "parking": "{count, plural, =0 {Sin estacionamientos: se estaciona en la calle} one {# estacionamiento en la zona} other {# estacionamientos en la zona}}",
+    "unavailable": "Los lugares alrededor de la zona no están disponibles ahora.",
+    "source": "Lugares: © colaboradores de OpenStreetMap",
+    "sample": "Lugares de muestra (desarrollo)"
+  },
+  "nearby": {
+    "title": "{count, plural, one {# tarea abierta más cerca} other {# tareas abiertas más cerca}}",
+    "body": "Dos tareas, un solo viaje.",
+    "away": "A {miles} mi de esta",
+    "sameDay": "El mismo día",
+    "hourly": "{rate}/h"
+  },
+  "previews": {
+    "group": "Mapa de la tarea",
+    "helper": "Ayudante desde casa, día caluroso con alerta, tareas cercanas",
+    "storm": "Visitante, tarde de tormenta",
+    "indoor": "Trabajo bajo techo: el clima breve",
+    "later": "Pronóstico aún no disponible, lugares no disponibles",
+    "dark": "El horario sigue después del atardecer",
+    "unavailable": "Pronóstico no disponible"
+  }
+}

@@ -18,8 +18,7 @@ import {
   deskBookingPosterWithOpenChange, deskBookingHelperWithOpenChange,
   deskBookingHelperTipped, deskBookingPosterTipAvailable, deskBookingPosterTipped, fakeBookingTipHandlers,
   deskBookingPosterScheduled, fakeScheduledPaymentHandlers, mayaBookingsWithRegularData, yardVisitNoCardPoster,
-  yardVisitPaymentDueHelper, yardVisitPaymentDuePoster, yardVisitScheduledHelper, yardVisitScheduledPoster,
-} from '@/fixtures';
+  yardVisitPaymentDueHelper, yardVisitPaymentDuePoster, yardVisitScheduledHelper, yardVisitScheduledPoster, taskMapIndoorBundle, taskMapYardHelperData } from '@/fixtures';
 import { BookingHubContent } from '@/ui/screens/bookings/booking-hub-screen';
 import { BookingsScreen } from '@/ui/screens/bookings/bookings-screen';
 import { AppShell } from '@/ui/shells/app-shell';
@@ -38,7 +37,7 @@ const shellHandlers: AppShellHandlers = {
   onSignOut: fakeHandler({ ok: true, code: 'updated' }),
 };
 
-type PreviewOptions = Pick<ComponentProps<typeof BookingHubContent>, 'initialResult' | 'initialPending' | 'handlers' | 'now' | 'tip' | 'tipPreview' | 'scheduledPayment' | 'scheduledPreview'>;
+type PreviewOptions = Pick<ComponentProps<typeof BookingHubContent>, 'initialResult' | 'initialPending' | 'handlers' | 'now' | 'tip' | 'tipPreview' | 'scheduledPayment' | 'scheduledPreview' | 'map'>;
 
 function hubPreview(id: string, title: string, data: BookingView, options: Partial<PreviewOptions> = {}): PreviewEntry {
   const person = data.viewerRole === 'poster' ? data.poster : data.helper;
@@ -82,7 +81,7 @@ export const bookingsPreviews: PreviewEntry[] = [
   hubPreview('helper-visit-waiting', copy.previews.helperVisitWaiting, yardVisitPaymentDueHelper, { now: visitSunday }),
   hubPreview('client-far-ahead', copy.previews.clientFarAhead, deskBookingPosterScheduled, { now: '2026-11-17T15:05:00.000Z', scheduledPayment: fakeScheduledPaymentHandlers }),
   hubPreview('client-confirmed', copy.previews.clientConfirmed, deskBookingPosterConfirmed),
-  hubPreview('helper-confirmed', copy.previews.helperConfirmed, deskBookingHelperConfirmed),
+  hubPreview('helper-confirmed', copy.previews.helperConfirmed, deskBookingHelperConfirmed, { map: { ...taskMapIndoorBundle, data: { ...taskMapIndoorBundle.data, viewer: 'helper', home: taskMapYardHelperData.home } } }),
   hubPreview('poster-open-change', copy.previews.posterOpenChange, deskBookingPosterWithOpenChange),
   hubPreview('helper-open-change', copy.previews.helperOpenChange, deskBookingHelperWithOpenChange),
   hubPreview('helper-day-of', copy.previews.helperDayOf, deskBookingHelperDayOf, { now: dayOf }),

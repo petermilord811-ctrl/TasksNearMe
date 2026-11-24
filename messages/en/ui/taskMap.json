@@ -1,0 +1,126 @@
+{
+  "map": {
+    "label": "Map of {area}: the task's general area",
+    "expand": "Open map",
+    "dialogDescription": "The task's general area, the trip there, and what's around it.",
+    "privacy": "The circle is the general area. The exact address is shared only once someone is booked.",
+    "layers": "What the map shows",
+    "threeD": "3D buildings",
+    "places": "Places",
+    "tasks": "Tasks nearby",
+    "origin": "You are here",
+    "home": "Your home area",
+    "task": "Open task: {title}, {price}, {miles} mi away"
+  },
+  "trip": {
+    "title": "Getting there",
+    "from": "Start from",
+    "fromDevice": "My location",
+    "fromHome": "Home: {area}",
+    "use": "Use my location",
+    "useBody": "See drive, bike and walk times from where you are. Your location stays on this device.",
+    "locating": "Finding you…",
+    "denied": "Location is turned off for this site. Turn it on in your browser's site settings to see the trip from where you are.",
+    "unavailable": "Couldn't find your location.",
+    "retry": "Try again",
+    "modesLabel": "How you'd get there",
+    "modes": {
+      "drive": "Drive",
+      "bike": "Bike",
+      "walk": "Walk"
+    },
+    "minutes": "{hours, plural, =0 {{minutes} min} other {# h{minutes, plural, =0 {} other { # min}}}}",
+    "miles": "{miles} mi",
+    "estimate": "Estimates to the middle of the area, worked out on this device. The address is somewhere in the circle.",
+    "estimateHome": "From the middle of {area} to the middle of the task's area: estimates worked out on this device.",
+    "rush": "It starts at {time} on a weekday: allow about {minutes} min for rush hour."
+  },
+  "weather": {
+    "title": "Weather for the task",
+    "conditions": {
+      "clear": "Clear",
+      "partly-cloudy": "Partly cloudy",
+      "cloudy": "Cloudy",
+      "fog": "Fog",
+      "drizzle": "Drizzle",
+      "rain": "Rain",
+      "showers": "Showers",
+      "thunderstorm": "Thunderstorms",
+      "snow": "Snow",
+      "sleet": "Sleet",
+      "wind": "Windy",
+      "haze": "Haze"
+    },
+    "range": "{low}°–{high}°F",
+    "single": "{temp}°F",
+    "rain": "Rain {chance}%",
+    "feelsLike": "Feels like {temp}°",
+    "wind": "Wind up to {mph} mph",
+    "sunset": "Sunset {time}",
+    "hourly": "Hour by hour",
+    "hour": "{time}: {temp}°F, {condition}, {chance}% chance of rain",
+    "flags": {
+      "heat": "Hot work: bring water and plan breaks in the shade.",
+      "cold": "Cold out: dress in layers.",
+      "rain": "Rain is likely: ask about a covered spot or another time.",
+      "storm": "Thunderstorms are possible: outdoor work may have to pause.",
+      "wind": "Windy: secure loose things and light loads.",
+      "dark": "Sunset is at {time} and the window runs past dark: bring a light."
+    },
+    "alerts": "Weather alerts",
+    "until": "until {time}",
+    "later": "The forecast reaches a week ahead: this task's weather shows from {from}.",
+    "unavailable": "The forecast isn't available right now.",
+    "source": "Forecast: National Weather Service",
+    "sample": "Sample forecast (development)"
+  },
+  "around": {
+    "title": "Around the area",
+    "landmarks": "Landmarks",
+    "forJob": "Useful for this job",
+    "kinds": {
+      "hardware": "Hardware store",
+      "garden": "Garden center",
+      "truck-rental": "Truck rental",
+      "storage": "Self storage",
+      "recycling": "Recycling and drop-off",
+      "donation": "Donations and thrift",
+      "supermarket": "Supermarket",
+      "electronics": "Electronics store",
+      "fuel": "Gas station",
+      "park": "Park",
+      "school": "School",
+      "university": "College",
+      "hospital": "Hospital",
+      "library": "Library",
+      "mall": "Shopping center"
+    },
+    "miles": "{miles} mi",
+    "place": "{kind}: {name}, {miles} mi",
+    "homes": {
+      "houses": "Mostly houses",
+      "apartments": "Mostly apartment buildings",
+      "mixed": "Houses and apartment buildings"
+    },
+    "parking": "{count, plural, =0 {No parking lots: expect street parking} one {# parking lot in the area} other {# parking lots in the area}}",
+    "unavailable": "Places around the area aren't available right now.",
+    "source": "Places: © OpenStreetMap contributors",
+    "sample": "Sample places (development)"
+  },
+  "nearby": {
+    "title": "{count, plural, one {# more open task nearby} other {# more open tasks nearby}}",
+    "body": "Two tasks, one trip.",
+    "away": "{miles} mi from this one",
+    "sameDay": "Same day",
+    "hourly": "{rate}/h"
+  },
+  "previews": {
+    "group": "Task map",
+    "helper": "Helper from home, hot day with an alert, tasks nearby",
+    "storm": "Visitor, stormy afternoon",
+    "indoor": "Indoor work: the short weather",
+    "later": "Forecast not out yet, places unavailable",
+    "dark": "Window runs past sunset",
+    "unavailable": "Forecast unavailable"
+  }
+}

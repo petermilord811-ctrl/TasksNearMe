@@ -1,12 +1,13 @@
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { ArrowRight, BadgeCheck, CalendarDays, Camera, CircleDollarSign, Flag, HandCoins, Laptop, Lock, MapPin, MessageSquareText, ShieldCheck, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { ISODateTime, PublicTaskPageData } from '@/contracts';
+import type { ISODateTime, PublicTaskPageData, TaskMapBundle } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { cn } from '@/ui/lib/utils';
 import { GeneralArea } from '@/ui/components/location/general-area';
+import { TaskMapPanel } from '@/ui/components/map/task-map-panel';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { RatingStars } from '@/ui/components/people/rating-stars';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
@@ -18,7 +19,14 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbS
 import { buttonVariants } from '@/ui/primitives/button';
 import { categoryIcons } from './marketing-sections';
 
-export interface PublicTaskScreenProps { data: PublicTaskPageData; now: ISODateTime; /** Previews and tests: the drawn map only. */ liveMap?: boolean }
+export interface PublicTaskScreenProps {
+  data: PublicTaskPageData;
+  now: ISODateTime;
+  /** Previews and tests: the drawn map only. */
+  liveMap?: boolean;
+  /** The task map (its area, the trip there, the weather and what's around); the area's plain map without it. */
+  map?: TaskMapBundle | null;
+}
 
 const cardClass = 'rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]';
 const headingClass = 'font-display text-lg leading-7 font-semibold tracking-[-0.015em]';
@@ -31,7 +39,7 @@ const headingClass = 'font-display text-lg leading-7 font-semibold tracking-[-0.
  * poster, see the full description, the answers and the photos (`details`); everyone else sees the excerpt, how many
  * photos there are, and how to see the rest.
  */
-export function PublicTaskScreen({ data, now, liveMap = true }: PublicTaskScreenProps) {
+export function PublicTaskScreen({ data, now, liveMap = true, map }: PublicTaskScreenProps) {
   const { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTimeRange, dayKey } = useFormat();
   const t = useTranslations('publicTask');
   const report = useTranslations('report');
@@ -138,8 +146,12 @@ export function PublicTaskScreen({ data, now, liveMap = true }: PublicTaskScreen
 
         {!remote && <section aria-labelledby="task-where" className={cn(cardClass, 'space-y-3')}>
           <h2 id="task-where" className={headingClass}>{t('whereTitle')}</h2>
-          <GeneralArea location={task.location} showMap liveMap={liveMap} privacyNote={false} />
-          <p className="flex items-start gap-2 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('privacy')}</p>
+          {map
+            ? <><GeneralArea location={task.location} privacyNote={false} /><TaskMapPanel map={map} {...(liveMap ? {} : { live: false })} /></>
+            : <>
+              <GeneralArea location={task.location} showMap liveMap={liveMap} privacyNote={false} />
+              <p className="flex items-start gap-2 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('privacy')}</p>
+            </>}
         </section>}
 
         <section aria-labelledby="task-poster" className={cn(cardClass, 'space-y-4')}>

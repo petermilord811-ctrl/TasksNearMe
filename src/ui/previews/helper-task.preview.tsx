@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
 import { ACTION_ERROR_CODES, routes, type AppShellHandlers, type HelperTaskView, type HelperWorkHandlers, type PreviewEntry } from '@/contracts';
-import { deskOfferMessageDraft, fakeHandler, fakeHelperWorkHandlers, helperComputerBlocked, helperDeskStaleOffer, helperDeskWithOffer, helperMovingHourly, helperYardNoOffer, jordanShell, priyaShell } from '@/fixtures';
+import { deskOfferMessageDraft, fakeHandler, fakeHelperWorkHandlers, helperComputerBlocked, helperDeskStaleOffer, helperDeskWithOffer, helperMovingHourly, helperYardNoOffer, jordanShell, priyaShell, taskMapHelperBundle } from '@/fixtures';
 import { HelperTaskScreen } from '@/ui/screens/work/helper-task-screen';
 import { AppShell } from '@/ui/shells/app-shell';
 import { ClickOnLoad } from './click-on-load';
@@ -32,7 +32,7 @@ export const helperTaskPreviews: PreviewEntry[] = [
       actions: [...helperDeskWithOffer.myOffer!.actions, { id: 'message_poster', kind: 'secondary', enabled: true }],
     },
   }, { handlers: { ...handlers, onOfferAction: fakeHandler({ ok: true, code: 'updated', redirectTo: routes.app.thread('thr_off_jordan') }) } }),
-  preview('offer-form', helperYardNoOffer),
+  preview('offer-form', helperYardNoOffer, { map: taskMapHelperBundle }),
   preview('offer-form', helperYardNoOffer, {}, 'tabs'),
   preview('hourly-form', helperMovingHourly),
   {
