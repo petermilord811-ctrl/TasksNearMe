@@ -277,7 +277,7 @@
     "title": "Activity",
     "description": "Whether the people you talk to see when you're around.",
     "label": "Show when I'm active",
-    "on": "On: they see “Active now” or “Active today”, and “Seen” on messages.",
+    "on": "On: they see “Active now” or “Active today”, and two blue ticks on messages they've read.",
     "off": "Off: nobody sees your activity, and you don't see theirs.",
     "hint": "Only people you share a conversation or booking with ever see it, never exact times, and never on your public profile.",
     "failed": "That didn't save. Try again."

@@ -53,7 +53,8 @@ export async function GET(request: Request, ctx: RouteContext<'/api/files/[id]'>
   const cacheControl = file.kind === 'work_sample' ? 'public, max-age=86400' : 'private, no-cache';
   const etag = `"${file.id}${width ? `-w${width}` : ''}"`;
   if (request.headers.get('if-none-match') === etag) return new Response(null, { status: 304, headers: { ETag: etag, 'Cache-Control': cacheControl } });
-  const smaller = width !== null && file.contentType.startsWith('image/') && Math.max(file.width, file.height) > width;
+  // A GIF (chat, 2026-11-24) is always served as stored: a smaller copy would be a still WebP.
+  const smaller = width !== null && file.contentType.startsWith('image/') && file.contentType !== 'image/gif' && Math.max(file.width, file.height) > width;
   const served = smaller && width !== null
     ? await cachedResize(`${file.id}:${width}`, async () => {
         const body = await storage.get(storageKey);

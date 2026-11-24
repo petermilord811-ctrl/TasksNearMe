@@ -33,7 +33,7 @@ export function HelpRow({ summary, now, current = false, onSelect, variant = 'fu
   } : undefined} data-help-row="" className={cn(
     'group relative flex min-w-0 items-center gap-3 transition-colors duration-200 hover:bg-foreground/[0.03] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring dark:hover:bg-white/[0.03]',
     variant === 'pane'
-      ? 'border-b border-foreground/[0.07] px-3 py-3 dark:border-white/[0.06]'
+      ? 'border-b border-foreground/[0.07] px-3 py-2 dark:border-white/[0.06]'
       : variant === 'split'
         ? 'rounded-[1.375rem] border border-primary/20 bg-card px-4 py-3.5 shadow-card sm:px-6 lg:rounded-none lg:border-0 lg:border-b lg:border-foreground/[0.07] lg:bg-transparent lg:px-3 lg:py-3 lg:shadow-none dark:lg:border-white/[0.06]'
         : 'rounded-[1.375rem] border border-primary/20 bg-card px-4 py-3.5 shadow-card sm:px-6',

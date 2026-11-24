@@ -8,6 +8,7 @@ export * from './actions';
 export * from './action-ids';
 export * from './timeline';
 export * from './messaging';
+export * from './gifs';
 export * from './tasks';
 export * from './marketing';
 export * from './cities';

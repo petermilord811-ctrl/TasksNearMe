@@ -36,7 +36,7 @@ export function ConversationActionsMenu({ options, name, onAskForOffer, compact 
   return <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button ref={trigger} type="button" aria-label={t('label', { name })} title={t('label', { name })} className={cn('grid shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-2 focus-visible:outline-ring data-[state=open]:bg-accent data-[state=open]:text-primary', compact ? 'size-11' : 'size-12')}>
+        <button ref={trigger} type="button" aria-label={t('label', { name })} title={t('label', { name })} className={cn('grid shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-2 focus-visible:outline-ring data-[state=open]:bg-accent data-[state=open]:text-primary', compact ? 'size-10' : 'size-12')}>
           <Plus aria-hidden="true" className="size-5 transition-transform duration-200 [[data-state=open]>&]:rotate-45" />
         </button>
       </DropdownMenuTrigger>

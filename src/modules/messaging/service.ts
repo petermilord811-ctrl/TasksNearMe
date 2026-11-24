@@ -591,6 +591,8 @@ export async function getThreadPage(db: Db, userId: string, threadId: string, no
     ...(requestOptions ? { requestOptions } : {}),
     ...(presence ? { presence } : {}),
     ...(mutual && lastMine && theirs?.lastReadAt && theirs.lastReadAt >= lastMine.createdAt ? { seenMessageId: lastMine.id } : {}),
+    // Ticks (2026-11-24): how far they've read, under the same rule as "Seen".
+    ...(mutual && theirs?.lastReadAt ? { readUpTo: theirs.lastReadAt.toISOString() } : {}),
     ...(newlyRead[0] ? { firstUnreadId: newlyRead[0].id } : {}),
     composer: {
       canSend: !disabledReason,

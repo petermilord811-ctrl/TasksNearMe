@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link, { useLinkStatus } from 'next/link';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowUp, Expand } from 'lucide-react';
+import { ArrowUp, Check, CheckCheck, Expand, Play } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionHandler, ConversationCards, ISODateTime, MessageReaction, MessageTranslation, MessageView, PersonSummary, Photo, RequestCardHandlers } from '@/contracts';
 import { ChangeCardView, OfferAskCardView, TaskRequestCardView } from '@/ui/components/messaging/conversation-cards';
@@ -38,6 +38,33 @@ function MessagePhoto({ photo, number, count, sender }: { photo: Photo; number: 
       <Image src={photo.src} alt={alt} width={photo.width} height={photo.height} unoptimized className="h-auto max-h-[60dvh] w-full rounded-lg object-contain" />
     </DialogContent>
   </Dialog>;
+}
+
+/**
+ * A GIF (2026-11-24): the GIF itself, at most 240 px wide, opening larger on a tap. With reduced motion asked for on the
+ * device it doesn't play by itself: a still placeholder says "Play GIF" until tapped (CSS, so the first paint is right).
+ */
+function MessageGif({ photo, sender }: { photo: Photo; sender: string }) {
+  const t = useTranslations('thread.gif');
+  const [playing, setPlaying] = useState(false);
+  const alt = photo.alt || t('alt', { name: sender });
+  return <div className="relative w-full max-w-60 overflow-hidden rounded-xl border bg-muted" style={{ aspectRatio: `${photo.width} / ${photo.height}` }} data-gif="">
+    <Dialog>
+      <DialogTrigger asChild>
+        <button type="button" aria-label={t('open', { description: alt })} className={cn('block size-full focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring', !playing && 'motion-reduce:hidden')}>
+          <Image src={photo.src} alt={alt} width={photo.width} height={photo.height} unoptimized className="size-full object-cover" />
+        </button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:max-w-md max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none">
+        <DialogHeader><DialogTitle>{t('title', { name: sender })}</DialogTitle><DialogDescription>{alt}</DialogDescription></DialogHeader>
+        <Image src={photo.src} alt={alt} width={photo.width} height={photo.height} unoptimized className="h-auto max-h-[60dvh] w-full rounded-lg object-contain" />
+      </DialogContent>
+    </Dialog>
+    <span aria-hidden="true" className={cn('pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1 text-[10px] font-bold leading-4 tracking-wide text-white', !playing && 'motion-reduce:hidden')}>{t('badge')}</span>
+    {!playing && <button type="button" onClick={() => setPlaying(true)} aria-label={t('playLabel', { description: alt })} className="absolute inset-0 hidden flex-col items-center justify-center gap-1.5 bg-muted text-sm font-semibold text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring motion-reduce:flex">
+      <span className="grid size-10 place-items-center rounded-full bg-background shadow-sm"><Play aria-hidden="true" className="size-5 text-primary" /></span>{t('play')}
+    </button>}
+  </div>;
 }
 
 function MessageContent({ message }: { message: MessageView }) {
@@ -91,7 +118,21 @@ function newAnnouncements(before: MessageView[], now: MessageView[]): Announceme
 /** Messages from the same person within this long read as one group: their name once, tighter spacing. */
 const GROUP_MS = 5 * 60_000;
 
-export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, otherParty, now, seenMessageId, firstUnreadId, focusId, onReact, onTranslate, cards, requestCardHandlers, canReply = false, className }: {
+/**
+ * Sent or read, on your own messages (2026-11-24, owner: "sent/read feature with tick/double tick icon"): one tick once
+ * it's sent, two in blue once the other person has read it (the second one pops in as it happens).
+ */
+function DeliveryTicks({ read }: { read: boolean }) {
+  const t = useTranslations('thread.delivery');
+  const label = t(read ? 'read' : 'sent');
+  return <span role="img" aria-label={label} title={label} className={cn('inline-flex shrink-0', read ? 'text-info' : 'opacity-70')}>
+    {read
+      ? <CheckCheck key="read" aria-hidden="true" className="size-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-50 motion-safe:duration-300" />
+      : <Check key="sent" aria-hidden="true" className="size-4" />}
+  </span>;
+}
+
+export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, otherParty, now, readUpTo, firstUnreadId, focusId, onReact, onTranslate, cards, requestCardHandlers, canReply = false, compact = false, className }: {
   messages: MessageView[];
   /** "Load earlier messages" (sweep MN11): this conversation from 100 messages earlier. */
   earlierHref?: string;
@@ -101,7 +142,8 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
   onRefresh?: () => void;
   otherParty: PersonSummary;
   now: ISODateTime;
-  seenMessageId?: string;
+  /** How far the other person has read: the viewer's messages up to it show two ticks (Read), later ones one (Sent). */
+  readUpTo?: ISODateTime;
   firstUnreadId?: string;
   /** A message to bring into view and mark for a moment: a search's result (2026-11-23). */
   focusId?: string;
@@ -113,6 +155,8 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
   requestCardHandlers?: RequestCardHandlers;
   /** Reply only where one can be sent: not in a closed or blocked conversation. */
   canReply?: boolean;
+  /** The chat window's denser bubbles (2026-11-24, owner: "make live chat components a little compact"). */
+  compact?: boolean;
   className?: string;
 }) {
   const { formatDate, formatDateTime, formatRelative, formatTime, dayKey } = useFormat();
@@ -278,10 +322,10 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
         : <Link href={earlierHref} replace scroll={false} prefetch={false} className={buttonVariants({ variant: 'outline', size: 'sm', className: 'min-h-11 rounded-full sm:min-h-9' })}><EarlierLabel /></Link>}
     </p>}
     {messages.length === 0 && <p className="py-10 text-center text-sm text-muted-foreground">{t('empty')}</p>}
-    {Array.from(days, ([day, entries]) => <section key={day} aria-label={formatDate(entries[0]!.createdAt, { withYear: true })} className="space-y-3">
+    {Array.from(days, ([day, entries]) => <section key={day} aria-label={formatDate(entries[0]!.createdAt, { withYear: true })} className={compact ? 'space-y-2' : 'space-y-3'}>
       {/* A day separator, not a sticky chip: a sticky one covered photos while scrolling (UI-021). */}
-      <h2 className="mx-auto w-fit rounded-full bg-foreground/[0.05] px-3 py-1 text-center text-xs font-semibold text-muted-foreground dark:bg-white/[0.07]"><time dateTime={day}>{formatDate(entries[0]!.createdAt, { withYear: true })}</time></h2>
-      <ol className="space-y-2.5">
+      <h2 className={cn('mx-auto w-fit rounded-full bg-foreground/[0.05] text-center font-semibold text-muted-foreground dark:bg-white/[0.07]', compact ? 'px-2.5 py-0.5 text-[11px]' : 'px-3 py-1 text-xs')}><time dateTime={day}>{formatDate(entries[0]!.createdAt, { withYear: true })}</time></h2>
+      <ol className={compact ? 'space-y-1.5' : 'space-y-2.5'}>
         {entries.map((message, index) => {
           const previous = entries[index - 1];
           // The same person, a moment later: no name again, closer to the one before.
@@ -292,7 +336,7 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
           const sender = message.sender === 'me' ? t('you') : message.sender === 'them' ? otherParty.displayName : t('system');
           const isNotice = message.kind !== 'text';
           const mine = message.sender === 'me';
-          const time = <time dateTime={message.createdAt} title={formatRelative(message.createdAt, now)} className={cn('text-xs tabular-nums', isNotice ? 'text-muted-foreground' : 'block', !isNotice && (mine ? 'text-right' : 'text-muted-foreground'))}>
+          const time = <time dateTime={message.createdAt} title={formatRelative(message.createdAt, now)} className={cn('tabular-nums', compact ? 'text-[11px]' : 'text-xs', isNotice ? 'text-muted-foreground' : 'block', !isNotice && (mine ? 'text-right' : 'text-muted-foreground'))}>
             <span aria-hidden="true">{formatTime(message.createdAt)}</span><span className="sr-only">{formatDateTime(message.createdAt)}</span>
           </time>;
           // A task request or a booking change (2026-11-23): its card, as it stands now.
@@ -308,7 +352,7 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
           </li></Fragment>;
           // Updates ("On the way", an offer received…) are small notes between the bubbles.
           if (isNotice) return <Fragment key={message.id}>{divider}<li className="flex min-w-0 justify-center">
-            <article className="inline-flex max-w-full flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5 rounded-full bg-foreground/[0.045] px-3.5 py-1.5 text-center text-sm text-muted-foreground [overflow-wrap:anywhere] dark:bg-white/[0.06]">
+            <article className={cn('inline-flex max-w-full flex-wrap items-baseline justify-center gap-x-2 gap-y-0.5 rounded-full bg-foreground/[0.045] text-center text-muted-foreground [overflow-wrap:anywhere] dark:bg-white/[0.06]', compact ? 'px-3 py-1 text-xs' : 'px-3.5 py-1.5 text-sm')}>
               <p className="sr-only">{sender}</p>
               <p className="text-sm font-medium text-foreground/80"><MessageContent message={message} /></p>
               {time}
@@ -328,30 +372,30 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
             return count > 0 ? [{ emoji, count, mine: mineNow }] : [];
           });
           const hasActions = canReply || Boolean(onReact) || canTranslate;
-          return <Fragment key={message.id}>{divider}<li data-message-id={message.id} className={cn('group/msg flex min-w-0 flex-col rounded-[1.5rem] transition-[background-color,box-shadow] duration-700', mine ? 'items-end' : 'items-start', grouped && '-mt-1.5', marked === message.id && 'bg-primary/10 ring-2 ring-primary/40')}>
+          return <Fragment key={message.id}>{divider}<li data-message-id={message.id} className={cn('group/msg flex min-w-0 flex-col rounded-[1.5rem] transition-[background-color,box-shadow] duration-700', mine ? 'items-end' : 'items-start', grouped && (compact ? '-mt-1' : '-mt-1.5'), marked === message.id && 'bg-primary/10 ring-2 ring-primary/40')}>
             <Popover open={picker?.id === message.id} onOpenChange={(open) => { if (!open) setPicker(null); }}>
             <PopoverAnchor asChild>
             <article {...gestures(message.id)} className={cn(
-              'relative min-w-0 max-w-[86%] space-y-1.5 rounded-[1.25rem] px-3.5 py-2.5 [overflow-wrap:anywhere] [-webkit-touch-callout:none] sm:max-w-[75%] sm:px-4 sm:py-3',
+              'relative min-w-0 [overflow-wrap:anywhere] [-webkit-touch-callout:none]',
+              compact ? 'max-w-[88%] space-y-1 rounded-[1.1rem] px-3 py-1.5' : 'max-w-[86%] space-y-1.5 rounded-[1.25rem] px-3.5 py-2.5 sm:max-w-[75%] sm:px-4 sm:py-3',
               mine
                 ? 'rounded-br-md bg-secondary text-secondary-foreground'
                 : 'rounded-bl-md border border-foreground/[0.07] bg-background shadow-[0_1px_2px_rgb(23_18_14/0.05)] dark:border-white/[0.07]',
             )}>
               {/* Your own bubbles don't need your name on them; it's still read out. */}
-              <p className={cn('text-xs font-semibold text-muted-foreground', (mine || grouped) && 'sr-only')}>{sender}</p>
+              <p className={cn('font-semibold text-muted-foreground', compact ? 'text-[11px]' : 'text-xs', (mine || grouped) && 'sr-only')}>{sender}</p>
               {message.replyTo && <blockquote className="border-l-2 border-primary/50 pl-2.5 text-[13px] leading-5 text-muted-foreground [overflow-wrap:anywhere]">
                 <span className="font-semibold">{message.replyTo.sender === 'me' ? t('you') : otherParty.displayName}: </span><MaskedText segments={message.replyTo.segments} />
               </blockquote>}
-              <p className="text-[15px] leading-6"><MessageContent message={message} /></p>
+              <p className={compact ? 'text-[14px] leading-[1.35rem]' : 'text-[15px] leading-6'}><MessageContent message={message} /></p>
               {translation && translation.status !== 'loading' && (translation.status !== 'ready' || translation.shown) && <div className="space-y-0.5 border-t border-foreground/[0.08] pt-1.5 dark:border-white/[0.08]">
                 <p className="text-xs font-semibold text-muted-foreground">{t('translate.label')}</p>
                 {translation.status === 'ready' ? <p className="text-[15px] leading-6 whitespace-pre-wrap">{translation.text}</p> : <p role="alert" className="text-sm text-destructive">{t('translate.failed')}</p>}
               </div>}
-              {message.attachments.length > 0 && <ul aria-label={t('photos')} className="grid max-w-96 grid-cols-1 gap-2 pt-1 sm:grid-cols-2">
-                {message.attachments.map((photo, index) => <li key={photo.id} className="min-w-0"><MessagePhoto photo={photo} number={index + 1} count={message.attachments.length} sender={sender} /></li>)}
+              {message.attachments.length > 0 && <ul aria-label={t('photos')} className={cn('grid max-w-96 grid-cols-1 gap-2 pt-1', !message.attachments.every((photo) => photo.animated) && 'sm:grid-cols-2')}>
+                {message.attachments.map((photo, index) => <li key={photo.id} className="min-w-0">{photo.animated ? <MessageGif photo={photo} sender={sender} /> : <MessagePhoto photo={photo} number={index + 1} count={message.attachments.length} sender={sender} />}</li>)}
               </ul>}
-              {time}
-              {mine && message.id === seenMessageId && <p className="text-right text-xs font-medium text-muted-foreground">{t('seen')}</p>}
+              {mine ? <p className="flex items-center justify-end gap-1">{time}<DeliveryTicks read={Boolean(readUpTo && message.createdAt <= readUpTo)} /></p> : time}
               {pills.length > 0 && <ul aria-label={t('reactions.label')} className={cn('flex flex-wrap gap-1 pt-0.5', mine && 'justify-end')}>
                 {pills.map((reaction) => {
                   const key = `${message.id}:${reaction.emoji}`;

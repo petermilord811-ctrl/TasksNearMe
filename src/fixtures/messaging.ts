@@ -68,11 +68,12 @@ const deskBookingMessages: MessageView[] = [
   { id: 'msg_4', sender: 'system', kind: 'status', segments: [], attachments: [], event: { type: 'on_my_way' }, createdAt: '2026-11-21T15:58:00.000Z' },
 ];
 
-/** Maya's view of the booking thread. */
+/** Maya's view of the booking thread. Jordan has read her message (two ticks): he answered it. */
 export const deskBookingThreadPageData: ThreadPageData = {
   thread: deskBookingThread,
   messages: deskBookingMessages,
   composer,
+  readUpTo: '2026-11-17T15:40:00.000Z',
 };
 
 /** Maya and Lee before booking: Lee's number is hidden. */

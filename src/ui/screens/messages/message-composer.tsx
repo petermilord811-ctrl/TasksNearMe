@@ -6,12 +6,13 @@ import { useTranslations } from 'next-intl';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { CircleAlert, Lock, MessageSquareText, Paperclip, Send, Sparkles, X } from 'lucide-react';
-import { sendMessageInputSchema, type ActionResult, type ComposerRules, type MessageSavedReply, type Photo, type SendMessageInput, type ThreadHandlers } from '@/contracts';
+import { sendMessageInputSchema, type ActionResult, type ComposerRules, type GifResult, type MessageSavedReply, type Photo, type PhotoUploadResult, type SendMessageInput, type ThreadHandlers } from '@/contracts';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/primitives/popover';
 import { useReply } from './reply-context';
 import { useFormat } from '@/ui/lib/format';
 import { ComposerPhotoStrip, PHOTO_TYPES, PhotoDropOverlay, useComposerPhotos, usePhotoDrop } from './composer-photos';
+import { GifPicker, gifFailureKey } from './gif-picker';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
 import { Alert, AlertDescription } from '@/ui/primitives/alert';
 import { Button } from '@/ui/primitives/button';
@@ -66,6 +67,8 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
   const [result, setResult] = useState<ActionResult | undefined>(initialResult);
   const [pending, setPending] = useState(initialPending);
   const [uploading, setUploading] = useState(false);
+  // A GIF that couldn't be attached (2026-11-24): why, under the box.
+  const [gifError, setGifError] = useState<Extract<PhotoUploadResult, { ok: false }>['code']>();
   const lastTyping = useRef(0);
   const locked = useRef(initialPending);
   const requestKey = useRef<string | null>(null);
@@ -142,7 +145,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
       const active = document.activeElement;
       return !active || active === document.body || (formRef.current?.contains(active) ?? false);
     };
-    locked.current = true; setPending(true); setResult(undefined);
+    locked.current = true; setPending(true); setResult(undefined); setGifError(undefined);
     // This message's key (bad connections pass, J-N1): a retry after an answer that never arrived sends the same key, so
     // the message goes once. A new key after it's sent.
     requestKey.current ??= newRequestKey();
@@ -160,6 +163,23 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
     } else if (keepFocus && !next.fieldErrors && focusStillHere()) document.getElementById(`${id}-body`)?.focus();
   }
 
+  // GIFs (2026-11-24): a picked GIF goes at once as its own message, like any messenger's (with the reply, if one is
+  // set); what's written in the box and the photos waiting stay as they are.
+  async function sendGif(gif: GifResult) {
+    if (!handlers.onAttachGif || !rules.canSend || locked.current) return;
+    locked.current = true; setPending(true); setResult(undefined); setGifError(undefined);
+    let attached: PhotoUploadResult;
+    try { attached = await handlers.onAttachGif({ id: gif.id }); } catch { attached = { ok: false, code: 'unknown' }; }
+    if (!mounted.current) return;
+    if (!attached.ok) { locked.current = false; setPending(false); setGifError(attached.code); return; }
+    let next: ActionResult;
+    try { next = await handlers.onSend({ body: '', attachmentIds: [attached.photo.id], requestKey: newRequestKey(), ...(replyTo ? { replyToId: replyTo.id } : {}) }); }
+    catch { next = { ok: false, code: 'unknown' }; }
+    if (!mounted.current) return;
+    locked.current = false; setPending(false); setResult(next);
+    if (next.ok && next.code === 'sent') { setReplyTo(null); if (onRefresh) onRefresh(); else router.refresh(); }
+  }
+
   if (!rules.canSend) return <p role="status" className="flex items-center justify-center gap-2 rounded-xl border bg-muted px-4 py-5 text-sm text-muted-foreground"><Lock aria-hidden="true" className="size-4 shrink-0" />{t(rules.disabledReason ?? 'closed')}</p>;
 
   const specialError = result && !result.ok && (result.code === 'not_allowed' || result.code === 'rate_limited');
@@ -167,7 +187,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
   return <form ref={formRef} noValidate aria-label={t('label')} aria-busy={pending || uploading} onSubmit={(event) => {
     if (locked.current || uploadLocked.current) { event.preventDefault(); return; }
     void form.handleSubmit(submit)(event);
-  }} className={cn('relative space-y-2.5 border-t border-foreground/[0.07] bg-card px-3 pt-3 dark:border-white/[0.06]', compact ? 'pb-3' : 'pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:pt-4 sm:pb-4')}>
+  }} className={cn('relative border-t border-foreground/[0.07] bg-card dark:border-white/[0.06]', compact ? 'space-y-1.5 px-2.5 pt-2 pb-2' : 'space-y-2.5 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 sm:pt-4 sm:pb-4')}>
     {replyTo && <div className="flex items-start justify-between gap-2 rounded-xl bg-foreground/[0.04] px-3 py-2 text-[13px] dark:bg-white/[0.05]">
       <p className="min-w-0"><span className="font-semibold">{t('replyingTo', { name: replyTo.name })}</span> <span className="line-clamp-1 text-muted-foreground [overflow-wrap:anywhere]">{replyTo.text}</span></p>
       <button type="button" onClick={() => setReplyTo(null)} aria-label={t('cancelReply')} className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/[0.06] hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"><X aria-hidden="true" className="size-4" /></button>
@@ -181,6 +201,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
     </div>}
     {rules.maxAttachments > 0 && <ComposerPhotoStrip photos={attach} max={rules.maxAttachments} megabytes={rules.maxPhotoMegabytes} compact={compact} />}
     {photoError && <p id={`${id}-photos-error`} role="alert" className="text-xs text-destructive">{photoError}</p>}
+    {gifError && <p role="alert" className="text-xs text-destructive">{t(gifFailureKey(gifError))}</p>}
     <PhotoDropOverlay target={drop.target} over={drop.over} />
     <Field className="gap-1.5" data-invalid={!!bodyError}>
       {/* The panel above already says what this is: the label is for screen readers. */}
@@ -191,18 +212,20 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
       {/* Photos straight from the picker (2026-11-23): no panel to open first. */}
       {rules.maxAttachments > 0 && <>
         <input ref={fileInput} type="file" accept={PHOTO_TYPES.join(',')} multiple={rules.maxAttachments > 1} hidden tabIndex={-1} onChange={(event) => { attach.add(Array.from(event.target.files ?? [])); event.target.value = ''; }} />
-        <button ref={attachButton} type="button" onClick={() => fileInput.current?.click()} disabled={pending || attach.photos.length + attach.pending.length >= rules.maxAttachments} aria-label={t('attach')} aria-describedby={photoError ? `${id}-photos-error ${id}-photos-hint` : `${id}-photos-hint`} title={t('photosHint', { maximum: rules.maxAttachments, megabytes: rules.maxPhotoMegabytes })} className="grid size-12 shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-40">
-          <Paperclip aria-hidden="true" className="size-5" />
+        <button ref={attachButton} type="button" onClick={() => fileInput.current?.click()} disabled={pending || attach.photos.length + attach.pending.length >= rules.maxAttachments} aria-label={t('attach')} aria-describedby={photoError ? `${id}-photos-error ${id}-photos-hint` : `${id}-photos-hint`} title={t('photosHint', { maximum: rules.maxAttachments, megabytes: rules.maxPhotoMegabytes })} className={cn('grid shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-primary focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-40', compact ? 'size-10' : 'size-12')}>
+          <Paperclip aria-hidden="true" className={compact ? 'size-[1.125rem]' : 'size-5'} />
         </button>
         <span id={`${id}-photos-hint`} className="sr-only">{t('photosHint', { maximum: rules.maxAttachments, megabytes: rules.maxPhotoMegabytes })}</span>
       </>}
+      {/* GIFs beside the paperclip (2026-11-24): only where the app offers them. */}
+      {rules.maxAttachments > 0 && handlers.onSearchGifs && handlers.onAttachGif && <GifPicker onSearch={handlers.onSearchGifs} onPick={(gif) => void sendGif(gif)} busy={pending} compact={compact} />}
       <Textarea {...form.register('body')} onPaste={(event) => {
         // A photo pasted into the message attaches it (2026-11-23); pasted words paste as usual.
         const pasted = Array.from(event.clipboardData?.files ?? []).filter((file) => file.type.startsWith('image/'));
         if (pasted.length === 0 || rules.maxAttachments === 0) return;
         event.preventDefault();
         attach.add(pasted);
-      }} id={`${id}-body`} rows={1} maxLength={rules.maxLength} readOnly={pending} aria-invalid={!!bodyError} aria-describedby={`${id}-hint ${id}-counter ${id}-body-error`} placeholder={t('label')} className="max-h-40 min-h-12 flex-1 resize-none field-sizing-content" onInput={() => {
+      }} id={`${id}-body`} rows={1} maxLength={rules.maxLength} readOnly={pending} aria-invalid={!!bodyError} aria-describedby={`${id}-hint ${id}-counter ${id}-body-error`} placeholder={t('label')} className={cn('max-h-40 flex-1 resize-none field-sizing-content', compact ? 'min-h-10 py-2 text-[14px] leading-5' : 'min-h-12')} onInput={() => {
         // "Typing…" for the other person (completion plan 7.1), at most one ping every 2.5 s; never blocks typing.
         if (!handlers.onTyping || Date.now() - lastTyping.current < 2500) return;
         lastTyping.current = Date.now();
@@ -213,19 +236,19 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
         if (!empty && !overLimit && !locked.current && !uploadLocked.current) void form.handleSubmit(submit)();
       }} />
         {/* A tap on Send leaves focus in the message, so a phone's keyboard stays open for the next one. */}
-        <Button type="submit" disabled={pending || uploading || empty || overLimit} aria-busy={pending} onMouseDown={(event) => event.preventDefault()} className="h-12 shrink-0 transition-[transform,box-shadow,background-color,opacity] duration-200 max-sm:w-12 max-sm:px-0 sm:min-w-24">{pending ? <Spinner aria-hidden="true" /> : <Send aria-hidden="true" className="size-4" />}<span className="max-sm:sr-only">{t(pending ? 'sending' : 'send')}</span></Button>
+        <Button type="submit" disabled={pending || uploading || empty || overLimit} aria-busy={pending} onMouseDown={(event) => event.preventDefault()} className={cn('shrink-0 transition-[transform,box-shadow,background-color,opacity] duration-200', compact ? 'size-10 px-0' : 'h-12 max-sm:w-12 max-sm:px-0 sm:min-w-24')}>{pending ? <Spinner aria-hidden="true" /> : <Send aria-hidden="true" className="size-4" />}<span className={compact ? 'sr-only' : 'max-sm:sr-only'}>{t(pending ? 'sending' : 'send')}</span></Button>
       </div>
       <div className="flex flex-wrap justify-between gap-x-3 gap-y-0.5 px-1">
         <FieldDescription id={`${id}-hint`} className={cn('text-xs', compact && 'sr-only')}>{t('hint')}</FieldDescription>
-        <p className="flex gap-3 text-xs text-muted-foreground"><span className="hidden lg:inline">{t('keyboardHint')}</span><span id={`${id}-counter`} className="tabular-nums">{t('counter', { count: body.length, maximum: rules.maxLength })}</span></p>
+        <p className="flex gap-3 text-xs text-muted-foreground"><span className={compact ? 'hidden' : 'hidden lg:inline'}>{t('keyboardHint')}</span><span id={`${id}-counter`} className={cn('tabular-nums', compact && body.length < rules.maxLength * 0.8 && 'sr-only')}>{t('counter', { count: body.length, maximum: rules.maxLength })}</span></p>
       </div>
       <div id={`${id}-body-error`}>{bodyError && <FieldError>{bodyError}</FieldError>}</div>
     </Field>
     <div className="flex flex-wrap items-start gap-x-2">
-    {handlers.onSuggest && suggestFor && !shownSuggestions && <button type="button" onClick={() => void suggest()} className="flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium text-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><Sparkles aria-hidden="true" className="size-4" />{t('suggest.button')}</button>}
+    {handlers.onSuggest && suggestFor && !shownSuggestions && <button type="button" onClick={() => void suggest()} className={cn('flex items-center gap-2 rounded-md px-2 font-medium text-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring', compact ? 'min-h-9 text-[13px]' : 'min-h-11 text-sm')}><Sparkles aria-hidden="true" className="size-4" />{t('suggest.button')}</button>}
     {(handlers.onSaveReply || savedReplies.length > 0) && <Popover open={repliesOpen} onOpenChange={setRepliesOpen}>
       <PopoverTrigger asChild>
-        <button type="button" className="flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium text-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"><MessageSquareText aria-hidden="true" className="size-4" />{t('savedReplies.button')}</button>
+        <button type="button" className={cn('flex items-center gap-2 rounded-md px-2 font-medium text-primary hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring', compact ? 'min-h-9 text-[13px]' : 'min-h-11 text-sm')}><MessageSquareText aria-hidden="true" className="size-4" />{t('savedReplies.button')}</button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-80 max-w-[calc(100vw-2rem)] space-y-2 p-3">
         {savedReplies.length === 0

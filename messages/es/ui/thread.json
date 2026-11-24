@@ -58,6 +58,14 @@
   "viewPhoto": "Ver foto",
   "photoAlt": "Foto {number} de {count} de {name}",
   "photoTitle": "Foto {number} de {count}",
+  "gif": {
+    "alt": "GIF de {name}",
+    "badge": "GIF",
+    "play": "Reproducir GIF",
+    "playLabel": "Reproducir GIF: {description}",
+    "open": "Ver el GIF más grande: {description}",
+    "title": "GIF de {name}"
+  },
   "previews": {
     "group": "Conversaciones",
     "booking": "Reserva con una foto y una actualización de estado",
@@ -142,6 +150,36 @@
       "uploading": "{count, plural, one {Agregando # foto…} other {Agregando # fotos…}}",
       "ready": "{count, plural, one {# foto} other {# fotos}} de {max}, listas para enviar",
       "drop": "Suelta las fotos para enviarlas"
+    },
+    "gif": {
+      "button": "GIF",
+      "open": "Elegir un GIF",
+      "title": "GIF",
+      "search": "Buscar en KLIPY",
+      "trending": "GIF populares",
+      "results": "GIF para “{query}”",
+      "count": "{count, plural, one {# GIF} other {# GIF}}",
+      "pick": "Enviar GIF: {title}",
+      "untitled": "GIF",
+      "loading": "Cargando GIF…",
+      "empty": "No hay GIF para “{query}”. Prueba con otras palabras.",
+      "emptyTrending": "No hay GIF para mostrar ahora.",
+      "error": "Los GIF no cargaron. Inténtalo de nuevo.",
+      "rateLimited": "Son muchas búsquedas. Espera un minuto y vuelve a intentarlo.",
+      "retry": "Intentar de nuevo",
+      "more": "Cargar más",
+      "loadingMore": "Cargando más…",
+      "moreFailed": "No se cargaron más GIF.",
+      "attribution": "Powered by KLIPY",
+      "sending": "Enviando GIF…",
+      "failed": {
+        "unsupported_type": "Ese GIF no se puede enviar. Prueba con otro.",
+        "too_large": "Ese GIF es demasiado grande para enviarlo. Prueba con otro.",
+        "rate_limited": "Enviaste muchos GIF. Inténtalo más tarde.",
+        "too_many": "El GIF no se envió. Inténtalo de nuevo.",
+        "unknown": "El GIF no se envió. Inténtalo de nuevo."
+      },
+      "close": "Cerrar GIF"
     }
   },
   "newMessages": "Mensajes nuevos",
@@ -332,5 +370,9 @@
     "theirTitle": "Tareas abiertas de {name}",
     "theirDescription": "Haz una oferta en una: el formulario se abre aquí mismo.",
     "makeOffer": "Hacer una oferta"
+  },
+  "delivery": {
+    "sent": "Enviado",
+    "read": "Leído"
   }
 }

@@ -9,6 +9,7 @@ export * from './timeline';
 export * from './actions';
 export * from './shell';
 export * from './messaging';
+export * from './gifs';
 export * from './marketing';
 export * from './auth';
 export * from './content';

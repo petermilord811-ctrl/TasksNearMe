@@ -6,12 +6,15 @@
  * - the map's style, tiles, glyphs and sprites (OpenFreeMap unless `MAP_STYLE_URL` names another host), drawn
  *   by MapLibre with its worker from this site (`/vendor/maplibre-gl-worker.mjs`) and the town's own workers;
  * - form posts that may end at Google's or Microsoft's sign-in page.
+ * - GIF previews in the chat's GIF picker, straight from KLIPY's file host (src/shared/gifs.ts, 2026-11-24).
  *
  * Inline scripts stay allowed: pages are prerendered shells (Cache Components), which can't carry a per-request
  * nonce (node_modules/next/dist/docs/01-app/02-guides/content-security-policy.md, "Without Nonces"). Everything
  * else is closed: other script hosts, plugins (`object-src`), `<base>` changes, being framed, form posts elsewhere.
  * Development adds `eval` (React Refresh) and the dev server's websockets, and is sent report-only.
  */
+
+import { GIF_MEDIA_HOSTS } from './gifs';
 
 const STRIPE = { script: ['https://js.stripe.com', 'https://*.js.stripe.com'], frame: ['https://js.stripe.com', 'https://*.js.stripe.com', 'https://hooks.stripe.com'], connect: ['https://api.stripe.com'] };
 const TURNSTILE = 'https://challenges.cloudflare.com';
@@ -45,7 +48,7 @@ export function contentSecurityPolicy({ development, mapStyleUrl, plainHttp = fa
     'default-src': ["'self'"],
     'script-src': ["'self'", "'unsafe-inline'", ...(development ? ["'unsafe-eval'"] : []), ...STRIPE.script, TURNSTILE],
     'style-src': ["'self'", "'unsafe-inline'"],
-    'img-src': ["'self'", 'data:', 'blob:', ...maps],
+    'img-src': ["'self'", 'data:', 'blob:', ...maps, ...GIF_MEDIA_HOSTS.map((host) => `https://${host}`)],
     'font-src': ["'self'", 'data:'],
     'connect-src': ["'self'", ...STRIPE.connect, TURNSTILE, ...maps, ...(development ? ['ws:', 'wss:'] : [])],
     'frame-src': [...STRIPE.frame, TURNSTILE],

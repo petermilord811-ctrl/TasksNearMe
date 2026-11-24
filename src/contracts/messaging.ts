@@ -7,6 +7,7 @@ import { requestKeyField } from './forms';
 import type { Cents, ISODateTime, Photo } from './common';
 import type { PersonSummary, PresenceState } from './people';
 import type { PhotoUploadResult } from './posting';
+import type { AttachGifInput, GifSearchInput, GifSearchResult } from './gifs';
 import type { ReportInput, ReportSubject } from './support';
 import type { TimelineEvent } from './timeline';
 import type { ProposableChangeType } from './changes';
@@ -246,6 +247,12 @@ export interface ThreadPageData {
   presence?: PresenceState;
   /** The viewer's latest message, when the other person has read up to it ("Seen"). Mutual, like `presence`. */
   seenMessageId?: string;
+  /**
+   * How far the other person has read (2026-11-24, owner: "sent/read feature with tick/double tick icon"): the viewer's
+   * messages up to this time show two ticks (Read), later ones one (Sent). Mutual, like `presence`: absent until it's a
+   * real conversation and both share their activity, and then every message shows one tick.
+   */
+  readUpTo?: ISODateTime;
   /** The first message the viewer hadn't read before opening the conversation: "New messages" goes above it (7.3). */
   firstUnreadId?: string;
   /** The viewer's saved replies, for the composer (7.3). */
@@ -422,6 +429,16 @@ export interface ThreadHandlers {
    * conversation). Errors: `not_allowed` (not theirs, not open, or the other person isn't a helper), `rate_limited`.
    */
   onAskForOffer?: ActionHandler<AskForOfferInput>;
+  /**
+   * GIFs (2026-11-24): trending with an empty `q`, else a search (60 a minute). Absent when GIFs are off (no KLIPY key
+   * in production): no GIF button.
+   */
+  onSearchGifs?: QueryHandler<GifSearchInput, GifSearchResult>;
+  /**
+   * A picked GIF, by its id: stored like a photo (`animated`), counted like one, then sent at once as its own message
+   * with `onSend`. Errors: `unsupported_type` (unknown, not an animated GIF), `too_large`, `rate_limited`, `unknown`.
+   */
+  onAttachGif?: QueryHandler<AttachGifInput, PhotoUploadResult>;
 }
 
 // ---- Direct conversations (2026-11-21) -----------------------------------------------------------------------
@@ -657,4 +674,7 @@ export interface ChatThreadHandlers {
   onSuggest(threadId: string): Promise<ReplySuggestions | null>;
   requestCards: RequestCardHandlers;
   onAskForOffer(threadId: string, input: AskForOfferInput): Promise<ActionResult>;
+  /** GIFs (2026-11-24), as on the conversation page; absent when they're off. */
+  onSearchGifs?: QueryHandler<GifSearchInput, GifSearchResult>;
+  onAttachGif?: QueryHandler<AttachGifInput, PhotoUploadResult>;
 }

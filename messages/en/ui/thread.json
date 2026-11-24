@@ -58,6 +58,14 @@
   "viewPhoto": "View photo",
   "photoAlt": "Photo {number} of {count} from {name}",
   "photoTitle": "Photo {number} of {count}",
+  "gif": {
+    "alt": "GIF from {name}",
+    "badge": "GIF",
+    "play": "Play GIF",
+    "playLabel": "Play GIF: {description}",
+    "open": "View GIF larger: {description}",
+    "title": "GIF from {name}"
+  },
   "previews": {
     "group": "Conversations",
     "booking": "Booking with a photo and status update",
@@ -142,6 +150,36 @@
       "uploading": "{count, plural, one {Adding # photo…} other {Adding # photos…}}",
       "ready": "{count, plural, one {# photo} other {# photos}} of {max}, ready to send",
       "drop": "Drop photos to send"
+    },
+    "gif": {
+      "button": "GIF",
+      "open": "Choose a GIF",
+      "title": "GIFs",
+      "search": "Search KLIPY",
+      "trending": "Trending GIFs",
+      "results": "GIFs for “{query}”",
+      "count": "{count, plural, one {# GIF} other {# GIFs}}",
+      "pick": "Send GIF: {title}",
+      "untitled": "GIF",
+      "loading": "Loading GIFs…",
+      "empty": "No GIFs for “{query}”. Try other words.",
+      "emptyTrending": "No GIFs to show right now.",
+      "error": "GIFs didn’t load. Try again.",
+      "rateLimited": "That’s a lot of searching. Wait a minute, then try again.",
+      "retry": "Try again",
+      "more": "Load more",
+      "loadingMore": "Loading more…",
+      "moreFailed": "More GIFs didn’t load.",
+      "attribution": "Powered by KLIPY",
+      "sending": "Sending GIF…",
+      "failed": {
+        "unsupported_type": "That GIF can’t be sent. Try another one.",
+        "too_large": "That GIF is too big to send. Try another one.",
+        "rate_limited": "You’ve sent a lot of GIFs. Try again later.",
+        "too_many": "The GIF didn’t send. Try again.",
+        "unknown": "The GIF didn’t send. Try again."
+      },
+      "close": "Close GIFs"
     }
   },
   "newMessages": "New messages",
@@ -332,5 +370,9 @@
     "theirTitle": "{name}'s open tasks",
     "theirDescription": "Make an offer on one: the form opens right here.",
     "makeOffer": "Make an offer"
+  },
+  "delivery": {
+    "sent": "Sent",
+    "read": "Read"
   }
 }

@@ -47,4 +47,6 @@ export interface Photo {
   alt: string;
   width: number;
   height: number;
+  /** An animated GIF (2026-11-24, GIFs in chat): a conversation shows it as itself, not as a photo to open. */
+  animated?: true;
 }

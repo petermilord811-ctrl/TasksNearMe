@@ -122,6 +122,8 @@ A feature whose keys are empty in `preview.env` is refused, the same as in produ
 - **Gift-card rewards:** need Tremendous.
 - **Google sign-in:** needs `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, plus the redirect URI
   `https://tasksnearme.com/api/auth/callback/google` registered with Google.
+- **GIFs in chat:** need `KLIPY_API_KEY` (empty: no GIF button). A KLIPY key in Testing mode allows 100 requests an
+  hour: ask KLIPY for production access first. The picker's previews load from `static.klipy.com` (the CSP allows it).
 
 Email (Resend) and address search (Mapbox) use the same keys as development.
 

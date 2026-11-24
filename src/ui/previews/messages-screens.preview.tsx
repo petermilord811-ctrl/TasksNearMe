@@ -5,11 +5,12 @@ import {
 import {
   blockedThreadPageData, closedThreadPageData, deskBookingThreadPageData, deskOfferThreadPageData, directThreadAwaitingReplyData, directThreadPageData, earlierThreadPageData, expiredOfferThreadPageData,
   mayaInboxWithDirectData, plusMenuForHelperPageData, plusMenuThreadPageData, changeCardThreadPageData, fakeConversationHandlers, mayaFoldersInboxData, requestCardForHelperPageData, requestCardThreadPageData, requestThreadPageData, sampleThreadPageData,
-  fakeHandler, fakeThreadHandlers, inboxEmptyData, jordanInboxPageData, jordanShell, mayaInboxPageData,
+  fakeGifHandlers, fakeHandler, fakeThreadHandlers, gifPanelStates, gifThreadPageData, inboxEmptyData, jordanInboxPageData, jordanShell, mayaInboxPageData,
   mayaShell, movingOfferThreadForHelper, taskCanceledOfferThreadPageData, taskCanceledThreadForHelperPageData,
 } from '@/fixtures';
 import { InboxScreen } from '@/ui/screens/messages';
 import { ThreadContent, ThreadScreen } from '@/ui/screens/messages/thread-screen';
+import { GifPickerPanel } from '@/ui/screens/messages/gif-picker';
 import { AppShell } from '@/ui/shells/app-shell';
 import inboxCopy from '../../../messages/en/ui/inbox.json';
 import threadCopy from '../../../messages/en/ui/thread.json';
@@ -29,11 +30,12 @@ function inboxPreview(id: keyof typeof inboxCopy.previews, data: InboxPageData, 
 }
 
 function threadPreview(id: string, title: string, data: ThreadPageData, options: {
-  result?: ActionResult; pending?: boolean; helper?: boolean; suggestions?: string[];
+  result?: ActionResult; pending?: boolean; helper?: boolean; suggestions?: string[]; gifs?: boolean;
 } = {}): PreviewEntry {
   const handlers: ThreadHandlers = {
     ...fakeThreadHandlers,
     ...fakeConversationHandlers,
+    ...(options.gifs ? fakeGifHandlers : {}),
     onSend: fakeHandler(options.result ?? { ok: true, code: 'sent' }, options.pending ? 60_000 : 400),
   };
   return {
@@ -48,7 +50,23 @@ function threadPreview(id: string, title: string, data: ThreadPageData, options:
   };
 }
 
+// GIFs in chat (2026-11-24): the picker's states, as its popover (wide screens) or sheet (phones) shows them.
+const gifPanelTitles: Record<keyof typeof gifPanelStates, string> = {
+  loading: 'GIF picker: loading', trending: 'GIF picker: trending GIFs first', results: 'GIF picker: a search, with Load more',
+  empty: 'GIF picker: nothing found', error: 'GIF picker: GIFs didn\u2019t load, with Try again', rateLimited: 'GIF picker: too many searches this minute',
+};
+function gifPanelPreview(state: keyof typeof gifPanelStates): PreviewEntry {
+  return {
+    id: `gif-picker/${state === 'rateLimited' ? 'rate-limited' : state}`, group: threadCopy.previews.group, title: gifPanelTitles[state],
+    render: () => <div className="w-[22rem] max-w-full rounded-xl border bg-popover p-3 text-popover-foreground shadow-md">
+      <GifPickerPanel seed={gifPanelStates[state]} onSearch={fakeGifHandlers.onSearchGifs} onPick={() => undefined} />
+    </div>,
+  };
+}
+
 export const messagesScreenPreviews: PreviewEntry[] = [
+  threadPreview('gif', 'A GIF in the conversation (a still with Play GIF under reduced motion), and the GIF button beside the paperclip', gifThreadPageData, { gifs: true }),
+  ...(['trending', 'results', 'loading', 'empty', 'error', 'rateLimited'] as const).map(gifPanelPreview),
   inboxPreview('client', mayaInboxPageData),
   inboxPreview('helper', jordanInboxPageData, jordanShell),
   inboxPreview('empty', inboxEmptyData),

@@ -45,7 +45,8 @@ test('a conversation updates live: typing, new messages, then presence and Seen'
     await ruth.getByRole('textbox', { name: 'Message' }).fill('Perfect, see you then');
     await ruth.getByRole('button', { name: 'Send' }).click();
     await expect(lee.getByRole('log').getByText('Perfect, see you then')).toBeVisible({ timeout: 10_000 });
-    await expect(ruth.getByText('Seen', { exact: true })).toBeVisible({ timeout: 15_000 });
+    // Two ticks on Ruth's message once Lee has read it (2026-11-24: ticks instead of "Seen").
+    await expect(ruth.getByRole('log').getByRole('listitem').filter({ hasText: 'Perfect, see you then' }).getByRole('img', { name: 'Read' })).toBeVisible({ timeout: 15_000 });
     await expect(lee.getByText('Active now')).toBeVisible({ timeout: 15_000 });
 
     // A professional chat (completion plan 7.3): Lee quotes Ruth's message in his reply and gives hers a thumbs up;

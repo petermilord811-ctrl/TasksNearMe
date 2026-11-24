@@ -22,8 +22,12 @@ export function photoSrc(file: { id: string; width: number; height: number }, ma
   return Math.max(file.width, file.height) > max ? `/api/files/${file.id}?w=${max}` : `/api/files/${file.id}`;
 }
 
-/** A stored image as the UI shows it, served through the access-checked file route. */
-export function photoFromFile(file: { id: string; width: number; height: number; alt: string }): Photo {
+/**
+ * A stored image as the UI shows it, served through the access-checked file route. A GIF (chat, 2026-11-24) is stored
+ * as it came, small enough never to be resized (a resize would stop it), and says it's animated.
+ */
+export function photoFromFile(file: { id: string; width: number; height: number; alt: string; contentType?: string }): Photo {
+  if (file.contentType === 'image/gif') return { id: file.id, src: `/api/files/${file.id}`, alt: file.alt, width: file.width, height: file.height, animated: true };
   return { id: file.id, src: photoSrc(file), alt: file.alt, width: file.width, height: file.height };
 }
 

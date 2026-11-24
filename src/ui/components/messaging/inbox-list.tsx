@@ -121,7 +121,7 @@ export function InboxList({ threads, now, currentId, variant = 'full', pinned, o
               onSelect(thread.id);
             } : undefined} className={cn(
               'group flex min-w-0 gap-3 transition-colors duration-200 hover:bg-foreground/[0.03] focus-visible:relative focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring dark:hover:bg-white/[0.03]',
-              as({ full: 'px-4 py-3.5 sm:gap-4 sm:px-6 sm:py-4', pane: 'px-3 py-3', split: 'px-4 py-3.5 sm:gap-4 sm:px-6 sm:py-4 lg:gap-3 lg:px-3 lg:py-3' }),
+              as({ full: 'px-4 py-3.5 sm:gap-4 sm:px-6 sm:py-4', pane: 'gap-2.5 px-3 py-2', split: 'px-4 py-3.5 sm:gap-4 sm:px-6 sm:py-4 lg:gap-3 lg:px-3 lg:py-3' }),
               current && 'bg-brand-soft/60 hover:bg-brand-soft/70',
               handlers && 'pr-12',
             )}>
@@ -144,7 +144,7 @@ export function InboxList({ threads, now, currentId, variant = 'full', pinned, o
                   {/* A direct conversation's title is the person's name, already the row's heading. */}
                   {thread.kind !== 'direct' && <span className="min-w-0 truncate font-medium">{thread.title}</span>}
                 </p>
-                <p className={cn('text-sm leading-5 [overflow-wrap:anywhere]', as({ full: 'line-clamp-2', pane: 'line-clamp-1', split: 'line-clamp-2 lg:line-clamp-1' }), unread ? 'text-foreground' : 'text-muted-foreground')}>
+                <p className={cn('leading-5 [overflow-wrap:anywhere]', as({ full: 'line-clamp-2 text-sm', pane: 'line-clamp-1 text-[13px]', split: 'line-clamp-2 text-sm lg:line-clamp-1' }), unread ? 'text-foreground' : 'text-muted-foreground')}>
                   {thread.lastMessage ? <LastMessage message={thread.lastMessage} /> : t('noMessage')}
                 </p>
               </div>

@@ -5,6 +5,8 @@ import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { acceptMessageRequestAction, askForOfferAction, deleteReplyAction, reactToMessageAction, saveReplyAction, searchConversationAction, sendMessageAction, setConversationFlagAction, suggestRepliesAction, translateMessageAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
 import { supportAssistantForRequest } from '@/modules/assist/assistant-choice';
+import { attachGifAction, searchGifsAction } from '@/modules/messaging/gif-actions';
+import { gifsOn } from '@/integrations/gifs';
 import { getHelpSummary } from '@/modules/assist/support-chat';
 import { getInbox, getThreadPage } from '@/modules/messaging/service';
 import { blockUserAction, reportUserAction } from '@/modules/support/actions';
@@ -75,6 +77,8 @@ async function Thread({ params, searchParams, wide }: Pick<PageProps<'/[locale]/
         onSuggest: suggestRepliesAction.bind(null, threadId),
         requestCards: { onAccept: acceptInviteAction, onDecline: declineInviteAction, onCancel: cancelInviteAction },
         onAskForOffer: askForOfferAction.bind(null, threadId),
+        // GIFs (2026-11-24): only with a KLIPY key, or the samples outside production.
+        ...(gifsOn() ? { onSearchGifs: searchGifsAction, onAttachGif: attachGifAction } : {}),
       }}
       {...(subject ? { safety: { subject, handlers: { onReport: reportUserAction.bind(null, threadId), onBlock: blockUserAction.bind(null, threadId) } } } : {})}
     />

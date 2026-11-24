@@ -5,7 +5,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import userEvent from '@testing-library/user-event';
 import { NextIntlClientProvider } from 'next-intl';
 import { routes, type ActionResult, type AskForOfferInput, type MessageReaction, type PhotoUploadResult } from '@/contracts';
-import { chatRequestCardThreadData, chatRequestThreadData, chatThreadData, fakeChatThreadHandlers, fakeThreadHandlers, plusMenuForHelperPageData, plusMenuThreadPageData, requestThreadPageData } from '@/fixtures';
+import { chatRequestCardThreadData, chatRequestThreadData, chatThreadData, deskBookingThreadPageData, fakeChatThreadHandlers, fakeThreadHandlers, plusMenuForHelperPageData, plusMenuThreadPageData, requestThreadPageData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { MessageComposerContent } from '@/ui/screens/messages/message-composer';
 import { MessageLog } from '@/ui/screens/messages/message-log';
@@ -155,5 +155,27 @@ describe('the conversation\'s "+"', () => {
     wrap(<OfferAskCardView card={plusMenuForHelperPageData.cards!.offerAsks!.msg_d7!} name="Maya" createdAt={now} />);
     expect(screen.getByText('Maya asked you for an offer')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Make an offer' })).toHaveAttribute('href', '/app/find-work/tsk_shelves/offer');
+  });
+});
+
+describe('ticks on your own messages', () => {
+  it('shows one tick on a sent message and two once the other person has read it', () => {
+    const data = deskBookingThreadPageData;
+    const read = data.messages.find((message) => message.sender === 'me' && message.kind === 'text')!;
+    const sent = { ...read, id: 'msg_after', createdAt: '2026-11-21T16:00:00.000Z' };
+    const theirs = data.messages.find((message) => message.sender === 'them')!;
+    wrap(<ReplyProvider><MessageLog messages={[read, theirs, sent]} otherParty={data.thread.otherParty} now={now} readUpTo={data.readUpTo} /></ReplyProvider>);
+    expect(screen.getAllByRole('img', { name: 'Read' })).toHaveLength(1);
+    expect(screen.getAllByRole('img', { name: 'Sent' })).toHaveLength(1);
+    // Theirs carry none, and "Seen" is gone.
+    expect(screen.queryByText('Seen')).toBeNull();
+  });
+
+  it('shows one tick on every message while read receipts are off (no readUpTo)', () => {
+    const data = deskBookingThreadPageData;
+    const mine = data.messages.filter((message) => message.sender === 'me');
+    wrap(<ReplyProvider><MessageLog messages={mine} otherParty={data.thread.otherParty} now={now} /></ReplyProvider>);
+    expect(screen.queryAllByRole('img', { name: 'Read' })).toHaveLength(0);
+    expect(screen.getAllByRole('img', { name: 'Sent' })).toHaveLength(mine.length);
   });
 });

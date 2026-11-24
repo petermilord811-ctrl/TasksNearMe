@@ -7,6 +7,8 @@ import { checkPushSubscriptionAction, removePushSubscriptionAction } from '@/mod
 import { remindApprovalsDue, remindUpcomingBookings } from '@/modules/bookings/reminders';
 import { unreadMessageCount } from '@/modules/messaging/service';
 import { acceptRequestFromWindowAction, askForOfferFromWindowAction, deleteReplyAction, reactFromWindowAction, saveReplyAction, searchConversationAction, sendFromWindowAction, setConversationFlagFromWindowAction, startDirectChatAction, suggestRepliesAction, translateMessageAction, typingAction, uploadMessagePhoto } from '@/modules/messaging/actions';
+import { attachGifAction, searchGifsAction } from '@/modules/messaging/gif-actions';
+import { gifsOn } from '@/integrations/gifs';
 import { handOffToSupportAction, replyToHelpCaseAction, requestLiveChatAction, typingInHelpCaseAction } from '@/modules/assist/support-chat-actions';
 import { blockUserAction, emailSupportTranscriptAction, rateSupportCaseAction, reportUserAction } from '@/modules/support/actions';
 import { helpUnreadCount } from '@/modules/support/service';
@@ -80,7 +82,7 @@ async function ViewerShell({ children }: { children: React.ReactNode }) {
         handlers={{ onModeChange: setMode, onSignOut: signOut, onSwitchLanguage: switchLanguageAction, onCheckPushDevice: checkPushSubscriptionAction, onForgetPushDevice: removePushSubscriptionAction, ...(aiWritingSetUp() ? { onAskSearch: searchWithAi } : {}) }}
         // Messages: the chat button and window (2026-11-22). Server Actions only (unbound, called with the conversation's
         // or the case's id), never closures.
-        chat={<ChatWindowController viewerId={viewer.user.id} unread={unreadMessages + unreadHelp} actions={{ send: sendFromWindowAction, react: reactFromWindowAction, typing: typingAction, upload: uploadMessagePhoto, saveReply: saveReplyAction, deleteReply: deleteReplyAction, report: reportUserAction, block: blockUserAction, handOff: handOffToSupportAction, reply: replyToHelpCaseAction, requestLive: requestLiveChatAction, typingInCase: typingInHelpCaseAction, startChat: startDirectChatAction, flag: setConversationFlagFromWindowAction, accept: acceptRequestFromWindowAction, searchThread: searchConversationAction, translate: translateMessageAction, suggest: suggestRepliesAction, acceptInvite: acceptInviteAction, declineInvite: declineInviteAction, cancelInvite: cancelInviteAction, askForOffer: askForOfferFromWindowAction, rateCase: rateSupportCaseAction, emailTranscript: emailSupportTranscriptAction }} />}
+        chat={<ChatWindowController viewerId={viewer.user.id} unread={unreadMessages + unreadHelp} actions={{ send: sendFromWindowAction, react: reactFromWindowAction, typing: typingAction, upload: uploadMessagePhoto, saveReply: saveReplyAction, deleteReply: deleteReplyAction, report: reportUserAction, block: blockUserAction, handOff: handOffToSupportAction, reply: replyToHelpCaseAction, requestLive: requestLiveChatAction, typingInCase: typingInHelpCaseAction, startChat: startDirectChatAction, flag: setConversationFlagFromWindowAction, accept: acceptRequestFromWindowAction, searchThread: searchConversationAction, translate: translateMessageAction, suggest: suggestRepliesAction, acceptInvite: acceptInviteAction, declineInvite: declineInviteAction, cancelInvite: cancelInviteAction, askForOffer: askForOfferFromWindowAction, rateCase: rateSupportCaseAction, emailTranscript: emailSupportTranscriptAction , ...(gifsOn() ? { searchGifs: searchGifsAction, attachGif: attachGifAction } : {}) }} />}
       >
         {children}
       </AppShell>

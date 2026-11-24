@@ -4,6 +4,9 @@ import dynamic from 'next/dynamic';
 import { useSelectedLayoutSegments } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
+  AttachGifInput,
+  GifSearchInput,
+  GifSearchResult,
   ActionResult,
   AskForOfferInput,
   ChatInboxData,
@@ -87,6 +90,9 @@ export interface ChatActions {
   acceptInvite(input: { inviteId: string }): Promise<ActionResult>;
   declineInvite(input: { inviteId: string }): Promise<ActionResult>;
   cancelInvite(input: { inviteId: string }): Promise<ActionResult>;
+  /** GIFs (2026-11-24): absent when they're off. */
+  searchGifs?: (input: GifSearchInput) => Promise<GifSearchResult>;
+  attachGif?: (input: AttachGifInput) => Promise<PhotoUploadResult>;
 }
 
 const WIDE = '(min-width: 1024px)';
@@ -530,6 +536,7 @@ export function ChatWindowController({ viewerId, unread, actions }: { viewerId: 
         if (result.ok) threadAgain(threadId);
         return result;
       },
+      ...(actions.searchGifs && actions.attachGif ? { onSearchGifs: actions.searchGifs, onAttachGif: actions.attachGif } : {}),
     }),
     [actions, threadAgain, soon, loadInbox],
   );

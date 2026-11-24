@@ -141,6 +141,8 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
     onSearch: (query) => handlers.onSearch(id, query),
     onTranslate: (messageId) => handlers.onTranslate(id, messageId),
     onSuggest: () => handlers.onSuggest(id),
+    // GIFs (2026-11-24): only where the app offers them.
+    ...(handlers.onSearchGifs && handlers.onAttachGif ? { onSearchGifs: handlers.onSearchGifs, onAttachGif: handlers.onAttachGif } : {}),
   };
   // Suggest replies answers the other person's latest message, when they wrote last (2026-11-23).
   const lastWritten = [...messages].reverse().find((message) => message.kind === 'text');
@@ -149,11 +151,11 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
   // The header never overlaps itself, however narrow (2026-11-23, owner: "bugs in header"): the name and its line below
   // take what's left after the buttons and wrap; the way to what it's about lives in the menu, with search and the rest.
   return <section aria-label={w('conversation', { name: other.displayName })} data-drop-photos="" className="@container/thread relative flex min-h-0 flex-1 flex-col">
-    <header className="flex min-w-0 items-center gap-2 border-b border-foreground/[0.07] px-3 py-2 dark:border-white/[0.06]">
+    <header className="flex min-w-0 items-center gap-2 border-b border-foreground/[0.07] px-2.5 py-1.5 dark:border-white/[0.06]">
       <InitialsAvatar initials={other.initials} photo={other.photo} size="sm" />
       <div className="min-w-0 flex-1 overflow-hidden">
-        <div className="flex min-w-0 items-center gap-1.5"><h3 className="min-w-0 truncate text-[15px] font-semibold" title={other.displayName}>{other.displayName}</h3><ConversationMarks thread={thread} /></div>
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+        <div className="flex min-w-0 items-center gap-1.5"><h3 className="min-w-0 truncate text-sm leading-5 font-semibold" title={other.displayName}>{other.displayName}</h3><ConversationMarks thread={thread} /></div>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] leading-4 text-muted-foreground">
           <ThreadPresence threadId={thread.id} presence={data.presence} className="shrink-0 text-xs" />
           {/* Their @username and Sparks (2026-11-22). */}
           {other.username && <span className="min-w-0 max-w-full truncate">@{other.username}</span>}
@@ -168,7 +170,7 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
         {controls}
       </div>
     </header>
-    {thread.contactMasking && <p className="flex items-start gap-2 border-b border-foreground/[0.07] bg-secondary/60 px-3 py-2 text-xs leading-5 text-secondary-foreground dark:border-white/[0.06]"><LockKeyhole aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" /><span>{thread.kind === 'direct' ? t('direct.masking') : t('masking')}</span></p>}
+    {thread.contactMasking && <p className="flex items-start gap-2 border-b border-foreground/[0.07] bg-secondary/60 px-2.5 py-1.5 text-[11px] leading-4 text-secondary-foreground dark:border-white/[0.06]"><LockKeyhole aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" /><span>{thread.kind === 'direct' ? t('direct.masking') : t('masking')}</span></p>}
     {data.canProposeChange && thread.subject.kind === 'booking' && <p className="flex flex-wrap items-center justify-between gap-x-3 border-b border-foreground/[0.07] px-3 py-1.5 text-xs dark:border-white/[0.06]">
       <span className="text-muted-foreground">{t('cards.change.hint')}</span>
       <Link href={routes.app.bookingProposeChange(thread.subject.bookingId)} className="inline-flex min-h-9 items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">{t('cards.change.propose')}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>
@@ -178,7 +180,7 @@ function ThreadPane({ load, now, handlers, onRetry, onRefresh, onLoadEarlier, fo
       <Link href={routes.app.requestHelper(requestHandle)} className="inline-flex min-h-9 items-center gap-1 font-semibold text-primary underline-offset-4 hover:underline">{t('direct.request')}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>
     </p>}
     <ReplyProvider>
-      <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier), onLoadEarlier: () => onLoadEarlier(data.earlier!.from) } : {})} onRefresh={onRefresh} otherParty={other} now={now} seenMessageId={data.seenMessageId} firstUnreadId={data.firstUnreadId} focusId={focusId} canReply={composer.canSend} {...(composer.canSend ? { onReact: bound.onReact } : {})} {...(data.assist?.translate ? { onTranslate: bound.onTranslate } : {})} {...(data.cards ? { cards: data.cards } : {})} requestCardHandlers={handlers.requestCards} className="min-h-0 flex-1 space-y-5 px-3 py-3 sm:px-3 sm:py-3" />
+      <MessageLog key={`log-${thread.id}`} messages={messages} {...(data.earlier ? { earlierHref: routes.app.thread(thread.id, data.earlier), onLoadEarlier: () => onLoadEarlier(data.earlier!.from) } : {})} onRefresh={onRefresh} otherParty={other} now={now} readUpTo={data.readUpTo} firstUnreadId={data.firstUnreadId} focusId={focusId} canReply={composer.canSend} {...(composer.canSend ? { onReact: bound.onReact } : {})} {...(data.assist?.translate ? { onTranslate: bound.onTranslate } : {})} {...(data.cards ? { cards: data.cards } : {})} requestCardHandlers={handlers.requestCards} compact className="min-h-0 flex-1 space-y-4 px-2.5 py-2.5 sm:px-2.5 sm:py-2.5" />
       {composer.disabledReason !== 'blocked' && <RequestBanner thread={thread} name={firstName} handlers={bound} onBlock={(input) => handlers.onBlock(id, input)} onIgnored={onIgnored} compact />}
       {composer.canSend && composer.firstMessagesLeft !== undefined && <p role="note" className="border-t border-foreground/[0.07] bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground dark:border-white/[0.06]">{t('direct.firstMessagesLeft', { count: composer.firstMessagesLeft, name: firstName })}</p>}
       {composer.canSend

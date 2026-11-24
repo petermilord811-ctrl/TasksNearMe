@@ -134,11 +134,15 @@ describe('real time through Postgres', () => {
     const shared = await getThreadPage(db, 'usr_maya', threadId, new Date(now.getTime() + 2000));
     expect(shared?.presence).toBe('now');
     expect(shared?.seenMessageId).toBe(mine!.id);
+    // Ticks (2026-11-24): how far Lee has read, under the same rule.
+    expect(shared?.readUpTo).toBeDefined();
+    expect(Date.parse(shared!.readUpTo!)).toBeGreaterThanOrEqual(now.getTime() + 500);
 
     await db.update(users).set({ showActivity: false }).where(eq(users.id, 'usr_maya'));
     const hidden = await getThreadPage(db, 'usr_maya', threadId, new Date(now.getTime() + 3000));
     expect(hidden?.presence).toBeUndefined();
     expect(hidden?.seenMessageId).toBeUndefined();
+    expect(hidden?.readUpTo).toBeUndefined();
     const theirs = await getThreadPage(db, 'usr_lee', threadId, new Date(now.getTime() + 3000));
     expect(theirs?.presence).toBeUndefined();
   });
