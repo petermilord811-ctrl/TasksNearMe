@@ -33,15 +33,17 @@ async function closePortalTasks() {
 
 const query = (page: Page) => new URL(page.url()).searchParams;
 
-test('sorting, the type and the Feed or List keep every other filter', async ({ page }, testInfo) => {
+test('sorting, the tab and the Feed or List keep every other filter', async ({ page }, testInfo) => {
   test.setTimeout(120_000);
   // Phones keep the sort in the sticky row's menu and Feed or List in the Filters sheet (plan 10.7).
   const phone = testInfo.project.name === 'app-mobile';
   const sortBy = async (name: string) => {
-    if (phone) {
-      await page.getByRole('button', { name: /^Sort: / }).click();
+    // A menu on phones and on Open tasks (its four sorts are the board's, 2026-11-23); buttons on Neighbors' toolbar.
+    const menu = page.getByRole('button', { name: /^Sort: / }).filter({ visible: true });
+    if (phone || (await menu.count()) > 0) {
+      await menu.click();
       await page.getByRole('list', { name: 'Sort' }).getByRole('link', { name }).click();
-      await expect(page.getByRole('button', { name: `Sort: ${name}` })).toBeVisible();
+      await expect(page.getByRole('button', { name: `Sort: ${name}` }).filter({ visible: true })).toBeVisible();
     } else {
       await page.getByRole('navigation', { name: 'Sort' }).getByRole('link', { name }).click();
       await expect(page.getByRole('navigation', { name: 'Sort' }).getByRole('link', { name })).toHaveAttribute('aria-current', 'page');
@@ -65,21 +67,72 @@ test('sorting, the type and the Feed or List keep every other filter', async ({ 
   await sortBy('New');
   await expect.poll(() => Object.fromEntries(query(page))).toEqual({ area: 'all', category: 'furniture-assembly', sort: 'new' });
 
-  await page.getByRole('navigation', { name: 'Show' }).getByRole('link', { name: /^Tasks/ }).click();
-  await expect(page.getByRole('navigation', { name: 'Show' }).getByRole('link', { name: /^Tasks/ })).toHaveAttribute('aria-current', 'page');
-  // Tasks only: every card is a task, and the full board is one link away for its price filters.
-  await expect(page.getByRole('link', { name: 'More task filters' })).toBeVisible();
-
-  await viewAs('List');
-  await expect.poll(() => Object.fromEntries(query(page))).toEqual({ area: 'all', category: 'furniture-assembly', type: 'task', sort: 'new', view: 'list' });
+  // Open tasks, the switch's other tab (2026-11-23): the place and the service come along; the tab has its own sort
+  // and view (the soonest first, the List).
+  const tabs = page.getByRole('navigation', { name: 'Neighbors or open tasks' }).filter({ visible: true });
+  await tabs.getByRole('link', { name: /^Open tasks/ }).click();
+  await expect.poll(() => Object.fromEntries(query(page))).toEqual({ area: 'all', category: 'furniture-assembly', type: 'task' });
+  await expect(tabs.locator('[aria-current="page"]')).toContainText('Open tasks');
+  // The board's own tools are here now: its sorts, and alerts for this search.
+  await expect(page.getByRole('link', { name: 'Save this search' })).toBeVisible();
+  await sortBy('Lowest price');
+  await expect.poll(() => Object.fromEntries(query(page))).toEqual({ area: 'all', category: 'furniture-assembly', type: 'task', sort: 'price_low' });
 
   await viewAs('Feed');
-  await expect.poll(() => Object.fromEntries(query(page))).toEqual({ area: 'all', category: 'furniture-assembly', type: 'task', sort: 'new' });
+  await expect.poll(() => Object.fromEntries(query(page))).toEqual({ area: 'all', category: 'furniture-assembly', type: 'task', sort: 'price_low', view: 'feed' });
+
+  await viewAs('List');
+  await expect.poll(() => Object.fromEntries(query(page))).toEqual({ area: 'all', category: 'furniture-assembly', type: 'task', sort: 'price_low' });
 
   // A filter comes off on its own; the rest stay.
   await page.getByRole('navigation', { name: 'Filters in use' }).getByRole('link', { name: 'Remove filter: Furniture assembly' }).click();
   await expect(page.getByRole('navigation', { name: 'Filters in use' })).toHaveCount(0);
-  expect(Object.fromEntries(query(page))).toEqual({ area: 'all', type: 'task', sort: 'new' });
+  expect(Object.fromEntries(query(page))).toEqual({ area: 'all', type: 'task', sort: 'price_low' });
+});
+
+test('Neighbors and Open tasks are two tabs of one place: the switch, the board’s filters, and back (2026-11-23)', async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  const phone = testInfo.project.name === 'app-mobile';
+  await devSignIn(page, 'maya@example.test');
+  await page.goto('/app/community?area=all');
+  await expect(page.getByRole('heading', { level: 1, name: 'All of Austin' }).filter({ visible: true })).toBeVisible();
+
+  // The switch at the top (on phones, across the sticky bar), Neighbors marked, the open tasks counted.
+  const tabs = page.getByRole('navigation', { name: 'Neighbors or open tasks' }).filter({ visible: true });
+  await expect(tabs).toBeVisible();
+  await expect(tabs.locator('[aria-current="page"]')).toHaveText('Neighbors');
+  const openTasks = tabs.getByRole('link', { name: /^Open tasks/ });
+  await expect(openTasks).toHaveAttribute('href', '/app/community?area=all&type=task');
+  expect(Number((await openTasks.textContent())!.match(/\d+/)![0])).toBeGreaterThan(0);
+  // Neighbors shows the newest of them: the rail's card on wide screens, a strip in the Feed on phones, each with the tab.
+  const preview = page.getByRole('region', { name: 'Open tasks in Austin' }).filter({ visible: true });
+  await expect(preview).toBeVisible();
+  await expect(preview.getByRole('link', { name: /^See (all \d+ open tasks|the open task)/ })).toHaveAttribute('href', '/app/community?area=all&type=task');
+  if (phone) await expect(preview.getByRole('article').first()).toBeVisible();
+
+  // Open tasks: the board inside the app (its composer, its rows, no post tabs).
+  await openTasks.click();
+  await expect.poll(() => Object.fromEntries(query(page))).toEqual({ area: 'all', type: 'task' });
+  await expect(tabs.locator('[aria-current="page"]')).toContainText('Open tasks');
+  await expect(page.getByRole('region', { name: 'Post in Austin' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Show' })).toHaveCount(0);
+
+  // The board's filters, each with its count: a price from the Filters panel (a sheet on phones).
+  await page.getByRole('button', { name: /^Filters/ }).filter({ visible: true }).click();
+  const panel = page.getByRole('dialog');
+  await panel.getByRole('group', { name: 'Price' }).getByRole('link', { name: /^\$50 to \$99/ }).click();
+  await expect.poll(() => Object.fromEntries(query(page))).toEqual({ area: 'all', type: 'task', min: '50', max: '99' });
+  await expect(page.getByRole('navigation', { name: 'Filters in use' }).getByRole('link', { name: 'Remove filter: $50 to $99' })).toBeVisible();
+
+  // Back to Neighbors: the place stays, the board's filters stay with Open tasks.
+  await tabs.getByRole('link', { name: 'Neighbors' }).click();
+  await expect.poll(() => Object.fromEntries(query(page))).toEqual({ area: 'all' });
+  await expect(tabs.locator('[aria-current="page"]')).toHaveText('Neighbors');
+  // On wide screens the heading's count opens the tab too.
+  if (!phone) {
+    await page.getByRole('link', { name: /^\d+ open tasks?$/ }).filter({ visible: true }).click();
+    await expect.poll(() => Object.fromEntries(query(page))).toEqual({ area: 'all', type: 'task' });
+  }
 });
 
 test('a neighbor asks in the composer, then turns the question into a task that links back', async ({ browser, baseURL }, testInfo) => {
@@ -147,13 +200,15 @@ test('a neighbor asks in the composer, then turns the question into a task that 
     await expect(link).toHaveAttribute('href', taskPath);
     await expect(page.getByRole('link', { name: 'Ask for help' })).toHaveCount(0);
     // Her own task waits in Your stuff, not in her stream (audit M20); for a neighbor, its card links back to the post.
-    await page.goto('/app/community?area=all&type=task&sort=new');
+    // Open tasks' cards (the Feed), newest first.
+    await page.goto('/app/community?area=all&type=task&sort=new&view=feed');
+    await expect(page.getByRole('heading', { level: 1, name: 'All of Austin' }).filter({ visible: true })).toBeVisible();
     await expect(page.getByRole('article', { name: title })).toHaveCount(0);
     const lee = await browser.newContext();
     try {
       const leePage = await lee.newPage();
       await devSignIn(leePage, 'lee@example.test');
-      await leePage.goto('/app/community?area=all&type=task&sort=new');
+      await leePage.goto('/app/community?area=all&type=task&sort=new&view=feed');
       const card = leePage.getByRole('article', { name: title });
       // Exactly the title: the link to the post it came from carries the same words after "From a neighborhood post".
       await expect(card.getByRole('link', { name: title, exact: true })).toHaveAttribute('href', `/app/find-work/${taskPath.split('/').at(-1)}`);

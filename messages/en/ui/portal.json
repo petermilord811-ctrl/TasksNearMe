@@ -45,7 +45,10 @@
     "label": "Sort",
     "hot": "Hot",
     "new": "New",
-    "top": "Top"
+    "top": "Top",
+    "soonest": "Soonest",
+    "price_high": "Highest price",
+    "price_low": "Lowest price"
   },
   "view": {
     "label": "View",
@@ -83,7 +86,6 @@
     "keyword": "“{q}”",
     "countOn": "({count} on)"
   },
-  "moreTaskFilters": "More task filters",
   "task": {
     "flair": "Task",
     "posted": "posted a task",
@@ -109,7 +111,11 @@
     "yesterday": "Yesterday",
     "count": "{count, plural, one {# item} other {# items}}",
     "replies": "{count, plural, =0 {No replies} one {# reply} other {# replies}}",
-    "helpful": "{count} helpful"
+    "helpful": "{count} helpful",
+    "tasks": "{count, plural, one {# open task} other {# open tasks}}",
+    "remote": "Remote",
+    "seeAllRemote": "See all {count} remote tasks",
+    "tomorrow": "Tomorrow"
   },
   "rail": {
     "label": "Around the neighborhood",
@@ -157,7 +163,10 @@
     "backToAll": "Back to everything",
     "pastEndTitle": "Nothing on this page",
     "pastEndBody": "You've reached the end. Start again from the first page.",
-    "firstPage": "Back to the first page"
+    "firstPage": "Back to the first page",
+    "tasksFilteredTitle": "No open tasks match these filters",
+    "tasksTitle": "No open tasks in {place} right now",
+    "tasksBody": "When a neighbor needs a hand, their task shows up here. Have something to get done? Post a task."
   },
   "live": {
     "show": "{count, plural, one {# new} other {# new}} · Show",
@@ -192,7 +201,13 @@
     "taskDiscussion": "Task page · its neighborhood post",
     "launch": "Neighbors · launch week: a pinned card and the neighborhood question",
     "unanswered": "Neighbors · asks waiting for an answer",
-    "staffSamples": "Neighbors · staff view where members don't see sample posts"
+    "staffSamples": "Neighbors · staff view where members don't see sample posts",
+    "openTasks": "Open tasks · the board inside Neighbors, by neighborhood",
+    "openTasksFiltered": "Open tasks · the board's filters (price, time of day, few offers)",
+    "openTasksByDay": "Open tasks · by the day they're on",
+    "openTasksEmpty": "Open tasks · nothing open nearby",
+    "openTasksNone": "Neighbors · no open tasks near you for the rail's card",
+    "openTasksNoArea": "Neighbors · no neighborhood yet: open tasks in the whole city"
   },
   "phoneBar": {
     "changePlace": "Change the neighborhood",
@@ -240,5 +255,19 @@
     "save": "Save",
     "saved": "Saved. Near you starts from there now.",
     "failed": "Couldn't save that. Try again."
+  },
+  "switch": {
+    "label": "Neighbors or open tasks",
+    "neighbors": "Neighbors",
+    "tasks": "Open tasks"
+  },
+  "openTasks": {
+    "nearby": "Open tasks near you",
+    "area": "Open tasks in {area}",
+    "market": "Open tasks in {market}",
+    "remote": "Remote tasks",
+    "none": "No open tasks here right now.",
+    "post": "Post a task",
+    "seeAll": "{count, plural, one {See the open task} other {See all # open tasks}}"
   }
 }

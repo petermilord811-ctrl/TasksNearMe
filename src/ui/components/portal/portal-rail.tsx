@@ -1,12 +1,14 @@
-import { ArrowRight, BadgeCheck, Bookmark, ClipboardList, Flame, Lock, MessageCircleQuestion, MessagesSquare, Star, Users } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Bookmark, ClipboardList, Clock, Flame, Laptop, Lock, MapPin, MessageCircleQuestion, MessagesSquare, Plus, Star, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { PortalHelper, PortalPageData, PortalRail as PortalRailData } from '@/contracts';
+import type { PortalHelper, PortalPageData, PortalRail as PortalRailData, PortalTaskView } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
+import { useFormat } from '@/ui/lib/format';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
 import { ScrollRow } from '@/ui/components/layout/scroll-row';
-import { savedHref, unansweredHref } from './portal-href';
+import { openTasksHref, savedHref, unansweredHref } from './portal-href';
+import { categoryIcons, useTaskPrice } from './task-feed-card';
 
 const cardClass = 'min-w-0 rounded-2xl border border-border bg-card p-3.5 shadow-card';
 const cardTitle = 'flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase';
@@ -101,6 +103,102 @@ export function UnansweredCard({ unanswered, query }: { unanswered: PortalRailDa
   </section>;
 }
 
+type OpenTasksData = Pick<PortalPageData, 'query' | 'place' | 'market'> & { openTasks: NonNullable<PortalPageData['openTasks']> };
+
+/** "Open tasks near you", or in the neighborhood, the city, or remote, as the place is. */
+function useOpenTasksTitle(data: Pick<PortalPageData, 'place' | 'market'>): string {
+  const t = useTranslations('portal.openTasks');
+  const { place } = data;
+  if (place.kind === 'nearby') return t('nearby');
+  if (place.kind === 'area') return t('area', { area: place.name });
+  if (place.kind === 'citywide') return t('remote');
+  return t('market', { market: data.market.name });
+}
+
+/** When an open task is: its day, and its hours or "any time that day". */
+function useTaskWhen(view: PortalTaskView): string {
+  const t = useTranslations('portal');
+  const { formatDate, formatTimeRange } = useFormat();
+  const { schedule } = view.task;
+  return `${formatDate(schedule.windowStart)} · ${schedule.flexible ? t('task.anyTime') : formatTimeRange(schedule.windowStart, schedule.windowEnd)}`;
+}
+
+/** One open task in the rail's card: its title (where it opens for this viewer), the price, the place and when. */
+function OpenTaskLine({ view }: { view: PortalTaskView }) {
+  const t = useTranslations('portal');
+  const { task } = view;
+  const { price } = useTaskPrice(task);
+  const when = useTaskWhen(view);
+  return <Link href={view.href} className="group/row -mx-2 block rounded-xl px-2 py-2 transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring">
+    <span className="flex items-start justify-between gap-3">
+      <span className="line-clamp-2 min-w-0 text-sm font-medium group-hover/row:text-primary">{task.title}</span>
+      <span className="shrink-0 font-display text-sm font-semibold tabular-nums">{price}</span>
+    </span>
+    <span className="mt-0.5 block truncate text-xs text-muted-foreground">{task.location.kind === 'remote' ? t('task.remote') : task.location.areaName} · {when}</span>
+  </Link>;
+}
+
+/**
+ * "Open tasks near you" (2026-11-23) in the rail on wide screens: the place's newest open tasks, each opening where it
+ * should for the viewer, and the Open tasks tab with all of them. With none, a quiet line and the way to post one.
+ */
+export function OpenTasksCard({ data }: { data: OpenTasksData }) {
+  const t = useTranslations('portal.openTasks');
+  const title = useOpenTasksTitle(data);
+  const { items, count } = data.openTasks;
+  return <section aria-labelledby="portal-open-tasks" className={cardClass}>
+    <h2 id="portal-open-tasks" className={cardTitle}><ClipboardList aria-hidden="true" className="size-4 text-primary" />{title}</h2>
+    {items.length === 0
+      ? <div className="mt-2 space-y-1.5">
+          <p className="text-sm text-muted-foreground">{t('none')}</p>
+          <Link href={routes.app.newTask()} className="inline-flex min-h-8 items-center gap-1 text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring"><Plus aria-hidden="true" className="size-3.5" />{t('post')}</Link>
+        </div>
+      : <ul className="mt-1.5 space-y-0.5">{items.map((view) => <li key={view.task.id}><OpenTaskLine view={view} /></li>)}</ul>}
+    {count > 0 && <Link href={openTasksHref(data.query)} className="mt-1.5 inline-flex min-h-8 items-center gap-1 text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('seeAll', { count })}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>}
+  </section>;
+}
+
+/** One open task as a tile in the Feed's strip: the service, the title, the price, the place and when. */
+function OpenTaskTile({ view }: { view: PortalTaskView }) {
+  const t = useTranslations('portal');
+  const card = useTranslations('taskCard');
+  const { task } = view;
+  const Icon = categoryIcons[task.categorySlug];
+  const { price, note } = useTaskPrice(task);
+  const when = useTaskWhen(view);
+  return <article className="relative flex h-full min-w-0 flex-col gap-2 rounded-2xl border border-border bg-card p-3.5 shadow-card transition-colors focus-within:border-primary/40 hover:border-primary/40">
+    <p className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+      <span className="inline-flex min-w-0 items-center gap-1"><Icon aria-hidden="true" className="size-3.5 shrink-0 text-primary" /><span className="truncate">{task.taskType ? card(`types.${task.categorySlug}.${task.taskType}`) : card(`categories.${task.categorySlug}`)}</span></span>
+    </p>
+    {/* The whole tile opens the task: the title's link stretches over it. */}
+    <h3 className="line-clamp-2 text-[15px]/5 font-semibold"><Link href={view.href} className="rounded-sm outline-offset-2 after:absolute after:inset-0 after:rounded-2xl after:content-[''] focus-visible:outline-2 focus-visible:outline-ring">{task.title}</Link></h3>
+    <p className="mt-auto font-display text-base font-semibold tabular-nums">{price}{note && <span className="ml-1 font-sans text-xs font-normal text-muted-foreground">{note}</span>}</p>
+    <p className="space-y-0.5 text-xs text-muted-foreground">
+      <span className="flex items-center gap-1 truncate">{task.location.kind === 'remote' ? <><Laptop aria-hidden="true" className="size-3.5 shrink-0" />{t('task.remote')}</> : <><MapPin aria-hidden="true" className="size-3.5 shrink-0" />{task.location.areaName}</>}</span>
+      <span className="flex items-center gap-1 truncate tabular-nums"><Clock aria-hidden="true" className="size-3.5 shrink-0" />{when}</span>
+    </p>
+  </article>;
+}
+
+/**
+ * "Open tasks near you" (2026-11-23) inside the Feed on phones and tablets (no rail there): the place's newest open
+ * tasks as tiles that swipe sideways, and the Open tasks tab with all of them.
+ */
+export function OpenTasksStrip({ data }: { data: OpenTasksData }) {
+  const t = useTranslations('portal.openTasks');
+  const title = useOpenTasksTitle(data);
+  const { items, count } = data.openTasks;
+  return <section aria-labelledby="portal-open-tasks-strip" className="space-y-2.5">
+    <div className="flex items-baseline justify-between gap-3">
+      <h2 id="portal-open-tasks-strip" className="font-display text-base font-semibold">{title}</h2>
+      <Link href={openTasksHref(data.query)} className="inline-flex min-h-9 shrink-0 items-center gap-1 text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('seeAll', { count })}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>
+    </div>
+    <ScrollRow label={title} className="snap-x snap-mandatory gap-3 pb-1">
+      {items.map((view) => <li key={view.task.id} className="w-[15rem] shrink-0 snap-start"><OpenTaskTile view={view} /></li>)}
+    </ScrollRow>
+  </section>;
+}
+
 /** Helpers nearby, as a sideways row inside the Feed (screens without the rail). */
 export function HelpersRow({ helpers }: { helpers: PortalHelper[] }) {
   const t = useTranslations('portal');
@@ -138,9 +236,10 @@ export function YourStuffStrip({ rail, query }: { rail: PortalRailData; query: P
 
 /**
  * The rail beside the stream on wide screens (completion plan 9.10): your open tasks, your posts and what you
- * saved; helpers who work in the place; the week's liveliest posts; and the rules that keep it a good place.
+ * saved; on Neighbors, the place's newest open tasks (2026-11-23); helpers who work in the place; the week's liveliest
+ * posts; and the rules that keep it a good place.
  */
-export function PortalRail({ data }: { data: Pick<PortalPageData, 'rail' | 'query' | 'place' | 'market'> }) {
+export function PortalRail({ data }: { data: Pick<PortalPageData, 'rail' | 'query' | 'place' | 'market'> & Partial<Pick<PortalPageData, 'openTasks'>> }) {
   const t = useTranslations('portal.rail');
   const { rail, query } = data;
   const nothing = rail.yourTasks.length === 0 && rail.yourPosts.length === 0 && rail.savedCount === 0;
@@ -171,6 +270,9 @@ export function PortalRail({ data }: { data: Pick<PortalPageData, 'rail' | 'quer
             </Link>}
           </div>}
     </section>
+
+    {/* The Neighbors tab's look at the other one (2026-11-23); Open tasks is that list itself. */}
+    {data.openTasks && <OpenTasksCard data={{ ...data, openTasks: data.openTasks }} />}
 
     <section aria-labelledby="portal-helpers" className={cardClass}>
       <h2 id="portal-helpers" className={cardTitle}><Users aria-hidden="true" className="size-4 text-primary" />{t('helpers')}</h2>

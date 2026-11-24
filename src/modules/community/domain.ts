@@ -9,10 +9,13 @@ import {
   PORTAL_GENERAL,
   PORTAL_GROUPS,
   PORTAL_Q_MAX,
-  PORTAL_SORTS,
   PORTAL_TIMES,
   PORTAL_TYPES,
   PORTAL_VIEWS,
+  TASK_BOARD_TIMES,
+  TASK_BOARD_WHEN,
+  portalDefaults,
+  portalSortsFor,
   type CategorySlug,
   type CommunityAuthor,
   type CommunityPostKind,
@@ -20,7 +23,9 @@ import {
   type CommunityPostTask,
   type PortalCategory,
   type PortalQueryState,
+  type PortalTaskFilters,
   type PortalTime,
+  type TaskBoardWhen,
 } from '@/contracts';
 
 /**
@@ -151,6 +156,9 @@ export function parsePortalQuery(params: Params): PortalQueryState {
   const q = firstOf(params.q)?.replace(/\s+/g, ' ').slice(0, PORTAL_Q_MAX).trim();
   const sortParam = firstOf(params.sort);
   const page = Number.parseInt(firstOf(params.page) ?? '', 10);
+  // Each tab its own defaults and sorts (2026-11-23): Neighbors, the Feed by Hot; Open tasks, the List by the soonest.
+  const defaults = portalDefaults(type);
+  const sort = sortParam === 'active' && type !== 'task' ? 'hot' : pick(sortParam, portalSortsFor(type)) ?? defaults.sort;
   return {
     ...(area ? { area } : {}),
     ...(category ? { category: category as PortalCategory } : {}),
@@ -159,10 +167,42 @@ export function parsePortalQuery(params: Params): PortalQueryState {
     ...(q ? { q } : {}),
     saved: firstOf(params.saved) === '1',
     unanswered: firstOf(params.unanswered) === '1',
-    sort: sortParam === 'active' ? 'hot' : pick(sortParam, PORTAL_SORTS) ?? 'hot',
-    view: pick(firstOf(params.view), PORTAL_VIEWS) ?? 'feed',
+    ...(type === 'task' ? parsePortalTaskFilters(params) : {}),
+    sort,
+    view: pick(firstOf(params.view), PORTAL_VIEWS) ?? defaults.view,
     group: pick(firstOf(params.group), PORTAL_GROUPS) ?? 'area',
     page: Number.isFinite(page) && page > 1 ? Math.min(page, 500) : 1,
+  };
+}
+
+/** The most a price filter takes, in whole dollars (the board's limit). */
+const MAX_PRICE_DOLLARS = 100_000;
+const dollarsOf = (value: string | undefined): number | undefined => {
+  if (value === undefined || !/^\d{1,6}$/.test(value)) return undefined;
+  const amount = Number.parseInt(value, 10);
+  return amount <= MAX_PRICE_DOLLARS ? amount : undefined;
+};
+
+/**
+ * Open tasks' own filters (2026-11-23), the board's under the board's names: `min` and `max` (whole dollars; swapped
+ * when the wrong way round, a minimum of 0 dropped), `pricing`, `when`, `slot` (the times of day, comma-separated) and
+ * `few`. Only read with `type=task`.
+ */
+export function parsePortalTaskFilters(params: Params): PortalTaskFilters {
+  let minPrice = dollarsOf(firstOf(params.min));
+  let maxPrice = dollarsOf(firstOf(params.max));
+  if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) [minPrice, maxPrice] = [maxPrice, minPrice];
+  const pricing = pick(firstOf(params.pricing), ['fixed', 'hourly'] as const);
+  const when = pick(firstOf(params.when), TASK_BOARD_WHEN.filter((value): value is Exclude<TaskBoardWhen, 'any'> => value !== 'any'));
+  const slotParam = (firstOf(params.slot) ?? '').split(',').map((slot) => slot.trim());
+  const slots = TASK_BOARD_TIMES.filter((slot) => slotParam.includes(slot));
+  return {
+    ...(minPrice !== undefined && minPrice > 0 ? { minPrice } : {}),
+    ...(maxPrice !== undefined ? { maxPrice } : {}),
+    ...(pricing ? { pricing } : {}),
+    ...(when ? { when } : {}),
+    ...(slots.length > 0 ? { slots } : {}),
+    ...(firstOf(params.few) === '1' ? { few: true } : {}),
   };
 }
 

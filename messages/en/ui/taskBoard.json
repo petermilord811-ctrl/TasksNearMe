@@ -167,10 +167,5 @@
     "bodyMember": "Ask who people nearby trust, answer a neighbor, or thank a helper.",
     "join": "Join Neighbors",
     "open": "Open Neighbors"
-  },
-  "tabs": {
-    "label": "Open tasks and Neighbors",
-    "tasks": "Open tasks",
-    "neighbors": "Neighbors"
   }
 }

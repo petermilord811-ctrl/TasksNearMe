@@ -167,10 +167,5 @@
     "bodyMember": "Pregunta en quién confía la gente cercana, responde a un vecino o agradece a un ayudante.",
     "join": "Unirte a Vecinos",
     "open": "Abrir Vecinos"
-  },
-  "tabs": {
-    "label": "Tareas abiertas y Vecinos",
-    "tasks": "Tareas abiertas",
-    "neighbors": "Vecinos"
   }
 }

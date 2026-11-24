@@ -158,4 +158,61 @@ describe('the neighborhood portal', () => {
     await db.update(tasks).set({ status: 'canceled' }).where(eq(tasks.id, askTaskId));
     expect((await getCommunityPost(db, lee, postId, now))?.post.task).toMatchObject({ state: 'closed' });
   });
+
+  it('opens Open tasks as the board does: its sorts, the board’s filters and their counts, and a look from Neighbors (2026-11-23)', async () => {
+    const [yard] = await db.select().from(tasks).where(eq(tasks.id, 'tsk_yard'));
+    if (!yard) throw new Error('The seeded yard task is missing');
+    // Two of Ben's, three days out on Austin's clock (UTC−6 in November): a cheap fixed price on a morning (9 to 11 a.m.),
+    // and a dear hourly one ($50 × 4 hours) on an evening (5:30 to 7:30 p.m.) a day later, already with three offers.
+    const day = new Date(now.getTime() + 3 * 86_400_000);
+    day.setUTCHours(0, 0, 0, 0);
+    const at = (hours: number) => new Date(day.getTime() + hours * 3_600_000);
+    const cheapId = `tsk_portal_cheap_${run}`;
+    const dearId = `tsk_portal_dear_${run}`;
+    const copy = { ...yard, status: 'open', version: 1, publishedAt: now, createdAt: now, hiddenAt: null, flexible: false, description: 'A flat-pack shelf to put together.' };
+    await db.insert(tasks).values([
+      { ...copy, id: cheapId, slug: `portal-${cheapId}`, title: `Portal filters ${run} cheap`, pricingType: 'fixed', budgetCents: 3000, hourlyRateCents: null, estimatedHours: null, windowStart: at(15), windowEnd: at(17), offerCount: 0 },
+      { ...copy, id: dearId, slug: `portal-${dearId}`, title: `Portal filters ${run} dear`, pricingType: 'hourly', budgetCents: null, hourlyRateCents: 5000, estimatedHours: 4, hoursCap: 5, windowStart: at(47.5), windowEnd: at(49.5), offerCount: 3 },
+    ]);
+    const open = async (extra: Record<string, string>) => (await getPortal(db, lee, all({ type: 'task', sort: 'soonest', q: `filters ${run}`, ...extra }), now))!;
+    const ids = async (extra: Record<string, string>) => (await open(extra)).items.map((item) => item.id);
+
+    // Its defaults: the List, soonest first; and the board's sorts.
+    const tab = await getPortal(db, lee, { type: 'task' }, now);
+    expect(tab?.query).toMatchObject({ type: 'task', sort: 'soonest', view: 'list' });
+    expect(await ids({})).toEqual([cheapId, dearId]);
+    expect(await ids({ sort: 'price_high' })).toEqual([dearId, cheapId]);
+    expect(await ids({ sort: 'price_low' })).toEqual([cheapId, dearId]);
+    // By the day they're on: the soonest day first, whatever the sort within a day.
+    expect(await ids({ sort: 'price_high', group: 'day' })).toEqual([cheapId, dearId]);
+
+    // The board's filters: the price (a fixed price, or the rate × the hours), fixed or hourly, the time of day, few offers.
+    expect(await ids({ min: '100' })).toEqual([dearId]);
+    expect(await ids({ max: '50' })).toEqual([cheapId]);
+    expect(await ids({ pricing: 'hourly' })).toEqual([dearId]);
+    expect(await ids({ slot: 'morning' })).toEqual([cheapId]);
+    expect(await ids({ slot: 'evening' })).toEqual([dearId]);
+    expect(await ids({ few: '1' })).toEqual([cheapId]);
+    // Each counted with the others, its own left out.
+    expect((await open({ few: '1' })).facets.tasks).toMatchObject({ prices: { under50: 1, from200: 0 }, pricing: { fixed: 1, hourly: 0 }, slots: { morning: 1, evening: 0 }, few: 1 });
+    expect((await open({})).facets.tasks).toMatchObject({ prices: { under50: 1, from200: 1 }, pricing: { fixed: 1, hourly: 1 }, slots: { morning: 1, evening: 1 }, few: 1 });
+    // "Show more" reads the same filters.
+    const more = await getPortalMore(db, lee, { area: 'all', type: 'task', q: `filters ${run}`, minPrice: 100, group: 'day', page: 1 }, now);
+    expect(more?.items.map((item) => item.id)).toEqual([dearId]);
+    // The board's filters mean nothing on Neighbors; the public board's link carries them for "Save this search".
+    expect((await getPortal(db, lee, all({ q: `filters ${run}`, min: '100' }), now))?.items.map((item) => item.id).sort()).toEqual([cheapId, dearId].sort());
+    expect((await open({ min: '100', slot: 'evening' })).boardHref).toMatch(/min=100.*time=evening/);
+
+    // From Neighbors, the place's newest open tasks, counted as the heading counts them; never the viewer's own.
+    const neighbors = await getPortal(db, lee, all(), now);
+    const preview = neighbors?.openTasks?.items ?? [];
+    expect(preview.length).toBeGreaterThan(0);
+    expect(preview.length).toBeLessThanOrEqual(5);
+    expect(preview.map((view) => view.task.postedAt)).toEqual(preview.map((view) => view.task.postedAt).sort().reverse());
+    expect(neighbors?.openTasks?.count).toBe(neighbors?.stats.openTasks);
+    const forBen = await getPortal(db, ben, all(), now);
+    expect(forBen?.openTasks?.items.some((view) => view.task.id === cheapId || view.task.id === dearId)).toBe(false);
+    // Open tasks is that list itself.
+    expect(tab?.openTasks).toBeUndefined();
+  });
 });

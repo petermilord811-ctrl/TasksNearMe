@@ -6,6 +6,7 @@ import { ArrowUp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { PortalPageData, TaskLiveState, TaskPublicView } from '@/contracts';
 import { PORTAL_GENERAL } from '@/contracts/portal';
+import { taskMatchesBoard } from '@/shared/board-match';
 import { setTaskLiveState } from '@/ui/components/search/board-live-store';
 import { useRealtime } from '@/ui/lib/realtime';
 import { cn } from '@/ui/lib/utils';
@@ -53,6 +54,18 @@ export function PortalLive({ data, listId, onCheckFresh }: { data: Data; listId:
     if (quiet || (query.type && query.type !== 'task')) return;
     if (query.category && task.categorySlug !== query.category) return;
     if (live.areaSlugs && !(task.location.kind === 'remote' ? live.withRemote : areaNames.has(task.location.areaName))) return;
+    // Open tasks' own filters (2026-11-23), read as the live board reads them (the price, fixed or hourly, when, the time
+    // of day, few offers); the place and the service are checked above.
+    if (query.type === 'task' && !taskMatchesBoard(task, {
+      areas: [],
+      minPrice: query.minPrice,
+      maxPrice: query.maxPrice,
+      pricing: query.pricing,
+      times: query.slots ?? [],
+      few: Boolean(query.few),
+      when: query.when ?? 'any',
+      remoteOnly: false,
+    }, { now: new Date(), areaNames: new Map(), timeZone: data.market.timeZone })) return;
     add(`task:${task.id}`);
   });
   const onState = useEffectEvent((state: TaskLiveState) => {

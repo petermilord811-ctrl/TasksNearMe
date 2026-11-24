@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowLeft, ArrowRight, ArrowUpDown, BellRing, Check, ChevronDown, ClipboardList, LayoutGrid, List, Lock, MessagesSquare, Plus, UsersRound, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ArrowUpDown, BellRing, Check, ChevronDown, LayoutGrid, List, Lock, Plus, UsersRound, X } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { ISODateTime, TaskBoardPageData, TaskBoardQuery, TaskPublicView } from '@/contracts';
 import { routes } from '@/contracts/routes';
@@ -15,6 +15,7 @@ import { PublicTaskCard } from '@/ui/components/tasks/public-task-card';
 import { LastVisitNote } from '@/ui/components/tasks/task-live';
 import { TaskRow } from '@/ui/components/tasks/task-row';
 import { BoardComposer } from '@/ui/components/tasks/board-composer';
+import { NeighborhoodSwitch } from '@/ui/components/portal/neighborhood-switch';
 import { NeighborsCard } from '@/ui/screens/home/neighbors-card';
 import { buttonVariants } from '@/ui/primitives/button';
 import { cn } from '@/ui/lib/utils';
@@ -85,19 +86,18 @@ function BoardNeighbors({ data, now }: { data: TaskBoardPageData; now: ISODateTi
       <div className="min-w-0 space-y-1.5">
         <h2 id="board-neighbors" className="font-display text-lg leading-7 font-semibold">{t('title', { market: data.market.name })}</h2>
         <p className="text-sm text-muted-foreground">{t(member ? 'bodyMember' : 'body')}</p>
-        <Link href={routes.app.community()} className="inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline">{t(member ? 'open' : 'join')}<ArrowRight aria-hidden="true" className="size-4" /></Link>
+        <Link href={neighborsHrefOf(data)} className="inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-primary underline-offset-4 hover:underline">{t(member ? 'open' : 'join')}<ArrowRight aria-hidden="true" className="size-4" /></Link>
       </div>
     </div>
   </section>;
 }
 
-/** Open tasks and Neighbors as two views of one neighborhood (2026-11-23): this page, and the posts on Neighbors. */
-function BoardTabs() {
-  const t = useTranslations('taskBoard.tabs');
-  return <nav aria-label={t('label')} className="inline-flex rounded-full border border-foreground/[0.08] bg-card/80 p-1 shadow-[0_1px_2px_rgb(23_18_14/0.04)] dark:border-white/[0.08]">
-    <span aria-current="page" className="inline-flex min-h-9 items-center gap-1.5 rounded-full bg-foreground px-3.5 text-[13px] font-semibold text-background"><ClipboardList aria-hidden="true" className="size-4" />{t('tasks')}</span>
-    <Link href={routes.app.community()} className="inline-flex min-h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold text-foreground/80 transition-colors hover:bg-accent hover:text-foreground"><MessagesSquare aria-hidden="true" className="size-4" />{t('neighbors')}</Link>
-  </nav>;
+/**
+ * Neighbors for this board's place (2026-11-23): one neighborhood chosen here opens Neighbors there (where the slugs
+ * match the member's market; otherwise Neighbors starts near them). Signed out, Neighbors asks to sign in first.
+ */
+function neighborsHrefOf(data: TaskBoardPageData): string {
+  return routes.app.community(data.query.areas.length === 1 ? { area: data.query.areas[0] } : {});
 }
 
 export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
@@ -193,8 +193,12 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
             </section>)}</div>
           : <div className={panelClass}><Rows tasks={data.tasks} now={now} visitKey={visitKey} /></div>;
 
+  // "From your neighbors" (or what Neighbors is, for a visitor), on the first page of the board itself: beside the list on
+  // wide screens (2026-11-23), under it on smaller ones.
+  const neighborsShown = query.page === 1 && !hub;
   return <div className="space-y-5">
-    {!data.heading && <BoardTabs />}
+    {/* The same switch as on Neighbors, in the same place (2026-11-23); a service's hub has its own heading. */}
+    {!data.heading && <NeighborhoodSwitch current="tasks" neighborsHref={neighborsHrefOf(data)} tasksHref={routes.taskBoard(market.slug)} taskCount={data.stats.openCount} />}
     <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
       <div className="min-w-0 max-w-3xl space-y-1.5">
         <h1 className={PAGE_TITLE_CLASS}>{data.heading?.title ?? t('title', { market: market.name })}</h1>
@@ -216,9 +220,9 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
     {/* Post right here, as on Neighbors: a task from a line of words, or a neighborhood ask (2026-11-23). */}
     {!hub && <BoardComposer market={market.name} {...(query.category ? { category: query.category } : {})} />}
 
-    <div className={cn('grid items-start gap-5', !nothingYet && 'lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-6')}>
+    <div className={cn('grid items-start gap-5', nothingYet ? 'xl:grid-cols-[minmax(0,1fr)_17.5rem] xl:gap-6' : 'lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-6 xl:grid-cols-[15rem_minmax(0,1fr)_17.5rem]')}>
       {/* The rail grows with the page: a nested scroll box cut the neighborhoods off with no hint (audit M19). */}
-      {!nothingYet && <aside aria-label={t('filters')}>
+      {!nothingYet && <aside aria-label={t('filters')} className="lg:row-span-2 xl:row-span-1">
         <BoardFilters board={data} />
       </aside>}
 
@@ -259,14 +263,14 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
 
         <div id="board-list" className="scroll-mt-28">{list}</div>
 
-        {query.page === 1 && !hub && <BoardNeighbors data={data} now={now} />}
-
         {data.pageCount > 1 && <nav aria-label={t('pagination')} className="flex flex-wrap items-center justify-center gap-3 pt-2">
           {query.page > 1 && <Link href={routes.taskBoard(market.slug, { ...query, page: query.page - 1 })} rel="prev" className={buttonVariants({ variant: 'outline' })}><ArrowLeft aria-hidden="true" className="size-4" />{t('previous')}</Link>}
           <p className="text-sm tabular-nums">{t('page', { page: query.page, count: data.pageCount })}</p>
           {query.page < data.pageCount && <Link href={routes.taskBoard(market.slug, { ...query, page: query.page + 1 })} rel="next" className={buttonVariants({ variant: 'outline' })}>{t('next')}<ArrowRight aria-hidden="true" className="size-4" /></Link>}
         </nav>}
       </div>
+
+      {neighborsShown && <div className={cn('min-w-0', nothingYet ? 'xl:col-start-2 xl:row-start-1' : 'lg:col-start-2 xl:col-start-3 xl:row-start-1')}><BoardNeighbors data={data} now={now} /></div>}
     </div>
 
     <div className="flex flex-col gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">

@@ -5,9 +5,9 @@ import { SkeletonReveal } from '@/ui/shells/page-transition';
 const card = 'space-y-3 rounded-[1.375rem] border border-border bg-card p-4 shadow-card sm:p-5';
 
 /**
- * The portal while it loads (completion plan 9.10): the same frame as the page (heading, the neighborhoods, the
- * composer, the tabs and toolbar, cards; the rail on wide screens; on phones the one row that holds the place, the sort
- * and Filters, plan 10.7), so nothing jumps when it arrives.
+ * The portal while it loads (completion plan 9.10): the same frame as the page (the Neighbors | Open tasks switch,
+ * heading, the neighborhoods, the composer, the tabs and toolbar, cards; the rail on wide screens; on phones the switch
+ * and the one row that holds the place, the sort and Filters, plan 10.7), so nothing jumps when it arrives.
  */
 export function PortalSkeleton() {
   const t = useTranslations('portal');
@@ -15,7 +15,9 @@ export function PortalSkeleton() {
     <span className="sr-only">{t('loading')}</span>
     <SkeletonReveal />
     <div aria-hidden="true" className="space-y-5 max-sm:space-y-4">
-      <div className="-mx-gutter flex items-center gap-2 border-b border-border/80 px-gutter py-2 sm:hidden"><Skeleton className="h-7 flex-1 rounded-lg" /><Skeleton className="h-10 w-20 rounded-full" /><Skeleton className="size-10 rounded-full" /></div>
+      {/* Phones: the Neighbors | Open tasks switch across the sticky bar (2026-11-23), then its row. */}
+      <div className="-mx-gutter space-y-1 border-b border-border/80 px-gutter pt-2 pb-1.5 sm:hidden"><Skeleton className="h-11 w-full rounded-full" /><div className="flex items-center gap-2"><Skeleton className="h-7 flex-1 rounded-lg" /><Skeleton className="h-10 w-20 rounded-full" /><Skeleton className="size-10 rounded-full" /></div></div>
+      <Skeleton className="h-11 w-64 rounded-full max-sm:hidden" />
       <div className="flex flex-col gap-4 max-sm:hidden sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-2.5"><Skeleton className="h-3 w-28" /><Skeleton className="h-8 w-64 max-w-full" /><Skeleton className="h-4 w-80 max-w-full" /></div>
         <Skeleton className="hidden h-11 w-72 rounded-full sm:block lg:w-80" />

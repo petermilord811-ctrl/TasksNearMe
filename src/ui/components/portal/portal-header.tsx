@@ -3,9 +3,9 @@ import { useLocale, useTranslations } from 'next-intl';
 import type { PortalPageData } from '@/contracts';
 import { PORTAL_Q_MAX } from '@/contracts/portal';
 import { UrlForm } from '@/ui/components/forms/url-form';
-import { localeHref } from '@/ui/lib/locale-link';
+import { LocaleLink as Link, localeHref } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
-import { portalHref } from './portal-href';
+import { openTasksHref, portalHref } from './portal-href';
 
 /** The place's name, as the heading and the composer say it. */
 export function usePlaceName(data: Pick<PortalPageData, 'place' | 'market'>): string {
@@ -41,10 +41,22 @@ export function PortalSearch({ data, id, className }: { data: Pick<PortalPageDat
 }
 
 /**
+ * The open tasks' count as the heading says it: on Neighbors a link to the Open tasks tab (2026-11-23), on that tab
+ * plain words.
+ */
+export function TaskStat({ data, onPick }: { data: Pick<PortalPageData, 'stats' | 'query'>; onPick?: () => void }) {
+  const t = useTranslations('portal');
+  const { stats, query } = data;
+  const words = <><ClipboardList aria-hidden="true" className="size-3.5 shrink-0 text-primary" />{t('stats.tasks', { count: stats.openTasks })}</>;
+  if (query.type === 'task') return <span className={cn('inline-flex items-center gap-1', stats.openTasks > 0 && 'font-medium text-foreground')}>{words}</span>;
+  return <Link href={openTasksHref(query)} onClick={onPick} className="inline-flex min-h-6 items-center gap-1 rounded-sm font-medium text-foreground underline-offset-4 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring">{words}</Link>;
+}
+
+/**
  * The portal's heading (completion plan 9.10; 2026-11-22, lighter): the place as a name (near your neighborhood, one
  * neighborhood, or the whole city) and its real numbers (open tasks, posts this week, helpers who work there) on one
- * quiet line. The search is the app's search bar above it (2026-11-23), which searches Neighbors first here and keeps
- * the filters; on phones it's also in the Filters sheet.
+ * quiet line, the open tasks a link to their tab (2026-11-23). The search is the app's search bar above it
+ * (2026-11-23), which searches Neighbors first here and keeps the filters; on phones it's also in the Filters sheet.
  */
 export function PortalHeader({ data }: { data: PortalPageData }) {
   const t = useTranslations('portal');
@@ -55,7 +67,7 @@ export function PortalHeader({ data }: { data: PortalPageData }) {
       <h1 className="font-display text-[1.375rem]/7 font-semibold tracking-[-0.015em] [overflow-wrap:anywhere]">{placeName}</h1>
       {/* Icons, not dots, between the numbers, so a line that wraps never starts or ends on a separator. */}
       <ul className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-muted-foreground tabular-nums">
-        <li className={cn('inline-flex items-center gap-1', stats.openTasks > 0 && 'font-medium text-foreground')}><ClipboardList aria-hidden="true" className="size-3.5 shrink-0 text-primary" />{t('stats.tasks', { count: stats.openTasks })}</li>
+        <li className="inline-flex items-center"><TaskStat data={data} /></li>
         <li className="inline-flex items-center gap-1"><MessagesSquare aria-hidden="true" className="size-3.5 shrink-0" />{t('stats.posts', { count: stats.postsThisWeek })}</li>
         <li className="inline-flex items-center gap-1"><Users aria-hidden="true" className="size-3.5 shrink-0" />{t('stats.helpers', { count: stats.helpers })}</li>
       </ul>

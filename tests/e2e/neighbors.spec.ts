@@ -78,23 +78,30 @@ const card = (page: Page, title: string) => page.getByRole('article', { name: ti
 
 test.afterAll(removePosts);
 
-test('on phones the first post starts high, under one sticky row', async ({ page }, testInfo) => {
+test('on phones the first post starts high, under the switch and one sticky row', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-mobile', 'the phone layout');
   test.setTimeout(90_000);
   await devSignIn(page, 'maya@example.test');
   await page.goto('/app/community?area=all');
   const bar = page.getByRole('heading', { level: 1, name: 'All of Austin' });
   await expect(bar).toBeVisible();
-  // The desktop toolbar and strip aren't there; the sort and Filters are in the row.
+  // The desktop toolbar and strip aren't there; the sort and Filters are in the row, under the Neighbors | Open tasks
+  // switch (2026-11-23), its two halves across the screen.
   await expect(page.getByRole('button', { name: /^Sort: / })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Neighborhoods' })).toBeHidden();
+  const tabs = page.getByRole('navigation', { name: 'Neighbors or open tasks' }).filter({ visible: true });
+  await expect(tabs).toBeVisible();
+  const tabsBox = await tabs.boundingBox();
+  expect(tabsBox?.width ?? 0, 'the switch takes the row').toBeGreaterThan(300);
   const first = page.locator('#portal-stream li').filter({ visible: true }).first();
   await expect(first).toBeVisible();
   const box = await first.boundingBox();
-  expect(box?.y ?? 9_999, 'the first item starts in the upper half of a 360 × 800 screen').toBeLessThan(420);
-  // The row stays under the app's bar as the page scrolls.
+  // The switch's row (2026-11-23) moved it down about 44 px from the upper half (420): still well above the fold.
+  expect(box?.y ?? 9_999, 'the first item starts high on a 360 × 800 screen').toBeLessThan(470);
+  // The switch and the row stay under the app's bar as the page scrolls.
   await page.mouse.wheel(0, 900);
   await expect(bar).toBeInViewport();
+  await expect(tabs.getByRole('link', { name: /^Open tasks/ })).toBeInViewport();
 });
 
 test('a neighbor replies right on a card, and the author edits their post', async ({ page }, testInfo) => {

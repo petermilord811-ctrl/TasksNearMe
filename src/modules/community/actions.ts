@@ -66,6 +66,9 @@ export async function loadPortalPageAction(query: PortalQuery & { page: number }
   const viewer = await communityViewer();
   if (!viewer) return null;
   const text = (value: unknown) => (typeof value === 'string' ? value : undefined);
+  // Whole dollars only; anything else is dropped (the address's parser checks the range again).
+  const dollars = (value: unknown) => (typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : undefined);
+  const slots = Array.isArray(query?.slots) ? query.slots.filter((slot): slot is NonNullable<PortalQuery['slots']>[number] => typeof slot === 'string') : undefined;
   return getPortalMore(
     db,
     viewer,
@@ -77,6 +80,13 @@ export async function loadPortalPageAction(query: PortalQuery & { page: number }
       q: text(query?.q),
       saved: query?.saved === true,
       unanswered: query?.unanswered === true,
+      // Open tasks' own filters (2026-11-23).
+      minPrice: dollars(query?.minPrice),
+      maxPrice: dollars(query?.maxPrice),
+      pricing: text(query?.pricing) as PortalQuery['pricing'],
+      when: text(query?.when) as PortalQuery['when'],
+      ...(slots ? { slots } : {}),
+      few: query?.few === true,
       sort: text(query?.sort) as PortalQuery['sort'],
       view: text(query?.view) as PortalQuery['view'],
       group: text(query?.group) as PortalQuery['group'],

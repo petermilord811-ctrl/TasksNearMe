@@ -145,3 +145,27 @@ test('a task posted while the board is open shows up as "1 new task · Show"; it
     await helperContext.close();
   }
 });
+
+test('the board sits beside Neighbors: the same switch, Neighbors where the board was, and "From your neighbors" beside the list (2026-11-23)', async ({ page }, testInfo) => {
+  test.setTimeout(90_000);
+  const phone = testInfo.project.name === 'app-mobile';
+  await devSignIn(page, 'maya@example.test');
+  await page.goto('/austin/tasks?area=mueller');
+  await expect(page.getByRole('heading', { level: 1, name: 'Open tasks in Austin' })).toBeVisible();
+  // The switch Neighbors has, in the same place: Open tasks marked, the market's open tasks counted.
+  const tabs = page.getByRole('navigation', { name: 'Neighbors or open tasks' });
+  await expect(tabs.locator('[aria-current="page"]')).toContainText('Open tasks');
+  await expect(tabs.locator('[aria-current="page"]')).toContainText(/\d+/);
+  // A member's newest neighborhood posts: beside the list on wide screens, under it on phones.
+  const neighbors = page.getByRole('region', { name: /From your neighbors|Neighbors in Austin/ });
+  await expect(neighbors).toBeVisible();
+  const list = await page.locator('#board-list').boundingBox();
+  const card = await neighbors.boundingBox();
+  if (phone) expect(card!.y, 'under the list').toBeGreaterThan(list!.y + list!.height - 1);
+  else expect(card!.x, 'beside the list').toBeGreaterThan(list!.x + list!.width - 1);
+  // Neighbors opens in the one neighborhood chosen here.
+  await tabs.getByRole('link', { name: 'Neighbors' }).click();
+  await expect(page).toHaveURL(/\/app\/community\?area=mueller$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Mueller' }).filter({ visible: true })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Neighbors or open tasks' }).filter({ visible: true }).locator('[aria-current="page"]')).toHaveText('Neighbors');
+});

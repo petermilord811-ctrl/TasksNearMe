@@ -10,7 +10,7 @@ import type { CommunityPostKind } from './community';
 import type { FindWorkQuery } from './helper-work';
 import type { DashboardQuery } from './home';
 import type { ExactAddress } from './location';
-import { PORTAL_Q_MAX, type PortalQuery } from './portal';
+import { PORTAL_Q_MAX, portalDefaults, type PortalQuery } from './portal';
 import { TASK_BOARD_Q_MAX, TASK_BOARD_TIMES, type TaskBoardQuery } from './tasks';
 
 /**
@@ -248,11 +248,15 @@ export const routes = {
     helpChat: () => '/app/messages/help',
     /**
      * The neighborhood portal (plan 9.10): posts and tasks near you, as a Feed or a List, over one set of filters.
-     * Defaults (near you, everything, any time, `hot`, the Feed, by neighborhood, page 1) are left out, in a fixed
-     * order, so the same filters always make the same URL.
+     * Defaults (near you, everything, any time, the tab's sort and view, by neighborhood, page 1) are left out, in a
+     * fixed order, so the same filters always make the same URL. Open tasks (`type=task`, 2026-11-23) has its own
+     * defaults (the List, soonest first, `portalDefaults`) and the board's task filters, under the board's own names
+     * (`time` is "posted" here, so the time of day is `slot`); they're dropped on any other tab.
      */
     community: (query: PortalQuery = {}) => {
       const q = query.q?.trim().slice(0, PORTAL_Q_MAX);
+      const defaults = portalDefaults(query.type);
+      const tasks = query.type === 'task';
       return withQuery('/app/community', {
         area: query.area,
         category: query.category,
@@ -261,8 +265,14 @@ export const routes = {
         q: q ? q : undefined,
         saved: query.saved ? '1' : undefined,
         unanswered: query.unanswered ? '1' : undefined,
-        sort: query.sort && query.sort !== 'hot' ? query.sort : undefined,
-        view: query.view && query.view !== 'feed' ? query.view : undefined,
+        min: tasks && query.minPrice !== undefined ? String(query.minPrice) : undefined,
+        max: tasks && query.maxPrice !== undefined ? String(query.maxPrice) : undefined,
+        pricing: tasks ? query.pricing : undefined,
+        when: tasks ? query.when : undefined,
+        slot: tasks && query.slots?.length ? TASK_BOARD_TIMES.filter((slot) => query.slots!.includes(slot)).join(',') : undefined,
+        few: tasks && query.few ? '1' : undefined,
+        sort: query.sort && query.sort !== defaults.sort ? query.sort : undefined,
+        view: query.view && query.view !== defaults.view ? query.view : undefined,
         group: query.group && query.group !== 'area' ? query.group : undefined,
         page: query.page && query.page > 1 ? String(query.page) : undefined,
       });

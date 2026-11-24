@@ -148,12 +148,13 @@ The List view uses the same frame: heading, strip, composer, tabs and toolbar, a
 |---|---|---|---|
 | `area` | *(near you)*, `all`, a neighborhood's slug | Near you: posts in your neighborhood, in those within 3 miles, and citywide posts. One neighborhood: its posts only | Near you: tasks in those neighborhoods, and remote tasks. One neighborhood: its tasks only |
 | `category` | a service's slug, or `general` | The post's service (`general`: about no one service) | The task's category (`general`: none) |
-| `type` | *(everything)*, `task`, `recommendation`, `question`, `tip`, `thanks` | Its kind | Tasks only |
+| `type` | *(everything)*, `task`, `recommendation`, `question`, `tip`, `thanks` | Its kind (the Show tabs) | `task`: the Open tasks tab (2026-11-23), opened by the Neighbors \| Open tasks switch |
 | `time` | *(any time)*, `24h`, `7d`, `30d` | Posted within | Published within |
 | `q` | words (max 80) | Every word, in the title or the words | Every word, in the title or the description (the board's keyword rule) |
 | `saved` | `1` | Posts you saved | Tasks you saved (helpers) |
-| `sort` | *(hot)*, `new`, `top` | §5 | §5 |
-| `view` | *(feed)*, `list` | | |
+| `sort` | Neighbors: *(hot)*, `new`, `top`. Open tasks: *(soonest)*, `new`, `price_high`, `price_low` | §5 | §5; Open tasks as the board |
+| `view` | Neighbors: *(feed)*, `list`. Open tasks: *(list)*, `feed` | | |
+| `min`, `max`, `pricing`, `when`, `slot`, `few` | whole dollars; `fixed` or `hourly`; `today`, `this_week`, `this_weekend`; `morning`, `afternoon`, `evening` (comma-separated); `1` | | Open tasks only: the board's price, fixed or hourly, when, time of day (the board's `time`) and few offers (2026-11-23) |
 | `group` | *(area)*, `day` | List only, kept in the URL by both views | |
 | `page` | 2, 3… | | |
 
@@ -161,7 +162,7 @@ The List view uses the same frame: heading, strip, composer, tabs and toolbar, a
 - **Counts on every option** (Craigslist). The strip has a count per neighborhood, the tabs a count per type, the service menu a count per service. Each count leaves its own filter out, so an option never counts itself out.
 - **Old addresses still work.** `scope=market` becomes `area=all`, `sort=active` becomes `hot`, and `kind=tip` becomes `type=tip`.
 - **No known neighborhood.** If we don't know yours yet (you haven't posted a task, and you don't help in an area), "Near you" is the whole city. The heading then says so.
-- **Price filters stay on the board.** With `type=task`, the toolbar links to the full board with the same service, neighborhood and time ("More task filters"). The board's price, time-of-day and few-offers filters stay there.
+- **Two tabs of one place (2026-11-23).** The Neighbors | Open tasks switch sits at the top of Neighbors and of the public board. Open tasks (`type=task`) is the board inside the app: the List by neighborhood (or by the day the task is on), soonest first, the board's sorts and its filters (price, fixed or hourly, when, time of day, few offers) with their counts, the board's composer and "Save this search". Across the switch the place, service, words, posted-within, Saved and grouping stay; each tab keeps its own sort and view. Tasks left the Show tabs (Everything still mixes them in), and "More task filters" is gone: the price filters are here now.
 
 ## 5. Ranking
 

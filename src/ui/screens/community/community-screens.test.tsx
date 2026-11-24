@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CommunityPostHandlers, CommunityPostPageData, CommunityReactInput, PortalHandlers, PortalPageData } from '@/contracts';
 import { routes } from '@/contracts/routes';
-import { communityPostHelperViewData, communityPostPageData, communityPostReplyBlockedData, fakeHandler, portalBlockedData, portalEmptyData, portalFeedData, portalFilteredEmptyData, portalHelperData, portalListData, portalLongThreadData, portalPostWithTaskData, portalSavedData, portalTasksData } from '@/fixtures';
+import { communityPostHelperViewData, communityPostPageData, communityPostReplyBlockedData, fakeHandler, portalBlockedData, portalEmptyData, portalFeedData, portalFilteredEmptyData, portalHelperData, portalListByDayData, portalListData, portalLongThreadData, portalNoOpenTasksData, portalOpenTasksByDayData, portalOpenTasksData, portalOpenTasksEmptyData, portalOpenTasksFilteredData, portalPostWithTaskData, portalSavedData, portalTasksData } from '@/fixtures';
 import { resetLastVisits } from '@/ui/lib/last-visit';
 import messages from '../../../../messages/en/ui';
 import { RouteDialogFrame } from '@/ui/components/layout/route-dialog-frame';
@@ -32,11 +32,21 @@ describe('PortalScreen', () => {
     expect(link.getAttribute('href')).toContain('area=citywide');
   });
 
-  it('lists one neighborhood by day, newest day first, with no grouping to choose (sweep P9)', () => {
-    portal({ ...portalTasksData, query: { ...portalTasksData.query, view: 'list' } });
+  it('lists by the day posted on Neighbors, newest day first (sweep P9)', () => {
+    portal(portalListByDayData);
     const days = [...document.querySelectorAll('[id^="portal-day-"]')].map((heading) => heading.id.slice('portal-day-'.length));
-    expect(days.length).toBeGreaterThan(0);
+    expect(days.length).toBeGreaterThan(1);
     expect(days).toEqual([...days].sort().reverse());
+  });
+
+  it('lists one neighborhood’s open tasks by the day they’re on, soonest first, with no grouping to choose (2026-11-23)', () => {
+    portal(portalTasksData);
+    const days = [...document.querySelectorAll('[id^="portal-day-"]')].map((heading) => heading.id.slice('portal-day-'.length));
+    expect(days.length).toBeGreaterThan(1);
+    expect(days).toEqual([...days].sort());
+    // Today and Tomorrow by name, as the board says them; each day counts its open tasks.
+    expect(screen.getByRole('heading', { level: 2, name: /^Today/ }).textContent).toContain('1 open task');
+    expect(screen.getByRole('heading', { level: 2, name: /^Tomorrow/ })).toBeDefined();
     expect(screen.queryByRole('navigation', { name: 'Group' })).toBeNull();
   });
 
@@ -102,9 +112,103 @@ describe('PortalScreen', () => {
     portal({ ...portalFeedData, query: { ...portalFeedData.query, category: 'furniture-assembly', time: '7d' } });
     expect(within(screen.getByRole('navigation', { name: 'View' })).getByRole('link', { name: 'List' }).getAttribute('href')).toBe(routes.app.community({ category: 'furniture-assembly', time: '7d', view: 'list' }));
     expect(within(screen.getByRole('navigation', { name: 'Sort' })).getByRole('link', { name: 'New' }).getAttribute('href')).toBe(routes.app.community({ category: 'furniture-assembly', time: '7d', sort: 'new' }));
-    expect(within(screen.getByRole('navigation', { name: 'Show' })).getByRole('link', { name: /^Tasks/ }).getAttribute('href')).toBe(routes.app.community({ category: 'furniture-assembly', time: '7d', type: 'task' }));
+    // Tasks left the Show tabs for the switch (2026-11-23): its Open tasks keeps the service and the time.
+    expect(within(screen.getByRole('navigation', { name: 'Show' })).queryByRole('link', { name: /^Tasks/ })).toBeNull();
+    for (const nav of screen.getAllByRole('navigation', { name: 'Neighbors or open tasks' })) {
+      expect(within(nav).getByRole('link', { name: /^Open tasks/ }).getAttribute('href')).toBe(routes.app.community({ category: 'furniture-assembly', time: '7d', type: 'task' }));
+    }
     // The filters in use come off one at a time.
     expect(within(screen.getByRole('navigation', { name: 'Filters in use' })).getByRole('link', { name: 'Remove filter: Past week' }).getAttribute('href')).toBe(routes.app.community({ category: 'furniture-assembly' }));
+  });
+
+  it('puts the Neighbors | Open tasks switch at the top, Neighbors marked, with the place’s open tasks counted (2026-11-23)', () => {
+    portal(portalFeedData);
+    // One for phones (the sticky bar) and one for wide screens; CSS shows one of them.
+    const switches = screen.getAllByRole('navigation', { name: 'Neighbors or open tasks' });
+    expect(switches).toHaveLength(2);
+    for (const nav of switches) {
+      expect(within(nav).getByText('Neighbors').closest('[aria-current="page"]')).not.toBeNull();
+      expect(within(nav).queryByRole('link', { name: /^Neighbors/ })).toBeNull();
+      const tasks = within(nav).getByRole('link', { name: /^Open tasks/ });
+      expect(tasks.textContent).toContain('7');
+      expect(tasks.getAttribute('href')).toBe(routes.app.community({ type: 'task' }));
+    }
+    // The heading's count opens the same tab.
+    expect(screen.getAllByRole('link', { name: '7 open tasks' }).every((link) => link.getAttribute('href') === routes.app.community({ type: 'task' }))).toBe(true);
+  });
+
+  it('shows the place’s newest open tasks beside Neighbors: the rail’s card and the Feed’s strip (2026-11-23)', () => {
+    portal(portalFeedData);
+    // The rail's card and the Feed's strip share their name (CSS shows one of them).
+    const regions = screen.getAllByRole('region', { name: 'Open tasks near you' });
+    expect(regions).toHaveLength(2);
+    const card = within(regions.find((region) => region.querySelector('#portal-open-tasks'))!);
+    const rows = card.getAllByRole('link').filter((link) => link.getAttribute('href') !== routes.app.community({ type: 'task' }));
+    expect(rows).toHaveLength(5);
+    // Newest first, each where it opens for Maya (the public task page).
+    expect(rows[0]!.textContent).toContain('Put together a queen bed frame tonight');
+    expect(rows[0]!.getAttribute('href')).toBe(routes.publicTask('put-together-a-queen-bed-frame-tonight-mueller-g7h8'));
+    expect(card.getByRole('link', { name: /See all 7 open tasks/ }).getAttribute('href')).toBe(routes.app.community({ type: 'task' }));
+    // The Feed's strip (no rail on phones and tablets) after the first three items.
+    const strip = regions.find((region) => region.querySelector('#portal-open-tasks-strip'));
+    expect(strip).toBeDefined();
+    expect(within(strip!).getAllByRole('article')).toHaveLength(5);
+    const feed = screen.getByRole('list', { name: 'Feed' });
+    const items = [...feed.children];
+    expect(items.findIndex((item) => item.contains(strip!))).toBe(3);
+  });
+
+  it('says so when no task is open nearby, with the way to post one', () => {
+    portal(portalNoOpenTasksData);
+    const card = within(screen.getByRole('region', { name: 'Open tasks near you' }));
+    expect(card.getByText('No open tasks here right now.')).toBeDefined();
+    expect(card.getByRole('link', { name: 'Post a task' }).getAttribute('href')).toBe(routes.app.newTask());
+    // Nothing to swipe through in the Feed.
+    expect(document.getElementById('portal-open-tasks-strip')).toBeNull();
+  });
+
+  it('opens Open tasks as the board inside the app: rows by neighborhood, its sorts, its composer, no post tabs (2026-11-23)', () => {
+    portal(portalOpenTasksData);
+    for (const nav of screen.getAllByRole('navigation', { name: 'Neighbors or open tasks' })) {
+      expect(within(nav).getByText('Open tasks').closest('[aria-current="page"]')).not.toBeNull();
+      expect(within(nav).getByRole('link', { name: 'Neighbors' }).getAttribute('href')).toBe(routes.app.community());
+    }
+    expect(screen.queryByRole('navigation', { name: 'Show' })).toBeNull();
+    // The board's composer: words become a task to post.
+    expect(screen.getByRole('region', { name: 'Post in Austin' })).toBeDefined();
+    // The board's sorts in a menu, as the board has them (Soonest chosen): the phone's row and the toolbar each have it.
+    expect(screen.queryByRole('navigation', { name: 'Sort' })).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Sort: Soonest' })).toHaveLength(2);
+    // The Neighbors tab's look at this one isn't here (this is the list itself).
+    expect(screen.queryByRole('region', { name: 'Open tasks near you' })).toBeNull();
+    // Rows by neighborhood, counted in open tasks; remote work last.
+    expect(screen.getByRole('heading', { level: 2, name: /^Mueller/ }).textContent).toContain('4 open tasks');
+    expect(screen.getByRole('heading', { level: 2, name: /^Remote/ })).toBeDefined();
+    // Save this search: the board's view with the same place, for alerts.
+    expect(screen.getByRole('link', { name: 'Save this search' }).getAttribute('href')).toBe(routes.app.newSavedSearch(portalOpenTasksData.boardHref));
+  });
+
+  it('lists Open tasks by the day they’re on, today first', () => {
+    portal(portalOpenTasksByDayData);
+    const days = [...document.querySelectorAll('[id^="portal-day-"]')].map((heading) => heading.id.slice('portal-day-'.length));
+    expect(days).toEqual([...days].sort());
+    expect(document.querySelector('[id^="portal-day-"]')?.textContent).toMatch(/^Today/);
+  });
+
+  it('shows the board’s filters in use on Open tasks, each removable, and clears them all', () => {
+    portal(portalOpenTasksFilteredData);
+    const inUse = within(screen.getByRole('navigation', { name: 'Filters in use' }));
+    const { query } = portalOpenTasksFilteredData;
+    expect(inUse.getByRole('link', { name: 'Remove filter: $50 to $99' }).getAttribute('href')).toBe(routes.app.community({ ...query, minPrice: undefined, maxPrice: undefined }));
+    expect(inUse.getByRole('link', { name: 'Remove filter: Morning (before noon)' }).getAttribute('href')).toBe(routes.app.community({ ...query, slots: [] }));
+    expect(inUse.getByRole('link', { name: 'Remove filter: 0 or 1 offers so far' }).getAttribute('href')).toBe(routes.app.community({ ...query, few: false }));
+    expect(inUse.getByRole('link', { name: 'Clear all' }).getAttribute('href')).toBe(routes.app.community({ type: 'task' }));
+  });
+
+  it('says when no open task is near, with the way to post one', () => {
+    portal(portalOpenTasksEmptyData);
+    expect(screen.getByText('No open tasks in Mueller right now')).toBeDefined();
+    expect(screen.getByRole('link', { name: 'Post a task and get offers' }).getAttribute('href')).toBe(routes.app.newTask());
   });
 
   it('reacts at once and keeps the change when the server agrees', () => {

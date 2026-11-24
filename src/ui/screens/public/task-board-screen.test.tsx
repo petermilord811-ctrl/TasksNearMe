@@ -178,12 +178,21 @@ describe('TaskBoardScreen', () => {
     expect(form.getAttribute('method')).toBe('get');
     expect(within(composer).getByRole('textbox', { name: 'What do you need help with?' })).toHaveAttribute('name', 'describe');
     expect(hrefOf(within(composer).getByRole('link', { name: /Who do you recommend/ }))).toBe(routes.app.newCommunityPost('recommendation'));
-    expect(hrefOf(within(screen.getByRole('navigation', { name: 'Open tasks and Neighbors' })).getByRole('link', { name: 'Neighbors' }))).toBe(routes.app.community());
+    // The same switch as on Neighbors (2026-11-23): Open tasks marked, with the market's open tasks counted.
+    const tabs = within(screen.getByRole('navigation', { name: 'Neighbors or open tasks' }));
+    expect(hrefOf(tabs.getByRole('link', { name: 'Neighbors' }))).toBe(routes.app.community());
+    expect(tabs.getByText('Open tasks').closest('[aria-current="page"]')).toHaveTextContent(String(taskBoardPageData.stats.openCount));
     // A visitor: what Neighbors is for, and the way in; a member: the newest posts near them.
     expect(screen.getByRole('region', { name: 'Neighbors in Austin' })).toHaveTextContent('Join Neighbors');
     cleanup();
     renderBoard(taskBoardMemberData);
     expect(screen.getByRole('link', { name: /Anyone used a helper for a crib/ })).toBeInTheDocument();
+  });
+
+  it('opens Neighbors in the one neighborhood chosen here (2026-11-23)', () => {
+    renderBoard({ ...taskBoardPageData, query: { ...taskBoardPageData.query, areas: ['mueller'] } });
+    expect(hrefOf(within(screen.getByRole('navigation', { name: 'Neighbors or open tasks' })).getByRole('link', { name: 'Neighbors' }))).toBe(routes.app.community({ area: 'mueller' }));
+    expect(hrefOf(screen.getByRole('link', { name: 'Join Neighbors' }))).toBe(routes.app.community({ area: 'mueller' }));
   });
 
   it('saves the current view, filters and all, for alerts (completion plan 7.10)', () => {

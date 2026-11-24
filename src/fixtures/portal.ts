@@ -13,6 +13,7 @@ import {
   type PortalQueryState,
   type PortalRail,
   type PortalSection,
+  type PortalTaskFacets,
   type PortalTaskView,
   type TaskPublicView,
 } from '@/contracts';
@@ -171,6 +172,12 @@ const hotItems: PortalItem[] = [
 ];
 const byNewest = [...hotItems].sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id));
 
+/**
+ * "Open tasks near you" (2026-11-23): the newest open tasks near Maya (her own desk task never), for the rail's card and
+ * the Feed's strip; 7 are open near her.
+ */
+const newestTasks: PortalTaskView[] = Object.values(forMaya).sort((a, b) => b.task.postedAt.localeCompare(a.task.postedAt)).slice(0, 5);
+
 // ---- The place, its counts and the rail -----------------------------------------------------------------------
 
 const query = (change: Partial<PortalQueryState> = {}): PortalQueryState => ({ saved: false, unanswered: false, sort: 'hot', view: 'feed', group: 'area', page: 1, ...change });
@@ -241,6 +248,7 @@ const base: PortalPageData = {
   live: { areaIds: ['are_crestview', 'are_east_austin', 'are_hyde_park', 'are_mueller', 'are_windsor_park'], areaSlugs: ['crestview', 'east-austin', 'hyde-park', 'mueller', 'windsor-park'], withRemote: true },
   today: '2026-11-17',
   boardHref: routes.taskBoard('austin', { areas: ['crestview', 'east-austin', 'hyde-park', 'mueller', 'windsor-park'], view: 'cards' }),
+  openTasks: { items: newestTasks, count: 7 },
 };
 
 /** The Feed near Maya, Hot: posts and tasks together, with the rail. */
@@ -299,16 +307,99 @@ export const portalHelperData: PortalPageData = {
   rail: { ...rail, yourTasks: [], yourPosts: [], savedCount: 1, helpers: helpers.filter((helper) => helper.handle !== 'jordan-t'), unanswered: [rail.unanswered[0]!] },
 };
 
-/** Tasks only, in one neighborhood. */
-export const portalTasksData: PortalPageData = {
+// ---- Open tasks: the switch's second tab (2026-11-23), the board inside Neighbors -------------------------------
+
+/** The board's filters counted near Maya, as `getPortal` reads them on Open tasks (each leaves its own filter out). */
+const taskFacets: PortalTaskFacets = {
+  prices: { under50: 1, from50: 3, from100: 3, from200: 0 },
+  pricing: { fixed: 5, hourly: 2 },
+  when: { today: 1, this_week: 5, this_weekend: 2 },
+  slots: { morning: 3, afternoon: 2, evening: 3 },
+  few: 5,
+};
+const tasksQuery = (change: Partial<PortalQueryState> = {}): PortalQueryState => query({ type: 'task', sort: 'soonest', view: 'list', ...change });
+const openTasksBase: PortalPageData = {
   ...base,
-  query: query({ type: 'task', area: 'mueller' }),
+  facets: { ...facets, types: { ...facets.types }, tasks: taskFacets },
+  boardHref: routes.taskBoard('austin', { areas: ['crestview', 'east-austin', 'hyde-park', 'mueller', 'windsor-park'] }),
+  openTasks: undefined,
+};
+
+/** Open tasks in one neighborhood (Mueller): by the day they're on, the soonest first. */
+export const portalTasksData: PortalPageData = {
+  ...openTasksBase,
+  query: tasksQuery({ area: 'mueller' }),
   place: { kind: 'area', slug: 'mueller', name: 'Mueller' },
-  items: [taskItem(forMaya.bed), taskItem(forMaya.wardrobe), taskItem(forMaya.bookshelf), taskItem(forMaya.dresser)],
+  items: [taskItem(forMaya.bed), taskItem(forMaya.dresser), taskItem(forMaya.wardrobe), taskItem(forMaya.bookshelf)],
   totalCount: 4,
-  facets: { ...facets, types: { all: 7, general: 0, task: 4, recommendation: 1, question: 1, tip: 0, thanks: 1 } },
+  facets: { ...facets, types: { all: 7, general: 0, task: 4, recommendation: 1, question: 1, tip: 0, thanks: 1 }, tasks: taskFacets },
   live: { areaIds: ['are_mueller'], areaSlugs: ['mueller'], withRemote: false },
-  boardHref: routes.taskBoard('austin', { areas: ['mueller'], view: 'cards' }),
+  boardHref: routes.taskBoard('austin', { areas: ['mueller'] }),
+};
+
+const taskSections: PortalSection[] = [
+  section('mueller', 'Mueller', 4, [taskItem(forMaya.bed), taskItem(forMaya.dresser), taskItem(forMaya.wardrobe), taskItem(forMaya.bookshelf)]),
+  section('crestview', 'Crestview', 1, [taskItem(forMaya.yard)]),
+  section('east-austin', 'East Austin', 1, [taskItem(forMaya.moving)]),
+  section('market', undefined, 1, [taskItem(forMaya.computer)]),
+];
+
+/** Open tasks near Maya (the tab's default): the board's dense rows by neighborhood, the soonest first, remote work last. */
+export const portalOpenTasksData: PortalPageData = {
+  ...openTasksBase,
+  query: tasksQuery(),
+  sections: taskSections,
+  items: taskSections.flatMap((group) => group.items),
+  totalCount: 7,
+};
+
+/** Open tasks by the day they're on (today, tomorrow, then dates), the soonest first. */
+export const portalOpenTasksByDayData: PortalPageData = {
+  ...openTasksBase,
+  query: tasksQuery({ group: 'day' }),
+  items: [forMaya.bed, forMaya.dresser, forMaya.wardrobe, forMaya.moving, forMaya.bookshelf, forMaya.computer, forMaya.yard].map(taskItem),
+  totalCount: 7,
+};
+
+/** The board's filters on Open tasks: $50 to $99, mornings, at most one offer so far. */
+export const portalOpenTasksFilteredData: PortalPageData = {
+  ...openTasksBase,
+  query: tasksQuery({ minPrice: 50, maxPrice: 99, slots: ['morning'], few: true }),
+  sections: [section('mueller', 'Mueller', 2, [taskItem(forMaya.dresser), taskItem(forMaya.bookshelf)])],
+  items: [taskItem(forMaya.dresser), taskItem(forMaya.bookshelf)],
+  totalCount: 2,
+  facets: { ...facets, tasks: { ...taskFacets, prices: { under50: 0, from50: 2, from100: 0, from200: 0 }, slots: { morning: 2, afternoon: 0, evening: 0 }, few: 2 } },
+  boardHref: routes.taskBoard('austin', { areas: ['crestview', 'east-austin', 'hyde-park', 'mueller', 'windsor-park'], minPrice: 50, maxPrice: 99, times: ['morning'], few: true }),
+};
+
+/** Nothing open near Maya on Open tasks: the way to post one, and the whole city. */
+export const portalOpenTasksEmptyData: PortalPageData = {
+  ...openTasksBase,
+  query: tasksQuery(),
+  items: [],
+  totalCount: 0,
+  facets: { ...facets, types: { ...facets.types, task: 0 }, tasks: { prices: { under50: 0, from50: 0, from100: 0, from200: 0 }, pricing: { fixed: 0, hourly: 0 }, when: { today: 0, this_week: 0, this_weekend: 0 }, slots: { morning: 0, afternoon: 0, evening: 0 }, few: 0 } },
+  stats: { ...base.stats, openTasks: 0 },
+};
+
+/** Neighbors with no open task near Maya: the rail's card says so, with the way to post one. */
+export const portalNoOpenTasksData: PortalPageData = {
+  ...base,
+  items: hotItems.filter((item) => item.type === 'post'),
+  totalCount: hotItems.filter((item) => item.type === 'post').length,
+  stats: { ...base.stats, openTasks: 0 },
+  openTasks: { items: [], count: 0 },
+};
+
+/** A member we can't place yet (plan 10.15): Neighbors is the whole city, and so are its open tasks. */
+export const portalNoAreaData: PortalPageData = {
+  ...base,
+  place: { kind: 'market' },
+  yourArea: undefined,
+  areas: areas.map((area) => ({ ...area, nearby: false, yours: false })),
+  askArea: true,
+  openTasks: { items: newestTasks, count: 8 },
+  stats: { ...base.stats, openTasks: 8 },
 };
 
 /** What Maya saved. */

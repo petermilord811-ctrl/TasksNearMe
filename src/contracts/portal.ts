@@ -17,7 +17,7 @@ import type {
 import type { PhotoUploadResult } from './posting';
 import type { OfferBlockedReason } from './helper-work';
 import type { OfferStatus } from './status';
-import type { TaskPublicView } from './tasks';
+import type { TaskBoardPricePreset, TaskBoardTime, TaskBoardWhen, TaskPublicView } from './tasks';
 
 /**
  * The neighborhood portal (completion plan 9.10, docs/ui/portal-9.10.md): the community's posts and the open tasks
@@ -25,6 +25,9 @@ import type { TaskPublicView } from './tasks';
  * set of filters in one URL. Signed-in members of the market only; never indexed. Everything is read for the viewer:
  * their market and neighborhood, blocks both ways, their own reactions and saves. Tasks name their neighborhood
  * (or Remote), never anything closer.
+ *
+ * Two tabs of one place (owner, 2026-11-23, "Neighbors | Open tasks"): Neighbors (everything, or one kind of post) and
+ * Open tasks (`type=task`), the board inside the app: its rows, sorts and filters, with the place kept across the switch.
  */
 
 export const PORTAL_VIEWS = ['feed', 'list'] as const;
@@ -37,11 +40,23 @@ export type PortalView = (typeof PORTAL_VIEWS)[number];
  * Engagement: a post's 2 × Helpful + Thanks + replies; a task's offers + questions.
  */
 export const PORTAL_SORTS = ['hot', 'new', 'top'] as const;
-export type PortalSort = (typeof PORTAL_SORTS)[number];
+
+/**
+ * Open tasks (`type=task`, the switch's second tab, 2026-11-23) sort as the board does: `soonest` (the window's start,
+ * the default), `new` (posted time), or the price either way (a fixed price, or the rate × the estimated hours).
+ */
+export const PORTAL_TASK_SORTS = ['soonest', 'new', 'price_high', 'price_low'] as const;
+export type PortalSort = (typeof PORTAL_SORTS)[number] | (typeof PORTAL_TASK_SORTS)[number];
 
 /** General posts, tasks, or one kind of ask or post. Without one: everything. */
 export const PORTAL_TYPES = ['general', 'task', 'recommendation', 'question', 'tip', 'thanks'] as const;
 export type PortalType = (typeof PORTAL_TYPES)[number];
+
+/**
+ * The post types the Show tabs offer (2026-11-23): tasks left the tabs for the Neighbors | Open tasks switch, which opens
+ * `type=task` as a tab of its own; `type=task` itself stays a filter of the same page.
+ */
+export const PORTAL_POST_TYPES = ['general', 'recommendation', 'question', 'tip', 'thanks'] as const satisfies readonly PortalType[];
 
 /** Posted within the last day, week or month. Without one: any time. */
 export const PORTAL_TIMES = ['24h', '7d', '30d'] as const;
@@ -66,9 +81,38 @@ export const PORTAL_FEED_PAGE_SIZE = 20;
 export const PORTAL_LIST_PAGE_SIZE = 30;
 /** Rows each neighborhood shows in the List by neighborhood, before "See all". */
 export const PORTAL_SECTION_SIZE = 5;
+/** "Open tasks near you" (2026-11-23): how many of the newest open tasks the rail's card and the Feed's strip show. */
+export const PORTAL_OPEN_TASKS_SHOWN = 5;
+
+/**
+ * The defaults that depend on the tab: Neighbors opens as the Feed, Hot; Open tasks as the board does, dense rows
+ * (the List) by the soonest window. A default is left out of the URL, so `?type=task` alone is the Open tasks tab.
+ */
+export function portalDefaults(type: PortalType | undefined): { sort: PortalSort; view: PortalView } {
+  return type === 'task' ? { sort: 'soonest', view: 'list' } : { sort: 'hot', view: 'feed' };
+}
+
+/** The sorts a tab offers, in order. */
+export function portalSortsFor(type: PortalType | undefined): readonly PortalSort[] {
+  return type === 'task' ? PORTAL_TASK_SORTS : PORTAL_SORTS;
+}
+
+/**
+ * The board's own filters for Open tasks (2026-11-23), read only with `type=task`: the price (whole dollars, inclusive,
+ * as the board's: a fixed price, or the rate × the estimated hours), fixed or hourly, when the window is, the time of
+ * day it touches (`slots`; the board's `time`, since `time` here is when it was posted), and at most one offer so far.
+ */
+export interface PortalTaskFilters {
+  minPrice?: number;
+  maxPrice?: number;
+  pricing?: 'fixed' | 'hourly';
+  when?: Exclude<TaskBoardWhen, 'any'>;
+  slots?: TaskBoardTime[];
+  few?: boolean;
+}
 
 /** `routes.app.community(query)`. Defaults are left out of the URL. */
-export interface PortalQuery {
+export interface PortalQuery extends PortalTaskFilters {
   /**
    * Absent: near you (your neighborhood, those within 3 miles, citywide posts and remote tasks). `all`: the market.
    * `citywide`: only what belongs to no neighborhood. A slug: one neighborhood.
@@ -86,9 +130,9 @@ export interface PortalQuery {
    * other posts drop out.
    */
   unanswered?: boolean;
-  /** Default `hot`. */
+  /** The tab's default (`portalDefaults`): `hot` on Neighbors, `soonest` on Open tasks; each tab its own sorts. */
   sort?: PortalSort;
-  /** Default `feed`. */
+  /** The tab's default (`portalDefaults`): `feed` on Neighbors, `list` on Open tasks. */
   view?: PortalView;
   /** Default `area`; the List reads it, both views keep it. */
   group?: PortalGroup;
@@ -161,6 +205,16 @@ export interface PortalArea {
   yours: boolean;
 }
 
+/** Open tasks' own filters, counted like the rest (each leaves its own filter out). */
+export interface PortalTaskFacets {
+  prices: Record<TaskBoardPricePreset, number>;
+  pricing: Record<'fixed' | 'hourly', number>;
+  when: Record<Exclude<TaskBoardWhen, 'any'>, number>;
+  slots: Record<TaskBoardTime, number>;
+  /** At most one offer so far. */
+  few: number;
+}
+
 /**
  * How many items each option would show, given all the other filters (each count leaves its own filter out, so
  * an option never counts itself out). Real counts, never estimates.
@@ -178,6 +232,8 @@ export interface PortalFacets {
   saved: number;
   /** Asks without an answer yet, under the other filters (plan 10.17). */
   unanswered: number;
+  /** On the Open tasks tab (`type=task`): the board's filters' counts. */
+  tasks?: PortalTaskFacets;
 }
 
 /** A helper who works in the place, for the rail and the feed's "Helpers nearby". */
@@ -261,8 +317,17 @@ export interface PortalPageData {
   live: { areaIds?: string[]; areaSlugs?: string[]; withRemote: boolean };
   /** Today in the market's time ("2026-11-21"), for Today and Yesterday in the List. */
   today: string;
-  /** The full task board with the same service, neighborhood and time (its price and time-of-day filters live there). */
+  /**
+   * The public board with the same service, neighborhoods, words and task filters: on Open tasks, "Save this search"
+   * saves it for alerts (saved searches are board views).
+   */
   boardHref: string;
+  /**
+   * "Open tasks near you" on the Neighbors tab (2026-11-23): the place's newest open tasks (at most
+   * `PORTAL_OPEN_TASKS_SHOWN`; never the viewer's own) and how many are open there, for the rail's card and the Feed's
+   * strip. Absent on the Open tasks tab.
+   */
+  openTasks?: { items: PortalTaskView[]; count: number };
   /** The card staff pinned for the market (plan 10.16), unless the viewer closed it. */
   announcement?: CommunityAnnouncementView;
   /**

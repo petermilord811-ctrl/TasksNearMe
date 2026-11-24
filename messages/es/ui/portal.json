@@ -45,7 +45,10 @@
     "label": "Ordenar",
     "hot": "Populares",
     "new": "Nuevas",
-    "top": "Más útiles"
+    "top": "Más útiles",
+    "soonest": "Más próximas",
+    "price_high": "Precio más alto",
+    "price_low": "Precio más bajo"
   },
   "view": {
     "label": "Vista",
@@ -83,7 +86,6 @@
     "keyword": "“{q}”",
     "countOn": "({count} activos)"
   },
-  "moreTaskFilters": "Más filtros de tareas",
   "task": {
     "flair": "Tarea",
     "posted": "publicó una tarea",
@@ -109,7 +111,11 @@
     "yesterday": "Ayer",
     "count": "{count, plural, one {# elemento} other {# elementos}}",
     "replies": "{count, plural, =0 {Sin respuestas} one {# respuesta} other {# respuestas}}",
-    "helpful": "{count} útil"
+    "helpful": "{count} útil",
+    "tasks": "{count, plural, one {# tarea abierta} other {# tareas abiertas}}",
+    "remote": "Remotas",
+    "seeAllRemote": "Ver las {count} tareas remotas",
+    "tomorrow": "Mañana"
   },
   "rail": {
     "label": "En el vecindario",
@@ -157,7 +163,10 @@
     "backToAll": "Volver a todo",
     "pastEndTitle": "No hay nada en esta página",
     "pastEndBody": "Llegaste al final. Empieza de nuevo desde la primera página.",
-    "firstPage": "Volver a la primera página"
+    "firstPage": "Volver a la primera página",
+    "tasksFilteredTitle": "Ninguna tarea abierta coincide con estos filtros",
+    "tasksTitle": "Por ahora no hay tareas abiertas en {place}",
+    "tasksBody": "Cuando un vecino necesite una mano, su tarea aparecerá aquí. ¿Tienes algo pendiente? Publica una tarea."
   },
   "live": {
     "show": "{count, plural, one {# nueva} other {# nuevas}} · Ver",
@@ -192,7 +201,13 @@
     "taskDiscussion": "Página de la tarea · su publicación del vecindario",
     "launch": "Vecinos · semana de lanzamiento: aviso fijado y la pregunta del vecindario",
     "unanswered": "Vecinos · preguntas que esperan respuesta",
-    "staffSamples": "Vecinos · vista del equipo donde no se ven publicaciones de muestra"
+    "staffSamples": "Vecinos · vista del equipo donde no se ven publicaciones de muestra",
+    "openTasks": "Tareas abiertas · el tablero dentro de Vecinos, por vecindario",
+    "openTasksFiltered": "Tareas abiertas · los filtros del tablero (precio, hora del día, pocas ofertas)",
+    "openTasksByDay": "Tareas abiertas · por el día en que son",
+    "openTasksEmpty": "Tareas abiertas · nada abierto cerca",
+    "openTasksNone": "Vecinos · sin tareas abiertas cerca para la tarjeta del lateral",
+    "openTasksNoArea": "Vecinos · todavía sin vecindario: tareas abiertas en toda la ciudad"
   },
   "phoneBar": {
     "changePlace": "Cambiar el vecindario",
@@ -240,5 +255,19 @@
     "save": "Guardar",
     "saved": "Guardado. Cerca de ti empieza desde ahí.",
     "failed": "No se pudo guardar. Intenta de nuevo."
+  },
+  "switch": {
+    "label": "Vecinos o tareas abiertas",
+    "neighbors": "Vecinos",
+    "tasks": "Tareas abiertas"
+  },
+  "openTasks": {
+    "nearby": "Tareas abiertas cerca de ti",
+    "area": "Tareas abiertas en {area}",
+    "market": "Tareas abiertas en {market}",
+    "remote": "Tareas remotas",
+    "none": "Por ahora no hay tareas abiertas aquí.",
+    "post": "Publicar una tarea",
+    "seeAll": "{count, plural, one {Ver la tarea abierta} other {Ver las # tareas abiertas}}"
   }
 }

@@ -25,6 +25,12 @@ import {
   portalStaffData,
   portalTaskDiscussion,
   portalTasksData,
+  portalNoAreaData,
+  portalNoOpenTasksData,
+  portalOpenTasksByDayData,
+  portalOpenTasksData,
+  portalOpenTasksEmptyData,
+  portalOpenTasksFilteredData,
 } from '@/fixtures';
 import { TaskDiscussionLink } from '@/ui/components/community/task-discussion-link';
 import { PortalSkeleton } from '@/ui/components/portal/portal-skeleton';
@@ -73,6 +79,13 @@ export const portalPreviews: PreviewEntry[] = [
   page('list-by-day', p.listByDay, routes.app.community({ view: 'list', group: 'day', sort: 'new' }), () => screen(portalListByDayData)),
   page('helper', p.helper, routes.app.community(), () => screen(portalHelperData, helperHandlers), jordanShell),
   page('tasks', p.tasks, routes.app.community({ type: 'task', area: 'mueller' }), () => screen(portalTasksData)),
+  // The switch's second tab (2026-11-23): the board inside Neighbors.
+  page('open-tasks', p.openTasks, routes.app.community({ type: 'task' }), () => screen(portalOpenTasksData)),
+  page('open-tasks-by-day', p.openTasksByDay, routes.app.community({ type: 'task', group: 'day' }), () => screen(portalOpenTasksByDayData)),
+  page('open-tasks-filtered', p.openTasksFiltered, routes.app.community(portalOpenTasksFilteredData.query), () => screen(portalOpenTasksFilteredData)),
+  page('open-tasks-empty', p.openTasksEmpty, routes.app.community({ type: 'task' }), () => screen(portalOpenTasksEmptyData)),
+  page('no-open-tasks', p.openTasksNone, routes.app.community(), () => screen(portalNoOpenTasksData)),
+  page('no-area', p.openTasksNoArea, routes.app.community(), () => screen(portalNoAreaData)),
   page('saved', p.saved, routes.app.community({ saved: true }), () => screen(portalSavedData)),
   page('filtered-empty', p.filteredEmpty, routes.app.community({ type: 'thanks', area: 'windsor-park', time: '7d' }), () => screen(portalFilteredEmptyData)),
   page('empty', p.empty, routes.app.community(), () => screen(portalEmptyData)),

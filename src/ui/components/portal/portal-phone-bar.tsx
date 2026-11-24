@@ -1,22 +1,21 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { ArrowDownWideNarrow, Check, ChevronDown, ClipboardList, Flame, House, MapPin, MessagesSquare, SlidersHorizontal, Sparkles, Trophy, Users } from 'lucide-react';
+import { Check, ChevronDown, House, MapPin, MessagesSquare, SlidersHorizontal, Users } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionHandler, CommunityAreaInput, PortalArea, PortalPageData } from '@/contracts';
 import { YourAreaControl } from './portal-notes';
-import { PORTAL_ALL_AREAS, PORTAL_SORTS } from '@/contracts/portal';
+import { PORTAL_ALL_AREAS } from '@/contracts/portal';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/ui/primitives/popover';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/ui/primitives/sheet';
-import { PortalFiltersSheet } from './portal-controls';
-import { usePlaceName } from './portal-header';
-import { activeFilterCount, portalHref } from './portal-href';
+import { NeighborhoodSwitch } from './neighborhood-switch';
+import { PortalFiltersSheet, PortalSortMenu } from './portal-controls';
+import { TaskStat, usePlaceName } from './portal-header';
+import { activeFilterCount, neighborsHref, openTasksHref, portalHref } from './portal-href';
 
 type Data = Pick<PortalPageData, 'query' | 'facets' | 'market' | 'boardHref' | 'composer' | 'place' | 'areas' | 'yourArea' | 'stats'>;
 
-const sortIcons = { hot: Flame, new: Sparkles, top: Trophy } as const;
 const optionClass = 'flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring';
 
 function AreaLink({ href, label, count, selected, yours, onPick }: { href: string; label: string; count: number; selected: boolean; yours?: boolean; onPick: () => void }) {
@@ -30,18 +29,17 @@ function AreaLink({ href, label, count, selected, yours, onPick }: { href: strin
 }
 
 /**
- * The portal's top on phones (plan 10.7), one row that stays under the app's bar as the page scrolls: the place as a
- * button (its sheet lists near you, every neighborhood and the city, each with its count, and the place's real numbers),
- * the sort as a small menu, and Filters with how many are on (its sheet holds the search and Feed or List too). It
- * replaces the heading, the numbers, the neighborhood strip and the toolbar there, so the first post starts about half
- * as far down the screen.
+ * The portal's top on phones (plan 10.7), staying under the app's bar as the page scrolls: the Neighbors | Open tasks
+ * switch across its width (2026-11-23: the board one tap away, always), then one row with the place as a button (its
+ * sheet lists near you, every neighborhood and the city, each with its count, and the place's real numbers), the tab's
+ * sort as a small menu, and Filters with how many are on (its sheet holds the search and Feed or List too). It replaces
+ * the heading, the numbers, the neighborhood strip and the toolbar there, so the first post starts high on the screen.
  */
 export function PortalPhoneBar({ data, onSetArea }: { data: Data; /** Your neighborhood, changeable under the list (plan 10.15). */ onSetArea?: ActionHandler<CommunityAreaInput> }) {
   const t = useTranslations('portal');
   const placeName = usePlaceName(data);
   const [placesOpen, setPlacesOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [sortOpen, setSortOpen] = useState(false);
   const hintId = useId();
   const { query, place, areas, stats } = data;
   const filters = activeFilterCount(query);
@@ -50,9 +48,9 @@ export function PortalPhoneBar({ data, onSetArea }: { data: Data; /** Your neigh
   const elsewhere = areas.filter((area) => !area.nearby && !area.yours);
   const pick = () => setPlacesOpen(false);
   const area = (option: PortalArea) => <AreaLink key={option.slug} href={portalHref(query, { area: option.slug })} label={option.name} count={option.count} selected={option.slug === selectedSlug} yours={option.yours} onPick={pick} />;
-  const SortIcon = sortIcons[query.sort];
 
-  return <div className="sticky top-[var(--app-header-offset,4rem)] z-20 -mx-gutter border-b border-border/80 bg-background/95 px-gutter py-1.5 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 sm:hidden">
+  return <div className="sticky top-[var(--app-header-offset,4rem)] z-20 -mx-gutter border-b border-border/80 bg-background/95 px-gutter pt-2 pb-1.5 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 sm:hidden">
+    <NeighborhoodSwitch current={query.type === 'task' ? 'tasks' : 'neighbors'} neighborsHref={neighborsHref(query)} tasksHref={openTasksHref(query)} taskCount={stats.openTasks} className="mb-1" />
     <div className="flex items-center gap-2">
       <h1 className="min-w-0 flex-1">
         <button type="button" onClick={() => setPlacesOpen(true)} aria-haspopup="dialog" aria-describedby={hintId} className="flex min-h-10 w-full min-w-0 items-center gap-1 rounded-xl text-left font-display text-[1.0625rem]/6 font-semibold tracking-[-0.01em] focus-visible:outline-2 focus-visible:outline-ring">
@@ -60,19 +58,7 @@ export function PortalPhoneBar({ data, onSetArea }: { data: Data; /** Your neigh
         </button>
       </h1>
       <span id={hintId} className="sr-only">{t('phoneBar.changePlace')}</span>
-      <Popover open={sortOpen} onOpenChange={setSortOpen}>
-        <PopoverTrigger aria-label={t('phoneBar.sort', { sort: t(`sort.${query.sort}`) })} className="inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full border border-border bg-card px-2.5 text-[13px] font-semibold transition-colors hover:border-foreground/30 focus-visible:outline-2 focus-visible:outline-ring data-[state=open]:border-foreground/40">
-          <SortIcon aria-hidden="true" className="size-3.5 text-primary" />{t(`sort.${query.sort}`)}<ArrowDownWideNarrow aria-hidden="true" className="size-3.5 text-muted-foreground" />
-        </PopoverTrigger>
-        <PopoverContent align="end" className="w-44 p-1.5">
-          <ul aria-label={t('sort.label')}>{PORTAL_SORTS.map((sort) => {
-            const Icon = sortIcons[sort];
-            return <li key={sort}><Link href={portalHref(query, { sort })} onClick={() => setSortOpen(false)} aria-current={query.sort === sort ? 'page' : undefined} className={cn(optionClass, query.sort === sort && 'bg-brand-soft font-semibold')}>
-              <Icon aria-hidden="true" className="size-4 text-primary" />{t(`sort.${sort}`)}{query.sort === sort && <Check aria-hidden="true" className="ml-auto size-4 text-primary" />}
-            </Link></li>;
-          })}</ul>
-        </PopoverContent>
-      </Popover>
+      <PortalSortMenu query={query} className="max-w-[45%]" />
       <button type="button" onClick={() => setFiltersOpen(true)} aria-haspopup="dialog" aria-label={filters > 0 ? t('filters.buttonCount', { count: filters }) : t('filters.button')} className="relative grid size-9 shrink-0 place-items-center rounded-full border border-border bg-card transition-colors hover:border-foreground/30 focus-visible:outline-2 focus-visible:outline-ring">
         <SlidersHorizontal aria-hidden="true" className="size-4" />
         {filters > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 min-w-5 rounded-full bg-primary px-1 text-center text-[11px] leading-5 font-semibold text-primary-foreground tabular-nums ring-2 ring-background">{filters}</span>}
@@ -85,7 +71,7 @@ export function PortalPhoneBar({ data, onSetArea }: { data: Data; /** Your neigh
           <SheetTitle className="font-display text-lg">{t('areas.moreTitle', { market: data.market.name })}</SheetTitle>
           <SheetDescription asChild>
             <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground tabular-nums">
-              <li className="inline-flex items-center gap-1.5"><ClipboardList aria-hidden="true" className="size-4 text-primary" />{t('stats.tasks', { count: stats.openTasks })}</li>
+              <li className="inline-flex items-center"><TaskStat data={data} onPick={pick} /></li>
               <li className="inline-flex items-center gap-1.5"><MessagesSquare aria-hidden="true" className="size-4" />{t('stats.posts', { count: stats.postsThisWeek })}</li>
               <li className="inline-flex items-center gap-1.5"><Users aria-hidden="true" className="size-4" />{t('stats.helpers', { count: stats.helpers })}</li>
             </ul>

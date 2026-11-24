@@ -62,11 +62,32 @@ describe('community rules', () => {
 describe('the portal (plan 9.10)', () => {
   it('reads its filters from the address, with defaults, and drops what it does not know', () => {
     expect(parsePortalQuery({})).toEqual({ saved: false, unanswered: false, sort: 'hot', view: 'feed', group: 'area', page: 1 });
-    expect(parsePortalQuery({ area: 'windsor-park', category: 'yard-cleanup', type: 'task', time: '7d', q: '  leaf   bags ', saved: '1', sort: 'top', view: 'list', group: 'day', page: '3' })).toEqual({
-      area: 'windsor-park', category: 'yard-cleanup', type: 'task', time: '7d', q: 'leaf bags', saved: true, unanswered: false, sort: 'top', view: 'list', group: 'day', page: 3,
+    expect(parsePortalQuery({ area: 'windsor-park', category: 'yard-cleanup', type: 'question', time: '7d', q: '  leaf   bags ', saved: '1', sort: 'top', view: 'list', group: 'day', page: '3' })).toEqual({
+      area: 'windsor-park', category: 'yard-cleanup', type: 'question', time: '7d', q: 'leaf bags', saved: true, unanswered: false, sort: 'top', view: 'list', group: 'day', page: 3,
     });
     expect(parsePortalQuery({ area: '../etc', category: 'pottery', type: 'event', time: '1y', sort: 'best', view: 'map', page: '-2' })).toEqual({ saved: false, unanswered: false, sort: 'hot', view: 'feed', group: 'area', page: 1 });
     expect(parsePortalQuery({ area: 'all', category: 'general' })).toMatchObject({ area: 'all', category: 'general' });
+  });
+
+  it('opens Open tasks as the board does, with its own sorts and the board’s filters (2026-11-23)', () => {
+    // The tab's defaults: the List, the soonest window first.
+    expect(parsePortalQuery({ type: 'task' })).toEqual({ type: 'task', saved: false, unanswered: false, sort: 'soonest', view: 'list', group: 'area', page: 1 });
+    // Its sorts are the board's; Neighbors' Hot and Top fall back to Soonest there, and Soonest means nothing on Neighbors.
+    expect(parsePortalQuery({ type: 'task', sort: 'price_high', view: 'feed' })).toMatchObject({ sort: 'price_high', view: 'feed' });
+    expect(parsePortalQuery({ type: 'task', sort: 'top' }).sort).toBe('soonest');
+    expect(parsePortalQuery({ type: 'task', sort: 'active' }).sort).toBe('soonest');
+    expect(parsePortalQuery({ sort: 'soonest' }).sort).toBe('hot');
+    // The board's filters under the board's names: the price in whole dollars (the wrong way round, swapped), fixed or
+    // hourly, when, the times of day (the board's order) and few offers.
+    expect(parsePortalQuery({ type: 'task', min: '120', max: '40', pricing: 'hourly', when: 'this_weekend', slot: 'evening,brunch,morning', few: '1' })).toMatchObject({
+      minPrice: 40, maxPrice: 120, pricing: 'hourly', when: 'this_weekend', slots: ['morning', 'evening'], few: true,
+    });
+    // Nonsense is dropped: a price that isn't whole dollars, a minimum of 0, when "any", an unknown kind of price.
+    const loose = parsePortalQuery({ type: 'task', min: '0', max: '12.5', pricing: 'barter', when: 'any', slot: 'noon' });
+    for (const key of ['minPrice', 'maxPrice', 'pricing', 'when', 'slots', 'few']) expect(loose).not.toHaveProperty(key);
+    // On Neighbors they mean nothing: tasks there are mixed in with posts.
+    const neighbors = parsePortalQuery({ min: '50', pricing: 'fixed', when: 'today', slot: 'morning', few: '1' });
+    for (const key of ['minPrice', 'pricing', 'when', 'slots', 'few']) expect(neighbors).not.toHaveProperty(key);
   });
 
   it('still opens the older feed addresses: the whole market, Active as Hot, a kind as the type', () => {

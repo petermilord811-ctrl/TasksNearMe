@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, gte, ilike, inArray, isNull, ne, notInArray, or, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, ilike, inArray, isNull, lt, lte, ne, notInArray, or, sql, type SQL } from 'drizzle-orm';
 import {
   CATEGORY_SLUGS,
   PORTAL_ALL_AREAS,
@@ -6,9 +6,11 @@ import {
   PORTAL_FEED_PAGE_SIZE,
   PORTAL_GENERAL,
   PORTAL_LIST_PAGE_SIZE,
+  PORTAL_OPEN_TASKS_SHOWN,
   PORTAL_SECTION_SIZE,
   PORTAL_TIMES,
   PORTAL_TYPES,
+  TASK_BOARD_PRICE_PRESETS,
   localeOrDefault,
   routes,
   type CategorySlug,
@@ -25,10 +27,14 @@ import {
   type PortalQueryState,
   type PortalRail,
   type PortalSection,
+  type PortalSort,
+  type PortalTaskFacets,
   type PortalTaskView,
   type PortalType,
+  type TaskBoardPricePreset,
   type TaskBoardQuery,
 } from '@/contracts';
+import { whenRange } from '@/shared/board-match';
 import { users } from '@/modules/accounts/schema';
 import { areas, categories } from '@/modules/markets/schema';
 import { marketTimeZone } from '@/modules/markets/time-zone';
@@ -37,7 +43,7 @@ import { getHelperSummaries } from '@/modules/profiles/queries';
 import { helperProfiles, helperServices } from '@/modules/profiles/schema';
 import { taskQuestions } from '@/modules/questions/schema';
 import { toTaskPublicView } from '@/modules/tasks/projections';
-import { keywordCondition, openIn, selectPublic, toRow } from '@/modules/tasks/queries';
+import { keywordCondition, openIn, selectPublic, taskPriceCents, timeCondition, toRow } from '@/modules/tasks/queries';
 import { taskMarks, tasks } from '@/modules/tasks/schema';
 import { blockedPeopleOf } from '@/modules/trust/blocks';
 import type { Db } from '@/platform/db/connect';
@@ -59,7 +65,8 @@ import { isRealRecordId, rowScopeCondition, samplesHiddenInThisBuild } from '@/s
  */
 
 type Params = Record<string, string | string[] | undefined>;
-type FilterKey = 'area' | 'type' | 'category' | 'time' | 'saved' | 'unanswered';
+/** A filter a count leaves out; the last five are Open tasks' own (the board's, 2026-11-23). */
+type FilterKey = 'area' | 'type' | 'category' | 'time' | 'saved' | 'unanswered' | 'price' | 'pricing' | 'when' | 'slots' | 'few';
 
 interface AreaRow {
   id: string;
@@ -160,6 +167,20 @@ function taskConditions(scope: Scope, skip?: FilterKey): SQL[] {
   if (skip !== 'saved' && query.saved) {
     conditions.push(sql`exists (select 1 from ${taskMarks} where ${taskMarks.taskId} = ${tasks.id} and ${taskMarks.userId} = ${viewer.id} and ${taskMarks.kind} = 'saved')`);
   }
+  // Open tasks' own filters (2026-11-23), as the board reads them (src/modules/tasks/queries.ts): only on that tab.
+  if (query.type === 'task') {
+    if (skip !== 'price') {
+      if (query.minPrice !== undefined) conditions.push(sql`${taskPriceCents} >= ${query.minPrice * 100}`);
+      if (query.maxPrice !== undefined) conditions.push(sql`${taskPriceCents} <= ${query.maxPrice * 100}`);
+    }
+    if (skip !== 'pricing' && query.pricing) conditions.push(eq(tasks.pricingType, query.pricing));
+    if (skip !== 'when' && query.when) {
+      const range = whenRange(query.when, scope.now, scope.timeZone);
+      if (range) conditions.push(lt(tasks.windowStart, range.to), gt(tasks.windowEnd, range.from));
+    }
+    if (skip !== 'slots' && query.slots?.length) conditions.push(or(...query.slots.map((slot) => timeCondition(slot, scope.timeZone)))!);
+    if (skip !== 'few' && query.few) conditions.push(lte(tasks.offerCount, 1));
+  }
   return conditions;
 }
 
@@ -167,27 +188,41 @@ const postEngagement = sql`(${ENGAGEMENT.helpful} * ${communityPosts.helpfulCoun
 const questionCount = sql`(select count(*) from ${taskQuestions} where ${taskQuestions.taskId} = ${tasks.id} and ${taskQuestions.status} = 'visible')`;
 const taskEngagement = sql`(${ENGAGEMENT.offer} * ${tasks.offerCount} + ${ENGAGEMENT.question} * ${questionCount})`;
 
-/** Every matching item as one relation: type, kind, id, at, engagement, area_id, category. */
+/**
+ * Every matching item as one relation: type, kind, id, at, engagement, area_id, category, and for tasks when their
+ * window starts and their price in cents (Open tasks' sorts, 2026-11-23; empty for posts).
+ */
 function itemsUnion(scope: Scope, skip?: FilterKey): SQL {
-  const posts = sql`select 'post'::text as type, ${communityPosts.kind} as kind, ${communityPosts.id} as id, ${communityPosts.createdAt} as at, ${postEngagement}::int as engagement, ${communityPosts.areaId} as area_id, ${communityPosts.categorySlug} as category
+  const posts = sql`select 'post'::text as type, ${communityPosts.kind} as kind, ${communityPosts.id} as id, ${communityPosts.createdAt} as at, ${postEngagement}::int as engagement, ${communityPosts.areaId} as area_id, ${communityPosts.categorySlug} as category, null::timestamptz as starts, null::bigint as price
     from ${communityPosts} where ${and(...postConditions(scope, skip))}`;
-  const taskRows = sql`select 'task'::text as type, 'task'::text as kind, ${tasks.id} as id, coalesce(${tasks.publishedAt}, ${tasks.createdAt}) as at, ${taskEngagement}::int as engagement, ${tasks.publicAreaId} as area_id, ${categories.slug} as category
+  const taskRows = sql`select 'task'::text as type, 'task'::text as kind, ${tasks.id} as id, coalesce(${tasks.publishedAt}, ${tasks.createdAt}) as at, ${taskEngagement}::int as engagement, ${tasks.publicAreaId} as area_id, ${categories.slug} as category, ${tasks.windowStart} as starts, ${taskPriceCents}::bigint as price
     from ${tasks} inner join ${categories} on ${categories.id} = ${tasks.categoryId} where ${and(...taskConditions(scope, skip))}`;
   return sql`(${posts} union all ${taskRows})`;
 }
 
-/** The sort's order; `dayFirst` (the List by day) puts the posting day first, in the market's time. */
-function orderOf(sort: PortalQueryState['sort'], dayFirst?: { timeZone: string }): SQL {
+/**
+ * The sort's order. Open tasks' (2026-11-23) as the board's: the soonest window, or the price either way (the soonest
+ * window next). `dayFirst` (the List by day) puts the day first, in the market's time: the day posted, newest first, or
+ * on Open tasks the day the task is on, soonest first.
+ */
+function orderOf(sort: PortalSort, dayFirst?: { timeZone: string; tasks: boolean }): SQL {
   const order = sort === 'new'
     ? sql`at desc, id desc`
     : sort === 'top'
       ? sql`engagement desc, at desc, id desc`
-      : sql`(log(1 + greatest(engagement, 0)) + extract(epoch from at) / ${HOT_SECONDS}) desc, at desc, id desc`;
-  return dayFirst ? sql`(at at time zone ${dayFirst.timeZone})::date desc, ${order}` : order;
+      : sort === 'soonest'
+        ? sql`starts asc nulls last, at desc, id desc`
+        : sort === 'price_high'
+          ? sql`price desc nulls last, starts asc nulls last, id desc`
+          : sort === 'price_low'
+            ? sql`price asc nulls last, starts asc nulls last, id desc`
+            : sql`(log(1 + greatest(engagement, 0)) + extract(epoch from at) / ${HOT_SECONDS}) desc, at desc, id desc`;
+  if (!dayFirst) return order;
+  return dayFirst.tasks ? sql`(starts at time zone ${dayFirst.timeZone})::date asc, ${order}` : sql`(at at time zone ${dayFirst.timeZone})::date desc, ${order}`;
 }
 
 /** The List by day keeps each day's items together, in the chosen sort within the day. */
-const dayFirstOf = (scope: Scope) => (scope.query.view === 'list' && scope.query.group === 'day' ? { timeZone: scope.timeZone } : undefined);
+const dayFirstOf = (scope: Scope) => (scope.query.view === 'list' && scope.query.group === 'day' ? { timeZone: scope.timeZone, tasks: scope.query.type === 'task' } : undefined);
 
 interface ItemRow extends Record<string, unknown> {
   type: 'post' | 'task';
@@ -331,6 +366,7 @@ async function facetsOf(db: Db, scope: Scope): Promise<{ facets: PortalFacets; a
   const all = [...areaCounts.values()].reduce((sum, n) => sum + n, 0);
   const nearby = scope.nearbyIds.length > 0 ? (areaCounts.get(null) ?? 0) + scope.nearbyIds.reduce((sum, id) => sum + (areaCounts.get(id) ?? 0), 0) : all;
   const row = times.rows[0] ?? {};
+  const taskFacets = scope.query.type === 'task' ? await taskFacetsOf(db, scope) : undefined;
   return {
     facets: {
       types,
@@ -340,8 +376,42 @@ async function facetsOf(db: Db, scope: Scope): Promise<{ facets: PortalFacets; a
       times: { '24h': Number(row['24h'] ?? 0), '7d': Number(row['7d'] ?? 0), '30d': Number(row['30d'] ?? 0) },
       saved: Number(saved.rows[0]?.n ?? 0),
       unanswered: Number(unanswered.rows[0]?.n ?? 0),
+      ...(taskFacets ? { tasks: taskFacets } : {}),
     },
     areaCounts,
+  };
+}
+
+/**
+ * Open tasks' own counts (2026-11-23), as the board's (src/modules/tasks/board.ts): each option with the other filters,
+ * its own left out, read straight from the tasks (the tab shows nothing else).
+ */
+async function taskFacetsOf(db: Db, scope: Scope): Promise<PortalTaskFacets> {
+  const where = (skip: FilterKey) => and(...taskConditions(scope, skip));
+  const sum = (condition: SQL | undefined) => sql<number>`coalesce(sum(case when ${condition ?? sql`true`} then 1 else 0 end), 0)::int`;
+  const joined = eq(categories.id, tasks.categoryId);
+  const preset = (key: TaskBoardPricePreset) => {
+    const found = TASK_BOARD_PRICE_PRESETS.find((candidate) => candidate.key === key)!;
+    return and('min' in found ? sql`${taskPriceCents} >= ${found.min * 100}` : undefined, 'max' in found ? sql`${taskPriceCents} <= ${found.max * 100}` : undefined);
+  };
+  const range = (key: 'today' | 'this_week' | 'this_weekend') => {
+    const span = whenRange(key, scope.now, scope.timeZone)!;
+    return sql`${tasks.windowStart} < ${span.to} and ${tasks.windowEnd} > ${span.from}`;
+  };
+  const [prices, pricing, when, slots, few] = await Promise.all([
+    db.select({ under50: sum(preset('under50')), from50: sum(preset('from50')), from100: sum(preset('from100')), from200: sum(preset('from200')) }).from(tasks).innerJoin(categories, joined).where(where('price')),
+    db.select({ fixed: sum(eq(tasks.pricingType, 'fixed')), hourly: sum(eq(tasks.pricingType, 'hourly')) }).from(tasks).innerJoin(categories, joined).where(where('pricing')),
+    db.select({ today: sum(range('today')), this_week: sum(range('this_week')), this_weekend: sum(range('this_weekend')) }).from(tasks).innerJoin(categories, joined).where(where('when')),
+    db.select({ morning: sum(timeCondition('morning', scope.timeZone)), afternoon: sum(timeCondition('afternoon', scope.timeZone)), evening: sum(timeCondition('evening', scope.timeZone)) }).from(tasks).innerJoin(categories, joined).where(where('slots')),
+    db.select({ n: sum(lte(tasks.offerCount, 1)) }).from(tasks).innerJoin(categories, joined).where(where('few')),
+  ]);
+  const count = (value: unknown) => Number(value ?? 0) || 0;
+  return {
+    prices: { under50: count(prices[0]?.under50), from50: count(prices[0]?.from50), from100: count(prices[0]?.from100), from200: count(prices[0]?.from200) },
+    pricing: { fixed: count(pricing[0]?.fixed), hourly: count(pricing[0]?.hourly) },
+    when: { today: count(when[0]?.today), this_week: count(when[0]?.this_week), this_weekend: count(when[0]?.this_weekend) },
+    slots: { morning: count(slots[0]?.morning), afternoon: count(slots[0]?.afternoon), evening: count(slots[0]?.evening) },
+    few: count(few[0]?.n),
   };
 }
 
@@ -490,7 +560,11 @@ async function unansweredOf(db: Db, scope: Scope): Promise<PortalRail['unanswere
 
 // ---- The page ------------------------------------------------------------------------------------------------
 
-/** The full board's link with what it shares with the portal: the service, one neighborhood, posted within. */
+/**
+ * The public board's link with what it shares with the portal: the service, the neighborhoods, posted within, the
+ * words, and on Open tasks the board's own filters (2026-11-23). "Save this search" saves it: saved searches are
+ * board views.
+ */
 function boardHrefOf(scope: Scope): string {
   const { query } = scope;
   const board: TaskBoardQuery = {
@@ -498,9 +572,34 @@ function boardHrefOf(scope: Scope): string {
     ...(scope.place.kind === 'area' ? { areas: [scope.place.slug] } : scope.place.kind === 'nearby' ? { areas: scope.marketAreas.filter((area) => scope.nearbyIds.includes(area.id)).map((area) => area.slug) } : {}),
     ...(query.time === '24h' ? { posted: '24h' as const } : query.time === '7d' ? { posted: '7d' as const } : {}),
     ...(query.q ? { q: query.q } : {}),
+    ...(query.type === 'task'
+      ? {
+          ...(query.minPrice !== undefined ? { minPrice: query.minPrice } : {}),
+          ...(query.maxPrice !== undefined ? { maxPrice: query.maxPrice } : {}),
+          ...(query.pricing ? { pricing: query.pricing } : {}),
+          ...(query.when ? { when: query.when } : {}),
+          ...(query.slots?.length ? { times: query.slots } : {}),
+          ...(query.few ? { few: true } : {}),
+        }
+      : {}),
     view: query.view === 'feed' ? 'cards' : 'list',
   };
   return routes.taskBoard(scope.facts.market.slug, board);
+}
+
+/**
+ * "Open tasks near you" (2026-11-23) on the Neighbors tab: the place's newest open tasks, whatever the other filters
+ * (as the heading's count), never the viewer's own, nobody blocked, nothing they hid.
+ */
+async function openTasksOf(db: Db, scope: Scope): Promise<PortalTaskView[]> {
+  const place: Scope = { ...scope, query: { saved: false, unanswered: false, sort: 'new', view: 'feed', group: 'area', page: 1, type: 'task', ...(scope.query.area ? { area: scope.query.area } : {}) } };
+  const found = await db.execute<{ id: string }>(sql`select id from ${itemsUnion(place)} items where type = 'task' order by at desc, id desc limit ${PORTAL_OPEN_TASKS_SHOWN}`);
+  const ids = found.rows.map((row) => row.id);
+  const views = await taskViewsOf(db, scope, ids);
+  return ids.flatMap((id) => {
+    const view = views.get(id);
+    return view ? [view] : [];
+  });
 }
 
 function areasOf(scope: Scope, counts: Map<string | null, number>): PortalArea[] {
@@ -539,7 +638,7 @@ export async function getPortal(db: Db, viewer: CommunityViewer, params: Params,
   if (!scope) return null;
   const { query, facts } = scope;
   const locale = localeOrDefault(viewer.locale);
-  const [listing, { facets, areaCounts }, stats, rail, composer, announcement] = await Promise.all([
+  const [listing, { facets, areaCounts }, stats, rail, composer, announcement, openTasks] = await Promise.all([
     sectioned(scope)
       ? sectionsOf(db, scope).then((sections) => ({ sections, items: sections.flatMap((section) => section.items), totalCount: sections.reduce((sum, section) => sum + section.count, 0) }))
       : itemPage(db, scope, query.page, pageSize(query)).then((page) => ({ sections: undefined, ...page })),
@@ -548,6 +647,8 @@ export async function getPortal(db: Db, viewer: CommunityViewer, params: Params,
     railOf(db, scope),
     composerData(db, facts, locale, now),
     announcementFor(db, viewer.id, facts.market.id, locale, now),
+    // The Neighbors tab's look at the other tab (2026-11-23); Open tasks is that list itself.
+    query.type === 'task' ? Promise.resolve(undefined) : openTasksOf(db, scope),
   ]);
   // Staff in production get a switch for the demo marketplace, which members don't see here (plan 10, D1).
   const samplesSwitch = viewer.staff && samplesHiddenInThisBuild() && isRealRecordId(viewer.id) ? { samples: { shown: (viewer.rows ?? 'all') === 'all' } } : {};
@@ -572,6 +673,7 @@ export async function getPortal(db: Db, viewer: CommunityViewer, params: Params,
     live: { ...(scope.areaIds ? { areaIds: scope.areaIds, areaSlugs: placeSlugs } : {}), withRemote: scope.withCitywide },
     today: marketDayKey(now, scope.timeZone),
     boardHref: boardHrefOf(scope),
+    ...(openTasks ? { openTasks: { items: openTasks, count: stats.openTasks } } : {}),
     ...(announcement ? { announcement } : {}),
     // We don't know their neighborhood (plan 10.15): the page asks, above the stream.
     ...(!facts.area && scope.marketAreas.length > 0 ? { askArea: true } : {}),
@@ -581,19 +683,8 @@ export async function getPortal(db: Db, viewer: CommunityViewer, params: Params,
 
 /** The next page of the same stream ("Show more"), read the way the page reads it. */
 export async function getPortalMore(db: Db, viewer: CommunityViewer, query: PortalQuery & { page: number }, now: Date): Promise<PortalMore | null> {
-  const params: Params = {
-    area: query.area,
-    category: query.category,
-    type: query.type,
-    time: query.time,
-    q: query.q,
-    saved: query.saved ? '1' : undefined,
-    unanswered: query.unanswered ? '1' : undefined,
-    sort: query.sort,
-    view: query.view,
-    group: query.group,
-    page: String(Number(query.page) || 1),
-  };
+  // The page's own address (it carries every filter, Open tasks' too, under their URL names), at the page asked for.
+  const params: Params = { ...Object.fromEntries(new URL(routes.app.community({ ...query, page: undefined }), 'https://portal.invalid').searchParams), page: String(Number(query.page) || 1) };
   const scope = await scopeFor(db, viewer, parsePortalQuery(params), now);
   if (!scope || sectioned(scope)) return null;
   const size = pageSize(scope.query);

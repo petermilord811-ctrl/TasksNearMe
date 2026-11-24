@@ -63,7 +63,17 @@ describe('the neighborhood portal (plan 9.10)', () => {
   it('leaves the defaults out and keeps one order, so the same filters make the same URL', () => {
     expect(routes.app.community()).toBe('/app/community');
     expect(routes.app.community({ sort: 'hot', view: 'feed', group: 'area', saved: false, page: 1 })).toBe('/app/community');
-    expect(routes.app.community({ page: 2, view: 'list', sort: 'new', saved: true, q: ' leaf  bags ', time: '7d', type: 'task', category: 'yard-cleanup', area: 'mueller', group: 'day' }))
-      .toBe('/app/community?area=mueller&category=yard-cleanup&type=task&time=7d&q=leaf++bags&saved=1&sort=new&view=list&group=day&page=2');
+    expect(routes.app.community({ page: 2, view: 'list', sort: 'new', saved: true, q: ' leaf  bags ', time: '7d', type: 'recommendation', category: 'yard-cleanup', area: 'mueller', group: 'day' }))
+      .toBe('/app/community?area=mueller&category=yard-cleanup&type=recommendation&time=7d&q=leaf++bags&saved=1&sort=new&view=list&group=day&page=2');
+  });
+
+  it('gives Open tasks its own defaults and the board’s filters under the board’s names, and drops them elsewhere (2026-11-23)', () => {
+    // The List, soonest first: the tab's defaults, left out.
+    expect(routes.app.community({ type: 'task', sort: 'soonest', view: 'list' })).toBe('/app/community?type=task');
+    expect(routes.app.community({ type: 'task', sort: 'price_low', view: 'feed' })).toBe('/app/community?type=task&sort=price_low&view=feed');
+    expect(routes.app.community({ type: 'task', area: 'mueller', minPrice: 50, maxPrice: 99, pricing: 'hourly', when: 'this_weekend', slots: ['evening', 'morning'], few: true }))
+      .toBe('/app/community?area=mueller&type=task&min=50&max=99&pricing=hourly&when=this_weekend&slot=morning%2Cevening&few=1');
+    // On Neighbors the task filters mean nothing and stay out; its own defaults are Hot and the Feed.
+    expect(routes.app.community({ minPrice: 50, slots: ['morning'], few: true, sort: 'hot', view: 'feed' })).toBe('/app/community');
   });
 });
