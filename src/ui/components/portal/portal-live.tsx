@@ -19,8 +19,8 @@ type Data = Pick<PortalPageData, 'query' | 'live' | 'areas' | 'market' | 'items'
 
 
 /**
- * The portal, live (completion plan 9.10): a post someone just made (the signed-in stream's community notices)
- * and a task just posted (the market's public stream) that fit what the reader is looking at become one pill,
+ * The portal, live (completion plan 9.10): on Neighbors a post someone just made (the signed-in stream's community
+ * notices), on Open tasks a task just posted (the market's public stream), that fit what the reader is looking at become one pill,
  * "3 new · Show", above the stream; nothing moves under the reader until they ask. Offer counts on task cards and
  * rows update as they change. A search or Saved view waits for a reload (a notice carries ids, not words).
  */
@@ -51,7 +51,8 @@ export function PortalLive({ data, listId, onCheckFresh }: { data: Data; listId:
   });
 
   const onTask = useEffectEvent((task: TaskPublicView) => {
-    if (quiet || (query.type && query.type !== 'task')) return;
+    // New tasks are Open tasks' news (2026-11-24): Neighbors holds the posts.
+    if (quiet || query.type !== 'task') return;
     if (query.category && task.categorySlug !== query.category) return;
     if (live.areaSlugs && !(task.location.kind === 'remote' ? live.withRemote : areaNames.has(task.location.areaName))) return;
     // Open tasks' own filters (2026-11-23), read as the live board reads them (the price, fixed or hourly, when, the time
@@ -136,7 +137,7 @@ export function PortalLive({ data, listId, onCheckFresh }: { data: Data; listId:
     startTransition(() => router.refresh());
   };
   return <>
-    <p aria-live="polite" className="sr-only">{count > 0 ? t('announce', { count }) : ''}</p>
+    <p aria-live="polite" className="sr-only">{count > 0 ? t(query.type === 'task' ? 'announceTasks' : 'announce', { count }) : ''}</p>
     {(count > 0 || loading) && <button
       type="button"
       onClick={show}

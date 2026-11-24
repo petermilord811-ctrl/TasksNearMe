@@ -59,12 +59,13 @@ import { portalHelperOf, welcomeFor } from './welcome';
 import { isRealRecordId, rowScopeCondition, samplesHiddenInThisBuild } from '@/shared/sample-data';
 
 /**
- * The neighborhood portal (completion plan 9.10, docs/ui/portal-9.10.md): the community's posts and the open tasks
- * in one stream, read for one signed-in member. Posts and tasks meet in one `union all` (type, kind, id, posted
- * time, engagement, neighborhood, service), so the sorts, pages, counts and sections are exact across both. The
- * same rules as everywhere else: the viewer's market, blocks both ways, visible posts (staff also see hidden ones,
- * marked), open tasks not past and not hidden, a helper's "not interested" tasks left out; tasks name their
- * neighborhood only.
+ * The neighborhood portal (completion plan 9.10, docs/ui/portal-9.10.md): the community's posts and the open tasks,
+ * read for one signed-in member, in two tabs: Neighbors holds the posts and Open tasks (`type=task`) the tasks
+ * (2026-11-24: a task once showed up to three times in one scroll of Neighbors). Both read one `union all` (type,
+ * kind, id, posted time, engagement, neighborhood, service), each tab's half of it empty on the other, so the sorts,
+ * pages, counts and sections stay exact. The same rules as everywhere else: the viewer's market, blocks both ways,
+ * visible posts (staff also see hidden ones, marked), open tasks not past and not hidden, a helper's "not interested"
+ * tasks left out; tasks name their neighborhood only.
  */
 
 type Params = Record<string, string | string[] | undefined>;
@@ -135,7 +136,9 @@ function postConditions(scope: Scope, skip?: FilterKey): SQL[] {
     const inPlace = scope.areaIds.length > 0 ? inArray(communityPosts.areaId, scope.areaIds) : sql`false`;
     conditions.push(scope.withCitywide ? or(isNull(communityPosts.areaId), inPlace)! : inPlace);
   }
-  if (skip !== 'type' && query.type) conditions.push(query.type === 'task' ? sql`false` : eq(communityPosts.kind, query.type));
+  // Posts are the Neighbors tab's, whatever a count leaves out; one kind of post when one is chosen.
+  if (query.type === 'task') conditions.push(sql`false`);
+  else if (skip !== 'type' && query.type) conditions.push(eq(communityPosts.kind, query.type));
   if (skip !== 'category' && query.category) conditions.push(query.category === PORTAL_GENERAL ? isNull(communityPosts.categorySlug) : eq(communityPosts.categorySlug, query.category));
   const since = skip === 'time' ? undefined : portalSince(query.time, scope.now);
   if (since) conditions.push(gte(communityPosts.createdAt, since));
@@ -161,7 +164,9 @@ function taskConditions(scope: Scope, skip?: FilterKey): SQL[] {
     const inPlace = scope.areaIds.length > 0 ? inArray(tasks.publicAreaId, scope.areaIds) : sql`false`;
     conditions.push(scope.withCitywide ? or(isNull(tasks.publicAreaId), inPlace)! : inPlace);
   }
-  if (skip !== 'type' && query.type && query.type !== 'task') conditions.push(sql`false`);
+  // Tasks are Open tasks' only (2026-11-24), whatever a count leaves out: on Neighbors they show once, in "Open tasks
+  // near you" and in the posts that became one, not again as cards, runs of rows and the strip in one scroll.
+  if (query.type !== 'task') conditions.push(sql`false`);
   if (skip !== 'category' && query.category) conditions.push(query.category === PORTAL_GENERAL ? sql`false` : eq(categories.slug, query.category));
   const since = skip === 'time' ? undefined : portalSince(query.time, scope.now);
   if (since) conditions.push(gte(tasks.publishedAt, since));
@@ -174,7 +179,7 @@ function taskConditions(scope: Scope, skip?: FilterKey): SQL[] {
   if (query.type === 'task') {
     if (skip !== 'price') {
       if (query.minPrice !== undefined) conditions.push(sql`${taskPriceCents} >= ${query.minPrice * 100}`);
-      if (query.maxPrice !== undefined) conditions.push(sql`${taskPriceCents} <= ${query.maxPrice * 100}`);
+      if (query.maxPrice !== undefined) conditions.push(sql`${taskPriceCents} < ${(query.maxPrice + 1) * 100}`);
     }
     if (skip !== 'pricing' && query.pricing) conditions.push(eq(tasks.pricingType, query.pricing));
     if (skip !== 'when' && query.when) {
@@ -224,8 +229,12 @@ function orderOf(sort: PortalSort, dayFirst?: { timeZone: string; tasks: boolean
   return dayFirst.tasks ? sql`(starts at time zone ${dayFirst.timeZone})::date asc, ${order}` : sql`(at at time zone ${dayFirst.timeZone})::date desc, ${order}`;
 }
 
-/** The List by day keeps each day's items together, in the chosen sort within the day. */
-const dayFirstOf = (scope: Scope) => (scope.query.view === 'list' && scope.query.group === 'day' ? { timeZone: scope.timeZone, tasks: scope.query.type === 'task' } : undefined);
+/**
+ * The List by day keeps each day's items together, in the chosen sort within the day: grouped by day, and one
+ * neighborhood or what's citywide, which the List always shows by day (sweep P9). Paged by the sort alone there, a later
+ * page's newer days joined panels above the reader (2026-11-24).
+ */
+const dayFirstOf = (scope: Scope) => (scope.query.view === 'list' && (scope.query.group === 'day' || scope.place.kind === 'area' || scope.place.kind === 'citywide') ? { timeZone: scope.timeZone, tasks: scope.query.type === 'task' } : undefined);
 
 interface ItemRow extends Record<string, unknown> {
   type: 'post' | 'task';
@@ -353,7 +362,9 @@ async function facetsOf(db: Db, scope: Scope): Promise<{ facets: PortalFacets; a
         coalesce(sum(case when at >= ${since('30d')} then 1 else 0 end), 0)::int as "30d"
       from ${itemsUnion(scope, 'time')} items`),
     db.execute<{ n: number }>(sql`select count(*)::int as n from ${itemsUnion({ ...scope, query: { ...scope.query, saved: true } })} items`),
-    db.execute<{ n: number }>(sql`select count(*)::int as n from ${itemsUnion({ ...scope, query: { ...scope.query, unanswered: true } })} items`),
+    // Counted as its toggle opens it (unansweredHref): every kind of ask, Saved off (2026-11-24: "Unanswered 0" on Tips
+    // opened a list of asks).
+    db.execute<{ n: number }>(sql`select count(*)::int as n from ${itemsUnion({ ...scope, query: { ...scope.query, unanswered: true, saved: false, type: undefined } })} items`),
   ]);
   const types = Object.fromEntries([...PORTAL_TYPES, 'all'].map((type) => [type, 0])) as PortalFacets['types'];
   for (const row of byKind.rows) {
@@ -395,7 +406,7 @@ async function taskFacetsOf(db: Db, scope: Scope): Promise<PortalTaskFacets> {
   const joined = eq(categories.id, tasks.categoryId);
   const preset = (key: TaskBoardPricePreset) => {
     const found = TASK_BOARD_PRICE_PRESETS.find((candidate) => candidate.key === key)!;
-    return and('min' in found ? sql`${taskPriceCents} >= ${found.min * 100}` : undefined, 'max' in found ? sql`${taskPriceCents} <= ${found.max * 100}` : undefined);
+    return and('min' in found ? sql`${taskPriceCents} >= ${found.min * 100}` : undefined, 'max' in found ? sql`${taskPriceCents} < ${(found.max + 1) * 100}` : undefined);
   };
   const range = (key: 'today' | 'this_week' | 'this_weekend') => {
     const span = whenRange(key, scope.now, scope.timeZone)!;
@@ -418,15 +429,33 @@ async function taskFacetsOf(db: Db, scope: Scope): Promise<PortalTaskFacets> {
   };
 }
 
-/** Real numbers for the place: open tasks and posts this week (whatever the other filters), and the active helpers who work there besides the viewer. */
+/**
+ * The filters Open tasks keeps across the switch (`openTasksHref`): the service ("General" is no task's), the words and
+ * posted within; the place is the scope's. Its counts and Neighbors' look at it read them, so "See all 3 open tasks"
+ * opens 3 (2026-11-24: with words in the search, it said the place's 14 and opened 1).
+ */
+function carriedToTasks(query: PortalQueryState): Pick<PortalQueryState, 'category' | 'q' | 'time'> {
+  return {
+    ...(query.category && query.category !== PORTAL_GENERAL ? { category: query.category } : {}),
+    ...(query.q ? { q: query.q } : {}),
+    ...(query.time ? { time: query.time } : {}),
+  };
+}
+
+/**
+ * Real numbers for the place: its open tasks under the filters the switch carries (as the switch and the heading link
+ * there), posts this week (whatever the other filters), and the active helpers who work there besides the viewer.
+ */
 async function statsOf(db: Db, scope: Scope): Promise<PortalPageData['stats']> {
   const plain: Scope = { ...scope, query: { saved: false, unanswered: false, sort: 'new', view: 'feed', group: 'area', page: 1, ...(scope.query.area ? { area: scope.query.area } : {}) } };
+  // Each tab's half: the posts (Neighbors) and the tasks (Open tasks).
+  const both = sql`(select * from ${itemsUnion(plain)} posts union all select * from ${itemsUnion({ ...plain, query: { ...plain.query, type: 'task', ...carriedToTasks(scope.query) } })} tasks)`;
   const weekAgo = portalSince('7d', scope.now)!;
   const [counts, helpers] = await Promise.all([
     db.execute<{ tasks: number; posts: number }>(sql`select
         coalesce(sum(case when type = 'task' then 1 else 0 end), 0)::int as tasks,
         coalesce(sum(case when type = 'post' and at >= ${weekAgo} then 1 else 0 end), 0)::int as posts
-      from ${itemsUnion(plain)} items`),
+      from ${both} items`),
     db
       .select({ n: sql<number>`count(*)::int` })
       .from(helperProfiles)
@@ -467,7 +496,8 @@ async function railOf(db: Db, scope: Scope): Promise<PortalRail> {
       .orderBy(desc(communityPosts.lastActivityAt))
       .limit(3),
     db
-      .execute<{ n: number }>(sql`select count(*)::int as n from ${itemsUnion({ ...scope, areaIds: null, withCitywide: true, query: { saved: true, unanswered: false, sort: 'new', view: 'feed', group: 'area', page: 1 } })} items`)
+      // The tab's own saves, as Saved opens them: posts on Neighbors, a helper's tasks on Open tasks.
+      .execute<{ n: number }>(sql`select count(*)::int as n from ${itemsUnion({ ...scope, areaIds: null, withCitywide: true, query: { saved: true, unanswered: false, sort: 'new', view: 'feed', group: 'area', page: 1, ...(scope.query.type === 'task' ? { type: 'task' as const } : {}) } })} items`)
       .then((result) => Number(result.rows[0]?.n ?? 0)),
     // Helpers who work in the place: never the viewer, nobody blocked either way.
     db
@@ -559,7 +589,8 @@ function boardHrefOf(scope: Scope): string {
   const { query } = scope;
   const board: TaskBoardQuery = {
     ...(query.category && query.category !== PORTAL_GENERAL ? { category: query.category } : {}),
-    ...(scope.place.kind === 'area' ? { areas: [scope.place.slug] } : scope.place.kind === 'nearby' ? { areas: scope.marketAreas.filter((area) => scope.nearbyIds.includes(area.id)).map((area) => area.slug) } : {}),
+    // What's citywide is the remote work on the board (2026-11-24: saved as no place at all, it alerted on every task).
+    ...(scope.place.kind === 'area' ? { areas: [scope.place.slug] } : scope.place.kind === 'nearby' ? { areas: scope.marketAreas.filter((area) => scope.nearbyIds.includes(area.id)).map((area) => area.slug) } : scope.place.kind === 'citywide' ? { remoteOnly: true } : {}),
     ...(query.time === '24h' ? { posted: '24h' as const } : query.time === '7d' ? { posted: '7d' as const } : {}),
     ...(query.q ? { q: query.q } : {}),
     ...(query.type === 'task'
@@ -578,11 +609,11 @@ function boardHrefOf(scope: Scope): string {
 }
 
 /**
- * "Open tasks near you" (2026-11-23) on the Neighbors tab: the place's newest open tasks, whatever the other filters
- * (as the heading's count), never the viewer's own, nobody blocked, nothing they hid.
+ * "Open tasks near you" (2026-11-23) on the Neighbors tab: the place's newest open tasks under the filters the switch
+ * carries (as the heading's count and "See all"), never the viewer's own, nobody blocked, nothing they hid.
  */
 async function openTasksOf(db: Db, scope: Scope): Promise<PortalTaskView[]> {
-  const place: Scope = { ...scope, query: { saved: false, unanswered: false, sort: 'new', view: 'feed', group: 'area', page: 1, type: 'task', ...(scope.query.area ? { area: scope.query.area } : {}) } };
+  const place: Scope = { ...scope, query: { saved: false, unanswered: false, sort: 'new', view: 'feed', group: 'area', page: 1, type: 'task', ...(scope.query.area ? { area: scope.query.area } : {}), ...carriedToTasks(scope.query) } };
   const found = await db.execute<{ id: string }>(sql`select id from ${itemsUnion(place)} items where type = 'task' order by at desc, id desc limit ${PORTAL_OPEN_TASKS_SHOWN}`);
   const ids = found.rows.map((row) => row.id);
   const views = await taskViewsOf(db, scope, ids);

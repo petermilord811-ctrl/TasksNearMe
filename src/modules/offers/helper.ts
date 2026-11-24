@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, gte, inArray, isNotNull, isNull, lte, notInArray, or, sql, type SQL } from 'drizzle-orm';
 import { hasPlan } from '@/modules/billing/benefits';
 import { aiDraftingEnabledFor } from '@/modules/assist/availability';
 import type {
@@ -30,7 +30,7 @@ import { areas, categories, markets, type FeeSchedule } from '@/modules/markets/
 import { helperProfiles } from '@/modules/profiles/schema';
 import { quoteBreakdown } from '@/modules/payments/fees';
 import { BOARD_PAGE_SIZE, parseTaskBoardQuery } from '@/modules/tasks/projections';
-import { findTaskWithPublicView, listFeedTasks } from '@/modules/tasks/queries';
+import { findTaskWithPublicView, listFeedTasks, openIn } from '@/modules/tasks/queries';
 import { files, taskMarks, taskPhotos, tasks } from '@/modules/tasks/schema';
 import { blockedPeopleOf, isBlockedBetween } from '@/modules/trust/blocks';
 import { maskContactDetails, publicExcerpt } from '@/modules/trust/contact-masking';
@@ -215,11 +215,20 @@ export async function getFindWorkPageData(db: Db, userId: string, params: Search
     feesFor(db, state.marketId),
     db.select({ lat: markets.centerLat, lng: markets.centerLng }).from(markets).where(eq(markets.id, state.marketId)).limit(1),
     db.select({ name: areas.name }).from(areas).innerJoin(helperProfiles, eq(helperProfiles.areaId, areas.id)).where(eq(helperProfiles.userId, userId)).limit(1),
+    // Counted as Saved lists them (2026-11-24): open in the helper's market and not started (`openIn`), nobody blocked
+    // either way, nothing they hid. Counting to the window's end, any market, a started all-day task was counted all
+    // day and never listed.
     db
       .select({ taskId: taskMarks.taskId })
       .from(taskMarks)
       .innerJoin(tasks, eq(tasks.id, taskMarks.taskId))
-      .where(and(eq(taskMarks.userId, userId), eq(taskMarks.kind, 'saved'), eq(tasks.status, 'open'), gt(tasks.windowEnd, now))),
+      .where(and(
+        eq(taskMarks.userId, userId),
+        eq(taskMarks.kind, 'saved'),
+        ...openIn(state.marketId, now),
+        notInArray(tasks.posterUserId, [userId, ...blocked]),
+        sql`not exists (select 1 from ${taskMarks} hidden where hidden.user_id = ${userId} and hidden.task_id = ${tasks.id} and hidden.kind = 'hidden')`,
+      )),
   ]);
   const savedIds = new Set(savedRows.map((row) => row.taskId));
 

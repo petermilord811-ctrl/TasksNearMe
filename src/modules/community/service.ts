@@ -322,7 +322,7 @@ async function postTasksOf(db: Db, viewer: CommunityViewer, posts: PostRow[], no
   if (taskIds.length === 0) return new Map();
   const [rows, [profile]] = await Promise.all([
     db
-      .select({ id: tasks.id, slug: tasks.slug, title: tasks.title, status: tasks.status, offerCount: tasks.offerCount, posterUserId: tasks.posterUserId, windowEnd: tasks.windowEnd, hiddenAt: tasks.hiddenAt })
+      .select({ id: tasks.id, slug: tasks.slug, title: tasks.title, status: tasks.status, offerCount: tasks.offerCount, posterUserId: tasks.posterUserId, windowStart: tasks.windowStart, hiddenAt: tasks.hiddenAt })
       .from(tasks)
       .where(inArray(tasks.id, taskIds)),
     db.select({ status: helperProfiles.status }).from(helperProfiles).where(eq(helperProfiles.userId, viewer.id)).limit(1),
@@ -824,7 +824,9 @@ export async function reactInCommunity(db: Db, viewer: CommunityViewer, input: C
   const kind = input.kind === 'thanks' || input.kind === 'helpful' ? input.kind : null;
   if (!targetKind || !kind) return { ok: false, code: 'validation_failed' };
   const facts = await viewerFacts(db, viewer.id);
-  if (!facts) return { ok: false, code: 'not_allowed' };
+  // A suspended or restricted account doesn't react (sweep 2026-11-24, A2: Helpful and Thanks feed Sparks), as it
+  // doesn't post or reply; an account still to verify its phone may.
+  if (!facts || facts.postBlocked === 'suspended') return { ok: false, code: 'not_allowed' };
   // The target, in the viewer's market, visible, from someone not blocked.
   let postId: string;
   let authorUserId: string;

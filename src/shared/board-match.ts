@@ -82,7 +82,8 @@ export function taskMatchesBoard(task: TaskPublicView, query: BoardMatchQuery, c
   }
   const price = taskPriceOf(task.budget);
   if (query.minPrice !== undefined && price < query.minPrice * 100) return false;
-  if (query.maxPrice !== undefined && price > query.maxPrice * 100) return false;
+  // A maximum in whole dollars covers that dollar's cents, as the board's query reads it.
+  if (query.maxPrice !== undefined && price >= (query.maxPrice + 1) * 100) return false;
   if (query.pricing && task.budget.type !== query.pricing) return false;
   if (query.posted && Date.parse(task.postedAt) < now.getTime() - POSTED_MS[query.posted]) return false;
   if (query.times.length > 0 && !query.times.some((time) => touchesTime(task.schedule, time, context.timeZone))) return false;

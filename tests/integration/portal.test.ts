@@ -51,33 +51,45 @@ afterAll(async () => {
 });
 
 describe('the neighborhood portal', () => {
-  it('shows posts and open tasks in one stream, each task opening where it should for the viewer', async () => {
+  it('keeps posts on Neighbors and tasks on Open tasks, each task opening where it should for the viewer (2026-11-24)', async () => {
     const postId = await post(ben, `Portal desk help ${run}`);
-    const forLee = await items(lee, all());
-    expect(forLee.some((item) => item.type === 'post' && item.id === postId)).toBe(true);
+    // Neighbors: the posts only, its counts too; the place's tasks show once, in "Open tasks near you".
+    const neighbors = await getPortal(db, lee, all(), now);
+    expect(neighbors?.items.some((item) => item.type === 'post' && item.id === postId)).toBe(true);
+    expect(neighbors?.items.every((item) => item.type === 'post')).toBe(true);
+    expect(neighbors?.facets.types.task).toBe(0);
+    expect(neighbors?.facets.types.all).toBe(neighbors?.totalCount);
+    expect(neighbors?.openTasks?.items.some((view) => view.task.id === taskId)).toBe(true);
+    expect(neighbors?.stats.openTasks).toBeGreaterThanOrEqual(1);
+    const forLee = await items(lee, all({ type: 'task' }));
+    expect(forLee.some((item) => item.type === 'post')).toBe(false);
     const leeTask = forLee.find((item) => item.type === 'task' && item.id === taskId);
     // Lee helps with furniture and computers: find work's answer for a yard job is that he doesn't offer it (audit M23).
     expect(leeTask?.type === 'task' && leeTask.task).toMatchObject({ relation: 'helper', href: routes.app.findWorkTask(taskId), blockedReason: 'category_not_offered' });
-    const mayaTask = (await items(maya, all())).find((item) => item.type === 'task' && item.id === taskId);
+    const mayaTask = (await items(maya, all({ type: 'task' }))).find((item) => item.type === 'task' && item.id === taskId);
     expect(mayaTask?.type === 'task' && mayaTask.task).toMatchObject({ relation: 'neighbor', href: routes.publicTask(`portal-${taskId}`) });
     expect(mayaTask?.type === 'task' && mayaTask.task.blockedReason).toBeUndefined();
     // Ben's own task isn't in his stream or its counts: it waits in Your stuff (audit M20).
-    const forBen = await getPortal(db, ben, all(), now);
+    const forBen = await getPortal(db, ben, all({ type: 'task' }), now);
     expect(forBen?.items.some((item) => item.type === 'task' && item.id === taskId)).toBe(false);
     expect(forBen?.rail.yourTasks.map((task) => task.id)).toContain(taskId);
     // Tasks never name more than the neighborhood.
     expect(JSON.stringify(leeTask)).not.toMatch(/line1|zip|accessNotes/);
   });
 
-  it('filters by type and counts each type with the other filters', async () => {
+  it('filters by type and counts each type with the other filters, each tab its own', async () => {
     const page = await getPortal(db, lee, all({ type: 'task' }), now);
     expect(page?.items.every((item) => item.type === 'task')).toBe(true);
     expect(page?.facets.types.task).toBe(page?.totalCount);
-    expect(page?.facets.types.all).toBeGreaterThanOrEqual((page?.facets.types.task ?? 0) + (page?.facets.types.recommendation ?? 0));
+    // Open tasks counts tasks only, its neighborhoods' too.
+    expect(page?.facets.types.all).toBe(page?.facets.types.task);
+    expect(page?.facets.types.recommendation).toBe(0);
+    expect(page?.areas.reduce((sum, area) => sum + area.count, 0)).toBeLessThanOrEqual(page?.facets.all ?? 0);
     const posts = await items(lee, all({ type: 'recommendation' }));
     expect(posts.every((item) => item.type === 'post' && item.post.kind === 'recommendation')).toBe(true);
-    const words = await items(lee, all({ q: `leaves ${run}` }));
-    expect(words.map((item) => item.id)).toEqual([taskId]);
+    // The words find the task on its tab, not on Neighbors.
+    expect((await items(lee, all({ type: 'task', q: `leaves ${run}` }))).map((item) => item.id)).toEqual([taskId]);
+    expect(await items(lee, all({ q: `leaves ${run}` }))).toEqual([]);
   });
 
   it('lists by neighborhood with counts, citywide last, and pages the rest without repeats', async () => {
@@ -151,7 +163,7 @@ describe('the neighborhood portal', () => {
     const page = await getCommunityPost(db, ben, postId, now);
     expect(page?.post.task).toMatchObject({ id: askTaskId, state: 'open', href: routes.app.task(askTaskId) });
     expect(page?.post.askForHelpHref).toBeUndefined();
-    const task = (await items(lee, all())).find((item) => item.id === askTaskId);
+    const task = (await items(lee, all({ type: 'task' }))).find((item) => item.id === askTaskId);
     expect(task?.type === 'task' && task.task.fromPost).toEqual({ id: postId, title: `Portal ask ${run}` });
 
     // A canceled task keeps its link, closed.
@@ -199,8 +211,8 @@ describe('the neighborhood portal', () => {
     // "Show more" reads the same filters.
     const more = await getPortalMore(db, lee, { area: 'all', type: 'task', q: `filters ${run}`, minPrice: 100, group: 'day', page: 1 }, now);
     expect(more?.items.map((item) => item.id)).toEqual([dearId]);
-    // The board's filters mean nothing on Neighbors; the public board's link carries them for "Save this search".
-    expect((await getPortal(db, lee, all({ q: `filters ${run}`, min: '100' }), now))?.items.map((item) => item.id).sort()).toEqual([cheapId, dearId].sort());
+    // Neighbors holds no tasks, whatever the board's filters say; the public board's link carries them for "Save this search".
+    expect((await getPortal(db, lee, all({ q: `filters ${run}`, min: '100' }), now))?.items).toEqual([]);
     expect((await open({ min: '100', slot: 'evening' })).boardHref).toMatch(/min=100.*time=evening/);
 
     // From Neighbors, the place's newest open tasks, counted as the heading counts them; never the viewer's own.

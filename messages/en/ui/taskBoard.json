@@ -13,7 +13,7 @@
   },
   "remoteOnly": "Remote only",
   "sort": "Sort",
-  "sortSummary": "Sort: {sort}",
+  "sortSummary": "<label>Sort:</label> {sort}",
   "sortOptions": {
     "soonest": "Soonest",
     "newest": "Newest",

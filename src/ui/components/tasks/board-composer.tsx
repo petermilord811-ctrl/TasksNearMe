@@ -35,17 +35,19 @@ export function BoardComposer({ market, category }: { market: string; category?:
     <form action={localeHref(routes.app.newTask(), locale)} method="get" className="flex items-center gap-3 p-3 sm:p-4">
       {intent?.title && <input type="hidden" name="title" value={intent.title} />}
       {guess && <input type="hidden" name="category" value={guess} />}
-      <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm"><Plus className="size-5" /></span>
+      <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-sm max-sm:hidden"><Plus className="size-5" /></span>
       <h2 id="board-composer" className="sr-only">{t('title', { market })}</h2>
       <label htmlFor="board-composer-words" className="sr-only">{t('label')}</label>
       <input id="board-composer-words" name="describe" value={text} onChange={(event) => setText(event.target.value)} maxLength={WORDS_MAX} placeholder={t('placeholder', { market })} autoComplete="off" enterKeyHint="send"
-        className="h-11 min-w-0 flex-1 rounded-full border border-foreground/[0.1] bg-background/70 px-4 text-base outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-muted-foreground hover:border-foreground/30 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 sm:text-[0.9375rem] dark:border-white/[0.1]" />
+        className="h-11 min-w-0 flex-1 text-ellipsis rounded-full border border-foreground/[0.1] bg-background/70 px-4 text-base outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-muted-foreground hover:border-foreground/30 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 sm:text-[0.9375rem] dark:border-white/[0.1]" />
       <button type="submit" className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-transform duration-200 hover:scale-[1.03] max-sm:px-3">
         <span className="max-sm:sr-only">{t('post')}</span><ArrowRight aria-hidden="true" className="size-4" />
       </button>
     </form>
     {intent?.category && <p className="-mt-1 px-4 pb-2 text-[13px] text-muted-foreground sm:pl-[4.25rem]" aria-live="polite">{t('soundsLike', { category: card(`categories.${intent.category}`) })}</p>}
-    <div className="flex flex-wrap items-center gap-x-1 gap-y-1 border-t border-foreground/[0.06] px-2 py-1.5 sm:px-3 dark:border-white/[0.06]">
+    {/* From `sm`: on phones the composer is its one line (2026-11-24), so the first task shows on the first screen; the
+        Neighbors tab and "From your neighbors" lead to these posts there. */}
+    <div className="flex flex-wrap items-center gap-x-1 gap-y-1 border-t border-foreground/[0.06] px-2 py-1.5 max-sm:hidden sm:px-3 dark:border-white/[0.06]">
       <span className="px-2 text-[13px] text-muted-foreground">{t('orAsk')}</span>
       {kinds.map(({ kind, Icon }) => <Link key={kind} href={routes.app.newCommunityPost(kind)} className="inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-[13px] font-medium text-foreground/85 transition-colors hover:bg-accent hover:text-foreground">
         <Icon aria-hidden="true" className="size-4 text-primary" />{t(`kinds.${kind}`)}

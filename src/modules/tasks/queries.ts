@@ -84,6 +84,9 @@ export function openIn(marketId: string, now: Date, rows: RowScope = 'all'): SQL
     eq(tasks.status, 'open'),
     gt(tasks.windowStart, now),
     isNull(tasks.hiddenAt),
+    // Posted ones only (2026-11-24), as `findPublicTask`: a request never posted (Book again's, a rebooking) that a
+    // replacement search reopened was listed everywhere, first among the newest (no date), with a page that was a 404.
+    isNotNull(tasks.publishedAt),
     // A team job's partner part (2026-11-24) is booked through the team, never listed.
     isNull(tasks.teamPartOf),
     // Not while its poster can't use their account: suspended, banned or deleted (sweep PT10). Reinstated, it's back.
@@ -168,7 +171,8 @@ export function boardConditions(query: BoardFilters, scope: BoardScope, skip?: B
   }
   if (skip !== 'price') {
     if (query.minPrice !== undefined) conditions.push(sql`${taskPriceCents} >= ${query.minPrice * 100}`);
-    if (query.maxPrice !== undefined) conditions.push(sql`${taskPriceCents} <= ${query.maxPrice * 100}`);
+    // A maximum in whole dollars covers that dollar's cents (2026-11-24): $49.50 was in neither "Under $50" nor "$50 to $99".
+    if (query.maxPrice !== undefined) conditions.push(sql`${taskPriceCents} < ${(query.maxPrice + 1) * 100}`);
   }
   if (query.pricing && skip !== 'pricing') conditions.push(eq(tasks.pricingType, query.pricing));
   if (query.posted && skip !== 'posted') conditions.push(gte(tasks.publishedAt, new Date(now.getTime() - POSTED_MS[query.posted])));
@@ -381,7 +385,9 @@ export async function findPublicTask(
     task: toTaskPublicView(toRow(row)),
     marketId: row.marketId,
     marketSlug: row.marketSlug,
-    acceptingOffers: row.status === 'open' && row.windowEnd > now,
+    // Offers close when the window starts, as the lists and offers have it (`openIn`, `offerBlockedReason`); a page that
+    // still said "Make an offer" until its end ended in "task closed" (2026-11-24).
+    acceptingOffers: row.status === 'open' && row.windowStart > now,
   };
 }
 

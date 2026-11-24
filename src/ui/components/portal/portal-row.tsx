@@ -15,7 +15,10 @@ const rowClass = 'grid min-w-0 grid-cols-[2.75rem_minmax(0,1fr)] items-start gap
 const metaClass = 'flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-muted-foreground';
 const titleLink = 'rounded-sm underline-offset-4 outline-offset-2 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring';
 
-/** A task as a dense row (Craigslist): when it is, the title, its type, place, time and offers, and the price. */
+/**
+ * A task as a dense row (Craigslist): when it is, the title, its type, place, time and offers, and the price; no "Task"
+ * flair (2026-11-24), as rows of tasks are Open tasks' only.
+ */
 function TaskRow({ view, now, visitKey, showArea, highlight }: { view: PortalTaskView; now: ISODateTime; visitKey: string; showArea: boolean; highlight: readonly string[] }) {
   const t = useTranslations('portal');
   const card = useTranslations('taskCard');
@@ -42,7 +45,6 @@ function TaskRow({ view, now, visitKey, showArea, highlight }: { view: PortalTas
       </h3>
       <p className={metaClass}>
         <span className="font-display text-sm font-semibold text-foreground tabular-nums sm:hidden">{price}{note && <span className="ml-1 font-sans text-[12px] font-normal text-muted-foreground">{note}</span>}</span>
-        <span className="inline-flex items-center rounded-full bg-foreground px-1.5 py-px text-[11px] font-semibold text-background">{t('task.flair')}</span>
         <span className="inline-flex items-center gap-1"><Icon aria-hidden="true" className="size-3.5 shrink-0" />{task.taskType ? card(`types.${task.categorySlug}.${task.taskType}`) : card(`categories.${task.categorySlug}`)}</span>
         {showArea && <span className="inline-flex items-center gap-1">{task.location.kind === 'remote' ? <><Laptop aria-hidden="true" className="size-3.5 shrink-0" />{t('task.remote')}</> : <><MapPin aria-hidden="true" className="size-3.5 shrink-0" />{task.location.areaName}</>}</span>}
         <span className="inline-flex items-center gap-1 tabular-nums"><Clock aria-hidden="true" className="size-3.5 shrink-0" />{task.schedule.flexible ? t('task.anyTime') : formatTimeRange(task.schedule.windowStart, task.schedule.windowEnd)}</span>

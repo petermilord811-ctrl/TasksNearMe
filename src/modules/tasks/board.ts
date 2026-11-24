@@ -50,7 +50,8 @@ export async function boardFacets(database: Db, query: TaskBoardQueryState, scop
   };
   const preset = (key: TaskBoardPricePreset) => {
     const found = TASK_BOARD_PRICE_PRESETS.find((candidate) => candidate.key === key)!;
-    return and('min' in found ? sql`${taskPriceCents} >= ${found.min * 100}` : undefined, 'max' in found ? sql`${taskPriceCents} <= ${found.max * 100}` : undefined);
+    // A maximum covers that dollar's cents, as the filter reads it (queries.ts), so the presets leave no gaps.
+    return and('min' in found ? sql`${taskPriceCents} >= ${found.min * 100}` : undefined, 'max' in found ? sql`${taskPriceCents} < ${(found.max + 1) * 100}` : undefined);
   };
 
   const [byCategory, byArea, byPricing, posted, times, when, prices, few, remote, byType] = await Promise.all([

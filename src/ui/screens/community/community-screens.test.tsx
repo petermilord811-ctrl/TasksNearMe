@@ -5,7 +5,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CommunityPostHandlers, CommunityPostPageData, CommunityReactInput, PortalHandlers, PortalPageData } from '@/contracts';
 import { routes } from '@/contracts/routes';
-import { communityPostHelperViewData, communityPostPageData, communityPostReplyBlockedData, fakeHandler, portalBlockedData, portalEmptyData, portalFeedData, portalFilteredEmptyData, portalHelperData, portalListByDayData, portalListData, portalLongThreadData, portalNoOpenTasksData, portalOpenTasksByDayData, portalOpenTasksData, portalOpenTasksEmptyData, portalOpenTasksFilteredData, portalPostWithTaskData, portalSavedData, portalTasksData } from '@/fixtures';
+import { communityPostHelperViewData, communityPostPageData, communityPostReplyBlockedData, fakeHandler, portalBlockedData, portalEmptyData, portalFeedData, portalFilteredEmptyData, portalListByDayData, portalListData, portalLongThreadData, portalNoOpenTasksData, portalOpenTasksByDayData, portalOpenTasksData, portalOpenTasksEmptyData, portalOpenTasksFilteredData, portalOpenTasksHelperData, portalPostWithTaskData, portalSavedData, portalTasksData } from '@/fixtures';
 import { resetLastVisits } from '@/ui/lib/last-visit';
 import messages from '../../../../messages/en/ui';
 import { RouteDialogFrame } from '@/ui/components/layout/route-dialog-frame';
@@ -75,24 +75,35 @@ describe('PortalScreen', () => {
     expect(within(screen.getByRole('navigation', { name: 'Show' })).getByRole('link', { name: /^Posts/ }).getAttribute('href')).toBe(routes.app.community({ type: 'general' }));
   });
 
-  it('shows posts and tasks together, each task opening where it should for the viewer', () => {
+  it('shows the posts on Neighbors, each task once: in "Open tasks near you" and in the post that became one (2026-11-24)', () => {
     portal(portalFeedData);
     const post = screen.getByRole('article', { name: /Who do you recommend for a flat-pack desk/ });
     expect(within(post).getByText('Pinned answer')).toBeDefined();
     // Your own ask turns into a task draft.
     expect(within(post).getByRole('link', { name: 'Ask for help' }).getAttribute('href')).toBe(routes.app.newTask({ fromPost: 'cpo_desk' }));
-    const task = screen.getByRole('article', { name: /Put together a queen bed frame tonight/ });
-    expect(within(task).getByRole('link', { name: 'View task' }).getAttribute('href')).toBe(routes.publicTask('put-together-a-queen-bed-frame-tonight-mueller-g7h8'));
-    // Her own task isn't news in the stream: it waits in Your stuff (audit M20).
+    // No task cards or runs of task rows in the stream: tasks are Open tasks'.
+    const stream = document.getElementById('portal-stream')!;
+    expect(stream.querySelectorAll('[data-item="task"]')).toHaveLength(0);
+    expect(stream.querySelectorAll('[data-item="post"]').length).toBe(portalFeedData.items.length);
+    expect(within(stream).queryByRole('heading', { name: /New tasks near you/ })).toBeNull();
+    // Her own task isn't news here: it waits in Your stuff (audit M20).
     expect(screen.queryByRole('article', { name: /Assemble a desk/ })).toBeNull();
     expect(screen.getAllByRole('link', { name: /Assemble a desk/ }).every((link) => link.getAttribute('href') === routes.app.task('tsk_desk'))).toBe(true);
-    // A task from a neighborhood post links back to it.
+    // The ask that became a task shows it.
+    const shelf = screen.getByRole('article', { name: /How long does anchoring a tall bookshelf take/ });
+    expect(within(shelf).getByRole('link', { name: /Posted as a task/ })).toBeDefined();
+  });
+
+  it('opens each task where it should for the viewer, and links a task back to the post it came from', () => {
+    portal(portalOpenTasksHelperData, { onSaveTask: fakeHandler({ ok: true, code: 'updated' }) });
     const shelf = screen.getByRole('article', { name: /Assemble and anchor a tall bookshelf/ });
     expect(within(shelf).getByRole('link', { name: /How long does anchoring a tall bookshelf take/ }).getAttribute('href')).toBe(routes.app.communityPost('cpo_shelf_ask'));
+    // No "Task" flair on Open tasks: everything there is one (2026-11-24).
+    expect(within(shelf).queryByText('Task', { exact: true })).toBeNull();
   });
 
   it('shows a helper where they stand on each task, as find work says it (audit M23)', () => {
-    portal(portalHelperData, { onSaveTask: fakeHandler({ ok: true, code: 'updated' }) });
+    portal(portalOpenTasksHelperData, { onSaveTask: fakeHandler({ ok: true, code: 'updated' }) });
     const card = (name: RegExp) => within(screen.getByRole('article', { name }));
     const computer = card(/Set up a new laptop/);
     expect(computer.getByText("You don't offer this service")).toBeDefined();

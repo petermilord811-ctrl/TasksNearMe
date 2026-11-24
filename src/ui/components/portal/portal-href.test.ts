@@ -21,11 +21,14 @@ describe('savedHref (sweep 2026-11-18, P2)', () => {
 });
 
 describe('the Neighbors | Open tasks switch (2026-11-23)', () => {
-  it('keeps the place, the service, the words, when posted, Saved and the grouping; each tab its own sort and view', () => {
+  it('keeps the place, the service, the words, when posted and the grouping; each tab its own sort, view and Saved', () => {
     const query = { ...portalFeedData.query, area: 'windsor-park', category: 'yard-cleanup' as const, q: 'leaves', time: '7d' as const, type: 'question' as const, sort: 'top' as const, view: 'list' as const, group: 'day' as const, unanswered: true };
     expect(openTasksHref(query)).toBe(routes.app.community({ area: 'windsor-park', category: 'yard-cleanup', q: 'leaves', time: '7d', group: 'day', type: 'task' }));
     // "General" is no task's service.
     expect(openTasksHref({ ...portalFeedData.query, category: 'general' })).toBe(routes.app.community({ type: 'task' }));
+    // Saved stays with its tab (2026-11-24): saved posts aren't saved tasks.
+    expect(openTasksHref({ ...portalFeedData.query, saved: true })).toBe(routes.app.community({ type: 'task' }));
+    expect(neighborsHref({ ...portalOpenTasksFilteredData.query, saved: true })).toBe(routes.app.community({}));
   });
 
   it('comes back to Neighbors without the board’s filters, Open tasks’ sort or its view', () => {

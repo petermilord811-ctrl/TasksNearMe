@@ -14,8 +14,9 @@
   },
   "search": {
     "label": "Search the neighborhood",
-    "placeholder": "Search posts and tasks",
-    "submit": "Search"
+    "placeholder": "Search posts",
+    "submit": "Search",
+    "placeholderTasks": "Search open tasks"
   },
   "areas": {
     "label": "Neighborhoods",
@@ -87,7 +88,6 @@
     "countOn": "({count} on)"
   },
   "task": {
-    "flair": "Task",
     "posted": "posted a task",
     "offers": "{count, plural, =0 {Be the first to offer} one {# offer} other {# offers}}",
     "questions": "{count, plural, one {# question} other {# questions}}",
@@ -106,10 +106,10 @@
     "seeAll": "See all {count} in {area}",
     "seeAllCitywide": "See all {count} citywide",
     "market": "Across {market}",
-    "marketHint": "Citywide posts and remote tasks",
+    "marketHint": "Posts for the whole city",
     "today": "Today",
     "yesterday": "Yesterday",
-    "count": "{count, plural, one {# item} other {# items}}",
+    "count": "{count, plural, one {# post} other {# posts}}",
     "replies": "{count, plural, =0 {No replies} one {# reply} other {# replies}}",
     "helpful": "{count} helpful",
     "tasks": "{count, plural, one {# open task} other {# open tasks}}",
@@ -166,12 +166,14 @@
     "firstPage": "Back to the first page",
     "tasksFilteredTitle": "No open tasks match these filters",
     "tasksTitle": "No open tasks in {place} right now",
-    "tasksBody": "When a neighbor needs a hand, their task shows up here. Have something to get done? Post a task."
+    "tasksBody": "When a neighbor needs a hand, their task shows up here. Have something to get done? Post a task.",
+    "searchTasks": "Look for “{words}” in open tasks"
   },
   "live": {
     "show": "{count, plural, one {# new} other {# new}} · Show",
-    "announce": "{count, plural, one {# new post or task} other {# new posts and tasks}} near you",
-    "loading": "Loading…"
+    "announce": "{count, plural, one {# new post} other {# new posts}} near you",
+    "loading": "Loading…",
+    "announceTasks": "{count, plural, one {# new open task} other {# new open tasks}} near you"
   },
   "more": {
     "show": "Show more",
@@ -210,7 +212,8 @@
     "openTasksByDay": "Open tasks · by the day they're on",
     "openTasksEmpty": "Open tasks · nothing open nearby",
     "openTasksNone": "Neighbors · no open tasks near you for the rail's card",
-    "openTasksNoArea": "Neighbors · no neighborhood yet: open tasks in the whole city"
+    "openTasksNoArea": "Neighbors · no neighborhood yet: open tasks in the whole city",
+    "openTasksHelper": "Open tasks · a helper's cards, each with where they stand"
   },
   "phoneBar": {
     "changePlace": "Change the neighborhood",
@@ -218,11 +221,6 @@
   },
   "unanswered": {
     "label": "Unanswered"
-  },
-  "taskGroup": {
-    "title": "New tasks near you",
-    "more": "{count, plural, one {# more task} other {# more tasks}}",
-    "all": "See all tasks"
   },
   "announcement": {
     "eyebrow": "From the TasksNearMe team",

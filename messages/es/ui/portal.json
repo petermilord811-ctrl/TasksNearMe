@@ -14,8 +14,9 @@
   },
   "search": {
     "label": "Buscar en el vecindario",
-    "placeholder": "Buscar publicaciones y tareas",
-    "submit": "Buscar"
+    "placeholder": "Buscar publicaciones",
+    "submit": "Buscar",
+    "placeholderTasks": "Buscar tareas abiertas"
   },
   "areas": {
     "label": "Vecindarios",
@@ -87,7 +88,6 @@
     "countOn": "({count} activos)"
   },
   "task": {
-    "flair": "Tarea",
     "posted": "publicó una tarea",
     "offers": "{count, plural, =0 {Sé la primera persona en ofertar} one {# oferta} other {# ofertas}}",
     "questions": "{count, plural, one {# pregunta} other {# preguntas}}",
@@ -106,10 +106,10 @@
     "seeAll": "Ver los {count} de {area}",
     "seeAllCitywide": "Ver los {count} de toda la ciudad",
     "market": "En todo {market}",
-    "marketHint": "Publicaciones para toda la ciudad y tareas a distancia",
+    "marketHint": "Publicaciones para toda la ciudad",
     "today": "Hoy",
     "yesterday": "Ayer",
-    "count": "{count, plural, one {# elemento} other {# elementos}}",
+    "count": "{count, plural, one {# publicación} other {# publicaciones}}",
     "replies": "{count, plural, =0 {Sin respuestas} one {# respuesta} other {# respuestas}}",
     "helpful": "{count} útil",
     "tasks": "{count, plural, one {# tarea abierta} other {# tareas abiertas}}",
@@ -166,12 +166,14 @@
     "firstPage": "Volver a la primera página",
     "tasksFilteredTitle": "Ninguna tarea abierta coincide con estos filtros",
     "tasksTitle": "Por ahora no hay tareas abiertas en {place}",
-    "tasksBody": "Cuando un vecino necesite una mano, su tarea aparecerá aquí. ¿Tienes algo pendiente? Publica una tarea."
+    "tasksBody": "Cuando un vecino necesite una mano, su tarea aparecerá aquí. ¿Tienes algo pendiente? Publica una tarea.",
+    "searchTasks": "Buscar “{words}” en las tareas abiertas"
   },
   "live": {
     "show": "{count, plural, one {# nueva} other {# nuevas}} · Ver",
-    "announce": "{count, plural, one {# publicación o tarea nueva} other {# publicaciones y tareas nuevas}} cerca de ti",
-    "loading": "Cargando…"
+    "announce": "{count, plural, one {# publicación nueva} other {# publicaciones nuevas}} cerca de ti",
+    "loading": "Cargando…",
+    "announceTasks": "{count, plural, one {# tarea abierta nueva} other {# tareas abiertas nuevas}} cerca de ti"
   },
   "more": {
     "show": "Ver más",
@@ -210,7 +212,8 @@
     "openTasksByDay": "Tareas abiertas · por el día en que son",
     "openTasksEmpty": "Tareas abiertas · nada abierto cerca",
     "openTasksNone": "Vecinos · sin tareas abiertas cerca para la tarjeta del lateral",
-    "openTasksNoArea": "Vecinos · todavía sin vecindario: tareas abiertas en toda la ciudad"
+    "openTasksNoArea": "Vecinos · todavía sin vecindario: tareas abiertas en toda la ciudad",
+    "openTasksHelper": "Tareas abiertas · las tarjetas de un ayudante, cada una con su situación"
   },
   "phoneBar": {
     "changePlace": "Cambiar el vecindario",
@@ -218,11 +221,6 @@
   },
   "unanswered": {
     "label": "Sin respuesta"
-  },
-  "taskGroup": {
-    "title": "Tareas nuevas cerca de ti",
-    "more": "{count, plural, one {# tarea más} other {# tareas más}}",
-    "all": "Ver todas las tareas"
   },
   "announcement": {
     "eyebrow": "Del equipo de TasksNearMe",

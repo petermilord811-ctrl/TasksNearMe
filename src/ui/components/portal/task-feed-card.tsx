@@ -1,4 +1,4 @@
-import { CalendarDays, ClipboardList, Hammer, Info, Laptop, Leaf, MapPin, MessageCircleQuestion, MessagesSquare, Package, Sparkles, type LucideIcon } from 'lucide-react';
+import { CalendarDays, Hammer, Info, Laptop, Leaf, MapPin, MessageCircleQuestion, MessagesSquare, Package, Sparkles, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ActionHandler, CategorySlug, ISODateTime, PortalTaskView, TaskPublicView } from '@/contracts';
 import { routes } from '@/contracts/routes';
@@ -61,13 +61,13 @@ export function HelperStandingNote({ view, closed, size = 'md' }: { view: Portal
 }
 
 /**
- * An open task as a card in the neighborhood's feed (completion plan 9.10): who posted it and where (the
+ * An open task as a card in Open tasks' Feed (completion plan 9.10): who posted it and where (the
  * neighborhood, never closer), the title and the first words, the price, when it is and what kind of job, the
  * neighborhood post it came from, and its next step for this viewer (manage your own, or have a look; a helper's
  * follows find work: make an offer, see theirs, send a new one once it expired, or why it isn't open to them).
  * Offers count live; questions are its discussion.
  */
-export function TaskFeedCard({ view, now, visitKey, onSaveTask, headingLevel = 2, compact = false, highlight = [] }: { view: PortalTaskView; now: ISODateTime; visitKey: string; onSaveTask?: ActionHandler<{ taskId: string; saved: boolean }>; headingLevel?: 2 | 3; /** The Feed's smaller card (plan 10.8): one line of facts, no excerpt, so neighbors' posts lead. */ compact?: boolean; /** A search's words, marked (plan 10.23). */ highlight?: readonly string[] }) {
+export function TaskFeedCard({ view, now, visitKey, onSaveTask, headingLevel = 2, highlight = [] }: { view: PortalTaskView; now: ISODateTime; visitKey: string; onSaveTask?: ActionHandler<{ taskId: string; saved: boolean }>; headingLevel?: 2 | 3; /** A search's words, marked (plan 10.23). */ highlight?: readonly string[] }) {
   const t = useTranslations('portal');
   const card = useTranslations('taskCard');
   const { formatDate, formatRelative, formatDateTime, formatTimeRange, dayKey } = useFormat();
@@ -85,52 +85,17 @@ export function TaskFeedCard({ view, now, visitKey, onSaveTask, headingLevel = 2
   const standing = useHelperStanding(view);
   const findWork = useTranslations('findWork');
 
-  if (compact) return <article aria-labelledby={`task-${task.id}`} className="min-w-0 space-y-1.5 rounded-2xl border border-border bg-card p-3.5 shadow-card sm:p-4">
-    <div className="flex items-start justify-between gap-3">
-      <p className="min-w-0 truncate text-xs text-muted-foreground">
-        <ClipboardList aria-hidden="true" className="mr-1 inline size-3.5 align-[-2px] text-primary" />
-        <span className="font-semibold text-foreground">{task.poster.displayName}</span> {t('task.posted')} · {place} · <time dateTime={task.postedAt} title={formatDateTime(task.postedAt)}>{formatRelative(task.postedAt, now)}</time>
-      </p>
-      <p className="shrink-0 text-right leading-tight"><span className="font-display text-base font-semibold tabular-nums">{price}</span>{note && <span className="block text-[11px] text-muted-foreground tabular-nums">{note}</span>}</p>
-    </div>
-    <Heading id={`task-${task.id}`} className="min-w-0 font-display text-[15.5px]/[1.35] font-semibold tracking-[-0.01em] [overflow-wrap:anywhere]">
-      <Link href={view.href} className="rounded-sm underline-offset-4 hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring"><Highlight text={task.title} words={highlight} /></Link>
-      <NewSinceBadge postedAt={task.postedAt} recent={recent} visitKey={visitKey} />
-    </Heading>
-    <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] text-muted-foreground tabular-nums">
-      <span className="inline-flex items-center gap-1"><Icon aria-hidden="true" className="size-3.5" />{task.taskType ? card(`types.${task.categorySlug}.${task.taskType}`) : card(`categories.${task.categorySlug}`)}</span>
-      <span aria-hidden="true">·</span>
-      <span className="inline-flex items-center gap-1"><CalendarDays aria-hidden="true" className="size-3.5" />{schedule}</span>
-    </p>
-    {view.fromPost && <Link href={routes.app.communityPost(view.fromPost.id)} className="flex min-w-0 items-center gap-1.5 rounded-sm text-[13px] underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">
-      <MessagesSquare aria-hidden="true" className="size-3.5 shrink-0 text-primary" />
-      <span className="shrink-0 text-muted-foreground">{t('task.fromPost')}:</span>
-      <span className="truncate font-medium">{view.fromPost.title}</span>
-    </Link>}
-    {view.relation === 'helper' && <HelperStandingNote view={view} closed={standing.closed} size="sm" />}
-    <div className="flex flex-wrap items-center gap-2">
-      <Link href={view.href} className={buttonVariants({ size: 'sm', variant: standing.primary ? 'default' : 'outline', className: 'min-h-8' })}>{standing.cta}</Link>
-      {onSaveTask && view.saved !== undefined && <SaveButton id={task.id} title={task.title} saved={view.saved} target={{ kind: 'task', onSave: onSaveTask }} compact="phone" />}
-      <p className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-[13px] text-muted-foreground">
-        {standing.closed && task.offerCount === 0 ? <span className="tabular-nums">{findWork('noLiveOffers')}</span> : <LiveOfferCount taskId={task.id} offerCount={task.offerCount} renderedAt={now} />}
-        {view.questionCount > 0 && <span className="inline-flex items-center gap-1 tabular-nums"><MessageCircleQuestion aria-hidden="true" className="size-3.5" />{t('task.questions', { count: view.questionCount })}</span>}
-      </p>
-    </div>
-  </article>;
-
   return <article aria-labelledby={`task-${task.id}`} className="min-w-0 space-y-2.5 rounded-2xl border border-border bg-card p-3.5 shadow-card sm:p-4">
-    <div className="flex items-start justify-between gap-3">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <InitialsAvatar initials={task.poster.initials} size="sm" />
-        <div className="min-w-0 leading-tight">
-          <p className="truncate text-sm"><span className="font-semibold">{task.poster.displayName}</span> <span className="text-muted-foreground">{t('task.posted')}</span></p>
-          <p className="truncate text-xs text-muted-foreground">
-            {task.location.kind === 'remote' ? <Laptop aria-hidden="true" className="mr-1 inline size-3 align-[-1px]" /> : <MapPin aria-hidden="true" className="mr-1 inline size-3 align-[-1px]" />}
-            {place} · <time dateTime={task.postedAt} title={formatDateTime(task.postedAt)}>{formatRelative(task.postedAt, now)}</time>
-          </p>
-        </div>
+    {/* No "Task" flair (2026-11-24): everything on Open tasks is one. */}
+    <div className="flex min-w-0 items-center gap-2.5">
+      <InitialsAvatar initials={task.poster.initials} size="sm" />
+      <div className="min-w-0 leading-tight">
+        <p className="truncate text-sm"><span className="font-semibold">{task.poster.displayName}</span> <span className="text-muted-foreground">{t('task.posted')}</span></p>
+        <p className="truncate text-xs text-muted-foreground">
+          {task.location.kind === 'remote' ? <Laptop aria-hidden="true" className="mr-1 inline size-3 align-[-1px]" /> : <MapPin aria-hidden="true" className="mr-1 inline size-3 align-[-1px]" />}
+          {place} · <time dateTime={task.postedAt} title={formatDateTime(task.postedAt)}>{formatRelative(task.postedAt, now)}</time>
+        </p>
       </div>
-      <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-foreground px-2 py-0.5 text-[11px] font-semibold text-background"><ClipboardList aria-hidden="true" className="size-3" />{t('task.flair')}</span>
     </div>
 
     {/* The title and the price share a line; the first words use the card's whole width under them. */}

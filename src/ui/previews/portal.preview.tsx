@@ -30,6 +30,7 @@ import {
   portalNoAreaData,
   portalNoOpenTasksData,
   portalOpenTasksByDayData,
+  portalOpenTasksHelperData,
   portalOpenTasksData,
   portalOpenTasksEmptyData,
   portalOpenTasksFilteredData,
@@ -86,6 +87,8 @@ export const portalPreviews: PreviewEntry[] = [
   // The switch's second tab (2026-11-23): the board inside Neighbors.
   page('open-tasks', p.openTasks, routes.app.community({ type: 'task' }), () => screen(portalOpenTasksData)),
   page('open-tasks-by-day', p.openTasksByDay, routes.app.community({ type: 'task', group: 'day' }), () => screen(portalOpenTasksByDayData)),
+  // A helper's cards (2026-11-24): tasks left the Neighbors Feed, so their standing shows here.
+  page('open-tasks-helper', p.openTasksHelper, routes.app.community({ type: 'task', view: 'feed' }), () => screen(portalOpenTasksHelperData, helperHandlers), jordanShell),
   page('open-tasks-filtered', p.openTasksFiltered, routes.app.community(portalOpenTasksFilteredData.query), () => screen(portalOpenTasksFilteredData)),
   page('open-tasks-empty', p.openTasksEmpty, routes.app.community({ type: 'task' }), () => screen(portalOpenTasksEmptyData)),
   page('no-open-tasks', p.openTasksNone, routes.app.community(), () => screen(portalNoOpenTasksData)),

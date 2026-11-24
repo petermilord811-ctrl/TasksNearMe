@@ -117,6 +117,23 @@ const fenceTip = portalPost({
   reactions: { thanks: 2, helpful: 3, mine: [] },
   previewReplies: [],
 }, { areaSlug: 'windsor-park' });
+/** A Mueller neighbor asking about a crib: Neighbors' fifth Mueller post, so its List section is full. */
+const cribAsk = portalPost({
+  ...questionBase,
+  id: 'cpo_crib',
+  kind: 'question',
+  title: 'Anyone used a helper for a crib and changing table?',
+  body: 'Baby due in January and two flat-pack boxes in the hallway. Did anyone have a helper put theirs together, and anchor the changing table?',
+  categorySlug: 'furniture-assembly',
+  areaName: 'Mueller',
+  author: { displayName: 'Nate O.', initials: 'NO', role: 'neighbor', verified: false, isYou: false },
+  createdAt: '2026-11-17T13:10:00.000Z',
+  lastActivityAt: '2026-11-17T14:30:00.000Z',
+  replyCount: 4,
+  reactions: { thanks: 0, helpful: 1, mine: [] },
+  previewReplies: [],
+  saved: false,
+}, { areaSlug: 'mueller' });
 
 // ---- Tasks ----------------------------------------------------------------------------------------------------
 
@@ -153,23 +170,19 @@ const forMaya = {
   computer: taskView(computer, 'neighbor'),
 };
 
-/** Hot: the liveliest first, posts and tasks together. */
+/**
+ * Hot: the liveliest first. Neighbors holds the posts (2026-11-24); the tasks are Open tasks', and the Feed shows their
+ * newest in "Open tasks near you" and in the post that became one (the bookshelf ask).
+ */
 const hotItems: PortalItem[] = [
   postItem(recommendation),
   postItem(general),
-  taskItem(forMaya.bed),
   postItem(question),
   postItem(fenceTip),
-  taskItem(forMaya.moving),
   postItem(thanks),
-  taskItem(forMaya.wardrobe),
+  postItem(cribAsk),
   postItem(shelfAsk),
-  taskItem(forMaya.bookshelf),
-  // Maya's own desk task isn't here: her open tasks wait in Your stuff (audit M20).
   postItem(tip),
-  taskItem(forMaya.dresser),
-  taskItem(forMaya.yard),
-  taskItem(forMaya.computer),
 ];
 const byNewest = [...hotItems].sort((a, b) => b.at.localeCompare(a.at) || b.id.localeCompare(a.id));
 
@@ -183,25 +196,30 @@ const newestTasks: PortalTaskView[] = Object.values(forMaya).sort((a, b) => b.ta
 
 const query = (change: Partial<PortalQueryState> = {}): PortalQueryState => ({ saved: false, unanswered: false, sort: 'hot', view: 'feed', group: 'area', page: 1, ...change });
 
-const areas: PortalArea[] = [
-  { slug: 'allandale', name: 'Allandale', count: 1, nearby: false, yours: false },
-  { slug: 'crestview', name: 'Crestview', count: 1, nearby: true, yours: false },
-  { slug: 'downtown', name: 'Downtown', count: 0, nearby: false, yours: false },
-  { slug: 'east-austin', name: 'East Austin', count: 1, nearby: true, yours: false },
-  { slug: 'hyde-park', name: 'Hyde Park', count: 0, nearby: true, yours: false },
-  { slug: 'mueller', name: 'Mueller', count: 8, nearby: true, yours: true },
-  { slug: 'windsor-park', name: 'Windsor Park', count: 2, nearby: true, yours: false },
-  { slug: 'zilker', name: 'Zilker', count: 1, nearby: false, yours: false },
+/** The market's neighborhoods with how many of the tab's items each holds: posts on Neighbors, tasks on Open tasks. */
+const areasWith = (counts: Partial<Record<string, number>>): PortalArea[] => [
+  { slug: 'allandale', name: 'Allandale', count: counts.allandale ?? 0, nearby: false, yours: false },
+  { slug: 'crestview', name: 'Crestview', count: counts.crestview ?? 0, nearby: true, yours: false },
+  { slug: 'downtown', name: 'Downtown', count: counts.downtown ?? 0, nearby: false, yours: false },
+  { slug: 'east-austin', name: 'East Austin', count: counts['east-austin'] ?? 0, nearby: true, yours: false },
+  { slug: 'hyde-park', name: 'Hyde Park', count: counts['hyde-park'] ?? 0, nearby: true, yours: false },
+  { slug: 'mueller', name: 'Mueller', count: counts.mueller ?? 0, nearby: true, yours: true },
+  { slug: 'windsor-park', name: 'Windsor Park', count: counts['windsor-park'] ?? 0, nearby: true, yours: false },
+  { slug: 'zilker', name: 'Zilker', count: counts.zilker ?? 0, nearby: false, yours: false },
 ];
 
-/** Near Mueller: 14 items (7 tasks and 7 posts; Maya's own task waits in Your stuff), 16 across Austin. */
+/** Neighbors near Mueller, counted from its posts as `getPortal` counts them; Allandale and Zilker have one each too. */
+const posts = hotItems.flatMap((item) => (item.type === 'post' ? [item.post] : []));
+const postsWhere = (test: (post: CommunityPostView) => boolean) => posts.filter(test).length;
+const postsSince = (hours: number) => postsWhere((post) => Date.parse(PORTAL_NOW) - Date.parse(post.createdAt) <= hours * 3_600_000);
+const areas = areasWith({ ...Object.fromEntries(['mueller', 'windsor-park'].map((slug) => [slug, postsWhere((post) => post.areaSlug === slug)])), allandale: 1, zilker: 1 });
 const facets: PortalFacets = {
-  types: { all: 14, general: 1, task: 7, recommendation: 1, question: 2, tip: 2, thanks: 1 },
-  categories: { 'furniture-assembly': 7, 'moving-help': 2, 'yard-cleanup': 3, 'light-cleaning': 0, 'computer-help': 1, general: 1 },
-  nearby: 14,
-  all: 16,
-  times: { '24h': 7, '7d': 14, '30d': 14 },
-  saved: 2,
+  types: { all: posts.length, general: postsWhere((post) => post.kind === 'general'), task: 0, recommendation: postsWhere((post) => post.kind === 'recommendation'), question: postsWhere((post) => post.kind === 'question'), tip: postsWhere((post) => post.kind === 'tip'), thanks: postsWhere((post) => post.kind === 'thanks') },
+  categories: { 'furniture-assembly': postsWhere((post) => post.categorySlug === 'furniture-assembly'), 'moving-help': postsWhere((post) => post.categorySlug === 'moving-help'), 'yard-cleanup': postsWhere((post) => post.categorySlug === 'yard-cleanup'), 'light-cleaning': postsWhere((post) => post.categorySlug === 'light-cleaning'), 'computer-help': postsWhere((post) => post.categorySlug === 'computer-help'), general: postsWhere((post) => !post.categorySlug) },
+  nearby: posts.length,
+  all: posts.length + 2,
+  times: { '24h': postsSince(24), '7d': postsSince(24 * 7), '30d': postsSince(24 * 30) },
+  saved: postsWhere((post) => Boolean(post.saved)),
   unanswered: 1,
 };
 
@@ -252,7 +270,7 @@ const base: PortalPageData = {
   openTasks: { items: newestTasks, count: 7 },
 };
 
-/** The Feed near Maya, Hot: posts and tasks together, with the rail. */
+/** The Feed near Maya, Hot: the posts, the newest open tasks after the third, and the rail. */
 export const portalFeedData: PortalPageData = base;
 
 /** Newest first, with a second page to load. */
@@ -267,11 +285,9 @@ const section = (key: string, areaName: string | undefined, count: number, items
 });
 
 const sections: PortalSection[] = [
-  section('mueller', 'Mueller', 7, [postItem(recommendation), taskItem(forMaya.bed), postItem(thanks), taskItem(forMaya.wardrobe), postItem(shelfAsk)]),
+  section('mueller', 'Mueller', 7, [postItem(recommendation), postItem(general), postItem(thanks), postItem(cribAsk), postItem(shelfAsk)]),
   section('windsor-park', 'Windsor Park', 2, [postItem(question), postItem(fenceTip)]),
-  section('crestview', 'Crestview', 1, [taskItem(forMaya.yard)]),
-  section('east-austin', 'East Austin', 1, [taskItem(forMaya.moving)]),
-  section('market', undefined, 2, [postItem(tip), taskItem(forMaya.computer)]),
+  section('market', undefined, 1, [postItem(tip)]),
 ];
 
 /** The List, by neighborhood (Craigslist): each one's first five and its count, citywide last. */
@@ -293,19 +309,24 @@ export const portalListByDayData: PortalPageData = { ...base, query: query({ vie
 const jordanStanding = (taskId: string): Pick<PortalTaskView, 'myOffer' | 'blockedReason'> =>
   taskId === computer.id ? { blockedReason: 'category_not_offered' } : taskId === bed.id ? { myOffer: { status: 'expired' } } : taskId === dresser.id ? { myOffer: { status: 'pending' } } : {};
 
-/** Jordan (a helper) reads the same place: tasks open his offer page, and he can save them. */
+/** A task as Jordan (a helper) sees it: it opens his offer page, he can save it, and it says where he stands. */
+const forJordan = (view: PortalTaskView): PortalTaskView => ({ ...view, relation: 'helper', href: routes.app.findWorkTask(view.task.id), saved: view.task.id === 'tsk_board_wardrobe', ...jordanStanding(view.task.id) });
+
+/** Jordan (a helper) reads the same place: the newest tasks open his offer page. */
 export const portalHelperData: PortalPageData = {
   ...base,
   me: { initials: 'JT' },
   helps: true,
   stats: { ...base.stats, helpers: 8 },
   items: hotItems.map((item): PortalItem => {
-    if (item.type === 'task') return { ...item, task: { ...item.task, relation: 'helper', href: routes.app.findWorkTask(item.task.task.id), saved: item.id === 'tsk_board_wardrobe', ...jordanStanding(item.id) } };
+    if (item.type === 'task') return item;
     const post = { ...item.post, author: { ...item.post.author, isYou: false } };
     const { askForHelpHref: _askForHelp, ...rest } = post;
     return { ...item, post: rest };
   }),
-  rail: { ...rail, yourTasks: [], yourPosts: [], savedCount: 1, helpers: helpers.filter((helper) => helper.handle !== 'jordan-t'), unanswered: [rail.unanswered[0]!] },
+  rail: { ...rail, yourTasks: [], yourPosts: [], savedCount: 0, helpers: helpers.filter((helper) => helper.handle !== 'jordan-t'), unanswered: [rail.unanswered[0]!] },
+  facets: { ...facets, saved: 0 },
+  openTasks: { items: newestTasks.map(forJordan), count: 7 },
 };
 
 // ---- Open tasks: the switch's second tab (2026-11-23), the board inside Neighbors -------------------------------
@@ -319,9 +340,25 @@ const taskFacets: PortalTaskFacets = {
   few: 5,
 };
 const tasksQuery = (change: Partial<PortalQueryState> = {}): PortalQueryState => query({ type: 'task', sort: 'soonest', view: 'list', ...change });
+/** Open tasks near Maya, counted from the tasks as `getPortal` counts them on that tab; Downtown has one too. */
+const openTaskViews = Object.values(forMaya);
+const tasksWhere = (test: (task: TaskPublicView) => boolean) => openTaskViews.filter((view) => test(view.task)).length;
+const tasksIn = (areaName: string) => tasksWhere((task) => task.location.kind !== 'remote' && task.location.areaName === areaName);
+const taskTabFacets: PortalFacets = {
+  types: { all: openTaskViews.length, general: 0, task: openTaskViews.length, recommendation: 0, question: 0, tip: 0, thanks: 0 },
+  categories: { 'furniture-assembly': tasksWhere((task) => task.categorySlug === 'furniture-assembly'), 'moving-help': tasksWhere((task) => task.categorySlug === 'moving-help'), 'yard-cleanup': tasksWhere((task) => task.categorySlug === 'yard-cleanup'), 'light-cleaning': tasksWhere((task) => task.categorySlug === 'light-cleaning'), 'computer-help': tasksWhere((task) => task.categorySlug === 'computer-help'), general: 0 },
+  nearby: openTaskViews.length,
+  all: openTaskViews.length + 1,
+  times: { '24h': tasksWhere((task) => Date.parse(PORTAL_NOW) - Date.parse(task.postedAt) <= 86_400_000), '7d': openTaskViews.length, '30d': openTaskViews.length },
+  saved: 0,
+  unanswered: 0,
+  tasks: taskFacets,
+};
 const openTasksBase: PortalPageData = {
   ...base,
-  facets: { ...facets, types: { ...facets.types }, tasks: taskFacets },
+  areas: areasWith({ mueller: tasksIn('Mueller'), crestview: tasksIn('Crestview'), 'east-austin': tasksIn('East Austin'), 'windsor-park': tasksIn('Windsor Park'), 'hyde-park': tasksIn('Hyde Park'), downtown: 1 }),
+  facets: taskTabFacets,
+  rail: { ...rail, savedCount: 0 },
   boardHref: routes.taskBoard('austin', { areas: ['crestview', 'east-austin', 'hyde-park', 'mueller', 'windsor-park'] }),
   openTasks: undefined,
 };
@@ -333,7 +370,7 @@ export const portalTasksData: PortalPageData = {
   place: { kind: 'area', slug: 'mueller', name: 'Mueller' },
   items: [taskItem(forMaya.bed), taskItem(forMaya.dresser), taskItem(forMaya.wardrobe), taskItem(forMaya.bookshelf)],
   totalCount: 4,
-  facets: { ...facets, types: { all: 7, general: 0, task: 4, recommendation: 1, question: 1, tip: 0, thanks: 1 }, tasks: taskFacets },
+  facets: { ...taskTabFacets, types: { ...taskTabFacets.types, all: 4, task: 4 } },
   live: { areaIds: ['are_mueller'], areaSlugs: ['mueller'], withRemote: false },
   boardHref: routes.taskBoard('austin', { areas: ['mueller'] }),
 };
@@ -362,6 +399,21 @@ export const portalOpenTasksByDayData: PortalPageData = {
   totalCount: 7,
 };
 
+/**
+ * Jordan (a helper) on Open tasks as cards (2026-11-24, where tasks are now): each opens his offer page and says where he
+ * stands (his expired offer on the bed frame, his waiting one on the dresser, computer help not his), and he can save them.
+ */
+export const portalOpenTasksHelperData: PortalPageData = {
+  ...openTasksBase,
+  query: tasksQuery({ view: 'feed' }),
+  me: { initials: 'JT' },
+  helps: true,
+  items: [forMaya.bed, forMaya.dresser, forMaya.wardrobe, forMaya.moving, forMaya.bookshelf, forMaya.computer, forMaya.yard].map(forJordan).map(taskItem),
+  totalCount: 7,
+  rail: { ...openTasksBase.rail, yourTasks: [], yourPosts: [], savedCount: 1, helpers: helpers.filter((helper) => helper.handle !== 'jordan-t') },
+  facets: { ...taskTabFacets, saved: 1 },
+};
+
 /** The board's filters on Open tasks: $50 to $99, mornings, at most one offer so far. */
 export const portalOpenTasksFilteredData: PortalPageData = {
   ...openTasksBase,
@@ -369,7 +421,7 @@ export const portalOpenTasksFilteredData: PortalPageData = {
   sections: [section('mueller', 'Mueller', 2, [taskItem(forMaya.dresser), taskItem(forMaya.bookshelf)])],
   items: [taskItem(forMaya.dresser), taskItem(forMaya.bookshelf)],
   totalCount: 2,
-  facets: { ...facets, tasks: { ...taskFacets, prices: { under50: 0, from50: 2, from100: 0, from200: 0 }, slots: { morning: 2, afternoon: 0, evening: 0 }, few: 2 } },
+  facets: { ...taskTabFacets, tasks: { ...taskFacets, prices: { under50: 0, from50: 2, from100: 0, from200: 0 }, slots: { morning: 2, afternoon: 0, evening: 0 }, few: 2 } },
   boardHref: routes.taskBoard('austin', { areas: ['crestview', 'east-austin', 'hyde-park', 'mueller', 'windsor-park'], minPrice: 50, maxPrice: 99, times: ['morning'], few: true }),
 };
 
@@ -379,15 +431,15 @@ export const portalOpenTasksEmptyData: PortalPageData = {
   query: tasksQuery(),
   items: [],
   totalCount: 0,
-  facets: { ...facets, types: { ...facets.types, task: 0 }, tasks: { prices: { under50: 0, from50: 0, from100: 0, from200: 0 }, pricing: { fixed: 0, hourly: 0 }, when: { today: 0, this_week: 0, this_weekend: 0 }, slots: { morning: 0, afternoon: 0, evening: 0 }, few: 0 } },
+  facets: { ...taskTabFacets, types: { ...taskTabFacets.types, all: 0, task: 0 }, tasks: { prices: { under50: 0, from50: 0, from100: 0, from200: 0 }, pricing: { fixed: 0, hourly: 0 }, when: { today: 0, this_week: 0, this_weekend: 0 }, slots: { morning: 0, afternoon: 0, evening: 0 }, few: 0 } },
   stats: { ...base.stats, openTasks: 0 },
 };
 
 /** Neighbors with no open task near Maya: the rail's card says so, with the way to post one. */
 export const portalNoOpenTasksData: PortalPageData = {
   ...base,
-  items: hotItems.filter((item) => item.type === 'post'),
-  totalCount: hotItems.filter((item) => item.type === 'post').length,
+  items: hotItems,
+  totalCount: hotItems.length,
   stats: { ...base.stats, openTasks: 0 },
   openTasks: { items: [], count: 0 },
 };
@@ -539,12 +591,17 @@ export const portalSpanishData: PortalPageData = {
   ...base,
   items: [
     postItem(spanishPost(recommendation, '¿A quién recomiendan para armar un escritorio y un librero?', 'Me acabo de mudar a Mueller y tengo un escritorio y un librero alto en cajas. Busco a alguien cuidadoso que pueda fijar el librero a la pared.')),
-    taskItem(spanishTask(forMaya.bed, 'Armar una base de cama queen esta noche', 'Base de metal y madera con tablillas, todavía en la caja. Tengo todas las herramientas.')),
     postItem(spanishPost(question, '¿La ciudad todavía recoge hojas en bolsas en diciembre?', 'Nuestros dos robles están tirando todas las hojas a la vez. ¿La recolección sigue siendo semanal?')),
-    taskItem(spanishTask(forMaya.moving, 'Ayuda para cargar un camión de mudanza (2 recámaras)', 'Ya renté el camión y todo estará en cajas y etiquetado. Sofá, cama queen y cómoda.')),
     postItem(spanishPost(tip, 'Renta la carretilla cuando reserves el camión', 'El lugar de renta cerca de la I-35 se queda sin carretillas el sábado por la mañana.')),
   ],
-  totalCount: 5,
+  totalCount: 3,
+  openTasks: {
+    items: [
+      spanishTask(forMaya.bed, 'Armar una base de cama queen esta noche', 'Base de metal y madera con tablillas, todavía en la caja. Tengo todas las herramientas.'),
+      spanishTask(forMaya.moving, 'Ayuda para cargar un camión de mudanza (2 recámaras)', 'Ya renté el camión y todo estará en cajas y etiquetado. Sofá, cama queen y cómoda.'),
+    ],
+    count: 7,
+  },
 };
 
 /** "Welcome to Mueller" (2026-11-24): Maya just moved here; the best-rated helpers nearby and the most helpful tips. */

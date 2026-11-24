@@ -81,6 +81,8 @@ test.afterAll(removePosts);
 test('on phones the first post starts high, under the switch and one sticky row', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-mobile', 'the phone layout');
   test.setTimeout(90_000);
+  // A post to measure: Neighbors is the posts (2026-11-24), and the seeded data has none (a tip, so no ask waits on it).
+  await insertPost({ author: 'usr_ana', title: `Gate latches stick in the cold ${Date.now().toString(36)}`, kind: 'tip' });
   await devSignIn(page, 'maya@example.test');
   await page.goto('/app/community?area=all');
   const bar = page.getByRole('heading', { level: 1, name: 'All of Austin' });

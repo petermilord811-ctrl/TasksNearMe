@@ -112,12 +112,14 @@ describe('the portal (plan 9.10)', () => {
   it('names a post task’s state as the post shows it', () => {
     const now = new Date('2026-11-17T15:00:00.000Z');
     const later = new Date('2026-11-20T15:00:00.000Z');
-    expect(postTaskState({ status: 'open', windowEnd: later, hiddenAt: null }, now)).toBe('open');
-    expect(postTaskState({ status: 'open', windowEnd: new Date('2026-11-16T15:00:00.000Z'), hiddenAt: null }, now)).toBe('closed');
-    expect(postTaskState({ status: 'open', windowEnd: later, hiddenAt: now }, now)).toBe('closed');
-    expect(postTaskState({ status: 'assigned', windowEnd: later, hiddenAt: null }, now)).toBe('booked');
-    expect(postTaskState({ status: 'completed', windowEnd: now, hiddenAt: null }, now)).toBe('done');
-    expect(postTaskState({ status: 'canceled', windowEnd: later, hiddenAt: null }, now)).toBe('closed');
+    expect(postTaskState({ status: 'open', windowStart: later, hiddenAt: null }, now)).toBe('open');
+    expect(postTaskState({ status: 'open', windowStart: new Date('2026-11-16T15:00:00.000Z'), hiddenAt: null }, now)).toBe('closed');
+    // Offers close when the window starts, though it hasn't ended (2026-11-24).
+    expect(postTaskState({ status: 'open', windowStart: now, hiddenAt: null }, now)).toBe('closed');
+    expect(postTaskState({ status: 'open', windowStart: later, hiddenAt: now }, now)).toBe('closed');
+    expect(postTaskState({ status: 'assigned', windowStart: later, hiddenAt: null }, now)).toBe('booked');
+    expect(postTaskState({ status: 'completed', windowStart: now, hiddenAt: null }, now)).toBe('done');
+    expect(postTaskState({ status: 'canceled', windowStart: later, hiddenAt: null }, now)).toBe('closed');
   });
 
   it('searches every word of two letters or more, at most six', () => {

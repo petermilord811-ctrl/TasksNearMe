@@ -12,10 +12,11 @@ import { useFormat } from '@/ui/lib/format';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { buttonVariants } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
-import { openTasksHref, portalHref } from './portal-href';
+import { portalHref } from './portal-href';
 import { PortalRow } from './portal-row';
 import { HelpersRow, OpenTasksStrip, TrendingCard, UnansweredCard } from './portal-rail';
 import { TaskFeedCard } from './task-feed-card';
+import { keyOfItem, refreshedStream, rereadStream } from './stream-merge';
 
 /** Pages that load on their own as the reader nears the end; then "Show more" waits, so the footer is reachable. */
 export const AUTO_PAGES = 3;
@@ -51,58 +52,16 @@ function FeedItem({ item, now, visitKey, query, me, handlers }: { item: PortalIt
         {...(handlers.onEdit ? { onEdit: handlers.onEdit } : {})}
         {...(handlers.onDelete ? { onDelete: handlers.onDelete } : {})}
       />
-    // Open tasks' cards (2026-11-23) are the board's: whole, with their first words; among posts, the smaller card.
-    : <TaskFeedCard view={item.task} now={now} visitKey={visitKey} compact={query.type !== 'task'} highlight={highlightWords(query.q)} {...(handlers.onSaveTask ? { onSaveTask: handlers.onSaveTask } : {})} />;
+    // Open tasks' cards (2026-11-23) are the board's: whole, with their first words. Tasks are that tab's only
+    // (2026-11-24); Neighbors shows its newest in "Open tasks near you".
+    : <TaskFeedCard view={item.task} now={now} visitKey={visitKey} highlight={highlightWords(query.q)} {...(handlers.onSaveTask ? { onSaveTask: handlers.onSaveTask } : {})} />;
 }
-
-/** Three or more tasks in a row fold into one card (plan 10.8), so neighbors' posts lead the Feed. */
-const TASK_RUN = 3;
-const TASK_RUN_SHOWN = 3;
-
-type Block = { kind: 'item'; item: PortalItem } | { kind: 'tasks'; items: PortalItem[] };
-
-/** The Feed's items as blocks: posts and single tasks on their own, runs of `TASK_RUN` or more tasks together. */
-export function feedBlocks(items: PortalItem[]): Block[] {
-  const blocks: Block[] = [];
-  let run: PortalItem[] = [];
-  const flush = () => {
-    if (run.length >= TASK_RUN) blocks.push({ kind: 'tasks', items: run });
-    else for (const item of run) blocks.push({ kind: 'item', item });
-    run = [];
-  };
-  for (const item of items) {
-    if (item.type === 'task') run.push(item);
-    else {
-      flush();
-      blocks.push({ kind: 'item', item });
-    }
-  }
-  flush();
-  return blocks;
-}
-
-/** "New tasks near you" (plan 10.8): a run of tasks as one card of dense rows, and the rest of them one tap away. */
-function TaskGroup({ items, now, visitKey, query }: { items: PortalItem[]; now: ISODateTime; visitKey: string; query: PortalPageData['query'] }) {
-  const t = useTranslations('portal');
-  const shown = items.slice(0, TASK_RUN_SHOWN);
-  const more = items.length - shown.length;
-  const key = keyOfItem(items[0]!);
-  return <section aria-labelledby={`portal-run-${key}`} className={panelClass}>
-    <header className={panelHeadClass}>
-      <h2 id={`portal-run-${key}`} className="text-[15px] font-semibold">{t('taskGroup.title')}<span className="ml-2 text-[13px] font-normal text-muted-foreground tabular-nums">{t('list.count', { count: items.length })}</span></h2>
-      <Link href={openTasksHref(query)} className="inline-flex min-h-8 items-center gap-1 text-[13px] font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{more > 0 ? t('taskGroup.more', { count: more }) : t('taskGroup.all')}<ArrowRight aria-hidden="true" className="size-3.5" /></Link>
-    </header>
-    <ol className="divide-y divide-border/70">{shown.map((item) => <li key={keyOfItem(item)} data-item="task"><PortalRow item={item} now={now} visitKey={visitKey} highlight={highlightWords(query.q)} /></li>)}</ol>
-  </section>;
-}
-
-const keyOfItem = (item: PortalItem) => `${item.type}:${item.id}`;
 
 /**
  * The portal's stream (completion plan 9.10): the Feed's cards or the List's rows, from the same items. The Feed
  * and the List by day keep going like LinkedIn's (the next pages added underneath, by themselves for the first
- * few, then with "Show more"; nothing on screen moves; an item that shifted between pages shows once; screen
- * readers hear how many were added). The List by neighborhood shows each neighborhood's first few with "See all".
+ * few, then with "Show more"; nothing on screen moves, a refresh included; an item that shifted between pages shows
+ * once; screen readers hear how many were added). The List by neighborhood shows each neighborhood's first few with "See all".
  * Without JavaScript, "Show more" is the next page's link. `groups` (the viewer's building and street groups, 2026-11-24)
  * joins on screens without the rail, on the first page: after the Feed's first item, or the List's first panel.
  */
@@ -112,7 +71,10 @@ export function PortalStream({ data, now, visitKey, handlers, groups }: { data: 
   const { query } = data;
   const groupsHere = Boolean(groups) && query.page === 1;
   const groupsPanel = groupsHere && <div className="xl:hidden">{groups}</div>;
-  const [more, setMore] = useState<PortalItem[]>([]);
+  // What's on screen: the first page, then the pages loaded under it, in the order they came.
+  const [items, setItems] = useState<PortalItem[]>(data.items);
+  const [firstPage, setFirstPage] = useState(data.items);
+  const [reread, setReread] = useState(0);
   const [next, setNext] = useState(query.page + 1);
   const [last, setLast] = useState(data.pageCount);
   const [autoLoads, setAutoLoads] = useState(0);
@@ -120,12 +82,44 @@ export function PortalStream({ data, now, visitKey, handlers, groups }: { data: 
   const [announcement, setAnnouncement] = useState('');
   const [loading, startTransition] = useTransition();
   const end = useRef<HTMLDivElement>(null);
-  const keyOf = (item: PortalItem) => `${item.type}:${item.id}`;
-  const shown = new Set(data.items.map(keyOf));
-  const items = [...data.items, ...more.filter((item) => !shown.has(keyOf(item)))];
+  const rereads = useRef(0);
+  const keyOf = keyOfItem;
   const paged = !data.sections;
   const hasMore = paged && next <= last;
   const { onMore } = handlers;
+  // The first page was read again (same filters: new ones start a new stream): merge it in place, and read the later
+  // pages again when some are on screen.
+  if (firstPage !== data.items) {
+    const laterLoaded = next > query.page + 1;
+    setItems(refreshedStream(items, firstPage, data.items, laterLoaded));
+    setFirstPage(data.items);
+    if (laterLoaded) setReread((count) => count + 1);
+  }
+  const rereadLater = useEffectEvent(async () => {
+    if (!onMore) return;
+    const round = ++rereads.current;
+    const later: PortalItem[] = [];
+    let pageCount = last;
+    for (let page = query.page + 1; page < next; page += 1) {
+      let result: Awaited<ReturnType<NonNullable<typeof onMore>>> = null;
+      try {
+        result = await onMore({ ...query, page });
+      } catch {
+        result = null;
+      }
+      // A failed read changes nothing on screen.
+      if (!result || round !== rereads.current) return;
+      later.push(...result.items);
+      pageCount = result.pageCount;
+    }
+    setItems((current) => rereadStream(current, data.items, later));
+    setLast(pageCount);
+  });
+  useEffect(() => {
+    if (reread === 0) return;
+    const timer = window.setTimeout(() => void rereadLater(), 0);
+    return () => window.clearTimeout(timer);
+  }, [reread]);
 
   const load = (auto: boolean) => {
     if (!onMore || loading || !hasMore) return;
@@ -141,9 +135,14 @@ export function PortalStream({ data, now, visitKey, handlers, groups }: { data: 
           setFailed(true);
           return;
         }
-        const seen = new Set([...shown, ...more.map(keyOf)]);
-        const fresh = result.items.filter((item) => !seen.has(keyOf(item)));
-        setMore([...more, ...fresh]);
+        const page = result;
+        const seen = new Set(items.map(keyOf));
+        const fresh = page.items.filter((item) => !seen.has(keyOf(item)));
+        // Merged into what's on screen now: a refresh may have changed it while the page was on its way.
+        setItems((current) => {
+          const shown = new Set(current.map(keyOf));
+          return [...current, ...page.items.filter((item) => !shown.has(keyOf(item)))];
+        });
         setNext(result.page + 1);
         setLast(result.pageCount);
         setFailed(false);
@@ -190,13 +189,10 @@ export function PortalStream({ data, now, visitKey, handlers, groups }: { data: 
   // ---- The Feed: cards (runs of tasks folded, plan 10.8), with the rail's helpers, the asks waiting for an answer and
   //      the week's busiest posts joining it on smaller screens.
   if (query.view === 'feed') {
-    // Runs of tasks fold only in Everything, for people who don't help: with Tasks (or Saved) chosen, and for a helper,
-    // whose next step is on each task's card, every card stays a card.
-    const blocks = query.type || query.saved || data.helps ? items.map((item): Block => ({ kind: 'item', item })) : feedBlocks(items);
     // The Neighbors tab's look at the other one, in Everything only (2026-11-23): after the third item, or after the last
     // when the Feed is shorter (a quiet place on its first days).
     const everything = !query.type && !query.saved && !query.unanswered;
-    const openTasksAt = Math.min(OPEN_TASKS_AFTER, blocks.length) - 1;
+    const openTasksAt = Math.min(OPEN_TASKS_AFTER, items.length) - 1;
     const inFeed = (index: number): ReactNode => {
       if (query.page !== 1) return null;
       if (index === openTasksAt && everything && data.openTasks && data.openTasks.items.length > 0) return <li className="xl:hidden"><OpenTasksStrip data={{ openTasks: data.openTasks, query, place: data.place, market: data.market }} /></li>;
@@ -207,17 +203,11 @@ export function PortalStream({ data, now, visitKey, handlers, groups }: { data: 
     };
     return <>
       <ol aria-label={t('view.feed')} className="space-y-3">
-        {blocks.map((block, index) => block.kind === 'tasks'
-          ? <Fragment key={`run-${keyOfItem(block.items[0]!)}`}>
-              <li><TaskGroup items={block.items} now={now} visitKey={visitKey} query={query} /></li>
-              {index === 0 && groupsHere && <li className="xl:hidden">{groups}</li>}
-              {inFeed(index)}
-            </Fragment>
-          : <Fragment key={keyOf(block.item)}>
-              <li data-item={block.item.type}><FeedItem item={block.item} now={now} visitKey={visitKey} query={query} {...(data.me ? { me: data.me } : {})} handlers={handlers} /></li>
-              {index === 0 && groupsHere && <li className="xl:hidden">{groups}</li>}
-              {inFeed(index)}
-            </Fragment>)}
+        {items.map((item, index) => <Fragment key={keyOf(item)}>
+          <li data-item={item.type}><FeedItem item={item} now={now} visitKey={visitKey} query={query} {...(data.me ? { me: data.me } : {})} handlers={handlers} /></li>
+          {index === 0 && groupsHere && <li className="xl:hidden">{groups}</li>}
+          {inFeed(index)}
+        </Fragment>)}
       </ol>
       {footer}
     </>;

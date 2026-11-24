@@ -14,7 +14,7 @@ import { PortalLive } from '@/ui/components/portal/portal-live';
 import { AnnouncementCard, AskAreaCard, SamplesNote } from '@/ui/components/portal/portal-notes';
 import { NeighborsWelcomeCard } from '@/ui/components/portal/neighbors-welcome';
 import { PortalPhoneBar } from '@/ui/components/portal/portal-phone-bar';
-import { PortalRail, YourStuffStrip } from '@/ui/components/portal/portal-rail';
+import { OpenTasksStrip, PortalRail, YourStuffStrip } from '@/ui/components/portal/portal-rail';
 import { PortalStream } from '@/ui/components/portal/portal-stream';
 import { NeighborhoodDaysStrip } from '@/ui/components/portal/neighborhood-days-strip';
 import { NeighborGroups, NeighborGroupsCard } from '@/ui/components/portal/neighbor-groups-card';
@@ -47,6 +47,9 @@ export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
   const [topAd, pinnedAd] = NEIGHBORS_RAIL_ADS;
   // The groups' two cards share one sheet and one pair of dialogs, which also open a group or an invite from the address.
   const groups = !tasks && data.groups && handlers.groups ? { data: data.groups, handlers: handlers.groups } : null;
+  // The List by neighborhood or by day; one neighborhood (or what's citywide) lists by day only, so there's no grouping to
+  // choose (sweep P9).
+  const grouping = query.view === 'list' && data.items.length > 0 && data.place.kind !== 'area' && data.place.kind !== 'citywide';
   const groupsCard = (layout: 'page' | 'rail') => groups && <NeighborGroupsCard data={groups.data} handlers={groups.handlers} now={now} layout={layout} />;
   const withGroups = (node: ReactNode) => (groups ? <NeighborGroups data={groups.data} handlers={groups.handlers}>{node}</NeighborGroups> : node);
   return <div className="space-y-3 sm:space-y-4">
@@ -70,17 +73,23 @@ export function PortalScreen({ data, handlers, now }: PortalScreenProps) {
           {/* The kinds of posts are Neighbors' own; Open tasks is one kind already. */}
           {!tasks && <TypeTabs data={data} />}
           <div className="max-sm:hidden"><PortalToolbar data={data} /></div>
+          {/* On Open tasks the grouping and "Save this search" share one row (2026-11-24: two rows of controls pushed the
+              first task below a phone's first screen). */}
           {tasks
-            ? <div className="flex flex-wrap items-start justify-between gap-2"><ActiveFilters data={data} /><div className="ml-auto"><SaveTasksSearch boardHref={data.boardHref} /></div></div>
+            ? <div className="flex flex-wrap items-center justify-between gap-2"><ActiveFilters data={data} /><div className="ml-auto flex items-center gap-2">{grouping && <ListGroupBar data={data} />}<SaveTasksSearch boardHref={data.boardHref} /></div></div>
             : <ActiveFilters data={data} />}
         </div>
         {data.samples && <SamplesNote shown={data.samples.shown} {...(handlers.onShowSamples ? { onShowSamples: handlers.onShowSamples } : {})} />}
         <PortalLive data={data} listId="portal-stream" {...(handlers.onCheckFresh ? { onCheckFresh: handlers.onCheckFresh } : {})} />
         <div id="portal-stream" className="scroll-mt-28 space-y-2.5">
-          {/* One neighborhood (or what's citywide) lists by day only, so there's no grouping to choose (sweep P9). */}
-          {query.view === 'list' && data.items.length > 0 && data.place.kind !== 'area' && data.place.kind !== 'citywide' && <ListGroupBar data={data} />}
+          {!tasks && grouping && <ListGroupBar data={data} />}
           {data.items.length === 0
-            ? <><PortalEmpty data={data} />{groups && <div className="xl:hidden">{groupsCard('page')}</div>}</>
+            ? <>
+                <PortalEmpty data={data} />
+                {/* A quiet Neighbors may still have open tasks (2026-11-24: they're the other tab's): its look at them stays. */}
+                {!tasks && !query.saved && data.openTasks && data.openTasks.items.length > 0 && <div className="xl:hidden"><OpenTasksStrip data={{ openTasks: data.openTasks, query, place: data.place, market: data.market }} /></div>}
+                {groups && <div className="xl:hidden">{groupsCard('page')}</div>}
+              </>
             : <PortalStream key={streamKey} data={data} now={now} visitKey={visitKey} handlers={handlers} {...(groups ? { groups: groupsCard('page') } : {})} />}
         </div>
       </div>

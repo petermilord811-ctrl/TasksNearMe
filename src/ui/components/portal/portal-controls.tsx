@@ -59,7 +59,7 @@ export function PortalSortMenu({ query, align = 'end', className }: { query: Por
 
 /**
  * The kinds of posts (completion plan 9.10), and everything, each with its count. Tasks left these tabs for the
- * Neighbors | Open tasks switch (2026-11-23); Everything still mixes them in. One row of tabs that scrolls sideways
+ * Neighbors | Open tasks switch (2026-11-23), and Everything for that tab too (2026-11-24). One row of tabs that scrolls sideways
  * (its ends fading) only when it doesn't fit, edge to edge on phones. Links, so each has its own URL and the other
  * filters stay.
  */
@@ -242,11 +242,20 @@ function FilterGroups({ data, withSearch, onPick }: { data: Data; withSearch: bo
   </div>;
 }
 
+/**
+ * The Filters sheet opens on itself, not on its search box (2026-11-24): focusing the box opened a phone's keyboard over
+ * the filters people came for. The search is one tap away at the top.
+ */
+function focusSheet(event: Event) {
+  event.preventDefault();
+  if (event.currentTarget instanceof HTMLElement) event.currentTarget.focus({ preventScroll: true });
+}
+
 /** The phone's Filters sheet (plan 10.7), opened from the sticky bar: the search, the view, and the filters. */
 export function PortalFiltersSheet({ data, open, onOpenChange }: { data: Data; open: boolean; onOpenChange: (open: boolean) => void }) {
   const t = useTranslations('portal');
   return <Sheet open={open} onOpenChange={onOpenChange}>
-    <SheetContent side="bottom" className="max-h-[85dvh] gap-0 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]">
+    <SheetContent side="bottom" onOpenAutoFocus={focusSheet} className="max-h-[85dvh] gap-0 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] focus:outline-none">
       <SheetHeader>
         <SheetTitle className="font-display text-lg">{t('filters.title')}</SheetTitle>
         <SheetDescription className="sr-only">{t('filters.title')}</SheetDescription>
@@ -293,7 +302,7 @@ export function PortalToolbar({ data }: { data: Data }) {
         <SlidersHorizontal aria-hidden="true" className="size-4" />
         {filters > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 min-w-5 rounded-full bg-primary px-1 text-center text-[11px] leading-5 font-semibold text-primary-foreground tabular-nums ring-2 ring-background">{filters}</span>}
       </SheetTrigger>
-      <SheetContent side="bottom" className="max-h-[85dvh] gap-0 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <SheetContent side="bottom" onOpenAutoFocus={focusSheet} className="max-h-[85dvh] gap-0 overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))] focus:outline-none">
         <SheetHeader>
           <SheetTitle className="font-display text-lg">{t('filters.title')}</SheetTitle>
           <SheetDescription className="sr-only">{t('filters.title')}</SheetDescription>
@@ -327,8 +336,9 @@ export function PortalToolbar({ data }: { data: Data }) {
  */
 export function SaveTasksSearch({ boardHref }: { boardHref: string }) {
   const saved = useTranslations('savedSearches');
-  return <Link href={routes.app.newSavedSearch(boardHref)} rel="nofollow" className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-[13px] font-semibold transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-ring">
-    <BellRing aria-hidden="true" className="size-4 text-primary" />{saved('save')}
+  // Phones: the bell alone (its name stays "Save this search"), so it fits beside the grouping.
+  return <Link href={routes.app.newSavedSearch(boardHref)} rel="nofollow" title={saved('save')} className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-border bg-card px-3 text-[13px] font-semibold transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-ring max-sm:size-9 max-sm:justify-center max-sm:px-0">
+    <BellRing aria-hidden="true" className="size-4 text-primary" /><span className="max-sm:sr-only">{saved('save')}</span>
   </Link>;
 }
 
@@ -337,7 +347,7 @@ export function ListGroupBar({ data }: { data: Pick<PortalPageData, 'query'> }) 
   const t = useTranslations('portal');
   const { query } = data;
   return <div className="flex items-center justify-end gap-2">
-    <span aria-hidden="true" className="text-[13px] text-muted-foreground">{t('group.label')}</span>
+    <span aria-hidden="true" className="text-[13px] text-muted-foreground max-sm:hidden">{t('group.label')}</span>
     <Segmented label={t('group.label')}>
       {PORTAL_GROUPS.map((group) => <Segment key={group} href={portalHref(query, { group })} selected={query.group === group} label={t(`group.${group}`)} />)}
     </Segmented>

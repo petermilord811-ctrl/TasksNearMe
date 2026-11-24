@@ -45,7 +45,7 @@ function MenuLink({ href, selected, label }: { href: string; selected: boolean; 
  * phone it fits on one line instead of a sideways row of eight chips cut at the edge. A native <details>, so it works
  * before the page's scripts and without them; each choice is a link, as the chips were.
  */
-function SortMenu({ children, summary }: { children: ReactNode; summary: string }) {
+function SortMenu({ children, summary }: { children: ReactNode; summary: ReactNode }) {
   return <details className="group/sort relative">
     <summary className="inline-flex min-h-9 cursor-pointer list-none items-center gap-1.5 rounded-lg bg-foreground/[0.05] px-3 text-[13px] font-medium focus-visible:outline-2 focus-visible:outline-ring dark:bg-white/[0.06] [&::-webkit-details-marker]:hidden">
       <ArrowUpDown aria-hidden="true" className="size-4 text-muted-foreground" />{summary}
@@ -164,7 +164,8 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
   const dayLabel = (day: string, sample: TaskPublicView) => (day === data.today ? t('today') : day === tomorrow ? t('tomorrow') : formatDate(sample.schedule.windowStart));
 
   // Save this view and get alerts when a new task fits (completion plan 7.10); signing in comes first.
-  const saveSearch = <Link href={routes.app.newSavedSearch(routes.taskBoard(market.slug, { ...query, page: undefined }))} rel="nofollow" className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-foreground/[0.1] bg-card px-3 text-[13px] font-semibold hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-ring dark:border-white/[0.1]"><BellRing aria-hidden="true" className="size-4 text-primary" />{saved('save')}</Link>;
+  // `compact`: on phones the bell alone (its name stays "Save this search"), beside the sort and the view (2026-11-24).
+  const saveSearch = (compact: boolean) => <Link href={routes.app.newSavedSearch(routes.taskBoard(market.slug, { ...query, page: undefined }))} rel="nofollow" title={saved('save')} className={cn('inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-foreground/[0.1] bg-card px-3 text-[13px] font-semibold hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-ring dark:border-white/[0.1]', compact && 'max-sm:size-9 max-sm:justify-center max-sm:px-0')}><BellRing aria-hidden="true" className="size-4 text-primary" /><span className={cn(compact && 'max-sm:sr-only')}>{saved('save')}</span></Link>;
 
   const list = data.tasks.length === 0
     ? <EmptyState
@@ -243,19 +244,20 @@ export function TaskBoardScreen({ data, now }: TaskBoardScreenProps) {
             />
           </div>
           {/* With nothing open there's no sorting or layout, and the alert takes their place on this row. */}
-          {nothingYet && <div className="ml-auto">{saveSearch}</div>}
+          {nothingYet && <div className="ml-auto">{saveSearch(false)}</div>}
+          {/* Sort, the view and "Save this search" on one row (2026-11-24: Save had a row of its own); phones drop "Sort:". */}
           {!nothingYet && <div className="ml-auto flex items-center gap-2">
-            <SortMenu summary={t('sortSummary', { sort: t(`sortOptions.${query.sort}`) })}>
+            <SortMenu summary={t.rich('sortSummary', { sort: t(`sortOptions.${query.sort}`), label: (chunks) => <span className="max-sm:sr-only">{chunks}</span> })}>
               <MenuGroup label={t('sort')}>{TASK_BOARD_SORTS.map((sort) => <MenuLink key={sort} href={href({ sort })} selected={query.sort === sort} label={t(`sortOptions.${sort}`)} />)}</MenuGroup>
               {query.view === 'list' && <MenuGroup label={t('group')}>{TASK_BOARD_GROUPS.map((group) => <MenuLink key={group} href={href({ group })} selected={query.group === group} label={t(`groupOptions.${group}`)} />)}</MenuGroup>}
             </SortMenu>
             <Segmented label={t('view')}>{TASK_BOARD_VIEWS.map((view) => <SegmentLink key={view} href={href({ view })} selected={query.view === view} label={t(`viewOptions.${view}`)} icon={view === 'list' ? <List aria-hidden="true" className="size-4" /> : <LayoutGrid aria-hidden="true" className="size-4" />} />)}</Segmented>
+            {saveSearch(true)}
           </div>}
         </div>
 
         {query.category && typeTiles.length > 1 && <TaskTypeTiles category={query.category} items={typeTiles} />}
 
-        {!nothingYet && <div className="flex justify-end">{saveSearch}</div>}
         {chips.length > 0 && <nav aria-label={t('active')} className="flex flex-wrap items-center gap-1.5">
           {chips.map((chip) => <Link key={chip.key} href={chip.href} rel="nofollow" aria-label={t('removeFilter', { label: chip.label })} className="inline-flex min-h-8 items-center gap-1 rounded-full border border-primary/30 bg-brand-soft px-3 text-[13px] font-medium transition-colors hover:border-primary/60 focus-visible:outline-2 focus-visible:outline-ring">{chip.label}<X aria-hidden="true" className="size-3.5" /></Link>)}
           <Link href={routes.taskBoard(market.slug, { view: query.view, group: query.group, sort: query.sort })} rel="nofollow" className="inline-flex min-h-8 items-center px-2 text-[13px] font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-ring">{t('clearAll')}</Link>

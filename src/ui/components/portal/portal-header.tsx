@@ -24,7 +24,7 @@ function HiddenFields({ href, except }: { href: string; except: string[] }) {
 }
 
 /**
- * A search of the place's posts and tasks (completion plan 9.10): a plain GET form, so it works before the page
+ * A search of the tab's posts or open tasks (completion plan 9.10): a plain GET form, so it works before the page
  * hydrates and every search has its own URL; the other filters ride along.
  */
 export function PortalSearch({ data, id, className }: { data: Pick<PortalPageData, 'query'>; id: string; className?: string }) {
@@ -34,7 +34,7 @@ export function PortalSearch({ data, id, className }: { data: Pick<PortalPageDat
   return <UrlForm urlKey={data.query.q ?? ''} role="search" action={localeHref(new URL(keep, 'https://portal.invalid').pathname, locale)} method="get" className={cn('relative', className)}>
     <label htmlFor={id} className="sr-only">{t('label')}</label>
     <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
-    <input id={id} name="q" type="search" defaultValue={data.query.q ?? ''} maxLength={PORTAL_Q_MAX} placeholder={t('placeholder')} className="h-10 w-full min-w-0 rounded-full border border-input bg-card pr-4 pl-10 text-base outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-muted-foreground hover:border-foreground/40 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 sm:text-sm" />
+    <input id={id} name="q" type="search" defaultValue={data.query.q ?? ''} maxLength={PORTAL_Q_MAX} placeholder={t(data.query.type === 'task' ? 'placeholderTasks' : 'placeholder')} className="h-10 w-full min-w-0 rounded-full border border-input bg-card pr-4 pl-10 text-base outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-muted-foreground hover:border-foreground/40 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/30 sm:text-sm" />
     <HiddenFields href={keep} except={['q', 'page']} />
     <button type="submit" className="sr-only">{t('submit')}</button>
   </UrlForm>;

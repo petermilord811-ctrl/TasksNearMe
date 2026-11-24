@@ -110,11 +110,14 @@ export const SAVE_RULE = { limit: 300, windowSeconds: DAY_SECONDS };
 /** The posts "Ask for help" turns into a task: asking for a recommendation, or asking a question. */
 export const ASK_FOR_HELP_KINDS = ['recommendation', 'question'] as const satisfies readonly CommunityPostKind[];
 
-/** A post's task as the post shows it: still taking offers, booked, done, or closed (canceled, expired, past, hidden). */
-export function postTaskState(task: { status: string; windowEnd: Date; hiddenAt: Date | null }, now: Date): CommunityPostTask['state'] {
+/**
+ * A post's task as the post shows it: still taking offers (until its window starts, when offers close, 2026-11-24),
+ * booked, done, or closed (canceled, expired, started, hidden).
+ */
+export function postTaskState(task: { status: string; windowStart: Date; hiddenAt: Date | null }, now: Date): CommunityPostTask['state'] {
   if (task.status === 'assigned') return 'booked';
   if (task.status === 'completed') return 'done';
-  if (task.status === 'open' && !task.hiddenAt && task.windowEnd.getTime() > now.getTime()) return 'open';
+  if (task.status === 'open' && !task.hiddenAt && task.windowStart.getTime() > now.getTime()) return 'open';
   return 'closed';
 }
 

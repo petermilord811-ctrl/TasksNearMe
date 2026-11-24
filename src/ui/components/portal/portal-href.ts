@@ -7,12 +7,13 @@ export function portalHref(query: PortalQueryState | PortalQuery, change: Partia
 }
 
 /**
- * What the two tabs share across the switch (2026-11-23): the place, the service, the words, when it was posted, Saved
- * and the grouping. Each tab keeps its own sort and view (their defaults); Unanswered stays with Neighbors' asks, and
- * the board's filters with Open tasks.
+ * What the two tabs share across the switch (2026-11-23): the place, the service, the words, when it was posted and the
+ * grouping. Each tab keeps its own sort and view (their defaults); Unanswered stays with Neighbors' asks, the board's
+ * filters with Open tasks, and Saved with each tab (2026-11-24: saved posts on one, a helper's saved tasks on the other,
+ * so carried over it opened an empty tab for anyone who doesn't help).
  */
 function shared(query: PortalQueryState): PortalQuery {
-  return { area: query.area, category: query.category, q: query.q, time: query.time, saved: query.saved, group: query.group };
+  return { area: query.area, category: query.category, q: query.q, time: query.time, group: query.group };
 }
 
 /** The Open tasks tab (`type=task`) from Neighbors; "General" isn't a task's service, so it stays behind. */
