@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createOverpassPlaces, lookupCenter, overpassQuery, parseOverpass, placeKindOf } from './overpass';
+import { boxAround, createOverpassPlaces, lookupCenter, overpassQuery, parseOverpass, placeKindOf } from './overpass';
 import { createSamplePlaces } from './sample';
 
 const BODY = {
@@ -25,17 +25,22 @@ describe('OpenStreetMap places through Overpass', () => {
     expect(lookupCenter({ lat: 30.34791, lng: -97.72549 })).toEqual({ lat: 30.35, lng: -97.73 });
   });
 
-  it('asks for every kind in its ring, then the counts', () => {
-    const query = overpassQuery({ lat: 30.35, lng: -97.73 });
+  it('asks for every kind in its box with exact tags (light enough for a busy server), then the counts', () => {
+    expect(boxAround({ lat: 0, lng: 0 }, 111.32)).toBe('(-1,-1,1,1)');
+    const center = { lat: 30.35, lng: -97.73 };
+    const query = overpassQuery(center);
     expect(query).toContain('[out:json]');
-    expect(query).toContain('nwr["shop"~"^(hardware|doityourself)$"](around:16000,30.35,-97.73);');
-    expect(query).toContain('nwr["leisure"="park"]["name"](around:2500,30.35,-97.73);');
+    expect(query).toContain(`nw["shop"="hardware"]${boxAround(center, 8)};`);
+    expect(query).toContain(`nw["amenity"="waste_transfer_station"]${boxAround(center, 12)};`);
+    expect(query).toContain(`nw["leisure"="park"]["name"]${boxAround(center, 2.5)};`);
+    expect(query).not.toContain('around:');
     expect(query.match(/out count;/g)).toHaveLength(4);
   });
 
   it('sorts features into the task map kinds', () => {
     expect(placeKindOf({ shop: 'doityourself' })).toBe('hardware');
-    expect(placeKindOf({ amenity: 'car_rental', name: 'U-Haul' })).toBe('truck-rental');
+    expect(placeKindOf({ amenity: 'car_rental', name: 'U-Haul Moving & Storage' })).toBe('truck-rental');
+    expect(placeKindOf({ amenity: 'car_rental', name: 'Corner Car Rental' })).toBeNull();
     expect(placeKindOf({ amenity: 'waste_transfer_station' })).toBe('recycling');
     expect(placeKindOf({ shop: 'second_hand' })).toBe('donation');
     expect(placeKindOf({ amenity: 'college' })).toBe('university');
@@ -77,6 +82,25 @@ describe('OpenStreetMap places through Overpass', () => {
 
     const failing = createOverpassPlaces({ userAgent: 'x', fetch: (async () => { throw new TypeError('offline'); }) as typeof fetch });
     await expect(failing.around({ lat: 30, lng: -97 })).resolves.toBeNull();
+  });
+
+  it('asks the next server when one is full or slow', async () => {
+    const asked: string[] = [];
+    const source = createOverpassPlaces({
+      userAgent: 'x',
+      urls: ['https://full.test/api', 'https://slow.test/api', 'https://good.test/api'],
+      timeoutMs: 50,
+      fetch: (async (url: RequestInfo | URL, init?: RequestInit) => {
+        asked.push(String(url));
+        if (String(url).includes('full')) return new Response('This Overpass API server is currently at capacity.', { status: 502 });
+        if (String(url).includes('slow')) {
+          return new Promise<Response>((_resolve, reject) => init?.signal?.addEventListener('abort', () => reject(new DOMException('timed out', 'TimeoutError'))));
+        }
+        return new Response(JSON.stringify(BODY), { status: 200 });
+      }) as typeof fetch,
+    });
+    expect((await source.around({ lat: 30.35, lng: -97.73 }))?.places).toHaveLength(3);
+    expect(asked).toEqual(['https://full.test/api', 'https://slow.test/api', 'https://good.test/api']);
   });
 
   it('has made-up "Sample" places for development and tests', async () => {

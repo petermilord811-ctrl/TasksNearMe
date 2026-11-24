@@ -55,7 +55,8 @@ export function TaskMapAround({ surroundings, headingId }: { surroundings: Promi
     <h3 id={headingId} className="text-sm font-semibold">{t('title')}</h3>
     <ul className="flex flex-wrap gap-1.5 text-[13px]">
       {result.homes && <li className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1">{result.homes === 'apartments' ? <Building2 aria-hidden="true" className="size-3.5" /> : <House aria-hidden="true" className="size-3.5" />}{t(`homes.${result.homes}`)}</li>}
-      <li className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1"><SquareParking aria-hidden="true" className="size-3.5" />{t('parking', { count: result.parkingLots })}</li>
+      {/* Downtown the map counts every small lot (hundreds within a mile): from ten on, "plenty". */}
+      <li className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-2.5 py-1"><SquareParking aria-hidden="true" className="size-3.5" />{result.parkingLots >= 10 ? t('parkingMany') : t('parking', { count: result.parkingLots })}</li>
     </ul>
     {result.landmarks.length > 0 && <div className="space-y-1.5">
       <h4 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">{t('landmarks')}</h4>

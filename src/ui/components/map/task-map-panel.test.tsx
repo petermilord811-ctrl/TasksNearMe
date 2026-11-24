@@ -116,6 +116,9 @@ describe('TaskMapPanel', () => {
     expect(screen.getByText('Sample Hardware')).toBeInTheDocument();
     expect(screen.getByText('No parking lots: expect street parking')).toBeInTheDocument();
     cleanup();
+    await show({ ...taskMapIndoorBundle, surroundings: Promise.resolve({ status: 'found', landmarks: [], helpful: [], parkingLots: 263, source: 'osm' }) });
+    expect(await screen.findByText('Plenty of parking lots nearby')).toBeInTheDocument();
+    cleanup();
     await show(taskMapLaterBundle);
     expect(await screen.findByText(/The forecast reaches a week ahead/)).toBeInTheDocument();
     expect(await screen.findByText("Places around the area aren't available right now.")).toBeInTheDocument();

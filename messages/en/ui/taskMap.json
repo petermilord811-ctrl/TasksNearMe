@@ -103,6 +103,7 @@
       "mixed": "Houses and apartment buildings"
     },
     "parking": "{count, plural, =0 {No parking lots: expect street parking} one {# parking lot in the area} other {# parking lots in the area}}",
+    "parkingMany": "Plenty of parking lots nearby",
     "unavailable": "Places around the area aren't available right now.",
     "source": "Places: © OpenStreetMap contributors",
     "sample": "Sample places (development)"

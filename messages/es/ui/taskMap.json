@@ -103,6 +103,7 @@
       "mixed": "Casas y edificios de apartamentos"
     },
     "parking": "{count, plural, =0 {Sin estacionamientos: se estaciona en la calle} one {# estacionamiento en la zona} other {# estacionamientos en la zona}}",
+    "parkingMany": "Muchos estacionamientos cerca",
     "unavailable": "Los lugares alrededor de la zona no están disponibles ahora.",
     "source": "Lugares: © colaboradores de OpenStreetMap",
     "sample": "Lugares de muestra (desarrollo)"
