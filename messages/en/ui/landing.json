@@ -335,7 +335,9 @@
     "minimapAwayNone": "Not open here yet",
     "minimapAwayLabel": "Minimap of your area: the arrow keys move the map, + and − zoom, Enter shows {city}",
     "minimapCityEdge": "{miles, number} mi",
-    "minimapCityEdgeLabel": "Show {city}, {miles, number} mi away"
+    "minimapCityEdgeLabel": "Show {city}, {miles, number} mi away",
+    "tileLabel": "Live map · {market}",
+    "tileOpen": "Open the live map of {market}"
   },
   "categories": {
     "eyebrow": "What people book",

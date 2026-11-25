@@ -175,6 +175,8 @@ const FRESH_MS = 3 * 3_600_000;
 const FRESH_MAX = 4;
 /** The arrival's first view: close over the task's area, tilted like the town (seen from the south-east). */
 const ARRIVAL = { zoom: 14.2, pitch: 52, bearing: -45 };
+/** How much closer the first view creeps while the landing's window onto it opens (zoom levels). */
+const ARRIVAL_LEAD_ZOOM = 0.2;
 /** Going to the visitor: at least this close (their streets, and the tasks around them). */
 const YOU_ZOOM = 12.6;
 /** A flight longer than this (another city, another country) is a jump instead (MapLibre's `maxDuration`). */
@@ -228,6 +230,13 @@ function paddingFor(room: Padding | undefined, width: number, height: number) {
   // A fraction of the map, or pixels (above 1: a panel measured by the page).
   const across = (value: number, size: number) => (value > 1 ? value : value * size);
   return { top: across(room.top, visible), right: across(room.right, width), bottom: height - visible + across(room.bottom, visible), left: across(room.left, width) };
+}
+
+/** The camera's padding that puts the middle of the free map at `at` (pixels in the map): only one side of each pair. */
+function anchorPadding(at: { x: number; y: number }, width: number, height: number) {
+  const x = Math.min(Math.max(at.x, 0), width);
+  const y = Math.min(Math.max(at.y, 0), height);
+  return { top: Math.max(0, 2 * y - height), right: Math.max(0, width - 2 * x), bottom: Math.max(0, height - 2 * y), left: Math.max(0, 2 * x - width) };
 }
 
 /**
@@ -520,10 +529,37 @@ export function MapLibreView({
       if (landed) reportView();
       reportBearing();
     };
+    /**
+     * The arrival's camera at `progress`. On the landing's stage (chapters/) the source says where the hero's first
+     * task pin is on the screen (`anchor`): the map starts with the task right under it, seen at the town's angle, and
+     * creeps a little closer while the window onto it opens (`lead`); as the camera pulls back, the page's padding for
+     * its panels takes over.
+     */
+    const stagedCamera = (progress: number) => {
+      const camera = arrived(arrivalCamera(progress, opening!, home));
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      const regular = paddingFor(latest.current.padding, width, height);
+      const anchor = progress < 1 ? (source?.anchor?.() ?? null) : null;
+      if (!anchor) return { ...camera, padding: regular };
+      const share = progress * progress * (3 - 2 * progress);
+      const start = anchorPadding(anchor, width, height);
+      const lead = source?.lead?.() ?? 0;
+      return {
+        ...camera,
+        zoom: camera.zoom + ARRIVAL_LEAD_ZOOM * lead * (1 - share),
+        padding: {
+          top: start.top + (regular.top - start.top) * share,
+          right: start.right + (regular.right - start.right) * share,
+          bottom: start.bottom + (regular.bottom - start.bottom) * share,
+          left: start.left + (regular.left - start.left) * share,
+        },
+      };
+    };
     const followArrival = (progress: number) => {
       if (!arriving || !opening) return;
       landed = progress >= 0.999;
-      instance.jumpTo(arrived(arrivalCamera(progress, opening, home)));
+      instance.jumpTo(stagedCamera(progress));
       setArrivalLit(progress < 0.9 ? (latest.current.arrival?.taskId ?? null) : null);
       setSettled(landed);
       // Finished elsewhere (focus in the explorer, a pick): landed for good.
@@ -610,7 +646,7 @@ export function MapLibreView({
     home = frameHome();
     homeView.current = home;
     first = opening ? arrivalCamera(progressNow(), opening, home) : home;
-    instance.jumpTo(arrived(first));
+    instance.jumpTo(opening ? stagedCamera(progressNow()) : arrived(first));
     const sized = new ResizeObserver(() => {
       const ratio = mapPixelRatio(container.clientWidth, container.clientHeight);
       if (Math.abs(ratio - instance.getPixelRatio()) > 0.01) instance.setPixelRatio(ratio);

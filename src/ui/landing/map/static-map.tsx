@@ -89,7 +89,7 @@ export function StaticMap({
   milesById?: Map<string, number>;
   /** The visitor's chosen distance: a ring around them, and the tasks beyond it quiet. */
   withinMiles?: number | null;
-  fade?: 'all' | 'vertical' | 'top';
+  fade?: 'all' | 'vertical' | 'top' | 'none';
   frame?: keyof typeof FRAMES;
   /** Room panels take over the map (fractions): the city is centered in what's left. */
   padding?: { top: number; right: number; bottom: number; left: number };

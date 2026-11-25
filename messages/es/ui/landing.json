@@ -335,7 +335,9 @@
     "minimapAwayNone": "Aún no abrimos aquí",
     "minimapAwayLabel": "Minimapa de tu zona: las flechas mueven el mapa, + y − acercan y alejan, Intro muestra {city}",
     "minimapCityEdge": "{miles, number} mi",
-    "minimapCityEdgeLabel": "Ver {city}, a {miles, number} mi"
+    "minimapCityEdgeLabel": "Ver {city}, a {miles, number} mi",
+    "tileLabel": "Mapa en vivo · {market}",
+    "tileOpen": "Abrir el mapa en vivo de {market}"
   },
   "categories": {
     "eyebrow": "Lo que más se reserva",

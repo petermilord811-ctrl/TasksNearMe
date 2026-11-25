@@ -49,6 +49,7 @@ import {
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { TOWN_DIVE_REACH } from '../chapters/timeline';
 import { dueFrame } from '../frame-clock';
 import { BUILD_UP } from './build-up';
 import { cameraPose } from './camera';
@@ -172,6 +173,12 @@ export interface TownController {
   setHover(x: number, y: number, active: boolean): void;
   /** How far the hero has scrolled away (0–1): the camera tilts toward a view from above and pulls back. */
   setTilt(tilt: number): void;
+  /**
+   * The camera diving at a slot's pin (0–1), straight along its line of sight to the pin's resting top: the pin stays
+   * where it is on the screen while the town grows around it (the landing's window onto the real map opens there).
+   * Set each frame by the page's clock, so it isn't eased here; the pointer's lean holds still while it dives.
+   */
+  setDive(amount: number, slotId: string | null): void;
   /** Whether the frame loop has something to show: the build-up, a tilt or a lean still settling. */
   isSettling(): boolean;
   /**
@@ -201,6 +208,8 @@ const easeOutBack = (t: number) => {
 
 /** How long the build-up takes (seconds). */
 const INTRO = BUILD_UP.seconds;
+/** How much of the way to a pin the camera covers at the end of a dive (`setDive`): the town grows about 3.6 times. */
+const DIVE_REACH = TOWN_DIVE_REACH;
 
 /**
  * How far the town notices the pointer (world units; a house is 30–60 across): trees lean within `TREE_REACH`, houses
@@ -1028,7 +1037,9 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
   let introDone = !options.buildUp;
   let shadowAge = 0;
   const pointer = { x: 0, y: 0, active: false };
-  const look = { yaw: 0, pitch: 0, tilt: 0, goalTilt: 0, goalYaw: 0, goalPitch: 0 };
+  const look = { yaw: 0, pitch: 0, tilt: 0, goalTilt: 0, goalYaw: 0, goalPitch: 0, dive: 0, drawnDive: 0 };
+  /** The slot the camera dives at (`setDive`), or -1. */
+  let diveIndex = -1;
   let afterFrame: (() => void) | null = null;
   /** The pointer over the town (canvas -1..1) and where it touches the ground, followed softly, fading in and out. */
   const hover = { x: 0, y: 0, active: false };
@@ -1045,9 +1056,22 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
   const placeCamera = () => {
     // Scrolling away tilts the camera toward a view from above and pulls it back: the town becomes a map.
     const pose = cameraPose(look.yaw, look.pitch, look.tilt, 1 + look.tilt * 0.5, view);
-    camera.position.set(pose.position.x, pose.position.y, pose.position.z);
-    camera.lookAt(pose.target.x, pose.target.y, pose.target.z);
+    // Diving at a pin: the camera and its target move together along the line to the pin's top, so the pin keeps its
+    // place on the screen and everything around it grows.
+    let shiftX = 0;
+    let shiftY = 0;
+    let shiftZ = 0;
+    const diveSlot = diveIndex >= 0 ? data.slots[diveIndex] : undefined;
+    if (diveSlot && look.dive > 0) {
+      const reach = look.dive * DIVE_REACH;
+      shiftX = (diveSlot.at.x - pose.position.x) * reach;
+      shiftY = (diveSlot.height + PIN_LIFT + (PIN_HEAD + 8) * PIN - pose.position.y) * reach;
+      shiftZ = (diveSlot.at.y - pose.position.z) * reach;
+    }
+    camera.position.set(pose.position.x + shiftX, pose.position.y + shiftY, pose.position.z + shiftZ);
+    camera.lookAt(pose.target.x + shiftX, pose.target.y + shiftY, pose.target.z + shiftZ);
     camera.updateMatrixWorld();
+    look.drawnDive = look.dive;
   };
 
   /**
@@ -1068,6 +1092,7 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
   // the page); the pointer's reaction counts while it fades in or out or follows a move.
   const isSettling = () =>
     !introDone ||
+    look.dive !== look.drawnDive ||
     Math.abs(look.goalTilt - look.tilt) > 0.002 ||
     Math.abs(look.goalYaw - look.yaw) > 0.03 ||
     Math.abs(look.goalPitch - look.pitch) > 0.03 ||
@@ -1114,7 +1139,7 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
     swayTime.value = clock;
     // The camera holds still while the town builds up (it grows out of the skeleton drawn from this very view),
     // then leans toward the pointer and drifts a little.
-    const lean = pointer.active && introDone;
+    const lean = pointer.active && introDone && look.dive === 0;
     look.goalYaw = (lean ? pointer.x * 2.4 : 0) + (introDone ? Math.sin(clock * 0.09) * 0.6 : 0);
     look.goalPitch = (lean ? -pointer.y * 1.4 : 0) + (introDone ? Math.sin(clock * 0.07 + 1) * 0.3 : 0);
     const ease = 1 - Math.exp(-dt * 2.4);
@@ -1126,7 +1151,7 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
     // Where the pointer touches the town: one ray to the ground plane (no meshes tested), followed softly; the town's
     // reaction fades in over it and out when it leaves (not while the town builds up, or seen from too far above).
     react.goal = 0;
-    if (hover.active && introDone && look.tilt < 0.85) {
+    if (hover.active && introDone && look.tilt < 0.85 && look.dive === 0) {
       raycaster.setFromCamera(hoverAt.set(hover.x, hover.y), camera);
       if (raycaster.ray.intersectPlane(groundPlane, touched)) {
         react.goalX = touched.x;
@@ -1496,6 +1521,10 @@ export async function createTown(canvas: HTMLCanvasElement, options: TownOptions
     },
     setTilt(tilt) {
       look.goalTilt = clamp01(tilt);
+    },
+    setDive(amount, slotId) {
+      diveIndex = slotId === null ? -1 : data.slots.findIndex((slot) => slot.id === slotId);
+      look.dive = diveIndex >= 0 ? clamp01(amount) : 0;
     },
     isSettling,
     pinAt(slotId, resting = false) {

@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { MapPin } from 'lucide-react';
 import { routes, type HomePageData, type MapArea } from '@/contracts';
 import { HoverLift, Reveal, usePrefersReducedMotion } from '@/ui/motion';
-import { MAP_SECTION_ID, useOptionalLanding } from '../landing-state';
+import { scrollToMap, useOptionalLanding } from '../landing-state';
 import { ArrowLink } from './heading';
 
 /**
@@ -26,7 +26,8 @@ export function CoverageSection({ data }: { data: HomePageData }) {
 
   const show = (area: MapArea) => {
     landing?.pickArea(area);
-    document.getElementById(MAP_SECTION_ID)?.scrollIntoView?.({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    // To the map (on the landing's stage: into its chapter, where it plays on from).
+    scrollToMap(reduced ? 'auto' : undefined);
   };
 
   return (

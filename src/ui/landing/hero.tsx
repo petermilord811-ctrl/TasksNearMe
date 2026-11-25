@@ -1,6 +1,7 @@
 import type { HomePageData, ISODateTime } from '@/contracts';
 import type { Season } from '@/shared/seasons';
 import { cn } from '@/ui/lib/utils';
+import { HeroWords } from './chapters/hero-words';
 import { HeroCopy } from './hero-copy';
 import { floraFor } from './minimap/flora';
 import { TownSkeleton } from './minimap/town-skeleton';
@@ -18,9 +19,10 @@ import { SeasonWeather } from './weather';
  * stage keeps its top-left corner empty for the words. Tablets and phones: the town is a full-width band (its own
  * 10:8 composition) under the words.
  *
- * As the page scrolls on, the hero stays pinned (wide screens) while the real map slides up over it like a sheet,
- * and the town tilts toward a view from above and pulls back as it's covered: no seam, no gap, no cross-fade.
- * The page's paper (a faint marble) shows through; only a breath of the brand's light sits behind the headline.
+ * It's the first chapter of the landing's stage (chapters/): when the visitor heads for the map, the words leave, the
+ * town's camera dives at its first task's pin, and the pin's ring opens into a window onto the real map, at the town's
+ * angle, with the same task under the same point: no seam, no gap, no cross-fade. The page's paper (a faint marble)
+ * shows through; only a breath of the brand's light sits behind the headline.
  *
  * The town grows the market's own plants (`floraFor`: Austin's Hill Country, or north Florida's live oaks, pines and
  * palmettos for Gainesville). It's dressed for the season (`season`, from the page's `data-season`): the town's
@@ -31,7 +33,7 @@ import { SeasonWeather } from './weather';
 export function Hero({ data, mode, now, season }: { data: HomePageData; mode: TownMode; now: ISODateTime; season: Season }) {
   const localTasks = data.recentTasks.filter((task) => task.location.kind === 'local');
   return (
-    <section aria-labelledby="hero-title" className="relative isolate z-[1] [--stage-w:108vw] sm:[--stage-w:104vw] lg:sticky lg:top-[var(--hero-stick,0px)] lg:flex lg:min-h-svh lg:flex-col">
+    <section aria-labelledby="hero-title" data-chapter-layer="town" className="relative isolate z-[1] [--stage-w:108vw] sm:[--stage-w:104vw] lg:flex lg:min-h-svh lg:flex-col">
       {/* A breath of the brand's light behind the headline, and the season's sky from the top right; both fade out
           long before any edge. */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 -top-24 -z-10 h-[calc(100%+8rem)]">
@@ -43,9 +45,9 @@ export function Hero({ data, mode, now, season }: { data: HomePageData; mode: To
 
       {/* The words. On wide screens they must end above the town's plates (about 76% of the hero's height): the
           bottom padding keeps them there on most screens, and the town's stage grows the hero when they don't fit. */}
-      <div data-hero-words className="relative z-10 mx-auto w-full max-w-[78rem] px-gutter pt-32 sm:pt-36 lg:pointer-events-none lg:pt-[clamp(6.5rem,15svh,10rem)] lg:pb-[24svh]">
+      <HeroWords className="relative z-10 mx-auto w-full max-w-[78rem] px-gutter pt-32 sm:pt-36 lg:pointer-events-none lg:pt-[clamp(6.5rem,15svh,10rem)] lg:pb-[24svh]">
         <HeroCopy data={data} now={now} />
-      </div>
+      </HeroWords>
 
       {/* The town: a band under the words on phones and tablets, the whole hero behind them on wide screens. */}
       <TownStage

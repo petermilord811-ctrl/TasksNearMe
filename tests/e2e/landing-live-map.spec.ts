@@ -19,16 +19,21 @@ async function openLiveMap(page: Page) {
   const map = page.locator('#tasks-near-you');
   await expect(map.locator('canvas.maplibregl-canvas')).toBeVisible({ timeout: 90_000 });
   // The hero's town can still change the page's height as it draws (slowly, on software WebGL): scroll to where the map
-  // has landed again until the explorer takes clicks.
+  // has landed again until the explorer takes clicks. On the landing's stage the step to the map plays on its own
+  // clock (tens of seconds on software WebGL): wait until it has landed too. A click while the panels still move misses,
+  // and Playwright's retry then scrolls the pinned stage to another chapter.
   await expect
     .poll(
       async () => {
         await landed.evaluate((anchor) => anchor.scrollIntoView({ block: 'start' }));
-        return page.locator('[data-map-explorer]').evaluate((panel) => getComputedStyle(panel).pointerEvents);
+        return page.locator('[data-map-explorer]').evaluate((panel) => {
+          const stage = (window as unknown as { __tnmChapters?: { value(): number } }).__tnmChapters;
+          return stage && stage.value() !== 1 ? 'moving' : getComputedStyle(panel).pointerEvents;
+        });
       },
-      { timeout: 60_000, intervals: [1000] },
+      { timeout: 90_000, intervals: [1000] },
     )
-    .not.toBe('none');
+    .not.toMatch(/^(none|moving)$/);
   await expect(map.getByRole('button', { name: 'Watch an area' })).toBeVisible({ timeout: 60_000 });
   return map;
 }

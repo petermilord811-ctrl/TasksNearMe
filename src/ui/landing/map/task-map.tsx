@@ -84,6 +84,7 @@ export function TaskMap({
   onDragging,
   fillFade = 'vertical',
   watchRef,
+  staged,
   controlsRow = false,
   wide = false,
   controlsClassName,
@@ -108,13 +109,23 @@ export function TaskMap({
   homeInsets?: MapViewProps['homeInsets'];
   /** A drag of the live map starts or ends (the page's panels step back meanwhile). */
   onDragging?: (dragging: boolean) => void;
-  /** `fill`: soft at the top and bottom, or at the top only when the page fades the bottom itself. */
-  fillFade?: 'vertical' | 'top';
+  /**
+   * `fill`: soft at the top and bottom, or at the top only when the page fades the bottom itself; on the landing's stage
+   * none (another layer is under it).
+   */
+  fillFade?: 'vertical' | 'top' | 'none';
   /**
    * What says the visitor is heading for the map (its approach starts the live map): the frame itself, unless the
    * page pins the map to the window (then it's always "in view", and the page's own box around it says it instead).
    */
   watchRef?: RefObject<HTMLElement | null>;
+  /**
+   * On the landing's stage (chapters/), where the map is always on screen under the town: the visitor's way there
+   * instead of the map's place on the page. The live map starts in a quiet moment once the hero is done, or at once
+   * when the visitor heads for it (`headingFor`), and its tasks are kept live once they've reached it (`reached`).
+   * 'wait': the page doesn't know yet whether the stage runs (it's hydrating): nothing starts meanwhile.
+   */
+  staged?: { headingFor: boolean; reached: boolean } | 'wait';
   /** The controls in one row (wide screens, where a column would reach the heading on short screens). */
   controlsRow?: boolean;
   /**
@@ -220,13 +231,18 @@ export function TaskMap({
     [origin, pinsShown],
   );
 
+  const onStage = typeof staged === 'object';
+  const stageUndecided = staged === 'wait';
+  const headingFor = typeof staged === 'object' && staged.headingFor;
+  /** Starts the live map now (the visitor heads for it on the landing's stage); set while the start below waits. */
+  const startNow = useRef<(() => void) | null>(null);
   // When to load the live map: only once the visitor heads for it, so a visit that never scrolls down fetches no
   // tiles at all (and the page's network settles). As the map comes within about a screen, its style is fetched
   // and the engine starts once the hero's town has finished building (they'd compete for the main thread and
   // the GPU) or after a short wait, in a quiet moment; when the map is actually in view it starts right away. Pointing
   // at the map or asking it to show something also starts it (below). Either way in an idle moment.
   useEffect(() => {
-    if (mode === 'static') return;
+    if (mode === 'static' || stageUndecided) return;
     const frame = watchRef?.current ?? frameRef.current;
     if (!frame) return;
     let started = false;
@@ -274,7 +290,13 @@ export function TaskMap({
       heroDone = true;
       maybeStart();
     }, HERO_WAIT_MS);
-    if ('IntersectionObserver' in window) {
+    startNow.current = start;
+    if (onStage) {
+      // On the landing's stage the map is the next chapter, always on screen under the town: it starts in a quiet
+      // moment once the hero is done, or at once when the visitor heads for it (below).
+      approaching = true;
+      maybeStart();
+    } else if ('IntersectionObserver' in window) {
       const near = new IntersectionObserver(([entry]) => {
         if (!entry?.isIntersecting || approaching) return;
         approaching = true;
@@ -291,13 +313,17 @@ export function TaskMap({
     }
     return () => {
       started = true;
+      startNow.current = null;
       stopWatching();
       if (hasIdle) window.cancelIdleCallback(idle);
       else window.clearTimeout(idle);
     };
     // The style's address doesn't change while the page is open.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode]);
+  }, [mode, onStage, stageUndecided]);
+  useEffect(() => {
+    if (headingFor) startNow.current?.();
+  }, [headingFor]);
 
   // Asked to show something (a neighborhood, a task) before it's up: load it now.
   const load = near || (mode !== 'static' && Boolean(explorer?.request));
@@ -348,9 +374,11 @@ export function TaskMap({
   }, [liveReady, setLiveReady]);
   // The visitor has come to the map: its tasks are kept live from now on (even if the live map can't run here).
   const setNearMap = explorer?.setNear;
+  // On the landing's stage the map loads before the visitor gets there: its tasks are kept live once they do.
+  const keepLive = stageUndecided ? false : typeof staged === 'object' ? staged.reached || Boolean(explorer?.request) : load;
   useEffect(() => {
-    if (load) setNearMap?.(true);
-  }, [load, setNearMap]);
+    if (keepLive) setNearMap?.(true);
+  }, [keepLive, setNearMap]);
 
   // Full screen: the page stops scrolling behind it, Escape closes it, and focus stays inside until it does.
   useEffect(() => {
@@ -662,8 +690,10 @@ export function TaskMap({
           framed. Wide screens: beside the tool bars (full screen: in its top-left corner), there from the arrival on.
           Phones and tablets: over the map's top-left corner once the tool asks for it (full screen: above the cards).
           While an area is drawn or watched, it steps back and is out of reach. */}
-      {fill && liveReady && controls && (wide || phoneMinimap) && (
+      {/* (Like the buttons, it waits for the arrival's second half: the camera has the first to itself.) */}
+      {fill && liveReady && controls && (wide || phoneMinimap) && !waiting && (
         <div
+          data-map-minimap=""
           inert={minimapBusy || undefined}
           className={cn(
             'absolute z-[2] transition-opacity duration-300 motion-safe:animate-in motion-safe:fade-in motion-safe:duration-500',
@@ -735,6 +765,7 @@ export function TaskMap({
       {fill && liveReady && !fullscreen && (
         <button
           type="button"
+          data-map-explore=""
           onClick={() => setFullscreen(true)}
           inert={waiting || undefined}
           className={cn(

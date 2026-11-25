@@ -1,7 +1,7 @@
 'use client';
 
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
-import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode, type SyntheticEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type ReactNode, type SyntheticEvent } from 'react';
 import { useTranslations } from 'next-intl';
 import { BadgeCheck, MapPin, Pause, Play, Star } from 'lucide-react';
 import { routes, type HelperSummary, type TaskPublicView } from '@/contracts';
@@ -12,7 +12,9 @@ import type { Season } from '@/shared/seasons';
 import type { TownFlora } from './flora';
 import { setHeroPaused, useHeroPaused } from '../hero-pause';
 import { clearHeroReady, markHeroReady } from '../hero-ready';
-import { MAP_SECTION_ID, useOptionalLanding } from '../landing-state';
+import { useChapterFrame, useChapters, useChaptersOn } from '../chapters/chapter-stage';
+import { TOWN_DIVE_REACH as DIVE_REACH } from '../chapters/timeline';
+import { useOptionalLanding } from '../landing-state';
 import { BUILD_UP } from './build-up';
 import type { TownLayout, TownModel } from './scene';
 import type { SceneReply, SceneRequest } from './scene-worker';
@@ -142,8 +144,6 @@ function attachPoint(dx: number, dy: number): { x: number; y: number } {
 /** A card shows from this width up (Tailwind needs the class names written out). */
 const FROM: Record<'sm' | 'md' | 'lg' | 'xl', string> = { sm: 'sm:block', md: 'md:block', lg: 'lg:block', xl: 'xl:block' };
 
-const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
-
 /**
  * The hero's mini-map: a window (`className`, placed and sized by the hero) onto a stage of fixed shape
  * (`stageClassName` places it): 16:10 beside the headline on wide screens, a 10:8 band under it on narrower
@@ -248,6 +248,30 @@ export function TownStage({
   const [hidden, setHidden] = useState(false);
   const [covered, setCovered] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
+  const chapters = useChapters();
+  const chaptersOn = useChaptersOn();
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const coveredRef = useRef(false);
+  /** Where the town's window sits on the landing's stage (px), kept with its box. */
+  const inStage = useRef({ x: 0, y: 0 });
+  /** What the first pin's place on the screen is worked out from (kept after each render). */
+  const pinInputs = useRef<{ town: TownController | null; slot: string | null; layout: TownLayout }>({ town: null, slot: null, layout });
+  /** Shares where the hero's first task pin is on the screen with the landing's stage (its window opens there). */
+  const publishPin = useCallback(() => {
+    const box = boxRef.current;
+    const view = viewRef.current;
+    const at0 = inStage.current;
+    const { town: live, slot, layout: drawn } = pinInputs.current;
+    if (!chapters || !box || !view) return;
+    if (!slot) {
+      chapters.setPin({ x: at0.x + box.width / 2, y: at0.y + box.height / 2 });
+      return;
+    }
+    const top = live?.pinAt(slot, true);
+    const anchor = SLOT_ANCHORS[drawn][slot as SlotId]?.head;
+    const at = top ? { x: top.x * view.width, y: top.y * view.height } : anchor ? { x: view.stage.left + anchor.x * view.stage.width, y: view.stage.top + anchor.y * view.stage.height } : null;
+    if (at) chapters.setPin({ x: at0.x + at.x, y: at0.y + at.y });
+  }, [chapters]);
 
   const pins = tasks.slice(0, SLOT_IDS.length).map((task, index) => ({ slotId: SLOT_IDS[index]!, task }));
   const focus = landing?.activeCategory ?? null;
@@ -428,48 +452,77 @@ export function TownStage({
     }
   }, [town, onScreen, hidden, covered, reduced, paused]);
 
-  // As the page scrolls on, the camera tilts toward a view from above and pulls back (the real map takes over).
-  // Wide screens: the hero is pinned and the map's section slides up over it, so the tilt follows how much of the
-  // screen that sheet covers, and the town stops drawing once it's covered. Phones: it follows the town's own way
-  // out of view, starting after the text.
+  // Where the town's window is on the screen (kept on resize and scroll, never read in the frame loop).
   useEffect(() => {
     const view = windowRef.current;
-    if (!town || !view) return;
-    const sheet = layout === 'wide' ? document.getElementById(MAP_SECTION_ID) : null;
+    const stage = stageRef.current;
+    if (!view || !stage) return;
     let frame = 0;
     const update = () => {
       frame = 0;
-      const viewport = window.innerHeight || 1;
       const box = view.getBoundingClientRect();
       boxRef.current = { left: box.left, top: box.top, width: box.width, height: box.height, viewportWidth: window.innerWidth, viewportHeight: window.innerHeight };
-      let progress: number;
-      if (sheet) {
-        const top = sheet.getBoundingClientRect().top;
-        progress = Math.max(0, Math.min(1, 1 - top / viewport));
-        setCovered(top <= 0);
-      } else {
-        const top = box.top + window.scrollY;
-        const start = Math.max(0, top - viewport * 0.35);
-        const end = Math.max(start + 1, top + box.height - viewport * 0.15);
-        progress = Math.max(0, Math.min(1, (window.scrollY - start) / (end - start)));
-        setCovered(false);
-      }
-      if (reduced) return;
-      town.setTilt(easeInOut(progress));
-      if (paused) town.renderOnce();
+      // Where the window sits on the landing's stage (they move together, so this holds while scrolling).
+      const outer = view.closest('[data-chapter-stage]')?.getBoundingClientRect();
+      inStage.current = outer ? { x: box.left - outer.left, y: box.top - outer.top } : { x: box.left, y: box.top };
+      // The stage is measured untransformed (a still town dives by scaling it).
+      if (!stage.style.transform) viewRef.current = measureView(view, stage);
+      publishPin();
     };
-    const onScroll = () => {
+    const schedule = () => {
       if (!frame) frame = requestAnimationFrame(update);
     };
     update();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
+    const sized = typeof ResizeObserver === 'function' ? new ResizeObserver(schedule) : null;
+    sized?.observe(view);
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule, { passive: true });
     return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
+      sized?.disconnect();
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
       cancelAnimationFrame(frame);
     };
-  }, [town, reduced, paused, layout]);
+  }, [publishPin]);
+
+  // On the landing's stage (chapters/), the town is the first chapter: when the map is on its way, its task cards
+  // leave with the words, the camera dives at the first task's pin (the window onto the real map opens there: its
+  // place is shared with the stage), and once the window covers the screen the town stops drawing. A still town (no
+  // GPU) dives by scaling its picture around the pin.
+  const firstSlot = pins[0]?.slotId ?? null;
+  useLayoutEffect(() => {
+    pinInputs.current = { town, slot: firstSlot, layout };
+  });
+  useChapterFrame((_, moment) => {
+    const nowCovered = !moment.townShown;
+    if (nowCovered !== coveredRef.current) {
+      coveredRef.current = nowCovered;
+      setCovered(nowCovered);
+    }
+    const cards = cardsRef.current;
+    if (cards) {
+      cards.style.opacity = moment.wordsOut > 0 ? String(1 - moment.wordsOut) : '';
+      cards.style.visibility = moment.wordsOut >= 1 ? 'hidden' : '';
+    }
+    const stage = stageRef.current;
+    if (town) {
+      town.setDive(moment.dive, firstSlot);
+      if (pausedRef.current) town.renderOnce();
+    } else if (stage) {
+      const point = chapters?.pin();
+      const box = boxRef.current;
+      const view = viewRef.current;
+      if (moment.dive > 0 && point && box && view) {
+        stage.style.transformOrigin = `${(point.x - inStage.current.x - view.stage.left).toFixed(1)}px ${(point.y - inStage.current.y - view.stage.top).toFixed(1)}px`;
+        stage.style.transform = `scale(${(1 / (1 - DIVE_REACH * moment.dive)).toFixed(4)})`;
+      } else if (stage.style.transform) {
+        stage.style.transform = '';
+        stage.style.transformOrigin = '';
+      }
+    }
+    // While it dives, the pin may drift a little with the camera's lean settling: the window follows it.
+    if (moment.dive > 0 && moment.townShown) publishPin();
+  }, chaptersOn);
 
   // The pins: real tasks, colored by category; another category quiets them, the pointed-at one lifts.
   useEffect(() => {
@@ -570,11 +623,12 @@ export function TownStage({
 
   // Wide screens: the hero's words sit over the town's empty top-left corner and must end above its plates
   // (the tallest things under them start at about 76% of the stage's height, which is the hero's height). When
-  // the words are taller (a short screen, bigger text), the hero grows so the whole town grows with it.
+  // the words are taller (a short screen, bigger text), the hero grows so the whole town grows with it. On the
+  // landing's stage the hero is the screen's height whatever happens (its words scale with the screen's height).
   useEffect(() => {
     const hero = windowRef.current?.closest('section');
     const words = hero?.querySelector<HTMLElement>('[data-hero-words] > *');
-    if (!hero || !words || layout !== 'wide') return;
+    if (!hero || !words || layout !== 'wide' || chaptersOn) return;
     let frame = 0;
     const fit = () => {
       frame = 0;
@@ -582,8 +636,6 @@ export function TownStage({
       const top = hero.getBoundingClientRect().top;
       const needed = Math.ceil((words.getBoundingClientRect().bottom - top) / WORDS_FIT);
       if (needed > hero.getBoundingClientRect().height + 1) hero.style.minHeight = `${needed}px`;
-      // Pinned, a hero taller than the screen stays put once its bottom reaches the screen's bottom.
-      hero.style.setProperty('--hero-stick', `${Math.min(0, Math.round(window.innerHeight - hero.getBoundingClientRect().height))}px`);
     };
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(fit);
@@ -597,9 +649,13 @@ export function TownStage({
       sized.disconnect();
       window.removeEventListener('resize', schedule);
       hero.style.removeProperty('min-height');
-      hero.style.removeProperty('--hero-stick');
     };
-  }, [layout]);
+  }, [layout, chaptersOn]);
+
+  // The live town has come (or the layout changed): its first pin's place, from the town itself.
+  useEffect(() => {
+    publishPin();
+  }, [town, firstSlot, layout, publishPin]);
 
   // A still that doesn't load mustn't hold the page back: the pins and cards come in over the skeleton, and the
   // map below starts. Only the picture being shown counts (the other theme's may be fetched too).
@@ -628,7 +684,7 @@ export function TownStage({
   };
 
   return (
-    <div ref={windowRef} className={cn('pointer-events-none', className)}>
+    <div ref={windowRef} data-hero-town="" className={cn('pointer-events-none', className)}>
       {/* The live town draws the whole window: the stage's part, or more of the land around it. */}
       <canvas
         ref={canvasRef}
@@ -636,7 +692,7 @@ export function TownStage({
         className={cn('absolute inset-0 size-full transition-opacity duration-[250ms] motion-reduce:transition-none', live ? 'opacity-100' : 'opacity-0', failed && 'hidden')}
       />
 
-      <div ref={stageRef} className={cn('absolute aspect-[10/8] lg:aspect-[16/10]', stageClassName)}>
+      <div ref={stageRef} data-town-stage="" className={cn('absolute aspect-[10/8] lg:aspect-[16/10]', stageClassName)}>
         {/* The skeleton: from the first paint until the live town is drawn under it (or the still is in). */}
         {mode !== 'static' && skeleton && !skeletonGone && (
           <div aria-hidden="true" className={cn('absolute inset-0 transition-opacity duration-[650ms] ease-out motion-reduce:transition-none', skeletonFading && 'opacity-0')}>
@@ -693,7 +749,7 @@ export function TownStage({
         {/* Cards that hang from the pins (each layout its own; none on the smallest phones), in as the pins land.
             Nothing above them fades (that would switch their frosted glass off mid-fade): each card makes its own
             entrance, one after another. */}
-        <div aria-hidden="true" className="absolute inset-0">
+        <div ref={cardsRef} aria-hidden="true" className="absolute inset-0">
           {LAYOUTS.map(({ layout: drawn, shown: shownAt }) => cardsShown(drawn) && (
             <div key={drawn} className={cn('absolute inset-0', shownAt)}>
               {pins.map(({ slotId, task }, index) => {

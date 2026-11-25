@@ -45,7 +45,7 @@ export function LiveCard({ wide, className }: { wide: boolean; className?: strin
   const invite = location.status === 'dismissed';
 
   return (
-    <div data-compact={compact ? '' : undefined} className={cn('lg:glass lg:rounded-[1.75rem] lg:px-5 lg:py-4', !compact && 'lg:px-6 lg:py-5', 'transition-[padding] duration-300 ease-[var(--ease-out)]', className)}>
+    <div data-live-card="" data-compact={compact ? '' : undefined} className={cn('lg:glass lg:rounded-[1.75rem] lg:px-5 lg:py-4', !compact && 'lg:px-6 lg:py-5', 'transition-[padding] duration-300 ease-[var(--ease-out)]', className)}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <LiveMark connected={explorer.connected} />
         <CitySwitcher className="max-lg:order-last" />

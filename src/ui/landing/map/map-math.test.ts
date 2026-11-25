@@ -24,7 +24,6 @@ import {
   nearestCity,
   outsideCircle,
   pinIdsMatching,
-  pinnedArrivalProgress,
   pixelsPerMile,
   projector,
   showCityFrom,
@@ -136,14 +135,6 @@ describe('donutArcs', () => {
 describe('the arrival under the hero', () => {
   const from: MapCamera = { center: { lat: 30.348, lng: -97.725 }, zoom: 14, pitch: 50, bearing: -45 };
   const to: MapCamera = { center: austinLandingMap.center, zoom: 10.75, pitch: 0, bearing: 0 };
-
-  it('waits while the sheet slides in, then runs over the pinned stretch of scrolling', () => {
-    expect(pinnedArrivalProgress(300, 600)).toBe(0);
-    expect(pinnedArrivalProgress(0, 600)).toBe(0);
-    expect(pinnedArrivalProgress(-150, 600)).toBeCloseTo(0.25);
-    expect(pinnedArrivalProgress(-600, 600)).toBe(1);
-    expect(pinnedArrivalProgress(-2000, 600)).toBe(1);
-  });
 
   it('starts close and tilted over the task and ends flat over the city', () => {
     expect(arrivalCamera(0, from, to)).toEqual(from);

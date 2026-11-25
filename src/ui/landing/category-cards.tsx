@@ -19,12 +19,14 @@ import { useOptionalLanding } from './landing-state';
  * the arrow moving along); pointing at one tints the page (the map's pins and the town's quiet down to it). Opening
  * one carries its icon into the category page's header (a shared View Transition).
  */
-export function CategoryCards({ categories, openCounts }: { categories: CategoryView[]; openCounts?: Partial<Record<CategorySlug, number>> }) {
+export function CategoryCards({ categories, openCounts, mapTile = false }: { categories: CategoryView[]; openCounts?: Partial<Record<CategorySlug, number>>; /** A first tile the landing's live map docks into (shown only on its stage). */ mapTile?: boolean }) {
   const t = useTranslations('landing.categories');
   const categoryName = useTranslations('helperCard.categories');
   const landing = useOptionalLanding();
   return (
-    <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+    <ul data-category-grid="" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+      {/* On the landing's stage the live map docks here (it draws over this tile); elsewhere it isn't shown. */}
+      {mapTile && <li data-map-tile="" aria-hidden="true" className="rounded-3xl bg-foreground/[0.04]" />}
       {categories.map((category, index) => {
         const Icon = CATEGORY_ICONS[category.slug];
         const wide = index < 2;
@@ -33,7 +35,7 @@ export function CategoryCards({ categories, openCounts }: { categories: Category
         const color = `var(--cat-${category.slug})`;
         const open = openCounts?.[category.slug] ?? 0;
         return (
-          <li key={category.slug} className={cn(wide ? 'lg:col-span-3' : 'lg:col-span-2', spans && 'sm:col-span-2 lg:col-span-2')}>
+          <li key={category.slug} data-category-card="" className={cn(wide ? 'lg:col-span-3' : 'lg:col-span-2', spans && 'sm:col-span-2 lg:col-span-2')}>
             <Reveal index={index} className="h-full">
               <HoverLift className="h-full" surfaceClassName="lift-shadow rounded-3xl border border-foreground/[0.07] bg-card/75" glow={color} tilt={wide ? 3 : 4}>
                 <Link
@@ -48,7 +50,7 @@ export function CategoryCards({ categories, openCounts }: { categories: Category
                 >
                   {/* A real photo of the work (decorative: the card's name says the same), kept near the top so heads
                       stay in: 16:9 from 640 px (a band across the whole row on a tablet's last card), square on phones. */}
-                  <span className="relative block overflow-hidden rounded-[1.125rem] bg-muted max-sm:w-24 max-sm:shrink-0">
+                  <span data-card-photo="" className="relative block overflow-hidden rounded-[1.125rem] bg-muted max-sm:w-24 max-sm:shrink-0">
                     <ServicePhoto
                       category={category.slug}
                       crop="landscape"
@@ -59,7 +61,7 @@ export function CategoryCards({ categories, openCounts }: { categories: Category
                   </span>
                   {/* From 640 px the icon leads the name and the arrow ends its line, with no row of their own: the
                       section was 1,680 px tall at 1280. */}
-                  <span className="flex min-w-0 flex-1 flex-col px-4 pt-4 pb-4 max-sm:py-1 max-sm:pr-2 sm:px-5 sm:pb-5">
+                  <span data-card-body="" className="flex min-w-0 flex-1 flex-col px-4 pt-4 pb-4 max-sm:py-1 max-sm:pr-2 sm:px-5 sm:pb-5">
                     <span className="flex items-center gap-3">
                       <ViewTransition name={`category-icon-${category.slug}`} share="category-morph" default="none">
                         <span className="lift-icon grid size-11 shrink-0 place-items-center rounded-2xl max-sm:hidden" style={{ background: `color-mix(in oklab, ${color} 15%, transparent)`, color }}>
@@ -72,8 +74,8 @@ export function CategoryCards({ categories, openCounts }: { categories: Category
                         <ArrowRight className="size-4" />
                       </span>
                     </span>
-                    <span className="mt-2 block text-sm text-muted-foreground max-sm:hidden">{t(`descriptions.${category.slug}`)}</span>
-                    <span className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm max-sm:mt-1">
+                    <span data-card-description="" className="mt-2 block text-sm text-muted-foreground max-sm:hidden">{t(`descriptions.${category.slug}`)}</span>
+                    <span data-card-price="" className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm max-sm:mt-1">
                       {/* Whole dollars read cleaner in a range (audit L34). */}
                       <span className="font-semibold tabular-nums">{t('range', { low: formatMoneyShort(category.priceGuidance.lowCents), high: formatMoneyShort(category.priceGuidance.highCents) })}</span>
                       <span className="text-muted-foreground">{t(`unit.${category.priceGuidance.unit}`)}</span>
@@ -82,7 +84,7 @@ export function CategoryCards({ categories, openCounts }: { categories: Category
                     </span>
                     {/* What's open: under the price on phones (the photo is small there), on the photo's corner from 640 px. */}
                     {open > 0 && (
-                      <span className="mt-1.5 inline-flex items-center gap-2 self-start rounded-full bg-foreground/[0.045] px-2.5 py-1 text-xs font-medium text-foreground/80 tabular-nums sm:absolute sm:top-[1.125rem] sm:left-[1.125rem] sm:mt-0 sm:bg-card/90 sm:text-foreground/85 sm:shadow-[0_4px_12px_-6px_rgb(0_0_0/0.4)] sm:backdrop-blur">
+                      <span data-open-count={category.slug} className="mt-1.5 inline-flex items-center gap-2 self-start rounded-full bg-foreground/[0.045] px-2.5 py-1 text-xs font-medium text-foreground/80 tabular-nums sm:absolute sm:top-[1.125rem] sm:left-[1.125rem] sm:mt-0 sm:bg-card/90 sm:text-foreground/85 sm:shadow-[0_4px_12px_-6px_rgb(0_0_0/0.4)] sm:backdrop-blur">
                         <span aria-hidden="true" className="live-dot" style={{ background: color }} />
                         {t('openOnMap', { count: open })}
                       </span>

@@ -1,7 +1,7 @@
 'use client';
 
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
-import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AnimatePresence, LazyMotion, domMax, m } from 'motion/react';
 import { useTranslations } from 'next-intl';
 import { ArrowDownUp, ChevronDown, ChevronsDownUp, ChevronsUpDown, MapPin, Moon, Navigation, Sparkles, Sun, Sunrise, Sunset, X } from 'lucide-react';
@@ -12,8 +12,10 @@ import { TimeZoneProvider } from '@/ui/lib/time-zone-provider';
 import { Reveal, spring, usePrefersReducedMotion } from '@/ui/motion';
 import { cn } from '@/ui/lib/utils';
 import { CATEGORY_ICONS } from './category-icons';
-import { MAP_LANDED_ATTRIBUTE, MAP_SECTION_ID, useLanding } from './landing-state';
-import { useArrivalDriver, WIDE_QUERY } from './map/arrival';
+import { useChapterFrame, useChapters, useChaptersMode } from './chapters/chapter-stage';
+import { FLIGHT_DOTS, useMapChapter } from './chapters/map-chapter';
+import { MAP_SECTION_ID, useLanding } from './landing-state';
+import { useStagedArrival, WIDE_QUERY } from './map/arrival';
 import { lightAt, type ClockPhase } from './map/clock';
 import { MapExplorerProvider, useMapExplorer } from './map/explorer-state';
 import { LiveCard } from './map/live-card';
@@ -39,22 +41,6 @@ const DISTANCES = [1, 3, 5] as const;
  * stepped around as they are), or the "Explore the map" button (phones). */
 const WIDE_EDGE = { top: 96, bottom: 44 };
 const PHONE_EDGE = { top: 14, bottom: 104 };
-/**
- * The pinned stretch on wide screens, as the page's CSS: `ARRIVAL_SCROLL` (0.8 of a screen) for the arrival, then
- * `ARRIVAL_HOLD` (0.3) more, so 110svh in all (`arrival.ts`). None with reduced motion (nothing would move while the
- * page seemed stuck), or when there's nothing to arrive at.
- */
-const PINNED_TRACK = 'lg:[--arrival-scroll:80svh] lg:[--arrival-track:110svh] lg:motion-reduce:[--arrival-scroll:0svh] lg:motion-reduce:[--arrival-track:0svh]';
-/**
- * Wide screens: the explorer comes in with the arrival (`--arrive`, written on the stage), from a little to the right;
- * elsewhere `--arrive` isn't set, so it's simply there.
- */
-const EXPLORER_IN = {
-  // 0 until 40% of the way, whole by about 73% (it takes clicks from ARRIVAL_PANELS_AT, 55%).
-  ['--explorer-in' as string]: 'clamp(0, calc((var(--arrive, 1) - 0.4) * 3), 1)',
-  opacity: 'var(--explorer-in)',
-  translate: 'calc((1 - var(--explorer-in)) * 2.5rem) 0',
-} as CSSProperties;
 /** Wide screens: while the visitor drags the map, the panels over it step back, so the map under them shows. */
 const STEP_BACK = 'lg:transition-[top,opacity] lg:duration-300 lg:ease-[var(--ease-out)] lg:group-data-[map-dragging]/stage:opacity-[0.58]';
 
@@ -68,11 +54,12 @@ const STEP_BACK = 'lg:transition-[top,opacity] lg:duration-300 lg:ease-[var(--ea
  * moves there by itself, worked out on the device), or one picked in the card's city switcher. A new city flies the
  * map there and swaps the tasks, the neighborhoods, the stream and the clock in place.
  *
- * Wide screens: the section is a sheet that slides up over the pinned hero carrying the map, still close and tilted
- * over the town's first task. Once it covers the screen, the map stays pinned while the next stretch of scrolling
- * pulls the camera back and flattens it into the whole city, and the explorer slides in beside it; the map then stays
- * a little longer, ready to use, before the page moves on. Only the camera moves while the map is pinned: never the
- * map and its camera at once. Phones: the same arrival plays once by itself when the map is in view.
+ * On the landing's stage (chapters/) it's the second chapter, a layer over the town: the map shows through a window
+ * that opens around the hero's first task pin, starting close and tilted over that task, then its camera pulls back
+ * and flattens into the whole city on the step's own time, and the card and the explorer arrive last (on phones the
+ * explorer is a sheet along the bottom). Going on, they leave and the map docks into the first tile of the categories'
+ * grid while its tasks fly into the cards' counts (`chapters/map-chapter.ts`). With reduced motion it's a plain
+ * section: the city view, with the card and the explorer.
  *
  * Flexible, not fixed (owner, 2026-11-23: "Components in live map are looking stuck"): once the visitor uses the map,
  * the card folds to one line; the explorer folds to its search and count with a press, and its list grows with the
@@ -134,7 +121,6 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
   const t = useTranslations('landing.map');
   const { autoLocate, city, pageCitySlug, cityLoading } = useLanding();
   const explorer = useMapExplorer();
-  const reduced = usePrefersReducedMotion();
   const market = city.market.name;
   const map = city.map;
   const wide = useMediaQuery(WIDE_QUERY);
@@ -146,21 +132,17 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
     const pin = (fromHero ? onMap.get(fromHero.id) : undefined) ?? map.pins[0];
     return pin ? { taskId: pin.id, point: pin.point } : null;
   }, [map.pins, data.recentTasks, city.market.slug, pageCitySlug]);
-  const sheetRef = useAlignedPaper();
+  const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const frameRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const headingRef = useRef<HTMLDivElement>(null);
-  const arrivalSource = useArrivalDriver({
-    track: sheetRef,
-    stage: stageRef,
-    frame: frameRef,
-    panel: panelRef,
-    wide,
-    enabled: mapMode === 'interactive' && arrival !== null,
-    liveReady: explorer.liveReady,
-    reduced,
-  });
+  // The window onto the map, the panels coming and going, and the map docking into the categories (chapters/).
+  const categoryOf = useCallback((pinId: string) => map.pins.find((pin) => pin.id === pinId)?.categorySlug ?? null, [map.pins]);
+  const focusRef = useRef({ x: 0, y: 0 });
+  const focus = useCallback(() => focusRef.current, []);
+  const { frame: frameRef, heading: headingRef, explorer: panelRef, flight: flightRef, tile: tileRef } = useMapChapter({ wide, categoryOf, focus });
+  const chapters = useChapters();
+  const chaptersMode = useChaptersMode();
+  const chaptersOn = chaptersMode === 'on';
+  const arrivalSource = useStagedArrival({ panel: panelRef, enabled: mapMode === 'interactive' && arrival !== null });
   // Wide screens: the room the panels take from the map, measured (their layout boxes: the slide-in's translate doesn't
   // count): the explorer's side, for the camera's middle, and the bottom of the heading's card, which the city view
   // keeps its tasks clear of.
@@ -193,7 +175,7 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [wide]);
+  }, [wide, headingRef, panelRef]);
   // The camera's room: the explorer's side (or only its margin while it's folded to a strip along the top), and a
   // margin all round; the middle of the rest is where a task or a group is brought.
   const folded = wide && explorer.collapsed;
@@ -206,12 +188,22 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
   // top of that margin.
   const homeInsets = useMemo(() => (wide && room ? { top: Math.max(0, room.headingBottom + 8 - FREE_MARGIN), left: Math.max(0, room.toolsRight + 12 - FREE_MARGIN) } : undefined), [wide, room]);
 
-  // The visitor has reached the map (it crosses the middle of the window): find them, without a press. Wide screens
-  // measure the sheet, since the map itself is fixed to the window behind it.
+  // On the landing's stage: the visitor has started toward the map (the live map loads at once if it hasn't yet), and
+  // has reached it (it's kept live from then on, and the visitor is found without a press). Each only once.
+  const [headingFor, setHeadingFor] = useState(false);
+  const [reached, setReached] = useState(false);
+  useChapterFrame((value) => {
+    if (value > 0 && !headingFor) setHeadingFor(true);
+    if (value >= 0.86 && !reached) setReached(true);
+  }, chaptersOn && !(headingFor && reached));
+  useEffect(() => {
+    if (reached && mapMode === 'interactive') autoLocate();
+  }, [reached, mapMode, autoLocate]);
+
+  // Off the stage (reduced motion): the visitor has reached the map when it crosses the middle of the window.
   useEffect(() => {
     const frame = frameRef.current;
-    const sheet = sheetRef.current;
-    if (mapMode !== 'interactive' || !frame || !sheet) return;
+    if (mapMode !== 'interactive' || !frame || chaptersMode !== 'off') return;
     let raf = 0;
     const stop = () => {
       cancelAnimationFrame(raf);
@@ -220,7 +212,7 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
     };
     const check = () => {
       raf = 0;
-      const box = (getComputedStyle(frame).position === 'fixed' ? sheet : frame).getBoundingClientRect();
+      const box = frame.getBoundingClientRect();
       const middle = window.innerHeight / 2;
       if (box.top > middle || box.bottom < middle) return;
       stop();
@@ -233,7 +225,21 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
     window.addEventListener('resize', schedule, { passive: true });
     schedule();
     return stop;
-  }, [mapMode, autoLocate, sheetRef]);
+  }, [mapMode, autoLocate, chaptersMode, frameRef]);
+
+  // Where the city sits in the free map, for the docked tile's crop.
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const measure = () => {
+      const right = wide ? (folded || !room ? FREE_MARGIN : room.right) : 0;
+      focusRef.current = { x: (FREE_MARGIN + stage.offsetWidth - right) / 2, y: stage.offsetHeight * (wide ? 0.5 : 0.42) };
+    };
+    measure();
+    const sized = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
+    sized?.observe(stage);
+    return () => sized?.disconnect();
+  }, [wide, folded, room]);
 
   // A task of the page's own city (the hero's town) asked for while another city showed: once the map is back there,
   // it shows that task.
@@ -257,40 +263,19 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
   return (
     <LazyMotion features={domMax}>
       <section
-        ref={sheetRef}
+        ref={sectionRef}
         id={MAP_SECTION_ID}
         aria-labelledby="map-title"
-        // `overflow-clip`, not `hidden`: clipping (to the rounded top) without becoming a scroll container keeps the
-        // stage's sticky position working against the page. Wide screens: a screen for the stage, plus the pinned
-        // stretch (the arrival, then a pause).
-        className={cn(
-          'relative scroll-mt-20 lg:z-[2] lg:h-[calc(100svh+var(--arrival-track,0svh))] lg:min-h-[calc(36rem+var(--arrival-track,0svh))] lg:overflow-clip lg:rounded-t-[2.75rem] lg:paper lg:shadow-[0_-34px_70px_-44px_rgb(0_0_0/0.42),0_30px_60px_-40px_rgb(0_0_0/0.34)] dark:lg:shadow-[0_-34px_80px_-40px_rgb(0_0_0/0.9),0_-18px_60px_-34px_color-mix(in_oklab,var(--iri-3)_40%,transparent),0_30px_70px_-36px_rgb(0_0_0/0.85)]',
-          mapMode === 'interactive' && arrival !== null && PINNED_TRACK,
-        )}
+        data-chapter-layer="map"
+        // Off the landing's stage (reduced motion, previews and tests): a section one screen tall on wide screens; the
+        // card, the map and the explorer in turn on phones. On the stage it's a layer over the town (landing.css).
+        className="relative scroll-mt-20 lg:h-svh lg:min-h-[36rem]"
       >
-        {/* The sheet's edge, so it reads as a sheet sliding over the town in both themes (on dark paper a shadow
-            alone vanishes): a hairline that follows the rounded corners, brightest in the middle where an
-            iridescent line runs along it. */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-[4] hidden h-16 rounded-t-[2.75rem] shadow-[inset_0_1px_0_rgb(255_255_255/0.7)] lg:block dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.13)]" />
-        <div aria-hidden="true" className="pointer-events-none absolute top-0 left-1/2 z-[4] hidden h-px w-[min(56rem,62%)] -translate-x-1/2 opacity-55 lg:block dark:opacity-90" style={{ background: 'linear-gradient(90deg, transparent, var(--iri-1) 22%, var(--iri-2) 50%, var(--iri-3) 78%, transparent)' }} />
-        {/* Where the map has landed (wide screens: past the pinned arrival): "see it on the map" scrolls here. */}
-        <div {...{ [MAP_LANDED_ATTRIBUTE]: '' }} aria-hidden="true" className="pointer-events-none absolute top-0 left-0 h-px w-px scroll-mt-20 lg:top-[var(--arrival-scroll,0svh)] lg:scroll-mt-0" />
-
-        {/* The stage: on wide screens, one window tall and pinned to it for the whole stretch, with the card and the
-            explorer on it, and the map fixed to the window behind them, seen only through the stage (its clip): the
-            sheet's rising edge uncovers the map (which doesn't move), and at the end the page below covers it the same
-            way. Full screen lifts the clip. On phones and tablets: the card, the map and the explorer in turn. */}
-        <div
-          ref={stageRef}
-          data-map-stage=""
-          className={cn(
-            'group/stage relative flex flex-col lg:sticky lg:top-0 lg:block lg:h-svh lg:min-h-[36rem] lg:[clip-path:inset(0_round_2.75rem_2.75rem_0_0)] lg:has-[[aria-modal=true]]:[clip-path:none]',
-            MAP_EDGE,
-          )}
-        >
-          {/* The real map: between the card and the list on phones; on wide screens fixed to the window, under
-              everything. */}
-          <div ref={frameRef} className="relative order-2 mt-6 h-[62svh] max-h-[36rem] min-h-[24rem] lg:fixed lg:inset-0 lg:order-none lg:mt-0 lg:h-auto lg:max-h-none lg:min-h-0">
+        {/* The stage: the card and the explorer over the map on wide screens; on phones and tablets, the card, the map
+            and the explorer in turn (on the landing's stage: the card along the top and the explorer as a sheet). */}
+        <div ref={stageRef} data-map-stage="" className={cn('group/stage relative flex flex-col lg:block lg:h-full', MAP_EDGE)}>
+          {/* The real map: between the card and the list on phones; on wide screens under everything. */}
+          <div ref={frameRef} data-map-frame="" className="relative order-2 mt-6 h-[62svh] max-h-[36rem] min-h-[24rem] lg:absolute lg:inset-0 lg:order-none lg:mt-0 lg:h-auto lg:max-h-none lg:min-h-0">
             {/* Below 1024 px the caption goes under the map, not over its bottom edge, where "Explore the map" sits. */}
             <figure className="m-0 size-full max-lg:flex max-lg:flex-col">
               <p className="sr-only">{t('mapLabel', { market })}</p>
@@ -307,8 +292,9 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
                 arrivalSource={arrivalSource}
                 edgeInsets={wide ? WIDE_EDGE : PHONE_EDGE}
                 onDragging={onDragging}
-                fillFade={wide ? 'top' : 'vertical'}
+                fillFade={chaptersOn ? 'none' : wide ? 'top' : 'vertical'}
                 watchRef={stageRef}
+                staged={chapters && mapMode === 'interactive' ? (chaptersMode === 'pending' ? 'wait' : chaptersOn ? { headingFor, reached } : undefined) : undefined}
                 wide={wide}
                 // (Their own transition already eases opacity: only the drag's step back is added.)
                 controlsClassName="right-[var(--page-gutter)] bottom-[16%] lg:right-auto lg:bottom-[max(1.25rem,2.5svh)] lg:left-[var(--map-edge)] lg:group-data-[map-dragging]/stage:opacity-[0.58]"
@@ -344,18 +330,20 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
           {/* The explorer: find, pick a category, order and narrow, see how many, and the tasks themselves (the map's
               accessible twin). On wide screens it sits under the top bar (following the bar as it slips away and comes
               back), grows with its list up to the screen's height (its rows scroll past that), folds to its search
-              and count with a press, and slides in as the map arrives. */}
+              and count with a press, and comes in once the map's camera is still. Its rows scroll by themselves (on a
+              phone's stage it's a sheet), so a swipe in it isn't a page turn. */}
           <div
             ref={panelRef}
             data-map-explorer=""
             data-map-panel=""
+            data-chapter-scrolls=""
             data-folded={folded ? '' : undefined}
             className={cn(
               'relative order-3 px-gutter pt-6 pb-16 sm:pb-20 lg:absolute lg:top-[calc(var(--top-bar-offset,5.5rem)+1rem)] lg:right-[var(--map-edge)] lg:order-none lg:w-[24rem] lg:px-0 lg:py-0 xl:w-[26.5rem] lg:group-has-[[aria-modal=true]]/stage:invisible',
               STEP_BACK,
             )}
           >
-            <div style={EXPLORER_IN}>
+            <div>
               <Reveal variant="bloom" origin="100% 50%" className="lg:glass lg:flex lg:max-h-[calc(100svh-var(--top-bar-offset,5.5rem)-1rem-max(1.25rem,2.5svh)-2rem)] lg:flex-col lg:rounded-[1.75rem] lg:p-2.5">
                 <div className="flex items-start gap-1 lg:shrink-0">
                   <div className="min-w-0 flex-1">
@@ -393,6 +381,31 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
               </Reveal>
             </div>
           </div>
+
+          {/* On the landing's stage: the lit rim of the window onto the map, and the tasks flying from the docked map
+              into their categories' counts (chapters/map-chapter.ts moves them; nothing is added as it plays). */}
+          <div ref={flightRef} data-chapter-flight="" aria-hidden="true" className="hidden">
+            <span data-window-rim="" className="chapter-rim absolute top-0 left-0 rounded-full" style={{ visibility: 'hidden' }} />
+            {Array.from({ length: FLIGHT_DOTS }, (_, index) => (
+              <span key={index} data-flight-dot="" className="absolute top-0 left-0 -mt-1.5 -ml-1.5 size-3 rounded-full shadow-[0_0_0_2px_white,0_4px_10px_-2px_rgb(0_0_0/0.4)]" style={{ visibility: 'hidden' }} />
+            ))}
+          </div>
+          {/* The docked map in the categories' grid: its name, and back to it with a press. */}
+          <button
+            ref={tileRef}
+            type="button"
+            data-map-tile-button=""
+            data-chapter-focus="2"
+            onClick={() => chapters?.goTo(1)}
+            aria-label={t('tileOpen', { market })}
+            className="absolute top-0 left-0 hidden rounded-[1.125rem] text-left outline-offset-4"
+            style={{ visibility: 'hidden' }}
+          >
+            <span className="glass absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold">
+              <span aria-hidden="true" className="live-dot bg-[var(--success)]" />
+              {t('tileLabel', { market })}
+            </span>
+          </button>
         </div>
       </section>
     </LazyMotion>
@@ -405,8 +418,18 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
  * past it.
  */
 function ExplorerFold({ open, grow = false, className, children }: { open: boolean; grow?: boolean; className?: string; children: ReactNode }) {
+  // Clipped while it folds or unfolds (its content mustn't spill past the moving row); once it has settled open, what
+  // opens from it (the neighborhood picker's list) shows past its edge, over the rows below. The list's part (`grow`)
+  // stays clipped: its rows scroll inside the panel.
+  const reduced = usePrefersReducedMotion();
+  const [settled, setSettled] = useState(open);
+  if (!open && settled) setSettled(false);
+  if (open && !settled && reduced) setSettled(true);
   return (
     <div
+      onTransitionEnd={(event) => {
+        if (event.target === event.currentTarget && event.propertyName === 'grid-template-rows' && open) setSettled(true);
+      }}
       className={cn(
         // One column that may be narrower than its content (`minmax(0, 1fr)`): a row of chips scrolls inside it rather
         // than widening the panel past the screen.
@@ -416,8 +439,9 @@ function ExplorerFold({ open, grow = false, className, children }: { open: boole
         className,
       )}
     >
-      {/* Open, it clips a little past its edges (a row's shadow, a focus ring); folded, at them. */}
-      <div className={cn('min-h-0 min-w-0', open ? 'overflow-clip [overflow-clip-margin:12px]' : 'overflow-hidden', grow && 'lg:flex lg:flex-col')} inert={!open || undefined}>
+      {/* Settled open, nothing is clipped; while it moves, a little past its edges (a row's shadow, a focus ring);
+          folded, at them. */}
+      <div className={cn('min-h-0 min-w-0', open ? (settled && !grow ? 'overflow-visible' : 'overflow-clip [overflow-clip-margin:12px]') : 'overflow-hidden', grow && 'lg:flex lg:flex-col')} inert={!open || undefined}>
         {children}
       </div>
     </div>
@@ -482,39 +506,6 @@ function MapCaption({ attribution, map, market, timeZone }: { attribution: strin
       <span>{attribution}</span>
     </>
   );
-}
-
-/**
- * Wide screens: the map's sheet has its own paper (it must hide the pinned hero it slides over), so its marble
- * is lined up with the page's: where the sheet ends, the veins carry on into the sections below with no seam.
- */
-function useAlignedPaper() {
-  const ref = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const sheet = ref.current;
-    const page = sheet?.parentElement?.closest<HTMLElement>('.paper');
-    if (!sheet || !page) return;
-    let frame = 0;
-    const align = () => {
-      frame = 0;
-      // Both boxes move together as the page scrolls, so their difference is the sheet's place on the page.
-      const offset = Math.round(sheet.getBoundingClientRect().top - page.getBoundingClientRect().top);
-      sheet.style.backgroundPosition = `50% ${-offset}px`;
-    };
-    const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(align);
-    };
-    align();
-    const sized = typeof ResizeObserver === 'function' ? new ResizeObserver(schedule) : null;
-    sized?.observe(page);
-    if (sheet.previousElementSibling) sized?.observe(sheet.previousElementSibling);
-    return () => {
-      cancelAnimationFrame(frame);
-      sized?.disconnect();
-      sheet.style.removeProperty('background-position');
-    };
-  }, []);
-  return ref;
 }
 
 /** Whether a media query matches (false on the server and before hydration). */

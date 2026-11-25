@@ -163,15 +163,15 @@ function prefersReducedMotion(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-/** Marks where the map has arrived on the page (its pinned camera has pulled back): scrolling to the map lands here. */
+/** Marks the map's chapter on the landing's stage (chapters/): scrolling to the map lands here, and its step plays. */
 export const MAP_LANDED_ATTRIBUTE = 'data-map-landed';
 
 /**
- * Scrolls to the map, landed (wide screens: past its pinned arrival, so the city view and the explorer are there),
- * or to its section's start where there's no pinned arrival (phones).
+ * Scrolls to the map: into its chapter on the landing's stage (the window onto it opens from there), or to its
+ * section's start where the sections are plain (reduced motion).
  */
-export function scrollToMap(): void {
-  const behavior = prefersReducedMotion() ? 'auto' : 'smooth';
+export function scrollToMap(how?: ScrollBehavior): void {
+  const behavior = how ?? (prefersReducedMotion() ? 'auto' : 'smooth');
   const landed = document.querySelector<HTMLElement>(`[${MAP_LANDED_ATTRIBUTE}]`);
   (landed ?? document.getElementById(MAP_SECTION_ID))?.scrollIntoView?.({ behavior, block: 'start' });
 }

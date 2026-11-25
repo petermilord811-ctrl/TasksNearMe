@@ -239,25 +239,11 @@ test.describe('public pages', () => {
     page.on('request', (request) => {
       if (request.url().includes('/api/realtime/')) opened.push(new URL(request.url()).pathname);
     });
-    // The map starts, and opens the stream, once it comes within 80% of a screen under the window and the hero is done
-    // (task-map.tsx). At the projects' own sizes it opens nearer than that (1.05 screens down on desktop, 1.2 on a
-    // phone), so it may start without a scroll: on CI the hero's town is a still picture, done at once (Ship
-    // 44941122120). A short window puts it farther down where the hero keeps its height (a phone): there, nothing
-    // opens without a scroll. On wide screens the hero is a screen tall whatever the window: the map is always near.
-    const size = page.viewportSize()!;
-    await page.setViewportSize({ width: size.width, height: 480 });
+    // The map shares the landing's pinned stage with the town (src/ui/landing/chapters): it may load before the visitor
+    // gets there, but its tasks are kept live (the stream) only once they reach it, on every screen.
     await page.goto('/');
-    const farBelow = await page.locator('#tasks-near-you').evaluate((section) => {
-      window.scrollTo(0, 0);
-      return section.getBoundingClientRect().top > window.innerHeight * 1.8 + 1;
-    });
-    // On a phone the rule must be checked, not skipped.
-    if (test.info().project.name === 'app-mobile') expect(farBelow).toBe(true);
-    if (farBelow) {
-      await page.waitForTimeout(2500);
-      expect(opened).toEqual([]);
-    }
-    await page.setViewportSize(size);
+    await page.waitForTimeout(2500);
+    expect(opened).toEqual([]);
     await landOnMap(page);
     await expect.poll(() => opened, { timeout: 30_000 }).toContain('/api/realtime/market/gainesville');
   });

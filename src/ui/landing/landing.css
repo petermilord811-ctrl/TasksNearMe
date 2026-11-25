@@ -135,6 +135,95 @@ html[data-motion="on"] [data-reveal]:not([data-revealed]) .reveal-fill { transfo
   .arrow-link-text, .arrow-link-icon, .cta-pill, .cta-arrow, .cta-ghost, .point-icon, .reveal-fill, .area-chip, .area-chip-pin, .landing-faq .faq-item { transition: none; }
 }
 
+/* ---- Chapters (chapters/chapter-stage.tsx) ----------------------------------------------------------------------
+   The town, the live map and the categories as layers of one pinned stage; the stage's clock writes what moves (each
+   layer's visibility, the map's window and dock, the panels). Plain rules, outside the layers: they win over the
+   sections' own Tailwind layout, which stays as it is for reduced motion, previews and tests (`data-chapters="off"`).
+   Phones and tablets: the hero is one screen (the words on top, the town under them), the map fills the screen with
+   its card on top and the explorer as a sheet along the bottom, and the categories are a two-column grid. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-chapters="on"] { height: calc(100svh + var(--chapter-track, 0px)); }
+  [data-chapters="on"] > [data-chapter-stage] { position: sticky; top: 0; height: 100svh; min-height: 34rem; overflow: clip; isolation: isolate; }
+  /* The stage carries the page's paper itself, so the marble doesn't slide under it while it's pinned. */
+  [data-chapters="on"] > [data-chapter-stage] { background-color: var(--background); background-image: linear-gradient(var(--paper-veil), var(--paper-veil)), var(--paper); background-size: 2048px 2048px; background-position: 50% 0; }
+  [data-chapters="on"] [data-chapter-layer] { position: absolute; inset: 0; margin: 0; min-height: 0; height: auto; }
+  [data-chapters="on"] [data-chapter-layer="town"] { z-index: 1; }
+  [data-chapters="on"] [data-chapter-layer="grid"] { z-index: 2; opacity: 0; pointer-events: none; }
+  [data-chapters="on"] [data-chapter-layer="map"] { z-index: 3; pointer-events: none; }
+  [data-chapters="on"] [data-chapter-map-rest] { top: 320px; }
+  /* A link to the map's section (#tasks-near-you) lands inside its chapter, not on the town (the layer sits at the stage's top). */
+  [data-chapters="on"] [data-chapter-layer="map"] { scroll-margin-top: -320px; }
+
+  /* The map: its stage fills the layer, and the map fills the stage (it isn't fixed to the window). */
+  [data-chapters="on"] [data-map-stage] { position: absolute; inset: 0; display: block; height: auto; min-height: 0; clip-path: none; }
+  [data-chapters="on"] [data-map-frame] { position: absolute; inset: 0; height: auto; max-height: none; min-height: 0; margin: 0; transform-origin: 0 0; opacity: 0; }
+  [data-chapters="on"] [data-map-frame] figcaption { display: none; }
+  [data-chapters="on"] [data-map-frame][data-docked] .tnm-marker { opacity: 0; transition: opacity 200ms; }
+  /* Docked, the map is a picture in its tile: its own buttons, minimap and notes step out of it. */
+  [data-chapters="on"] [data-map-frame][data-docked] :is([data-map-controls], [data-map-minimap], [data-map-panel]) { opacity: 0; pointer-events: none; transition: opacity 200ms; }
+  [data-chapters="on"] [data-map-heading], [data-chapters="on"] [data-map-explorer] { opacity: 0; }
+  [data-chapters="on"] [data-chapter-flight] { display: block; position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+  [data-chapters="on"] [data-map-tile-button] { display: block; z-index: 5; }
+  /* The window's rim: a thin light edge with the brand's glow, the map seen a little sunk inside it. */
+  .chapter-rim { box-shadow: 0 0 0 2px rgb(255 255 255 / 0.92), 0 0 0 7px color-mix(in oklab, var(--violet) 22%, transparent), 0 0 46px 8px color-mix(in oklab, var(--iri-2) 30%, transparent), inset 0 0 34px rgb(23 18 14 / 0.28); will-change: transform; }
+
+  /* The categories: the heading, then the grid filling the rest of the screen, the map's tile first. */
+  [data-chapters="on"] [data-chapter-layer="grid"] { display: flex; flex-direction: column; padding-block: calc(var(--top-bar-offset, 5.5rem) + 0.5rem) max(1.25rem, 3svh); }
+  [data-chapters="on"] [data-chapter-layer="grid"] > * { display: flex; flex: 1; flex-direction: column; min-height: 0; width: 100%; }
+  [data-chapters="on"] [data-category-grid-wrap] { display: flex; flex: 1; flex-direction: column; min-height: 0; margin-top: clamp(0.75rem, 2.5svh, 2rem); }
+  [data-chapters="on"] [data-category-grid] { flex: 1; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
+  [data-chapters="on"] [data-category-grid] > li { min-height: 0; }
+  [data-chapters="on"] [data-map-tile] { display: block; }
+  [data-chapters="on"] [data-category-card] [data-card-photo] { aspect-ratio: auto; flex: 1; min-height: 0; }
+  [data-chapters="on"] [data-category-card] [data-card-photo] img { height: 100%; aspect-ratio: auto; }
+  [data-chapters="on"] [data-category-card] [data-card-description] { display: none; }
+  [data-chapters="on"] [data-category-more] > * { margin-top: clamp(0.5rem, 1.5svh, 1rem); }
+  [data-chapters="on"] [data-open-count] { opacity: 0; transform: scale(0.6); }
+
+  @media (min-width: 1024px) {
+    [data-chapters="on"] [data-chapter-map-rest] { top: 300px; }
+    [data-chapters="on"] [data-chapter-layer="map"] { scroll-margin-top: -300px; }
+    [data-chapters="on"] [data-category-grid] > li { grid-column: span 2 / span 2; }
+  }
+
+  @media (max-width: 1023px) {
+    /* The hero: one screen, the town filling what the words leave at the bottom. */
+    [data-chapters="on"] [data-chapter-layer="town"] { display: flex; flex-direction: column; }
+    [data-chapters="on"] [data-hero-words] { flex: none; padding-top: 5rem; }
+    /* Short phones: the line of new tasks and the promises make room for the town. */
+    @media (max-height: 760px) { [data-chapters="on"] [data-hero-extras] { display: none; } }
+    [data-chapters="on"] [data-hero-town] { position: relative; flex: 1; height: auto; min-height: 14rem; margin: 0; }
+    /* The town's band keeps its middle in view (the first task's pin) when the room left under the words is short. */
+    [data-chapters="on"] [data-hero-town] > [data-town-stage] { top: 50%; translate: 0 -50%; }
+    /* The map: the card along the top, the explorer as a sheet along the bottom (its rows scroll inside it). */
+    [data-chapters="on"] [data-map-heading] { position: absolute; top: 0; left: 0; right: 0; z-index: 2; padding: 4.25rem var(--page-gutter) 0; }
+    /* The card over the map, compact: on glass, the title smaller and its sentence left out (the explorer says it). */
+    [data-chapters="on"] [data-map-heading] [data-live-card] { padding: 0.75rem 1rem 0.85rem; border-radius: 1.25rem; background: color-mix(in oklab, var(--background) 86%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 14px 32px -22px rgb(0 0 0 / 0.45), inset 0 0 0 1px rgb(255 255 255 / 0.35); }
+    [data-chapters="on"] [data-map-heading] #map-title { padding-top: 0.35rem; font-size: 1.65rem; }
+    [data-chapters="on"] [data-map-heading] #map-title + p { display: none; }
+    [data-chapters="on"] [data-map-explorer] {
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; max-height: 30svh; overflow-y: auto; overscroll-behavior: contain;
+      padding: 0.5rem var(--page-gutter) 1rem; border-radius: 1.5rem 1.5rem 0 0;
+      background: color-mix(in oklab, var(--background) 88%, transparent); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+      box-shadow: 0 -18px 40px -28px rgb(0 0 0 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.5);
+    }
+    /* The map's own buttons and "Explore the map" stand above the sheet. */
+    [data-chapters="on"] [data-map-frame] [data-map-controls] { bottom: calc(30svh + 0.75rem); }
+    [data-chapters="on"] [data-map-frame] [data-map-explore] { bottom: calc(30svh + 0.75rem); }
+    [data-chapters="on"] [data-map-explorer]::before { content: ""; display: block; width: 2.5rem; height: 0.3rem; margin: 0 auto 0.5rem; border-radius: 99px; background: color-mix(in oklab, var(--foreground) 22%, transparent); }
+    /* The categories: two columns of tiles, the photo above the name. */
+    [data-chapters="on"] [data-category-grid] { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; }
+    [data-chapters="on"] [data-category-grid] > li { grid-column: auto; }
+    [data-chapters="on"] [data-category-card] a { flex-direction: column; align-items: stretch; padding: 0.35rem; }
+    [data-chapters="on"] [data-category-card] [data-card-photo] { width: auto; }
+    [data-chapters="on"] [data-category-card] [data-card-photo] img { aspect-ratio: auto; }
+    [data-chapters="on"] [data-category-card] [data-card-body] { flex: none; padding: 0.5rem 0.4rem 0.35rem; }
+    [data-chapters="on"] [data-category-card] [data-card-price] { display: none; }
+  }
+}
+/* Outside the stage (reduced motion, previews, tests) the map's tile has nothing to show: the map is its own section. */
+[data-map-tile] { display: none; }
+
 /* ---- Landing map ---- */
 /* A task's area on the drawn map fades and grows in, like the live map's (`area-glow.ts`). */
 @keyframes tnm-area-in { from { opacity: 0; transform: scale(0.86); } to { opacity: 1; transform: none; } }

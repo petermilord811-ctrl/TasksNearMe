@@ -8,7 +8,7 @@ import { dueFrame } from './frame-clock';
 import { useHeroPaused } from './hero-pause';
 import { whenHeroReady } from './hero-ready';
 import { mapleRadius } from './leaf-shape';
-import { MAP_SECTION_ID } from './sections/ids';
+import { useChapterFrame } from './chapters/chapter-stage';
 
 type Scheme = 'light' | 'dark';
 
@@ -287,6 +287,7 @@ export function SeasonWeather({ season, still = false, className }: { season: Se
   /** The map below has reached the top of the window: it covers the pinned hero (wide screens) or the hero has
    *  scrolled away (phones). */
   const [covered, setCovered] = useState(false);
+  const coveredRef = useRef(false);
   /** The town is up (or this is a still frame): the air fades in and may move. */
   const [ready, setReady] = useState(still);
   const moving = ready && !still && !reduced && !paused && onScreen && !hidden && !covered;
@@ -434,26 +435,14 @@ export function SeasonWeather({ season, still = false, className }: { season: Se
     return whenHeroReady(() => setReady(true));
   }, [still]);
 
-  useEffect(() => {
-    const sheet = still ? null : document.getElementById(MAP_SECTION_ID);
-    if (!sheet) return;
-    let frame = 0;
-    const check = () => {
-      frame = 0;
-      setCovered(sheet.getBoundingClientRect().top <= 0);
-    };
-    const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(check);
-    };
-    check();
-    window.addEventListener('scroll', schedule, { passive: true });
-    window.addEventListener('resize', schedule, { passive: true });
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener('scroll', schedule);
-      window.removeEventListener('resize', schedule);
-    };
-  }, [still]);
+  // On the landing's stage the weather stops with the town, once the window onto the map has covered the screen.
+  useChapterFrame((_, moment) => {
+    const next = !moment.townShown;
+    if (next !== coveredRef.current) {
+      coveredRef.current = next;
+      setCovered(next);
+    }
+  }, !still);
 
   useEffect(() => {
     const canvas = canvasRef.current;

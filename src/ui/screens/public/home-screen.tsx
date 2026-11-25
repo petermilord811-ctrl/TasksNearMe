@@ -2,6 +2,7 @@
 import type { LatLng } from '@/shared/geo';
 import { seasonAt, type Season } from '@/shared/seasons';
 import { PageSkeleton } from '@/ui/components/feedback/page-skeleton';
+import { ChapterStage } from '@/ui/landing/chapters/chapter-stage';
 import { Hero } from '@/ui/landing/hero';
 import { LandingProvider } from '@/ui/landing/landing-state';
 import { MapSection } from '@/ui/landing/map-section';
@@ -44,12 +45,13 @@ export function HomeScreen({ data, now, mapMode = 'interactive', initialLocation
         <MotionRoot />
         {/* One paper under the whole page (a faint marble), so no section starts or stops a background. */}
         <div className="paper" data-season={season}>
-          {/* On wide screens the hero stays pinned while the map slides up over it like a sheet. */}
-          <div className="relative">
+          {/* The town, the live map and the categories share one pinned stage, and a scroll gesture moves between them
+              (ChapterStage); with reduced motion, in previews and tests they're plain sections, one after another. */}
+          <ChapterStage enabled={mapMode === 'interactive'}>
             <Hero data={data} mode={mapMode} now={now} season={season} />
             <MapSection data={data} mapMode={mapMode} />
-          </div>
-          <CategoriesSection data={data} />
+            <CategoriesSection data={data} />
+          </ChapterStage>
           <StepsSection />
           <PricingSection data={data} />
           <TrustSection />

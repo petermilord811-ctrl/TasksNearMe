@@ -251,14 +251,6 @@ const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 const smooth = (t: number) => t * t * (3 - 2 * t);
 const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-/**
- * Wide screens: how far the map has arrived (0–1) once its stage is pinned. `top` is where the map's scroll track
- * starts (its section's top edge): 0 while the sheet is still sliding over the hero (top above 0 isn't reached
- * yet), then it runs over the next `distance` pixels of scrolling (the camera moves while the map itself stays put).
- */
-export function pinnedArrivalProgress(top: number, distance: number): number {
-  return clamp01(-top / Math.max(1, distance));
-}
 
 /** A box inside the map (pixels from its top-left corner): the part a visitor sees, clear of the page's panels. */
 export interface EdgeBox {
