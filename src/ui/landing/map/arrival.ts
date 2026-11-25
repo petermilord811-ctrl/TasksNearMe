@@ -7,10 +7,9 @@ import { useChapters } from '../chapters/chapter-stage';
  * The live map's arrival under the hero as one number, from 0 (close and tilted over the hero's first task, as the
  * town looked) to 1 (flat over the whole city), shared by the camera and the map's own buttons.
  *
- * On the landing's stage (chapters/) it follows the stage's clock rather than the scroll (owner, 2026-11-24: "imagine
- * you are scrolling not that smoothly, but like human"): it's 0 while the window onto the map opens around the hero's
- * pin, the camera then pulls back on the step's own time, and it runs back the same way when the visitor scrolls back
- * up. Off the stage (reduced motion, a stage that isn't running) it's simply 1, and previews and tests (`enabled`
+ * On the landing's stage (chapters/) it follows the stage, which follows the scroll a moment behind (`clock.ts`): it's
+ * 0 while the window onto the map opens around the hero's pin, the camera then pulls back as the visitor scrolls on,
+ * and it runs back the same way when the visitor scrolls back up. Off the stage (reduced motion, a stage that isn't running) it's simply 1, and previews and tests (`enabled`
  * false) have no arrival at all.
  *
  * The visitor taking over (a gesture on the map, a pick in the explorer, focus in it, a request to show something)

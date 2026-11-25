@@ -39,7 +39,7 @@ const px = (value: number) => `${value.toFixed(2)}px`;
 
 /**
  * Moves the map's parts with the landing's stage (`timeline.ts`). Step one: the map shows through a circle around the
- * hero's first task pin that grows past the screen's corners (its rim lit), while the camera pulls back on its own
+ * hero's first task pin that grows past the screen's corners (its rim lit), while the camera pulls back with it
  * (`arrival.ts`); then the card and the explorer come in. Step two: they leave, the map shrinks into its tile in the
  * categories' grid (a uniform scale and a crop, its corners rounding), and the tasks on it fly into their categories'
  * counts. Sizes are measured on resize and when step two starts, never while it moves; nothing is added to the page as
@@ -72,21 +72,28 @@ export function useMapChapter(options: Options): MapChapterParts {
     const rim = flightRef.current?.querySelector<HTMLElement>('[data-window-rim]') ?? null;
     const dots = Array.from(flightRef.current?.querySelectorAll<HTMLElement>('[data-flight-dot]') ?? []);
 
-    // The stage's size and the tile's place in the grid, kept on resize.
+    // The stage's size and the tile's place in the grid. The grid settles after the stage does (its fonts, its photos,
+    // longer words in Spanish), and the tile moves with it (owner, 2026-11-25: the docked map sat a row lower than its
+    // tile): read again when the tile or the grid changes size, once the fonts are in, and as each dock starts.
+    const tileElement = stage?.querySelector<HTMLElement>('[data-map-tile]') ?? null;
+    const grid = stage?.querySelector<HTMLElement>('[data-category-grid]') ?? null;
     const measure = () => {
       size = { width: frame.offsetWidth, height: frame.offsetHeight };
-      const tile = stage?.querySelector<HTMLElement>('[data-map-tile]');
-      if (tile && stage) {
+      if (tileElement && stage) {
         const outer = stage.getBoundingClientRect();
-        const box = tile.getBoundingClientRect();
+        const box = tileElement.getBoundingClientRect();
         tileBox = { x: box.left - outer.left, y: box.top - outer.top, width: box.width, height: box.height };
       }
       flight = null;
     };
     measure();
+    let docking = false;
+    let alive = true;
     const sized = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null;
-    sized?.observe(frame);
-    if (stage) sized?.observe(stage);
+    for (const element of [frame, stage, grid, tileElement]) if (element) sized?.observe(element);
+    void document.fonts?.ready.then(() => {
+      if (alive) measure();
+    });
 
     /** Step two is starting: where the tasks are on the map and where their counts are, read once. */
     const prepareFlight = (dock: ReturnType<typeof dockFrame> | null): Flight => {
@@ -117,6 +124,9 @@ export function useMapChapter(options: Options): MapChapterParts {
     };
 
     const draw = (value: number, moment: StageMoment) => {
+      // A dock starting: where the tile is now.
+      if (moment.dock > 0 && !docking) measure();
+      docking = moment.dock > 0;
       const { width, height } = size;
       if (!width || !height) return;
       const { wide, focus } = latest.current;
@@ -213,6 +223,7 @@ export function useMapChapter(options: Options): MapChapterParts {
     };
     const stop = chapters.subscribe(draw);
     return () => {
+      alive = false;
       stop();
       sized?.disconnect();
       // Off the stage: everything back as it was.

@@ -142,7 +142,7 @@ html[data-motion="on"] [data-reveal]:not([data-revealed]) .reveal-fill { transfo
    Phones and tablets: the hero is one screen (the words on top, the town under them), the map fills the screen with
    its card on top and the explorer as a sheet along the bottom, and the categories are a two-column grid. */
 @media (prefers-reduced-motion: no-preference) {
-  [data-chapters="on"] { height: calc(100svh + var(--chapter-track, 0px)); }
+  [data-chapters="on"] { height: calc(max(100svh, 34rem) + var(--chapter-track, 0px)); }
   [data-chapters="on"] > [data-chapter-stage] { position: sticky; top: 0; height: 100svh; min-height: 34rem; overflow: clip; isolation: isolate; }
   /* The stage carries the page's paper itself, so the marble doesn't slide under it while it's pinned. */
   [data-chapters="on"] > [data-chapter-stage] { background-color: var(--background); background-image: linear-gradient(var(--paper-veil), var(--paper-veil)), var(--paper); background-size: 2048px 2048px; background-position: 50% 0; }
@@ -150,9 +150,10 @@ html[data-motion="on"] [data-reveal]:not([data-revealed]) .reveal-fill { transfo
   [data-chapters="on"] [data-chapter-layer="town"] { z-index: 1; }
   [data-chapters="on"] [data-chapter-layer="grid"] { z-index: 2; opacity: 0; pointer-events: none; }
   [data-chapters="on"] [data-chapter-layer="map"] { z-index: 3; pointer-events: none; }
-  [data-chapters="on"] [data-chapter-map-rest] { top: 320px; }
-  /* A link to the map's section (#tasks-near-you) lands inside its chapter, not on the town (the layer sits at the stage's top). */
-  [data-chapters="on"] [data-chapter-layer="map"] { scroll-margin-top: -320px; }
+  /* Where going to the map lands: the middle of its stop, 0.51 of the stretch (clock.ts, MAP_REST_SHARE). A link to the
+     map's section (#tasks-near-you) lands there too, not on the town (the layer sits at the stage's top). */
+  [data-chapters="on"] [data-chapter-map-rest] { top: calc(var(--chapter-track) * 0.51); }
+  [data-chapters="on"] [data-chapter-layer="map"] { scroll-margin-top: calc(var(--chapter-track) * -0.51); }
 
   /* The map: its stage fills the layer, and the map fills the stage (it isn't fixed to the window). */
   [data-chapters="on"] [data-map-stage] { position: absolute; inset: 0; display: block; height: auto; min-height: 0; clip-path: none; }
@@ -181,8 +182,6 @@ html[data-motion="on"] [data-reveal]:not([data-revealed]) .reveal-fill { transfo
   [data-chapters="on"] [data-open-count] { opacity: 0; transform: scale(0.6); }
 
   @media (min-width: 1024px) {
-    [data-chapters="on"] [data-chapter-map-rest] { top: 300px; }
-    [data-chapters="on"] [data-chapter-layer="map"] { scroll-margin-top: -300px; }
     [data-chapters="on"] [data-category-grid] > li { grid-column: span 2 / span 2; }
   }
 

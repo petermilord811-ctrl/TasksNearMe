@@ -1,191 +1,105 @@
 /**
- * The landing's chapters, as plain math (owner, 2026-11-24: "imagine you are scrolling not that smoothly, but like
- * human in both laptop and phone. redesign the switch animation"). The town, the live map and the categories share one
- * pinned stage, and the scroll only picks which chapter to show: 0 the town, 1 the map, 2 the categories with the map
- * docked in their grid. The stage then walks there on its own clock, at the step's own pace, however fast, slow or
- * jerky the hand was, so it never rests halfway between two chapters.
+ * The landing's chapters, as plain math (owner, 2026-11-25: "when I scroll a little, animation is also changed a little
+ * by scroll height ... and make it feel smooth", after a first version played each step to its end on its own). The
+ * town, the live map and the categories share one pinned stage, and how far the page has scrolled into its pinned
+ * stretch is how far the stage has moved: 0 the town, 1 the map, 2 the categories with the map docked in their grid.
  *
- * - Forward and back lines are separate (`forward` is further on than `back`), and read in the direction the hand is
- *   really going (a turn counts after `DEADBAND` px), so one notch back or a shaky thumb doesn't rewind a step.
- * - A step reverses from wherever it is when the hand turns back, a little faster than it plays forward.
- * - Two chapters behind (a fling, the End key, a link lower down): the steps play faster, back to back.
- * - Near the end of the pinned stretch (`hurry` px before `track`), and once the stage is leaving, a step that hasn't
- *   landed speeds up, so the stage never scrolls away half done.
- * - A small scroll toward the next line previews the step (its first tenth): the scene leans in while the hand is
- *   moving or holding, and settles back if it stops short of the line. Past the line, the step starts from there.
+ * - The stretch is cut into step one, a stop at the map, step two and a stop at the categories (`SPANS`). On a stop the
+ *   value holds, so the map and the grid can be used without the scene drifting, and a link or a key that goes to a
+ *   chapter lands in the middle of its stop (`restOffset`).
+ * - What the stage draws follows the scroll with a short ease (`ease`, a time constant in ms): wheel notches, flicks and
+ *   a jerky hand become one smooth motion that is never more than a moment behind and never plays on by itself.
  *
- * `value` is what the stage draws: 0 to 2, the chapter clock plus the preview.
+ * `value` is what the stage draws: 0 to 2.
  */
 
 export type Chapter = 0 | 1 | 2;
 
-export interface ChapterLines {
-  /** Past these scroll offsets into the pinned stretch (px), moving forward: the map, then the categories. */
-  forward: readonly [number, number];
-  /**
-   * Above these, moving back: the town again, then the map again. On a laptop each sits below its forward line (a
-   * notch back doesn't rewind); on a phone above it (a flick back commits as soon as it heads for the page before).
-   * Lines are only read in the direction the hand is going, so neither flickers.
-   */
-  back: readonly [number, number];
-  /** How far before each forward line a small scroll starts to preview its step (px). */
-  preview: readonly [number, number];
-  /** Where the stage stops being pinned and scrolls away (px). */
-  track: number;
-  /** How far before `track` an unfinished step starts to hurry (px; 0 where a flick stops at each chapter). */
-  hurry: number;
-  /** Each step's length, forward (ms): town to map, map to categories. */
-  durations: readonly [number, number];
+/** Shares of the pinned stretch: step one, the stop at the map, step two, the stop at the categories (they add up to 1). */
+export const SPANS = { one: 0.44, mapStop: 0.14, two: 0.32, gridStop: 0.1 } as const;
+
+/**
+ * Where a link or a key that goes to the map lands, as a share of the stretch: the middle of its stop. landing.css places
+ * the map's rest marker (`[data-chapter-map-rest]`) and the map section's scroll margin with this same share.
+ */
+export const MAP_REST_SHARE = SPANS.one + SPANS.mapStop / 2;
+
+/** The ease of the stage behind the scroll on wide screens, and on touch screens (ms, a time constant). */
+export const EASE_MS = { wide: 140, touch: 90 } as const;
+
+/** Under this distance from the scroll (in chapters) the stage has arrived. */
+const SETTLED = 0.0015;
+/** A frame longer than this (a hidden tab, a long task) counts as this long, so the stage doesn't leap (ms). */
+const LONGEST_FRAME_MS = 100;
+
+/** What the stage shows `offset` px into a pinned stretch `length` px long (0–2). */
+export function valueAt(offset: number, length: number): number {
+  if (!(length > 0) || offset <= 0) return 0;
+  const t = offset / length;
+  const mapStop = SPANS.one + SPANS.mapStop;
+  const two = mapStop + SPANS.two;
+  if (t < SPANS.one) return t / SPANS.one;
+  if (t <= mapStop) return 1;
+  if (t < two) return 1 + (t - mapStop) / SPANS.two;
+  return 2;
+}
+
+/** Where going to a chapter lands (px into the stretch): the top for the town, else the middle of the chapter's stop. */
+export function restOffset(chapter: Chapter, length: number): number {
+  if (chapter === 0) return 0;
+  if (chapter === 1) return length * MAP_REST_SHARE;
+  return length * (SPANS.one + SPANS.mapStop + SPANS.two + SPANS.gridStop / 2);
 }
 
 export interface ClockFrame {
   /** What the stage draws (0–2). */
   value: number;
-  /** The chapter the stage is heading for. */
-  target: Chapter;
-  /** How much faster than its own pace the step runs now (1 when it isn't catching up). */
-  speed: number;
-  /** Something is still moving: call `step` again next frame. */
+  /** Where the scroll is (0–2): the value eases toward it. */
+  target: number;
+  /** Still easing: call `step` again next frame. */
   busy: boolean;
 }
 
 export interface ChapterClock {
-  /** A new scroll offset into the pinned stretch (px), read at `now` (ms). */
-  scroll(y: number, now: number): void;
-  /** A finger is on the screen (the preview holds while it rests). */
-  hold(holding: boolean): void;
-  /** Advances the clock to `now` (ms): one call per animation frame while `busy`. */
+  /** A new scroll offset into the pinned stretch (px). */
+  scroll(offset: number): void;
+  /** The stretch's new length (px), after a resize. */
+  resize(length: number): void;
+  /** Eases the value toward the scroll, to `now` (ms): one call per animation frame while `busy`. */
   step(now: number): ClockFrame;
-  /** Sets the chapter for `y` at once, without a step (the first reading, a new layout). */
-  jump(y: number): void;
-  /** Where the hand is now (px). */
+  /** Sets the value for `offset` at once, without easing (a first reading, a held moment released). */
+  jump(offset: number): void;
+  /** Where the scroll is now (px). */
   offset(): number;
 }
 
-/** A turn of the hand counts once it has come back this far (px). */
-const DEADBAND = 10;
-/** Going back plays this much faster than going forward. */
-const REVERSE = 1.35;
-/** The preview shows this share of the next step at most. */
-const PREVIEW = 0.1;
-/** The hand counts as moving for this long after a scroll (ms). */
-const ACTIVE_MS = 200;
-
-const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
-const easeInOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-
-/** The chapter a scroll offset falls in, read from the forward lines (a first reading has no direction yet). */
-export function chapterAt(lines: ChapterLines, y: number): Chapter {
-  if (y >= lines.forward[1]) return 2;
-  if (y >= lines.forward[0]) return 1;
-  return 0;
-}
-
-export function createChapterClock(lines: ChapterLines, start = 0): ChapterClock {
+export function createChapterClock(length: number, start = 0, ease: number = EASE_MS.wide): ChapterClock {
+  let stretch = length;
   let y = start;
-  let direction = 1;
-  let extreme = start;
-  let target: Chapter = chapterAt(lines, start);
-  let clock: number = target;
-  let preview = 0;
-  let envelope = 0;
-  let lastScroll = Number.NEGATIVE_INFINITY;
-  let holding = false;
+  let value = valueAt(start, stretch);
+  /** The previous frame's time, or 0 when the value was at rest (the next frame counts as an ordinary one). */
   let last = 0;
-
   return {
-    scroll(next, now) {
-      if (direction > 0) {
-        if (next > extreme) extreme = next;
-        else if (extreme - next > DEADBAND) {
-          direction = -1;
-          extreme = next;
-        }
-      } else if (next < extreme) extreme = next;
-      else if (next - extreme > DEADBAND) {
-        direction = 1;
-        extreme = next;
-      }
+    scroll(next) {
       y = next;
-      lastScroll = now;
-      if (direction > 0) {
-        while (target < 2 && y >= lines.forward[target as 0 | 1]) {
-          // The step starts where its preview had got to.
-          if (clock === target) clock += preview;
-          preview = 0;
-          target = (target + 1) as Chapter;
-        }
-      } else {
-        while (target > 0 && y <= lines.back[target - 1]) {
-          preview = 0;
-          target = (target - 1) as Chapter;
-        }
-      }
     },
-    hold(next) {
-      holding = next;
+    resize(next) {
+      stretch = next;
     },
     step(now) {
-      const dt = last ? Math.min(64, Math.max(0, now - last)) : 16;
-      last = now;
-      let busy = false;
-      let speed = 1;
-      if (clock !== target) {
-        const forward = target > clock;
-        let duration = (forward ? clock < 1 : clock <= 1) ? lines.durations[0] : lines.durations[1];
-        if (!forward) duration /= REVERSE;
-        if (Math.abs(target - clock) > 1.02) speed = 2.2;
-        if (forward && lines.hurry > 0 && y >= lines.track - lines.hurry) speed = Math.max(speed, 3);
-        if (forward && y > lines.track) speed = 6;
-        let next = clock + ((forward ? 1 : -1) * dt * speed) / duration;
-        if (forward ? next >= target : next <= target) next = target;
-        clock = next;
-        busy = true;
-      }
-      if (clock === target && target < 2) {
-        const next = target as 0 | 1;
-        const pull = clamp01((y - (lines.forward[next] - lines.preview[next])) / lines.preview[next]);
-        const active = holding || now - lastScroll < ACTIVE_MS;
-        const goal = active && pull > 0 ? 1 : 0;
-        envelope += (goal - envelope) * (1 - Math.exp(-dt / (goal ? 60 : 240)));
-        if (Math.abs(goal - envelope) < 0.003) envelope = goal;
-        else busy = true;
-        if (goal) busy = true;
-        preview = PREVIEW * easeInOut(pull) * envelope;
-      } else {
-        envelope = 0;
-        preview = 0;
-      }
-      if (!busy) last = 0;
-      return { value: clock + preview, target, speed, busy };
+      const target = valueAt(y, stretch);
+      const elapsed = last ? Math.min(LONGEST_FRAME_MS, Math.max(0, now - last)) : 16;
+      value += (target - value) * (1 - Math.exp(-elapsed / ease));
+      if (Math.abs(target - value) < SETTLED) value = target;
+      const busy = value !== target;
+      last = busy ? now : 0;
+      return { value, target, busy };
     },
     jump(next) {
       y = next;
-      extreme = next;
-      direction = 1;
-      target = chapterAt(lines, next);
-      clock = target;
-      preview = 0;
-      envelope = 0;
+      value = valueAt(y, stretch);
       last = 0;
     },
     offset: () => y,
   };
 }
-
-/**
- * The lines for each screen (scroll offsets into the pinned stretch, px). A wheel notch is 100 px: on a laptop one
- * notch opens the map, a burst of four or five stays on it, and the categories come about a screen later. On a phone
- * each chapter is a page 320 px apart that a flick stops at (CSS scroll snapping), so nothing needs to hurry before the
- * end of the stretch.
- */
-export const WIDE_LINES: ChapterLines = { forward: [60, 560], back: [30, 470], preview: [60, 100], track: 860, hurry: 120, durations: [1600, 1400] };
-export const PHONE_PAGE = 320;
-export const PHONE_LINES: ChapterLines = {
-  forward: [PHONE_PAGE * 0.3, PHONE_PAGE * 1.3],
-  back: [PHONE_PAGE * 0.7, PHONE_PAGE * 1.7],
-  preview: [PHONE_PAGE * 0.3, PHONE_PAGE * 0.3],
-  track: PHONE_PAGE * 2,
-  hurry: 0,
-  durations: [1350, 1200],
-};

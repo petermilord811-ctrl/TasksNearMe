@@ -25,8 +25,16 @@ async function landOnMap(page: Page) {
       { timeout: 30_000 },
     )
     .toBe(true);
-  // The explorer takes clicks once the arrival has come far enough (wide screens), right away on phones.
-  await expect.poll(() => page.locator('[data-map-explorer]').evaluate((panel) => getComputedStyle(panel).pointerEvents)).not.toBe('none');
+  // The explorer takes clicks once the arrival has come far enough, and the landing's stage (which follows the scroll a
+  // moment behind) has landed on the map: a click while it still moves would make Playwright's retry scroll it on.
+  await expect
+    .poll(() =>
+      page.locator('[data-map-explorer]').evaluate((panel) => {
+        const stage = (window as unknown as { __tnmChapters?: { value(): number } }).__tnmChapters;
+        return stage && stage.value() !== 1 ? 'moving' : getComputedStyle(panel).pointerEvents;
+      }),
+    )
+    .not.toMatch(/^(none|moving)$/);
   if (!(await page.evaluate(() => window.matchMedia('(min-width: 1024px)').matches))) return;
   // Wide screens: it takes clicks from 55% of the arrival but slides in until about 73%, and its card blooms in. Wait
   // until it's all the way in and has stopped moving. A click that finds it "not stable" makes Playwright retry with the

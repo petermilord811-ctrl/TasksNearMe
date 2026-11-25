@@ -56,7 +56,7 @@ const STEP_BACK = 'lg:transition-[top,opacity] lg:duration-300 lg:ease-[var(--ea
  *
  * On the landing's stage (chapters/) it's the second chapter, a layer over the town: the map shows through a window
  * that opens around the hero's first task pin, starting close and tilted over that task, then its camera pulls back
- * and flattens into the whole city on the step's own time, and the card and the explorer arrive last (on phones the
+ * and flattens into the whole city as the visitor scrolls on, and the card and the explorer arrive last (on phones the
  * explorer is a sheet along the bottom). Going on, they leave and the map docks into the first tile of the categories'
  * grid while its tasks fly into the cards' counts (`chapters/map-chapter.ts`). With reduced motion it's a plain
  * section: the city view, with the card and the explorer.
@@ -330,13 +330,12 @@ function MapSectionContent({ data, mapMode }: { data: HomePageData; mapMode: Map
           {/* The explorer: find, pick a category, order and narrow, see how many, and the tasks themselves (the map's
               accessible twin). On wide screens it sits under the top bar (following the bar as it slips away and comes
               back), grows with its list up to the screen's height (its rows scroll past that), folds to its search
-              and count with a press, and comes in once the map's camera is still. Its rows scroll by themselves (on a
-              phone's stage it's a sheet), so a swipe in it isn't a page turn. */}
+              and count with a press, and comes in once the map's camera is still. On a phone's stage it's a sheet
+              whose rows scroll by themselves. */}
           <div
             ref={panelRef}
             data-map-explorer=""
             data-map-panel=""
-            data-chapter-scrolls=""
             data-folded={folded ? '' : undefined}
             className={cn(
               'relative order-3 px-gutter pt-6 pb-16 sm:pb-20 lg:absolute lg:top-[calc(var(--top-bar-offset,5.5rem)+1rem)] lg:right-[var(--map-edge)] lg:order-none lg:w-[24rem] lg:px-0 lg:py-0 xl:w-[26.5rem] lg:group-has-[[aria-modal=true]]/stage:invisible',

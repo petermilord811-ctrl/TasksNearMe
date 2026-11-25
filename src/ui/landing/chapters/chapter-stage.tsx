@@ -4,16 +4,11 @@ import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState
 import { usePrefersReducedMotion } from '@/ui/motion';
 import { devHelpersOn } from '@/shared/dev-helpers';
 import { MAP_LANDED_ATTRIBUTE } from '../landing-state';
-import { createChapterClock, PHONE_LINES, PHONE_PAGE, WIDE_LINES, type Chapter, type ChapterLines } from './clock';
+import { createChapterClock, EASE_MS, restOffset, type Chapter } from './clock';
 import { stageMoment, type StageMoment } from './timeline';
-import { usePhonePaging } from './phone-paging';
 
-/** Wide screens (the town beside the words) and the rest (the town under them) have their own lines. */
+/** Wide screens (the town beside the words) ease the stage a little longer behind the wheel than touch screens. */
 export const CHAPTERS_WIDE_QUERY = '(min-width: 1024px)';
-/** Where scrolling to the map lands in the pinned stretch (px): well inside the map's chapter on both layouts. */
-export const MAP_REST: Record<'wide' | 'phone', number> = { wide: 300, phone: PHONE_PAGE };
-/** Where going to the categories lands: inside their chapter, before the stage starts to leave. */
-const GRID_REST: Record<'wide' | 'phone', number> = { wide: 700, phone: PHONE_PAGE * 2 };
 
 type Listener = (value: number, moment: StageMoment) => void;
 export type ChapterMode = 'pending' | 'on' | 'off';
@@ -133,13 +128,13 @@ function createStore(): ChapterStore & { publish(value: number): void; setMode(m
 }
 
 /**
- * The landing's first three chapters on one pinned stage (owner, 2026-11-24: "imagine you are scrolling not that
- * smoothly, but like human in both laptop and phone. redesign the switch animation"): the hero's town, the live map
- * with its card and explorer, and the categories with the map docked as their first tile. The stage stays pinned for a
- * stretch of scrolling (`--chapter-track`: about one laptop screen, or two phone pages), and the scroll only picks a
- * chapter (`clock.ts`); the layers move on the clock's own time (`timeline.ts`). On phones a flick moves one chapter
- * (`phone-paging.ts`). With reduced motion, in previews and tests (`enabled` false) the layers are plain sections, one
- * after another, as they were.
+ * The landing's first three chapters on one pinned stage (owner, 2026-11-24: "Deeply let's re-design the section swtich
+ * animation in first landing page"): the hero's town, the live map with its card and explorer, and the categories with
+ * the map docked as their first tile. The stage stays pinned for a stretch of scrolling (`--chapter-track`: about two
+ * screens), and the scroll moves it along (owner, 2026-11-25: "when I scroll a little, animation is also changed a
+ * little by scroll height ... and make it feel smooth"): `clock.ts` turns the scroll into how far the stage is, eased a
+ * moment behind the hand, and the layers draw that moment (`timeline.ts`). With reduced motion, in previews and tests
+ * (`enabled` false) the layers are plain sections, one after another, as they were.
  */
 export function ChapterStage({ enabled, children }: { enabled: boolean; children: ReactNode }) {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -150,7 +145,7 @@ export function ChapterStage({ enabled, children }: { enabled: boolean; children
   const wide = useWide();
   const mode: ChapterMode = !enabled ? 'off' : !hydrated ? 'pending' : reduced ? 'off' : 'on';
   const on = mode === 'on';
-  const lines: ChapterLines = wide ? WIDE_LINES : PHONE_LINES;
+  const ease = wide ? EASE_MS.wide : EASE_MS.touch;
 
   useEffect(() => {
     store.setMode(mode);
@@ -160,13 +155,16 @@ export function ChapterStage({ enabled, children }: { enabled: boolean; children
   useEffect(() => {
     const track = trackRef.current;
     if (!track || !on) return;
-    // The track's place on the page, kept on resize (never read while scrolling).
+    // The track's place on the page and the length of its pinned stretch, kept on resize (never read while scrolling).
+    const stage = track.querySelector<HTMLElement>('[data-chapter-stage]');
     let top = 0;
+    let length = 1;
     const measure = () => {
       top = track.getBoundingClientRect().top + window.scrollY;
+      length = Math.max(1, track.offsetHeight - (stage?.offsetHeight ?? window.innerHeight));
     };
     measure();
-    const clock = createChapterClock(lines, window.scrollY - top);
+    const clock = createChapterClock(length, window.scrollY - top, ease);
     let frame = 0;
     /** A value held by the dev helpers (screenshots of any moment), or null. */
     let held: number | null = null;
@@ -181,22 +179,17 @@ export function ChapterStage({ enabled, children }: { enabled: boolean; children
       if (!frame) frame = requestAnimationFrame(step);
     };
     const onScroll = () => {
-      clock.scroll(window.scrollY - top, performance.now());
+      clock.scroll(window.scrollY - top);
       kick();
     };
-    // A resize (or the page growing as its pictures arrive) moves the track: read it again, and let a step that's
-    // playing go on.
+    // A resize (or the page growing as its pictures arrive) moves the track and can change its length: read them again.
     const onResize = () => {
       measure();
+      clock.resize(length);
       onScroll();
     };
-    const onTouch = (event: TouchEvent) => {
-      clock.hold(event.type === 'touchstart' && event.touches.length > 0);
-      kick();
-    };
     store.bind((chapter, behavior = 'smooth') => {
-      const rest = chapter === 1 ? MAP_REST : GRID_REST;
-      window.scrollTo({ top: top + (chapter === 0 ? 0 : wide ? rest.wide : rest.phone), behavior });
+      window.scrollTo({ top: top + restOffset(chapter, length), behavior });
     });
     // Development and the e2e build only: hold the stage at any moment, for screenshots and checks.
     const debug = devHelpersOn()
@@ -221,21 +214,15 @@ export function ChapterStage({ enabled, children }: { enabled: boolean; children
     sized?.observe(track);
     sized?.observe(document.body);
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('touchstart', onTouch, { passive: true });
-    window.addEventListener('touchend', onTouch, { passive: true });
-    window.addEventListener('touchcancel', onTouch, { passive: true });
     kick();
     return () => {
       cancelAnimationFrame(frame);
       sized?.disconnect();
       window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('touchstart', onTouch);
-      window.removeEventListener('touchend', onTouch);
-      window.removeEventListener('touchcancel', onTouch);
       store.bind(() => {});
       if (debug) delete (window as unknown as { __tnmChapters?: unknown }).__tnmChapters;
     };
-  }, [store, on, wide, lines]);
+  }, [store, on, ease]);
 
   // The town stops being drawn once the window onto the map covers it, and the categories are there from step two on.
   useEffect(() => {
@@ -273,17 +260,15 @@ export function ChapterStage({ enabled, children }: { enabled: boolean; children
     };
   }, [store, on]);
 
-  usePhonePaging(trackRef, on && !wide);
-
   return (
     <ChapterContext value={store}>
       <div
         ref={trackRef}
         data-chapters={enabled ? 'on' : 'off'}
-        className="relative [--chapter-track:640px] lg:[--chapter-track:860px]"
+        className="relative [--chapter-track:190svh] lg:[--chapter-track:210svh]"
       >
         <div data-chapter-stage="">{children}</div>
-        {/* Where "see it on the map" lands (`scrollToMap`): inside the map's chapter (the step plays on from there). */}
+        {/* Where "see it on the map" lands (`scrollToMap`): the middle of the map's stop (landing.css, `MAP_REST_SHARE`). */}
         <span data-chapter-map-rest="" {...(on ? { [MAP_LANDED_ATTRIBUTE]: '' } : {})} aria-hidden="true" className="pointer-events-none absolute left-0 h-px w-px" />
       </div>
     </ChapterContext>
