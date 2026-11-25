@@ -5,6 +5,7 @@ import type { BadgeView } from './badges';
 import type { CategorySlug, ISODateTime, Photo } from './common';
 import type { PhotoUploadResult } from './posting';
 import type { SparksSummary } from './sparks';
+import type { AiAssistResult, CommunityAnswerDraft, CommunityAnswerDraftInput, CommunityPolish, CommunityPolishInput } from './ai-assist';
 
 /**
  * The community feed (completion plan 7.7–7.8): neighbors ask for a recommendation, ask a question, share a tip,
@@ -225,6 +226,11 @@ export interface CommunityPostPageData {
     isAuthor: boolean;
     /** A staff member who moderates (trust and safety, support leads, admins): shows the moderation controls. */
     isStaff: boolean;
+    /**
+     * "Draft an answer with AI" (2026-11-24): a helper with an active service in the post's service, on a question or a
+     * recommendation request they can reply to, with AI on for them. Needs `CommunityPostHandlers.onDraftAnswer`.
+     */
+    answerDraft?: true;
   };
   /** A recommendation request: the helpers the viewer can name (ones they booked or saved, and themself). */
   recommendOptions: { handle: string; displayName: string; self: boolean }[];
@@ -385,6 +391,8 @@ export type CommunityModerationInput = z.input<typeof communityModerationInputSc
 export interface CommunityNewPostHandlers extends Partial<PhoneVerifyHandlers> {
   onPost: ActionHandler<CommunityPostInput>;
   onUploadPhoto?: QueryHandler<FormData, PhotoUploadResult>;
+  /** "Make it clearer" (2026-11-24): the title and words rewritten with AI, for the author to keep or undo. Absent when AI is off. */
+  onPolish?: QueryHandler<CommunityPolishInput, AiAssistResult<CommunityPolish>>;
 }
 
 /**
@@ -417,6 +425,8 @@ export interface CommunityPostHandlers extends Partial<PhoneVerifyHandlers> {
   onUploadPhoto?: QueryHandler<FormData, PhotoUploadResult>;
   onLoadReactors?: QueryHandler<{ target: 'post' | 'reply'; id: string }, CommunityReactorsView | null>;
   onTranslate?: QueryHandler<{ target: 'post' | 'reply'; id: string }, CommunityTranslation | null>;
+  /** "Draft an answer with AI" (`viewer.answerDraft`; bound to the post by the page): a reply for the helper to change and send. */
+  onDraftAnswer?: QueryHandler<CommunityAnswerDraftInput, AiAssistResult<CommunityAnswerDraft>>;
 }
 
 /** A post or a reply in the viewer's language (plan 10.23), made on request; never stored. */

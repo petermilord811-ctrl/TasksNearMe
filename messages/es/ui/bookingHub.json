@@ -81,7 +81,11 @@
     "helperVisitWaiting": "Ayudante: esperando el pago del cliente",
     "clientFarAhead": "Cliente: una reserva con mucha anticipación, pagada después",
     "listLoading": "Reservas · cargando",
-    "loading": "Una reserva · cargando"
+    "loading": "Una reserva · cargando",
+    "prepEmpty": "Cliente · Prepárate, antes de la lista",
+    "prepMade": "Cliente · Prepárate, lista hecha",
+    "prepStale": "Cliente · Prepárate, la reserva cambió",
+    "prepHelper": "Ayudante · Prepárate, lista hecha"
   },
   "back": "Todas las reservas",
   "change": {
@@ -289,5 +293,22 @@
   "direct": {
     "poster": "Pagas a {name} directamente después de la tarea (efectivo, Zelle, Venmo…). Aquí no se cobra nada y no hay ninguna tarifa.",
     "helper": "{name} te paga directamente después de la tarea (efectivo, Zelle, Venmo…). Nada pasa por TasksNearMe y no hay ninguna tarifa."
+  },
+  "prep": {
+    "title": "Prepárate",
+    "introPoster": "Una lista corta para el día, hecha con IA a partir de lo que acordaron tú y {name}: el espacio, las cosas y lo que hay que confirmar.",
+    "introHelper": "Una lista corta para el día, hecha con IA a partir de lo que acordaron tú y {name}: qué llevar y qué confirmar.",
+    "make": "Hacer mi lista",
+    "making": "Haciendo tu lista…",
+    "again": "Hacer una nueva",
+    "stale": "La reserva cambió desde que se hizo esta lista.",
+    "madeWithAi": "Hecha con IA el {date}. Solo tú la ves.",
+    "list": "Tu lista",
+    "progress": "{done} de {total} hechas",
+    "errors": {
+      "unavailable": "Las listas no están disponibles ahora. Inténtalo más tarde.",
+      "rate_limited": "Son muchas listas por ahora. Inténtalo de nuevo en una hora.",
+      "prohibited": "No podemos hacer una lista para esta reserva."
+    }
   }
 }

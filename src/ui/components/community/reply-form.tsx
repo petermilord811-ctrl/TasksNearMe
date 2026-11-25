@@ -3,8 +3,9 @@
 import { useId, useRef, useState, useTransition } from 'react';
 import { CornerDownRight, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { COMMUNITY_REPLY_MAX, COMMUNITY_REPLY_PHOTOS_MAX, type ActionHandler, type ActionResult, type CommunityPostPageData, type CommunityReplyInput, type Photo, type PhotoUploadResult, type QueryHandler } from '@/contracts';
+import { aiAssistOutcome, COMMUNITY_ANSWER_NOTES_MAX, COMMUNITY_REPLY_MAX, COMMUNITY_REPLY_PHOTOS_MAX, type ActionHandler, type ActionResult, type AiAssistResult, type CommunityAnswerDraft, type CommunityAnswerDraftInput, type CommunityPostPageData, type CommunityReplyInput, type Photo, type PhotoUploadResult, type QueryHandler } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
+import { AiDraftButton, AiDraftStatus, type AiDraftOutcome } from '@/ui/components/forms/ai-draft';
 import { nativeSelectClassName } from '@/ui/components/forms/native-select';
 import { Button } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
@@ -19,13 +20,26 @@ import { useSparksToast } from './sparks-toast';
  * to name (ones you booked or saved, or yourself). A reply's Reply button makes it "Replying to Maya R." (she hears
  * about it). Masked on the server like any message; words that might land as unkind get the kindness reminder.
  */
-export function CommunityReplyForm({ data, onReply, onUploadPhoto }: { data: Pick<CommunityPostPageData, 'post' | 'recommendOptions' | 'alreadyRecommended'>; onReply: ActionHandler<CommunityReplyInput>; onUploadPhoto?: QueryHandler<FormData, PhotoUploadResult> }) {
+export function CommunityReplyForm({ data, onReply, onUploadPhoto, onDraftAnswer, answerPreview }: {
+  data: Pick<CommunityPostPageData, 'post' | 'recommendOptions' | 'alreadyRecommended'>;
+  onReply: ActionHandler<CommunityReplyInput>;
+  onUploadPhoto?: QueryHandler<FormData, PhotoUploadResult>;
+  /** "Draft an answer with AI" (2026-11-24): a helper on an ask in a service they offer. */
+  onDraftAnswer?: QueryHandler<CommunityAnswerDraftInput, AiAssistResult<CommunityAnswerDraft>>;
+  /** Preview seeds for the answer draft. */
+  answerPreview?: { pending?: boolean; outcome?: AiDraftOutcome; body?: string };
+}) {
   const t = useTranslations('community.replyForm');
+  const answerCopy = useTranslations('community.answerDraft');
+  const drafts = useTranslations('forms.aiDraft');
   const fieldCopy = useTranslations('forms.fieldErrors');
   const sparksToast = useSparksToast();
   const { target, setTarget, form: formRef } = useReplyTarget();
   const id = useId();
-  const [body, setBody] = useState('');
+  const [body, setBody] = useState(answerPreview?.body ?? '');
+  const [drafting, setDrafting] = useState(answerPreview?.pending ?? false);
+  const [draftOutcome, setDraftOutcome] = useState<AiDraftOutcome | undefined>(answerPreview?.outcome);
+  const [draftBefore, setDraftBefore] = useState<string>();
   const [recommend, setRecommend] = useState('');
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [result, setResult] = useState<ActionResult | undefined>();
@@ -59,6 +73,34 @@ export function CommunityReplyForm({ data, onReply, onUploadPhoto }: { data: Pic
     } else if (next.fieldErrors?.body && !isKindnessReminder(next)) input.current?.focus();
   });
 
+  // "Draft an answer with AI": what's typed goes along as the helper's own words; Undo puts it back.
+  const draftAnswer = async () => {
+    if (!onDraftAnswer || drafting) return;
+    setDrafting(true);
+    setDraftOutcome(undefined);
+    let next: AiAssistResult<CommunityAnswerDraft>;
+    try {
+      next = await onDraftAnswer({ notes: body.trim().slice(0, COMMUNITY_ANSWER_NOTES_MAX) });
+    } catch {
+      next = { ok: false, code: 'unavailable' };
+    }
+    setDrafting(false);
+    if (!next.ok) {
+      const outcome = aiAssistOutcome(next);
+      setDraftOutcome({ kind: 'failed', code: outcome === 'drafted' ? 'unavailable' : outcome });
+      return;
+    }
+    setDraftBefore((kept) => kept ?? body);
+    setBody(next.value.body.slice(0, COMMUNITY_REPLY_MAX));
+    setDraftOutcome({ kind: 'drafted' });
+  };
+  const undoDraft = () => {
+    if (draftBefore === undefined) return;
+    setBody(draftBefore);
+    setDraftBefore(undefined);
+    setDraftOutcome({ kind: 'undone' });
+  };
+
   return <form ref={formRef} id={REPLY_FORM_ID} noValidate aria-label={t('label')} className="scroll-mt-28 space-y-3" onSubmit={(event) => { event.preventDefault(); if (!pending && body.trim().length >= 2) submit(); }}>
     <label htmlFor={`${id}-body`} className="text-sm font-semibold">{t('label')}</label>
     {target && <p className="flex flex-wrap items-center gap-2 text-sm">
@@ -82,6 +124,13 @@ export function CommunityReplyForm({ data, onReply, onUploadPhoto }: { data: Pic
       className="min-h-24"
     />
     {bodyError && <p id={`${id}-body-error`} className="text-sm text-destructive">{fieldCopy(fieldCopy.has(bodyError) ? bodyError : 'invalid')}</p>}
+    {onDraftAnswer && <div className="space-y-1">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <AiDraftButton size="sm" className="rounded-full" pending={drafting} disabled={pending} onClick={() => void draftAnswer()}>{answerCopy('button')}</AiDraftButton>
+        <p className="text-xs text-muted-foreground">{answerCopy('hint')}</p>
+      </div>
+      <AiDraftStatus outcome={draftOutcome} {...(draftBefore !== undefined ? { onUndo: undoDraft } : {})} drafted={drafts('draftedSend')} />
+    </div>}
     {onUploadPhoto && <CommunityPhotoPicker id={`${id}-photo`} photos={photos} onChange={setPhotos} onUpload={onUploadPhoto} max={COMMUNITY_REPLY_PHOTOS_MAX} disabled={pending} variant="icon" />}
     {canRecommend && <div className="space-y-1.5">
       <label htmlFor={`${id}-recommend`} className="text-sm font-medium">{t('recommend')}</label>

@@ -187,7 +187,11 @@
     "postGeneral": "Una publicación general (texto y una foto, sin título)",
     "newDialog": "Nueva publicación",
     "newDialogRecommendation": "Nueva publicación: una recomendación",
-    "newQuestionService": "Nueva pregunta · preguntando a quienes lo hacen"
+    "newQuestionService": "Nueva pregunta · preguntando a quienes lo hacen",
+    "newPostPolish": "Nueva publicación · Hacerlo más claro",
+    "newPostPolished": "Nueva publicación · reescrita con IA",
+    "postAnswerDraft": "Ayudante en una solicitud · Redactar una respuesta con IA",
+    "postAnswerDrafted": "Ayudante en una solicitud · respuesta redactada con IA"
   },
   "sinceVisit": {
     "badge": "Nueva",
@@ -347,5 +351,13 @@
   },
   "replyToPost": "Responder a esta publicación",
   "replyToPerson": "Responder a {name}",
-  "guidelinesShort": "Sé amable y habla de lo que pasa aquí."
+  "guidelinesShort": "Sé amable y habla de lo que pasa aquí.",
+  "polish": {
+    "button": "Hacerlo más claro",
+    "hint": "La IA reescribe tu publicación para que sea clara y amable, sin cambiar lo que quieres decir. Deshacer devuelve la tuya."
+  },
+  "answerDraft": {
+    "button": "Redactar una respuesta con IA",
+    "hint": "La IA redacta a partir de la pregunta y tu perfil. Si quieres, escribe primero unas palabras tuyas."
+  }
 }

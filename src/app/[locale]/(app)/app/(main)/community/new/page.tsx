@@ -6,6 +6,8 @@ import { Suspense } from 'react';
 import { routes } from '@/contracts/routes';
 import { confirmPhoneChangeAction, startPhoneChangeAction } from '@/modules/accounts/account-actions';
 import { createCommunityPostAction, uploadCommunityPhotoAction } from '@/modules/community/actions';
+import { polishCommunityPostAction } from '@/modules/assist/ai-actions';
+import { aiDraftingEnabledFor } from '@/modules/assist/availability';
 import { communityViewerOf } from '@/modules/community/request-viewer';
 import { getNewCommunityPostPage } from '@/modules/community/service';
 import { localeOrDefault } from '@/contracts';
@@ -40,7 +42,9 @@ async function NewPost({ searchParams }: Pick<PageProps<'/[locale]/app/community
   const data = await getNewCommunityPostPage(db, await communityViewerOf(viewer.user, localeOrDefault(locale)), kind, booking, now);
   // Missing what posting needs (its home city): said here, not a silent trip to Home (2026-11-23).
   if (!data) return <PageUnavailableScreen />;
-  return <CommunityNewPostScreen data={data} handlers={{ onPost: createCommunityPostAction, onUploadPhoto: uploadCommunityPhotoAction, ...(data.postBlocked === 'phone_required' ? { onStartPhoneChange: startPhoneChangeAction, onConfirmPhoneChange: confirmPhoneChangeAction } : {}) }} />;
+  // "Make it clearer" (2026-11-24), with AI on for them.
+  const polish = await aiDraftingEnabledFor(db, viewer.user.id);
+  return <CommunityNewPostScreen data={data} handlers={{ onPost: createCommunityPostAction, onUploadPhoto: uploadCommunityPhotoAction, ...(polish ? { onPolish: polishCommunityPostAction } : {}), ...(data.postBlocked === 'phone_required' ? { onStartPhoneChange: startPhoneChangeAction, onConfirmPhoneChange: confirmPhoneChangeAction } : {}) }} />;
 }
 
 export default withClientMessages('[locale]/(app)/app/(main)/community/new/page.tsx', NewCommunityPostPage);

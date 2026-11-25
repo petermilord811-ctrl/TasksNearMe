@@ -70,4 +70,5 @@ export * from './peek';
 export * from './thanks';
 export * from './followers';
 export * from './teams';
+export * from './ai-assist';
 export type { PreviewEntry } from './preview';

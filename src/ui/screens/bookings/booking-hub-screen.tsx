@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { ArrowLeft, CalendarDays, Check, Clock3, HandCoins, HandHeart, HelpCircle, Lock, Navigation, Repeat } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import {
-  routes, type ActionResult, type BadgeTone, type BookingActionId, type BookingHubHandlers,
+  routes, type ActionResult, type BadgeTone, type BookingActionId, type BookingHubHandlers, type BookingPrepHandlers,
   type BookingPaymentLine, type BookingSheetHandlers, type BookingTipHandlers, type BookingView, type ISODateTime,
   type FollowerHandlers, type ScheduledPaymentHandlers, type TaskMapBundle, type TeamHandlers, type ThankYouHandlers,
 } from '@/contracts';
@@ -34,6 +34,7 @@ import { RichText } from '@/ui/components/rich-text/rich-text';
 import { ThanksPanelView } from '@/ui/components/thanks/thank-you-note';
 import { FamilyCard } from '@/ui/components/family/followers-dialog';
 import { TeamPanel } from '@/ui/components/teams/team-panel';
+import { BookingPrepCard, type BookingPrepPreview } from '@/ui/components/bookings/booking-prep-card';
 
 export interface BookingHubScreenProps {
   data: BookingView;
@@ -55,6 +56,8 @@ export interface BookingHubScreenProps {
   now: ISODateTime;
   /** The task map (the area, the trip there, the weather for the booking and what's around). */
   map?: TaskMapBundle | null;
+  /** "Get ready" (2026-11-24): "Make my checklist", when `data.prep` is there. Without it a checklist shows without it. */
+  prep?: BookingPrepHandlers;
 }
 
 export function BookingHubScreen({ sheets, ...props }: BookingHubScreenProps) {
@@ -133,12 +136,13 @@ function BookingPayment({ payment }: { payment: BookingPaymentLine }) {
 }
 
 /** Initial result/pending states belong to the preview gallery. App pages use BookingHubScreen. */
-export function BookingHubContent({ data, handlers, sheets, tip, scheduledPayment, thanks, followers, team, partnerSheets, now, initialResult, initialPending, tipPreview, scheduledPreview, map }: Omit<BookingHubScreenProps, 'sheets'> & {
+export function BookingHubContent({ data, handlers, sheets, tip, scheduledPayment, thanks, followers, team, partnerSheets, now, initialResult, initialPending, tipPreview, scheduledPreview, map, prep, prepPreview }: Omit<BookingHubScreenProps, 'sheets'> & {
   sheets: BookingSheetHandlers;
   initialResult?: ActionResult;
   initialPending?: BookingActionId;
   tipPreview?: TipCardPreviewState;
   scheduledPreview?: ScheduledPaymentPreviewState;
+  prepPreview?: BookingPrepPreview;
 }) {
   const { formatDate, formatDateTime, formatMonthYear, formatTime, formatTimeRange } = useFormat();
   const t = useTranslations('bookingHub');
@@ -185,6 +189,17 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
 
     {/* Team up (2026-11-24): a two-person job's lead and partner, each on their own booking. */}
     {data.team && <TeamPanel key={`team-${data.id}`} data={data} team={data.team} {...(team ? { handlers: team } : {})} {...(partnerSheets ? { partnerSheets } : {})} />}
+
+    {/* "Get ready" (2026-11-24): the viewer's checklist for the day, made with AI on request. */}
+    {data.prep && <BookingPrepCard
+      key={`prep-${data.id}`}
+      bookingId={data.id}
+      role={data.viewerRole}
+      otherName={(data.viewerRole === 'poster' ? helper : poster).displayName.split(/\s+/)[0] ?? ''}
+      prep={data.prep}
+      {...(prep ? { handlers: prep } : {})}
+      {...(prepPreview ? { preview: prepPreview } : {})}
+    />}
 
     <BookingTipCard key={`tip-${data.id}`} data={data} handlers={tip} preview={tipPreview} />
 

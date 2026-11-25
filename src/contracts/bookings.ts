@@ -16,6 +16,7 @@ import type { TimelineEvent } from './timeline';
 import type { ThanksPanel } from './thanks';
 import type { BookingFamilyView, FollowedBookingRow } from './followers';
 import type { BookingTeamView } from './teams';
+import type { BookingPrepView } from './ai-assist';
 
 /**
  * Bookings. This file starts with booking an offer: the confirmation and payment page
@@ -267,6 +268,11 @@ export interface BookingView {
   openChange?: { id: string; status: 'proposed' | 'accepted_pending_funding'; fromMe: boolean; differenceCents?: Cents };
   /** A team job (2026-11-24): the lead's or the partner's part, the invite as it stands, and the client's choices. */
   team?: BookingTeamView;
+  /**
+   * "Get ready" (2026-11-24): the viewer's checklist for the day, made with AI on request, before the booking is done.
+   * Absent once it's done or canceled, and when AI is off for the viewer.
+   */
+  prep?: BookingPrepView;
   /** From the domain (ui-contract §6): only actions that work today are included. */
   actions: ActionDescriptor<BookingActionId>[];
 }

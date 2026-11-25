@@ -81,7 +81,11 @@
     "helperVisitWaiting": "Helper: waiting for the client's payment",
     "clientFarAhead": "Client: a booking far ahead, paid later",
     "listLoading": "Bookings · loading",
-    "loading": "A booking · loading"
+    "loading": "A booking · loading",
+    "prepEmpty": "Client · Get ready, before a checklist",
+    "prepMade": "Client · Get ready, checklist made",
+    "prepStale": "Client · Get ready, the booking changed",
+    "prepHelper": "Helper · Get ready, checklist made"
   },
   "back": "All bookings",
   "change": {
@@ -289,5 +293,22 @@
   "direct": {
     "poster": "You pay {name} directly after the task (cash, Zelle, Venmo…). Nothing is charged here, and there is no fee.",
     "helper": "{name} pays you directly after the task (cash, Zelle, Venmo…). Nothing goes through TasksNearMe, and there is no fee."
+  },
+  "prep": {
+    "title": "Get ready",
+    "introPoster": "A short checklist for the day, made with AI from what you and {name} agreed: the space, the items and what to confirm.",
+    "introHelper": "A short checklist for the day, made with AI from what you and {name} agreed: what to bring and what to confirm.",
+    "make": "Make my checklist",
+    "making": "Making your checklist…",
+    "again": "Make a new one",
+    "stale": "The booking changed since this was made.",
+    "madeWithAi": "Made with AI on {date}. Only you see it.",
+    "list": "Your checklist",
+    "progress": "{done} of {total} done",
+    "errors": {
+      "unavailable": "Checklists aren't available right now. Try again later.",
+      "rate_limited": "That's a lot of checklists for now. Try again in an hour.",
+      "prohibited": "We can't make a checklist for this booking."
+    }
   }
 }

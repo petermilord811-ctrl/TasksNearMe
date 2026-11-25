@@ -116,14 +116,16 @@
   },
   "aiDraft": {
     "drafting": "Writing…",
-    "drafted": "Drafted for you. Read it through and change anything before you save.",
+    "drafted": "Drafted with AI. Read it through and change anything before you save.",
     "undo": "Undo",
     "undone": "Back to what you had.",
     "errors": {
       "unavailable": "Writing help isn't available right now. You can write it yourself.",
       "rate_limited": "That's a lot of drafts for now. Try again in an hour.",
       "prohibited": "We can't help write that. Check what TasksNearMe allows."
-    }
+    },
+    "draftedSend": "Drafted with AI. Read it through and change anything before you send.",
+    "rewritten": "Rewritten with AI. Check that it still says what you mean."
   },
   "addressSearch": {
     "results": "Address suggestions",

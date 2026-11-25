@@ -8,13 +8,22 @@ import { RepliesSinceVisit } from '@/ui/components/community/new-since-visit';
 import { ThreadRecommendations } from '@/ui/components/community/post-card';
 import { PostPageCard } from '@/ui/components/community/post-page-card';
 import { CommunityReplyForm } from '@/ui/components/community/reply-form';
+import type { ComponentProps } from 'react';
 import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
 import { VerifyPhoneButton } from '@/ui/components/community/verify-phone-button';
 import { ReplyTargetProvider } from '@/ui/components/community/reply-target';
 import { ThreadReplies } from '@/ui/components/community/thread-replies';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 
-export interface CommunityPostScreenProps { data: CommunityPostPageData; handlers: CommunityPostHandlers; now: ISODateTime }
+export interface CommunityPostScreenProps {
+  data: CommunityPostPageData;
+  handlers: CommunityPostHandlers;
+  now: ISODateTime;
+  /** Preview seeds for "Draft an answer with AI" (2026-11-24). */
+  answerPreview?: CommunityReplyFormProps['answerPreview'];
+}
+
+type CommunityReplyFormProps = ComponentProps<typeof CommunityReplyForm>;
 
 const railCard = 'min-w-0 rounded-2xl border border-border bg-card p-3.5 shadow-card';
 const railTitle = 'flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase';
@@ -27,7 +36,7 @@ const railTitle = 'flex items-center gap-1.5 text-xs font-semibold tracking-wide
  * visit say "New". On wide screens a column beside it: the helpers named in the thread, more from the neighborhood, and
  * the rules.
  */
-export function CommunityPostScreen({ data, handlers, now }: CommunityPostScreenProps) {
+export function CommunityPostScreen({ data, handlers, now, answerPreview }: CommunityPostScreenProps) {
   const t = useTranslations('community');
   const { post, viewer } = data;
   // This browser's last look at the post marks the replies since (completion plan 7.6).
@@ -64,7 +73,7 @@ export function CommunityPostScreen({ data, handlers, now }: CommunityPostScreen
           {/* An open post this reader can't reply to says why, as a new post does (sweep P3); "Replies are closed" is for
               a post that is. */}
           {viewer.canReply
-            ? <CommunityReplyForm data={data} onReply={handlers.onReply} {...(handlers.onUploadPhoto ? { onUploadPhoto: handlers.onUploadPhoto } : {})} />
+            ? <CommunityReplyForm data={data} onReply={handlers.onReply} {...(handlers.onUploadPhoto ? { onUploadPhoto: handlers.onUploadPhoto } : {})} {...(viewer.answerDraft && handlers.onDraftAnswer ? { onDraftAnswer: handlers.onDraftAnswer } : {})} {...(answerPreview ? { answerPreview } : {})} />
             : viewer.replyBlocked
               ? <p role="status" className="rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-sm">{t(`postBlocked.${viewer.replyBlocked}`)} {viewer.replyBlocked === 'phone_required' && <VerifyPhoneButton handlers={handlers} />}</p>
               : <p className="text-sm text-muted-foreground">{t('replyForm.closed')}</p>}
@@ -125,7 +134,7 @@ export function CommunityPostDialog({ data, handlers, now }: CommunityPostScreen
       </section>
       <div className="space-y-2.5 rounded-2xl border border-border bg-card p-3.5 shadow-card sm:p-4">
         {viewer.canReply
-          ? <CommunityReplyForm data={data} onReply={handlers.onReply} {...(handlers.onUploadPhoto ? { onUploadPhoto: handlers.onUploadPhoto } : {})} />
+          ? <CommunityReplyForm data={data} onReply={handlers.onReply} {...(handlers.onUploadPhoto ? { onUploadPhoto: handlers.onUploadPhoto } : {})} {...(viewer.answerDraft && handlers.onDraftAnswer ? { onDraftAnswer: handlers.onDraftAnswer } : {})} />
           : viewer.replyBlocked
             ? <p role="status" className="rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-sm">{t(`postBlocked.${viewer.replyBlocked}`)} {viewer.replyBlocked === 'phone_required' && <VerifyPhoneButton handlers={handlers} />}</p>
             : <p className="text-sm text-muted-foreground">{t('replyForm.closed')}</p>}

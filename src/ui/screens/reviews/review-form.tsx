@@ -15,19 +15,22 @@ import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives
 import { Spinner } from '@/ui/primitives/spinner';
 import { Textarea } from '@/ui/primitives/textarea';
 import { useKeepFocusAboveBar } from '@/ui/lib/keep-focus-above-bar';
+import { ReviewAiDraft, type ReviewAiDraftPreview } from './review-ai-draft';
 
-export function ReviewForm({ data, handlers, initialResult, initialPending = false }: {
+export function ReviewForm({ data, handlers, initialResult, initialPending = false, aiPreview }: {
   data: ReviewPageData;
   handlers: ReviewHandlers;
   initialResult?: ActionResult;
   initialPending?: boolean;
+  /** Preview seeds for "Write it with AI": the form's values and the draft's state. */
+  aiPreview?: ReviewAiDraftPreview & { values?: Partial<ReviewInput> };
 }) {
   const { formatDate } = useFormat();
   const t = useTranslations('review');
   const fieldCopy = useTranslations('forms.fieldErrors');
   const id = useId();
   const schema = useMemo(() => createReviewInputSchema(data.direction), [data.direction]);
-  const form = useForm<ReviewInput>({ resolver: zodResolver(schema), defaultValues: { rating: 0, tags: [], body: '', privateFeedback: '' } });
+  const form = useForm<ReviewInput>({ resolver: zodResolver(schema), defaultValues: { rating: 0, tags: [], body: '', privateFeedback: '', ...aiPreview?.values } });
   const action = useFormAction(form, { initialResult, successToast: t('sent') });
   const pending = action.pending || initialPending;
   const disabled = pending || Boolean(action.result?.ok);
@@ -82,6 +85,8 @@ export function ReviewForm({ data, handlers, initialResult, initialPending = fal
         <Textarea {...form.register('body')} id={`${id}-body`} rows={5} maxLength={1000} aria-invalid={Boolean(form.formState.errors.body)} aria-describedby={`${id}-body-hint ${id}-body-count${form.formState.errors.body ? ` ${id}-body-error` : ''}`} className="min-h-32" />
         <p id={`${id}-body-count`} className="text-sm tabular-nums text-muted-foreground">{t('bodyCount', { count: body?.length ?? 0 })}</p>
         {form.formState.errors.body?.message && <FieldError id={`${id}-body-error`}>{fieldError(form.formState.errors.body.message)}</FieldError>}
+        {/* "Write it with AI" (2026-11-24): only when AI is on for this reviewer (the page passes the handler). */}
+        {handlers.onDraftReview && <ReviewAiDraft form={form} onDraft={handlers.onDraftReview} disabled={disabled} {...(aiPreview ? { preview: aiPreview } : {})} />}
       </Field>
       <Field data-invalid={Boolean(form.formState.errors.privateFeedback)} className="gap-2 border-t pt-6">
         <FieldLabel htmlFor={`${id}-private`} className="text-foreground">{t('privateLabel')}</FieldLabel>

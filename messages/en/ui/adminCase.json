@@ -215,7 +215,8 @@
     "question-answer": "Case · a reported answer",
     "question-hidden": "Case · a reported question, hidden",
     "question-restore-limit": "Case · restoring a question refused",
-    "question-agent": "Case · a reported answer, an agent's view"
+    "question-agent": "Case · a reported answer, an agent's view",
+    "summary": "Dispute · summarized with AI"
   },
   "review": {
     "title": "Reported review",
@@ -363,6 +364,21 @@
       "pending": "Saving…",
       "removeSubmit": "Remove message",
       "restoreSubmit": "Restore message"
+    }
+  },
+  "summary": {
+    "title": "Summary",
+    "button": "Summarize with AI",
+    "working": "Summarizing…",
+    "again": "Summarize again",
+    "happened": "What happened",
+    "open": "Still open",
+    "caption": "Made with AI from what this page shows (never the restricted conversation). Check the case before you act.",
+    "errors": {
+      "unavailable": "AI summaries aren't available right now.",
+      "rate_limited": "That's a lot of summaries for now. Try again in an hour.",
+      "prohibited": "AI couldn't summarize this case.",
+      "not_found": "This case isn't available to you any more. Reload the page."
     }
   }
 }

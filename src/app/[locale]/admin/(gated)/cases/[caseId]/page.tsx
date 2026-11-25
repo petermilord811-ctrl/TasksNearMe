@@ -20,6 +20,9 @@ import {
   staffReplyAction,
 } from '@/modules/support/staff-actions';
 import { getViewer } from '@/platform/auth/viewer';
+import { summarizeCaseAction } from '@/modules/assist/ai-actions';
+import { aiWritingSetUp } from '@/integrations/ai';
+import { getFlags } from '@/modules/markets/queries';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
 import { AdminCaseScreen } from '@/ui/screens/admin';
@@ -46,6 +49,8 @@ async function AdminCase({ params }: Pick<PageProps<'/[locale]/admin/cases/[case
   const { data, version } = found;
   // Saved replies to start from, for whoever can reply.
   const savedReplies = data.actions.includes('reply') ? await savedRepliesFor(db, data.case.queue) : [];
+  // "Summarize with AI" (2026-11-24): with AI set up here and its global switch on.
+  const summarize = aiWritingSetUp() && Boolean((await getFlags('global', db)).ai_drafting);
   return (
     <AdminCaseScreen
       data={savedReplies.length > 0 ? { ...data, savedReplies } : data}
@@ -65,6 +70,7 @@ async function AdminCase({ params }: Pick<PageProps<'/[locale]/admin/cases/[case
         onModerateQuestion: moderateQuestionAction.bind(null, caseId),
         onModerateThanks: moderateThanksAction.bind(null, caseId),
         onModerateGroupMessage: moderateGroupMessageAction.bind(null, caseId),
+        ...(summarize ? { onSummarize: summarizeCaseAction.bind(null, caseId) } : {}),
       }}
     />
   );

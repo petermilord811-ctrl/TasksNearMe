@@ -19,6 +19,8 @@ import {
 } from '@/modules/community/actions';
 import { confirmPhoneChangeAction, startPhoneChangeAction } from '@/modules/accounts/account-actions';
 import { communityViewerOf } from '@/modules/community/request-viewer';
+import { draftCommunityAnswerAction } from '@/modules/assist/ai-actions';
+import { withAnswerDraft } from '@/modules/assist/neighbors-ai';
 import { getCommunityPost } from '@/modules/community/service';
 import { localeOrDefault } from '@/contracts';
 import { getViewer } from '@/platform/auth/viewer';
@@ -47,8 +49,10 @@ async function Post({ params }: Pick<PageProps<'/[locale]/app/community/[postId]
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.communityPost(postId)));
   const [now, locale] = await Promise.all([requestNow(), getLocale()]);
   const reader = await communityViewerOf(viewer.user, localeOrDefault(locale));
-  const data = await getCommunityPost(db, reader, postId, now);
-  if (!data) notFound();
+  const found = await getCommunityPost(db, reader, postId, now);
+  if (!found) notFound();
+  // "Draft an answer with AI" (2026-11-24): a helper on an ask in a service they offer.
+  const data = await withAnswerDraft(db, viewer.user.id, found);
   return (
     <CommunityPostScreen
       data={data}
@@ -65,6 +69,7 @@ async function Post({ params }: Pick<PageProps<'/[locale]/app/community/[postId]
         onUploadPhoto: uploadCommunityPhotoAction,
         onLoadReactors: loadCommunityReactorsAction,
         ...(data.canTranslate ? { onTranslate: translateCommunityItemAction } : {}),
+        ...(data.viewer.answerDraft ? { onDraftAnswer: draftCommunityAnswerAction.bind(null, postId) } : {}),
         ...(data.viewer.replyBlocked === 'phone_required' ? { onStartPhoneChange: startPhoneChangeAction, onConfirmPhoneChange: confirmPhoneChangeAction } : {}),
       }}
     />

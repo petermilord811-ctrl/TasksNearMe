@@ -403,7 +403,14 @@
     "post-again-address-deleted": "Post again: address deleted",
     "describe-templates": "Describe: start from an example",
     "describe-from-template": "Describe: started from an example",
-    "error-bot-check": "Review: bot check turned down"
+    "error-bot-check": "Review: bot check turned down",
+    "price-within": "Price check · in range",
+    "price-below": "Price check · under the range",
+    "price-above": "Price check · above the range",
+    "price-no-budget": "Price check · no price yet",
+    "price-idle": "Price check · before checking",
+    "price-pending": "Price check · checking",
+    "price-unavailable": "Price check · unavailable"
   },
   "repeat": {
     "ready": "Posting “{title}” again. Everything from last time is filled in except photos, on the next date that fits. Check it, then post.",
@@ -498,6 +505,32 @@
       "label": "Printer setup",
       "title": "Set up a printer",
       "description": "Set up my printer and connect it to my computers and phones.\n- Devices to connect (computers, phones):\n- Wi-Fi or a cable:\n- Ink or toner installed (yes or no):\n- Anything already tried:"
+    }
+  },
+  "priceCheck": {
+    "title": "Is this price fair?",
+    "intro": "AI reads your task and sizes the job. The range comes from {market}'s price guide, and nothing in your post changes.",
+    "check": "Check my price with AI",
+    "checking": "Checking…",
+    "again": "Check again",
+    "range": "Fair for this job: {low}–{high}",
+    "sizeItem": "For {count, plural, one {# item} other {# items}}",
+    "sizeHour": "For about {hours} hours",
+    "sizeTask": "For the whole task",
+    "verdict": {
+      "within": "Your price, {amount}, is in this range.",
+      "below": "Your price, {amount}, is under this range, so fewer helpers may offer.",
+      "above": "Your price, {amount}, is above this range. That's fine if the job is bigger than it sounds."
+    },
+    "noBudget": "Enter your price to see where it sits.",
+    "why": "Why this range",
+    "recent": "Recent bookings for this service in {market}: {low}–{high} ({count, plural, one {# booking} other {# bookings}}).",
+    "checkedWithAi": "Checked with AI. Prices are your call.",
+    "needsWords": "Describe the task first, then check the price.",
+    "errors": {
+      "unavailable": "Price checks aren't available right now. You can still set your price.",
+      "rate_limited": "That's a lot of price checks for now. Try again in an hour.",
+      "prohibited": "We can't price this task. Check what TasksNearMe allows."
     }
   }
 }

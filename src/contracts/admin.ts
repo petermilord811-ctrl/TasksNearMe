@@ -17,6 +17,7 @@ import type { SupportRating } from './support';
 import { CASE_RESOLUTIONS, CASE_STATUSES } from './status';
 import type { BookingStatus, CaseResolution, CaseStatus, CaseType, EarningsStatus } from './status';
 import type { EarningsKind } from './earnings';
+import type { AdminCaseSummary, AiAssistResult } from './ai-assist';
 
 /**
  * Staff tools, part 1 (blueprint 02 §1.3, 03 §9; backlog B-052, B-054): the queues, the case list, and
@@ -367,6 +368,11 @@ export interface AdminCaseHandlers {
   onModerateThanks?: ActionHandler<ReviewModerationInput>;
   /** Remove the reported group message, or restore it (`groupMessage.canModerate`; a reason of 10 to 1,000 characters). ok `updated`. */
   onModerateGroupMessage?: ActionHandler<ReviewModerationInput>;
+  /**
+   * "Summarize with AI" (2026-11-24): what happened and what's still open, from what this page shows (never the
+   * restricted conversation). Saves nothing. Absent when AI is off.
+   */
+  onSummarize?: QueryHandler<Record<string, never>, AiAssistResult<AdminCaseSummary>>;
 }
 
 // ---- The staff booking page (UI-019) -------------------------------------------------------------------

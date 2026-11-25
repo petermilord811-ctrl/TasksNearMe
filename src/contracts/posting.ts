@@ -6,6 +6,7 @@ import type { CategorySlug, Cents, ISODateTime, Photo } from './common';
 import { CATEGORY_SLUGS } from './common';
 import type { CategoryView, MarketView } from './marketing';
 import type { PriceBreakdown, PricingInput } from './money';
+import type { AiAssistResult, PriceCheck, PriceCheckInput } from './ai-assist';
 
 /**
  * The posting wizard (`/app/tasks/new`, blueprint 02 J1). The UI holds the draft while the
@@ -444,4 +445,9 @@ export interface PostTaskHandlers {
   onPost: ActionHandler<TaskDraftInput & BotCheckInput & { fromPostId?: string; requestKey?: string }>;
   /** Thumbnails for photo ids restored from a saved draft (only the person's own uploads). */
   onResolvePhotos?: QueryHandler<{ photoIds: string[] }, Photo[]>;
+  /**
+   * "Check my price with AI" on the budget step (2026-11-24; only with `aiDraftingEnabled`): a fair range for this task
+   * from the market's own prices, sized from the words and details. Changes nothing in the form.
+   */
+  onCheckPrice?: QueryHandler<PriceCheckInput, AiAssistResult<PriceCheck>>;
 }

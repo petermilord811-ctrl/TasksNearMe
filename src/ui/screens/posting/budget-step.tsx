@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
 import { useTranslations } from 'next-intl';
-import { belowCategoryMinimum, type PostTaskPageData, type TaskDraftInput } from '@/contracts';
+import { belowCategoryMinimum, type AiAssistResult, type PostTaskPageData, type PriceCheck, type PriceCheckInput, type QueryHandler, type TaskDraftInput } from '@/contracts';
 import { formatMoney, formatMoneyInput, parseMoneyInput } from '@/shared/format';
 import { Input } from '@/ui/primitives/input';
 import { PostingField, postingFieldId } from './posting-field';
+import { PriceCheckCard, type PriceCheckState } from './price-check';
 
 type MoneyName = 'budget.priceCents' | 'budget.rateCents' | 'expenseAllowance.amountCents';
 
@@ -26,7 +27,8 @@ function MoneyField({ name, label, hint }: { name: MoneyName; label: string; hin
   </PostingField>} />;
 }
 
-export function BudgetStep({ data }: { data: PostTaskPageData }) {
+/** `onCheckPrice`: "Check my price with AI" (2026-11-24), when AI is on; `priceCheckPreview` seeds it in previews. */
+export function BudgetStep({ data, onCheckPrice, priceCheckPreview }: { data: PostTaskPageData; onCheckPrice?: QueryHandler<PriceCheckInput, AiAssistResult<PriceCheck>>; priceCheckPreview?: PriceCheckState }) {
   const t = useTranslations('postTask');
   const { watch, setValue, clearErrors, register, getFieldState, formState } = useFormContext<TaskDraftInput>();
   const budget = watch('budget');
@@ -60,6 +62,7 @@ export function BudgetStep({ data }: { data: PostTaskPageData }) {
         })}</div>
         {minimumNote}</div>
       </div>}
+    {onCheckPrice && data.aiDraftingEnabled && <PriceCheckCard market={data.market.name} onCheck={onCheckPrice} {...(priceCheckPreview ? { initialState: priceCheckPreview } : {})} />}
     <div className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] dark:border-white/[0.06] bg-card p-4 shadow-card sm:p-6">
       <label className="flex min-h-11 cursor-pointer items-center gap-3 font-medium"><input type="checkbox" checked={expense !== undefined} onChange={(event) => { setValue('expenseAllowance', event.target.checked ? { amountCents: 0, description: '' } : undefined, { shouldDirty: true }); clearErrors('expenseAllowance'); }} className="size-5 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring" />{t('budget.addExpense')}</label>
       <p className="text-sm text-muted-foreground">{t('budget.expenseHint')}</p>

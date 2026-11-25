@@ -19,6 +19,7 @@ import { createPaymentProvider } from '@/integrations/payments';
 import { expireDueInvites } from '@/modules/invites/service';
 import { expireDueOffers } from '@/modules/offers/helper';
 import { publishDueReviews, sendReviewPrompts } from '@/modules/reviews/service';
+import { startReviewSummaries } from '@/modules/assist/review-summaries-job';
 import { createFileStorage } from '@/integrations/storage';
 import { verificationProvidersFor } from '@/modules/verification/providers';
 import { runVerificationTimers } from '@/modules/verification/timers';
@@ -86,6 +87,9 @@ export const JOBS: Job[] = [
   { name: 'reviews.publish', run: (db, now) => publishDueReviews(db, now) },
   // Asks both people to review a completed booking, and reminds whoever hasn't before the window closes (sweep RV4).
   { name: 'reviews.prompts', run: (db, now) => sendReviewPrompts(db, now) },
+  // "What neighbors say" (2026-11-24): helpers' review summaries made again with AI when their reviews changed, a few a
+  // run, in the background (this returns at once, so no job waits on a model).
+  { name: 'assist.review_summaries', run: async (db, now) => { startReviewSummaries(db, now); } },
   { name: 'verification.timers', run: (db, now) => runVerificationTimers(db, { storage: createFileStorage(), providers: verificationProvidersFor(process.env) }, now) },
   // Welcome gift cards for helpers whose three checks passed, and the month's waiting line (before notifications).
   { name: 'rewards.welcome', run: (db, now) => runWelcomeRewards(db, now) },

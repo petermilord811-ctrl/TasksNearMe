@@ -20,6 +20,8 @@ import {
   uploadCommunityPhotoAction,
 } from '@/modules/community/actions';
 import { communityViewerOf } from '@/modules/community/request-viewer';
+import { draftCommunityAnswerAction } from '@/modules/assist/ai-actions';
+import { withAnswerDraft } from '@/modules/assist/neighbors-ai';
 import { getCommunityPost } from '@/modules/community/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
@@ -54,8 +56,9 @@ async function Post({ params }: { params: Params }) {
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.communityPost(postId)));
   const [now, locale] = await Promise.all([requestNow(), getLocale()]);
   const reader = await communityViewerOf(viewer.user, localeOrDefault(locale));
-  const data = await getCommunityPost(db, reader, postId, now);
-  if (!data) notFound();
+  const found = await getCommunityPost(db, reader, postId, now);
+  if (!found) notFound();
+  const data = await withAnswerDraft(db, viewer.user.id, found);
   // The signed-in shell's clock, as the full page has it (the dialog opens outside the shell).
   return (
     <TimeZoneProvider timeZone={viewer.user.timeZone}>
@@ -75,6 +78,7 @@ async function Post({ params }: { params: Params }) {
           onUploadPhoto: uploadCommunityPhotoAction,
           onLoadReactors: loadCommunityReactorsAction,
           ...(data.canTranslate ? { onTranslate: translateCommunityItemAction } : {}),
+          ...(data.viewer.answerDraft ? { onDraftAnswer: draftCommunityAnswerAction.bind(null, postId) } : {}),
           ...(data.viewer.replyBlocked === 'phone_required' ? { onStartPhoneChange: startPhoneChangeAction, onConfirmPhoneChange: confirmPhoneChangeAction } : {}),
         }}
       />

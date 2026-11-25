@@ -16,6 +16,7 @@ import { VerificationBadges } from '@/ui/components/people/verification-badges';
 import { AchievementBadgeList } from '@/ui/components/people/achievement-badges';
 import { WorkSampleGallery } from '@/ui/components/people/work-sample-gallery';
 import { ReviewCard } from '@/ui/components/reviews/review-card';
+import { ReviewSummaryCard } from '@/ui/components/reviews/review-summary';
 import { cn } from '@/ui/lib/utils';
 import { buttonVariants } from '@/ui/primitives/button';
 import { PublicThankYouNotes } from '@/ui/components/thanks/public-thank-you-notes';
@@ -166,6 +167,8 @@ export function HelperProfileScreen({ data, contact, onRevealContact, initialCon
 
       <section aria-labelledby="helper-reviews-heading" className="space-y-4">
         <h2 id="helper-reviews-heading" className="font-display text-xl/7 font-semibold tracking-[-0.015em] md:text-[22px]/7.5">{t('reviews')}</h2>
+        {/* "What neighbors say" (2026-11-24): made with AI from the reviews below. */}
+        {data.reviewSummary && <ReviewSummaryCard summary={data.reviewSummary} />}
         {helper.rating && data.reviews.length < helper.rating.count && <p className="text-sm tabular-nums text-muted-foreground">{t('recentReviews', { shown: data.reviews.length, total: helper.rating.count })}</p>}
         {data.reviews.length > 0
           ? <ul className="grid gap-4 md:grid-cols-2">{data.reviews.map((review) => <li key={review.id} className="min-w-0"><ReviewCard review={review} reportHref={routes.app.report('review', review.id)} /></li>)}</ul>

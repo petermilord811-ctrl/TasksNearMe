@@ -403,7 +403,14 @@
     "post-again-address-deleted": "Publicar de nuevo: dirección eliminada",
     "describe-templates": "Descripción: empezar con un ejemplo",
     "describe-from-template": "Descripción: empezó con un ejemplo",
-    "error-bot-check": "Revisión: verificación rechazada"
+    "error-bot-check": "Revisión: verificación rechazada",
+    "price-within": "Revisión de precio · en el rango",
+    "price-below": "Revisión de precio · por debajo",
+    "price-above": "Revisión de precio · por encima",
+    "price-no-budget": "Revisión de precio · sin precio aún",
+    "price-idle": "Revisión de precio · antes de revisar",
+    "price-pending": "Revisión de precio · revisando",
+    "price-unavailable": "Revisión de precio · no disponible"
   },
   "repeat": {
     "ready": "Publicando “{title}” de nuevo. Todo lo de la vez anterior está completo, excepto las fotos, para la próxima fecha disponible. Revísalo y publica.",
@@ -498,6 +505,32 @@
       "label": "Configurar impresora",
       "title": "Configurar una impresora",
       "description": "Configurar mi impresora y conectarla a mis computadoras y teléfonos.\n- Dispositivos por conectar (computadoras, teléfonos):\n- Wi-Fi o cable:\n- Tinta o tóner instalado (sí o no):\n- Algo que ya intenté:"
+    }
+  },
+  "priceCheck": {
+    "title": "¿Es justo este precio?",
+    "intro": "La IA lee tu tarea y calcula el tamaño del trabajo. El rango sale de la guía de precios de {market}, y nada de tu publicación cambia.",
+    "check": "Revisar mi precio con IA",
+    "checking": "Revisando…",
+    "again": "Revisar de nuevo",
+    "range": "Justo para este trabajo: {low}–{high}",
+    "sizeItem": "Para {count, plural, one {# pieza} other {# piezas}}",
+    "sizeHour": "Para unas {hours} horas",
+    "sizeTask": "Para toda la tarea",
+    "verdict": {
+      "within": "Tu precio, {amount}, está en este rango.",
+      "below": "Tu precio, {amount}, está por debajo de este rango, así que menos ayudantes podrían ofertar.",
+      "above": "Tu precio, {amount}, está por encima de este rango. Está bien si el trabajo es más grande de lo que parece."
+    },
+    "noBudget": "Escribe tu precio para ver dónde queda.",
+    "why": "Por qué este rango",
+    "recent": "Reservas recientes de este servicio en {market}: {low}–{high} ({count, plural, one {# reserva} other {# reservas}}).",
+    "checkedWithAi": "Revisado con IA. El precio lo decides tú.",
+    "needsWords": "Primero describe la tarea y luego revisa el precio.",
+    "errors": {
+      "unavailable": "La revisión de precios no está disponible ahora. Igual puedes poner tu precio.",
+      "rate_limited": "Son muchas revisiones por ahora. Inténtalo de nuevo en una hora.",
+      "prohibited": "No podemos dar precio a esta tarea. Revisa lo que permite TasksNearMe."
     }
   }
 }

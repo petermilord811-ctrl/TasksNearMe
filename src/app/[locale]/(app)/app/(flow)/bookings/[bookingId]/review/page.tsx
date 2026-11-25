@@ -4,6 +4,8 @@ import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { submitReviewAction } from '@/modules/reviews/actions';
+import { draftReviewAction } from '@/modules/assist/ai-actions';
+import { aiDraftingEnabledFor } from '@/modules/assist/availability';
 import { getReviewPage } from '@/modules/reviews/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
@@ -31,7 +33,9 @@ async function Review({ params }: Pick<PageProps<'/[locale]/app/bookings/[bookin
   const now = await requestNow();
   const data = await getReviewPage(db, viewer.user.id, bookingId, now);
   if (!data) notFound();
-  return <ReviewScreen data={data} now={now.toISOString()} handlers={{ onSubmit: submitReviewAction.bind(null, bookingId) }} />;
+  // "Write it with AI" (2026-11-24) while the review can still be written, when AI is on for them.
+  const drafting = !data.mine && !data.unavailable && (await aiDraftingEnabledFor(db, viewer.user.id));
+  return <ReviewScreen data={data} now={now.toISOString()} handlers={{ onSubmit: submitReviewAction.bind(null, bookingId), ...(drafting ? { onDraftReview: draftReviewAction.bind(null, bookingId) } : {}) }} />;
 }
 
 export default withClientMessages('[locale]/(app)/app/(flow)/bookings/[bookingId]/review/page.tsx', ReviewPage);

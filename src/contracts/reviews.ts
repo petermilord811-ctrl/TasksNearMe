@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import type { ActionHandler, FieldErrorCode } from './actions';
+import type { ActionHandler, FieldErrorCode, QueryHandler } from './actions';
+import type { AiAssistResult, ReviewDraft, ReviewDraftInput } from './ai-assist';
 import type { CategorySlug, ISODateTime } from './common';
 import type { HelperSummary, PersonSummary } from './people';
 import { HELPER_REVIEW_TAGS } from './profiles';
@@ -74,6 +75,11 @@ export interface ReviewPageData {
  */
 export interface ReviewHandlers {
   onSubmit: ActionHandler<ReviewInput>;
+  /**
+   * "Write it with AI" (2026-11-24): from the stars, the tags and what's typed, a draft of the review's words for the
+   * reviewer to change and send. Saves nothing. Absent when AI is off for them: the button isn't shown.
+   */
+  onDraftReview?: QueryHandler<ReviewDraftInput, AiAssistResult<ReviewDraft>>;
 }
 
 /** `/app/saved`: the client's saved helpers, most recently saved first. */

@@ -62,6 +62,11 @@ export const ACTION_SUCCESS_CODES = [
    * nothing changed yet, so the UI goes there without a success message (journeys on a phone, J-C3).
    */
   'opened',
+  /**
+   * AI wrote a draft or an answer (src/contracts/ai-assist.ts): nothing was saved or sent; it's in a field or a card for
+   * the person to read and change (2026-11-24).
+   */
+  'drafted',
 ] as const;
 export type ActionSuccessCode = (typeof ACTION_SUCCESS_CODES)[number];
 

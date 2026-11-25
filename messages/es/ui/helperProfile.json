@@ -36,7 +36,8 @@
     "contactReveal": "Jordan · datos de contacto para un vecino de nivel alto",
     "contactRevealed": "Jordan · datos de contacto visibles",
     "contactLocked": "Jordan · datos de contacto bloqueados",
-    "answers": "Sam · respuestas en Vecinos"
+    "answers": "Sam · respuestas en Vecinos",
+    "reviewSummary": "Sam · lo que dicen los vecinos (resumen con IA)"
   },
   "recommendedBy": "{count, plural, one {# recomendación de vecinos} other {# recomendaciones de vecinos}}",
   "message": "Escribirle a {name}",
@@ -46,5 +47,9 @@
     "description": "{count, plural, one {Los vecinos marcaron como útil una respuesta suya en # pregunta.} other {Los vecinos marcaron como útiles respuestas suyas en # preguntas.}}",
     "askedIn": "Preguntado en {place}",
     "helpful": "{count, plural, one {A # le resultó útil} other {A # les resultó útil}}"
+  },
+  "reviewSummary": {
+    "title": "Lo que dicen los vecinos",
+    "caption": "Resumido con IA de {count, plural, one {# reseña} other {# reseñas}}. Léelas abajo."
   }
 }

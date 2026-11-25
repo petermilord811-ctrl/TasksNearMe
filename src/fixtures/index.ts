@@ -69,3 +69,4 @@ export * from './peek';
 export * from './task-map';
 export * from './thanks';
 export * from './followers';
+export * from './ai-assist';

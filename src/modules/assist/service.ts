@@ -1,5 +1,5 @@
 import 'server-only';
-import { and, eq } from 'drizzle-orm';
+import { and, desc, eq, isNotNull } from 'drizzle-orm';
 import type { OfferMessageDraftInput, OfferMessageDraftResult, ProfileDraftInput, ProfileDraftResult } from '@/contracts';
 import { CATEGORY_SLUGS, type CategorySlug } from '@/contracts';
 import { AiRefusedError, AiUnavailableError } from '@/integrations/ai';
@@ -9,6 +9,7 @@ import { users } from '@/modules/accounts/schema';
 import { areas, categories, markets } from '@/modules/markets/schema';
 import { getHelperTaskView } from '@/modules/offers/helper';
 import { helperProfiles, helperServices } from '@/modules/profiles/schema';
+import { reviews } from '@/modules/reviews/schema';
 import { findProhibitedPhrase, maskContactDetails } from '@/modules/trust/contact-masking';
 import { GLOBAL_PROHIBITED_PHRASES } from '@/modules/trust/prohibited';
 import type { Db } from '@/platform/db/connect';
@@ -24,6 +25,8 @@ import { formatDate, formatTime, marketLocalToUtc } from '@/shared/format';
  */
 
 const PROFILE_RULE = { limit: 10, windowSeconds: 60 * 60 };
+/** The newest published reviews a profile draft reads. */
+const PROFILE_REVIEWS_READ = 6;
 const OFFER_RULE = { limit: 20, windowSeconds: 60 * 60 };
 const languageNames = new Intl.DisplayNames(['en'], { type: 'language' });
 
@@ -57,7 +60,7 @@ export async function draftHelperProfile(
   const limited = await consumeRateLimit(db, `assist:profile:${userId}`, PROFILE_RULE, now);
   if (!limited.ok) return { ok: false, code: 'rate_limited' };
 
-  const [services, [area]] = await Promise.all([
+  const [services, [area], reviewRows] = await Promise.all([
     db
       .select({ slug: categories.slug, description: helperServices.description })
       .from(helperServices)
@@ -66,7 +69,15 @@ export async function draftHelperProfile(
     person.profile?.areaId
       ? db.select({ name: areas.name, city: markets.name }).from(areas).innerJoin(markets, eq(markets.id, areas.marketId)).where(eq(areas.id, person.profile.areaId)).limit(1)
       : Promise.resolve([]),
+    // What clients wrote in their published reviews (2026-11-24): the about-me may say what they value.
+    db
+      .select({ body: reviews.body })
+      .from(reviews)
+      .where(and(eq(reviews.subjectUserId, userId), eq(reviews.direction, 'client_to_helper'), eq(reviews.status, 'published'), isNotNull(reviews.body)))
+      .orderBy(desc(reviews.publishedAt))
+      .limit(PROFILE_REVIEWS_READ),
   ]);
+  const reviewWords = reviewRows.map((row) => clean(row.body ?? '').trim().slice(0, 300)).filter(Boolean);
   const profile = person.profile;
   try {
     const draft = await writer.draft({
@@ -79,6 +90,7 @@ export async function draftHelperProfile(
       languages: (profile?.languages ?? ['en']).map((code) => languageNames.of(code) ?? code),
       notes: clean(notes),
       ...(profile && (profile.headline || profile.bio) ? { current: { headline: clean(profile.headline), bio: clean(profile.bio) } } : {}),
+      ...(reviewWords.length > 0 ? { reviews: reviewWords } : {}),
     });
     return { ok: true, draft: { headline: clean(draft.headline), bio: clean(draft.bio) } };
   } catch (error) {

@@ -55,11 +55,19 @@
       "window_closed": "Plazo para reseñar terminado"
     },
     "theirsMissing": "Plazo terminado, sin reseña de la otra persona",
-    "windowClosedTheirs": "Plazo terminado, su reseña para leer"
+    "windowClosedTheirs": "Plazo terminado, su reseña para leer",
+    "aiDraft": "Del cliente · Escribir con IA",
+    "aiDrafted": "Del cliente · redactada con IA",
+    "aiFailed": "Del cliente · IA no disponible"
   },
   "theirs": {
     "title": "La reseña de {name} sobre ti",
     "published": "Publicada el {date}",
     "missing": "{name} no dejó una reseña."
+  },
+  "aiDraft": {
+    "button": "Escribir con IA",
+    "hint": "La IA escribe a partir de tus estrellas, tus etiquetas y lo que hayas escrito aquí.",
+    "needsRating": "Elige primero las estrellas; luego la IA puede escribir a partir de ellas."
   }
 }

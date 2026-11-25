@@ -42,7 +42,7 @@ test("a helper drafts their profile from a few words; Undo and leaving the page 
 
   await page.getByLabel('A few words about you (optional)').fill('Patient and tidy. I always bring a level.');
   await page.getByRole('button', { name: 'Draft my profile' }).click();
-  await expect(page.getByText('Drafted for you.')).toBeVisible();
+  await expect(page.getByText('Drafted with AI.')).toBeVisible();
   await expect(page.getByLabel('About you', { exact: true })).toHaveValue(/Patient and tidy\. I always bring a level\./);
   await expect(headline).not.toHaveValue(saved);
 

@@ -36,7 +36,8 @@
     "contactReveal": "Jordan · contact details for a top neighbor",
     "contactRevealed": "Jordan · contact details shown",
     "contactLocked": "Jordan · contact details locked",
-    "answers": "Sam · answers on Neighbors"
+    "answers": "Sam · answers on Neighbors",
+    "reviewSummary": "Sam · what neighbors say (AI summary)"
   },
   "recommendedBy": "{count, plural, one {Recommended by # neighbor} other {Recommended by # neighbors}}",
   "message": "Message {name}",
@@ -46,5 +47,9 @@
     "description": "{count, plural, one {Neighbors marked an answer of theirs helpful on # question.} other {Neighbors marked answers of theirs helpful on # questions.}}",
     "askedIn": "Asked in {place}",
     "helpful": "{count, plural, one {# found it helpful} other {# found it helpful}}"
+  },
+  "reviewSummary": {
+    "title": "What neighbors say",
+    "caption": "Summarized with AI from {count, plural, one {# review} other {# reviews}}. Read them below."
   }
 }

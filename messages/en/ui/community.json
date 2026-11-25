@@ -187,7 +187,11 @@
     "postGeneral": "A general post (words and a photo, no title)",
     "newDialog": "New post",
     "newDialogRecommendation": "New post: a recommendation",
-    "newQuestionService": "New question · asking helpers who do it"
+    "newQuestionService": "New question · asking helpers who do it",
+    "newPostPolish": "New post · Make it clearer",
+    "newPostPolished": "New post · rewritten with AI",
+    "postAnswerDraft": "Helper on a request · Draft an answer with AI",
+    "postAnswerDrafted": "Helper on a request · answer drafted with AI"
   },
   "sinceVisit": {
     "badge": "New",
@@ -347,5 +351,13 @@
   },
   "replyToPost": "Reply to this post",
   "replyToPerson": "Reply to {name}",
-  "guidelinesShort": "Be kind and keep it local."
+  "guidelinesShort": "Be kind and keep it local.",
+  "polish": {
+    "button": "Make it clearer",
+    "hint": "AI rewrites your post to be clear and kind, keeping what you mean. Undo puts yours back."
+  },
+  "answerDraft": {
+    "button": "Draft an answer with AI",
+    "hint": "AI drafts from the question and your profile. Type a few words of your own first if you like."
+  }
 }

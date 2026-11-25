@@ -1,8 +1,11 @@
 import { withClientMessages } from '@/i18n/client-messages';
 import type { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
+import { getLocale } from 'next-intl/server';
 import { Suspense } from 'react';
-import { routes } from '@/contracts';
+import { localeOrDefault, routes } from '@/contracts';
+import { prepareBookingAction } from '@/modules/assist/ai-actions';
+import { bookingPrepViewFor } from '@/modules/assist/booking-prep';
 import { bookingActionHandler } from '@/modules/bookings/hub-actions';
 import {
   cancelBookingAction,
@@ -59,12 +62,15 @@ async function Booking({ params }: Pick<PageProps<'/[locale]/app/bookings/[booki
   // The task map: the trip there (the helper's from home or where they are), the weather for the booking, what's around.
   const map = await taskMapFor(db, { task: { ...data.task, location: data.location }, viewer: { kind: data.viewerRole, userId: viewer.user.id }, now });
   const partnerId = data.team?.cancelChoice?.partnerBookingId;
+  // "Get ready" (2026-11-24): the viewer's checklist for the day, made with AI on request, in the page's language.
+  const prep = await bookingPrepViewFor(db, viewer.user.id, data, localeOrDefault(await getLocale()));
   return (
     <BookingHubScreen
-      data={data}
+      data={prep ? { ...data, prep } : data}
       now={now.toISOString()}
       map={map}
       handlers={{ onAction: bookingActionHandler.bind(null, bookingId) }}
+      {...(prep ? { prep: { onPrepare: prepareBookingAction.bind(null, bookingId) } } : {})}
       sheets={{
         onPreviewCancel: previewCancelAction.bind(null, bookingId),
         onCancel: cancelBookingAction.bind(null, bookingId),

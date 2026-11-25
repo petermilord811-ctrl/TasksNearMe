@@ -18,6 +18,7 @@ import { AdminReportedQuestion } from './admin-reported-question';
 import { AdminReportedThanks } from './admin-reported-thanks';
 import { AdminReportedGroupMessage } from './admin-reported-group-message';
 import { AdminReportedReview } from './admin-reported-review';
+import { AdminCaseSummaryCard, type AdminCaseSummaryState } from './admin-case-summary';
 
 export interface AdminCaseScreenProps {
   data: AdminCasePageData;
@@ -113,7 +114,9 @@ export function AdminCaseScreen(props: AdminCaseScreenProps) {
 }
 
 /** Preview seeds are kept separate from the screen's application-facing props. */
-export function AdminCaseContent({ data, handlers, now, initialDialog, replyState, resolutionState, conversationState }: AdminCaseScreenProps & {
+export function AdminCaseContent({ data, handlers, now, initialDialog, replyState, resolutionState, conversationState, summaryState }: AdminCaseScreenProps & {
+  /** "Summarize with AI" as a preview shows it (2026-11-24). */
+  summaryState?: AdminCaseSummaryState;
   initialDialog?: ComponentProps<typeof AdminCaseControls>['initialDialog'];
   replyState?: ComponentProps<typeof AdminCaseControls>['replyState'];
   resolutionState?: ComponentProps<typeof AdminCaseControls>['resolutionState'];
@@ -139,6 +142,8 @@ export function AdminCaseContent({ data, handlers, now, initialDialog, replyStat
     <AdminCaseControls key={row.id} data={data} handlers={handlers} initialDialog={initialDialog} replyState={replyState} resolutionState={resolutionState}>
       <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <div className="min-w-0 space-y-5">
+          {/* "Summarize with AI" (2026-11-24), when AI is on: the page's own facts, saved nowhere. */}
+          {handlers.onSummarize && <AdminCaseSummaryCard key={row.id} onSummarize={handlers.onSummarize} {...(summaryState ? { initialState: summaryState } : {})} />}
           <section className="space-y-3 rounded-xl border bg-card p-4 shadow-card sm:p-5">
             <h2 className="text-xl font-semibold">{t('details.opening')}</h2>
             {reason && <p className="text-sm font-medium">{t('details.reason', { reason })}</p>}

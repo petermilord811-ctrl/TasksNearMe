@@ -18,6 +18,7 @@ import {
   uploadTaskPhoto,
 } from '@/modules/tasks/actions';
 import { homeMarketIdOf, phoneGateOpen, taskDrafter, taskPosting } from '@/modules/tasks/server';
+import { checkTaskPriceAction } from '@/modules/assist/ai-actions';
 import { requirePosterIdentity } from '@/modules/verification/poster-identity';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
@@ -144,6 +145,8 @@ async function PostTask({ searchParams }: Pick<PageProps<'/[locale]/app/tasks/ne
         onQuote: quoteTaskPrice,
         onPost: postTaskAction,
         onResolvePhotos: resolveTaskPhotos,
+        // "Check my price with AI" on the budget step (2026-11-24), with the market's AI switch.
+        ...(aiDraftingEnabled ? { onCheckPrice: checkTaskPriceAction } : {}),
       }}
     />
   );

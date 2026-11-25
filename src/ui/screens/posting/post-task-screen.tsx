@@ -22,6 +22,7 @@ import { PhotosStep } from './photos-step';
 import { LocationStep } from './location-step';
 import { ScheduleStep } from './schedule-step';
 import { BudgetStep } from './budget-step';
+import type { PriceCheckState } from './price-check';
 import { ReviewStep } from './review-step';
 import { adoptHandoffDraft, draftStorageKey, readStoredDraft, storeHandoffDraft } from './draft-storage';
 
@@ -38,6 +39,8 @@ export interface PostTaskScreenProps {
   initialResult?: ActionResult;
   /** Disable tab storage for isolated previews and tests. Defaults to true. */
   persistDraft?: boolean;
+  /** "Check my price with AI" as a preview shows it (2026-11-24). */
+  priceCheckPreview?: PriceCheckState;
 }
 
 const stepFields: Record<PostTaskStep, FieldPath<TaskDraftInput>[]> = {
@@ -74,7 +77,7 @@ export function PostTaskScreen(props: PostTaskScreenProps) {
   return <PostTaskDraftScreen key={props.data.draftStorageKey ?? draftStorageKey(props.data.market.slug)} {...props} />;
 }
 
-function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initialPhotos = [], initialAddress, initialSuggestion, initialSuggestions, initialResult, persistDraft = true }: PostTaskScreenProps) {
+function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initialPhotos = [], initialAddress, initialSuggestion, initialSuggestions, initialResult, persistDraft = true, priceCheckPreview }: PostTaskScreenProps) {
   const t = useTranslations('postTask');
   const router = useRouter();
   const schema = useMemo(() => createTaskDraftSchema(data), [data]);
@@ -409,7 +412,7 @@ function PostTaskDraftScreen({ data, handlers, initialStep, initialValues, initi
         {step === 'details' && values.categorySlug && <DetailsStep category={values.categorySlug} />}
         {step === 'where' && <LocationStep data={data} handlers={handlers} selectedAddress={address} onAddressChange={setAddress} initialSuggestions={initialSuggestions} />}
         {step === 'when' && <ScheduleStep data={data} />}
-        {step === 'budget' && <BudgetStep data={data} />}
+        {step === 'budget' && <BudgetStep data={data} {...(handlers.onCheckPrice ? { onCheckPrice: handlers.onCheckPrice } : {})} {...(priceCheckPreview ? { priceCheckPreview } : {})} />}
         {step === 'review' && <ReviewStep data={data} handlers={handlers} values={values} photos={photos} selectedAddress={address} />}
         {step === 'review' && data.botCheck && <BotCheckField check={check} result={result} />}
         {step === 'review' && data.guest && <p className="rounded-2xl bg-secondary/70 p-4 text-sm text-foreground dark:bg-secondary/40">{t('guest.reviewNote')}</p>}

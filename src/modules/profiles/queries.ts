@@ -29,7 +29,8 @@ import type { Db } from '@/platform/db/connect';
 import { helperProfiles, helperServices, helperWorkSamples } from './schema';
 import { badgesFor } from '@/modules/badges/service';
 import { marketTimeZone } from '@/modules/markets/time-zone';
-import { rowScopeCondition, type RowScope } from '@/shared/sample-data';
+import { rowScopeCondition, searchEngineRows, type RowScope } from '@/shared/sample-data';
+import { reviewSummaryOf } from '@/modules/assist/review-summaries';
 import { deletedLabelFor, shownPerson } from '@/modules/accounts/shown-name';
 import { usernamesOf } from '@/modules/accounts/usernames';
 import { publicThanksOf } from '@/modules/thanks/views';
@@ -264,6 +265,8 @@ export async function getHelperProfile(handle: string, database: Db = db, rows: 
   const thanks = await publicThanksOf(database, userId, rows);
   // Their answers neighbors marked Helpful (2026-11-24): credit on the profile only, never a ranking or reward signal.
   const neighborsAnswers = await neighborsAnswersOf(database, userId, rows);
+  // "What neighbors say" (2026-11-24): made with AI from the reviews the public sees, while it still matches them.
+  const reviewSummary = await reviewSummaryOf(database, userId, searchEngineRows());
   return {
     timeZone,
     ...(sparks ? { sparks } : {}),
@@ -271,6 +274,7 @@ export async function getHelperProfile(handle: string, database: Db = db, rows: 
     ...(username ? { username } : {}),
     ...(thanks.length > 0 ? { thanks } : {}),
     ...(neighborsAnswers ? { neighborsAnswers } : {}),
+    ...(reviewSummary ? { reviewSummary } : {}),
     helper: withRecommended(toHelperSummary(
       row.profile,
       row.user,

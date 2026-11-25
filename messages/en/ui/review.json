@@ -55,11 +55,19 @@
       "window_closed": "Review window ended"
     },
     "theirsMissing": "Window ended, no review from them",
-    "windowClosedTheirs": "Window ended, theirs to read"
+    "windowClosedTheirs": "Window ended, theirs to read",
+    "aiDraft": "By the client · Write it with AI",
+    "aiDrafted": "By the client · drafted with AI",
+    "aiFailed": "By the client · AI unavailable"
   },
   "theirs": {
     "title": "{name}'s review of you",
     "published": "Published {date}",
     "missing": "{name} didn't leave a review."
+  },
+  "aiDraft": {
+    "button": "Write it with AI",
+    "hint": "AI writes from your stars, your tags and anything you typed here.",
+    "needsRating": "Choose a star rating first, then AI can write from it."
   }
 }

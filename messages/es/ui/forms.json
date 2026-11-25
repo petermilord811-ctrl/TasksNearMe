@@ -116,14 +116,16 @@
   },
   "aiDraft": {
     "drafting": "Escribiendo…",
-    "drafted": "Redactado para ti. Léelo completo y cambia lo que quieras antes de guardar.",
+    "drafted": "Redactado con IA. Léelo completo y cambia lo que quieras antes de guardar.",
     "undo": "Deshacer",
     "undone": "Volviste a lo que tenías.",
     "errors": {
       "unavailable": "La ayuda para escribir no está disponible ahora. Puedes escribirlo tú.",
       "rate_limited": "Son muchos borradores por ahora. Inténtalo de nuevo en una hora.",
       "prohibited": "No podemos ayudar a escribir eso. Revisa lo que permite TasksNearMe."
-    }
+    },
+    "draftedSend": "Redactado con IA. Léelo completo y cambia lo que quieras antes de enviarlo.",
+    "rewritten": "Reescrito con IA. Revisa que siga diciendo lo que quieres."
   },
   "addressSearch": {
     "results": "Sugerencias de direcciones",

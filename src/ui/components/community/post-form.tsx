@@ -4,6 +4,8 @@ import { useEffect, useId, useRef, useState, useTransition } from 'react';
 import { Lightbulb, MapPin, Tag } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { ActionHandler, ActionResult, QueryHandler } from '@/contracts/actions';
+import { aiAssistOutcome, type AiAssistResult, type CommunityPolish, type CommunityPolishInput } from '@/contracts/ai-assist';
+import type { CategorySlug } from '@/contracts/common';
 import {
   COMMUNITY_BODY_MAX,
   COMMUNITY_BODY_MIN,
@@ -20,6 +22,7 @@ import type { Photo } from '@/contracts/common';
 import type { PhotoUploadResult } from '@/contracts/posting';
 import { routes } from '@/contracts/routes';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
+import { AiDraftButton, AiDraftStatus, type AiDraftOutcome } from '@/ui/components/forms/ai-draft';
 import { LocaleLink as Link, localeHref } from '@/ui/lib/locale-link';
 import { useFormat } from '@/ui/lib/format';
 import { useRouteDialog } from '@/ui/lib/route-dialog';
@@ -46,6 +49,10 @@ export interface CommunityPostFormProps {
   /** Move focus into the first field when the form appears. */
   focusOnMount?: boolean;
   className?: string;
+  /** "Make it clearer" (2026-11-24): the title and words rewritten with AI, with Undo. Absent when AI is off. */
+  onPolish?: QueryHandler<CommunityPolishInput, AiAssistResult<CommunityPolish>>;
+  /** Preview seeds for "Make it clearer": the words in the form and the rewrite's state. */
+  polishPreview?: { pending?: boolean; outcome?: AiDraftOutcome; values?: { title?: string; body?: string } };
 }
 
 /** What this device keeps of an unfinished post (plan 10.6). */
@@ -88,8 +95,9 @@ const pillSelect = 'h-9 max-w-full appearance-none rounded-full border border-bo
  * or discarded. In the route dialog (src/app/[locale]/@modal/(.)app/community/new) Post stays at its bottom edge and
  * posting closes it over a refreshed page; on the full page posting opens the new post.
  */
-export function CommunityPostForm({ data, initialKind, onPost, onUploadPhoto, label, onCancel, focusOnMount = false, className }: CommunityPostFormProps) {
+export function CommunityPostForm({ data, initialKind, onPost, onUploadPhoto, label, onCancel, focusOnMount = false, className, onPolish, polishPreview }: CommunityPostFormProps) {
   const t = useTranslations('community');
+  const drafts = useTranslations('forms.aiDraft');
   const card = useTranslations('taskCard');
   const fieldCopy = useTranslations('forms.fieldErrors');
   const sparksToast = useSparksToast();
@@ -101,8 +109,11 @@ export function CommunityPostForm({ data, initialKind, onPost, onUploadPhoto, la
   const titleRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [kind, setKind] = useState<CommunityPostKind>(initialKind);
-  const [title, setTitle] = useState('');
-  const [body, setBody] = useState('');
+  const [title, setTitle] = useState(polishPreview?.values?.title ?? '');
+  const [body, setBody] = useState(polishPreview?.values?.body ?? '');
+  const [polishing, setPolishing] = useState(polishPreview?.pending ?? false);
+  const [polishOutcome, setPolishOutcome] = useState<AiDraftOutcome | undefined>(polishPreview?.outcome);
+  const [polishBefore, setPolishBefore] = useState<{ title: string; body: string }>();
   const [categorySlug, setCategorySlug] = useState<string>(data.categorySlug ?? '');
   const [areaSlug, setAreaSlug] = useState(data.yourArea?.slug ?? '');
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -209,6 +220,36 @@ export function CommunityPostForm({ data, initialKind, onPost, onUploadPhoto, la
     }
   });
 
+  // "Make it clearer" (2026-11-24): the words go to AI as they are; the rewrite replaces them, and Undo puts them back.
+  const polish = async () => {
+    if (!onPolish || polishing) return;
+    setPolishing(true);
+    setPolishOutcome(undefined);
+    let next: AiAssistResult<CommunityPolish>;
+    try {
+      next = await onPolish({ kind, ...(untitled ? {} : { title }), body, ...(categorySlug ? { categorySlug: categorySlug as CategorySlug } : {}) });
+    } catch {
+      next = { ok: false, code: 'unavailable' };
+    }
+    setPolishing(false);
+    if (!next.ok) {
+      const outcome = aiAssistOutcome(next);
+      setPolishOutcome({ kind: 'failed', code: outcome === 'drafted' ? 'unavailable' : outcome });
+      return;
+    }
+    setPolishBefore((kept) => kept ?? { title, body });
+    if (!untitled && next.value.title !== undefined) setTitle(next.value.title);
+    setBody(next.value.body);
+    setPolishOutcome({ kind: 'drafted' });
+  };
+  const undoPolish = () => {
+    if (!polishBefore) return;
+    setTitle(polishBefore.title);
+    setBody(polishBefore.body);
+    setPolishBefore(undefined);
+    setPolishOutcome({ kind: 'undone' });
+  };
+
   const errorText = (name: string) => errorOf(name) && <p id={`${id}-${name}-error`} className="text-sm text-destructive">{errorOf(name)}</p>;
   // The counter only near the end, where it helps.
   const counter = body.length > COMMUNITY_BODY_MAX * 0.8 && <p id={`${id}-body-count`} className="text-xs tabular-nums text-muted-foreground">{t('newPost.bodyCount', { count: body.length, max: COMMUNITY_BODY_MAX })}</p>;
@@ -277,6 +318,14 @@ export function CommunityPostForm({ data, initialKind, onPost, onUploadPhoto, la
             {errors.body?.[0] === 'prohibited' ? <p className="text-sm text-destructive">{t('guidelines')}</p> : errorText('body')}
           </div>
         </>}
+
+    {onPolish && <div className="space-y-1">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <AiDraftButton size="sm" className="rounded-full" pending={polishing} disabled={pending || blocked || tooShort} onClick={() => void polish()}>{t('polish.button')}</AiDraftButton>
+        <p className="text-xs text-muted-foreground">{t('polish.hint')}</p>
+      </div>
+      <AiDraftStatus outcome={polishOutcome} {...(polishBefore ? { onUndo: undoPolish } : {})} drafted={drafts('rewritten')} />
+    </div>}
 
     {onUploadPhoto && <div className="space-y-1">
       <p className="sr-only">{t('photos.label')}</p>

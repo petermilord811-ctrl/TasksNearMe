@@ -54,7 +54,8 @@
     "updated": "Actualizado",
     "on_the_way": "El cliente sabe que vas en camino.",
     "arrived": "Llegada registrada. Cuando termines, envía el trabajo para su aprobación.",
-    "opened": "Abriendo…"
+    "opened": "Abriendo…",
+    "drafted": "Redactado con IA"
   },
   "error": {
     "validation_failed": "Revisa los detalles e inténtalo de nuevo.",

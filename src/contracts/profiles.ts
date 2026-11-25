@@ -6,6 +6,7 @@ import type { BadgeView } from './badges';
 import type { SparksSummary } from './sparks';
 import type { PublicThankYouNote } from './thanks';
 import type { NeighborhoodDayCardView } from './neighborhood-days';
+import type { ReviewSummaryView } from './ai-assist';
 
 /** Tags a client can give a helper in a review. The UI maps each to copy ("On time"). */
 export const HELPER_REVIEW_TAGS = [
@@ -63,6 +64,11 @@ export interface HelperProfilePageData {
   services: HelperServiceDetail[];
   /** Newest first, at most 10. The total is `helper.rating.count`. */
   reviews: PublicReviewView[];
+  /**
+   * "What neighbors say" (2026-11-24): a few points from their published client reviews, made with AI by the job runner
+   * when the reviews change. Absent with fewer than 3 reviews with words, or with AI off for their market.
+   */
+  reviewSummary?: ReviewSummaryView;
   workSamples: WorkSampleView[];
   /** Open slots, soonest first (at most 6). Each links to `routes.app.requestHelper(handle, { slotId })` (UI-029). */
   slots?: AvailabilitySlotView[];

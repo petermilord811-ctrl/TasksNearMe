@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { ArrowLeft, CalendarDays, CircleAlert, CircleCheck, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { routes, type ActionResult, type ISODateTime, type ReviewHandlers, type ReviewPageData } from '@/contracts';
+import { routes, type ActionResult, type ISODateTime, type ReviewHandlers, type ReviewInput, type ReviewPageData } from '@/contracts';
 import { useFormat } from '@/ui/lib/format';
 import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { RatingStars } from '@/ui/components/people/rating-stars';
 import { Badge } from '@/ui/primitives/badge';
 import { ReviewForm } from './review-form';
+import type { ReviewAiDraftPreview } from './review-ai-draft';
 
 export interface ReviewScreenProps {
   data: ReviewPageData;
@@ -19,10 +20,10 @@ export function ReviewScreen(props: ReviewScreenProps) {
   return <ReviewContent {...props} />;
 }
 
-type ReviewState = { initialResult?: ActionResult; initialPending?: boolean };
+type ReviewState = { initialResult?: ActionResult; initialPending?: boolean; aiPreview?: ReviewAiDraftPreview & { values?: Partial<ReviewInput> } };
 
 /** Initial states support previews; app callers use ReviewScreen. */
-export function ReviewContent({ data, handlers, now, initialResult, initialPending }: ReviewScreenProps & ReviewState) {
+export function ReviewContent({ data, handlers, now, initialResult, initialPending, aiPreview }: ReviewScreenProps & ReviewState) {
   const { formatDate } = useFormat();
   const t = useTranslations('review');
   return <div className="mx-auto max-w-reading space-y-6">
@@ -39,7 +40,7 @@ export function ReviewContent({ data, handlers, now, initialResult, initialPendi
         <p className="flex items-center gap-2 text-sm text-muted-foreground"><CalendarDays aria-hidden="true" className="size-4 shrink-0" /><time dateTime={data.booking.start} className="tabular-nums">{formatDate(data.booking.start, { withYear: true })}</time></p>
       </div>
     </header>
-    <ReviewBody data={data} handlers={handlers} now={now} initialResult={initialResult} initialPending={initialPending} />
+    <ReviewBody data={data} handlers={handlers} now={now} initialResult={initialResult} initialPending={initialPending} {...(aiPreview ? { aiPreview } : {})} />
   </div>;
 }
 
@@ -60,7 +61,7 @@ export function ReviewDialogScreen({ data, handlers, now, initialResult, initial
 }
 
 /** Your review (the form, or what you sent) and theirs once it's out: on the page and in the dialog. */
-function ReviewBody({ data, handlers, now, initialResult, initialPending }: ReviewScreenProps & ReviewState) {
+function ReviewBody({ data, handlers, now, initialResult, initialPending, aiPreview }: ReviewScreenProps & ReviewState) {
   const { formatDate, formatDateTime, formatRelative } = useFormat();
   const t = useTranslations('review');
   const mine = data.mine;
@@ -81,7 +82,7 @@ function ReviewBody({ data, handlers, now, initialResult, initialPending }: Revi
     </section> : data.unavailable ? <section aria-label={t('unavailable.title')} className="space-y-3 rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card sm:p-6">
       <h2 className="flex items-start gap-2 font-heading text-xl/7 font-semibold"><CircleAlert aria-hidden="true" className="mt-1 size-5 shrink-0 text-warning" />{t('unavailable.title')}</h2>
       <p>{t(`unavailable.${data.unavailable}`)}</p>
-    </section> : <ReviewForm key={`${data.booking.id}-${data.direction}`} data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} />}
+    </section> : <ReviewForm key={`${data.booking.id}-${data.direction}`} data={data} handlers={handlers} initialResult={initialResult} initialPending={initialPending} {...(aiPreview ? { aiPreview } : {})} />}
     {/* Theirs, once it's published (both are in, or the 14 days ended) and not hidden: blueprint 08, sweep RV2. */}
     {theirs ? <section aria-label={t('theirs.title', { name: data.subject.displayName })} className="space-y-5 rounded-[1.375rem] border border-foreground/[0.07] bg-card dark:border-white/[0.06] p-4 shadow-card sm:p-6">
       <div className="flex items-center gap-3">

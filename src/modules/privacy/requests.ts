@@ -25,6 +25,7 @@ import { cancelTask } from '@/modules/offers/owner';
 import type { PaymentProvider } from '@/integrations/payments';
 import { paymentCustomers, paymentMethods } from '@/modules/payments/schema';
 import { helperProfiles, helperServices, helperWorkSamples } from '@/modules/profiles/schema';
+import { aiResults } from '@/modules/assist/schema';
 import { userBadges } from '@/modules/badges/schema';
 import { savedHelpers } from '@/modules/reviews/schema';
 import { deleteAddressDocument } from '@/modules/verification/address';
@@ -412,6 +413,8 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
     await tx.delete(userBadges).where(eq(userBadges.userId, userId));
     await tx.update(helperServices).set({ status: 'paused', description: '' }).where(eq(helperServices.userId, userId));
     await tx.delete(helperWorkSamples).where(eq(helperWorkSamples.userId, userId));
+    // Their "What neighbors say" (2026-11-24): made with AI from reviews about them, gone with their profile.
+    await tx.delete(aiResults).where(and(eq(aiResults.kind, 'review_summary'), eq(aiResults.subjectId, userId)));
     // Part 7: what they kept goes; what they wrote in the community and on tasks comes down (rows stay for
     // reports and staff, as messages do); their reactions go, and the counts on what they reacted to follow.
     await tx.delete(savedSearches).where(eq(savedSearches.userId, userId));

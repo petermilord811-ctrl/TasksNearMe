@@ -7,6 +7,8 @@ import { localeOrDefault } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { confirmPhoneChangeAction, startPhoneChangeAction } from '@/modules/accounts/account-actions';
 import { createCommunityPostAction, uploadCommunityPhotoAction } from '@/modules/community/actions';
+import { polishCommunityPostAction } from '@/modules/assist/ai-actions';
+import { aiDraftingEnabledFor } from '@/modules/assist/availability';
 import { communityViewerOf } from '@/modules/community/request-viewer';
 import { getNewCommunityPostPage } from '@/modules/community/service';
 import { getViewer } from '@/platform/auth/viewer';
@@ -45,7 +47,8 @@ async function NewPost({ searchParams }: { searchParams: SearchParams }) {
   const data = await getNewCommunityPostPage(db, await communityViewerOf(viewer.user, localeOrDefault(locale)), kind, booking, now);
   // Nothing to post to (no home market): said in the dialog (2026-11-23), not by moving the page underneath to Home.
   if (!data) notFound();
-  return <CommunityNewPostDialog data={data} handlers={{ onPost: createCommunityPostAction, onUploadPhoto: uploadCommunityPhotoAction, ...(data.postBlocked === 'phone_required' ? { onStartPhoneChange: startPhoneChangeAction, onConfirmPhoneChange: confirmPhoneChangeAction } : {}) }} />;
+  const polish = await aiDraftingEnabledFor(db, viewer.user.id);
+  return <CommunityNewPostDialog data={data} handlers={{ onPost: createCommunityPostAction, onUploadPhoto: uploadCommunityPhotoAction, ...(polish ? { onPolish: polishCommunityPostAction } : {}), ...(data.postBlocked === 'phone_required' ? { onStartPhoneChange: startPhoneChangeAction, onConfirmPhoneChange: confirmPhoneChangeAction } : {}) }} />;
 }
 
 export default withClientMessages('[locale]/@modal/(.)app/community/new/page.tsx', NewCommunityPostDialogPage);
