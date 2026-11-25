@@ -1458,7 +1458,10 @@ export function MapLibreView({
         box,
         panels,
       );
-      element.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0) translate(-50%, -50%)`;
+      // Placed with `translate`, not `transform`: its scale (hidden 90%, pressed 95%) then shrinks it around its own
+      // middle. With `transform`, the scale applied after the move and pulled it a tenth of the way to the map's top
+      // left corner, so it flew in from there and, hidden, sat over the heading's card.
+      element.style.translate = `calc(${Math.round(x)}px - 50%) calc(${Math.round(y)}px - 50%)`;
       const angle = Math.atan2(at.y - y, at.x - x);
       if (arrowRef.current) arrowRef.current.style.transform = `rotate(${angle + Math.PI / 2}rad)`;
     };
@@ -2088,7 +2091,7 @@ export function MapLibreView({
           title={edgeMiles !== null ? t(userSource === 'home' ? 'homeEdgeLabel' : 'youEdgeLabel', { miles: edgeMiles }) : undefined}
           className={cn(
             // Solid and ringed in white, so it reads over any part of the map, in both themes.
-            'absolute top-0 left-0 z-[6] inline-flex h-10 items-center gap-2 rounded-full bg-violet pr-3.5 pl-1.5 text-xs font-semibold whitespace-nowrap text-white shadow-[0_0_0_2px_rgb(255_255_255/0.92),0_12px_28px_-10px_rgb(0_0_0/0.65)] transition-[opacity,scale,filter] duration-300 ease-[var(--ease-out)] will-change-transform hover:brightness-110 active:scale-95',
+            'absolute top-0 left-0 z-[6] inline-flex h-10 items-center gap-2 rounded-full bg-violet pr-3.5 pl-1.5 text-xs font-semibold whitespace-nowrap text-white shadow-[0_0_0_2px_rgb(255_255_255/0.92),0_12px_28px_-10px_rgb(0_0_0/0.65)] transition-[opacity,scale,filter] duration-300 ease-[var(--ease-out)] [will-change:translate,scale] hover:brightness-110 active:scale-95',
             edgeShown ? 'scale-100 opacity-100' : 'pointer-events-none scale-90 opacity-0',
           )}
         >
