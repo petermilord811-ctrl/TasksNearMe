@@ -32,6 +32,13 @@
     "link": "link hidden (links show once the booking is paid)",
     "handle": "@••• (usernames show once the booking is paid)"
   },
+  "maskedAlways": {
+    "phone": "•••-•••-{hint} (hidden)",
+    "phoneWithoutHint": "•••-•••-•••• (hidden)",
+    "email": "•••@••• (hidden)",
+    "link": "link hidden",
+    "handle": "@••• (hidden)"
+  },
   "previews": {
     "locationGroup": "Location",
     "messagingGroup": "Masked text",

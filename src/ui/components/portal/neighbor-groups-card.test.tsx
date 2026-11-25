@@ -94,7 +94,7 @@ describe('NeighborGroupPanel', () => {
 
   it('shows masked messages, newest last, with report links for others’ and delete for your own', () => {
     panel();
-    const items = screen.getAllByRole('listitem');
+    const items = within(screen.getByRole('log')).getAllByRole('listitem');
     expect(items[0]!.textContent).toContain('Package room is open again');
     expect(items[items.length - 1]!.textContent).toContain('Chris D.');
     // The phone shows only as masked, with its last 4 digits.
@@ -121,14 +121,15 @@ describe('NeighborGroupPanel', () => {
     const box = screen.getByLabelText('Message to Mueller Lofts residents');
     fireEvent.change(box, { target: { value: 'Who has a ladder?' } });
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Send' })));
-    expect(onSend).toHaveBeenCalledWith({ groupId: 'ngrp_lofts', body: 'Who has a ladder?' });
+    // The conversation's composer (2026-11-24): with no photos, and its key so a retry sends it once.
+    expect(onSend).toHaveBeenCalledWith({ groupId: 'ngrp_lofts', body: 'Who has a ladder?', attachmentIds: [], requestKey: expect.any(String) });
     await waitFor(() => expect((box as HTMLTextAreaElement).value).toBe(''));
     expect(onReload).toHaveBeenCalled();
     onSend.mockResolvedValueOnce({ ok: false, code: 'rate_limited', retryAt: '2026-11-17T15:01:00.000Z' });
     fireEvent.change(box, { target: { value: 'Again' } });
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Send' })));
     await waitFor(() => expect((box as HTMLTextAreaElement).value).toBe('Again'));
-    expect(screen.getByRole('status')).toBeDefined();
+    expect(screen.getByText("You're sending messages too quickly. Wait before trying again.")).toBeDefined();
   });
 
   it('has no composer for an account that can’t write', () => {

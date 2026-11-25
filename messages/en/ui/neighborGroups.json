@@ -87,9 +87,6 @@
     "deleting": "Deleting…",
     "cancel": "Cancel",
     "messageLabel": "Message to {name}",
-    "placeholder": "Write to the group",
-    "send": "Send",
-    "sending": "Sending…",
     "masked": "Phone numbers, emails and links are hidden in groups. Keep plans and payments on TasksNearMe.",
     "cantSend": "Your account can't send messages right now.",
     "mute": "Mute notifications",
@@ -102,7 +99,16 @@
     "leaveAdmin": "You're the admin: the member who joined first after you becomes the admin.",
     "leaveLast": "You're the last member, so the group closes.",
     "leaveConfirm": "Leave",
-    "left": "You left {group}."
+    "left": "You left {group}.",
+    "log": "Messages in {name}",
+    "photo": "Photo",
+    "gif": "GIF",
+    "hidden": "hidden details",
+    "quoteHidden": "A message you can't see",
+    "someone": "Someone",
+    "typingOne": "{name} is typing…",
+    "typingTwo": "{first} and {second} are typing…",
+    "typingMany": "Several people are typing…"
   },
   "people": {
     "title": "Members",
@@ -153,6 +159,12 @@
     "memberMembers": "Group: a member's members",
     "portal": "Neighbors with groups",
     "adminCase": "Staff: a reported group message",
-    "adminCaseRemoved": "Staff: a removed group message"
+    "adminCaseRemoved": "Staff: a removed group message",
+    "chat": "Group: photos, a GIF, reactions and replies",
+    "chatUnread": "Group: new messages since last time",
+    "chatReadOnly": "Group: an account that can't write",
+    "typing": "Group: a neighbor typing",
+    "typingMany": "Group: several people typing",
+    "adminCasePhotos": "Staff: a reported group message with photos"
   }
 }

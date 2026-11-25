@@ -1,4 +1,15 @@
-import { NEIGHBOR_GROUP_CODE_LENGTH, NEIGHBOR_GROUP_LIMITS, type NeighborGroupCreateBlock, type NeighborGroupInviteState, type NeighborGroupMessageStatus, type NeighborGroupRole } from '@/contracts';
+import {
+  MESSAGE_REACTIONS,
+  NEIGHBOR_GROUP_CODE_LENGTH,
+  NEIGHBOR_GROUP_LIMITS,
+  type MessageReaction,
+  type NeighborGroupCreateBlock,
+  type NeighborGroupInviteState,
+  type NeighborGroupMessageStatus,
+  type NeighborGroupQuote,
+  type NeighborGroupReaction,
+  type NeighborGroupRole,
+} from '@/contracts';
 
 /**
  * Building and street groups (2026-11-24): the pure rules. Who may create one, what an invite leads to, who may remove
@@ -60,10 +71,68 @@ export const inviteWorks = (invite: { expiresAt: Date; revokedAt: Date | null },
 
 export const inviteExpiry = (now: Date) => new Date(now.getTime() + NEIGHBOR_GROUP_LIMITS.inviteDays * 86_400_000);
 
-/** What a member may do with a message: delete their own while it shows; report someone else's, once. */
-export function messageActions(message: { isYours: boolean; status: NeighborGroupMessageStatus; reportedByYou: boolean }): { canDelete: boolean; canReport: boolean } {
+/**
+ * What a member may do with a message: delete their own while it shows; report someone else's, once; react to it and
+ * reply to it while it shows and their account may write.
+ */
+export function messageActions(message: { isYours: boolean; status: NeighborGroupMessageStatus; reportedByYou: boolean; canWrite: boolean }): { canDelete: boolean; canReport: boolean; canReact: boolean; canReply: boolean } {
   const visible = message.status === 'visible';
-  return { canDelete: visible && message.isYours, canReport: visible && !message.isYours && !message.reportedByYou };
+  return {
+    canDelete: visible && message.isYours,
+    canReport: visible && !message.isYours && !message.reportedByYou,
+    canReact: visible && message.canWrite,
+    canReply: visible && message.canWrite,
+  };
+}
+
+export const isGroupReaction = (emoji: unknown): emoji is MessageReaction => typeof emoji === 'string' && (MESSAGE_REACTIONS as readonly string[]).includes(emoji);
+
+/**
+ * A message's reactions as one member sees them: each emoji with its count and whether they gave it, in
+ * `MESSAGE_REACTIONS` order. People they blocked, or who blocked them, aren't counted (they don't see each other).
+ */
+export function reactionSummary(rows: readonly { emoji: string; userId: string }[], viewerId: string, blocked: ReadonlySet<string>): NeighborGroupReaction[] {
+  const counts = new Map<MessageReaction, { count: number; mine: boolean }>();
+  for (const row of rows) {
+    if (!isGroupReaction(row.emoji) || blocked.has(row.userId)) continue;
+    const entry = counts.get(row.emoji) ?? { count: 0, mine: false };
+    entry.count += 1;
+    if (row.userId === viewerId) entry.mine = true;
+    counts.set(row.emoji, entry);
+  }
+  return MESSAGE_REACTIONS.flatMap((emoji) => {
+    const entry = counts.get(emoji);
+    return entry ? [{ emoji, ...entry }] : [];
+  });
+}
+
+/**
+ * The "New messages" line: the first message, oldest first, that someone else wrote after the viewer last read the
+ * group. The messages are the ones the viewer sees (none from someone blocked either way).
+ */
+export function firstUnreadOf(messages: readonly { id: string; authorUserId: string; createdAt: Date }[], viewerId: string, lastReadAt: Date): string | undefined {
+  return messages.find((message) => message.authorUserId !== viewerId && message.createdAt.getTime() > lastReadAt.getTime())?.id;
+}
+
+/**
+ * Whether a member may open a group photo (src/modules/files/related-access.ts): the group is open, the message it's on
+ * still shows, the viewer is in the group now and may read groups, and they and its author haven't blocked one another.
+ * Its uploader always may (`canViewFile`); staff only through a case's link.
+ */
+export function canSeeGroupPhoto(input: { groupStatus: string; messageStatus: string; isMember: boolean; viewerStatus: string; blockedWithAuthor: boolean }): boolean {
+  return input.groupStatus === 'active' && input.messageStatus === 'visible' && input.isMember && canReadGroups(input.viewerStatus) && !input.blockedWithAuthor;
+}
+
+/** How a reply's quoted message shows to this viewer: as written (masked by the caller), or only why it can't. */
+export function quoteState(quoted: { status: NeighborGroupMessageStatus; authorUserId: string }, blocked: ReadonlySet<string>): NeighborGroupQuote['status'] {
+  if (blocked.has(quoted.authorUserId)) return 'hidden';
+  return quoted.status;
+}
+
+/** A quote's media line: a GIF when it's one animated GIF, else photos ("Photo"). */
+export function quoteMedia(attachments: readonly { contentType: string }[]): NeighborGroupQuote['media'] {
+  if (attachments.length === 0) return undefined;
+  return attachments.every((file) => file.contentType === 'image/gif') ? 'gif' : 'photo';
 }
 
 /**

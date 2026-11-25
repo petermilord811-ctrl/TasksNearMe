@@ -8,6 +8,11 @@ export interface MaskedTextProps {
   segments: MessageSegment[];
   /** People named by @username link to them; off where the text sits inside a link already (a conversation's row). */
   links?: boolean;
+  /**
+   * Where no booking ever shows the details (a building or street group, 2026-11-24): they read "(hidden)", never
+   * "hidden until booking".
+   */
+  always?: boolean;
   className?: string;
 }
 
@@ -27,7 +32,7 @@ function Mention({ segment, links }: { segment: MentionSegment; links: boolean }
 }
 
 /** Render the app's projection verbatim; the UI never detects or reconstructs contact details. */
-export function MaskedText({ segments, links = true, className }: MaskedTextProps) {
+export function MaskedText({ segments, links = true, always = false, className }: MaskedTextProps) {
   const t = useTranslations('location');
 
   return (
@@ -39,14 +44,14 @@ export function MaskedText({ segments, links = true, className }: MaskedTextProp
       ) : (
         <span key={index} className="rounded bg-muted px-1 py-0.5 text-muted-foreground">
           {segment.detail === 'email'
-            ? t('masked.email')
+            ? (always ? t('maskedAlways.email') : t('masked.email'))
             : segment.detail === 'link'
-              ? t('masked.link')
+              ? (always ? t('maskedAlways.link') : t('masked.link'))
               : segment.detail === 'handle'
-                ? t('masked.handle')
+                ? (always ? t('maskedAlways.handle') : t('masked.handle'))
                 : segment.hint
-                  ? t('masked.phone', { hint: segment.hint })
-                  : t('masked.phoneWithoutHint')}
+                  ? (always ? t('maskedAlways.phone', { hint: segment.hint }) : t('masked.phone', { hint: segment.hint }))
+                  : (always ? t('maskedAlways.phoneWithoutHint') : t('masked.phoneWithoutHint'))}
         </span>
       ))}
     </span>

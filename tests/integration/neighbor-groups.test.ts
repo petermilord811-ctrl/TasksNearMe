@@ -1,6 +1,20 @@
+import { randomUUID } from 'node:crypto';
+import os from 'node:os';
+import path from 'node:path';
 import { and, eq, inArray, isNull, like, or, sql } from 'drizzle-orm';
+import sharp from 'sharp';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { MessageReaction, MessageSegment } from '@/contracts';
+import { createStandInGifs } from '@/integrations/gifs/stand-in';
+import { createLocalFileStorage } from '@/integrations/storage';
 import { users } from '@/modules/accounts/schema';
+import { canViewFile } from '@/modules/files/access';
+import { canViewRelatedFile } from '@/modules/files/related-access';
+import { readStaffFileToken } from '@/modules/files/staff-file-token';
+import { dataExportPhotos } from '@/modules/privacy/data-export';
+import { storePhoto } from '@/modules/files/uploads';
+import { attachGif } from '@/modules/messaging/gifs';
+import { files } from '@/modules/tasks/schema';
 import {
   createGroupInvite,
   createNeighborGroup,
@@ -13,12 +27,15 @@ import {
   joinNeighborGroup,
   leaveNeighborGroup,
   muteNeighborGroup,
+  notifyGroupTyping,
   previewInvite,
+  reactToGroupMessage,
   removeGroupMember,
+  reportedGroupMessageOf,
   revokeGroupInvite,
   sendGroupMessage,
 } from '@/modules/community/groups';
-import { neighborGroupInvites, neighborGroupMembers, neighborGroupMessages, neighborGroups } from '@/modules/community/schema';
+import { neighborGroupInvites, neighborGroupMembers, neighborGroupMessages, neighborGroupPhotos, neighborGroupReactions, neighborGroups } from '@/modules/community/schema';
 import { areas } from '@/modules/markets/schema';
 import { channelsFor } from '@/modules/notifications/delivery-domain';
 import { notifications } from '@/modules/notifications/schema';
@@ -41,7 +58,7 @@ const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
 const STAFF = { id: 'usr_morgan', roles: ['support_lead' as const] };
 const ADMIN = 'usr_tmp_ng_admin';
 /** Each admin creates at most 3 groups: the file's groups take turns among these. */
-const ADMINS = [ADMIN, 'usr_tmp_ng_admin2', 'usr_tmp_ng_admin3', 'usr_tmp_ng_admin4'];
+const ADMINS = [ADMIN, 'usr_tmp_ng_admin2', 'usr_tmp_ng_admin3', 'usr_tmp_ng_admin4', 'usr_tmp_ng_admin5', 'usr_tmp_ng_admin6', 'usr_tmp_ng_admin7'];
 let groupsMade = 0;
 const BEA = 'usr_tmp_ng_bea';
 const CAL = 'usr_tmp_ng_cal';
@@ -63,6 +80,8 @@ async function cleanUp() {
   await db.delete(notifications).where(and(inArray(notifications.userId, PEOPLE), eq(notifications.type, 'group_message')));
   await db.delete(blocks).where(or(inArray(blocks.blockerId, PEOPLE), inArray(blocks.blockedId, PEOPLE)));
   await db.delete(rateLimits).where(or(...PEOPLE.map((id) => like(rateLimits.key, `%${id}%`))));
+  // Their uploads (their links to messages went with the groups above).
+  await db.delete(files).where(inArray(files.ownerUserId, PEOPLE));
 }
 
 beforeAll(async () => {
@@ -286,5 +305,202 @@ describe('building and street groups', () => {
     const cals = await db.select().from(neighborGroupMessages).where(and(eq(neighborGroupMessages.groupId, groupId), eq(neighborGroupMessages.authorUserId, CAL)));
     expect(cals.every((row) => row.status === 'removed')).toBe(true);
     expect(await getNeighborGroupView(db, CAL, groupId, now())).toBeNull();
+  });
+});
+
+describe('group chat as in a conversation (2026-11-24)', () => {
+  const storage = createLocalFileStorage(path.join(os.tmpdir(), `tnm-groups-${process.pid}`));
+  const png = () => sharp({ create: { width: 40, height: 30, channels: 3, background: '#88aa66' } }).png().toBuffer();
+  async function upload(owner: string, kind: 'group_photo' | 'message' = 'group_photo'): Promise<string> {
+    const result = await storePhoto({ db, storage }, { userId: owner, kind, file: new File([new Uint8Array(await png())], 'pond.png', { type: 'image/png' }) });
+    if (!result.ok) throw new Error(`upload failed: ${result.code}`);
+    return result.photo.id;
+  }
+  /** Whether this person may open the file, as the file route decides (staff links aside). */
+  async function canOpen(fileId: string, userId: string): Promise<boolean> {
+    const [file] = await db.select().from(files).where(eq(files.id, fileId));
+    return canViewFile(file!, { userId }) || (await canViewRelatedFile(db, file!, userId, now()));
+  }
+  const plain = (segments: MessageSegment[]) => segments.map((segment) => (segment.kind === 'text' ? segment.text : '•')).join('');
+  const lastMessageIn = async (groupId: string) => (await db.select().from(neighborGroupMessages).where(eq(neighborGroupMessages.groupId, groupId)).orderBy(sql`${neighborGroupMessages.createdAt} desc`).limit(1))[0]!;
+
+  it('sends photos that only current members open, while the message shows, never across a block', async () => {
+    const { admin, groupId } = await groupWithMembers('Photo building');
+    const [first, second] = [await upload(BEA), await upload(BEA)];
+    expect(await sendGroupMessage(db, BEA, { groupId, attachmentIds: [first, second] }, now())).toMatchObject({ ok: true, code: 'sent' });
+    const sent = (await getNeighborGroupView(db, CAL, groupId, now()))!.messages.at(-1)!;
+    expect(sent.segments).toEqual([]);
+    expect(sent.attachments).toEqual([
+      { id: first, src: `/api/files/${first}`, alt: '', width: 40, height: 30 },
+      { id: second, src: `/api/files/${second}`, alt: '', width: 40, height: 30 },
+    ]);
+    // Its members and its uploader open it; nobody else.
+    for (const member of [CAL, admin, BEA]) expect(await canOpen(first, member)).toBe(true);
+    expect(await canOpen(first, DEV)).toBe(false);
+    // A photo goes on one message, and only the sender's own group uploads go at all.
+    expect(await sendGroupMessage(db, BEA, { groupId, attachmentIds: [first] }, now())).toMatchObject({ ok: false, code: 'validation_failed', fieldErrors: { attachmentIds: ['invalid'] } });
+    expect(await sendGroupMessage(db, BEA, { groupId, attachmentIds: [await upload(CAL)] }, now())).toMatchObject({ ok: false, code: 'validation_failed' });
+    expect(await sendGroupMessage(db, BEA, { groupId, attachmentIds: [await upload(BEA, 'message')] }, now())).toMatchObject({ ok: false, code: 'validation_failed' });
+    const twice = await upload(BEA);
+    expect(await sendGroupMessage(db, BEA, { groupId, attachmentIds: [twice, twice] }, now())).toMatchObject({ ok: false, code: 'validation_failed' });
+    expect(await sendGroupMessage(db, BEA, { groupId, attachmentIds: ['fil_1', 'fil_2', 'fil_3', 'fil_4', 'fil_5'] }, now())).toMatchObject({ ok: false, code: 'validation_failed' });
+    // A block between the reader and its author closes it, both ways; lifted, it opens again.
+    await setBlocked(db, BEA, CAL, true, now());
+    expect(await canOpen(first, CAL)).toBe(false);
+    await setBlocked(db, BEA, CAL, false, now());
+    expect(await canOpen(first, CAL)).toBe(true);
+    // Out of the group: no more.
+    expect(await removeGroupMember(db, admin, { groupId, userId: CAL }, now())).toMatchObject({ ok: true });
+    expect(await canOpen(first, CAL)).toBe(false);
+    // Deleted by its author: gone for the members (photos too), still the author's own.
+    const [link] = await db.select().from(neighborGroupPhotos).where(eq(neighborGroupPhotos.fileId, first));
+    expect(await deleteGroupMessage(db, BEA, { messageId: link!.messageId }, now())).toMatchObject({ ok: true });
+    expect(await canOpen(first, admin)).toBe(false);
+    expect(await canOpen(first, BEA)).toBe(true);
+    expect((await getNeighborGroupView(db, admin, groupId, now()))!.messages.find((message) => message.id === link!.messageId)).toMatchObject({ status: 'deleted', attachments: [], reactions: [] });
+  });
+
+  it('sends a picked GIF as a group photo of its own, and a member’s copy of their data has their group photos', async () => {
+    const { groupId } = await groupWithMembers('GIF building');
+    const gif = await attachGif({ db, storage, now }, { userId: BEA, id: 'sample-party', kind: 'group_photo' }, createStandInGifs());
+    if (!gif.ok) throw new Error(gif.code);
+    const [row] = await db.select().from(files).where(eq(files.id, gif.photo.id));
+    expect(row).toMatchObject({ kind: 'group_photo', contentType: 'image/gif', storageKey: `group_photo/${gif.photo.id}.gif` });
+    expect(await sendGroupMessage(db, BEA, { groupId, attachmentIds: [gif.photo.id] }, now())).toMatchObject({ ok: true });
+    expect((await getNeighborGroupView(db, CAL, groupId, now()))!.messages.at(-1)!.attachments).toEqual([gif.photo]);
+    expect(gif.photo.animated).toBe(true);
+    expect(await canOpen(gif.photo.id, CAL)).toBe(true);
+    expect(await canOpen(gif.photo.id, DEV)).toBe(false);
+    // Hers, in her copy: under groups/, as the GIF it is. Never in another member's.
+    expect((await dataExportPhotos(db, storage, BEA)).list.map((entry) => entry.file)).toContain(`photos/groups/${gif.photo.id}.gif`);
+    expect((await dataExportPhotos(db, storage, CAL)).list.map((entry) => entry.file)).not.toContain(`photos/groups/${gif.photo.id}.gif`);
+  });
+
+  it('lets members react to a message that shows, once an emoji each, and never counts across a block', async () => {
+    const { admin, groupId } = await groupWithMembers('Reaction building', [BEA, CAL, DEV]);
+    await sendGroupMessage(db, BEA, { groupId, body: 'Who wants pizza?' }, now());
+    const message = await lastMessageIn(groupId);
+    const react = (userId: string, emoji: string, on = true) => reactToGroupMessage(db, userId, { messageId: message.id, emoji: emoji as MessageReaction, on }, now());
+    const reactionsFor = async (viewer: string) => (await getNeighborGroupView(db, viewer, groupId, now()))!.messages[0]!.reactions;
+    expect(await react(CAL, 'heart')).toEqual({ ok: true, code: 'updated' });
+    expect(await react(CAL, 'heart')).toMatchObject({ ok: true });
+    expect(await react(admin, 'heart')).toMatchObject({ ok: true });
+    expect(await react(BEA, 'party')).toMatchObject({ ok: true });
+    expect(await reactionsFor(CAL)).toEqual([{ emoji: 'heart', count: 2, mine: true }, { emoji: 'party', count: 1, mine: false }]);
+    expect(await react(CAL, 'heart', false)).toMatchObject({ ok: true });
+    expect(await reactionsFor(BEA)).toEqual([{ emoji: 'heart', count: 1, mine: false }, { emoji: 'party', count: 1, mine: true }]);
+    // Only the offered emoji, and only members.
+    expect(await react(CAL, 'skull')).toMatchObject({ ok: false, code: 'validation_failed' });
+    expect(await react(FAR, 'heart')).toMatchObject({ ok: false, code: 'not_found' });
+    // Someone DEV blocked: their heart isn't counted for DEV, while DEV still reacts to Bea's message.
+    await setBlocked(db, DEV, admin, true, now());
+    expect(await react(DEV, 'heart')).toMatchObject({ ok: true });
+    expect(await reactionsFor(DEV)).toEqual([{ emoji: 'heart', count: 1, mine: true }, { emoji: 'party', count: 1, mine: false }]);
+    await setBlocked(db, DEV, admin, false, now());
+    // Never on the message of someone blocked either way.
+    await setBlocked(db, BEA, CAL, true, now());
+    expect(await react(CAL, 'fire')).toMatchObject({ ok: false, code: 'not_found' });
+    await setBlocked(db, BEA, CAL, false, now());
+    // An account that can't write reads, but doesn't react.
+    await db.update(users).set({ status: 'restricted' }).where(eq(users.id, CAL));
+    try {
+      expect(await react(CAL, 'fire')).toMatchObject({ ok: false, code: 'not_allowed' });
+      expect((await getNeighborGroupView(db, CAL, groupId, now()))!.messages[0]).toMatchObject({ canReact: false, canReply: false });
+    } finally {
+      await db.update(users).set({ status: 'active' }).where(eq(users.id, CAL));
+    }
+    // A deleted account's reactions go with it.
+    await db.transaction((tx) => forgetGroupMember(tx, DEV, now()));
+    expect(await db.select().from(neighborGroupReactions).where(eq(neighborGroupReactions.userId, DEV))).toEqual([]);
+    // A deleted message takes none, and shows none.
+    await deleteGroupMessage(db, BEA, { messageId: message.id }, now());
+    expect(await react(CAL, 'fire')).toMatchObject({ ok: false, code: 'not_found' });
+    expect((await getNeighborGroupView(db, CAL, groupId, now()))!.messages[0]).toMatchObject({ status: 'deleted', reactions: [], canReact: false, canReply: false });
+  });
+
+  it('quotes the message a reply answers, as each member may see it', async () => {
+    const { admin, groupId } = await groupWithMembers('Reply building');
+    const other = await groupWithMembers('Reply building two');
+    await sendGroupMessage(db, BEA, { groupId, body: 'Text me at 512-555-0147 about the ladder' }, now());
+    const quoted = await lastMessageIn(groupId);
+    expect(await sendGroupMessage(db, CAL, { groupId, body: 'I have one', replyToId: quoted.id }, new Date(Date.now() + 1000))).toMatchObject({ ok: true });
+    const replyFor = async (viewer: string) => (await getNeighborGroupView(db, viewer, groupId, now()))!.messages.find((message) => message.replyTo)!.replyTo;
+    const forAdmin = await replyFor(admin);
+    expect(forAdmin).toMatchObject({ id: quoted.id, status: 'visible', author: { displayName: 'Ruth A.', isYou: false } });
+    expect(forAdmin!.segments).toContainEqual({ kind: 'masked', detail: 'phone', hint: '0147' });
+    expect(JSON.stringify(forAdmin)).not.toMatch(/512/);
+    expect((await replyFor(BEA))!.author).toEqual({ displayName: 'Ruth A.', isYou: true });
+    // Only a message of the same group that the sender sees.
+    expect(await sendGroupMessage(db, CAL, { groupId: other.groupId, body: 'Wrong group', replyToId: quoted.id }, now())).toMatchObject({ ok: false, code: 'validation_failed', fieldErrors: { replyToId: ['invalid'] } });
+    // Across a block: neither its words nor its author, and it can't be quoted.
+    await setBlocked(db, admin, BEA, true, now());
+    expect(await replyFor(admin)).toEqual({ id: quoted.id, status: 'hidden', segments: [] });
+    expect(await sendGroupMessage(db, admin, { groupId, body: 'Me too', replyToId: quoted.id }, now())).toMatchObject({ ok: false, code: 'validation_failed' });
+    await setBlocked(db, admin, BEA, false, now());
+    // Deleted later: the quote says so, and it can't be quoted again.
+    await deleteGroupMessage(db, BEA, { messageId: quoted.id }, now());
+    expect(await replyFor(admin)).toMatchObject({ status: 'deleted', segments: [], author: { displayName: 'Ruth A.' } });
+    expect(await sendGroupMessage(db, CAL, { groupId, body: 'Late reply', replyToId: quoted.id }, now())).toMatchObject({ ok: false, code: 'validation_failed' });
+  });
+
+  it('marks where the new messages start, and sends a message once however often it is retried', async () => {
+    const { groupId } = await groupWithMembers('Unread building');
+    const at = (ms: number) => new Date(Date.now() + ms);
+    await sendGroupMessage(db, BEA, { groupId, body: 'Before' }, at(1000));
+    // Cal's first look: Bea's message was new. Looking again: nothing is.
+    expect((await getNeighborGroupView(db, CAL, groupId, at(1500)))!.firstUnreadId).toBe((await lastMessageIn(groupId)).id);
+    expect((await getNeighborGroupView(db, CAL, groupId, at(1600)))!.firstUnreadId).toBeUndefined();
+    const key = randomUUID();
+    for (let attempt = 0; attempt < 3; attempt += 1) expect(await sendGroupMessage(db, BEA, { groupId, body: 'After', requestKey: key }, at(2000))).toEqual({ ok: true, code: 'sent' });
+    await sendGroupMessage(db, BEA, { groupId, body: 'And again' }, at(3000));
+    const view = await getNeighborGroupView(db, CAL, groupId, at(4000));
+    expect(view!.messages.map((message) => plain(message.segments))).toEqual(['Before', 'After', 'And again']);
+    expect(view!.firstUnreadId).toBe(view!.messages[1]!.id);
+    // Your own never count.
+    expect((await getNeighborGroupView(db, BEA, groupId, at(5000)))!.firstUnreadId).toBeUndefined();
+  });
+
+  it('says "typing…" to the other members, at most every 2.5 s, never to someone blocked', async () => {
+    const { admin, groupId } = await groupWithMembers('Typing building');
+    const at = new Date(Date.now() + 90_000);
+    const heard: { channel: string; notice: { type: string; group?: string; user?: string } }[] = [];
+    const client = await pool.connect();
+    const onNotice = (message: { payload?: string }) => {
+      const envelope = JSON.parse(message.payload ?? '{}') as (typeof heard)[number];
+      if (envelope.notice?.type === 'typing' && envelope.notice.group === groupId) heard.push(envelope);
+    };
+    client.on('notification', onNotice);
+    try {
+      await client.query('LISTEN tnm_realtime');
+      await setBlocked(db, CAL, BEA, true, at);
+      expect(await notifyGroupTyping(db, BEA, { groupId }, at)).toBe('sent');
+      expect(await notifyGroupTyping(db, BEA, { groupId }, new Date(at.getTime() + 1000))).toBe('throttled');
+      expect(await notifyGroupTyping(db, DEV, { groupId }, at)).toBe('not_found');
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    } finally {
+      client.removeListener('notification', onNotice);
+      await client.query('UNLISTEN tnm_realtime');
+      client.release();
+      await setBlocked(db, CAL, BEA, false, at);
+    }
+    // The admin hears it (ids only); Bea doesn't hear herself, and Cal, who blocked her, doesn't either.
+    expect(heard.map((envelope) => envelope.channel)).toEqual([`user:${admin}`]);
+    expect(heard[0]!.notice).toEqual({ type: 'typing', group: groupId, user: BEA });
+  });
+
+  it('shows our team a reported message’s photos through the case’s staff link', async () => {
+    const { groupId } = await groupWithMembers('Staff photo building');
+    const photo = await upload(BEA);
+    await sendGroupMessage(db, BEA, { groupId, body: 'For sale', attachmentIds: [photo] }, now());
+    const message = await lastMessageIn(groupId);
+    const at = now();
+    const shown = await reportedGroupMessageOf(db, message.id, true, { id: STAFF.id, now: at, context: 'case:case_photo_test' });
+    expect(shown!.photos).toHaveLength(1);
+    const src = new URL(shown!.photos![0]!.src, 'http://localhost');
+    expect(src.pathname).toBe(`/api/files/${photo}`);
+    expect(readStaffFileToken(src.searchParams.get('t') ?? '', at)).toMatchObject({ fileId: photo, staffUserId: STAFF.id, context: 'case:case_photo_test' });
+    // Never for staff who aren't looking at a case (no link), and not for a member.
+    expect((await reportedGroupMessageOf(db, message.id, true))!.photos).toBeUndefined();
+    expect(await canOpen(photo, STAFF.id)).toBe(false);
   });
 });

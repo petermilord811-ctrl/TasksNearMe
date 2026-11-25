@@ -1,23 +1,21 @@
 'use client';
 
-import { useEffect, useEffectEvent, useId, useRef, useState, useTransition } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { Bell, BellOff, Copy, Flag, Link2, LogOut, ShieldCheck, Trash2, UserMinus, X } from 'lucide-react';
+import { Bell, BellOff, Copy, Link2, LogOut, ShieldCheck, UserMinus, X } from 'lucide-react';
 import {
-  NEIGHBOR_GROUP_MESSAGE_MAX,
-  routes,
   type ActionResult,
   type NeighborGroupHandlers,
   type NeighborGroupInviteView,
   type NeighborGroupMemberView,
-  type NeighborGroupMessageView,
   type NeighborGroupView,
+  type ThreadHandlers,
 } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
-import { MaskedText } from '@/ui/components/messaging/masked-text';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
-import { LocaleLink as Link } from '@/ui/lib/locale-link';
+import { MessageComposerContent } from '@/ui/screens/messages/message-composer';
+import { ReplyProvider } from '@/ui/screens/messages/reply-context';
 import { useFormat } from '@/ui/lib/format';
 import { useRealtime } from '@/ui/lib/realtime';
 import { cn } from '@/ui/lib/utils';
@@ -27,11 +25,13 @@ import { Button } from '@/ui/primitives/button';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/ui/primitives/sheet';
 import { Spinner } from '@/ui/primitives/spinner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/primitives/tabs';
-import { Textarea } from '@/ui/primitives/textarea';
 import { GroupKindIcon } from './neighbor-group-dialogs';
+import { NeighborGroupLog } from './neighbor-group-log';
 
 export type NeighborGroupTab = 'chat' | 'members';
 const failed = { ok: false as const, code: 'unknown' as const };
+/** How long "typing…" stays after a member's last notice (they ping every 2.5 s while typing). */
+const TYPING_SHOWN_MS = 6000;
 
 /** Runs a handler, turning a throw into `unknown` (never assume success). */
 async function run<T>(handler: (input: T) => Promise<ActionResult>, input: T): Promise<ActionResult> {
@@ -45,7 +45,8 @@ async function run<T>(handler: (input: T) => Promise<ActionResult>, input: T): P
 /**
  * A building or street group, open over Neighbors (2026-11-24): a bottom sheet on phones, a panel at the side on wide
  * screens, never a trip away. It loads when opened (`onOpen`, which also reads it) and again when a member writes
- * (the live `group.message` notice), and after anything done in it. `initialView` is for previews.
+ * (the live `group.message` notice; while the tab is hidden it waits, so nothing reads as read unseen), and after
+ * anything done in it. `initialView` is for previews.
  */
 export function NeighborGroupSheet({ groupId, onClose, handlers, initialView, initialTab = 'chat' }: {
   groupId: string | null;
@@ -59,6 +60,8 @@ export function NeighborGroupSheet({ groupId, onClose, handlers, initialView, in
   const [view, setView] = useState<NeighborGroupView | null | undefined>(initialView);
   const [shownFor, setShownFor] = useState<string | null>(initialView ? initialView.group.id : null);
   const ticket = useRef(0);
+  // A live notice that came while the tab was hidden: read the group once it's back in view.
+  const staleWhileHidden = useRef(false);
   // A different group: start again (adjusted while rendering, not in an effect).
   if (groupId !== shownFor) {
     setShownFor(groupId);
@@ -84,8 +87,24 @@ export function NeighborGroupSheet({ groupId, onClose, handlers, initialView, in
     return () => window.clearTimeout(timer);
   }, [groupId, view]);
 
+  useEffect(() => {
+    if (!groupId) return;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible' || !staleWhileHidden.current) return;
+      staleWhileHidden.current = false;
+      loadSoon(groupId);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [groupId]);
+
   useRealtime('update', (notice) => {
     if (notice.event !== 'group.message' || !groupId || notice.group !== groupId) return;
+    // Reading the group reads it: not while nobody sees it (sweep 2026-11-24 C2's rule for conversations).
+    if (document.visibilityState === 'hidden') {
+      staleWhileHidden.current = true;
+      return;
+    }
     void load(groupId);
     // Not handled: the page refreshes too, for the bell and the list.
   });
@@ -117,8 +136,46 @@ export function NeighborGroupSheet({ groupId, onClose, handlers, initialView, in
   </Sheet>;
 }
 
+/**
+ * Who is typing in the group now (2026-11-24): the live `typing` notices for it, each shown for a few seconds after the
+ * last one, and gone once that member's message arrives. Names come from the group's members.
+ */
+function useGroupTyping(view: NeighborGroupView, seed: readonly string[] = []): string | null {
+  const t = useTranslations('neighborGroups.group');
+  const [typers, setTypers] = useState<Record<string, number>>(() => Object.fromEntries(seed.map((id) => [id, Number.POSITIVE_INFINITY])));
+  useRealtime('typing', (notice) => {
+    if (notice.group !== view.group.id || typeof notice.user !== 'string') return false;
+    const user = notice.user;
+    setTypers((current) => ({ ...current, [user]: Date.now() + TYPING_SHOWN_MS }));
+    return true;
+  });
+  // Each one goes a few seconds after their last notice.
+  useEffect(() => {
+    const due = Object.values(typers).filter(Number.isFinite);
+    if (due.length === 0) return;
+    const timer = window.setTimeout(() => setTypers((current) => Object.fromEntries(Object.entries(current).filter(([, until]) => until > Date.now()))), Math.max(50, Math.min(...due) - Date.now()));
+    return () => window.clearTimeout(timer);
+  }, [typers]);
+  // Their message arrived: they stopped typing (adjusted while rendering).
+  const last = view.messages.at(-1);
+  const [seenLast, setSeenLast] = useState(last?.id);
+  if (last?.id !== seenLast) {
+    setSeenLast(last?.id);
+    if (last && typers[last.author.userId] !== undefined) {
+      const next = { ...typers };
+      delete next[last.author.userId];
+      setTypers(next);
+    }
+  }
+  const names = Object.keys(typers).map((id) => view.members.find((member) => member.userId === id && !member.isYou)?.displayName ?? null);
+  if (names.length === 0) return null;
+  if (names.length === 1) return t('typingOne', { name: names[0] ?? t('someone') });
+  if (names.length === 2 && names[0] && names[1]) return t('typingTwo', { first: names[0], second: names[1] });
+  return t('typingMany');
+}
+
 /** The group itself: its header, the chat (newest at the bottom, the composer under it) and its members. */
-export function NeighborGroupPanel({ view, handlers, initialTab = 'chat', inSheet = false, onReload, onClose }: {
+export function NeighborGroupPanel({ view, handlers, initialTab = 'chat', inSheet = false, onReload, onClose, initialTyping }: {
   view: NeighborGroupView;
   handlers: NeighborGroupHandlers;
   initialTab?: NeighborGroupTab;
@@ -126,11 +183,16 @@ export function NeighborGroupPanel({ view, handlers, initialTab = 'chat', inShee
   inSheet?: boolean;
   onReload: () => void;
   onClose: (changed: boolean) => void;
+  /** Previews: members shown typing. */
+  initialTyping?: readonly string[];
 }) {
   const t = useTranslations('neighborGroups.group');
   const kinds = useTranslations('neighborGroups.kinds');
   const [tab, setTab] = useState<NeighborGroupTab>(initialTab);
   const [muting, startMuting] = useTransition();
+  // "New messages" stays where it was when the group opened, however often it's read again while open.
+  const [unreadFrom] = useState(view.firstUnreadId);
+  const typing = useGroupTyping(view, initialTyping);
   const { group, you } = view;
   const subtitle = t('subtitle', { kind: kinds(group.kind), area: group.areaName, count: group.memberCount });
 
@@ -147,15 +209,20 @@ export function NeighborGroupPanel({ view, handlers, initialTab = 'chat', inShee
       <div className="flex items-start gap-3">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary"><GroupKindIcon kind={group.kind} className="size-5" /></span>
         <div className="min-w-0 flex-1">
+          {/* A long name (up to 60 characters) takes two lines on a phone rather than a few letters and "…". */}
           {inSheet
-            ? <>
-              <SheetTitle className="truncate text-lg font-semibold leading-tight">{group.name}</SheetTitle>
-              <SheetDescription className="text-sm text-muted-foreground">{subtitle}</SheetDescription>
-            </>
-            : <>
-              <h2 className="truncate text-lg font-semibold leading-tight">{group.name}</h2>
-              <p className="text-sm text-muted-foreground">{subtitle}</p>
-            </>}
+            ? <SheetTitle className="line-clamp-2 text-lg font-semibold leading-tight [overflow-wrap:anywhere]">{group.name}</SheetTitle>
+            : <h2 className="line-clamp-2 text-lg font-semibold leading-tight [overflow-wrap:anywhere]">{group.name}</h2>}
+          {/* "typing…" takes the group's line while it lasts (as in a conversation's header), in the same cell, so the
+              header keeps its height whichever shows. */}
+          <div className="grid min-w-0">
+            {inSheet
+              ? <SheetDescription className={cn('col-start-1 row-start-1 text-sm text-muted-foreground', typing && 'invisible')}>{subtitle}</SheetDescription>
+              : <p className={cn('col-start-1 row-start-1 text-sm text-muted-foreground', typing && 'invisible')}>{subtitle}</p>}
+            <p aria-live="polite" className="col-start-1 row-start-1 flex min-w-0 items-start gap-1.5 text-sm font-medium text-primary">
+              {typing && <><span aria-hidden="true" className="mt-2 inline-flex shrink-0 gap-0.5">{[0, 1, 2].map((dot) => <span key={dot} className="size-1.5 animate-bounce rounded-full bg-current motion-reduce:animate-none" style={{ animationDelay: `${dot * 150}ms` }} />)}</span><span className="min-w-0">{typing}</span></>}
+            </p>
+          </div>
         </div>
         <Button type="button" variant="ghost" size="icon" className="size-11" aria-pressed={you.muted} aria-label={t(you.muted ? 'unmute' : 'mute')} disabled={muting} onClick={toggleMute}>
           {muting ? <Spinner aria-hidden="true" /> : you.muted ? <BellOff aria-hidden="true" /> : <Bell aria-hidden="true" />}
@@ -167,11 +234,14 @@ export function NeighborGroupPanel({ view, handlers, initialTab = 'chat', inShee
         <TabsTrigger value="members" className="min-h-10 flex-1">{t('tabs.members')}</TabsTrigger>
       </TabsList>
     </header>
-    <TabsContent value="chat" className="flex min-h-0 flex-1 flex-col">
-      <GroupStream view={view} handlers={handlers} onReload={onReload} onReport={() => onClose(false)} />
-      {you.canSend
-        ? <GroupComposer groupId={group.id} groupName={group.name} onSend={handlers.onSend} onSent={onReload} />
-        : <p className="border-t px-4 py-3 text-sm text-muted-foreground">{t('cantSend')}</p>}
+    {/* Photos dropped anywhere on the chat attach to the message (the composer's drop area). */}
+    <TabsContent value="chat" data-drop-photos="" className="relative flex min-h-0 flex-1 flex-col bg-card">
+      <ReplyProvider>
+        <NeighborGroupLog view={view} handlers={handlers} {...(unreadFrom ? { unreadFrom } : {})} onChanged={onReload} onReport={() => onClose(false)} className="min-h-0 flex-1" />
+        {you.canSend
+          ? <GroupComposer view={view} handlers={handlers} onSent={onReload} />
+          : <p role="status" className="border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-sm text-muted-foreground">{t('cantSend')}</p>}
+      </ReplyProvider>
     </TabsContent>
     <TabsContent value="members" className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       <GroupMembers view={view} handlers={handlers} onReload={onReload} onLeft={() => onClose(true)} />
@@ -179,113 +249,24 @@ export function NeighborGroupPanel({ view, handlers, initialTab = 'chat', inShee
   </Tabs>;
 }
 
-function GroupStream({ view, handlers, onReload, onReport }: { view: NeighborGroupView; handlers: NeighborGroupHandlers; onReload: () => void; onReport: () => void }) {
+/**
+ * The group's message box: the conversation's own composer (2026-11-24), so writing feels the same everywhere: photos by
+ * the paperclip, a drop or a paste; GIFs where they're on; a reply to the message picked in the log; "typing…" for the
+ * others. Its sends go to the group.
+ */
+function GroupComposer({ view, handlers, onSent }: { view: NeighborGroupView; handlers: NeighborGroupHandlers; onSent: () => void }) {
   const t = useTranslations('neighborGroups.group');
-  const list = useRef<HTMLDivElement>(null);
-  const newest = view.messages[view.messages.length - 1]?.id;
-  // Newest at the bottom: the stream opens there, and follows each new message.
-  useEffect(() => {
-    const element = list.current;
-    if (element) element.scrollTop = element.scrollHeight;
-  }, [newest]);
-
-  return <div ref={list} className="min-h-0 flex-1 overflow-y-auto px-4 py-3" aria-live="polite" aria-relevant="additions">
-    {view.hasEarlier && <p className="pb-3 text-center text-xs text-muted-foreground">{t('earlier')}</p>}
-    {view.messages.length === 0
-      ? <p className="py-10 text-center text-sm text-muted-foreground">{t('empty')}</p>
-      : <ol className="space-y-3">{view.messages.map((message) => <GroupMessage key={message.id} message={message} onDelete={handlers.onDeleteMessage} onDeleted={onReload} onReport={onReport} />)}</ol>}
-    {view.blockedHidden > 0 && <p className="pt-3 text-center text-xs text-muted-foreground">{t('blockedHidden', { count: view.blockedHidden })}</p>}
-  </div>;
-}
-
-function GroupMessage({ message, onDelete, onDeleted, onReport }: { message: NeighborGroupMessageView; onDelete: NeighborGroupHandlers['onDeleteMessage']; onDeleted: () => void; onReport: () => void }) {
-  const t = useTranslations('neighborGroups.group');
-  const { formatDateTime } = useFormat();
-  const [confirming, setConfirming] = useState(false);
-  const [pending, startTransition] = useTransition();
-  const { author } = message;
-  const mine = author.isYou;
-  const remove = () => startTransition(async () => {
-    const result = await run(onDelete, { messageId: message.id });
-    if (result.ok) {
-      setConfirming(false);
-      onDeleted();
-    } else toast.error(t('retry'));
-  });
-
-  return <li className={cn('flex gap-2', mine && 'flex-row-reverse')}>
-    {!mine && <InitialsAvatar initials={author.initials} size="sm" {...(author.photo ? { photo: author.photo } : {})} />}
-    <div className={cn('min-w-0 max-w-[85%] space-y-1 rounded-2xl px-3 py-2', mine ? 'bg-primary/10' : 'bg-muted/60', message.status !== 'visible' && 'bg-transparent ring-1 ring-border')}>
-      <p className="text-xs text-muted-foreground">
-        <span className="font-semibold text-foreground">{mine ? t('you') : author.displayName}</span>
-        {!mine && author.areaName ? ` · ${author.areaName}` : ''}
-        {' · '}<time dateTime={message.createdAt}>{formatDateTime(message.createdAt)}</time>
-      </p>
-      {message.status === 'visible'
-        ? <MaskedText segments={message.segments} links={false} className="whitespace-pre-wrap text-[15px] leading-6 [overflow-wrap:anywhere]" />
-        : <p className="text-sm italic text-muted-foreground">{t(message.status)}</p>}
-      {(message.reportedByYou || message.canReport || message.canDelete) && <div className="flex flex-wrap items-center gap-1 pt-0.5">
-        {message.reportedByYou && <Badge variant="secondary">{t('reported')}</Badge>}
-        {message.canReport && <Button asChild variant="ghost" size="sm" className="h-9 px-2 text-muted-foreground">
-          <Link href={routes.app.report('group_message', message.id)} aria-label={t('reportLabel', { name: author.displayName })} onClick={onReport}><Flag aria-hidden="true" />{t('report')}</Link>
-        </Button>}
-        {message.canDelete && <Button type="button" variant="ghost" size="sm" className="h-9 px-2 text-muted-foreground" aria-label={t('deleteLabel')} onClick={() => setConfirming(true)}><Trash2 aria-hidden="true" />{t('delete')}</Button>}
-      </div>}
-    </div>
-    {message.canDelete && <AlertDialog open={confirming} onOpenChange={(open) => { if (!pending) setConfirming(open); }}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{t('deleteTitle')}</AlertDialogTitle>
-          <AlertDialogDescription>{t('deleteDescription')}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>{t('cancel')}</AlertDialogCancel>
-          <Button type="button" variant="destructive" disabled={pending} aria-busy={pending} onClick={remove}>{pending && <Spinner aria-hidden="true" />}{t(pending ? 'deleting' : 'deleteConfirm')}</Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>}
-  </li>;
-}
-
-function GroupComposer({ groupId, groupName, onSend, onSent }: { groupId: string; groupName: string; onSend: NeighborGroupHandlers['onSend']; onSent: () => void }) {
-  const t = useTranslations('neighborGroups.group');
-  const fieldCopy = useTranslations('forms.fieldErrors');
-  const id = useId();
-  const [body, setBody] = useState('');
-  const [result, setResult] = useState<ActionResult | undefined>();
-  const [pending, startTransition] = useTransition();
-  const empty = body.trim().length === 0;
-  const fieldError = result && !result.ok ? result.fieldErrors?.body?.[0] : undefined;
-  const send = () => startTransition(async () => {
-    const next = await run(onSend, { groupId, body });
-    if (next.ok) {
-      setBody('');
-      setResult(undefined);
-      onSent();
-    } else setResult(next);
-  });
-
-  return <form noValidate aria-busy={pending} className="space-y-2 border-t bg-background px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]" onSubmit={(event) => { event.preventDefault(); if (!pending && !empty) send(); }}>
-    <div className="flex items-end gap-2">
-      <label htmlFor={`${id}-body`} className="sr-only">{t('messageLabel', { name: groupName })}</label>
-      <Textarea
-        id={`${id}-body`}
-        value={body}
-        onChange={(event) => setBody(event.target.value)}
-        onKeyDown={(event) => { if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); if (!pending && !empty) send(); } }}
-        placeholder={t('placeholder')}
-        maxLength={NEIGHBOR_GROUP_MESSAGE_MAX}
-        rows={2}
-        className="max-h-40 min-h-11 resize-none"
-        aria-describedby={`${id}-note`}
-        aria-invalid={Boolean(fieldError)}
-      />
-      <Button type="submit" className="min-h-11 shrink-0" disabled={pending || empty} aria-busy={pending}>{pending && <Spinner aria-hidden="true" />}{t(pending ? 'sending' : 'send')}</Button>
-    </div>
-    <p id={`${id}-note`} className="text-xs text-muted-foreground">{t('masked')}</p>
-    {fieldError && <p className="text-sm text-destructive">{fieldCopy(fieldCopy.has(fieldError) ? fieldError : 'invalid')}</p>}
-    <FormFeedback result={result && !result.ok && !fieldError ? result : undefined} />
-  </form>;
+  const groupId = view.group.id;
+  const { onSend, onUploadPhoto, onTyping, onSearchGifs, onAttachGif } = handlers;
+  const composerHandlers = useMemo<ThreadHandlers>(() => ({
+    onSend: (input) => onSend({ groupId, body: input.body, attachmentIds: input.attachmentIds, ...(input.replyToId ? { replyToId: input.replyToId } : {}), ...(input.requestKey ? { requestKey: input.requestKey } : {}) }),
+    onUploadPhoto,
+    ...(onTyping ? { onTyping: () => onTyping({ groupId }) } : {}),
+    ...(onSearchGifs && onAttachGif ? { onSearchGifs, onAttachGif } : {}),
+  }), [groupId, onSend, onUploadPhoto, onTyping, onSearchGifs, onAttachGif]);
+  const rules = { canSend: true, ...view.composer };
+  // Named for the group; its placeholder stays the conversation's short "Message" (the box sizes to it).
+  return <MessageComposerContent rules={rules} handlers={composerHandlers} onRefresh={onSent} label={t('messageLabel', { name: view.group.name })} />;
 }
 
 function GroupMembers({ view, handlers, onReload, onLeft }: { view: NeighborGroupView; handlers: NeighborGroupHandlers; onReload: () => void; onLeft: () => void }) {

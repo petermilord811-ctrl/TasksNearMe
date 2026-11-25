@@ -1,12 +1,11 @@
 'use client';
 
-import Image from 'next/image';
 import Link, { useLinkStatus } from 'next/link';
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowUp, Check, CheckCheck, Expand, Play } from 'lucide-react';
+import { ArrowUp, Check, CheckCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { ActionHandler, ConversationCards, ISODateTime, MessageReaction, MessageTranslation, MessageView, PersonSummary, Photo, RequestCardHandlers, TeamHandlers, ThankYouHandlers } from '@/contracts';
+import type { ActionHandler, ConversationCards, ISODateTime, MessageReaction, MessageTranslation, MessageView, PersonSummary, RequestCardHandlers, TeamHandlers, ThankYouHandlers } from '@/contracts';
 import { ChangeCardView, OfferAskCardView, SharedTimesCardView, TaskRequestCardView } from '@/ui/components/messaging/conversation-cards';
 import { MESSAGE_REACTIONS } from '@/contracts/messaging';
 import { Languages, Reply, SmilePlus } from 'lucide-react';
@@ -20,69 +19,12 @@ import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { useRealtimeConnected } from '@/ui/lib/realtime';
 import { MaskedText } from '@/ui/components/messaging/masked-text';
+import { MessageAttachments } from '@/ui/components/messaging/message-media';
 import { cn } from '@/ui/lib/utils';
 import { buttonVariants } from '@/ui/primitives/button';
 import { Spinner } from '@/ui/primitives/spinner';
-import { Skeleton } from '@/ui/primitives/skeleton';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/ui/primitives/dialog';
 import { ThankYouNoteCard } from '@/ui/components/thanks/thank-you-note';
 import { TeamInviteCardView } from '@/ui/components/teams/team-card';
-
-function MessagePhoto({ photo, number, count, sender }: { photo: Photo; number: number; count: number; sender: string }) {
-  const t = useTranslations('thread');
-  const alt = photo.alt || t('photoAlt', { number, count, name: sender });
-  return <Dialog>
-    <DialogTrigger asChild>
-      <button type="button" aria-label={t('openPhoto', { description: alt })} className="group w-full overflow-hidden rounded-lg border bg-card text-left text-foreground transition-colors hover:bg-accent">
-        <Image src={photo.src} alt={alt} width={photo.width} height={photo.height} unoptimized className="aspect-4/3 h-auto w-full object-cover" />
-        <span className="flex min-h-11 items-center justify-between gap-2 px-3 py-2 text-sm font-medium">{t('viewPhoto')}<Expand aria-hidden="true" className="size-4 shrink-0 text-primary" /></span>
-      </button>
-    </DialogTrigger>
-    <DialogContent className="max-h-[90dvh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:max-w-reading max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none">
-      <DialogHeader><DialogTitle>{t('photoTitle', { number, count })}</DialogTitle><DialogDescription>{alt}</DialogDescription></DialogHeader>
-      <Image src={photo.src} alt={alt} width={photo.width} height={photo.height} unoptimized className="h-auto max-h-[60dvh] w-full rounded-lg object-contain" />
-    </DialogContent>
-  </Dialog>;
-}
-
-/** A GIF's width in a bubble, in px: 240, or less for a tall one so it's at most 280 px high (never under 120). */
-function gifBoxWidth(photo: Pick<Photo, 'width' | 'height'>): number {
-  return Math.max(120, Math.min(240, Math.round((280 * photo.width) / Math.max(1, photo.height))));
-}
-
-/**
- * A GIF (2026-11-24): the GIF itself, at most 240 px wide, opening larger on a tap. With reduced motion asked for on the
- * device it doesn't play by itself: a still placeholder says "Play GIF" until tapped (CSS, so the first paint is right).
- */
-function MessageGif({ photo, sender }: { photo: Photo; sender: string }) {
-  const t = useTranslations('thread.gif');
-  const [playing, setPlaying] = useState(false);
-  const [arrived, setArrived] = useState(false);
-  const alt = photo.alt || t('alt', { name: sender });
-  // The box has its final size before the file arrives, from the size the server stored (2026-11-24, owner: "that chat
-  // bubble size is changed"): a fixed width (240 px, less for a tall GIF so it's at most 280 px high), never wider than
-  // the bubble. A fixed width also counts when the bubble sizes itself; a percentage of it waited for the file. Until
-  // the file is there, a shimmer. (A file that fails stops it too: caught here, as React passes the image's error up. Given
-  // to the Image itself, onError makes it ask for the file again after hydration and rewrite its address.)
-  return <div className="relative max-w-full overflow-hidden rounded-xl border bg-muted" style={{ width: gifBoxWidth(photo), aspectRatio: `${photo.width} / ${photo.height}` }} data-gif="" onError={() => setArrived(true)}>
-    {!arrived && <Skeleton aria-hidden="true" className="absolute inset-0 rounded-none" />}
-    <Dialog>
-      <DialogTrigger asChild>
-        <button type="button" aria-label={t('open', { description: alt })} className={cn('relative block size-full focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring', !playing && 'motion-reduce:hidden')}>
-          <Image src={photo.src} alt={alt} width={photo.width} height={photo.height} unoptimized loading="eager" onLoad={() => setArrived(true)} className="size-full object-cover" />
-        </button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:max-w-md max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none">
-        <DialogHeader><DialogTitle>{t('title', { name: sender })}</DialogTitle><DialogDescription>{alt}</DialogDescription></DialogHeader>
-        <Image src={photo.src} alt={alt} width={photo.width} height={photo.height} unoptimized className="h-auto max-h-[60dvh] w-full rounded-lg object-contain" />
-      </DialogContent>
-    </Dialog>
-    <span aria-hidden="true" className={cn('pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/60 px-1 text-[10px] font-bold leading-4 tracking-wide text-white', !playing && 'motion-reduce:hidden')}>{t('badge')}</span>
-    {!playing && <button type="button" onClick={() => setPlaying(true)} aria-label={t('playLabel', { description: alt })} className="absolute inset-0 hidden flex-col items-center justify-center gap-1.5 bg-muted text-sm font-semibold text-foreground hover:bg-accent focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring motion-reduce:flex">
-      <span className="grid size-10 place-items-center rounded-full bg-background shadow-sm"><Play aria-hidden="true" className="size-5 text-primary" /></span>{t('play')}
-    </button>}
-  </div>;
-}
 
 function MessageContent({ message }: { message: MessageView }) {
   const { formatTime } = useFormat();
@@ -498,9 +440,7 @@ export function MessageLog({ messages, earlierHref, onLoadEarlier, onRefresh, ot
                 <p className="text-xs font-semibold text-muted-foreground">{t('translate.label')}</p>
                 {translation.status === 'ready' ? <p className="text-[15px] leading-6 whitespace-pre-wrap">{translation.text}</p> : <p role="alert" className="text-sm text-destructive">{t('translate.failed')}</p>}
               </div>}
-              {message.attachments.length > 0 && <ul aria-label={t('photos')} className={cn('grid max-w-96 grid-cols-1 gap-2 pt-1', !message.attachments.every((photo) => photo.animated) && 'sm:grid-cols-2')}>
-                {message.attachments.map((photo, index) => <li key={photo.id} className="min-w-0">{photo.animated ? <MessageGif photo={photo} sender={sender} /> : <MessagePhoto photo={photo} number={index + 1} count={message.attachments.length} sender={sender} />}</li>)}
-              </ul>}
+              <MessageAttachments attachments={message.attachments} sender={sender} className="pt-1" />
               {mine ? <p className="flex items-center justify-end gap-1">{time}<DeliveryTicks read={Boolean(readUpTo && message.createdAt <= readUpTo)} /></p> : time}
               {pills.length > 0 && <ul aria-label={t('reactions.label')} className={cn('flex flex-wrap gap-1 pt-0.5', mine && 'justify-end')}>
                 {pills.map((reaction) => {

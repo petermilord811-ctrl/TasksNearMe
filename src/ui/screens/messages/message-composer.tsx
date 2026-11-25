@@ -39,6 +39,10 @@ export interface MessageComposerProps {
   suggestFor?: string;
   /** A direct conversation's "+" (Request a task, Ask for an offer…: 2026-11-23), before the paperclip. */
   actionsMenu?: ReactNode;
+  /** The message box's name, where "Message" isn't enough (a building or street group's: "Message to Maple Court"). */
+  label?: string;
+  /** Its placeholder; "Message" otherwise (the box sizes to it, so a long one makes it taller). */
+  placeholder?: string;
 }
 
 export function MessageComposer({ rules, handlers }: MessageComposerProps) {
@@ -46,7 +50,7 @@ export function MessageComposer({ rules, handlers }: MessageComposerProps) {
 }
 
 /** Seeds let previews show asynchronous states without starting a request on mount. */
-export function MessageComposerContent({ rules, handlers, savedReplies = [], template, onRefresh, compact = false, suggestFor, actionsMenu, initialResult, initialPending = false, initialBody = '', initialSuggestions }: MessageComposerProps & {
+export function MessageComposerContent({ rules, handlers, savedReplies = [], template, onRefresh, compact = false, suggestFor, actionsMenu, label, placeholder, initialResult, initialPending = false, initialBody = '', initialSuggestions }: MessageComposerProps & {
   initialResult?: ActionResult;
   initialPending?: boolean;
   initialBody?: string;
@@ -193,6 +197,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
   if (!rules.canSend) return <p role="status" className="flex items-center justify-center gap-2 rounded-xl border bg-muted px-4 py-5 text-sm text-muted-foreground"><Lock aria-hidden="true" className="size-4 shrink-0" />{t(rules.disabledReason ?? 'closed')}</p>;
 
   const specialError = result && !result.ok && (result.code === 'not_allowed' || result.code === 'rate_limited');
+  const sent = result?.ok === true && result.code === 'sent';
   const feedback = result && !result.ok ? { ...result, fieldErrors: undefined } : result;
   return <form ref={formRef} noValidate aria-label={t('label')} aria-busy={pending || uploading} onSubmit={(event) => {
     if (locked.current || uploadLocked.current) { event.preventDefault(); return; }
@@ -224,7 +229,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
     <PhotoDropOverlay target={drop.target} over={drop.over} />
     <Field className="gap-1.5" data-invalid={!!bodyError}>
       {/* The panel above already says what this is: the label is for screen readers. */}
-      <FieldLabel htmlFor={`${id}-body`} className="sr-only">{t('label')}</FieldLabel>
+      <FieldLabel htmlFor={`${id}-body`} className="sr-only">{label ?? t('label')}</FieldLabel>
       {/* Send sits beside the message, as in any chat (on phones as an icon, still named "Send"). */}
       <div className="flex items-end gap-1 sm:gap-1.5">
       {/* A tap on "›" leaves focus in the message, so the keyboard stays open. */}
@@ -251,7 +256,7 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
         if (pasted.length === 0 || rules.maxAttachments === 0) return;
         event.preventDefault();
         attach.add(pasted);
-      }} id={`${id}-body`} rows={1} maxLength={rules.maxLength} readOnly={pending} aria-invalid={!!bodyError} aria-describedby={`${id}-hint ${id}-counter ${id}-body-error`} placeholder={t('label')} className={cn('max-h-40 flex-1 resize-none field-sizing-content', compact ? 'min-h-10 py-2 text-[14px] leading-5' : 'min-h-12')} onInput={() => {
+      }} id={`${id}-body`} rows={1} maxLength={rules.maxLength} readOnly={pending} aria-invalid={!!bodyError} aria-describedby={`${id}-hint ${id}-counter ${id}-body-error`} placeholder={placeholder ?? t('label')} className={cn('max-h-40 flex-1 resize-none field-sizing-content', compact ? 'min-h-10 py-2 text-[14px] leading-5' : 'min-h-12')} onInput={() => {
         // "Typing…" for the other person (completion plan 7.1), at most one ping every 2.5 s; never blocks typing.
         if (!handlers.onTyping || Date.now() - lastTyping.current < 2500) return;
         lastTyping.current = Date.now();
@@ -298,10 +303,13 @@ export function MessageComposerContent({ rules, handlers, savedReplies = [], tem
       </PopoverContent>
     </Popover>}
     </div>
+    {/* "Message sent." is read out, not shown: the message itself shows in the conversation (2026-11-24 chat audit: a
+        bordered card after every send pushed the page down and squeezed the chat window's conversation). */}
+    <p aria-live="polite" className="sr-only">{sent ? t('sent') : ''}</p>
     {specialError ? <div aria-live="polite" aria-atomic="true"><Alert role="status" className="border-destructive/30"><CircleAlert aria-hidden="true" className="text-destructive" /><AlertDescription className="text-foreground">
       <p>{t(result.code === 'not_allowed' ? 'notAllowed' : 'rateLimited')}</p>
       {result.code === 'rate_limited' && result.retryAt && <p className="tabular-nums">{t('retryAt', { at: formatDateTime(result.retryAt), zone: zoneName })}</p>}
       {result.code === 'not_allowed' && <Button type="button" variant="outline" className="mt-2" onClick={() => (onRefresh ? onRefresh() : router.refresh())}>{t('reload')}</Button>}
-    </AlertDescription></Alert></div> : <FormFeedback result={feedback} successMessage={result?.ok && result.code === 'sent' ? t('sent') : undefined} />}
+    </AlertDescription></Alert></div> : <FormFeedback result={sent ? undefined : feedback} />}
   </form>;
 }

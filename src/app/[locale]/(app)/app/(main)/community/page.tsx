@@ -25,6 +25,7 @@ import {
 } from '@/modules/community/actions';
 import { confirmPhoneChangeAction, startPhoneChangeAction } from '@/modules/accounts/account-actions';
 import {
+  attachNeighborGroupGifAction,
   createNeighborGroupAction,
   deleteNeighborGroupMessageAction,
   inviteToNeighborGroupAction,
@@ -33,10 +34,15 @@ import {
   muteNeighborGroupAction,
   openNeighborGroupAction,
   previewNeighborGroupInviteAction,
+  reactToNeighborGroupMessageAction,
   removeNeighborGroupMemberAction,
   revokeNeighborGroupInviteAction,
   sendNeighborGroupMessageAction,
+  typingInNeighborGroupAction,
+  uploadNeighborGroupPhotoAction,
 } from '@/modules/community/group-actions';
+import { searchGifsAction } from '@/modules/messaging/gif-actions';
+import { gifsOn } from '@/integrations/gifs';
 import { getNeighborGroupsData } from '@/modules/community/groups';
 import { getPortal } from '@/modules/community/portal';
 import { communityViewerOf } from '@/modules/community/request-viewer';
@@ -108,6 +114,11 @@ async function Portal({ searchParams }: Pick<PageProps<'/[locale]/app/community'
                 onPreviewInvite: previewNeighborGroupInviteAction,
                 onJoin: joinNeighborGroupAction,
                 onSend: sendNeighborGroupMessageAction,
+                // As in a conversation (2026-11-24): photos, GIFs where they're on, reactions and "typing…".
+                onUploadPhoto: uploadNeighborGroupPhotoAction,
+                ...(gifsOn() ? { onSearchGifs: searchGifsAction, onAttachGif: attachNeighborGroupGifAction } : {}),
+                onReact: reactToNeighborGroupMessageAction,
+                onTyping: typingInNeighborGroupAction,
                 onDeleteMessage: deleteNeighborGroupMessageAction,
                 onInvite: inviteToNeighborGroupAction,
                 onRevokeInvite: revokeNeighborGroupInviteAction,

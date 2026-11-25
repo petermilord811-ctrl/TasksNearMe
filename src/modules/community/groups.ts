@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { and, asc, count, desc, eq, gt, inArray, isNull, ne, sql } from 'drizzle-orm';
 import {
   NEIGHBOR_GROUP_LIMITS,
+  NEIGHBOR_GROUP_MESSAGE_MAX,
   neighborGroupCodeInputSchema,
   neighborGroupCreateInputSchema,
   neighborGroupMessageInputSchema,
@@ -15,21 +16,28 @@ import {
   type NeighborGroupKind,
   type NeighborGroupMessageInput,
   type NeighborGroupMessageStatus,
+  type NeighborGroupMessageView,
+  type NeighborGroupQuote,
+  type NeighborGroupReactionInput,
   type NeighborGroupResult,
   type NeighborGroupRole,
   type NeighborGroupsData,
   type NeighborGroupSummary,
   type NeighborGroupView,
+  type Photo,
 } from '@/contracts';
 import { users } from '@/modules/accounts/schema';
-import { avatarPhoto } from '@/modules/files/photos';
+import { MAX_PHOTO_BYTES, avatarPhoto, photoFromFile } from '@/modules/files/photos';
+import { staffPhotoFromFile } from '@/modules/files/staff-file-token';
 import { areas } from '@/modules/markets/schema';
 import { notifications } from '@/modules/notifications/schema';
 import { supportCases } from '@/modules/support/schema';
-import { toMessageSegments } from '@/modules/trust/message-segments';
-import { blockedPeopleOf } from '@/modules/trust/blocks';
+import { files } from '@/modules/tasks/schema';
+import { shortenSegments, toMessageSegments } from '@/modules/trust/message-segments';
+import { blockedPeopleOf, isBlockedBetween } from '@/modules/trust/blocks';
 import { validationFailed } from '@/platform/actions/results';
 import type { Db } from '@/platform/db/connect';
+import { violatedConstraint } from '@/platform/db/errors';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { userChannel } from '@/platform/realtime/hub';
@@ -38,8 +46,10 @@ import {
   canReadGroups,
   canRemoveMember,
   canRevokeInvite,
+  canSeeGroupPhoto,
   canWriteInGroups,
   createsLeft,
+  firstUnreadOf,
   formatInviteCode,
   groupCreateBlock,
   groupRecipients,
@@ -48,13 +58,22 @@ import {
   inviteNamesGroup,
   inviteState,
   inviteWorks,
+  isGroupReaction,
   memberName,
   messageActions,
   nextAdmin,
   normalizeInviteCode,
+  quoteMedia,
+  quoteState,
+  reactionSummary,
   seesInvite,
 } from './groups-domain';
-import { neighborGroupInvites, neighborGroupMembers, neighborGroupMessages, neighborGroups } from './schema';
+import { neighborGroupInvites, neighborGroupMembers, neighborGroupMessages, neighborGroupPhotos, neighborGroupReactions, neighborGroups } from './schema';
+
+/** Files a group message's photos are uploaded as (src/modules/files/uploads.ts; a picked GIF too). */
+export const GROUP_PHOTO_KIND = 'group_photo';
+/** The composer's rules in a group: as a conversation's, with the group's own length. */
+const GROUP_COMPOSER = { maxLength: NEIGHBOR_GROUP_MESSAGE_MAX, maxAttachments: NEIGHBOR_GROUP_LIMITS.photosPerMessage, maxPhotoMegabytes: Math.round(MAX_PHOTO_BYTES / (1024 * 1024)) };
 
 /**
  * Building and street groups (2026-11-24): small private chats on Neighbors (src/contracts/neighbor-groups.ts). Every
@@ -234,29 +253,47 @@ export async function getNeighborGroupView(db: Db, viewerId: string, groupId: st
   ]);
   const shown = messageRows.filter((row) => !blocked.has(row.message.authorUserId));
   const blockedHidden = messageRows.length - shown.length;
-  const page = shown.slice(0, NEIGHBOR_GROUP_LIMITS.pageSize);
-  const reported = await reportedByViewer(db, viewerId, page.map((row) => row.message.id));
+  // Oldest first, as the stream reads.
+  const page = shown.slice(0, NEIGHBOR_GROUP_LIMITS.pageSize).reverse();
+  const pageIds = page.map((row) => row.message.id);
+  const canWrite = canWriteInGroups(person.status);
+  const [reported, photos, reactions, quotes] = await Promise.all([
+    reportedByViewer(db, viewerId, pageIds),
+    photosOfMessages(db, pageIds),
+    reactionsOfMessages(db, pageIds),
+    quotesFor(db, group.id, page.map((row) => row.message.replyToMessageId), viewerId, blocked),
+  ]);
+  // Before this read moves it on: the first message that was new to them.
+  const firstUnreadId = firstUnreadOf(page.map((row) => row.message), viewerId, membership.lastReadAt);
   const memberCount = memberRows.length;
   if (options.markRead !== false) await markGroupRead(db, viewerId, group.id, now);
   return {
     group: { id: group.id, name: group.name, kind: kindOf(group.kind), areaName: areaName ?? '', memberCount, createdAt: group.createdAt.toISOString() },
-    you: { role, muted: membership.mutedAt !== null, canSend: canWriteInGroups(person.status) },
-    messages: page.reverse().map(({ message, ...author }) => {
+    you: { role, muted: membership.mutedAt !== null, canSend: canWrite },
+    messages: page.map(({ message, ...author }): NeighborGroupMessageView => {
       const status = statusOf(message.status);
       const isYours = message.authorUserId === viewerId;
       const reportedByYou = reported.has(message.id);
       const name = shownName(author);
+      const visible = status === 'visible';
+      const quote = message.replyToMessageId ? quotes.get(message.replyToMessageId) : undefined;
       return {
         id: message.id,
         author: { userId: message.authorUserId, ...name, ...(author.areaName ? { areaName: author.areaName } : {}), ...(author.avatarFileId ? { photo: avatarPhoto(author.avatarFileId, name.displayName) } : {}), isYou: isYours },
         // Always masked: no booking unlocks a group (a chat before a booking).
-        segments: status === 'visible' ? toMessageSegments(message.body, { mask: true }) : [],
+        segments: visible ? toMessageSegments(message.body, { mask: true }) : [],
+        // A deleted or removed message's photos go with its words (the file route refuses them too).
+        attachments: visible ? (photos.get(message.id) ?? []).map((file) => photoFromFile(file)) : [],
+        ...(quote ? { replyTo: quote } : {}),
+        reactions: visible ? reactionSummary(reactions.get(message.id) ?? [], viewerId, blocked) : [],
         status,
         createdAt: message.createdAt.toISOString(),
         reportedByYou,
-        ...messageActions({ isYours, status, reportedByYou }),
+        ...messageActions({ isYours, status, reportedByYou, canWrite }),
       };
     }),
+    ...(firstUnreadId ? { firstUnreadId } : {}),
+    composer: GROUP_COMPOSER,
     hasEarlier: shown.length > NEIGHBOR_GROUP_LIMITS.pageSize,
     blockedHidden,
     members: memberRows.map((member) => {
@@ -277,6 +314,71 @@ export async function getNeighborGroupView(db: Db, viewerId: string, groupId: st
     canInvite: canWriteInGroups(person.status) && memberCount < NEIGHBOR_GROUP_LIMITS.members,
     memberLimit: NEIGHBOR_GROUP_LIMITS.members,
   };
+}
+
+type PhotoFile = { id: string; width: number; height: number; alt: string; contentType: string; ownerUserId: string };
+
+/** The photos (and GIFs) of these messages, in order, by message. */
+async function photosOfMessages(db: Db | Tx, messageIds: readonly string[]): Promise<Map<string, PhotoFile[]>> {
+  const out = new Map<string, PhotoFile[]>();
+  if (messageIds.length === 0) return out;
+  const rows = await db
+    .select({ messageId: neighborGroupPhotos.messageId, id: files.id, width: files.width, height: files.height, alt: files.alt, contentType: files.contentType, ownerUserId: files.ownerUserId })
+    .from(neighborGroupPhotos)
+    .innerJoin(files, eq(files.id, neighborGroupPhotos.fileId))
+    .where(inArray(neighborGroupPhotos.messageId, [...messageIds]))
+    .orderBy(asc(neighborGroupPhotos.position), asc(neighborGroupPhotos.createdAt));
+  for (const { messageId, ...file } of rows) {
+    // A file the retention timer emptied (no size any more) isn't shown.
+    if (!file.width || !file.height) continue;
+    out.set(messageId, [...(out.get(messageId) ?? []), file]);
+  }
+  return out;
+}
+
+/** Who gave which reaction on these messages, by message (the viewer's blocks are applied when they're counted). */
+async function reactionsOfMessages(db: Db, messageIds: readonly string[]): Promise<Map<string, { emoji: string; userId: string }[]>> {
+  const out = new Map<string, { emoji: string; userId: string }[]>();
+  if (messageIds.length === 0) return out;
+  const rows = await db
+    .select({ messageId: neighborGroupReactions.messageId, emoji: neighborGroupReactions.emoji, userId: neighborGroupReactions.userId })
+    .from(neighborGroupReactions)
+    .where(inArray(neighborGroupReactions.messageId, [...messageIds]))
+    .orderBy(asc(neighborGroupReactions.createdAt));
+  for (const { messageId, ...row } of rows) out.set(messageId, [...(out.get(messageId) ?? []), row]);
+  return out;
+}
+
+/**
+ * The messages these replies quote (in the same group), as this viewer may see them: the first words, masked, and who
+ * wrote them; for a deleted or removed one, only that; for someone blocked either way, nothing of it.
+ */
+async function quotesFor(db: Db, groupId: string, replyTo: readonly (string | null)[], viewerId: string, blocked: ReadonlySet<string>): Promise<Map<string, NeighborGroupQuote>> {
+  const ids = [...new Set(replyTo.filter((id): id is string => Boolean(id)))];
+  const out = new Map<string, NeighborGroupQuote>();
+  if (ids.length === 0) return out;
+  const rows = await db
+    .select({ id: neighborGroupMessages.id, authorUserId: neighborGroupMessages.authorUserId, body: neighborGroupMessages.body, status: neighborGroupMessages.status, name: users.name, firstName: users.firstName, lastName: users.lastName })
+    .from(neighborGroupMessages)
+    .innerJoin(users, eq(users.id, neighborGroupMessages.authorUserId))
+    .where(and(inArray(neighborGroupMessages.id, ids), eq(neighborGroupMessages.groupId, groupId)));
+  const media = await photosOfMessages(db, rows.map((row) => row.id));
+  for (const row of rows) {
+    const status = quoteState({ status: statusOf(row.status), authorUserId: row.authorUserId }, blocked);
+    if (status !== 'visible') {
+      out.set(row.id, { id: row.id, status, ...(status === 'hidden' ? {} : { author: { displayName: shownName(row).displayName, isYou: row.authorUserId === viewerId } }), segments: [] });
+      continue;
+    }
+    const kind = quoteMedia(media.get(row.id) ?? []);
+    out.set(row.id, {
+      id: row.id,
+      status,
+      author: { displayName: shownName(row).displayName, isYou: row.authorUserId === viewerId },
+      segments: shortenSegments(toMessageSegments(row.body, { mask: true })),
+      ...(kind ? { media: kind } : {}),
+    });
+  }
+  return out;
 }
 
 function inviteView(invite: typeof neighborGroupInvites.$inferSelect, createdBy: string, role: NeighborGroupRole): NeighborGroupInviteView {
@@ -396,33 +498,145 @@ export async function joinNeighborGroup(db: Db, viewerId: string, input: { code:
 export async function sendGroupMessage(db: Db, viewerId: string, input: NeighborGroupMessageInput, now: Date): Promise<ActionResult> {
   const parsed = neighborGroupMessageInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
+  const { requestKey } = parsed.data;
+  // The same message again, after an answer that never arrived (the composer's key): sent already, never twice, and
+  // before the rate limit (as in a conversation).
+  if (requestKey) {
+    const [sent] = await db.select({ id: neighborGroupMessages.id }).from(neighborGroupMessages).where(and(eq(neighborGroupMessages.authorUserId, viewerId), eq(neighborGroupMessages.requestKey, requestKey))).limit(1);
+    if (sent) return { ok: true, code: 'sent' };
+  }
   const person = await personOf(db, viewerId);
   if (!person || !canWriteInGroups(person.status)) return { ok: false, code: 'not_allowed' };
   const membership = await membershipOf(db, parsed.data.groupId, viewerId);
   if (!membership) return { ok: false, code: 'not_found' };
-  const limited = await consumeRateLimit(db, `group_message:${viewerId}:${membership.group.id}`, { limit: NEIGHBOR_GROUP_LIMITS.messagesPerMinute, windowSeconds: 60 }, now);
-  if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
   const group = membership.group;
+  const blocked = new Set(await blockedPeopleOf(db, viewerId));
+  // A reply quotes a message of the same group that the sender can see.
+  let replyToMessageId: string | null = null;
+  if (parsed.data.replyToId) {
+    const [quoted] = await db
+      .select({ id: neighborGroupMessages.id, authorUserId: neighborGroupMessages.authorUserId })
+      .from(neighborGroupMessages)
+      .where(and(eq(neighborGroupMessages.id, parsed.data.replyToId), eq(neighborGroupMessages.groupId, group.id), eq(neighborGroupMessages.status, 'visible')))
+      .limit(1);
+    if (!quoted || blocked.has(quoted.authorUserId)) return { ok: false, code: 'validation_failed', fieldErrors: { replyToId: ['invalid'] } };
+    replyToMessageId = quoted.id;
+  }
+  // Photos: the sender's own group uploads, not on any message yet, each once (else the message is refused rather than
+  // sent with fewer photos than they saw).
+  const attachmentIds = parsed.data.attachmentIds;
+  if (attachmentIds.length > 0) {
+    const unique = [...new Set(attachmentIds)];
+    const owned = unique.length === attachmentIds.length
+      ? await db
+          .select({ id: files.id })
+          .from(files)
+          .leftJoin(neighborGroupPhotos, eq(neighborGroupPhotos.fileId, files.id))
+          .where(and(inArray(files.id, unique), eq(files.ownerUserId, viewerId), eq(files.kind, GROUP_PHOTO_KIND), isNull(neighborGroupPhotos.fileId)))
+      : [];
+    if (owned.length !== attachmentIds.length) return { ok: false, code: 'validation_failed', fieldErrors: { attachmentIds: ['invalid'] } };
+  }
+  const limited = await consumeRateLimit(db, `group_message:${viewerId}:${group.id}`, { limit: NEIGHBOR_GROUP_LIMITS.messagesPerMinute, windowSeconds: 60 }, now);
+  if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
   const messageId = newId('ngmsg');
   const members = await db
     .select({ userId: neighborGroupMembers.userId, mutedAt: neighborGroupMembers.mutedAt, status: users.status })
     .from(neighborGroupMembers)
     .innerJoin(users, eq(users.id, neighborGroupMembers.userId))
     .where(eq(neighborGroupMembers.groupId, group.id));
-  const blocked = new Set(await blockedPeopleOf(db, viewerId));
   const recipients = groupRecipients(viewerId, members.map((member) => ({ userId: member.userId, muted: member.mutedAt !== null, status: member.status })), blocked);
   // Everyone in it who may see the message hears it live (muted too: their open view still updates).
   const live = members.filter((member) => member.userId !== viewerId && !blocked.has(member.userId)).map((member) => member.userId);
   const sender = shownName(person).displayName;
-  await db.transaction(async (tx) => {
-    await tx.insert(neighborGroupMessages).values({ id: messageId, groupId: group.id, authorUserId: viewerId, body: parsed.data.body, createdAt: now });
-    await tx.update(neighborGroupMembers).set({ lastReadAt: now }).where(and(eq(neighborGroupMembers.groupId, group.id), eq(neighborGroupMembers.userId, viewerId)));
-    await tx.update(neighborGroups).set({ updatedAt: now }).where(eq(neighborGroups.id, group.id));
-    await notifyMembers(tx, group, recipients, { messageId, sender, now });
-    // A notice carries ids only; each page reads the group the usual way (members only).
-    await publishNotices(tx, live.map((userId) => ({ channel: userChannel(userId), notice: { type: 'update', event: 'group.message', group: group.id } })));
-  });
+  try {
+    await db.transaction(async (tx) => {
+      await tx.insert(neighborGroupMessages).values({ id: messageId, groupId: group.id, authorUserId: viewerId, body: parsed.data.body, replyToMessageId, requestKey: requestKey ?? null, createdAt: now });
+      if (attachmentIds.length > 0) await tx.insert(neighborGroupPhotos).values(attachmentIds.map((fileId, position) => ({ fileId, messageId, position, createdAt: now })));
+      await tx.update(neighborGroupMembers).set({ lastReadAt: now }).where(and(eq(neighborGroupMembers.groupId, group.id), eq(neighborGroupMembers.userId, viewerId)));
+      await tx.update(neighborGroups).set({ updatedAt: now }).where(eq(neighborGroups.id, group.id));
+      await notifyMembers(tx, group, recipients, { messageId, sender, now });
+      // A notice carries ids only; each page reads the group the usual way (members only).
+      await publishNotices(tx, live.map((userId) => ({ channel: userChannel(userId), notice: { type: 'update', event: 'group.message', group: group.id } })));
+    });
+  } catch (error) {
+    // The same message at the same moment (its key is taken): the other request sent it.
+    if (requestKey && violatedConstraint(error) === 'neighbor_group_messages_author_request_key_idx') return { ok: true, code: 'sent' };
+    // Two messages racing for the same photo: the other one has it.
+    if (violatedConstraint(error) === 'neighbor_group_photos_pkey') return { ok: false, code: 'validation_failed', fieldErrors: { attachmentIds: ['invalid'] } };
+    throw error;
+  }
   return { ok: true, code: 'sent' };
+}
+
+/**
+ * A reaction on a group message (2026-11-24): a member whose account may write, on a message that shows, never across a
+ * block. Open views of the group update live (ids only); nobody is notified.
+ */
+export async function reactToGroupMessage(db: Db, viewerId: string, input: NeighborGroupReactionInput, now: Date): Promise<ActionResult> {
+  if (!input || !isGroupReaction(input.emoji) || typeof input.on !== 'boolean') return { ok: false, code: 'validation_failed' };
+  const [message] = await db.select().from(neighborGroupMessages).where(eq(neighborGroupMessages.id, String(input.messageId ?? ''))).limit(1);
+  if (!message) return { ok: false, code: 'not_found' };
+  const membership = await membershipOf(db, message.groupId, viewerId);
+  if (!membership) return { ok: false, code: 'not_found' };
+  if (message.status !== 'visible' || (await isBlockedBetween(db, viewerId, message.authorUserId))) return { ok: false, code: 'not_found' };
+  const person = await personOf(db, viewerId);
+  if (!person || !canWriteInGroups(person.status)) return { ok: false, code: 'not_allowed' };
+  const limited = await consumeRateLimit(db, `group_reactions:${viewerId}`, { limit: NEIGHBOR_GROUP_LIMITS.reactionsPerMinute, windowSeconds: 60 }, now);
+  if (!limited.ok) return { ok: false, code: 'rate_limited', retryAt: limited.retryAt.toISOString() };
+  if (input.on) await db.insert(neighborGroupReactions).values({ messageId: message.id, userId: viewerId, emoji: input.emoji, createdAt: now }).onConflictDoNothing();
+  else await db.delete(neighborGroupReactions).where(and(eq(neighborGroupReactions.messageId, message.id), eq(neighborGroupReactions.userId, viewerId), eq(neighborGroupReactions.emoji, input.emoji)));
+  await publishLive(db, message.groupId, viewerId);
+  return { ok: true, code: 'updated' };
+}
+
+/** When each person last said they were typing in a group (this server only; it only spaces the notices out). */
+const typingSentAt = new Map<string, number>();
+const TYPING_EVERY_MS = 2500;
+
+/**
+ * "Typing…" in a group (2026-11-24): a live notice to its other members, at most one every 2.5 s a person a group. Never
+ * stored. Only a member whose account may write sends one, and nobody they blocked (or who blocked them) hears it.
+ */
+export async function notifyGroupTyping(db: Db, viewerId: string, input: { groupId: string }, now: Date): Promise<'sent' | 'throttled' | 'not_found'> {
+  const groupId = String(input?.groupId ?? '');
+  const key = `${viewerId}:${groupId}`;
+  if (now.getTime() - (typingSentAt.get(key) ?? 0) < TYPING_EVERY_MS) return 'throttled';
+  const membership = await membershipOf(db, groupId, viewerId);
+  const person = membership ? await personOf(db, viewerId) : null;
+  if (!membership || !person || !canWriteInGroups(person.status)) return 'not_found';
+  typingSentAt.set(key, now.getTime());
+  if (typingSentAt.size > 10_000) {
+    for (const [entry, at] of typingSentAt) if (now.getTime() - at > 60_000) typingSentAt.delete(entry);
+  }
+  const [members, blocked] = await Promise.all([
+    db.select({ userId: neighborGroupMembers.userId }).from(neighborGroupMembers).where(eq(neighborGroupMembers.groupId, membership.group.id)),
+    blockedPeopleOf(db, viewerId),
+  ]);
+  const skip = new Set([viewerId, ...blocked]);
+  await publishNotices(db, members.filter((member) => !skip.has(member.userId)).map((member) => ({ channel: userChannel(member.userId), notice: { type: 'typing', group: membership.group.id, user: viewerId } })));
+  return 'sent';
+}
+
+/**
+ * Whether someone may open a group photo (src/modules/files/related-access.ts): a current member of its open group, while
+ * the message shows, and not between people who blocked one another. Its uploader always may (`canViewFile`).
+ */
+export async function canViewGroupPhoto(db: Db, fileId: string, userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ groupId: neighborGroupMessages.groupId, groupStatus: neighborGroups.status, messageStatus: neighborGroupMessages.status, authorUserId: neighborGroupMessages.authorUserId })
+    .from(neighborGroupPhotos)
+    .innerJoin(neighborGroupMessages, eq(neighborGroupMessages.id, neighborGroupPhotos.messageId))
+    .innerJoin(neighborGroups, eq(neighborGroups.id, neighborGroupMessages.groupId))
+    .where(eq(neighborGroupPhotos.fileId, fileId))
+    .limit(1);
+  if (!row) return false;
+  const [viewer, member] = await Promise.all([
+    personOf(db, userId),
+    db.select({ userId: neighborGroupMembers.userId }).from(neighborGroupMembers).where(and(eq(neighborGroupMembers.groupId, row.groupId), eq(neighborGroupMembers.userId, userId))).limit(1),
+  ]);
+  if (!viewer) return false;
+  const blockedWithAuthor = row.authorUserId !== userId && (await isBlockedBetween(db, userId, row.authorUserId));
+  return canSeeGroupPhoto({ groupStatus: row.groupStatus, messageStatus: row.messageStatus, isMember: member.length > 0, viewerStatus: viewer.status, blockedWithAuthor });
 }
 
 /** One unread `group_message` a person a group: the next message joins it (its count, its latest writer, its time). */
@@ -569,6 +783,8 @@ export async function forgetGroupMember(tx: Tx, userId: string, now: Date): Prom
     .set({ status: 'removed', moderationReason: 'account_deleted', moderatedAt: now })
     .where(and(eq(neighborGroupMessages.authorUserId, userId), ne(neighborGroupMessages.status, 'removed')));
   await tx.update(neighborGroupInvites).set({ revokedAt: now, revokedByUserId: userId }).where(and(eq(neighborGroupInvites.createdByUserId, userId), isNull(neighborGroupInvites.revokedAt)));
+  // Their reactions go too (their photos go with their files: src/modules/privacy/requests.ts).
+  await tx.delete(neighborGroupReactions).where(eq(neighborGroupReactions.userId, userId));
   const groups = await tx.select({ groupId: neighborGroupMembers.groupId }).from(neighborGroupMembers).where(eq(neighborGroupMembers.userId, userId));
   for (const { groupId } of groups) await leaveIn(tx, userId, groupId, now);
 }
@@ -593,8 +809,11 @@ export async function groupMessageReportTarget(db: Db, viewerId: string, message
   return { id: row.message.id, groupId: row.message.groupId, authorUserId: row.message.authorUserId, author: shownName(row).displayName };
 }
 
-/** The reported message on its case, as written (staff read the words a member reported; nothing else of the group). */
-export async function reportedGroupMessageOf(db: Db, messageId: string, canModerate: boolean): Promise<AdminCaseGroupMessage | null> {
+/**
+ * The reported message on its case, as written (staff read the words a member reported, and see its photos through the
+ * staff link, audited; nothing else of the group).
+ */
+export async function reportedGroupMessageOf(db: Db, messageId: string, canModerate: boolean, staff?: { id: string; now: Date; context: string }): Promise<AdminCaseGroupMessage | null> {
   const [row] = await db
     .select({ message: neighborGroupMessages, group: neighborGroups, author: users.name, firstName: users.firstName, lastName: users.lastName, areaName: areas.name })
     .from(neighborGroupMessages)
@@ -605,8 +824,11 @@ export async function reportedGroupMessageOf(db: Db, messageId: string, canModer
     .limit(1);
   if (!row) return null;
   const status = statusOf(row.message.status);
+  const photoFiles = staff ? ((await photosOfMessages(db, [row.message.id])).get(row.message.id) ?? []) : [];
+  const photos: Photo[] = staff ? photoFiles.map((file) => staffPhotoFromFile(file, { id: staff.id }, staff.context, staff.now)) : [];
   return {
     message: { id: row.message.id, body: row.message.body, author: { displayName: shownName({ name: row.author, firstName: row.firstName, lastName: row.lastName }).displayName }, createdAt: row.message.createdAt.toISOString() },
+    ...(photos.length > 0 ? { photos } : {}),
     group: { name: row.group.name, kind: kindOf(row.group.kind), areaName: row.areaName, memberCount: await memberCountOf(db, row.group.id) },
     status,
     ...(status === 'removed' && row.message.moderationReason ? { removedReason: row.message.moderationReason } : {}),

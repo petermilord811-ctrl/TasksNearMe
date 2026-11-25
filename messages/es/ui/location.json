@@ -32,6 +32,13 @@
     "link": "enlace oculto (los enlaces se muestran cuando se paga la reserva)",
     "handle": "@••• (los nombres de usuario se muestran cuando se paga la reserva)"
   },
+  "maskedAlways": {
+    "phone": "•••-•••-{hint} (oculto)",
+    "phoneWithoutHint": "•••-•••-•••• (oculto)",
+    "email": "•••@••• (oculto)",
+    "link": "enlace oculto",
+    "handle": "@••• (oculto)"
+  },
   "previews": {
     "locationGroup": "Ubicación",
     "messagingGroup": "Texto oculto",

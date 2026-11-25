@@ -8,6 +8,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeOff, UsersRound } from 'lucide-react';
 import { reviewModerationInputSchema, type ActionHandler, type AdminCaseGroupMessage, type ReviewModerationInput } from '@/contracts';
 import { FormFeedback } from '@/ui/components/forms/form-feedback';
+import { MessageAttachments } from '@/ui/components/messaging/message-media';
 import { useFormat } from '@/ui/lib/format';
 import { useFormAction } from '@/ui/lib/use-form-action';
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/ui/primitives/alert-dialog';
@@ -54,7 +55,9 @@ export function AdminReportedGroupMessage({ data, onModerate, initialOpen = fals
         <Badge variant={hidden ? 'destructive' : 'secondary'}>{t(`statuses.${data.status}`)}</Badge>
       </div>
       <p className="text-sm text-muted-foreground">{t('about', { author: data.message.author.displayName, group: data.group.name, area: data.group.areaName, count: data.group.memberCount, date: formatDate(data.message.createdAt) })}</p>
-      <blockquote className="flex gap-2 whitespace-pre-wrap rounded-xl bg-muted/50 px-3 py-2 text-[15px] leading-6 [overflow-wrap:anywhere]"><UsersRound aria-hidden="true" className="mt-1 size-4 shrink-0 text-primary" /><span>{data.message.body}</span></blockquote>
+      {data.message.body && <blockquote className="flex gap-2 whitespace-pre-wrap rounded-xl bg-muted/50 px-3 py-2 text-[15px] leading-6 [overflow-wrap:anywhere]"><UsersRound aria-hidden="true" className="mt-1 size-4 shrink-0 text-primary" /><span>{data.message.body}</span></blockquote>}
+      {/* Its photos or GIF (2026-11-24), through this case's staff link. */}
+      {data.photos && <MessageAttachments attachments={data.photos} sender={data.message.author.displayName} className="max-w-md" />}
       {hidden && data.removedReason && <p className="text-sm"><span className="font-medium">{t('removedReason')}</span> <span className="whitespace-pre-wrap">{data.removedReason}</span></p>}
       {gone ? <p className="text-sm text-muted-foreground">{t('deletedByAuthor')}</p> : data.canModerate && onModerate ? (
         <Button ref={trigger} type="button" variant="outline" className="min-h-11" onClick={() => setOpen(true)}>

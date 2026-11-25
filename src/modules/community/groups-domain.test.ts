@@ -3,7 +3,9 @@ import { NEIGHBOR_GROUP_LIMITS } from '@/contracts';
 import {
   canRemoveMember,
   canRevokeInvite,
+  canSeeGroupPhoto,
   createsLeft,
+  firstUnreadOf,
   formatInviteCode,
   groupCreateBlock,
   groupRecipients,
@@ -11,10 +13,14 @@ import {
   inviteCodeFrom,
   inviteNamesGroup,
   inviteState,
+  isGroupReaction,
   memberName,
   messageActions,
   nextAdmin,
   normalizeInviteCode,
+  quoteMedia,
+  quoteState,
+  reactionSummary,
   seesInvite,
 } from './groups-domain';
 
@@ -93,12 +99,68 @@ describe('members and invites', () => {
 });
 
 describe('messages', () => {
-  it('lets the author delete and others report, once, while it shows', () => {
-    expect(messageActions({ isYours: true, status: 'visible', reportedByYou: false })).toEqual({ canDelete: true, canReport: false });
-    expect(messageActions({ isYours: false, status: 'visible', reportedByYou: false })).toEqual({ canDelete: false, canReport: true });
-    expect(messageActions({ isYours: false, status: 'visible', reportedByYou: true })).toEqual({ canDelete: false, canReport: false });
-    expect(messageActions({ isYours: true, status: 'deleted', reportedByYou: false })).toEqual({ canDelete: false, canReport: false });
-    expect(messageActions({ isYours: false, status: 'removed', reportedByYou: false })).toEqual({ canDelete: false, canReport: false });
+  it('lets the author delete and others report, once, while it shows; anyone who may write reacts and replies', () => {
+    const writer = { canWrite: true };
+    expect(messageActions({ isYours: true, status: 'visible', reportedByYou: false, ...writer })).toEqual({ canDelete: true, canReport: false, canReact: true, canReply: true });
+    expect(messageActions({ isYours: false, status: 'visible', reportedByYou: false, ...writer })).toEqual({ canDelete: false, canReport: true, canReact: true, canReply: true });
+    expect(messageActions({ isYours: false, status: 'visible', reportedByYou: true, ...writer })).toEqual({ canDelete: false, canReport: false, canReact: true, canReply: true });
+    expect(messageActions({ isYours: true, status: 'deleted', reportedByYou: false, ...writer })).toEqual({ canDelete: false, canReport: false, canReact: false, canReply: false });
+    expect(messageActions({ isYours: false, status: 'removed', reportedByYou: false, ...writer })).toEqual({ canDelete: false, canReport: false, canReact: false, canReply: false });
+    // An account that can't write (restricted) still reads, deletes its own and reports; it doesn't react or reply.
+    expect(messageActions({ isYours: false, status: 'visible', reportedByYou: false, canWrite: false })).toEqual({ canDelete: false, canReport: true, canReact: false, canReply: false });
+  });
+
+  it('counts reactions per emoji in the picker’s order, marks the viewer’s, and leaves out blocked people', () => {
+    const rows = [
+      { emoji: 'heart', userId: 'usr_a' },
+      { emoji: 'thumbs_up', userId: 'usr_me' },
+      { emoji: 'heart', userId: 'usr_me' },
+      { emoji: 'heart', userId: 'usr_blocked' },
+      { emoji: 'fire', userId: 'usr_blocked' },
+      { emoji: 'skull', userId: 'usr_a' },
+    ];
+    expect(reactionSummary(rows, 'usr_me', new Set(['usr_blocked']))).toEqual([
+      { emoji: 'thumbs_up', count: 1, mine: true },
+      { emoji: 'heart', count: 2, mine: true },
+    ]);
+    expect(reactionSummary([], 'usr_me', new Set())).toEqual([]);
+    expect(isGroupReaction('party')).toBe(true);
+    expect(isGroupReaction('skull')).toBe(false);
+    expect(isGroupReaction(undefined)).toBe(false);
+  });
+
+  it('puts "New messages" above the first message someone else wrote since the viewer last read', () => {
+    const at = (minutes: number) => new Date(now.getTime() + minutes * 60_000);
+    const messages = [
+      { id: 'm1', authorUserId: 'usr_a', createdAt: at(-10) },
+      { id: 'm2', authorUserId: 'usr_me', createdAt: at(5) },
+      { id: 'm3', authorUserId: 'usr_b', createdAt: at(6) },
+      { id: 'm4', authorUserId: 'usr_a', createdAt: at(7) },
+    ];
+    expect(firstUnreadOf(messages, 'usr_me', now)).toBe('m3');
+    expect(firstUnreadOf(messages, 'usr_me', at(10))).toBeUndefined();
+    expect(firstUnreadOf(messages, 'usr_me', at(-20))).toBe('m1');
+  });
+
+  it('opens a group photo only for a current member of an open group, while the message shows, never across a block', () => {
+    const fine = { groupStatus: 'active', messageStatus: 'visible', isMember: true, viewerStatus: 'active', blockedWithAuthor: false };
+    expect(canSeeGroupPhoto(fine)).toBe(true);
+    expect(canSeeGroupPhoto({ ...fine, viewerStatus: 'restricted' })).toBe(true);
+    expect(canSeeGroupPhoto({ ...fine, isMember: false })).toBe(false);
+    expect(canSeeGroupPhoto({ ...fine, groupStatus: 'closed' })).toBe(false);
+    expect(canSeeGroupPhoto({ ...fine, messageStatus: 'deleted' })).toBe(false);
+    expect(canSeeGroupPhoto({ ...fine, messageStatus: 'removed' })).toBe(false);
+    expect(canSeeGroupPhoto({ ...fine, viewerStatus: 'suspended' })).toBe(false);
+    expect(canSeeGroupPhoto({ ...fine, blockedWithAuthor: true })).toBe(false);
+  });
+
+  it('quotes a reply’s message as it shows: hidden across a block, else its own status; photos or a GIF', () => {
+    expect(quoteState({ status: 'visible', authorUserId: 'usr_a' }, new Set())).toBe('visible');
+    expect(quoteState({ status: 'deleted', authorUserId: 'usr_a' }, new Set())).toBe('deleted');
+    expect(quoteState({ status: 'visible', authorUserId: 'usr_a' }, new Set(['usr_a']))).toBe('hidden');
+    expect(quoteMedia([])).toBeUndefined();
+    expect(quoteMedia([{ contentType: 'image/gif' }])).toBe('gif');
+    expect(quoteMedia([{ contentType: 'image/webp' }, { contentType: 'image/gif' }])).toBe('photo');
   });
 
   it('tells the other members, never the sender, the muted, the blocked or a suspended account', () => {

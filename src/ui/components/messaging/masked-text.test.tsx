@@ -10,10 +10,10 @@ import { MaskedText } from './masked-text';
 
 afterEach(cleanup);
 
-function renderMessage(segments: MessageSegment[]) {
+function renderMessage(segments: MessageSegment[], always = false) {
   return render(
     <NextIntlClientProvider locale="en" messages={{ ...uiMessages, location }}>
-      <p data-testid="message"><MaskedText segments={segments} /></p>
+      <p data-testid="message"><MaskedText segments={segments} always={always} /></p>
     </NextIntlClientProvider>,
   );
 }
@@ -35,6 +35,16 @@ describe('MaskedText', () => {
     renderMessage([{ kind: 'text', text: 'Pay here ' }, { kind: 'masked', detail: 'link' }, { kind: 'text', text: ' or ' }, { kind: 'masked', detail: 'handle' }]);
     expect(screen.getByText('link hidden (links show once the booking is paid)')).toBeVisible();
     expect(screen.getByText('@••• (usernames show once the booking is paid)')).toBeVisible();
+  });
+
+  it('in a building or street group, where no booking shows them, says only that they are hidden', () => {
+    renderMessage([...maskedPhoneMessage, { kind: 'masked', detail: 'email' }, { kind: 'masked', detail: 'link' }, { kind: 'masked', detail: 'handle' }, { kind: 'masked', detail: 'phone' }], true);
+    expect(screen.getByText('•••-•••-0134 (hidden)')).toBeVisible();
+    expect(screen.getByText('•••@••• (hidden)')).toBeVisible();
+    expect(screen.getByText('link hidden')).toBeVisible();
+    expect(screen.getByText('@••• (hidden)')).toBeVisible();
+    expect(screen.getByText('•••-•••-•••• (hidden)')).toBeVisible();
+    expect(screen.getByTestId('message')).not.toHaveTextContent(/booking/);
   });
 
   it('renders allowed text unchanged rather than running its own contact detection', () => {

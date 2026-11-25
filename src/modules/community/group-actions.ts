@@ -1,19 +1,28 @@
 'use server';
 
+import { cookies } from 'next/headers';
 import type {
   ActionResult,
+  AttachGifInput,
   NeighborGroupCodeInput,
   NeighborGroupCreateInput,
   NeighborGroupInvitePreview,
   NeighborGroupInviteResult,
   NeighborGroupMessageInput,
+  NeighborGroupReactionInput,
   NeighborGroupResult,
   NeighborGroupView,
+  PhotoUploadResult,
 } from '@/contracts';
+import { GIF_STAND_IN_COOKIE, createGifProvider, wantsGifStandIn } from '@/integrations/gifs';
+import { storePhoto } from '@/modules/files/uploads';
+import { attachGif } from '@/modules/messaging/gifs';
+import { fileStorage } from '@/modules/tasks/server';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
 import {
+  GROUP_PHOTO_KIND,
   createGroupInvite,
   createNeighborGroup,
   deleteGroupMessage,
@@ -21,7 +30,9 @@ import {
   joinNeighborGroup,
   leaveNeighborGroup,
   muteNeighborGroup,
+  notifyGroupTyping,
   previewInvite,
+  reactToGroupMessage,
   removeGroupMember,
   revokeGroupInvite,
   sendGroupMessage,
@@ -66,6 +77,39 @@ export async function sendNeighborGroupMessageAction(input: NeighborGroupMessage
   const id = await viewerId();
   if (!id) return { ok: false, code: 'not_allowed' };
   return sendGroupMessage(db, id, input, await requestNow());
+}
+
+/** A photo for a group message (re-encoded; location data removed): only the group's members ever open it. */
+export async function uploadNeighborGroupPhotoAction(formData: FormData): Promise<PhotoUploadResult> {
+  const id = await viewerId();
+  if (!id) return { ok: false, code: 'unknown' };
+  const file = formData instanceof FormData ? formData.get('file') : null;
+  if (!(file instanceof File)) return { ok: false, code: 'unsupported_type' };
+  return storePhoto({ db, storage: fileStorage }, { userId: id, kind: GROUP_PHOTO_KIND, file });
+}
+
+/**
+ * A picked GIF for a group message, by its id (as in a conversation: src/modules/messaging/gif-actions.ts), stored as a
+ * group photo. The GIF search itself is the conversation's (`searchGifsAction`).
+ */
+export async function attachNeighborGroupGifAction(input: AttachGifInput): Promise<PhotoUploadResult> {
+  const id = await viewerId();
+  if (!id) return { ok: false, code: 'unknown' };
+  const provider = createGifProvider(process.env, { standIn: wantsGifStandIn((await cookies()).get(GIF_STAND_IN_COOKIE)?.value) });
+  return attachGif({ db, storage: fileStorage }, { userId: id, id: input?.id, kind: GROUP_PHOTO_KIND }, provider);
+}
+
+export async function reactToNeighborGroupMessageAction(input: NeighborGroupReactionInput): Promise<ActionResult> {
+  const id = await viewerId();
+  if (!id) return { ok: false, code: 'not_allowed' };
+  return reactToGroupMessage(db, id, input, await requestNow());
+}
+
+/** "Typing…" for the group's other members: fire and forget (the service spaces the notices out). */
+export async function typingInNeighborGroupAction(input: { groupId: string }): Promise<void> {
+  const id = await viewerId();
+  if (!id) return;
+  await notifyGroupTyping(db, id, input, new Date());
 }
 
 export async function deleteNeighborGroupMessageAction(input: { messageId: string }): Promise<ActionResult> {

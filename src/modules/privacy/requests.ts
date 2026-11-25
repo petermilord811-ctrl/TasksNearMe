@@ -316,12 +316,13 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
   const billing = createBillingProvider();
   await endSubscriptionsOf(db, billing, userId, now);
 
-  // Their photos go: the profile's, the work samples' and their tasks' (pictures of their home, J-PR3). Message
-  // attachments, completion photos and receipts stay on the retention clock (blueprint 08 §5), for the other person.
+  // Their photos go: the profile's, the work samples' and their tasks' (pictures of their home, J-PR3), and their group
+  // photos (their group messages come down: nobody sees them any more). Message attachments, completion photos and
+  // receipts stay on the retention clock (blueprint 08 §5), for the other person.
   const photoFiles = await db
     .select({ id: files.id, storageKey: files.storageKey })
     .from(files)
-    .where(and(eq(files.ownerUserId, userId), inArray(files.kind, ['avatar', 'work_sample', 'task_photo', 'community_photo'])));
+    .where(and(eq(files.ownerUserId, userId), inArray(files.kind, ['avatar', 'work_sample', 'task_photo', 'community_photo', 'group_photo'])));
   // The cached pages they were on: their public profile, the helper lists, their tasks and their city's pages (J-PR4).
   const [profile] = await db.select({ handle: helperProfiles.handle }).from(helperProfiles).where(eq(helperProfiles.userId, userId)).limit(1);
   const [market] = await db.select({ slug: markets.slug }).from(markets).where(eq(markets.id, user.homeMarketId)).limit(1);

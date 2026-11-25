@@ -87,9 +87,6 @@
     "deleting": "Eliminando…",
     "cancel": "Cancelar",
     "messageLabel": "Mensaje para {name}",
-    "placeholder": "Escribe al grupo",
-    "send": "Enviar",
-    "sending": "Enviando…",
     "masked": "Los teléfonos, correos y enlaces se ocultan en los grupos. Mantén los planes y los pagos en TasksNearMe.",
     "cantSend": "Tu cuenta no puede enviar mensajes por ahora.",
     "mute": "Silenciar notificaciones",
@@ -102,7 +99,16 @@
     "leaveAdmin": "Tú lo administras: pasará a administrarlo el miembro que entró primero después de ti.",
     "leaveLast": "Eres el último miembro, así que el grupo se cierra.",
     "leaveConfirm": "Dejar",
-    "left": "Dejaste {group}."
+    "left": "Dejaste {group}.",
+    "log": "Mensajes en {name}",
+    "photo": "Foto",
+    "gif": "GIF",
+    "hidden": "datos ocultos",
+    "quoteHidden": "Un mensaje que no puedes ver",
+    "someone": "Alguien",
+    "typingOne": "{name} está escribiendo…",
+    "typingTwo": "{first} y {second} están escribiendo…",
+    "typingMany": "Varias personas están escribiendo…"
   },
   "people": {
     "title": "Miembros",
@@ -153,6 +159,12 @@
     "memberMembers": "Grupo: miembros vistos por un miembro",
     "portal": "Vecinos con grupos",
     "adminCase": "Equipo: un mensaje de grupo reportado",
-    "adminCaseRemoved": "Equipo: un mensaje de grupo quitado"
+    "adminCaseRemoved": "Equipo: un mensaje de grupo quitado",
+    "chat": "Grupo: fotos, un GIF, reacciones y respuestas",
+    "chatUnread": "Grupo: mensajes nuevos desde la última vez",
+    "chatReadOnly": "Grupo: una cuenta que no puede escribir",
+    "typing": "Grupo: alguien escribiendo",
+    "typingMany": "Grupo: varias personas escribiendo",
+    "adminCasePhotos": "Equipo: un mensaje de grupo reportado con fotos"
   }
 }

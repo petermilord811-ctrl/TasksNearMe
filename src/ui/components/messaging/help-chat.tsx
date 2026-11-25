@@ -318,12 +318,13 @@ export function HelpChat({ data, transcript, handlers, now, variant = 'window' }
     <div ref={logRef} role="log" aria-label={t('log')} aria-live="off" tabIndex={0} className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 [overflow-anchor:none] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring">
       {mode === 'assistant' && open && <p className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-primary/25 bg-brand-soft/50 px-3.5 py-2 text-sm">
         <span>{t('case.backToCase')}</span>
-        <button type="button" onClick={() => setAssistantOverCase(false)} className="font-semibold text-primary underline-offset-4 hover:underline">{t('case.backToCaseLink')}</button>
+        {/* A whole tap target, apart from the card under it (ui-audit, 2026-11-24: 20 px tall, crowding the rating). */}
+        <button type="button" onClick={() => setAssistantOverCase(false)} className="inline-flex min-h-11 items-center font-semibold text-primary underline-offset-4 hover:underline">{t('case.backToCaseLink')}</button>
       </p>}
       {mode === 'assistant' && !open && data.recent && <div className="mb-3 space-y-2">
         <p className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-foreground/[0.04] px-3.5 py-2 text-sm dark:bg-white/[0.05]">
           <span>{t('case.recent', { topic: t(`handoff.topics.${data.recent.topic}`), status: t(`statuses.${data.recent.status}`) })}</span>
-          <Link href={routes.app.supportCase(data.recent.id)} className="font-semibold text-primary underline-offset-4 hover:underline">{t('case.recentLink')}</Link>
+          <Link href={routes.app.supportCase(data.recent.id)} className="inline-flex min-h-11 items-center font-semibold text-primary underline-offset-4 hover:underline">{t('case.recentLink')}</Link>
         </p>
         {/* A case solved lately asks how the help was (2026-11-23). */}
         {data.recent.rating && onRate && <SupportRatingCard key={data.recent.id} rating={data.recent.rating} variant="chat" onRate={(input) => onRate(data.recent!.id, input)} />}

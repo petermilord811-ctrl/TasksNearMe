@@ -412,7 +412,8 @@ export async function getAdminCase(db: Db, staff: StaffActor, caseId: string, no
   const reportedQuestion = row.context?.questionId ? await reportedQuestionOf(db, staff, row.context.questionId, row.context.answer === true) : null;
   const reportedThanks = row.context?.thanksId ? await reportedThanksOf(db, staff, row.context.thanksId) : null;
   // A reported group message (2026-11-24): its words as written, never the rest of its group's conversation.
-  const reportedGroupMessage = row.context?.groupMessageId ? await reportedGroupMessageOf(db, row.context.groupMessageId, canModerateTasks(staff.roles)) : null;
+  // Its photos through the staff link, for this case (each opening is audited by the file route).
+  const reportedGroupMessage = row.context?.groupMessageId ? await reportedGroupMessageOf(db, row.context.groupMessageId, canModerateTasks(staff.roles), { id: staff.id, now, context: `case:${row.id}` }) : null;
   // A reported community post or reply: members' public words, read and moderated on the community page.
   const [reportedPost] = row.context?.postId
     ? await db.select({ id: communityPosts.id, title: communityPosts.title }).from(communityPosts).where(eq(communityPosts.id, row.context.postId)).limit(1)

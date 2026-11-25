@@ -78,13 +78,14 @@ export function dataExportJsonName(now: Date): string {
   return `tasksnearme-data-${now.toISOString().slice(0, 10)}.json`;
 }
 
-const PHOTO_FOLDERS: Record<string, string> = { avatar: 'profile', task_photo: 'tasks', work_sample: 'work-samples', message: 'messages', community_photo: 'neighbors' };
-const extensionOf = (contentType: string) => ({ 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/png': 'png', 'image/heic': 'heic' })[contentType] ?? 'bin';
+const PHOTO_FOLDERS: Record<string, string> = { avatar: 'profile', task_photo: 'tasks', work_sample: 'work-samples', message: 'messages', community_photo: 'neighbors', group_photo: 'groups' };
+// GIFs sent in chat are stored as they came (2026-11-24).
+const extensionOf = (contentType: string) => ({ 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/png': 'png', 'image/heic': 'heic', 'image/gif': 'gif' })[contentType] ?? 'bin';
 
 /**
  * The photos the person added themselves, for the copy's zip (ab, 2026-11-21): their profile photo, their tasks'
  * photos, their work samples, the photos they sent in messages and those on their Neighbors posts and replies (plan
- * 10.1). Only files they own; never anyone else's, and never
+ * 10.1), and their photos and GIFs in building and street groups (2026-11-24). Only files they own; never anyone else's, and never
  * identity documents or proofs of address (deleted within 30 days of our decision). A file storage no longer has (the
  * retention timer took it) is left out. Each is listed in the JSON with its place in the zip.
  */
@@ -96,7 +97,7 @@ export async function dataExportPhotos(db: Db, storage: FileStorage, userId: str
   const rows = await db
     .select()
     .from(files)
-    .where(and(eq(files.ownerUserId, userId), or(eq(files.kind, 'task_photo'), eq(files.kind, 'community_photo'), linked.length ? inArray(files.id, [...new Set(linked)]) : undefined)))
+    .where(and(eq(files.ownerUserId, userId), or(eq(files.kind, 'task_photo'), eq(files.kind, 'community_photo'), eq(files.kind, 'group_photo'), linked.length ? inArray(files.id, [...new Set(linked)]) : undefined)))
     .orderBy(asc(files.createdAt));
   const taskOf = new Map(
     rows.length ? (await db.select({ fileId: taskPhotos.fileId, title: tasks.title }).from(taskPhotos).innerJoin(tasks, eq(tasks.id, taskPhotos.taskId)).where(inArray(taskPhotos.fileId, rows.map((row) => row.id)))).map((row) => [row.fileId, row.title]) : [],

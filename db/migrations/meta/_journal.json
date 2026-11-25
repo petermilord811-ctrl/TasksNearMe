@@ -610,6 +610,13 @@
       "when": 1795504458379,
       "tag": "0086_team_up",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1795557164214,
+      "tag": "0087_group_chat",
+      "breakpoints": true
     }
   ]
 }

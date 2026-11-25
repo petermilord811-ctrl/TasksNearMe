@@ -127,15 +127,17 @@ export function ThreadContent({ data, handlers, now, safety, composerState, assi
           </h1>
           <ConversationMarks thread={thread} />
         </div>
-        <div className="flex min-w-0 items-center gap-x-2 text-xs text-muted-foreground sm:text-sm">
+        {/* It wraps (2026-11-24 chat audit): on a 360 px phone "Active now", the handle and "Direct message" squeezed one
+            another to "@." and "Dir…"; now what doesn't fit goes to the next line, shortened only if it alone is too long. */}
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground sm:text-sm">
           <ThreadPresence threadId={thread.id} presence={data.presence} className="shrink-0 text-xs sm:text-sm" />
           {/* Their @username and Sparks (2026-11-22); a sample profile says so (2026-11-23). */}
           {/* On a phone the row has room for the presence, the handle (shortened if long) and the Sparks total; the
               level's name joins them from 640 px (sweep 2026-11-24: "12 · Newcomer" ran 2 px past a 360 px screen). */}
-          {other.username && <span className="min-w-0 truncate">@{other.username}</span>}
+          {other.username && <span className="min-w-0 max-w-full truncate">@{other.username}</span>}
           {thread.sample && <Badge variant="outline" className="shrink-0">{t('sampleBadge')}</Badge>}
           {other.sparks && <SparksBadge sparks={other.sparks} compact className="shrink-0 flex-nowrap max-sm:[&_[data-sparks-level]]:hidden" />}
-          <span className="truncate">{thread.kind === 'direct' ? t('direct.label') : thread.title}</span>
+          <span className="min-w-0 max-w-full truncate">{thread.kind === 'direct' ? t('direct.label') : thread.title}</span>
         </div>
       </div>
       {subjectLink && <Link href={subjectLink} title={t(`subject.${thread.subject.kind}`)} className="group/subject inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-full text-sm font-semibold text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:justify-start">

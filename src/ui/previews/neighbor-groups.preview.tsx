@@ -2,11 +2,15 @@ import type { ReactNode } from 'react';
 import { routes, type AppShellHandlers, type NeighborGroupsData, type NeighborGroupView, type PortalHandlers, type PreviewEntry } from '@/contracts';
 import {
   adminCaseGroupMessage,
+  adminCaseGroupMessagePhotos,
   adminCaseGroupMessageRemoved,
   fakeHandler,
   fakeNeighborGroupHandlers,
   GROUPS_NOW,
   groupViewAdmin,
+  groupViewChat,
+  groupViewChatReadOnly,
+  groupViewChatUnread,
   groupViewEmpty,
   groupViewMuted,
   groupViewStates,
@@ -59,11 +63,11 @@ const railCard = (id: string, title: string, data: NeighborGroupsData): PreviewE
 });
 
 /** A group as its sheet shows it, framed at a phone sheet's height (the sheet itself opens over the page). */
-const panel = (id: string, title: string, view: NeighborGroupView, tab: NeighborGroupTab = 'chat'): PreviewEntry => ({
+const panel = (id: string, title: string, view: NeighborGroupView, tab: NeighborGroupTab = 'chat', typing?: readonly string[]): PreviewEntry => ({
   id: `neighbor-groups/${id}`,
   group: GROUP,
   title,
-  render: () => <Frame><NeighborGroupPanel view={view} handlers={handlers} initialTab={tab} onReload={() => {}} onClose={() => {}} /></Frame>,
+  render: () => <Frame><NeighborGroupPanel view={view} handlers={handlers} initialTab={tab} onReload={() => {}} onClose={() => {}} {...(typing ? { initialTyping: typing } : {})} /></Frame>,
 });
 
 const Frame = ({ children }: { children: ReactNode }) => <div className="mx-auto flex h-[720px] max-w-lg flex-col overflow-hidden rounded-2xl border bg-background">{children}</div>;
@@ -84,6 +88,11 @@ export const neighborGroupPreviews: PreviewEntry[] = [
   panel('stream-states', p.streamStates, groupViewStates),
   panel('stream-empty', p.streamEmpty, groupViewEmpty),
   panel('muted', p.muted, groupViewMuted),
+  panel('chat', p.chat, groupViewChat),
+  panel('chat-unread', p.chatUnread, groupViewChatUnread),
+  panel('chat-read-only', p.chatReadOnly, groupViewChatReadOnly),
+  panel('typing', p.typing, groupViewChat, 'chat', ['usr_ana']),
+  panel('typing-many', p.typingMany, groupViewChat, 'chat', ['usr_ana', 'usr_ben', 'usr_chris']),
   panel('admin-members', p.adminMembers, groupViewAdmin, 'members'),
   panel('member-members', p.memberMembers, groupViewStates, 'members'),
   {
@@ -95,4 +104,5 @@ export const neighborGroupPreviews: PreviewEntry[] = [
   },
   { id: 'neighbor-groups/admin-case', group: GROUP, title: p.adminCase, render: () => <div className="mx-auto max-w-2xl"><AdminReportedGroupMessage data={adminCaseGroupMessage} onModerate={fakeHandler({ ok: true, code: 'updated' })} /></div> },
   { id: 'neighbor-groups/admin-case-removed', group: GROUP, title: p.adminCaseRemoved, render: () => <div className="mx-auto max-w-2xl"><AdminReportedGroupMessage data={adminCaseGroupMessageRemoved} onModerate={fakeHandler({ ok: true, code: 'updated' })} /></div> },
+  { id: 'neighbor-groups/admin-case-photos', group: GROUP, title: p.adminCasePhotos, render: () => <div className="mx-auto max-w-2xl"><AdminReportedGroupMessage data={adminCaseGroupMessagePhotos} onModerate={fakeHandler({ ok: true, code: 'updated' })} /></div> },
 ];

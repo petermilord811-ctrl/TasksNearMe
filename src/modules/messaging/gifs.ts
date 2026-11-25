@@ -62,11 +62,11 @@ export async function animatedGifSize(bytes: Buffer): Promise<{ width: number; h
 }
 
 /**
- * Attach a picked GIF by its id: ok with the stored photo (`animated`), to send with `sendMessage`. Errors:
- * `unsupported_type` (an unknown id, or not an animated GIF), `too_large` (over 4 MB), `rate_limited`, `unknown`
- * (GIFs are off, or the provider didn't answer).
+ * Attach a picked GIF by its id: ok with the stored photo (`animated`), to send with `sendMessage` (or, stored as a
+ * `group_photo`, with a group's message: 2026-11-24). Errors: `unsupported_type` (an unknown id, or not an animated
+ * GIF), `too_large` (over 4 MB), `rate_limited`, `unknown` (GIFs are off, or the provider didn't answer).
  */
-export async function attachGif({ db, storage, now = () => new Date() }: UploadDeps, input: { userId: string; id: unknown }, provider: GifProvider | null): Promise<PhotoUploadResult> {
+export async function attachGif({ db, storage, now = () => new Date() }: UploadDeps, input: { userId: string; id: unknown; kind?: 'message' | 'group_photo' }, provider: GifProvider | null): Promise<PhotoUploadResult> {
   if (!provider) return { ok: false, code: 'unknown' };
   const id = typeof input.id === 'string' ? input.id : '';
   if (!GIF_ID_PATTERN.test(id)) return { ok: false, code: 'unsupported_type' };
@@ -90,9 +90,10 @@ export async function attachGif({ db, storage, now = () => new Date() }: UploadD
   if (!size) return { ok: false, code: 'unsupported_type' };
 
   const fileId = newId('fil');
-  const storageKey = `message/${fileId}.gif`;
+  const kind = input.kind ?? 'message';
+  const storageKey = `${kind}/${fileId}.gif`;
   await storage.put(storageKey, bytes, 'image/gif');
-  const row = { id: fileId, ownerUserId: input.userId, kind: 'message', storageKey, contentType: 'image/gif', width: size.width, height: size.height, bytes: bytes.length, alt: title.slice(0, 200), createdAt: now() };
+  const row = { id: fileId, ownerUserId: input.userId, kind, storageKey, contentType: 'image/gif', width: size.width, height: size.height, bytes: bytes.length, alt: title.slice(0, 200), createdAt: now() };
   await db.insert(files).values(row);
   return { ok: true, photo: photoFromFile(row) };
 }

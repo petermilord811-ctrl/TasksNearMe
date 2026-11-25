@@ -347,6 +347,53 @@ export const neighborGroupMessages = pgTable(
     moderatedByUserId: text('moderated_by_user_id').references(() => users.id),
     moderationReason: text('moderation_reason'),
     moderatedAt: timestamp('moderated_at', { withTimezone: true }),
+    /** A reply to an earlier message of the same group (2026-11-24): shown quoted above it. */
+    replyToMessageId: text('reply_to_message_id'),
+    /**
+     * The composer's key for this message (a client UUID): a repeat after an answer that never arrived is the same
+     * message, not a second one. Unique per author.
+     */
+    requestKey: text('request_key'),
   },
-  (t) => [index('neighbor_group_messages_group_idx').on(t.groupId, t.createdAt), index('neighbor_group_messages_author_idx').on(t.authorUserId, t.createdAt)],
+  (t) => [
+    index('neighbor_group_messages_group_idx').on(t.groupId, t.createdAt),
+    index('neighbor_group_messages_author_idx').on(t.authorUserId, t.createdAt),
+    uniqueIndex('neighbor_group_messages_author_request_key_idx').on(t.authorUserId, t.requestKey).where(sql`request_key is not null`),
+  ],
+);
+
+/**
+ * A group message's photos and GIF (2026-11-24): uploaded as files of kind `group_photo` (re-encoded, metadata dropped;
+ * a GIF as it came), each on one message, in order. Only the group's current members open them, while the message
+ * shows (src/modules/community/groups.ts `canViewGroupPhoto`); its author always, staff through a case's link.
+ */
+export const neighborGroupPhotos = pgTable(
+  'neighbor_group_photos',
+  {
+    fileId: text('file_id')
+      .primaryKey()
+      .references(() => files.id, { onDelete: 'cascade' }),
+    messageId: text('message_id')
+      .notNull()
+      .references(() => neighborGroupMessages.id, { onDelete: 'cascade' }),
+    position: integer('position').notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('neighbor_group_photos_message_idx').on(t.messageId, t.position)],
+);
+
+/** Reactions on group messages (2026-11-24): one of `MESSAGE_REACTIONS`, once each a person; members only. */
+export const neighborGroupReactions = pgTable(
+  'neighbor_group_reactions',
+  {
+    messageId: text('message_id')
+      .notNull()
+      .references(() => neighborGroupMessages.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    emoji: text('emoji').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.messageId, t.userId, t.emoji] }), index('neighbor_group_reactions_user_idx').on(t.userId)],
 );
