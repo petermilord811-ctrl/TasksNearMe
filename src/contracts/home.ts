@@ -256,6 +256,11 @@ export interface DashboardMap {
   serviceArea?: { name: string; center: { lat: number; lng: number }; radiusMiles: number };
 }
 
+/** How many bookings "Coming up" shows on Home. */
+export const DASHBOARD_UP_NEXT_LIMIT = 2;
+/** How many open tasks "New near you" shows on a helper's Home. */
+export const DASHBOARD_NEARBY_TOP_LIMIT = 3;
+
 /** `/app`. */
 export interface DashboardData {
   /** For "Good morning, Maya". */
@@ -270,6 +275,19 @@ export interface DashboardData {
   query: DashboardQueryState;
   /** The person's tabs, in order, with their counts under the filters. */
   tabs: DashboardTabSummary[];
+  /**
+   * "Coming up" on Home (2026-11-25, owner: "show more meaningful and necessary things on home tab"): the next
+   * bookings, either side, soonest first, at most `DASHBOARD_UP_NEXT_LIMIT`, whatever list is open.
+   */
+  upNext: DashboardItem[];
+  /**
+   * "New near you" on Home (2026-11-25): a helper's best open tasks nearby, the ones they can still offer on, at most
+   * `DASHBOARD_NEARBY_TOP_LIMIT`, whatever list is open and however it's filtered. Absent for someone without the helper
+   * side and while they wait for their city.
+   */
+  nearbyTop?: DashboardItem[];
+  /** The person's home market, named beside the date on Home ("Tue, Nov 25 · Gainesville"). */
+  place?: string;
   /** The current tab's items under the filters: soonest first (`done`: the latest first), the first `DASHBOARD_LIST_LIMIT` (on a map, `DASHBOARD_MAP_LIMIT`). */
   items: DashboardItem[];
   /** The market's categories, for the filter. */

@@ -4,7 +4,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import en from '../../../../messages/en/ui';
 import es from '../../../../messages/es/ui';
-import { LiveAreaMap } from './live-area-map';
+import { LiveAreaMap, mapPixelRatio } from './live-area-map';
 
 // MapLibre stands in as a map that records what it was built with; every other call does nothing.
 const built = vi.hoisted(() => [] as Record<string, unknown>[]);
@@ -60,5 +60,22 @@ describe('LiveAreaMap (accessibility pass, J-A6)', () => {
     rerender(map('en', true));
     expect(canvases).toHaveLength(1);
     expect(canvas.tabIndex).toBe(0);
+  });
+});
+
+describe('LiveAreaMap’s look (owner, 2026-11-25: the landing map’s)', () => {
+  it('starts on the landing’s base style, at a pixel ratio that keeps the canvas under about 4 million pixels', () => {
+    render(map('en'));
+    const options = built.at(-1)!;
+    // Not prefetched here: the style comes from its address and is restyled as MapLibre commits it.
+    expect(options.style).toBe('https://tiles.example/style.json');
+    expect(typeof options.transformStyle).toBe('function');
+    expect(options.cooperativeGestures).toBe(true);
+    vi.stubGlobal('devicePixelRatio', 2);
+    expect(mapPixelRatio(390, 520)).toBe(2);
+    expect(mapPixelRatio(1440, 900)).toBeCloseTo(Math.sqrt(4_000_000 / (1440 * 900)), 5);
+    vi.stubGlobal('devicePixelRatio', 1);
+    expect(mapPixelRatio(1440, 900)).toBe(1);
+    vi.unstubAllGlobals();
   });
 });

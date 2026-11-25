@@ -2,7 +2,7 @@
 
 import { useId, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, BellRing, Lock, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BellRing, Lock } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { routes, type ActionResult, type FindWorkCard, type FindWorkHandlers, type FindWorkPageData, type FindWorkWaiting, type ISODateTime } from '@/contracts';
 import { formatMoney } from '@/shared/format';
@@ -144,9 +144,27 @@ function FindWorkList({ data, now, handlers, liveMap = true }: FindWorkScreenPro
   }
   const cards = listed.filter((card) => !hidden[card.task.id] && !(query.saved && saved[card.task.id] === false));
   const isSaved = (card: FindWorkCard) => saved[card.task.id] ?? card.saved;
+  // Each task on the map: a pin in its category's color with its price, and the card a picked pin opens (its general
+  // area and day, never an address; it opens the task as its row does).
   const places: AreaMapPlace[] = useMemo(() => cards.flatMap((card) => card.task.location.kind === 'local'
-    ? [{ id: card.task.id, point: card.task.location.publicPoint, radiusMeters: card.task.location.radiusMeters, label: budgetLabel(card), name: t('mapPlace', { title: card.task.title, budget: budgetLabel(card), area: card.task.location.areaName }) }]
-    : []), [cards, budgetLabel, t]);
+    ? [{
+      id: card.task.id,
+      point: card.task.location.publicPoint,
+      radiusMeters: card.task.location.radiusMeters,
+      label: budgetLabel(card),
+      name: t('mapPlace', { title: card.task.title, budget: budgetLabel(card), area: card.task.location.areaName }),
+      categorySlug: card.task.categorySlug,
+      fresh: card.isNew,
+      card: {
+        title: card.task.title,
+        area: card.task.location.areaName,
+        when: dayLabel(card.startDay),
+        price: budgetLabel(card),
+        ...(card.earnings.type === 'fixed' ? { detail: t('earn', { amount: formatMoney(card.earnings.amountCents) }) } : {}),
+        href: routes.app.findWorkTask(card.task.id),
+      },
+    }]
+    : []), [cards, budgetLabel, dayLabel, t]);
   const remoteCount = cards.filter((card) => card.task.location.kind === 'remote').length;
 
   // Days as groups when the list goes by start time.
@@ -219,7 +237,6 @@ function FindWorkList({ data, now, handlers, liveMap = true }: FindWorkScreenPro
     } else setOfferError('undo_failed');
   }
 
-  const selectedCard = selected ? cards.find((card) => card.task.id === selected) : undefined;
   const mapArea = data.map.area;
 
   return <div className="mx-auto w-full max-w-content space-y-4">
@@ -269,7 +286,9 @@ function FindWorkList({ data, now, handlers, liveMap = true }: FindWorkScreenPro
             fallbackCenter={data.map.marketCenter}
             activeId={active ?? selected}
             onActiveChange={setActive}
+            selectedId={selected}
             onSelect={setSelected}
+            cardLabels={{ open: t('mapOpenTask'), close: t('closeSelected') }}
             label={t('mapLabel')}
             describedBy={legendId}
             groupLabel={(count) => t('mapGroup', { count })}
@@ -277,11 +296,6 @@ function FindWorkList({ data, now, handlers, liveMap = true }: FindWorkScreenPro
             className="h-[62vh] min-h-80 lg:h-[calc(100vh-var(--app-header-offset,0px)-10rem)]"
           />
           <p id={legendId} className="text-xs text-muted-foreground">{mapArea ? t('mapLegend', { area: mapArea.name, miles: mapArea.serviceRadiusMiles }) : t('mapLegendNoArea')}{remoteCount > 0 ? ` ${t('mapRemote', { count: remoteCount })}` : ''}</p>
-          {selectedCard && <div className="relative rounded-[1.375rem] border border-foreground/[0.07] bg-card p-3 pr-12 shadow-card dark:border-white/[0.06]">
-            <p className="font-semibold"><Link href={routes.app.findWorkTask(selectedCard.task.id)} className="underline-offset-4 hover:underline">{selectedCard.task.title}</Link></p>
-            <p className="text-sm text-muted-foreground tabular-nums">{selectedCard.task.location.kind === 'local' ? selectedCard.task.location.areaName : ''} · {budgetLabel(selectedCard)}{selectedCard.earnings.type === 'fixed' ? ` · ${t('earn', { amount: formatMoney(selectedCard.earnings.amountCents) })}` : ''}</p>
-            <button type="button" onClick={() => setSelected(null)} aria-label={t('closeSelected')} className="absolute top-1.5 right-1.5 inline-flex size-11 items-center justify-center rounded-md hover:bg-accent"><X aria-hidden="true" className="size-4" /></button>
-          </div>}
         </div>
       </div>
     </div>

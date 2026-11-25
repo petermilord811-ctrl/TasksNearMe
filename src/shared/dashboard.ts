@@ -163,6 +163,18 @@ export function dashboardSummary(attentionCount: number, bookings: readonly Dash
 }
 
 /**
+ * "Coming up" on Home (2026-11-25): the bookings still ahead, the same ones the summary counts (booked, from today on),
+ * soonest first, the first `limit`.
+ */
+export function dashboardUpNext(bookings: readonly DashboardItem[], now: Date, timeZone: TimeZone, limit: number): DashboardItem[] {
+  const today = dashboardDateRange('today', 'active', now, timeZone)!.from.getTime();
+  return bookings
+    .filter((item) => item.stage === 'booked' && Date.parse(item.when.start) >= today)
+    .sort((a, b) => Date.parse(a.when.start) - Date.parse(b.when.start))
+    .slice(0, limit);
+}
+
+/**
  * A client's first visit (journeys on a phone, J-C1): no task posted, and no offer or booking on either side, ever. The
  * page then leads with posting a first task instead of empty lists, filters and an all-caught-up note.
  */

@@ -108,6 +108,7 @@
   "mapLegendNoArea": "Los círculos muestran la zona general de cada tarea, nunca la dirección.",
   "mapRemote": "{count, plural, one {# tarea remota aparece} other {# tareas remotas aparecen}} solo en la lista.",
   "closeSelected": "Cerrar",
+  "mapOpenTask": "Ver la tarea",
   "quickOffer": "Ofrecer {price}",
   "quickOfferLabel": "Ofrecer {price} por {title}, a partir de {start}",
   "quickOfferHint": "Al precio del cliente, a partir de {start}. Ganarías {earn}.",

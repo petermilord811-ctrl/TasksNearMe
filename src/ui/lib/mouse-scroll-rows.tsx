@@ -23,6 +23,8 @@ const DRAG_SLOP = 5;
 const GRAB_CLASSES = ['cursor-grab', 'active:cursor-grabbing'];
 
 const SKIPPED = 'input, textarea, select, pre, code, table, [contenteditable=""], [contenteditable="true"]';
+/** Controls whose press is their own: fields, dropdowns and the dropdowns' lists (select-menu-engine.ts). */
+const PRESS_OWN = 'input, textarea, select, option, [contenteditable=""], [contenteditable="true"], [role="listbox"]';
 
 /** The nearest element from `start` up that scrolls sideways with a hidden scrollbar and has more to show, if any. */
 export function sidewaysRowFrom(start: EventTarget | null): HTMLElement | null {
@@ -111,6 +113,8 @@ export function MouseScrollRows() {
 
     const onPointerDown = (event: PointerEvent) => {
       if (event.pointerType !== 'mouse' || event.button !== 0 || event.defaultPrevented) return;
+      // A press on a field or a dropdown in a row is for that control (a select opens its list), never a drag.
+      if (event.target instanceof Element && event.target.closest(PRESS_OWN)) return;
       const row = sidewaysRowFrom(event.target);
       if (!row) return;
       prepareRow(row);

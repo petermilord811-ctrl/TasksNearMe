@@ -114,6 +114,19 @@ describe('sideways rows for a mouse (owner, 2026-11-24)', () => {
     expect(pressed).toHaveBeenCalledOnce();
   });
 
+  it('never drags from a dropdown in a row: its press opens its list (select-menus, 2026-11-25)', () => {
+    render(<MouseScrollRows />);
+    const { list } = row();
+    const select = document.createElement('select');
+    select.innerHTML = '<option>Soonest</option><option>Newest</option>';
+    list.querySelector('li')!.append(select);
+    pointer('pointerdown', select, { x: 200 });
+    pointer('pointermove', select, { x: 100 });
+    expect(list.scrollLeft).toBe(0);
+    expect(list.hasAttribute('data-mouse-dragging')).toBe(false);
+    pointer('pointerup', select, { x: 100 });
+  });
+
   it('leaves touch to the browser', () => {
     render(<MouseScrollRows />);
     const { list, chip } = row();

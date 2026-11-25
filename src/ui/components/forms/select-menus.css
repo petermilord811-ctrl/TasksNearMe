@@ -1,0 +1,203 @@
+/*
+ * Branded dropdown lists (owner, 2026-11-25: "dropdown item is classic one, you didn't customize"). Every dropdown
+ * <select> in the app stays a native select (its value, forms, react-hook-form, the keyboard, screen readers, and the
+ * page before it hydrates); only the list it opens is drawn in the app's popover look:
+ * - where the browser lets a page style its own list (`appearance: base-select`: Chrome and Edge 135+, on computers
+ *   and Android), by this CSS alone;
+ * - elsewhere, for a mouse, by select-menu-engine.ts: a listbox in the same look (`.tnm-select-menu` below). A touch
+ *   screen there (Safari on an iPhone or iPad, Firefox on Android) keeps the platform's own picker, the better one on
+ *   a phone.
+ * A select that shows several rows at once (`multiple`, a `size` above 1), or sits in `[data-native-picker]`, keeps
+ * the browser's own list.
+ */
+
+@supports (appearance: base-select) {
+  select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *),
+  select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *)::picker(select) {
+    appearance: base-select;
+  }
+  /* Styled this way a select lays out its words and arrow as a row: centred in its height, as before. */
+  select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *) {
+    align-items: center;
+  }
+
+  /* The closed select's arrow; a select that draws its own (Tailwind's `appearance-none` and an icon) keeps that. */
+  select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *)::picker-icon {
+    content: "";
+    flex: none;
+    inline-size: 1rem;
+    block-size: 1rem;
+    margin-inline-start: auto;
+    background-color: var(--muted-foreground);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / contain no-repeat;
+    transition: rotate 0.2s var(--ease-out, ease);
+  }
+  select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *):open::picker-icon {
+    rotate: 180deg;
+  }
+  select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *)[class~="appearance-none"]::picker-icon {
+    display: none;
+  }
+
+  /* The list: a popover under the select (above it only when there's no room below), at least as wide as the select. */
+  select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *)::picker(select) {
+    position-try-order: normal;
+    box-sizing: border-box;
+    margin-block: 6px;
+    padding: 6px;
+    max-inline-size: min(24rem, calc(100vw - 16px));
+    max-block-size: min(22rem, 60dvh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    border: 1px solid color-mix(in oklab, var(--foreground) 9%, transparent);
+    border-radius: 1rem;
+    background: var(--popover);
+    color: var(--popover-foreground);
+    box-shadow: var(--overlay-shadow);
+    font-size: 0.9375rem;
+    opacity: 0;
+    translate: 0 -4px;
+    transition: opacity 0.14s ease, translate 0.16s var(--ease-out, ease), display 0.16s allow-discrete, overlay 0.16s allow-discrete;
+  }
+  select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *):open::picker(select) {
+    opacity: 1;
+    translate: 0 0;
+  }
+  @starting-style {
+    select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *):open::picker(select) {
+      opacity: 0;
+      translate: 0 -4px;
+    }
+  }
+
+  select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *) option {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    min-block-size: 2.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.625rem;
+    color: var(--popover-foreground);
+    font-weight: 500;
+    line-height: 1.3;
+    outline: none;
+  }
+  select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *) option:not(:disabled):is(:hover, :focus-visible) {
+    background: var(--brand-soft);
+  }
+  select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *) option:checked {
+    font-weight: 650;
+  }
+  /* The chosen one's check, at the row's end. */
+  select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *) option::checkmark {
+    content: "";
+    order: 1;
+    flex: none;
+    margin-inline-start: auto;
+    inline-size: 1rem;
+    block-size: 1rem;
+    background-color: var(--primary);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *) option:disabled {
+    opacity: 0.45;
+  }
+  select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *) optgroup {
+    padding-block-start: 0.375rem;
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+    font-weight: 650;
+  }
+  select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *) optgroup option {
+    color: var(--popover-foreground);
+    font-size: 0.9375rem;
+  }
+
+  /* A finger's row: 44 px, 16 px words. */
+  @media (pointer: coarse) {
+    select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *) option {
+      min-block-size: 2.75rem;
+      font-size: 1rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *)::picker(select),
+    select:not([multiple], [size]:not([size="1"]), [data-native-picker], [data-native-picker] *)::picker-icon {
+      transition: none;
+    }
+  }
+}
+
+/* The fallback's listbox (select-menu-engine.ts), the same look. */
+.tnm-select-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 2147483000;
+  box-sizing: border-box;
+  min-inline-size: 10rem;
+  max-inline-size: min(24rem, calc(100vw - 16px));
+  max-block-size: 22rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 6px;
+  border: 1px solid color-mix(in oklab, var(--foreground) 9%, transparent);
+  border-radius: 1rem;
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: var(--overlay-shadow);
+  font: 500 0.9375rem/1.3 var(--font-sans, system-ui), system-ui, sans-serif;
+  animation: tnm-select-menu-down 0.16s var(--ease-out, ease) both;
+}
+.tnm-select-menu[data-side="top"] {
+  animation-name: tnm-select-menu-up;
+}
+@keyframes tnm-select-menu-down {
+  from { opacity: 0; translate: 0 -4px; }
+}
+@keyframes tnm-select-menu-up {
+  from { opacity: 0; translate: 0 4px; }
+}
+.tnm-select-menu [role="option"] {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-block-size: 2.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.625rem;
+}
+.tnm-select-menu [role="option"][data-active] {
+  background: var(--brand-soft);
+}
+.tnm-select-menu [role="option"][aria-selected="true"] {
+  font-weight: 650;
+}
+.tnm-select-menu [role="option"][aria-disabled="true"] {
+  opacity: 0.45;
+}
+.tnm-select-menu .tnm-select-check {
+  flex: none;
+  margin-inline-start: auto;
+  inline-size: 1rem;
+  block-size: 1rem;
+  background-color: var(--primary);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  visibility: hidden;
+}
+.tnm-select-menu [aria-selected="true"] > .tnm-select-check {
+  visibility: visible;
+}
+.tnm-select-menu .tnm-select-group {
+  padding: 0.5rem 0.75rem 0.25rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tnm-select-menu {
+    animation: none;
+  }
+}

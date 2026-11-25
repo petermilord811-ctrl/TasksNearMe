@@ -2,18 +2,22 @@
 
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import type { CategorySlug } from '@/contracts';
 import type { LatLng } from '@/shared/geo';
+import { prefetchBaseStyle } from '@/ui/landing/map/base-style';
 import { cn } from '@/ui/lib/utils';
 import { useMapTiles } from './map-tiles';
+import { MapPlaceCard, type MapPlaceCardContent } from './place-card';
 import { StaticAreaMap } from './static-area-map';
 
 /**
  * A map of general areas: each place is its public point and area circle, never an address. The live map
- * (MapLibre with free OpenFreeMap tiles, recolored to the page; `live-area-map.tsx`, loaded only when shown)
- * fades in over a drawn map, which stays when WebGL or the tiles aren't available, and in previews and tests.
- * Markers in the same spot group into a count; hovering or focusing one lights it and reports it, so a list
- * beside the map can light its row too. The wheel scrolls the page until the map is clicked; touch needs two
- * fingers.
+ * (MapLibre with free OpenFreeMap tiles in the landing map's own look: its cleaned, recolored base and the hour's
+ * light; `live-area-map.tsx`, loaded only when shown) fades in over a drawn map, which stays when WebGL or the tiles
+ * aren't available, and in previews and tests. A place with a category is a pin in its category's color and icon
+ * (`map-pins.tsx`); pins close together group into a donut of their categories; hovering or focusing one lights it
+ * and reports it, so a list beside the map can light its row too, and a picked one opens its card (`place-card.tsx`).
+ * The wheel scrolls the page until the map is clicked; touch needs two fingers.
  */
 
 export interface AreaMapPlace {
@@ -24,6 +28,12 @@ export interface AreaMapPlace {
   label: string;
   /** The marker's accessible name, e.g. "Assemble a desk, $60, Mueller". */
   name: string;
+  /** Its category: a pin in the category's color and icon, its area circle in the same color. */
+  categorySlug?: CategorySlug;
+  /** Posted in the last day: a soft halo breathes behind its pin. */
+  fresh?: boolean;
+  /** The card a picked pin opens (with `cardLabels`); without it, picking only reports the place. */
+  card?: MapPlaceCardContent;
 }
 
 export interface AreaMapProps {
@@ -37,7 +47,11 @@ export interface AreaMapProps {
   fallbackCenter: LatLng;
   activeId?: string | null;
   onActiveChange?: (id: string | null) => void;
-  onSelect?: (id: string) => void;
+  /** The picked place: its pin stays lit and its card shows (`null` when its card is closed). */
+  selectedId?: string | null;
+  onSelect?: (id: string | null) => void;
+  /** The card's link and close button. */
+  cardLabels?: { open: string; close: string };
   label: string;
   /** The id of text that explains the map (a legend beside it): the map region's description. */
   describedBy?: string;
@@ -51,6 +65,7 @@ const LiveAreaMap = dynamic(() => import('./live-area-map').then((module) => mod
 
 export function AreaMap(props: AreaMapProps) {
   const tiles = useMapTiles();
+  const styleUrl = props.styleUrl ?? tiles.styleUrl;
   const wantLive = props.live ?? tiles.live;
   const [live, setLive] = useState<'loading' | 'ready' | 'failed'>(wantLive ? 'loading' : 'failed');
   // The live map (MapLibre's code, its style and tiles, a WebGL context) loads once the map is about to be seen: one
@@ -67,6 +82,8 @@ export function AreaMap(props: AreaMapProps) {
     const observer = new IntersectionObserver((entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
       observer.disconnect();
+      // Its style is only network: fetched now, it's ready (and recolored once) by the time the map starts.
+      void prefetchBaseStyle(styleUrl);
       idle = whenIdle(() => setNear(true));
     }, { rootMargin: '300px 0px' });
     observer.observe(element);
@@ -75,13 +92,15 @@ export function AreaMap(props: AreaMapProps) {
       if (typeof cancelIdleCallback === 'function') cancelIdleCallback(idle);
       else window.clearTimeout(idle);
     };
-  }, [wantLive, near]);
-  const drawn = <StaticAreaMap places={props.places} serviceArea={props.serviceArea} fallbackCenter={props.fallbackCenter} activeId={props.activeId} onActiveChange={props.onActiveChange} onSelect={props.onSelect} groupLabel={props.groupLabel} className="absolute inset-0" />;
+  }, [wantLive, near, styleUrl]);
+  const drawn = <StaticAreaMap places={props.places} serviceArea={props.serviceArea} fallbackCenter={props.fallbackCenter} activeId={props.activeId} selectedId={props.selectedId} onActiveChange={props.onActiveChange} onSelect={props.onSelect} groupLabel={props.groupLabel} className="absolute inset-0" />;
+  const picked = props.selectedId ? props.places.find((place) => place.id === props.selectedId) : undefined;
   // One landmark per map, named by its label, whichever map shows (the drawn one or the live one): its markers and the
   // live map's canvas (a named group) sit inside it, and nothing around it adds another (accessibility pass, J-A10).
   return <div ref={box} role="region" aria-label={props.label} aria-describedby={props.describedBy} className={cn('relative min-h-40 overflow-hidden rounded-xl border bg-card', props.className)}>
     {live !== 'ready' && drawn}
-    {near && live !== 'failed' && <LiveAreaMap {...props} styleUrl={props.styleUrl ?? tiles.styleUrl} visible={live === 'ready'} onReady={() => setLive('ready')} onFailed={() => setLive('failed')} />}
+    {near && live !== 'failed' && <LiveAreaMap {...props} styleUrl={styleUrl} visible={live === 'ready'} onReady={() => setLive('ready')} onFailed={() => setLive('failed')} />}
     <p className="pointer-events-none absolute right-2 bottom-1 z-10 rounded bg-card/80 px-1.5 text-[10px] text-muted-foreground">{props.attribution ?? tiles.attribution}</p>
+    {picked?.card && props.cardLabels && <MapPlaceCard key={picked.id} card={picked.card} categorySlug={picked.categorySlug} openLabel={props.cardLabels.open} closeLabel={props.cardLabels.close} onClose={() => props.onSelect?.(null)} />}
   </div>;
 }

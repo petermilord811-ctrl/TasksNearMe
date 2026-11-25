@@ -22,7 +22,9 @@ import { switchTheme, useEffectiveTheme } from './theme-toggle';
 import { SparksBadge } from '@/ui/components/people/sparks-badge';
 
 /** The avatar: a soft ring that warms to the brand color while pointed at or open. */
-const AVATAR = 'size-11 shrink-0 rounded-full bg-secondary object-cover shadow-[0_0_0_1px_color-mix(in_oklab,var(--foreground)_10%,transparent),0_4px_12px_-6px_rgb(60_30_10/0.4)] transition-[box-shadow] duration-300 ease-[var(--ease-out)] group-hover/avatar:shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_28%,transparent),0_6px_16px_-6px_rgb(60_30_10/0.45)] group-data-[state=open]/avatar:shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_40%,transparent),0_6px_16px_-6px_rgb(60_30_10/0.45)]';
+// 32 px in the phone bar's 40 px button (36 in 44 from `sm`), a hairline instead of a drop shadow (2026-11-25: as light
+// as the bar's other buttons).
+const AVATAR = 'size-8 shrink-0 rounded-full sm:size-9 bg-secondary object-cover shadow-[0_0_0_1px_color-mix(in_oklab,var(--foreground)_10%,transparent)] transition-[box-shadow] duration-300 ease-[var(--ease-out)] group-hover/avatar:shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_28%,transparent)] group-data-[state=open]/avatar:shadow-[0_0_0_3px_color-mix(in_oklab,var(--primary)_40%,transparent)]';
 
 export interface AccountMenuProps {
   viewer: SignedInViewer | StaffViewer;
@@ -117,8 +119,8 @@ export function AccountMenu({ viewer, onSignOut, onSwitchLanguage, onModeChange,
           opened, restyling the whole page (speed on a phone); a menu needs neither. */}
       <DropdownMenu modal={false} open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
-          <Button ref={triggerRef} type="button" variant="ghost" size="icon" className="group/avatar rounded-full p-0 hover:bg-transparent active:scale-95 dark:hover:bg-transparent" aria-label={t('accountMenu', { name: viewer.displayName, initials: viewer.initials })} aria-describedby={statusId} aria-busy={pending} disabled={pending}>
-            {pending ? <LoaderCircle aria-hidden="true" className="size-5 animate-spin motion-reduce:animate-none" /> : viewer.photo ? <AvatarPhoto src={viewer.photo.src} alt="" size={44} className={AVATAR} fallback={initials} /> : initials}
+          <Button ref={triggerRef} type="button" variant="ghost" size="icon" className="group/avatar rounded-full p-0 hover:bg-transparent active:scale-95 max-sm:size-10 max-sm:min-h-10 max-sm:min-w-10 dark:hover:bg-transparent" aria-label={t('accountMenu', { name: viewer.displayName, initials: viewer.initials })} aria-describedby={statusId} aria-busy={pending} disabled={pending}>
+            {pending ? <LoaderCircle aria-hidden="true" className="size-5 animate-spin motion-reduce:animate-none" /> : viewer.photo ? <AvatarPhoto src={viewer.photo.src} alt="" size={36} className={AVATAR} fallback={initials} /> : initials}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={8} className="w-64 max-w-[calc(100vw-2rem)]">

@@ -92,7 +92,7 @@ export function ThemeToggle({ className, compact = 'never' }: { className?: stri
       aria-label={label}
       title={t('label')}
       data-theme-toggle="compact"
-      className={cn('inline-flex size-9 shrink-0 items-center justify-center rounded-full text-foreground/80 transition-colors hover:bg-foreground/[0.06] hover:text-foreground sm:hidden', className)}
+      className={cn('inline-flex size-10 shrink-0 items-center justify-center rounded-full text-foreground/80 transition-colors hover:bg-foreground/[0.06] hover:text-foreground sm:hidden', className)}
     >
       <Moon aria-hidden="true" className="size-5 dark:hidden" />
       <Sun aria-hidden="true" className="hidden size-5 dark:block" />

@@ -6,6 +6,24 @@ one and non-claude use one)", and "Organize pages more simple and clearly."
 `/app` stops being a landing page of big cards and becomes a working dashboard: what needs you, then your tasks,
 offers and bookings as compact lists you can filter, switch to cards or a map, and search, with or without AI.
 
+## 0. Home's redesign (2026-11-25)
+
+Owner: "show more meaningful and necessary things on home tab. Design the layout more correctly for better UI/UX.
+learn from other sites." The lists below (§2–§6) stay as they are, the URL included, but move down the page under a
+visible title; above them Home now opens the way home-service apps do:
+
+1. **The day:** "Tue, Nov 25 · Austin" (the home market, `DashboardData.place`), the greeting, and the two facts as
+   chips ("1 thing needs you", "No bookings coming up"); a helper's earnings beside them.
+2. **What you came for:** in "I need help" mode, a "What do you need help with?" card with the search (and Ask AI)
+   and the market's categories as chips that start a task in one tap (`routes.app.newTask({ category })`). A helper's
+   search stays right above the lists it searches.
+3. **Needs your attention,** compact: two-line headlines, the explanation in one line on phones.
+4. **Coming up:** the next bookings, either side, soonest first (`upNext`, at most two, the summary's own rule in
+   `dashboardUpNext`), or "Nothing booked yet" with the way to find a helper or work.
+5. **New near you** (helpers): their best open tasks nearby, the ones they can still offer on (`nearbyTop`, at most
+   three), whatever list is open and however it's filtered, with "See all in Find work".
+6. Then the lists (their filters one sideways row on phones), and "From your neighbors".
+
 ## 1. Principles
 
 - **Compact.** One row per item (about 60 px), many items on one screen. Cards and the map are a choice, not the default.

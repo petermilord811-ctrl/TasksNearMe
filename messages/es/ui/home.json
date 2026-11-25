@@ -11,7 +11,10 @@
   "sections": {
     "attention": "Requiere tu atención",
     "earnings": "Ganancias de un vistazo",
-    "lists": "Tus tareas, ofertas y reservas"
+    "lists": "Tus tareas, ofertas y reservas",
+    "ask": "¿Con qué necesitas ayuda?",
+    "upNext": "Próximamente",
+    "nearbyTop": "Nuevas cerca de ti"
   },
   "caughtUp": "Estás al día. Lo que requiera tu atención aparecerá aquí.",
   "firstRun": {
@@ -329,5 +332,24 @@
     "placeNearby": "Cerca de {area}",
     "placeMarket": "En todo {market}",
     "waiting": "{count, plural, one {# pregunta espera respuesta} other {# preguntas esperan respuesta}}"
+  },
+  "dateLine": "{date} · {place}",
+  "ask": {
+    "categories": "Empieza por una categoría"
+  },
+  "upNext": {
+    "all": "Todas las reservas",
+    "none": {
+      "poster": "Todavía no hay nada reservado.",
+      "helper": "Todavía no tienes trabajos reservados."
+    },
+    "find": {
+      "poster": "Buscar un ayudante",
+      "helper": "Buscar trabajo"
+    }
+  },
+  "nearbyTop": {
+    "all": "Ver todo en Buscar trabajo",
+    "none": "Ahora no hay tareas nuevas cerca de ti."
   }
 }

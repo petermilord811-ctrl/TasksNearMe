@@ -11,7 +11,10 @@
   "sections": {
     "attention": "Needs your attention",
     "earnings": "Earnings at a glance",
-    "lists": "Your tasks, offers and bookings"
+    "lists": "Your tasks, offers and bookings",
+    "ask": "What do you need help with?",
+    "upNext": "Coming up",
+    "nearbyTop": "New near you"
   },
   "caughtUp": "You’re all caught up. Anything that needs you will show here.",
   "firstRun": {
@@ -329,5 +332,24 @@
     "placeNearby": "Near {area}",
     "placeMarket": "Across {market}",
     "waiting": "{count, plural, one {# question is waiting for an answer} other {# questions are waiting for an answer}}"
+  },
+  "dateLine": "{date} · {place}",
+  "ask": {
+    "categories": "Start with a category"
+  },
+  "upNext": {
+    "all": "All bookings",
+    "none": {
+      "poster": "Nothing booked yet.",
+      "helper": "No jobs booked yet."
+    },
+    "find": {
+      "poster": "Find a helper",
+      "helper": "Find work"
+    }
+  },
+  "nearbyTop": {
+    "all": "See all in Find work",
+    "none": "No new tasks near you right now."
   }
 }

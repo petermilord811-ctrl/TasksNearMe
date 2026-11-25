@@ -350,7 +350,7 @@ describe('empty lists', () => {
     renderDashboard(priyaDashboardData, { now: DASHBOARD_HELPER_NOW });
     expect(screen.getAllByRole('link', { name: /Finish setting up/ })).toHaveLength(1);
     expect(region('Needs your attention').getByRole('link', { name: /Finish setting up/ })).toHaveAttribute('href', routes.app.helperOnboarding('identity'));
-    expect(screen.getAllByRole('article').length).toBe(priyaDashboardData.items.length);
+    expect(region('Your tasks, offers and bookings').getAllByRole('article').length).toBe(priyaDashboardData.items.length);
   });
 });
 
@@ -446,5 +446,42 @@ describe('search', () => {
   it('counts this month’s AI searches near the month’s end, when they’re fewer than today’s', () => {
     renderDashboard(mayaDashboardMonthEndData, { handlers: { onAiSearch: async () => aiAnswerClientResult } });
     expect(screen.getByText(/^1 AI search left this month · renews Tue, Dec 1$/)).toBeVisible();
+  });
+});
+
+describe('Home, 2026-11-25 (owner: "show more meaningful and necessary things on home tab")', () => {
+  it('opens with the date and the place, and someone who needs help with what they need, then categories that start a task', () => {
+    renderDashboard(mayaDashboardData);
+    expect(screen.getByText(/· Austin$/)).toBeInTheDocument();
+    const ask = region('What do you need help with?');
+    expect(ask.getByRole('search')).toBeInTheDocument();
+    const categories = ask.getByRole('navigation', { name: 'Start with a category' });
+    const first = mayaDashboardData.categories[0]!;
+    expect(within(categories).getAllByRole('link')).toHaveLength(mayaDashboardData.categories.length);
+    expect(within(categories).getAllByRole('link')[0]).toHaveAttribute('href', routes.app.newTask({ category: first }));
+    // The search is in the card, not again above the lists.
+    expect(screen.getAllByRole('search')).toHaveLength(1);
+  });
+
+  it('shows what is coming up, either side, soonest first, with the way to all bookings', () => {
+    renderDashboard(mayaDashboardData);
+    const upNext = region('Coming up');
+    expect(upNext.queryAllByRole('article')).toHaveLength(mayaDashboardData.upNext.length);
+    if (mayaDashboardData.upNext.length > 0) expect(upNext.getByRole('link', { name: 'All bookings' })).toHaveAttribute('href', routes.app.bookings());
+    cleanup();
+    renderDashboard({ ...mayaDashboardData, upNext: [] });
+    const none = region('Coming up');
+    expect(none.getByText('Nothing booked yet.')).toBeInTheDocument();
+    expect(none.getByRole('link', { name: 'Find a helper' })).toHaveAttribute('href', routes.app.helpers());
+  });
+
+  it('gives a helper the best open tasks nearby, whatever list is open, and the way to Find work', () => {
+    renderDashboard(jordanDashboardData, { now: DASHBOARD_HELPER_NOW });
+    const nearby = region('New near you');
+    expect(nearby.getAllByRole('article')).toHaveLength(jordanDashboardData.nearbyTop!.length);
+    expect(nearby.getByRole('link', { name: 'See all in Find work' })).toHaveAttribute('href', routes.app.findWork());
+    // A helper's search stays right above the lists; no "What do you need help with?" card.
+    expect(screen.queryByRole('region', { name: 'What do you need help with?' })).toBeNull();
+    expect(region('Coming up').queryAllByRole('article')).toHaveLength(jordanDashboardData.upNext.length);
   });
 });

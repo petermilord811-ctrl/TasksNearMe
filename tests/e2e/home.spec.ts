@@ -12,13 +12,16 @@ test("a client's dashboard: attention, their tasks first, and the filters and vi
   await expect(page.getByRole('heading', { level: 1, name: /Good (morning|afternoon|evening), Ben/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Needs your attention' })).toBeVisible();
   const lists = page.getByRole('navigation', { name: 'Lists' });
+  // The lists' own section ("Coming up" above it shows his booking too, 2026-11-25).
+  const listed = page.getByRole('region', { name: 'Your tasks, offers and bookings' });
   await expect(lists.getByRole('link', { name: /^Tasks \d+ items?$/ })).toHaveAttribute('aria-current', 'true');
   await expect(lists.getByRole('link')).toHaveCount(3);
-  // His booked task is in his tasks; the booking itself is under Bookings.
-  await expect(page.getByRole('link', { name: 'Anchor a tall bookshelf to the wall' }).first()).toHaveAttribute('href', /\/app\/tasks\/tsk_tv$/);
+  // His booked task is in his tasks; the booking itself is under Bookings, and coming up.
+  await expect(listed.getByRole('link', { name: 'Anchor a tall bookshelf to the wall' }).first()).toHaveAttribute('href', /\/app\/tasks\/tsk_tv$/);
+  await expect(page.getByRole('region', { name: 'Coming up' }).getByRole('link', { name: 'Anchor a tall bookshelf to the wall' })).toHaveAttribute('href', /\/app\/bookings\/bkg_tv$/);
   await lists.getByRole('link', { name: /^Bookings/ }).click();
   await expect(page).toHaveURL(/\/app\?tab=bookings$/);
-  await expect(page.getByRole('link', { name: 'Anchor a tall bookshelf to the wall' })).toHaveAttribute('href', /\/app\/bookings\/bkg_tv$/);
+  await expect(listed.getByRole('link', { name: 'Anchor a tall bookshelf to the wall' })).toHaveAttribute('href', /\/app\/bookings\/bkg_tv$/);
   await expect(page.getByRole('link', { name: 'See all bookings' })).toHaveAttribute('href', /\/app\/bookings$/);
 
   // A filter is a URL, kept on reload; a status with nothing in it says so.
@@ -41,7 +44,7 @@ test("a client's dashboard: attention, their tasks first, and the filters and vi
   await views.getByRole('link', { name: 'Cards' }).click();
   await expect(page).toHaveURL(/view=cards/);
   await expect(views.getByRole('link', { name: 'Cards' })).toHaveAttribute('aria-current', 'true');
-  await expect(page.getByRole('article').first()).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Your tasks, offers and bookings' }).getByRole('article').first()).toBeVisible();
   // His tasks are all at his home: no map is offered.
   await expect(views.getByRole('link', { name: 'Map' })).toHaveCount(0);
 });
@@ -90,7 +93,8 @@ test("a helper's dashboard: jobs first, earnings at a glance, and nearby tasks o
   await nearby.click();
   await expect(page).toHaveURL(/tab=nearby/);
   // Matches open Find work's view of the task; with none, the empty list says how to find more.
-  if (matches > 0) await expect(page.getByRole('article').first().getByRole('link').first()).toHaveAttribute('href', /\/app\/find-work\//);
+  // (The lists' own rows: "Coming up" and "New near you" sit above them, 2026-11-25.)
+  if (matches > 0) await expect(page.getByRole('region', { name: 'Your tasks, offers and bookings' }).getByRole('article').first().getByRole('link').first()).toHaveAttribute('href', /\/app\/find-work\//);
   else await expect(page.getByRole('heading', { name: 'No open tasks near you right now' })).toBeVisible();
   const map = page.getByRole('group', { name: 'Show as' }).getByRole('link', { name: 'Map' });
   if (await map.count()) {

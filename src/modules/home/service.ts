@@ -1,5 +1,7 @@
 import { and, eq, gt, gte, inArray, isNull, ne, notInArray, or } from 'drizzle-orm';
 import {
+  DASHBOARD_NEARBY_TOP_LIMIT,
+  DASHBOARD_UP_NEXT_LIMIT,
   type AttentionItem,
   type CategorySlug,
   type DashboardData,
@@ -42,6 +44,7 @@ import {
   dashboardSeeAll,
   dashboardSummary,
   dashboardTabsFor,
+  dashboardUpNext,
   isDashboardFirstRun,
   isHelperFirstRun,
   nearbyItem,
@@ -260,6 +263,8 @@ async function receivedOfferItems(db: Db, userId: string, now: Date): Promise<Da
 
 /** How many open tasks nearby the dashboard reads at once (the tab counts them; the list shows the first 20). */
 const NEARBY_LIMIT = 100;
+/** "New near you" shows three; a few more are read since some are already offered on or blocked. */
+const NEARBY_TOP_READ = 8;
 
 /** Open tasks in the client's market for their search (others' tasks; their own and blocked people's left out). */
 async function clientNearby(db: Db, userId: string, marketId: string, filters: { category?: CategorySlug; q?: string; window?: { from: Date; to: Date } }, now: Date): Promise<TaskPublicView[]> {
@@ -297,7 +302,7 @@ export async function getDashboard(db: Db, viewer: DashboardViewer, query: Dashb
   const words = { ...(filters.category ? { category: filters.category } : {}), ...(filters.q ? { q: filters.q } : {}) };
 
   const [[home], page, unread, access] = await Promise.all([
-    db.select({ marketId: users.homeMarketId, marketSlug: markets.slug, lat: markets.centerLat, lng: markets.centerLng }).from(users).leftJoin(markets, eq(markets.id, users.homeMarketId)).where(eq(users.id, userId)).limit(1),
+    db.select({ marketId: users.homeMarketId, marketSlug: markets.slug, marketName: markets.name, lat: markets.centerLat, lng: markets.centerLng }).from(users).leftJoin(markets, eq(markets.id, users.homeMarketId)).where(eq(users.id, userId)).limit(1),
     getBookingsPage(db, userId, now),
     unreadItem(db, userId, now),
     aiSearchAccess(db, userId, now),
@@ -311,21 +316,31 @@ export async function getDashboard(db: Db, viewer: DashboardViewer, query: Dashb
       })()
     : null;
 
+  // "New near you" on Home follows no filter: with the nearby list filtered, its own small unfiltered read beside.
+  const nearbyFiltered = nearbyWanted && (Object.keys(words).length > 0 || range !== null);
   const helper = sides.helper
     ? await (async () => {
-        const [state, sent, earnings, feed] = await Promise.all([
+        const [state, sent, earnings, feed, plainFeed] = await Promise.all([
           loadHelperState(db, userId, now),
           getMyOffers(db, userId, now),
           getEarningsPage(db, userId, now),
-          // Find work's own read (its area, setup, waiting for the city); only its first row when nearby isn't shown.
+          // Find work's own read (its area, setup, waiting for the city); when nearby isn't shown, its first few rows
+          // for "New near you".
           nearbyWanted
             ? getFindWorkPageData(db, userId, words, now, { limit: NEARBY_LIMIT, ...(range ? { window: range } : {}) })
-            : getFindWorkPageData(db, userId, {}, now, { limit: 1 }),
+            : getFindWorkPageData(db, userId, {}, now, { limit: NEARBY_TOP_READ }),
+          nearbyFiltered ? getFindWorkPageData(db, userId, {}, now, { limit: NEARBY_TOP_READ }) : Promise.resolve(null),
         ]);
         const attention = await helperAttention(db, userId, { state, activeOffers: sent.active, payoutActionNeeded: earnings.payoutAccount.actionNeeded }, now);
         // Matches: tasks they can offer on and haven't yet; while setting up, everything nearby to browse.
-        const cards = nearbyWanted && feed && !feed.waitingFor ? feed.cards.filter((card) => !card.myOffer && (!state.setup.bookable || !card.blockedReason)) : [];
-        return { state, sent, earnings, feed, attention, nearby: cards.map((card) => nearbyItem(card.task, 'helper', now)) };
+        const matchesOf = (page: typeof feed | null) => (page && !page.waitingFor ? page.cards.filter((card) => !card.myOffer && (!state.setup.bookable || !card.blockedReason)) : []);
+        const cards = nearbyWanted ? matchesOf(feed) : [];
+        const top = matchesOf(plainFeed ?? feed).slice(0, DASHBOARD_NEARBY_TOP_LIMIT);
+        return {
+          state, sent, earnings, feed, attention,
+          nearby: cards.map((card) => nearbyItem(card.task, 'helper', now)),
+          nearbyTop: top.map((card) => nearbyItem(card.task, 'helper', now)),
+        };
       })()
     : null;
 
@@ -357,6 +372,9 @@ export async function getDashboard(db: Db, viewer: DashboardViewer, query: Dashb
     attention,
     summary: dashboardSummary(attention.length, itemsOf.bookings, now, viewer.timeZone),
     ...lists,
+    upNext: dashboardUpNext(itemsOf.bookings, now, viewer.timeZone, DASHBOARD_UP_NEXT_LIMIT),
+    ...(helper && helper.feed && !helper.feed.waitingFor ? { nearbyTop: helper.nearbyTop } : {}),
+    ...(home?.marketName ? { place: home.marketName } : {}),
     categories: categoryViews.map((category) => category.slug),
     seeAll: dashboardSeeAll(filters.tab, { mode: viewer.mode, sides, ...(home?.marketSlug ? { market: home.marketSlug } : {}), words }),
     map: {

@@ -108,6 +108,7 @@
   "mapLegendNoArea": "Circles show each task's general area, never the address.",
   "mapRemote": "{count, plural, one {# remote task is} other {# remote tasks are}} in the list only.",
   "closeSelected": "Close",
+  "mapOpenTask": "View task",
   "quickOffer": "Offer {price}",
   "quickOfferLabel": "Offer {price} for {title}, starting at {start}",
   "quickOfferHint": "At their price, starting at {start}. You’d earn {earn}.",

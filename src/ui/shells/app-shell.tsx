@@ -21,6 +21,11 @@ import { MobileBottomNav } from './mobile-bottom-nav';
 import { getAppNav } from './nav';
 import { PushDeviceGuard } from '@/ui/components/push/push-device-guard';
 
+/** A count on a bar button (unread messages, notifications): small, on the icon's corner, ringed off the bar. */
+/** The phone bar's buttons: 40 px (the base's 44 px from `sm`), so the logo's words fit on one line more often. */
+const PHONE_BUTTON = 'max-sm:size-10 max-sm:min-h-10 max-sm:min-w-10';
+const BADGE = 'absolute top-1 right-0.5 min-w-[1.125rem] rounded-full bg-primary px-1 text-center text-[0.625rem] leading-[1.125rem] font-semibold text-primary-foreground tabular-nums ring-2 ring-background';
+
 export interface AppShellProps {
   viewer: SignedInViewer;
   handlers: AppShellHandlers;
@@ -54,12 +59,13 @@ export function AppShell({ viewer, handlers, children, currentPath, layout, noti
     <ScrollbarActivity />
     {handlers.onCheckPushDevice && <PushDeviceGuard viewerId={viewer.id} onCheck={handlers.onCheckPushDevice} />}
     <AppBar>
-      <div className="mx-auto flex max-w-admin flex-wrap items-center gap-x-2 gap-y-2 px-gutter py-2 sm:flex-nowrap sm:gap-x-3 sm:py-2.5">
-        <Logo animated stack="phones" />
+      <div className="mx-auto flex max-w-admin flex-nowrap items-center gap-x-2 px-gutter py-2 sm:gap-x-3 sm:py-2.5">
+        <Logo animated stack="auto" />
         {/* On phones the avatar menu switches the mode instead, so the bar stays one row (audit M38). */}
         <div className="hidden sm:ml-3 sm:block lg:ml-5"><ModeSwitch mode={viewer.mode} onModeChange={handlers.onModeChange} /></div>
-        {/* Phones: five 44 px buttons beside the two-line logo fit 360 px with 2 px between them. */}
-        <div className="ml-auto flex items-center gap-0.5 sm:gap-1.5">
+        {/* Phones: 40 px buttons, and the logo's words on one line where they fit (a client's five buttons from about
+            386 px, a helper's four everywhere); below that, on two lines by themselves. */}
+        <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1.5">
           {/* The next thing to do in this mode, one tap away. */}
           <QuickAction mode={viewer.mode} />
           <span aria-hidden="true" className="mx-1 hidden h-7 w-px bg-foreground/10 sm:block" />
@@ -68,13 +74,13 @@ export function AppShell({ viewer, handlers, children, currentPath, layout, noti
           <ThemeToggle compact="phones" />
           {/* Phones and tablets (owner, 2026-11-24): Messages in the bar, with its unread count, where the floating chat
               button was. Wide screens keep the chat window's button. */}
-          <Link href={routes.app.messages()} data-bar-messages className={buttonVariants({ variant: 'ghost', size: 'icon', className: 'relative rounded-full text-foreground/80 lg:hidden' })} aria-label={viewer.unreadMessages > 0 ? t('messagesUnread', { count: viewer.unreadMessages }) : t('messages')}>
+          <Link href={routes.app.messages()} data-bar-messages className={buttonVariants({ variant: 'ghost', size: 'icon', className: `relative rounded-full text-foreground/80 lg:hidden ${PHONE_BUTTON}` })} aria-label={viewer.unreadMessages > 0 ? t('messagesUnread', { count: viewer.unreadMessages }) : t('messages')}>
             <MessagesSquare aria-hidden="true" className="size-5" />
-            {viewer.unreadMessages > 0 && <span aria-hidden="true" className="absolute top-1 right-0.5 min-w-5 rounded-full bg-primary px-1.5 text-center text-[0.6875rem] leading-5 font-semibold text-primary-foreground tabular-nums ring-2 ring-background">{viewer.unreadMessages > 99 ? '99+' : viewer.unreadMessages}</span>}
+            {viewer.unreadMessages > 0 && <span aria-hidden="true" className={BADGE}>{viewer.unreadMessages > 99 ? '99+' : viewer.unreadMessages}</span>}
           </Link>
-          <Link href={routes.app.recentNotifications()} className={buttonVariants({ variant: 'ghost', size: 'icon', className: 'relative rounded-full text-foreground/80' })} aria-label={viewer.unreadNotifications > 0 ? t('unreadNotifications', { count: viewer.unreadNotifications }) : t('notifications')}>
+          <Link href={routes.app.recentNotifications()} className={buttonVariants({ variant: 'ghost', size: 'icon', className: `relative rounded-full text-foreground/80 ${PHONE_BUTTON}` })} aria-label={viewer.unreadNotifications > 0 ? t('unreadNotifications', { count: viewer.unreadNotifications }) : t('notifications')}>
             <Bell aria-hidden="true" className="size-5" />
-            {viewer.unreadNotifications > 0 && <span aria-hidden="true" className="absolute top-1 right-0.5 min-w-5 rounded-full bg-primary px-1.5 text-center text-[0.6875rem] leading-5 font-semibold text-primary-foreground tabular-nums ring-2 ring-background">{viewer.unreadNotifications}</span>}
+            {viewer.unreadNotifications > 0 && <span aria-hidden="true" className={BADGE}>{viewer.unreadNotifications > 99 ? '99+' : viewer.unreadNotifications}</span>}
           </Link>
           <AccountMenu viewer={viewer} onSignOut={handlers.onSignOut} onSwitchLanguage={handlers.onSwitchLanguage} onModeChange={handlers.onModeChange} {...(handlers.onForgetPushDevice ? { onForgetPushDevice: handlers.onForgetPushDevice } : {})} />
         </div>

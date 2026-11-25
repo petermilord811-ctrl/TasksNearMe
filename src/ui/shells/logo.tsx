@@ -63,20 +63,28 @@ export function BrandMark({ className, animated = false }: { className?: string;
 /**
  * The wordmark: one lowercase word, "near" in the brand gradient. `stack="phones"` sets it as two lines below `sm`
  * (owner, 2026-11-24: "in phone mode or space is not enough, show tasksnearme logo text in two lines"): "tasks" over
- * "nearme" at 16 px, tight, about as tall as the mark and 53 px wide, so a 360 px bar keeps room for five buttons.
+ * "nearme" at 16 px, tight, about as tall as the mark. `stack="auto"` (the signed-in bar, 2026-11-25; owner: "header
+ * tasksnearme title and other buttons look uncomfortable"): one line at 16 px on phones while the bar has room, and
+ * "nearme" goes under "tasks" by itself only when it hasn't (the logo's link shrinks first), so every width, mode and
+ * language gets one line where it fits.
  */
-export function Wordmark({ className, stack = 'never' }: { className?: string; stack?: 'never' | 'phones' }) {
+export function Wordmark({ className, stack = 'never' }: { className?: string; stack?: 'never' | 'phones' | 'auto' }) {
   return (
-    <span aria-hidden="true" className={cn('font-display text-[1.375rem] leading-none font-bold tracking-[-0.055em] text-foreground [font-stretch:92%]', stack === 'phones' && 'max-sm:inline-grid max-sm:text-base max-sm:leading-[0.92] max-sm:tracking-[-0.045em]', className)}>
+    <span aria-hidden="true" className={cn(
+      'font-display text-[1.375rem] leading-none font-bold tracking-[-0.055em] text-foreground [font-stretch:92%]',
+      stack === 'phones' && 'max-sm:inline-grid max-sm:text-base max-sm:leading-[0.92] max-sm:tracking-[-0.045em]',
+      stack === 'auto' && 'max-sm:inline-flex max-sm:min-w-0 max-sm:flex-wrap max-sm:text-base max-sm:leading-[0.94] max-sm:tracking-[-0.045em]',
+      className,
+    )}>
       <span>tasks</span><span><span className="text-iridescent">near</span>me</span>
     </span>
   );
 }
 
-export function Logo({ variant = 'full', animated = false, stack = 'never', className }: { variant?: 'full' | 'mark'; animated?: boolean; stack?: 'never' | 'phones'; className?: string }) {
+export function Logo({ variant = 'full', animated = false, stack = 'never', className }: { variant?: 'full' | 'mark'; animated?: boolean; stack?: 'never' | 'phones' | 'auto'; className?: string }) {
   const t = useTranslations('shell');
   return (
-    <Link href={routes.home()} aria-label={t('homeLink')} className={cn('brand-logo inline-flex min-h-11 min-w-11 shrink-0 items-center gap-2.5 rounded-xl', stack === 'phones' && 'max-sm:gap-2', className)}>
+    <Link href={routes.home()} aria-label={t('homeLink')} className={cn('brand-logo inline-flex min-h-11 min-w-11 shrink-0 items-center gap-2.5 rounded-xl', stack === 'phones' && 'max-sm:gap-2', stack === 'auto' && 'max-sm:min-w-0 max-sm:shrink max-sm:gap-2', className)}>
       <BrandMark animated={animated} />
       {variant === 'full' && <Wordmark stack={stack} />}
     </Link>

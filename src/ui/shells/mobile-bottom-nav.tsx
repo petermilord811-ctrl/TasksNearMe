@@ -14,8 +14,10 @@ export function opensKeyboard(element: Element | null): boolean {
 }
 
 /**
- * The phone's tab dock: a glass bar floating just above the bottom edge (and the safe area). It shares its real
- * height, gap included, so pages and their sticky action bars stay clear of it.
+ * The phone's tab dock (2026-11-25, owner: "upgrade footer shape more idealistic and professional"): a solid bar the
+ * full width of the screen, on the bottom edge and over the safe area, with a cradle cut into the middle of its top
+ * edge where Home's raised circle sits (`dock-cradle`, globals.css). It shares its real height, the circle's 17 px
+ * above the bar included, so pages and their sticky action bars stay clear of both.
  *
  * While a text field has focus on a touch-first device the keyboard is up and the page has resized above it
  * (`interactive-widget`, root layout): the dock steps aside (out of sight and inert) and shares a height of 0, so the
@@ -64,11 +66,17 @@ export function MobileBottomNav({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  return <div ref={navRef} data-mobile-bottom-nav data-typing={typing || undefined} inert={typing} className={cn('pointer-events-none fixed inset-x-0 bottom-0 z-30 px-2.5 pb-[max(.625rem,env(safe-area-inset-bottom))] transition-transform duration-200 ease-[var(--ease-out)] motion-reduce:transition-none lg:hidden', typing && 'translate-y-[calc(100%+1rem)]')}>
-    {/* A solid bar in the brand's soft color (owner, 2026-11-22: "make that bar solid color, diff from back color, it's
-        not shown clear"): the frosted glass took on the page's own color. */}
-    <div className="pointer-events-auto mx-auto max-w-md rounded-[1.75rem] border border-primary/[0.16] bg-secondary p-1.5 shadow-[0_1px_2px_rgb(23_18_14/0.05),0_18px_40px_-18px_rgb(40_20_5/0.45)] dark:border-white/[0.08] dark:shadow-[0_18px_40px_-16px_rgb(0_0_0/0.8)]">
-      {children}
+  return <div ref={navRef} data-mobile-bottom-nav data-typing={typing || undefined} inert={typing} className={cn('pointer-events-none fixed inset-x-0 bottom-0 z-30 pt-[1.0625rem] transition-transform duration-200 ease-[var(--ease-out)] motion-reduce:transition-none lg:hidden', typing && 'translate-y-[calc(100%+1rem)]')}>
+    {/* The whole bar takes taps (nothing under it is reached by a tap on its edge); the 17 px above it is the circle's. */}
+    <div className="pointer-events-auto relative">
+      {/* Solid, set apart from the page by its own color, a hairline and a soft shadow that follow the cradle (owner,
+          2026-11-22: "make that bar solid color, diff from back color, it's not shown clear"). */}
+      <div aria-hidden="true" className="dock-elevation absolute inset-0 dark:[filter:drop-shadow(0_-1px_0_rgb(255_255_255/0.07))_drop-shadow(0_-12px_26px_rgb(0_0_0/0.55))]">
+        <div className="dock-cradle absolute inset-0 bg-card dark:bg-[color-mix(in_oklab,var(--card)_88%,white)]" />
+      </div>
+      <div className="relative mx-auto max-w-[34rem] px-1 pb-[env(safe-area-inset-bottom)]">
+        {children}
+      </div>
     </div>
   </div>;
 }

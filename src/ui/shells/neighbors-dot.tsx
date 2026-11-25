@@ -19,5 +19,5 @@ export function NeighborsDot({ latestAt, visitKey, bottom }: { latestAt: string;
   const onNeighbors = /\/app\/community(?:\/|$)/.test(pathname ?? '');
   if (onNeighbors || typeof lastSeen !== 'number' || Date.parse(latestAt) <= lastSeen) return null;
   // Named as an image, so the link's name gains "New posts" while its text stays "Neighbors".
-  return <span role="img" aria-label={t('neighborsNew')} className={cn('rounded-full bg-primary ring-2', bottom ? 'absolute top-1.5 left-[calc(50%+0.45rem)] size-2.5 ring-secondary' : 'ml-auto size-2.5 ring-background')} />;
+  return <span role="img" aria-label={t('neighborsNew')} className={cn('rounded-full bg-primary ring-2', bottom ? 'absolute top-0.5 left-[calc(50%+0.45rem)] size-2.5 ring-card' : 'ml-auto size-2.5 ring-background')} />;
 }

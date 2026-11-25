@@ -84,6 +84,9 @@
     "helpChat": "Help",
     "liveChat": "Live chat"
   },
+  "navShort": {
+    "helpers": "Helpers"
+  },
   "footer": {
     "tagline": "Good neighbors. Lighter to-do lists.",
     "introduction": "Local help for the things that make a home, and a little more time for you.",

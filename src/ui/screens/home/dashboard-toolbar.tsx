@@ -56,9 +56,10 @@ export function DashboardToolbar({ data }: { data: DashboardData }) {
   const dates = query.status === 'done' ? 'pastDateOptions' : 'dateOptions';
   const views: DashboardView[] = data.mapAvailable ? ['list', 'cards', 'map'] : ['list', 'cards'];
 
-  // One wrapping row: nothing is cut off on a phone (two lines there, the view switch at the second's end), one line
-  // on wide screens with the view switch at the right.
-  return <div role="group" aria-label={t('filtersLabel')} className="flex flex-wrap items-center gap-2">
+  // One row (2026-11-25, Home's redesign: it took two on a phone): on phones the filters scroll sideways under a fade
+  // at the edge while the view switch stays at the right; from `sm` they wrap, nothing cut off.
+  return <div className="flex items-center gap-2">
+    <div role="group" aria-label={t('filtersLabel')} className="-my-1 flex min-w-0 flex-1 items-center gap-2 py-1 max-sm:-ml-gutter max-sm:overflow-x-auto max-sm:pl-gutter max-sm:[mask-image:linear-gradient(to_right,transparent,#000_var(--spacing-gutter,1rem),#000_calc(100%-1.5rem),transparent)] max-sm:[scrollbar-width:none] sm:flex-wrap max-sm:[&::-webkit-scrollbar]:hidden">
     <FilterSelect label={t('status')} value={query.status} active={query.status !== 'active'} onChange={(status) => go({ status: status as DashboardQuery['status'] })}>
       {DASHBOARD_STATUSES.map((status) => <option key={status} value={status}>{t(`statusOptions.${status}`)}</option>)}
     </FilterSelect>
@@ -72,6 +73,7 @@ export function DashboardToolbar({ data }: { data: DashboardData }) {
     {filtered && <Link href={routes.app.home({ tab: query.tab, view: query.view, ...(query.q ? { q: query.q } : {}) })} scroll={false} className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-full px-2.5 text-sm font-semibold text-primary underline-offset-4 hover:underline">
       <X aria-hidden="true" className="size-4" />{t('clear')}
     </Link>}
+    </div>
     <div role="group" aria-label={t('viewsLabel')} className="ml-auto flex shrink-0 rounded-full border bg-card p-0.5 shadow-card">
       {views.map((view) => {
         const Icon = VIEW_ICONS[view];

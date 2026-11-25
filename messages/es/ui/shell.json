@@ -84,6 +84,9 @@
     "helpChat": "Ayuda",
     "liveChat": "Chat en vivo"
   },
+  "navShort": {
+    "helpers": "Ayudantes"
+  },
   "footer": {
     "tagline": "Buenos vecinos. Listas de pendientes más ligeras.",
     "introduction": "Ayuda local para lo que hace un hogar, y un poco más de tiempo para ti.",

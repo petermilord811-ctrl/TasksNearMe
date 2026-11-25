@@ -106,7 +106,7 @@
   --page-gutter: 1rem;
   --card-padding: 1rem;
   --section-gap: 1.5rem;
-  --app-bottom-nav-height: calc(6rem + env(safe-area-inset-bottom));
+  --app-bottom-nav-height: calc(5.0625rem + env(safe-area-inset-bottom));
   --layer-action: 20;
   --layer-navigation: 30;
   --layer-dev: 40;
@@ -608,6 +608,22 @@ html[data-motion="on"] [data-reveal]:not([data-revealed]) .draw-on-reveal { stro
 /* AppShell supplies this only when mobile tabs are present. Portaled sheets
    and standalone flow pages keep their actions at the viewport bottom. */
 @utility bottom-app-navigation { bottom: var(--app-bottom-offset, 0px); }
+
+/* The phone dock's shape (2026-11-25, owner: "upgrade footer shape more idealistic and professional"): a full-width
+   solid bar with a cradle cut into the middle of its top edge, round-shouldered, where Home's circle sits (54 px, its
+   centre 10 px below the edge, a 6 px gap all round). One masked element, so no seams; the shadow on its parent
+   (`dock-elevation`, darker in dark mode by a `dark:` filter beside it) follows the cut. Geometry: a cradle of radius
+   33 around (44, 10) in an 88 × 44 box, shoulders of radius 8. */
+@utility dock-cradle {
+  --dock-cradle: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 88 44'%3E%3Cpath d='M3.05 0A8 8 0 0 1 11.04 8.39A33 33 0 1 0 76.96 8.39A8 8 0 0 1 84.95 0Z'/%3E%3C/svg%3E");
+  -webkit-mask: var(--dock-cradle) 50% 0 / 88px 44px no-repeat, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: var(--dock-cradle) 50% 0 / 88px 44px no-repeat, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+@utility dock-elevation {
+  filter: drop-shadow(0 -1px 0 rgb(23 18 14 / 0.07)) drop-shadow(0 -10px 22px rgb(40 20 5 / 0.09));
+}
 
 /* The theme switch: the new theme grows as a circle from the switch over the old one (ThemeToggle sets
    the centre and radius). Scoped to that one View Transition so page transitions keep their own. */

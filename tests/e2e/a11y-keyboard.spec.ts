@@ -41,14 +41,27 @@ async function chooseRadio(page: Page, radio: Locator): Promise<void> {
   expect((await focusIsVisible(page)).visible, `visible focus on ${radio}`).toBe(true);
 }
 
-/** Tab to a native select and move to `value` with the arrow keys. */
+/**
+ * Tab to a select and choose `value` with the arrow keys. The app's selects open a list styled as the app's
+ * (`appearance: base-select`, select-menus.css): an arrow opens it on the chosen option, the arrows move and Enter
+ * chooses, as on a Mac. A classic select changes in place with the arrows.
+ */
 async function chooseOption(page: Page, select: Locator, value: string): Promise<void> {
   await tabTo(page, select);
-  const values = await select.evaluate((element) => Array.from((element as HTMLSelectElement).options).map((option) => option.value));
+  const values = await select.evaluate((element) => Array.from((element as HTMLSelectElement).options).filter((option) => !option.disabled).map((option) => option.value));
   const target = values.indexOf(value);
   expect(target, `option ${value}`).toBeGreaterThanOrEqual(0);
-  for (let moves = 0; moves < values.length && (await select.inputValue()) !== value; moves++) {
-    await page.keyboard.press(values.indexOf(await select.inputValue()) < target ? 'ArrowDown' : 'ArrowUp');
+  if (await select.evaluate((element) => getComputedStyle(element).appearance === 'base-select')) {
+    // Opened on the chosen option, or on the first that can be chosen.
+    const from = Math.max(0, values.indexOf(await select.inputValue()));
+    await page.keyboard.press('ArrowDown');
+    await expect.poll(() => select.evaluate((element) => element.matches(':open'))).toBe(true);
+    for (let moves = 0; moves < Math.abs(target - from); moves++) await page.keyboard.press(target > from ? 'ArrowDown' : 'ArrowUp');
+    await page.keyboard.press('Enter');
+  } else {
+    for (let moves = 0; moves < values.length && (await select.inputValue()) !== value; moves++) {
+      await page.keyboard.press(values.indexOf(await select.inputValue()) < target ? 'ArrowDown' : 'ArrowUp');
+    }
   }
   await expect(select).toHaveValue(value);
 }

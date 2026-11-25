@@ -5,6 +5,7 @@ import Script from 'next/script';
 import { APP_LOCALES, isAppLocale } from '@/contracts/locale';
 import { AppToaster } from '@/ui/components/feedback/app-toaster';
 import { MouseScrollRows } from '@/ui/lib/mouse-scroll-rows';
+import { SelectMenus } from '@/ui/components/forms/select-menus';
 import { BubbleCursor } from '@/ui/components/cursor/bubble-cursor';
 import { MapTilesProvider } from '@/ui/components/map/map-tiles';
 import { mapTiles } from '@/modules/markets/map-tiles';
@@ -94,6 +95,8 @@ export default async function RootLayout({ children, modal }: LayoutProps<'/[loc
           <BubbleCursor />
           {/* Rows that scroll sideways without a scrollbar, for a mouse: the wheel and a drag (owner, 2026-11-24). */}
           <MouseScrollRows />
+          {/* Dropdowns open a list in the app's look, not the browser's (2026-11-25). */}
+          <SelectMenus />
         </ClientMessages>
       </body>
     </html>

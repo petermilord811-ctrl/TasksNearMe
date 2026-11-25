@@ -1,8 +1,9 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowRight, BellDot, CalendarDays, CheckCheck, Inbox, MapPinned, Plus, Search, SearchX, SlidersHorizontal, Wallet } from 'lucide-react';
+import { CATEGORY_ICONS } from '@/ui/components/tasks/category-icons';
 import { useTranslations } from 'next-intl';
-import { routes, type DashboardData, type DashboardHandlers, type DashboardTab, type ISODateTime } from '@/contracts';
+import { routes, type DashboardData, type DashboardHandlers, type DashboardItem, type DashboardTab, type ISODateTime } from '@/contracts';
 import { marketClockTime } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { EmptyState } from '@/ui/components/feedback/empty-state';
@@ -34,8 +35,69 @@ const SIDE_SCROLL = '-mx-gutter -my-1 overflow-x-auto px-gutter py-1 [scrollbar-
 const EDGE_FADE = 'linear-gradient(to right, transparent, #000 var(--spacing-gutter, 1rem), #000 calc(100% - var(--spacing-gutter, 1rem)), transparent)';
 const edgeFade: CSSProperties = { maskImage: EDGE_FADE, WebkitMaskImage: EDGE_FADE };
 
-function SectionTitle({ id, children }: { id: string; children: string }) {
-  return <h2 id={id} className="font-display text-lg leading-7 font-semibold tracking-[-0.015em]">{children}</h2>;
+function SectionTitle({ id, children, link }: { id: string; children: string; link?: { href: string; label: string } }) {
+  const title = <h2 id={id} className="font-display text-lg leading-7 font-semibold tracking-[-0.015em]">{children}</h2>;
+  if (!link) return title;
+  return <div className="flex items-baseline justify-between gap-3">
+    {title}
+    <Link href={link.href} className="inline-flex min-h-11 shrink-0 items-center gap-1 text-sm font-semibold text-primary underline-offset-4 hover:underline">
+      {link.label}<ArrowRight aria-hidden="true" className="size-4" />
+    </Link>
+  </div>;
+}
+
+/**
+ * What someone who needs help came for, first (2026-11-25, owner: "show more meaningful and necessary things on home
+ * tab ... learn from other sites"): the "What do you need help with?" search (and Ask AI), then the market's categories
+ * as chips that start a task in one tap, the way home-service apps open.
+ */
+function AskCard({ data, children }: { data: DashboardData; children: ReactNode }) {
+  const t = useTranslations('home');
+  const categoryName = useTranslations('helperCard.categories');
+  return <section aria-labelledby="home-ask" className="space-y-3 rounded-[1.5rem] border border-foreground/[0.07] bg-card p-4 shadow-card sm:p-5 dark:border-white/[0.06]">
+    <h2 id="home-ask" className="font-display text-lg leading-7 font-semibold tracking-[-0.015em]">{t('sections.ask')}</h2>
+    {children}
+    {/* Phones: one row that scrolls under a fade, edge to edge in the card; from `sm` the chips wrap, all in view. */}
+    {data.categories.length > 0 && <nav aria-label={t('ask.categories')} className="-my-1 py-1 max-sm:-mx-4 max-sm:overflow-x-auto max-sm:px-4 max-sm:[mask-image:linear-gradient(to_right,transparent,#000_1rem,#000_calc(100%-1rem),transparent)] max-sm:[scrollbar-width:none] max-sm:[&::-webkit-scrollbar]:hidden">
+      <ul className="flex gap-2 max-sm:w-max sm:flex-wrap">
+        {data.categories.map((slug) => {
+          const Icon = CATEGORY_ICONS[slug];
+          return <li key={slug}>
+            <Link href={routes.app.newTask({ category: slug })} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-foreground/[0.08] bg-background/60 py-1.5 pr-4 pl-2 text-sm font-semibold text-foreground transition-[background-color,border-color] duration-200 hover:border-primary/30 hover:bg-secondary dark:border-white/[0.08] dark:bg-white/[0.03]">
+              <span aria-hidden="true" className="grid size-8 place-items-center rounded-full text-white" style={{ background: `var(--cat-${slug})` }}><Icon className="size-4" /></span>
+              {categoryName(slug)}
+            </Link>
+          </li>;
+        })}
+      </ul>
+    </nav>}
+  </section>;
+}
+
+/** The next bookings (either side), as the lists' rows: what's coming and when, one tap from its page. */
+function UpNext({ data }: { data: DashboardData }) {
+  const t = useTranslations('home');
+  const side = data.mode === 'helper' || !data.sides.client ? 'helper' : 'poster';
+  return <section aria-labelledby="home-up-next" className="space-y-3">
+    <SectionTitle id="home-up-next" {...(data.upNext.length > 0 ? { link: { href: routes.app.bookings(), label: t('upNext.all') } } : {})}>{t('sections.upNext')}</SectionTitle>
+    {data.upNext.length > 0
+      ? <DashboardRows items={data.upNext} />
+      : <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[1.375rem] border border-dashed bg-card/60 px-4 py-3 text-sm text-muted-foreground">
+        <CalendarDays aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />{t(`upNext.none.${side}`)}
+        <Link href={side === 'poster' ? routes.app.helpers() : routes.app.findWork()} className="font-semibold text-primary underline-offset-4 hover:underline">{t(`upNext.find.${side}`)}</Link>
+      </p>}
+  </section>;
+}
+
+/** A helper's best open tasks nearby, whatever list is open below: the way to the next job. */
+function NearbyTop({ items }: { items: DashboardItem[] }) {
+  const t = useTranslations('home');
+  return <section aria-labelledby="home-nearby-top" className="space-y-3">
+    <SectionTitle id="home-nearby-top" link={{ href: routes.app.findWork(), label: t('nearbyTop.all') }}>{t('sections.nearbyTop')}</SectionTitle>
+    {items.length > 0
+      ? <DashboardRows items={items} />
+      : <p className="flex items-center gap-2.5 rounded-[1.375rem] border border-dashed bg-card/60 px-4 py-3 text-sm text-muted-foreground"><Search aria-hidden="true" className="size-5 shrink-0" />{t('nearbyTop.none')}</p>}
+  </section>;
 }
 
 /** Earnings at a glance (helpers): what's coming and what's on the way to the bank, opening Earnings. */
@@ -112,7 +174,7 @@ function DashboardLists({ data, liveMap }: { data: DashboardData; liveMap: boole
   const { query, items } = data;
   const count = data.tabs.find((tab) => tab.id === query.tab)?.count ?? items.length;
   return <section aria-labelledby="home-lists" className="space-y-3">
-    <h2 id="home-lists" className="sr-only">{t('sections.lists')}</h2>
+    <SectionTitle id="home-lists">{t('sections.lists')}</SectionTitle>
     <ListTabs data={data} />
     <DashboardToolbar data={data} />
     {query.q && <p aria-live="polite" className="px-1 text-sm text-muted-foreground tabular-nums">{t('search.matches', { count, q: query.q })}</p>}
@@ -167,22 +229,27 @@ function FirstTaskCard() {
 export function DashboardScreen({ data, now, handlers, liveMap = true, initialAiAnswer }: DashboardScreenProps) {
   const t = useTranslations('home');
   // "Good morning" on the person's own clock (their home market's, completion plan 8.1).
-  const { timeZone } = useFormat();
+  const { timeZone, formatDate } = useFormat();
   const hour = Number(marketClockTime(now, timeZone).split(':')[0]);
   const period = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening';
   // A first visit (a client's, J-C1, or a helper's who can be booked, J-H9): its card instead of "nothing" everywhere.
   const firstVisit = Boolean(data.firstRun || data.firstWork);
+  // Someone in "I need help" mode leads with asking; a helper with their work (2026-11-25).
+  const asking = data.mode === 'poster' && data.sides.client;
+  const search = <DashboardSearch data={data} {...(handlers?.onAiSearch ? { onAiSearch: handlers.onAiSearch } : {})} {...(initialAiAnswer ? { initialAnswer: initialAiAnswer } : {})} />;
+  const today = formatDate(now);
 
-  return <div className="mx-auto w-full max-w-content space-y-6">
+  return <div className="mx-auto w-full max-w-content space-y-7">
     <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div className="min-w-0">
-        <h1 className="font-display text-[1.75rem] leading-[1.12] font-semibold tracking-[-0.03em] text-balance lg:text-[2.125rem]">{t(`greeting.${period}`, { firstName: data.firstName })}</h1>
-        {/* Two facts side by side, each whole when the line wraps (no separator left dangling). A first visit has neither. */}
-        {!firstVisit && <ul className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[15px] leading-6 text-muted-foreground">
-          <li className={cn('inline-flex items-center gap-1.5', data.summary.needsYou > 0 && 'font-semibold text-foreground')}>
+        <p className="text-sm font-medium text-muted-foreground">{data.place ? t('dateLine', { date: today, place: data.place }) : today}</p>
+        <h1 className="mt-0.5 font-display text-[1.625rem] leading-[1.12] font-semibold tracking-[-0.03em] text-balance lg:text-[2.125rem]">{t(`greeting.${period}`, { firstName: data.firstName })}</h1>
+        {/* Two facts as chips, each whole when the line wraps. A first visit has neither. */}
+        {!firstVisit && <ul className="mt-3 flex flex-wrap items-center gap-2 text-sm leading-5">
+          <li className={cn('inline-flex min-h-8 items-center gap-1.5 rounded-full border px-3 py-1', data.summary.needsYou > 0 ? 'border-primary/25 bg-secondary font-semibold text-secondary-foreground' : 'border-foreground/[0.08] bg-card text-muted-foreground dark:border-white/[0.08]')}>
             <BellDot aria-hidden="true" className={cn('size-4 shrink-0', data.summary.needsYou > 0 && 'text-primary')} />{t('summary.needsYou', { count: data.summary.needsYou })}
           </li>
-          <li className="inline-flex items-center gap-1.5"><CalendarDays aria-hidden="true" className="size-4 shrink-0" />{t('summary.upcoming', { count: data.summary.upcoming })}</li>
+          <li className="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-foreground/[0.08] bg-card px-3 py-1 text-muted-foreground dark:border-white/[0.08]"><CalendarDays aria-hidden="true" className="size-4 shrink-0" />{t('summary.upcoming', { count: data.summary.upcoming })}</li>
         </ul>}
       </div>
       {data.earnings && !data.firstWork && <EarningsGlance earnings={data.earnings} />}
@@ -191,17 +258,25 @@ export function DashboardScreen({ data, now, handlers, liveMap = true, initialAi
     {data.firstRun && <FirstTaskCard />}
     {data.firstWork && <FirstWorkCard nearbyCount={data.firstWork.nearbyCount} />}
 
-    {/* What needs the person first; then the search, right above the lists it searches. */}
+    {/* "What do you need help with?" first for someone who needs help: the reason they opened the app. */}
+    {asking && !data.firstRun && <AskCard data={data}>{search}</AskCard>}
+
+    {/* What needs the person. */}
     {(!firstVisit || data.attention.length > 0) && <section aria-labelledby="home-attention" className="space-y-3">
       <SectionTitle id="home-attention">{t('sections.attention')}</SectionTitle>
       {data.attention.length > 0
-        ? <AttentionList items={data.attention} now={now} />
+        ? <AttentionList items={data.attention} now={now} compact />
         : <p className="flex items-center gap-2.5 rounded-[1.375rem] border border-dashed bg-card/60 px-4 py-3 text-sm text-muted-foreground"><CheckCheck aria-hidden="true" className="size-5 shrink-0 text-primary" />{t('caughtUp')}</p>}
     </section>}
 
+    {/* What's coming, then (helpers) the next job to find. */}
+    {!firstVisit && <UpNext data={data} />}
+    {data.nearbyTop && !data.firstWork && <NearbyTop items={data.nearbyTop} />}
+
     {data.waitingFor && <WaitingForCityNote waiting={data.waitingFor} />}
 
-    <DashboardSearch data={data} {...(handlers?.onAiSearch ? { onAiSearch: handlers.onAiSearch } : {})} {...(initialAiAnswer ? { initialAnswer: initialAiAnswer } : {})} />
+    {/* A helper's search sits right above the lists it searches (a client's is in the card above). */}
+    {(!asking || data.firstRun) && search}
 
     {(!firstVisit || data.query.q) && <DashboardLists data={data} liveMap={liveMap} />}
 
