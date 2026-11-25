@@ -513,6 +513,24 @@ export function MapLibreView({
     let arriving = Boolean(opening);
     let landed = !opening;
     let unfollow = () => {};
+    /**
+     * On the landing's stage the map is made while the visitor is still on the town, out of sight, and made ready there
+     * (owner, 2026-11-25: "you have to prepare 2D map soon to avoid akward 2D map loading"): it loads the close view the
+     * window opens onto, then the city view, so pulling back meets ground already drawn (the city's tiles stay in the
+     * map's cache and stand in for the zooms in between), then takes the close view again. 'close' and 'city': that view
+     * is loading; 'done': warmed, or the visitor came first.
+     */
+    let warming: 'close' | 'city' | 'done' = 'done';
+    let warmTimer = 0;
+    const stopWarming = () => {
+      warming = 'done';
+      window.clearTimeout(warmTimer);
+    };
+    /** The visitor is still on the town: the window onto the map hasn't started to open. */
+    const atRest = (progress: number) => progress <= 0 && (source?.lead?.() ?? 0) <= 0;
+    const showCityView = () => {
+      instance.jumpTo({ ...arrived(home), padding: paddingFor(latest.current.padding, container.clientWidth, container.clientHeight) });
+    };
     const reportView = (force = false) => {
       if (arriving && !force) return;
       const bounds = instance.getBounds();
@@ -522,6 +540,7 @@ export function MapLibreView({
     const endArrival = () => {
       if (!arriving) return;
       arriving = false;
+      stopWarming();
       unfollow();
       setArrivalLit(null);
       setSettled(true);
@@ -558,6 +577,14 @@ export function MapLibreView({
     };
     const followArrival = (progress: number) => {
       if (!arriving || !opening) return;
+      if (warming === 'city') {
+        // Still on the town: the city view loads on, out of sight (framed again after a resize).
+        if (atRest(progress)) {
+          showCityView();
+          return;
+        }
+        stopWarming();
+      }
       landed = progress >= 0.999;
       instance.jumpTo(stagedCamera(progress));
       setArrivalLit(progress < 0.9 ? (latest.current.arrival?.taskId ?? null) : null);
@@ -647,6 +674,26 @@ export function MapLibreView({
     homeView.current = home;
     first = opening ? arrivalCamera(progressNow(), opening, home) : home;
     instance.jumpTo(opening ? stagedCamera(progressNow()) : arrived(first));
+    if (opening && source?.anchor && progressNow() < 1) {
+      // The close view loads first (see `warming`); once it's in, the city view, then back.
+      warming = 'close';
+      instance.once('idle', () => {
+        if (warming !== 'close' || !arriving || !atRest(progressNow())) {
+          stopWarming();
+          return;
+        }
+        warming = 'city';
+        showCityView();
+        const back = () => {
+          if (warming !== 'city') return;
+          stopWarming();
+          if (arriving) followArrival(progressNow());
+        };
+        instance.once('idle', back);
+        // A city view that never settles (a tile that keeps failing) mustn't keep the close view away.
+        warmTimer = window.setTimeout(back, 8000);
+      });
+    }
     const sized = new ResizeObserver(() => {
       const ratio = mapPixelRatio(container.clientWidth, container.clientHeight);
       if (Math.abs(ratio - instance.getPixelRatio()) > 0.01) instance.setPixelRatio(ratio);
@@ -1139,6 +1186,7 @@ export function MapLibreView({
       repaintLight.current = () => {};
       relight.current = () => {};
       frameHomeRef.current = () => null;
+      window.clearTimeout(warmTimer);
       themeWatch?.disconnect();
       stopSystemTheme();
       sized.disconnect();

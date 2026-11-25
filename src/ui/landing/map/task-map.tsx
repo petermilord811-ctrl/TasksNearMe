@@ -41,6 +41,12 @@ export type MapMode = 'interactive' | 'static';
 /** The longest the live map waits for the hero's town to say it's drawn. */
 const HERO_WAIT_MS = 6000;
 /**
+ * On the landing's stage the map is the next chapter, so it's made ready early (owner, 2026-11-25: "you have to prepare
+ * 2D map soon to avoid akward 2D map loading"): its engine and style are fetched at once, and it starts as soon as the
+ * town has drawn, after this long at most, without waiting for a still moment.
+ */
+const STAGE_HERO_WAIT_MS = 2500;
+/**
  * The town reports ready once its build-up has finished (`markHeroReady`), so the map's engine starts a moment
  * after (its first frames compile shaders, which would make the growth stutter). Its style is fetched at once.
  */
@@ -240,7 +246,8 @@ export function TaskMap({
   // tiles at all (and the page's network settles). As the map comes within about a screen, its style is fetched
   // and the engine starts once the hero's town has finished building (they'd compete for the main thread and
   // the GPU) or after a short wait, in a quiet moment; when the map is actually in view it starts right away. Pointing
-  // at the map or asking it to show something also starts it (below). Either way in an idle moment.
+  // at the map or asking it to show something also starts it (below). Either way in an idle moment. On the landing's
+  // stage it's sooner (`STAGE_HERO_WAIT_MS`).
   useEffect(() => {
     if (mode === 'static' || stageUndecided) return;
     const frame = watchRef?.current ?? frameRef.current;
@@ -284,17 +291,20 @@ export function TaskMap({
       quietLimit = window.setTimeout(start, QUIET_MAX_MS);
     };
     const maybeStart = () => {
-      if (approaching && heroDone) settle = window.setTimeout(startWhenQuiet, HERO_SETTLE_MS);
+      if (approaching && heroDone) settle = window.setTimeout(onStage ? start : startWhenQuiet, HERO_SETTLE_MS);
     };
     cancelHero = whenHeroReady(() => {
       heroDone = true;
       maybeStart();
-    }, HERO_WAIT_MS);
+    }, onStage ? STAGE_HERO_WAIT_MS : HERO_WAIT_MS);
     startNow.current = start;
     if (onStage) {
-      // On the landing's stage the map is the next chapter, always on screen under the town: it starts in a quiet
-      // moment once the hero is done, or at once when the visitor heads for it (below).
+      // On the landing's stage the map is the next chapter, always on screen under the town: its engine and style are
+      // fetched now, and it starts once the hero is done (`STAGE_HERO_WAIT_MS`), or at once when the visitor heads for
+      // it (below).
       approaching = true;
+      warmUp();
+      void import('./maplibre-view').catch(() => {});
       maybeStart();
     } else if ('IntersectionObserver' in window) {
       const near = new IntersectionObserver(([entry]) => {

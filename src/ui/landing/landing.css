@@ -150,10 +150,10 @@ html[data-motion="on"] [data-reveal]:not([data-revealed]) .reveal-fill { transfo
   [data-chapters="on"] [data-chapter-layer="town"] { z-index: 1; }
   [data-chapters="on"] [data-chapter-layer="grid"] { z-index: 2; opacity: 0; pointer-events: none; }
   [data-chapters="on"] [data-chapter-layer="map"] { z-index: 3; pointer-events: none; }
-  /* Where going to the map lands: the middle of its stop, 0.51 of the stretch (clock.ts, MAP_REST_SHARE). A link to the
+  /* Where going to the map lands: early in its stop, 0.36 of the stretch (clock.ts, MAP_REST_SHARE). A link to the
      map's section (#tasks-near-you) lands there too, not on the town (the layer sits at the stage's top). */
-  [data-chapters="on"] [data-chapter-map-rest] { top: calc(var(--chapter-track) * 0.51); }
-  [data-chapters="on"] [data-chapter-layer="map"] { scroll-margin-top: calc(var(--chapter-track) * -0.51); }
+  [data-chapters="on"] [data-chapter-map-rest] { top: calc(var(--chapter-track) * 0.36); }
+  [data-chapters="on"] [data-chapter-layer="map"] { scroll-margin-top: calc(var(--chapter-track) * -0.36); }
 
   /* The map: its stage fills the layer, and the map fills the stage (it isn't fixed to the window). */
   [data-chapters="on"] [data-map-stage] { position: absolute; inset: 0; display: block; height: auto; min-height: 0; clip-path: none; }

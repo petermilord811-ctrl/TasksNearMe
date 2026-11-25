@@ -130,8 +130,8 @@ function createStore(): ChapterStore & { publish(value: number): void; setMode(m
 /**
  * The landing's first three chapters on one pinned stage (owner, 2026-11-24: "Deeply let's re-design the section swtich
  * animation in first landing page"): the hero's town, the live map with its card and explorer, and the categories with
- * the map docked as their first tile. The stage stays pinned for a stretch of scrolling (`--chapter-track`: about two
- * screens), and the scroll moves it along (owner, 2026-11-25: "when I scroll a little, animation is also changed a
+ * the map docked as their first tile. The stage stays pinned for a stretch of scrolling (`--chapter-track`: about
+ * three and a third screens, one and a half of them a stop at the map), and the scroll moves it along (owner, 2026-11-25: "when I scroll a little, animation is also changed a
  * little by scroll height ... and make it feel smooth"): `clock.ts` turns the scroll into how far the stage is, eased a
  * moment behind the hand, and the layers draw that moment (`timeline.ts`). With reduced motion, in previews and tests
  * (`enabled` false) the layers are plain sections, one after another, as they were.
@@ -265,10 +265,10 @@ export function ChapterStage({ enabled, children }: { enabled: boolean; children
       <div
         ref={trackRef}
         data-chapters={enabled ? 'on' : 'off'}
-        className="relative [--chapter-track:190svh] lg:[--chapter-track:210svh]"
+        className="relative [--chapter-track:335svh]"
       >
         <div data-chapter-stage="">{children}</div>
-        {/* Where "see it on the map" lands (`scrollToMap`): the middle of the map's stop (landing.css, `MAP_REST_SHARE`). */}
+        {/* Where "see it on the map" lands (`scrollToMap`): early in the map's stop (landing.css, `MAP_REST_SHARE`). */}
         <span data-chapter-map-rest="" {...(on ? { [MAP_LANDED_ATTRIBUTE]: '' } : {})} aria-hidden="true" className="pointer-events-none absolute left-0 h-px w-px" />
       </div>
     </ChapterContext>

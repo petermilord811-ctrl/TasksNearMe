@@ -26,7 +26,7 @@ export function CoverageSection({ data }: { data: HomePageData }) {
 
   const show = (area: MapArea) => {
     landing?.pickArea(area);
-    // To the map (on the landing's stage: the middle of its chapter's stop).
+    // To the map (on the landing's stage: early in its chapter's stop).
     scrollToMap(reduced ? 'auto' : undefined);
   };
 

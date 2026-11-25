@@ -3,7 +3,8 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createChapterClock, EASE_MS, MAP_REST_SHARE, restOffset, SPANS, valueAt, type ChapterClock } from './clock';
 
-const LENGTH = 2000;
+/** The pinned stretch on a laptop 900 px tall (335svh). */
+const LENGTH = 3015;
 
 /** Steps the clock at 60 frames a second until it rests (or `limit` frames), returning the values it drew. */
 function run(clock: ChapterClock, start: number, limit = 400): { values: number[]; end: number } {
@@ -35,11 +36,18 @@ describe('the landing’s chapter clock', () => {
     expect(SPANS.one + SPANS.mapStop + SPANS.two + SPANS.gridStop).toBeCloseTo(1);
   });
 
-  it('lands a chapter in the middle of its stop', () => {
+  it('lands a chapter inside its stop, with most of the map’s stop still ahead', () => {
     expect(restOffset(0, LENGTH)).toBe(0);
     expect(valueAt(restOffset(1, LENGTH), LENGTH)).toBe(1);
     expect(valueAt(restOffset(2, LENGTH), LENGTH)).toBe(2);
     expect(restOffset(1, LENGTH) / LENGTH).toBeCloseTo(MAP_REST_SHARE);
+    // The map holds for about a screen and a half of scrolling, most of it after where a link lands (owner,
+    // 2026-11-25: "make users need more scroll (* 1.5)", over the 0.8 screen ahead before).
+    const screen = 900;
+    expect((SPANS.mapStop * LENGTH) / screen).toBeGreaterThan(1.45);
+    const ahead = (SPANS.one + SPANS.mapStop) * LENGTH - restOffset(1, LENGTH);
+    expect(ahead / screen).toBeGreaterThan(1.2);
+    expect(valueAt(restOffset(1, LENGTH) + 1.2 * screen, LENGTH)).toBe(1);
   });
 
   it('places the map’s rest marker in landing.css where the clock rests on the map', () => {

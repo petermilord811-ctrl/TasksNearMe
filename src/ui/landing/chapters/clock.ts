@@ -5,8 +5,10 @@
  * stretch is how far the stage has moved: 0 the town, 1 the map, 2 the categories with the map docked in their grid.
  *
  * - The stretch is cut into step one, a stop at the map, step two and a stop at the categories (`SPANS`). On a stop the
- *   value holds, so the map and the grid can be used without the scene drifting, and a link or a key that goes to a
- *   chapter lands in the middle of its stop (`restOffset`).
+ *   value holds, so the map and the grid can be used without the scene drifting. The map's stop is about a screen and a
+ *   half of scrolling (owner, 2026-11-25: "in map, give enough time to not change by scrolling ... if bottom scroll
+ *   exceeds limit, minimze map", then "make users need more scroll (* 1.5)"), and a link or a key that goes to the map
+ *   lands near its start, with most of that room still ahead (`restOffset`).
  * - What the stage draws follows the scroll with a short ease (`ease`, a time constant in ms): wheel notches, flicks and
  *   a jerky hand become one smooth motion that is never more than a moment behind and never plays on by itself.
  *
@@ -15,14 +17,17 @@
 
 export type Chapter = 0 | 1 | 2;
 
-/** Shares of the pinned stretch: step one, the stop at the map, step two, the stop at the categories (they add up to 1). */
-export const SPANS = { one: 0.44, mapStop: 0.14, two: 0.32, gridStop: 0.1 } as const;
+/**
+ * Shares of the pinned stretch (`--chapter-track`, 335svh): step one, the stop at the map, step two, the stop at the
+ * categories (they add up to 1). In screens: about 0.9, 1.5, 0.7 and 0.23.
+ */
+export const SPANS = { one: 0.27, mapStop: 0.45, two: 0.21, gridStop: 0.07 } as const;
 
 /**
- * Where a link or a key that goes to the map lands, as a share of the stretch: the middle of its stop. landing.css places
+ * Where a link or a key that goes to the map lands, as a share of the stretch: a fifth into its stop. landing.css places
  * the map's rest marker (`[data-chapter-map-rest]`) and the map section's scroll margin with this same share.
  */
-export const MAP_REST_SHARE = SPANS.one + SPANS.mapStop / 2;
+export const MAP_REST_SHARE = SPANS.one + SPANS.mapStop * 0.2;
 
 /** The ease of the stage behind the scroll on wide screens, and on touch screens (ms, a time constant). */
 export const EASE_MS = { wide: 140, touch: 90 } as const;
@@ -44,7 +49,10 @@ export function valueAt(offset: number, length: number): number {
   return 2;
 }
 
-/** Where going to a chapter lands (px into the stretch): the top for the town, else the middle of the chapter's stop. */
+/**
+ * Where going to a chapter lands (px into the stretch): the top for the town, early in the map's stop, the middle of the
+ * categories' stop.
+ */
 export function restOffset(chapter: Chapter, length: number): number {
   if (chapter === 0) return 0;
   if (chapter === 1) return length * MAP_REST_SHARE;

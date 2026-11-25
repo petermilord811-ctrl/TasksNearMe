@@ -163,7 +163,7 @@ function prefersReducedMotion(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-/** Marks the map's chapter on the landing's stage (chapters/): scrolling to the map lands here, in the middle of its stop. */
+/** Marks the map's chapter on the landing's stage (chapters/): scrolling to the map lands here, early in its stop. */
 export const MAP_LANDED_ATTRIBUTE = 'data-map-landed';
 
 /**
