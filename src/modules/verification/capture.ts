@@ -11,18 +11,19 @@ import type { ByteCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
+import { ensureDraftProfile } from './draft-profile';
 import { computeOnboarding } from './progress';
 import { identityCaptures } from './schema';
 import { livenessPromptFor } from './standing';
 import { loadOnboardingState, syncHelperProfile } from './state';
 
 /**
- * Our own ID check, the first of two stages (owner, 2026-11-13; blueprint 06 §1): after the Texas
- * biometric notice, the helper photographs the ID (the front, and the back unless it's a passport) and
- * takes a live selfie that follows a prompt. Every photo is re-encoded (no location or other metadata),
- * encrypted, and stored as a private file that only staff open, with a logged reason, until it's deleted
- * 30 days after the decision. Staff compare the photos and approve or reject; approval opens the
- * provider's hosted check as the double check (`startIdentity`).
+ * Our own ID check (owner, 2026-11-13; blueprint 06 §1): after the Texas biometric notice, the helper photographs the
+ * ID (the front, and the back unless it's a passport) and takes a live selfie that follows a prompt. Every photo is
+ * re-encoded (no location or other metadata), encrypted, and stored as a private file that only staff open, with a
+ * logged reason, until it's deleted a year after the decision (2026-11-27). Our server checks them (auto-check.ts) and
+ * decides the clear cases; staff decide the rest. Approval verifies the ID, or opens an ID provider's double check where
+ * one is set up (`startIdentity`).
  */
 
 export interface IdentityCaptureDeps {
@@ -47,6 +48,8 @@ type Fields = Extract<IdentityCaptureResult, { code: 'validation_failed' }>['fie
 const invalid = (fieldErrors: Fields): IdentityCaptureResult => ({ ok: false, code: 'validation_failed', fieldErrors });
 
 async function identityStep(db: Db, userId: string, now: Date) {
+  // The ID check can be the first thing a helper does (owner, 2026-11-27: checks in any order, before the profile).
+  await ensureDraftProfile(db, userId);
   const state = await loadOnboardingState(db, userId, now);
   const step = computeOnboarding(state.facts).progress.steps.find((entry) => entry.step === 'identity');
   return { state, open: state.profile !== null && step !== undefined && step.state !== 'locked' };
@@ -164,7 +167,8 @@ export async function deleteIdentityCapturePhotos(deps: { db: Db; storage: FileS
   if (!row || ids.length === 0) return false;
   const stored = await deps.db.select({ id: files.id, storageKey: files.storageKey }).from(files).where(inArray(files.id, ids));
   for (const file of stored) await deps.storage.delete(file.storageKey);
-  await deps.db.update(identityCaptures).set({ frontFileId: null, backFileId: null, selfieFileId: null, filesDeletedAt: now, updatedAt: now }).where(eq(identityCaptures.id, row.id));
+  // What was read from the ID goes with its photos.
+  await deps.db.update(identityCaptures).set({ frontFileId: null, backFileId: null, selfieFileId: null, detailsCiphertext: null, filesDeletedAt: now, updatedAt: now }).where(eq(identityCaptures.id, row.id));
   if (stored.length) await deps.db.delete(files).where(and(inArray(files.id, stored.map((file) => file.id)), inArray(files.kind, [...IDENTITY_FILE_KINDS])));
   return true;
 }

@@ -23,21 +23,27 @@ const all: OnboardingFacts = { ...basics, phoneVerified: true, identity: verifie
 const states = (facts: OnboardingFacts, viewing?: Parameters<typeof computeOnboarding>[1]) =>
   Object.fromEntries(computeOnboarding(facts, viewing).progress.steps.map((s) => [s.step, s.state]));
 
-describe('helper onboarding (owner, 2026-11-23: the location profile opens helping, the checks in any order)', () => {
-  it('starts with the profile; every check is locked until the basics are saved', () => {
+describe('helper onboarding (owner, 2026-11-23: the location profile opens helping; 2026-11-27: every check in any order, before the profile)', () => {
+  it('opens every check from the start, before the profile (owner, 2026-11-27: "not able to pick preferred verification")', () => {
     expect(states(fresh, 'profile')).toEqual({
       profile: 'current',
       services: 'todo',
       area: 'todo',
-      address: 'locked',
-      phone: 'locked',
-      identity: 'locked',
-      payout: 'locked',
+      address: 'todo',
+      phone: 'todo',
+      identity: 'todo',
+      payout: 'todo',
       background: 'skipped',
-      done: 'locked',
+      done: 'todo',
     });
     expect(computeOnboarding(fresh).firstIncomplete).toBe('profile');
-    expect(canOpenStep(fresh, 'identity')).toBe(false);
+    for (const step of ['address', 'phone', 'identity', 'payout', 'done'] as const) expect(canOpenStep(fresh, step)).toBe(true);
+  });
+
+  it('opens the background check once the area is set (where the helper works decides its rules)', () => {
+    const inHomeNoArea = { ...fresh, services: [cleaning] };
+    expect(states(inHomeNoArea).background).toBe('locked');
+    expect(states({ ...inHomeNoArea, areaSet: true }).background).toBe('todo');
   });
 
   it('lists the home address right after the area', () => {
@@ -45,7 +51,7 @@ describe('helper onboarding (owner, 2026-11-23: the location profile opens helpi
   });
 
   it('opens every check at once after the basics, in any order', () => {
-    expect(states(basics)).toMatchObject({ address: 'todo', phone: 'todo', identity: 'todo', payout: 'todo', background: 'todo', done: 'locked' });
+    expect(states(basics)).toMatchObject({ address: 'todo', phone: 'todo', identity: 'todo', payout: 'todo', background: 'todo', done: 'todo' });
     for (const step of ['address', 'phone', 'identity', 'payout', 'background'] as const) expect(canOpenStep(basics, step)).toBe(true);
   });
 
@@ -81,11 +87,12 @@ describe('helper onboarding (owner, 2026-11-23: the location profile opens helpi
     const noAddress = { ...all, address: { status: 'in_review' as const, verified: false } };
     expect(computeOnboarding(noAddress).progress.bookable).toBe(false);
     expect(computeOnboarding({ ...all, address: { status: 'requested', verified: false } }).progress.bookable).toBe(false);
-    expect(states(noAddress).done).toBe('locked');
+    // Verifications (the last step) is always there; it says what helping still needs.
+    expect(states(noAddress).done).toBe('todo');
   });
 
   it('needs the helper agreement and the basics to help', () => {
-    expect(states({ ...basics, agreementAccepted: false })).toMatchObject({ profile: 'todo', address: 'locked' });
+    expect(states({ ...basics, agreementAccepted: false })).toMatchObject({ profile: 'todo', address: 'todo' });
     expect(computeOnboarding({ ...all, agreementAccepted: false }).progress.bookable).toBe(false);
     expect(computeOnboarding({ ...all, areaSet: false }).progress.bookable).toBe(false);
   });

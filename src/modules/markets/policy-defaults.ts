@@ -61,6 +61,7 @@ export const DEFAULT_FLAGS: Record<string, { enabled: boolean; description: stri
   'reward.acceptance': { enabled: false, description: '5% offer-acceptance reward (off at launch)' },
   'reward.completion': { enabled: false, description: 'Completion bonus on flagged tasks (off at launch)' },
   background_checks: { enabled: true, description: 'Require background checks for in-home categories' },
+  auto_verification: { enabled: true, description: 'Automatic decisions on ID photos and proofs of address: clean readings are approved without staff, doubtful ones go to the queue' },
   'reward.recurring_month': { enabled: true, description: '$15 gift card after a calendar month of regular visits all completed and paid (once per series)' },
   recurring: { enabled: true, description: 'Regular visits for cleaning and yard work: helpers propose a schedule, each visit is charged 2 days before' },
   'credit.poster_welcome': { enabled: false, description: "$10 back on a client's first completed booking (platform-funded, up to the booking's fees)" },

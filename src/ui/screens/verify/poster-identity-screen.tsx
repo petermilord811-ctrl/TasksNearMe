@@ -15,7 +15,7 @@ import { useFormAction } from '@/ui/lib/use-form-action';
 import { Button } from '@/ui/primitives/button';
 import { FieldError } from '@/ui/primitives/field';
 import { Spinner } from '@/ui/primitives/spinner';
-import { identityStatusTones } from '@/ui/screens/helper/verification-panel';
+import { identityStatusTones } from '@/ui/components/status/verification-tones';
 
 const checkboxClass = 'mt-0.5 size-5 shrink-0 accent-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring';
 

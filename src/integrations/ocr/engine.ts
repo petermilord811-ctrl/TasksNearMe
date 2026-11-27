@@ -224,9 +224,27 @@ async function decodeBarcode(photo, turn, zoom) {
   return found ? barcodeText(found.bytes) : null;
 }
 
+// The back's 1D barcode (a Florida card's inventory control number, Code 128 or Code 39), or null: the photo as it is,
+// then turned level at its strongest tilt.
+async function linearCode(bytes) {
+  const photo = await barcodePhoto(bytes);
+  const options = { formats: ['Code128', 'Code39', 'Code93'], tryHarder: true, tryRotate: true, tryInvert: false, tryDownscale: true, maxNumberOfSymbols: 1 };
+  for (const turn of [0, ...(await tilts(photo)).filter((tilt) => Math.abs(tilt) >= 0.75).slice(0, 1).map((tilt) => -tilt)]) {
+    let image = grayImage(photo);
+    if (turn) image = image.rotate(turn, { background: '#ffffff' });
+    const { data, info } = await image.normalize().toColourspace('srgb').ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const results = await barcodeReader().readBarcodes({ width: info.width, height: info.height, data: new Uint8ClampedArray(data.buffer, data.byteOffset, data.length), colorSpace: 'srgb' }, options);
+    const found = results.find((result) => result.isValid && result.text);
+    if (found) return found.text.slice(0, 64);
+  }
+  return null;
+}
+
 // The back's PDF417 text, or null: the photo as it is; then turned level at its strongest tilts (the strongest a
-// half degree either way too); then enlarged and turned at the strongest. The first that decodes wins.
-async function barcode({ bytes }) {
+// half degree either way too); then enlarged and turned at the strongest. The first that decodes wins. With "linear",
+// the back's 1D barcode instead.
+async function barcode({ bytes, linear }) {
+  if (linear) return linearCode(bytes);
   const photo = await barcodePhoto(bytes);
   const text = await decodeBarcode(photo, 0, 1);
   if (text !== null) return text;
@@ -259,11 +277,75 @@ async function pdfText({ bytes, maxPages, readPages }) {
   });
   if (pdf.numPages > maxPages) return { pages: pdf.numPages, text: null };
   const parts = [];
+  // How the PDF was made, for the proof-of-address checks (pdf-forensics.ts): the annotations and fillable fields on the
+  // pages read, and how many text runs each font draws on the first page (a number typed over a statement in another
+  // font). Only these facts cross back, never the text they come from.
+  const annotationKinds = new Set();
+  let formFields = false;
+  let fonts = [];
+  // Two different texts drawn at one spot: new text over a covered one (the same text twice is a fake bold).
+  let overlaps = 0;
+  // The first page's mailing block, behind a #10 envelope's window (about 2.25 to 2.94 in from the top, 1 in from the
+  // left, at most 3.5 in wide), with room to spare: the name and address of whom it's sent to.
+  let mailingBlock = '';
   for (let number = 1; number <= Math.min(pdf.numPages, readPages); number++) {
-    const content = await (await pdf.getPage(number)).getTextContent();
+    const page = await pdf.getPage(number);
+    const content = await page.getTextContent();
     parts.push(content.items.map((item) => (typeof item.str === 'string' ? item.str + (item.hasEOL ? '\n' : ' ') : '')).join(''));
+    const drawn = new Map();
+    for (const item of content.items) {
+      const said = typeof item.str === 'string' ? item.str.trim() : '';
+      if (said.length < 2 || !Array.isArray(item.transform)) continue;
+      const spot = Math.round(item.transform[4]) + ':' + Math.round(item.transform[5]);
+      const before = drawn.get(spot);
+      if (before === undefined) drawn.set(spot, said);
+      else if (before !== said) overlaps += 1;
+    }
+    if (number === 1) {
+      try {
+        const viewport = page.getViewport({ scale: 1 });
+        const lines = [];
+        for (const item of content.items) {
+          if (typeof item.str !== 'string' || !item.str.trim() || !Array.isArray(item.transform)) continue;
+          const [x, y] = viewport.convertToViewportPoint(item.transform[4], item.transform[5]);
+          if (x >= 24 && x <= 380 && y >= 100 && y <= 320) lines.push(item.str + (item.hasEOL ? '\n' : ' '));
+        }
+        mailingBlock = lines.join('').slice(0, 800);
+      } catch {
+        // A page without a usable viewport has no mailing block to give.
+      }
+    }
+    try {
+      for (const annotation of await page.getAnnotations()) {
+        if (annotation.subtype === 'Widget') formFields = formFields || (typeof annotation.fieldType === 'string' && annotation.fieldType !== 'Sig');
+        else if (typeof annotation.subtype === 'string') annotationKinds.add(annotation.subtype);
+      }
+    } catch {
+      // Annotations that won't parse say nothing either way.
+    }
+    if (number === 1) {
+      const runs = new Map();
+      for (const item of content.items) {
+        if (typeof item.str !== 'string' || !item.str.trim()) continue;
+        const font = runs.get(item.fontName) || { runs: 0, digitRuns: 0 };
+        font.runs += 1;
+        if (/[0-9]/.test(item.str)) font.digitRuns += 1;
+        runs.set(item.fontName, font);
+      }
+      fonts = [...runs.values()];
+    }
   }
-  return { pages: pdf.numPages, text: parts.join('\n') };
+  const info = {};
+  try {
+    const metadata = await pdf.getMetadata();
+    const raw = (metadata && metadata.info) || {};
+    for (const [key, name] of [['Producer', 'producer'], ['Creator', 'creator'], ['CreationDate', 'created'], ['ModDate', 'modified']]) {
+      if (typeof raw[key] === 'string' && raw[key].trim()) info[name] = raw[key].trim().slice(0, 200);
+    }
+  } catch {
+    // No metadata to read.
+  }
+  return { pages: pdf.numPages, text: parts.join('\n'), info, annotationKinds: [...annotationKinds], formFields, fonts, overlaps, mailingBlock };
 }
 
 // A photo that won't decode, and what PDF.js throws for a file it can't open: the document's fault, not the reader's.
@@ -322,6 +404,25 @@ export interface OcrPass {
   threshold?: 'sauvola' | 'otsu';
 }
 
+/** A PDF's text, and what PDF.js read about how it was made (the proof-of-address checks, pdf-forensics.ts). */
+export interface PdfText {
+  pages: number;
+  /** Null for a PDF longer than `maxPages`. */
+  text: string | null;
+  /** The Info dictionary's Producer, Creator and dates (PDF date strings, "D:2026…"). */
+  info?: { producer?: string; creator?: string; created?: string; modified?: string };
+  /** Annotation subtypes on the pages read; form widgets are `formFields`. */
+  annotationKinds?: string[];
+  /** Fields to type into, tick or choose on those pages (signature fields aren't). */
+  formFields?: boolean;
+  /** The first page's fonts: how many text runs each draws, and how many of those hold digits. */
+  fonts?: { runs: number; digitRuns: number }[];
+  /** Places on the pages read where two different texts are drawn at one spot. */
+  overlaps?: number;
+  /** The first page's text behind an envelope's window (the name and address it's sent to). */
+  mailingBlock?: string;
+}
+
 export interface PdfLimits {
   /** A longer PDF isn't read at all. */
   maxPages: number;
@@ -334,7 +435,9 @@ export interface ReadSession {
   recognize(pass: OcrPass): Promise<OcrPage>;
   /** The text of the PDF417 barcode in a photo (the back of a license or ID card), or null when none decodes. */
   barcode(bytes: Buffer): Promise<string | null>;
-  pdfText(bytes: Buffer, limits: PdfLimits): Promise<{ pages: number; text: string | null }>;
+  /** The 1D barcode on a card's back (Florida's inventory control number), or null when none decodes. */
+  linearBarcode(bytes: Buffer): Promise<string | null>;
+  pdfText(bytes: Buffer, limits: PdfLimits): Promise<PdfText>;
 }
 
 export interface ReadBudget {
@@ -422,7 +525,8 @@ export function withReadSession<T>(work: (session: ReadSession) => Promise<T>, b
       recognize: (pass) =>
         ask<OcrPage>({ type: 'ocr', bytes: pass.bytes, turn: pass.turn ?? 0, band: pass.band ?? null, psm: pass.psm, whitelist: pass.whitelist ?? '', threshold: pass.threshold ?? 'sauvola' }),
       barcode: (bytes) => ask<string | null>({ type: 'barcode', bytes }),
-      pdfText: (bytes, limits) => ask<{ pages: number; text: string | null }>({ type: 'pdf', bytes, maxPages: limits.maxPages, readPages: limits.readPages }),
+      linearBarcode: (bytes) => ask<string | null>({ type: 'barcode', bytes, linear: true }),
+      pdfText: (bytes, limits) => ask<PdfText>({ type: 'pdf', bytes, maxPages: limits.maxPages, readPages: limits.readPages }),
     };
     try {
       const result = await work(session);

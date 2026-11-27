@@ -22,8 +22,32 @@ const kai: PersonSummary = { id: 'usr_kai', displayName: 'Kai D.', initials: 'KD
 const idAllMatch: IdentityAutoCheck = { readable: true, nameMatches: true, isAdult: true, notExpired: true, expires: { month: 4, year: 2029 }, documentType: 'drivers_license', addressMatches: true, source: 'barcode', frontAgrees: true };
 const idFlags: IdentityAutoCheck = { readable: true, nameMatches: false, isAdult: true, notExpired: false, expires: { month: 10, year: 2026 }, documentType: 'state_id', addressMatches: false, source: 'barcode', frontAgrees: false };
 
+/**
+ * The automatic checks (2026-11-27): Rosa's selfie only partly matches her license photo and her head isn't turned as
+ * asked, so the checks left her photos for staff; the barcode is Florida's and its number matches her.
+ */
+const idChecksForStaff: IdentityAutoCheck = {
+  ...idAllMatch,
+  checks: [
+    { key: 'readable', outcome: 'pass' },
+    { key: 'machine_readable', outcome: 'pass' },
+    { key: 'genuine', outcome: 'pass' },
+    { key: 'front_matches', outcome: 'pass' },
+    { key: 'name', outcome: 'pass' },
+    { key: 'adult', outcome: 'pass' },
+    { key: 'not_expired', outcome: 'pass' },
+    { key: 'face_match', outcome: 'unsure' },
+    { key: 'live', outcome: 'unsure' },
+    { key: 'unique', outcome: 'pass' },
+  ],
+  signals: ['number_derivation_ok', 'face_weak_match', 'pose_not_followed'],
+  face: { similarity: 0.39, matchAt: 0.45, mismatchBelow: 0.3 },
+  liveness: 0.96,
+  decision: 'review',
+};
+
 /** Our own ID check's tries as staff see them (stage 1). */
-const rosaInReview: AdminIdentityCaptureView = { id: 'idc_rosa', status: 'submitted', documentType: 'drivers_license', submittedAt: '2026-11-19T18:20:00.000Z', prompt: 'look_left', autoCheck: idAllMatch, photos: ['front', 'back', 'selfie'] };
+const rosaInReview: AdminIdentityCaptureView = { id: 'idc_rosa', status: 'submitted', documentType: 'drivers_license', submittedAt: '2026-11-19T18:20:00.000Z', prompt: 'look_left', autoCheck: idChecksForStaff, photos: ['front', 'back', 'selfie'], detailsStored: true };
 const rosaTurnedDown: AdminIdentityCaptureView = {
   id: 'idc_rosa_first',
   status: 'rejected',
@@ -37,7 +61,7 @@ const rosaTurnedDown: AdminIdentityCaptureView = {
   rejectionReason: 'prompt_not_followed',
   note: 'Selfie shows no hand; asked for a new one with the prompt.',
 };
-const priyaApproved: AdminIdentityCaptureView = { id: 'idc_priya', status: 'approved', documentType: 'drivers_license', submittedAt: '2026-11-17T13:00:00.000Z', prompt: 'smile', autoCheck: idAllMatch, photos: ['front', 'back', 'selfie'], decidedAt: '2026-11-17T13:40:00.000Z', decidedBy: 'Taylor B.', note: 'ID and selfie match; smile as asked.' };
+const priyaApproved: AdminIdentityCaptureView = { id: 'idc_priya', status: 'approved', documentType: 'drivers_license', submittedAt: '2026-11-17T13:00:00.000Z', prompt: 'smile', autoCheck: idAllMatch, photos: ['front', 'back', 'selfie'], decidedAt: '2026-11-17T13:40:00.000Z', decidedBy: 'Taylor B.', decidedByKind: 'staff', note: 'ID and selfie match; smile as asked.' };
 /** Approved by our team, then not confirmed by the provider's double check. */
 const anaApproved: AdminIdentityCaptureView = {
   id: 'idc_ana',

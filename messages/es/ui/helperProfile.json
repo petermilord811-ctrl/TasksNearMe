@@ -59,5 +59,12 @@
     "responseValue": "{range, select, hour {< 1 h} few_hours {< 4 h} other {< 1 d}}"
   },
   "details": "Detalles",
-  "sparks": "Sparks"
+  "sparks": "Sparks",
+  "lists": {
+    "skills": "Habilidades",
+    "likes": "Trabajo que disfruto",
+    "excludes": "Trabajo que no hago",
+    "experience": "Experiencia",
+    "present": "Actualidad"
+  }
 }

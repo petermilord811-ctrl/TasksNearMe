@@ -41,7 +41,7 @@ export function readingEmailText(check: StoredIdentityAutoCheck, link: string): 
   const lines = !check.readable
     ? ["The automatic reading couldn't read this ID. Open the photos to check it yourself."]
     : [
-        `Read from: ${check.source === 'barcode' ? 'the barcode on the back' : check.source === 'front' ? "the front's print" : 'the ID'}`,
+        `Read from: ${check.source === 'barcode' ? 'the barcode on the back' : check.source === 'mrz' ? "the passport's machine-readable zone" : check.source === 'front' ? "the front's print" : 'the ID'}`,
         `Name matches the account's legal name: ${yesNo(check.nameMatches)}`,
         `Address matches the home address on file: ${yesNo(check.addressMatches, 'no address to compare')}`,
         `18 or older: ${yesNo(check.isAdult)}`,

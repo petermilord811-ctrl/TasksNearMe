@@ -9,6 +9,8 @@ import {
   editorRemoveWorkSample,
   editorReorderWorkSamples,
   editorSaveArea,
+  editorSaveExperience,
+  editorSavePreferences,
   editorSaveProfile,
   editorSaveServices,
   editorSaveTools,
@@ -17,6 +19,7 @@ import {
   editorUploadWorkSample,
 } from '@/modules/verification/actions';
 import { getProfileEditorData } from '@/modules/verification/service';
+import { applyResumeAction, readResumeAction } from '@/modules/profiles/resume-actions';
 import { getViewer } from '@/platform/auth/viewer';
 import { db } from '@/platform/db/client';
 import { PageSkeleton } from '@/ui/components';
@@ -56,6 +59,10 @@ async function Editor() {
         onSaveServices: editorSaveServices,
         onSaveArea: editorSaveArea,
         onSaveTools: editorSaveTools,
+        onSavePreferences: editorSavePreferences,
+        onSaveExperience: editorSaveExperience,
+        onReadResume: readResumeAction,
+        onApplyResume: applyResumeAction,
         onUploadWorkSample: editorUploadWorkSample,
         onUpdateWorkSample: editorUpdateWorkSample,
         onRemoveWorkSample: editorRemoveWorkSample,

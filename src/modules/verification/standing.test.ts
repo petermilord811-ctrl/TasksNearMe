@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { LIVENESS_PROMPTS } from '@/contracts';
 import {
   addressDocumentDue,
   addressStanding,
@@ -194,11 +193,12 @@ describe('our own ID check (stage 1)', () => {
     expect(identityStanding([pass], now, [], AUSTIN)).toMatchObject({ verified: true, cleared: true, canCapture: false, captureApproved: false });
   });
 
-  it('deletes the photos 30 days after the decision, canceled ones at once', () => {
+  it('keeps the photos a year after the decision for review (owner, 2026-11-27), canceled ones not at all', () => {
     const base = { filesDeletedAt: null, hasFiles: true };
-    expect(capturePhotosDue({ ...base, status: 'approved', decidedAt: ago(29) }, now)).toBe(false);
-    expect(capturePhotosDue({ ...base, status: 'approved', decidedAt: ago(30) }, now)).toBe(true);
-    expect(capturePhotosDue({ ...base, status: 'rejected', decidedAt: ago(31) }, now)).toBe(true);
+    expect(capturePhotosDue({ ...base, status: 'approved', decidedAt: ago(30) }, now)).toBe(false);
+    expect(capturePhotosDue({ ...base, status: 'approved', decidedAt: ago(364) }, now)).toBe(false);
+    expect(capturePhotosDue({ ...base, status: 'approved', decidedAt: ago(365) }, now)).toBe(true);
+    expect(capturePhotosDue({ ...base, status: 'rejected', decidedAt: ago(366) }, now)).toBe(true);
     expect(capturePhotosDue({ ...base, status: 'canceled', decidedAt: now }, now)).toBe(true);
     expect(capturePhotosDue({ ...base, status: 'submitted', decidedAt: null }, now)).toBe(false);
     expect(capturePhotosDue({ status: 'rejected', decidedAt: ago(40), filesDeletedAt: ago(5), hasFiles: false }, now)).toBe(false);
@@ -219,8 +219,8 @@ describe('our own ID check (stage 1)', () => {
   it('picks the selfie prompt from a keyed hash of the person and the try, so reloading never changes it', () => {
     expect(livenessPromptFor('usr_a', 0, 'secret')).toBe(livenessPromptFor('usr_a', 0, 'secret'));
     const prompts = new Set(Array.from({ length: 60 }, (_, tries) => livenessPromptFor('usr_a', tries, 'secret')));
-    expect(prompts.size).toBeGreaterThanOrEqual(4);
-    for (const prompt of prompts) expect(LIVENESS_PROMPTS).toContain(prompt);
+    // Only the turns the face check can verify (2026-11-27), each of them.
+    expect([...prompts].sort()).toEqual(['look_left', 'look_right', 'look_up']);
     const other = Array.from({ length: 12 }, (_, tries) => livenessPromptFor('usr_a', tries, 'another secret'));
     expect(other).not.toEqual(Array.from({ length: 12 }, (_, tries) => livenessPromptFor('usr_a', tries, 'secret')));
   });

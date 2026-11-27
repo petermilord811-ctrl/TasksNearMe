@@ -97,6 +97,7 @@ import { proposalPreviews } from './proposal.preview';
 import { seriesPreviews } from './series.preview';
 import { verificationPreviews } from './verification.preview';
 import { identityCheckPreviews } from './identity-check.preview';
+import { verifyFlowPreviews } from './verify-flow.preview';
 import { aiAssistPreviews } from './ai-assist.preview';
 
 export const previews: PreviewEntry[] = [
@@ -131,6 +132,7 @@ export const previews: PreviewEntry[] = [
   ...helperOnboardingPreviews,
   ...verificationPreviews,
   ...identityCheckPreviews,
+  ...verifyFlowPreviews,
   ...helperProfileEditorPreviews,
   ...findWorkPreviews,
   ...pageSkeletonPreviews,

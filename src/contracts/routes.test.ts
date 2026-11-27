@@ -39,10 +39,11 @@ describe('routes', () => {
     );
   });
 
-  it('opens the phone and home address checks in place, the other checks on their setup pages (2026-11-23)', () => {
+  it('opens the phone, home address and ID checks in place (2026-11-23, the ID since 2026-11-27), the provider checks on their setup pages', () => {
     expect(routes.app.helperCheck('phone')).toBe('/app/helper/checks/phone');
     expect(routes.app.helperCheck('address')).toBe('/app/helper/checks/address');
-    expect(routes.app.helperCheck('identity')).toBe(routes.app.helperOnboarding('identity'));
+    expect(routes.app.helperCheck('identity')).toBe('/app/helper/checks/identity');
+    expect(routes.app.helperCheck('payout')).toBe(routes.app.helperOnboarding('payout'));
     expect(routes.app.helperCheck('background')).toBe(routes.app.helperOnboarding('background'));
   });
 

@@ -16,6 +16,7 @@ import type { FieldCipher } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { consumeRateLimit } from '@/platform/rate-limit';
+import { ensureDraftProfile } from './draft-profile';
 import { computeOnboarding } from './progress';
 import { addressVerifications } from './schema';
 import { loadOnboardingState, syncHelperProfile } from './state';
@@ -109,6 +110,8 @@ async function prepareDocument(file: File): Promise<{ ok: true; body: Buffer; co
 
 export async function submitAddressProof(deps: AddressProofDeps, userId: string, form: FormData, now: Date): Promise<AddressProofResult> {
   const { db } = deps;
+  // The home address can be the first thing a helper does (owner, 2026-11-27: checks in any order, before the profile).
+  await ensureDraftProfile(db, userId);
   const state = await loadOnboardingState(db, userId, now);
   const step = computeOnboarding(state.facts).progress.steps.find((s) => s.step === 'address');
   if (!step || step.state === 'locked' || !state.address.canSubmit) return { ok: false, code: 'not_allowed' };

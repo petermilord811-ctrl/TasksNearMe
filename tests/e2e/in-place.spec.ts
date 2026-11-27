@@ -167,25 +167,31 @@ test('the verified-helper reminder opens the home address and phone checks over 
     const check = page.getByRole('dialog', { name: 'Verify your home address' });
     await expect(check).toBeVisible({ timeout: 30_000 });
     await expect(page).toHaveURL(/\/app\/helper\/checks\/address$/);
+    // The Persona-style flow (2026-11-27): the intro, the address, the kind of document, the file, then the outcome.
+    await check.getByRole('button', { name: 'Start' }).click();
     await check.getByRole('combobox', { name: 'Your home address' }).fill('1234 Example');
     await check.getByRole('option', { name: /1234 Example Lane/ }).first().click();
-    await check.getByRole('radio', { name: 'Utility bill' }).check();
+    await check.getByRole('button', { name: 'Continue' }).click();
+    await check.getByRole('button', { name: /^Utility bill/ }).click();
     const bill = await sharp({ create: { width: 800, height: 1000, channels: 3, background: '#ffffff' } }).png().toBuffer();
-    await check.getByLabel('Document', { exact: true }).setInputFiles({ name: 'bill.png', mimeType: 'image/png', buffer: bill });
-    await check.getByRole('checkbox', { name: /This document shows my name and this address/ }).check();
-    await check.getByRole('button', { name: 'Send for review' }).click();
+    await check.locator('input[type="file"]').first().setInputFiles({ name: 'bill.png', mimeType: 'image/png', buffer: bill });
+    await check.getByRole('checkbox', { name: /It shows my name and this address/ }).check();
+    await check.getByRole('button', { name: 'Submit' }).click();
+    // A test account's proof is read by the stand-in, which is never sure: our team decides.
+    await expect(check.getByRole('heading', { name: 'Almost done' })).toBeVisible({ timeout: 90_000 });
+    await check.getByRole('button', { name: 'Done' }).click();
 
     // It closes over the page it opened on, which now counts the address as sent.
     await expect(check).toBeHidden({ timeout: 30_000 });
     await expect(page).toHaveURL(/\/app\/bookings$/);
-    await expect(page.getByText("Sent. We'll review it and let you know.").first()).toBeVisible();
+    await expect(page.getByText('Document sent for review').first()).toBeVisible();
     await untilShown(page.getByRole('dialog').getByRole('link', { name: /^Home address/ }), () => pill.click());
     await expect(page.getByRole('dialog').getByRole('link', { name: /^Home address/ })).toContainText('In review');
 
     // The phone (verified at sign-up): its check opens over the page too, and Escape closes it.
     await page.getByRole('dialog').getByRole('link', { name: /^Phone/ }).click();
     const phone = page.getByRole('dialog', { name: 'Verify your phone' });
-    await expect(phone.getByText(/Your phone number ending in \d{4} is verified\./)).toBeVisible({ timeout: 30_000 });
+    await expect(phone.getByRole('heading', { name: 'Phone verified' })).toBeVisible({ timeout: 30_000 });
     await expect(page).toHaveURL(/\/app\/helper\/checks\/phone$/);
     await page.keyboard.press('Escape');
     await expect(phone).toBeHidden();

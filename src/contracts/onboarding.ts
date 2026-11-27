@@ -10,6 +10,7 @@ import type { VerificationBadges } from './people';
 import type { AddressSuggestion, PhotoUploadResult } from './posting';
 import type { WorkSampleView } from './profiles';
 import type { WelcomeGiftCard } from './rewards';
+import type { HelperExperienceInput, HelperPreferencesInput, ResumeImportHandlers } from './resume';
 import type { OnboardingStep } from './routes';
 import type {
   AddressVerificationStatus,
@@ -18,6 +19,7 @@ import type {
   IdentityStatus,
   PayoutAccountStatus,
 } from './status';
+import type { CheckProgress, CheckProgressInput } from './verification-checks';
 
 /**
  * Helper onboarding (`/app/helper/onboarding/[step]`) and the profile editor (`/app/helper/profile`),
@@ -321,6 +323,11 @@ export interface IdentityCaptureSummary {
   rejectionReason?: IdentityCaptureRejectionReason;
   /** What the next selfie must show. */
   prompt: LivenessPrompt;
+  /**
+   * After our check approves the photos, an ID provider double-checks them (Persona or Stripe Identity, when one is set
+   * up). Without one, our own check is the verification (owner, 2026-11-27: our own server, no paid services).
+   */
+  doubleCheck: boolean;
 }
 
 /** Documents that prove a home address. Each must show the person's name and the address, dated within 90 days. */
@@ -528,6 +535,11 @@ export interface HelperOnboardingHandlers {
   /** `acknowledged`: the disclosure summary was acknowledged just now (needed while `background.disclosureNeeded`). */
   onStartBackgroundCheck: ActionHandler<{ acknowledged?: boolean }>;
   onRefreshStatus: ActionHandler;
+  /**
+   * The flows' "Verifying…" screen: where the ID photos or the proof just sent stand, with each automatic check as it
+   * finishes (polled every 2 seconds for about a minute). Null when nothing was sent.
+   */
+  onCheckProgress: QueryHandler<CheckProgressInput, CheckProgress | null>;
   /** The profile photo on Introduce yourself, as on the account page: FormData with one `file`; resolves with the photo. */
   onUploadPhoto: QueryHandler<FormData, PhotoUploadResult>;
   /** Back to initials; ok `updated`. */
@@ -558,7 +570,16 @@ export interface HelperProfileEditorData {
     services: HelperServicesInput;
     area: HelperAreaInput;
     tools: HelperToolsInput;
+    /** Skills, the work they enjoy and the work they don't do (2026-11-27). */
+    preferences: HelperPreferencesInput;
+    experience: HelperExperienceInput;
   };
+  /** The profile card's line: rating and jobs done (absent before the first). */
+  stats?: { ratingAverage?: number; ratingCount: number; completedCount: number };
+  /** Where they help, as the card says it ("North Loop, Austin" or "Gainesville, FL"). */
+  areaLabel?: string;
+  /** "Import from resume": AI suggests from the resume (true), or keyword suggestions only (false). */
+  resumeAi: boolean;
   workSamples: WorkSampleView[];
   /** Up to this many work samples. */
   maxWorkSamples: number;
@@ -583,8 +604,10 @@ export interface HelperProfileEditorData {
  * Handlers for the profile editor. Saves resolve with ok `saved`. Work samples: upload returns the
  * photo; update, remove, and reorder resolve with `updated`.
  */
-export interface HelperProfileEditorHandlers {
+export interface HelperProfileEditorHandlers extends ResumeImportHandlers {
   onSaveProfile: ActionHandler<HelperProfileInput>;
+  onSavePreferences: ActionHandler<HelperPreferencesInput>;
+  onSaveExperience: ActionHandler<HelperExperienceInput>;
   /** "Write it for me" (only when `aiDraftingEnabled`). Saves nothing. */
   onDraftProfile: QueryHandler<ProfileDraftInput, ProfileDraftResult>;
   onSaveServices: ActionHandler<HelperServicesInput>;

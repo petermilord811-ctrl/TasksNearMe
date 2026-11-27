@@ -107,6 +107,27 @@ function textPdf(pages: string[][]): Buffer {
   return Buffer.from(out, 'latin1');
 }
 
+/**
+ * The same PDF saved again with page 1's text replaced (an incremental update: the page and a new content stream
+ * appended, with an xref pointing back to the first), as an editor saves a change.
+ */
+function amendPdf(file: Buffer, lines: string[]): Buffer {
+  const original = file.toString('latin1');
+  const pdfString = (value: string) => `(${value.replace(/[\\()]/g, (ch) => `\\${ch}`)})`;
+  const size = Number(original.match(/\/Size (\d+)/)![1]);
+  const prev = Number(original.match(/startxref\n(\d+)/)![1]);
+  const content = ['BT', '/F1 12 Tf', '16 TL', '72 720 Td', ...lines.map((line) => `${pdfString(line)} Tj T*`), 'ET'].join('\n');
+  let out = original;
+  const contentAt = Buffer.byteLength(out, 'latin1');
+  out += `${size} 0 obj\n<< /Length ${Buffer.byteLength(content, 'latin1')} >>\nstream\n${content}\nendstream\nendobj\n`;
+  const pageAt = Buffer.byteLength(out, 'latin1');
+  out += `5 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents ${size} 0 R >>\nendobj\n`;
+  const xref = Buffer.byteLength(out, 'latin1');
+  out += `xref\n5 1\n${String(pageAt).padStart(10, '0')} 00000 n \n${size} 1\n${String(contentAt).padStart(10, '0')} 00000 n \n`;
+  out += `trailer\n<< /Size ${size + 1} /Root 1 0 R /Prev ${prev} >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, 'latin1');
+}
+
 const BILL_TEXT = [
   'Riverbend Power & Water',
   'Statement date: October 28, 2026',
@@ -129,9 +150,11 @@ describe.skipIf(!fontsRender)("the server's document readers", () => {
 
   it("reads a US license's labeled fields and its header, in a shadow too", { timeout: SLOW }, async () => {
     expect(ids.name).toBe('server:ocr');
-    await expect(id(await photo(licenseFront(), '#d8d8d8'), 'drivers_license')).resolves.toEqual({
+    await expect(id(await photo(licenseFront(), '#d8d8d8'), 'drivers_license')).resolves.toMatchObject({
       readable: true,
       source: 'front',
+      // Read from the print alone: whether it's genuine is our team's to say (2026-11-27).
+      genuine: { outcome: 'unsure', signals: [] },
       documentType: 'drivers_license',
       surname: 'SAMPLE',
       givenNames: 'ALEX RIVER',
@@ -149,8 +172,9 @@ describe.skipIf(!fontsRender)("the server's document readers", () => {
   it("reads a passport's MRZ with every check digit, even sent as a license", { timeout: SLOW }, async () => {
     const page = await webp(passportPage([MRZ_1, MRZ_2]));
     const reading = { readable: true, documentType: 'passport', surname: 'ERIKSSON', givenNames: 'ANNA MARIA', dateOfBirth: '1974-08-12', expiryDate: '2012-04-15', issuingState: 'UTO', documentNumber: 'L898902C3' };
-    await expect(id(page, 'passport')).resolves.toEqual(reading);
-    await expect(id(page, 'drivers_license')).resolves.toEqual({ ...reading, source: 'front' });
+    // Every check digit passed: read by machine, and genuine as far as the zone can say (2026-11-27).
+    await expect(id(page, 'passport')).resolves.toMatchObject({ ...reading, source: 'mrz', genuine: { outcome: 'pass', signals: ['mrz_check_digits_ok'] }, details: { source: 'mrz', documentNumber: 'L898902C3' } });
+    await expect(id(page, 'drivers_license')).resolves.toMatchObject({ ...reading, source: 'mrz' });
   });
 
   it("reads a license's barcode first and checks the front agrees, and reads the front alone without one", { timeout: SLOW }, async () => {
@@ -168,12 +192,13 @@ describe.skipIf(!fontsRender)("the server's document readers", () => {
       documentNumber: '12345678',
       address: { line1: '1234 EXAMPLE LANE', line2: 'APT 2', city: 'AUSTIN', state: 'TX', zip: '78723' },
     };
-    await expect(ids.read({ document: front, back: await back(TEXAS_LICENSE), declaredType: 'drivers_license' })).resolves.toEqual({ ...fromBarcode, frontAgrees: true });
+    await expect(ids.read({ document: front, back: await back(TEXAS_LICENSE), declaredType: 'drivers_license' })).resolves.toMatchObject({ ...fromBarcode, frontAgrees: true, genuine: { outcome: 'pass' } });
     // Another card's back (another birth date and number): its fields, and the front disagrees.
     const otherCard = TEXAS_LICENSE.map((element) => (element.startsWith('DBB') ? 'DBB04021991' : element.startsWith('DAQ') ? 'DAQ87654321' : element));
-    await expect(ids.read({ document: front, back: await back(otherCard), declaredType: 'drivers_license' })).resolves.toEqual({ ...fromBarcode, dateOfBirth: '1991-04-02', documentNumber: '87654321', frontAgrees: false });
+    await expect(ids.read({ document: front, back: await back(otherCard), declaredType: 'drivers_license' })).resolves.toMatchObject({ ...fromBarcode, dateOfBirth: '1991-04-02', documentNumber: '87654321', frontAgrees: false });
     // A back without a barcode: the front's fields, as before.
-    await expect(ids.read({ document: front, back: { bytes: await photograph(await cardBack(null)), contentType: 'image/webp' }, declaredType: 'drivers_license' })).resolves.toEqual({
+    await expect(ids.read({ document: front, back: { bytes: await photograph(await cardBack(null)), contentType: 'image/webp' }, declaredType: 'drivers_license' })).resolves.toMatchObject({
+      genuine: { outcome: 'unsure', signals: ['barcode_missing'] },
       readable: true,
       source: 'front',
       documentType: 'drivers_license',
@@ -196,23 +221,53 @@ describe.skipIf(!fontsRender)("the server's document readers", () => {
 
   it('answers for a photographed utility bill, and says unreadable for a blurry one', { timeout: SLOW }, async () => {
     const bill = await photo(utilityBill(), '#d8d4cc');
-    await expect(proofs.read({ document: { bytes: bill, contentType: 'image/webp' }, expected })).resolves.toEqual({ readable: true, documentType: 'utility_bill', nameMatches: true, addressMatches: true, recent: true });
-    await expect(proofs.read({ document: { bytes: await sharp(utilityBill()).blur(10).webp().toBuffer(), contentType: 'image/webp' }, expected })).resolves.toEqual({ readable: false });
+    await expect(proofs.read({ document: { bytes: bill, contentType: 'image/webp' }, expected })).resolves.toMatchObject({
+      readable: true,
+      documentType: 'utility_bill',
+      nameMatches: true,
+      addressMatches: true,
+      recent: true,
+      textSource: 'photo',
+      unedited: 'pass',
+      signals: expect.arrayContaining(['photo', 'issuer_unknown']),
+    });
+    await expect(proofs.read({ document: { bytes: await sharp(utilityBill()).blur(10).webp().toBuffer(), contentType: 'image/webp' }, expected })).resolves.toMatchObject({ readable: false });
   });
 
   it("reads a PDF's own text, and says unreadable for one without text, a broken one or a long one", { timeout: SLOW }, async () => {
     const pdf = (bytes: Buffer) => proofs.read({ document: { bytes, contentType: 'application/pdf' }, expected });
-    await expect(pdf(textPdf([BILL_TEXT]))).resolves.toEqual({ readable: true, documentType: 'utility_bill', nameMatches: true, addressMatches: true, recent: true });
-    await expect(proofs.read({ document: { bytes: textPdf([BILL_TEXT]), contentType: 'application/pdf' }, expected: { ...expected, name: 'Jordan Lee', submittedOn: '2027-06-01' } })).resolves.toEqual({
+    await expect(pdf(textPdf([BILL_TEXT]))).resolves.toMatchObject({ readable: true, documentType: 'utility_bill', nameMatches: true, addressMatches: true, recent: true, textSource: 'pdf', confident: true, unedited: 'pass' });
+    await expect(proofs.read({ document: { bytes: textPdf([BILL_TEXT]), contentType: 'application/pdf' }, expected: { ...expected, name: 'Jordan Lee', submittedOn: '2027-06-01' } })).resolves.toMatchObject({
       readable: true,
       documentType: 'utility_bill',
       nameMatches: false,
       addressMatches: true,
       recent: false,
     });
-    await expect(pdf(textPdf([[]]))).resolves.toEqual({ readable: false });
+    await expect(pdf(textPdf([[]]))).resolves.toEqual({ readable: false, textSource: 'pdf', confident: false, signals: ['scanned_pdf'] });
     await expect(pdf(Buffer.from('%PDF-1.7\nnot really a PDF'))).resolves.toEqual({ readable: false });
     await expect(pdf(textPdf(Array.from({ length: 51 }, () => BILL_TEXT)))).resolves.toEqual({ readable: false });
+  });
+
+  it("weighs a PDF saved again by what changed: another address is an edit, the same text isn't", { timeout: SLOW }, async () => {
+    const pdf = (bytes: Buffer) => proofs.read({ document: { bytes, contentType: 'application/pdf' }, expected });
+    const original = textPdf([BILL_TEXT.map((line) => line.replace('1234 EXAMPLE LN', '4321 OTHER LN'))]);
+    const edited = await pdf(amendPdf(original, BILL_TEXT));
+    expect(edited).toMatchObject({ readable: true, addressMatches: true, unedited: 'fail', signals: expect.arrayContaining(['pdf_incremental_updates']) });
+    const resaved = await pdf(amendPdf(textPdf([BILL_TEXT]), BILL_TEXT));
+    expect(resaved).toMatchObject({ unedited: 'pass' });
+    expect(resaved.signals).not.toContain('pdf_incremental_updates');
+  });
+
+  it('finds text drawn over other text, and the mailing block behind the envelope window', { timeout: SLOW }, async () => {
+    const pdf = (bytes: Buffer) => proofs.read({ document: { bytes, contentType: 'application/pdf' }, expected });
+    const clean = await pdf(textPdf([BILL_TEXT]));
+    expect(clean.signals).toEqual(expect.arrayContaining(['address_in_header', 'name_near_address']));
+    expect(clean.signals).not.toContain('pdf_text_overlay');
+    // A second string drawn where the ZIP is: what a white box and new text leave behind.
+    const covered = textPdf([BILL_TEXT]).toString('latin1').replace('ET\nendstream', 'ET\nBT /F1 12 Tf 72 640 Td (AUSTIN TX 78701) Tj ET\nendstream').replace(/\/Length (\d+)/, (_, length: string) => `/Length ${Number(length) + 'BT /F1 12 Tf 72 640 Td (AUSTIN TX 78701) Tj ET\n'.length}`);
+    const overlaid = await pdf(Buffer.from(covered, 'latin1'));
+    expect(overlaid).toMatchObject({ unedited: 'fail', signals: expect.arrayContaining(['pdf_text_overlay']) });
   });
 
   it('stops a read past its time or memory budget, and runs one read at a time', { timeout: SLOW }, async () => {

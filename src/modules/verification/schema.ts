@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import type { AddressCheckKey, AddressSignal, AutoDecision, CheckItem, FaceMatchScore, IdCheckKey, IdSignal } from '../../contracts/verification-checks';
 import { users } from '../accounts/schema';
 
 /**
@@ -65,8 +66,9 @@ export const identityVerifications = pgTable(
 );
 
 /**
- * The yes/no answers of the automatic reading of an ID (stage 1). The name, birth date and document
- * number are read once and never kept; only these answers and the expiry month and year are.
+ * The automatic reading of an ID (stage 1): its yes/no answers, and since 2026-11-27 the checks our server ran
+ * (`checks`, `signals`, `face`, `decision`). The details read from the ID (name, birth date, number, address) are kept
+ * apart, encrypted (`identity_captures.details_ciphertext`), never here.
  */
 export interface StoredIdentityAutoCheck {
   readable: boolean;
@@ -80,12 +82,22 @@ export interface StoredIdentityAutoCheck {
   /** The address on the ID's barcode matches the home address on file (absent when either is missing). */
   addressMatches?: boolean;
   /** Where the reading came from: the barcode on the back (licenses and state IDs) or the front's print. */
-  source?: 'barcode' | 'front';
+  source?: 'barcode' | 'mrz' | 'front';
   /** The front's printed birth date, number and surname agree with the barcode (when both were read). */
   frontAgrees?: boolean;
   /** Which reader produced it (`server:ocr`, `claude:<model>` or `stand-in`). */
   by: string;
   at: string;
+  /** Every check in `ID_CHECK_KEYS` order (2026-11-27; absent on older readings). */
+  checks?: CheckItem<IdCheckKey>[];
+  /** Findings behind the checks, for staff. */
+  signals?: IdSignal[];
+  /** The selfie against the ID's photo (absent when either face wasn't found). */
+  face?: FaceMatchScore;
+  /** How likely the selfie is a live person (0 to 1; absent without the model). */
+  liveness?: number;
+  /** What the checks decided: approved and rejected are applied at once; review waits for staff. */
+  decision?: AutoDecision;
 }
 
 /**
@@ -113,6 +125,13 @@ export const identityCaptures = pgTable(
     status: text('status').notNull(), // submitted | approved | rejected | canceled
     rejectionReason: text('rejection_reason'), // document_unreadable | selfie_mismatch | prompt_not_followed | under_18 | expired | double_check_failed | duplicate_id | other
     autoCheck: jsonb('auto_check').$type<StoredIdentityAutoCheck>(),
+    /**
+     * What was read from the ID (`IdDocumentDetails`: names, birth date, number, address, dates, class…), encrypted
+     * (platform/crypto) and kept with the photos for our team's review (owner, 2026-11-27); deleted with them.
+     */
+    detailsCiphertext: text('details_ciphertext'),
+    /** Who decided: `auto` (our server's checks) or `staff` (with `decidedByUserId`). */
+    decidedBy: text('decided_by'),
     submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull(),
     decidedAt: timestamp('decided_at', { withTimezone: true }),
     decidedByUserId: text('decided_by_user_id'),
@@ -194,16 +213,24 @@ export const backgroundChecks = pgTable(
   (t) => [index('background_checks_user_idx').on(t.userId, t.createdAt)],
 );
 
-/** The yes/no answers of an automatic document reading (never the document's text). */
+/** The answers of an automatic document reading (never the document's text). */
 export interface StoredAddressAutoCheck {
   readable: boolean;
   nameMatches?: boolean;
   addressMatches?: boolean;
   recent?: boolean;
   documentType?: string;
-  /** Which reader produced it (`claude:<model>` or `stand-in`). */
+  /** Which reader produced it (`server:ocr`, `claude:<model>` or `stand-in`). */
   by: string;
   at: string;
+  /** The company or agency that sent it, when recognized ("Duke Energy"). */
+  issuer?: string;
+  /** The newest date found up to the day it was sent (YYYY-MM-DD). */
+  documentDate?: string;
+  /** Every check in `ADDRESS_CHECK_KEYS` order (2026-11-27; absent on older readings). */
+  checks?: CheckItem<AddressCheckKey>[];
+  signals?: AddressSignal[];
+  decision?: AutoDecision;
 }
 
 /**
@@ -232,6 +259,8 @@ export const addressVerifications = pgTable(
     decidedByUserId: text('decided_by_user_id'),
     rejectionReason: text('rejection_reason'),
     autoCheck: jsonb('auto_check').$type<StoredAddressAutoCheck>(),
+    /** Who decided: `auto` (our server's checks) or `staff`. */
+    decidedBy: text('decided_by'),
     requestedByUserId: text('requested_by_user_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

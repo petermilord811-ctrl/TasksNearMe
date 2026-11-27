@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { addressOnDocument, documentKind, judgeAddressProof, nameOnDocument, parseStreetAddress, recentOnDocument } from './address-proof';
+import { addressOnDocument, documentDateOf, documentKind, judgeAddressProof, nameOnDocument, parseStreetAddress, recentOnDocument, statementDateOf } from './address-proof';
+import type { PdfStructure } from './pdf-forensics';
 import { words } from './text';
 
 const ADDRESS = '1234 Example Lane, Apt 2, Austin, TX 78723';
@@ -76,6 +77,33 @@ describe('the kind of proof of address', () => {
   });
 });
 
+describe("the date a statement states as its own", () => {
+  it('takes the end of a labeled period, else a labeled statement or bill date, else an unlabeled range', () => {
+    expect(statementDateOf('Statement Period 10/01/26 - 10/31/26  Account ending 1234', '2026-11-12')).toBe('2026-10-31');
+    expect(statementDateOf('STATEMENT PERIOD Aug 1 - Aug 31, 2026', '2026-11-12')).toBe('2026-08-31');
+    expect(statementDateOf('Billing Period: Sep 28, 2026 to Oct 27, 2026', '2026-11-12')).toBe('2026-10-27');
+    expect(statementDateOf('Opening/Closing Date 10/05/26 - 11/04/26', '2026-11-12')).toBe('2026-11-04');
+    expect(statementDateOf('Statement Date: October 28, 2026   Amount due by 11/18/2026', '2026-11-12')).toBe('2026-10-28');
+    expect(statementDateOf('Bill Date 11/01/2026', '2026-11-12')).toBe('2026-11-01');
+    expect(statementDateOf('October 01, 2026 through October 31, 2026', '2026-11-12')).toBe('2026-10-31');
+  });
+
+  it('never takes the next closing date, a date after it was sent, or a span of years', () => {
+    expect(statementDateOf('Next Closing Date 11/30/2026. Statement date 10/31/2026', '2026-11-12')).toBe('2026-10-31');
+    expect(statementDateOf('Statement date 12/31/2026', '2026-11-12')).toBeUndefined();
+    expect(statementDateOf('Customer from 2019-01-01 to 2026-10-31', '2026-11-12')).toBeUndefined();
+  });
+
+  it('falls back to three weeks before a due date', () => {
+    expect(statementDateOf('Please pay by November 21, 2026', '2026-11-12')).toBe('2026-10-31');
+    expect(statementDateOf('No dates here', '2026-11-12')).toBeUndefined();
+  });
+
+  it('or, for the document date shown to staff, the newest date up to the day it was sent', () => {
+    expect(documentDateOf('Customer since 3/1/2015. Statement 10/1/2026. Due 12/5/2026', '2026-11-12')).toBe('2026-10-01');
+  });
+});
+
 describe('the reading of a proof of address', () => {
   it('answers all four questions from text read with confidence', () => {
     expect(judgeAddressProof({ text: BILL, confident: true }, expected)).toEqual({ readable: true, documentType: 'utility_bill', nameMatches: true, addressMatches: true, recent: true });
@@ -87,5 +115,62 @@ describe('the reading of a proof of address', () => {
     const someoneElse = { ...expected, name: 'Jordan Lee' };
     expect(judgeAddressProof({ text: BILL, confident: false }, someoneElse)).toEqual({ readable: true, documentType: 'utility_bill', addressMatches: true, recent: true });
     expect(judgeAddressProof({ text: 'ALEX SAMPLE 1234 EXAMPLE LN 78723', confident: true }, expected)).toEqual({ readable: false });
+  });
+
+  const structure: PdfStructure = { revisions: 1, linearized: false, signed: false, encrypted: false, javascript: false, acroForm: false, formFields: false, annotationKinds: [], embeddedFiles: false };
+
+  it("adds what the automatic decision needs from the server's reader: the sender, the date, the source and the findings", () => {
+    const bill = BILL.replace('Riverbend Power & Water', 'Gainesville Regional Utilities');
+    expect(judgeAddressProof({ text: bill, confident: true, source: 'pdf', pdf: { structure, reader: { producer: 'BFO Report Engine' } } }, expected)).toEqual({
+      readable: true,
+      documentType: 'utility_bill',
+      nameMatches: true,
+      addressMatches: true,
+      recent: true,
+      issuer: { name: 'Gainesville Regional Utilities', kind: 'utility_bill' },
+      documentDate: '2026-10-28',
+      textSource: 'pdf',
+      confident: true,
+      unedited: 'pass',
+      signals: ['issuer_known', 'name_near_address', 'address_in_header'],
+    });
+  });
+
+  it("finds an edited PDF's marks, a photo's source, and a sender's kind of document", () => {
+    const edited = judgeAddressProof({ text: BILL, confident: true, source: 'pdf', pdf: { structure: { ...structure, producer: 'iLovePDF' } } }, expected);
+    expect(edited).toMatchObject({ unedited: 'fail', signals: expect.arrayContaining(['pdf_editor_tool', 'issuer_unknown']) });
+    const photo = judgeAddressProof({ text: BILL, confident: false, source: 'photo' }, expected);
+    expect(photo).toMatchObject({ textSource: 'photo', confident: false, unedited: 'pass', signals: expect.arrayContaining(['photo', 'low_confidence_text']) });
+    // A letter from a sender we know is their kind of document, and a different kind than declared is noted.
+    const letter = 'Duke Energy\nDear customer ALEX R SAMPLE of 1234 EXAMPLE LN APT 2 AUSTIN TX 78723, thank you for choosing us, we value you as a customer and we look forward to serving you this year with care. October 28, 2026';
+    expect(judgeAddressProof({ text: letter, confident: true, source: 'pdf', pdf: { structure } }, { ...expected, declaredType: 'bank_statement' })).toMatchObject({ documentType: 'utility_bill', signals: expect.arrayContaining(['kind_differs', 'issuer_known']) });
+  });
+
+  it("goes by the envelope window's lines when a PDF has them", () => {
+    const reading = judgeAddressProof({ text: BILL, confident: true, source: 'pdf', pdf: { structure }, mailingBlock: 'ALEX R SAMPLE\n1234 EXAMPLE LN APT 2\nAUSTIN TX 78723-1234' }, expected);
+    expect(reading.signals).toEqual(expect.arrayContaining(['address_in_header', 'name_near_address']));
+    const elsewhere = judgeAddressProof({ text: BILL, confident: true, source: 'pdf', pdf: { structure }, mailingBlock: 'JORDAN LEE\n88 OTHER ROAD\nAUSTIN TX 78701' }, expected);
+    expect(elsewhere.signals).not.toContain('address_in_header');
+  });
+
+  it('decides "recent" by the date it labels, and leaves an old label with a newer date elsewhere to staff', () => {
+    const old = 'Statement date: July 1, 2026\n' + BILL.split('\n').slice(2).join('\n').replace(/10\/25\/2026|11\/18\/2026/g, '06/25/2026');
+    expect(judgeAddressProof({ text: old, confident: true, source: 'pdf', pdf: { structure } }, expected).recent).toBe(false);
+    const printed = `${old}\nPrinted on 11/10/2026`;
+    expect(judgeAddressProof({ text: printed, confident: true, source: 'pdf', pdf: { structure } }, expected).recent).toBeUndefined();
+  });
+
+  it('says a scanned PDF and an unreadable photo are unreadable, and why', () => {
+    expect(judgeAddressProof({ text: ' ', confident: true, source: 'pdf', pdf: { structure } }, expected)).toEqual({ readable: false, textSource: 'pdf', confident: false, signals: ['scanned_pdf'] });
+    expect(judgeAddressProof({ text: 'x', confident: false, source: 'photo' }, expected)).toEqual({ readable: false, textSource: 'photo', confident: false, signals: ['photo', 'low_confidence_text'] });
+  });
+});
+
+describe('USPS street words', () => {
+  it('reads Publication 28 suffixes and units both ways, and never mistakes a street named Front for a unit', () => {
+    expect(addressOnDocument(words('1234 EXAMPLE PKWY UNIT 4 GAINESVILLE FL 32601'), '1234 Example Parkway, Gainesville, FL 32601')).toBe(true);
+    expect(addressOnDocument(words('77 Harbor Crescent Gainesville FL 32601'), '77 Harbor Cres, Gainesville, FL 32601')).toBe(true);
+    expect(parseStreetAddress('12 Front St, Gainesville, FL 32601')).toEqual({ number: '12', street: ['FRONT'], suffix: 'ST', zip: '32601' });
+    expect(parseStreetAddress('12 Oak Lane Bsmt, Gainesville, FL 32601')).toEqual({ number: '12', street: ['OAK'], suffix: 'LN', zip: '32601' });
   });
 });

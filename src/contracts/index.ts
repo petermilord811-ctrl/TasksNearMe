@@ -19,6 +19,8 @@ export * from './profiles';
 export * from './posting';
 export * from './offers';
 export * from './onboarding';
+export * from './verification-checks';
+export * from './resume';
 export * from './helper-work';
 export * from './payments';
 export * from './bookings';

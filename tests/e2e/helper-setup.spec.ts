@@ -117,8 +117,10 @@ test('a new helper sets up their profile in one flow and goes on to the checks',
   await page.getByRole('checkbox', { name: /I agree to the Helper agreement/ }).check();
   await page.getByRole('button', { name: 'Save and continue' }).click();
 
-  // On to the home address, which opens helping (owner, 2026-11-23); the profile shows as one done step.
-  await expect(page).toHaveURL(/\/app\/helper\/onboarding\/address$/, { timeout: 30_000 });
+  // On to Verifications, where the checks are picked in any order (owner, 2026-11-27).
+  await expect(page).toHaveURL(/\/app\/helper\/verification$/, { timeout: 30_000 });
+  await expect(page.getByRole('heading', { level: 1, name: 'Verifications' })).toBeVisible();
+  // The profile reads like the public one (LinkedIn-style), its headline on the card.
   await page.goto('/app/helper/profile');
-  await expect(page.getByLabel('Headline')).toHaveValue(headline);
+  await expect(page.getByText(headline).first()).toBeVisible();
 });

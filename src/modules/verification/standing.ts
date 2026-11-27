@@ -1,4 +1,5 @@
 import { createHmac } from 'node:crypto';
+import { CHECKABLE_PROMPTS } from '@/integrations/ocr/face';
 import type {
   AddressDocumentType,
   AddressRejectionReason,
@@ -12,7 +13,7 @@ import type {
   IdentityStatus,
   LivenessPrompt,
 } from '@/contracts';
-import { LIVENESS_PROMPTS, type TimeZone } from '@/contracts';
+import type { TimeZone } from '@/contracts';
 import { marketDayKey, marketLocalToUtc } from '@/shared/format';
 
 /**
@@ -75,8 +76,12 @@ export const ADDRESS_RULES = {
 
 /** Our own ID check (stage 1, added 2026-11-13). Its tries count toward `IDENTITY_RULES`. */
 export const IDENTITY_CAPTURE_RULES = {
-  /** The photos are deleted this long after the stage-1 decision, at the latest (sooner once both stages are final). */
-  photoRetentionDays: 30,
+  /**
+   * The photos and what was read from the ID are kept, encrypted, for our team's review this long after the decision
+   * (owner, 2026-11-27: "store DL infos and images for further possible manual review"; Texas CUBI allows up to a year
+   * after the purpose ends), then deleted; at once for a canceled try or a deleted account.
+   */
+  photoRetentionDays: 365,
   /** Staff aim to decide within this long. */
   responseTargetHours: 48,
   /** The age a helper must be. */
@@ -335,11 +340,12 @@ export function namesMatch(account: { firstName: string; lastName: string }, ver
  * capture the person sent, so each new try gets its own.
  */
 export function livenessPromptFor(userId: string, tries: number, secret: string): LivenessPrompt {
-  const digest = createHmac('sha256', secret).update(`tnm.liveness.v1.${userId}.${tries}`).digest();
-  return LIVENESS_PROMPTS[digest.readUInt32BE(0) % LIVENESS_PROMPTS.length]!;
+  // Since 2026-11-27 only the turns our server can check from the face's pose (face.ts); older tries kept theirs.
+  const digest = createHmac('sha256', secret).update(`tnm.liveness.v2.${userId}.${tries}`).digest();
+  return CHECKABLE_PROMPTS[digest.readUInt32BE(0) % CHECKABLE_PROMPTS.length]!;
 }
 
-/** Whether a capture's photos are due for deletion: 30 days after the decision, or at once when it was canceled. */
+/** Whether a capture's photos are due for deletion: a year after the decision, or at once when it was canceled. */
 export function capturePhotosDue(row: { status: string; decidedAt: Date | null; filesDeletedAt: Date | null; hasFiles: boolean }, now: Date): boolean {
   if (!row.hasFiles || row.filesDeletedAt !== null) return false;
   if (row.status === 'canceled') return true;

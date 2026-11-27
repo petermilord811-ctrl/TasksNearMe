@@ -1,3 +1,4 @@
+import type { AddressCheckKey, AddressSignal, AutoDecision, CheckItem, FaceMatchScore, IdCheckKey, IdSignal } from './verification-checks';
 import { z } from 'zod';
 import type { ActionHandler, FieldErrorCode, QueryHandler } from './actions';
 import type { CategorySlug, ISODateTime } from './common';
@@ -53,6 +54,13 @@ export interface AddressAutoCheck {
   recent?: boolean;
   /** What the document looks like. */
   documentType?: AddressDocumentType | 'other';
+  /** Who sent it, when recognized ("Duke Energy"), and its own date (2026-11-27). */
+  issuer?: string;
+  documentDate?: string;
+  /** Every check in `ADDRESS_CHECK_KEYS` order, the findings behind them, and what they decided (2026-11-27). */
+  checks?: CheckItem<AddressCheckKey>[];
+  signals?: AddressSignal[];
+  decision?: AutoDecision;
 }
 
 /** A proof waiting in the address queue (oldest first). */
@@ -93,9 +101,17 @@ export interface IdentityAutoCheck {
   /** The address on the ID's barcode matches the person's home address on file (absent when either is missing). */
   addressMatches?: boolean;
   /** Where the reading came from: the barcode on the back (licenses and state IDs) or the front's print. */
-  source?: 'barcode' | 'front';
+  source?: 'barcode' | 'mrz' | 'front';
   /** The front's printed birth date, number and surname agree with the barcode (when both were read). */
   frontAgrees?: boolean;
+  /** The ten automatic checks (2026-11-27; absent on older readings), the findings behind them, the face similarity and liveness. */
+  checks?: CheckItem<IdCheckKey>[];
+  signals?: IdSignal[];
+  face?: FaceMatchScore;
+  /** How likely the selfie is of a live person, 0 to 1. */
+  liveness?: number;
+  /** What the checks decided: approved and rejected were applied at once; review is for staff. */
+  decision?: AutoDecision;
 }
 
 /** An ID check waiting on staff: photos to compare, a name that differs from the account's, or 5 tries without a pass. */
@@ -151,6 +167,8 @@ export interface AdminAddressProofView {
   documentDeletedAt?: ISODateTime;
   decidedAt?: ISODateTime;
   decidedBy?: string;
+  /** Decided by our server's checks (`auto`) or by staff. */
+  decidedByKind?: 'auto' | 'staff';
   rejectionReason?: AddressRejectionReason;
   autoCheck?: AddressAutoCheck;
 }
@@ -175,11 +193,16 @@ export interface AdminIdentityCaptureView {
   autoCheck?: IdentityAutoCheck;
   /** In review without its automatic reading yet. */
   reading?: IdentityReadingState;
-  /** The photos still stored (they're deleted 30 days after the decision). */
+  /** The photos still stored (deleted a year after the decision, 2026-11-27). */
   photos: IdentityCapturePhoto[];
+  /** What was read from the ID is stored with them (encrypted): "Show the ID's details" shows it, for any kind of ID. */
+  detailsStored?: boolean;
   photosDeletedAt?: ISODateTime;
   decidedAt?: ISODateTime;
+  /** The deciding staff member's name. */
   decidedBy?: string;
+  /** Decided by our server's checks (`auto`) or by a person (`staff`). */
+  decidedByKind?: 'auto' | 'staff';
   rejectionReason?: IdentityCaptureRejectionReason;
   /** The deciding staff member's note (staff only; the helper sees the reason). */
   note?: string;
@@ -361,11 +384,24 @@ export const identityDetailsRevealInputSchema = z.object({
 export type IdentityDetailsRevealInput = z.input<typeof identityDetailsRevealInputSchema>;
 
 /**
- * What the barcode on the back of a license or state ID says, read on this server when staff ask (never stored, never
- * logged), and how it compares with the account.
+ * What was read from the ID and how it compares with the account: since 2026-11-27 what the automatic reading stored
+ * (encrypted) when the photos came in (`stored`); for older captures, the barcode on the back of a license or state ID
+ * read again on this server when staff ask (never stored, never logged).
  */
 export interface IdentityCaptureDetails {
-  documentType: Extract<IdentityDocumentType, 'drivers_license' | 'state_id'>;
+  documentType: IdentityDocumentType | 'other';
+  /** Read from the barcode, a passport's machine-readable zone, or the front's print. */
+  source?: 'barcode' | 'mrz' | 'front';
+  /** From the stored reading (true), or the barcode read again now (absent). */
+  stored?: boolean;
+  licenseClass?: string;
+  restrictions?: string;
+  endorsements?: string;
+  /** The card's document discriminator (DCF) and inventory control number (DCK). */
+  documentDiscriminator?: string;
+  inventoryControl?: string;
+  aamvaVersion?: number;
+  jurisdictionVersion?: number;
   /** The issuing state's two-letter code. */
   issuingState: string;
   name: { given: string; middle?: string; surname: string; suffix?: string };

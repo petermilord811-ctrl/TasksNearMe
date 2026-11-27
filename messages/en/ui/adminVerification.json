@@ -64,7 +64,50 @@
     "recent": "Within 90 days: {answer}",
     "yes": "yes",
     "no": "no",
-    "unknown": "not sure"
+    "unknown": "not sure",
+    "issuer": "From: {issuer}",
+    "documentDate": "Dated {date}",
+    "decision": "Automatic decision: {decision}",
+    "decisions": {
+      "approved": "approved",
+      "review": "left for staff",
+      "rejected": "turned down"
+    },
+    "checksTitle": "Checks",
+    "checks": {
+      "readable": "Document read",
+      "accepted_kind": "Accepted kind of document",
+      "name": "Name on it",
+      "address": "Address on it",
+      "recent": "Dated within 90 days",
+      "unedited": "No signs of editing"
+    },
+    "outcomes": {
+      "pass": "pass",
+      "fail": "fail",
+      "unsure": "unsure",
+      "skipped": "n/a"
+    },
+    "signalsTitle": "Findings",
+    "signals": {
+      "scanned_pdf": "A scan saved as a PDF (no text of its own)",
+      "photo": "A photo of the document",
+      "issuer_known": "From a company or agency we recognize",
+      "issuer_unknown": "From a sender we don't recognize",
+      "pdf_edited_after_creation": "Changed more than a day after it was made",
+      "pdf_incremental_updates": "Saved again after it was made, with its text changed",
+      "pdf_editor_tool": "Made or changed with a PDF editor or an online PDF tool",
+      "pdf_annotations": "Notes or boxes drawn over the page",
+      "pdf_form_fields": "Fillable fields on the page",
+      "pdf_font_mix": "Several fonts mixed in the name or address lines (note only)",
+      "pdf_javascript": "Active content (scripts or embedded files)",
+      "name_near_address": "The name sits in the mailing block with the address",
+      "address_in_header": "The address is in the mailing block",
+      "kind_differs": "Looks like a different kind of document than chosen",
+      "low_confidence_text": "The photo's text was hard to read",
+      "pdf_text_overlay": "Different text drawn over text at the same spot",
+      "pdf_created_before_statement": "The file was made before the date it states"
+    }
   },
   "rejectionReasons": {
     "unreadable": "unreadable",
@@ -203,7 +246,8 @@
     "documentTypes": {
       "drivers_license": "Driver's license",
       "state_id": "State ID card",
-      "passport": "Passport"
+      "passport": "Passport",
+      "other": "Another document"
     },
     "sentOn": "Sent {date}",
     "prompt": "Selfie prompt: {prompt}",
@@ -234,9 +278,78 @@
       "address": "Address matches: {answer}",
       "source": {
         "barcode": "Read from the barcode",
-        "front": "Read from the front"
+        "front": "Read from the front",
+        "mrz": "Read from the passport's machine-readable zone"
       },
-      "frontAgrees": "Front and barcode agree: {answer}"
+      "frontAgrees": "Front and barcode agree: {answer}",
+      "decision": "Automatic decision: {decision}",
+      "decisions": {
+        "approved": "approved",
+        "review": "left for staff",
+        "rejected": "turned down"
+      },
+      "checksTitle": "Automatic checks",
+      "checks": {
+        "readable": "Photos readable",
+        "machine_readable": "Barcode or passport zone read",
+        "genuine": "Encoded as the issuer encodes it",
+        "front_matches": "Front agrees with the barcode",
+        "name": "Name matches the account",
+        "adult": "18 or older",
+        "not_expired": "Not expired",
+        "face_match": "Selfie matches the ID photo",
+        "live": "Live selfie that followed its prompt",
+        "unique": "Not on another account"
+      },
+      "outcomes": {
+        "pass": "pass",
+        "fail": "fail",
+        "unsure": "unsure",
+        "skipped": "n/a"
+      },
+      "face": "Face similarity {score} (same person from {matchAt}, different below {below})",
+      "liveness": "Live-person score {score} (a hint, never a decision)",
+      "signalsTitle": "Findings",
+      "signals": {
+        "barcode_missing": "The back's barcode didn't read.",
+        "header_malformed": "The barcode's header isn't laid out as AAMVA's standard says.",
+        "issuer_unknown": "The barcode's issuer number isn't one AAMVA assigned.",
+        "issuer_mismatch": "The barcode's issuer doesn't match its own subfile or the state on the front.",
+        "version_unknown": "The barcode's AAMVA version doesn't exist.",
+        "version_too_new": "The barcode uses an AAMVA version published long after the card's issue date.",
+        "subfile_layout_off": "The barcode's sections aren't where or as long as its header says.",
+        "required_fields_missing": "Fields the standard requires are missing from the barcode.",
+        "field_format_off": "A barcode field is in the wrong format (sex, name flags, ZIP or country).",
+        "number_format_off": "The license number doesn't have the state's format.",
+        "number_derivation_off": "The license number doesn't match the name or birth date it's built from.",
+        "number_derivation_ok": "The license number matches the name, birth date and sex it's built from.",
+        "dates_inconsistent": "The issue, birth and expiry dates don't fit together.",
+        "validity_too_long": "The license runs longer than the state allows.",
+        "expiry_not_on_birthday": "A Florida license that doesn't expire on the holder's birthday.",
+        "inventory_mismatch": "The 1D barcode's inventory number differs from the PDF417's.",
+        "barcode_signature_ok": "The state's digital signature on the barcode is valid.",
+        "barcode_signature_bad": "The state's digital signature on the barcode didn't verify.",
+        "mrz_check_digits_ok": "Every check digit of the passport's machine-readable zone is right.",
+        "front_unreadable": "The front's print didn't read.",
+        "front_name_differs": "The front's name differs from the barcode's.",
+        "front_birth_date_differs": "The front's birth date differs from the barcode's.",
+        "front_number_differs": "The front's number differs from the barcode's.",
+        "front_expiry_differs": "The front's expiry differs from the barcode's.",
+        "id_face_missing": "No face found on the ID.",
+        "selfie_face_missing": "No face found in the selfie.",
+        "selfie_many_faces": "More than one face in the selfie.",
+        "face_mismatch": "The selfie's face doesn't match the ID photo.",
+        "face_weak_match": "The selfie's face only partly matches the ID photo.",
+        "selfie_is_id_photo": "The selfie is a picture of the ID's own photo.",
+        "spoof_suspected": "The selfie may be a photo of a photo or a screen.",
+        "pose_not_followed": "The selfie doesn't show the head turned as asked.",
+        "pose_followed": "The selfie shows the head turned as asked.",
+        "photo_of_screen": "The ID photo looks like a photo of a screen.",
+        "photocopy": "The ID photo is black and white: a copy, not the card.",
+        "card_outline_off": "The card's outline isn't an ID card's shape.",
+        "photo_edited": "The photo shows signs of editing.",
+        "low_quality": "The photos are too dark or blurry."
+      }
     },
     "rejectionReasons": {
       "document_unreadable": "the ID is unreadable",
@@ -269,7 +382,7 @@
     "details": {
       "open": "Show the ID's details",
       "title": "Show the ID's details",
-      "description": "This server reads the barcode on the back of the license or ID again and shows what it says, without opening the photos. Nothing it shows is stored. Why you need it is logged with your name and the time.",
+      "description": "What was read from the ID when the photos came in (stored encrypted with them), without opening the photos; for older checks, the barcode on the back read again now. Why you need it is logged with your name and the time.",
       "reason": "Why you need it",
       "reasonHint": "At least 10 characters, for example: comparing the name and address with the account before approving.",
       "reasonRequired": "Say why in at least 10 characters.",
@@ -314,7 +427,21 @@
         }
       },
       "noBarcode": "The back has no barcode this server can read (too blurry, or a card without one). Open the photos to check the details.",
-      "unavailable": "The reader couldn't run just now. Try again in a minute, or open the photos."
+      "unavailable": "The reader couldn't run just now. Try again in a minute, or open the photos.",
+      "loggedStored": "Shown and logged: read from the ID when it was sent.",
+      "stored": "Stored encrypted with the photos and deleted with them. Compare it with the photos before you decide.",
+      "source": {
+        "barcode": "from the barcode",
+        "mrz": "from the passport's zone",
+        "front": "from the front's print"
+      },
+      "licenseClass": "Class",
+      "restrictions": "Restrictions",
+      "endorsements": "Endorsements",
+      "discriminator": "Document discriminator",
+      "inventory": "Inventory number",
+      "versionLabel": "Barcode version",
+      "version": "AAMVA {version}, issuer {jurisdiction}"
     },
     "decide": {
       "open": "Review",
@@ -339,7 +466,8 @@
       "waiting": "Not read automatically yet: the reader gets to it within a few minutes. After {time} you can approve without the reading.",
       "no_reader": "No automatic reading here (no reader is set up): approving skips the duplicate-ID check, and the audit log says so.",
       "timed_out": "The automatic reading didn’t answer in time: approving skips the duplicate-ID check, and the audit log says so."
-    }
+    },
+    "decidedAuto": "Decided automatically {date}"
   },
   "providerOutcome": "The provider's result: {outcome}",
   "providerOutcomes": {

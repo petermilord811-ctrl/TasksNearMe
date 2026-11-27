@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
   ...(process.env.TNM_E2E_BUILD === '1' ? { typescript: { ignoreBuildErrors: true } } : {}),
   // CI's preview build (.github/workflows/ci.yml, scripts/preview/bundle.sh): a self-contained server folder.
   ...(process.env.NEXT_OUTPUT === 'standalone' ? { output: 'standalone' as const } : {}),
-  // The server's document readers (src/integrations/ocr/engine.ts) load Tesseract, its English data, zxing-wasm's
+  // The server's document readers (src/integrations/ocr/engine.ts, face-engine.ts) load Tesseract, its English data, zxing-wasm's
   // barcode reader and unpdf in a short-lived process of their own at run time, out of the bundler's sight, so the
   // standalone folder is told to keep them. Only the LSTM builds of Tesseract's core (the readers' engine mode), and
   // only zxing's CommonJS reader with its WebAssembly binary (the process reads it from here: nothing is downloaded).
@@ -37,6 +37,11 @@ const nextConfig: NextConfig = {
       './node_modules/zxing-wasm/dist/reader/zxing_reader.wasm',
       './node_modules/unpdf/package.json',
       './node_modules/unpdf/dist/**',
+      // Our own ID check's face matching (src/integrations/ocr/face-engine.ts, 2026-11-27): OpenCV's WebAssembly build
+      // and the open models it runs, read from here at run time (nothing is downloaded).
+      './node_modules/@techstark/opencv-js/package.json',
+      './node_modules/@techstark/opencv-js/dist/opencv.js',
+      './vendor/face-models/*.onnx',
     ],
   },
   ...(devPublicHost ? { allowedDevOrigins: [devPublicHost] } : {}),

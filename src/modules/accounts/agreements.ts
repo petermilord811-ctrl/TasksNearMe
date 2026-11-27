@@ -17,9 +17,11 @@ export const AGREEMENT_VERSIONS = {
    * team, kept encrypted until the checks finish and deleted at most 30 days after our decision), then the
    * provider's double check; a client's check is the provider's alone. draft-0.3 (2026-11-13): the
    * provider is Persona (completion plan 6.2), which keeps its images and is asked to delete them 30 days
-   * after its result.
+   * after its result. draft-0.4 (owner, 2026-11-27): software on our own servers checks the ID and compares the
+   * selfie's face with the ID's photo (face geometry); the photos and the details read from the ID are kept
+   * encrypted for review and fraud prevention and deleted at most a year after our decision.
    */
-  biometric_consent: 'draft-0.3',
+  biometric_consent: 'draft-0.4',
   /** Our summary of the background check, before Checkr's own FCRA disclosure and authorization. */
   bg_check_disclosure: 'draft-0.1',
 } as const;

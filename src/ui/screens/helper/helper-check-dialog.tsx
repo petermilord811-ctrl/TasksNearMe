@@ -6,40 +6,39 @@ import { routes, type HelperCheckDialogStep, type HelperOnboardingHandlers, type
 import { RouteDialogBody, RouteDialogHeader } from '@/ui/components/layout/route-dialog';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { buttonVariants } from '@/ui/primitives/button';
-import { AddressStep } from './address-step';
-import { PhoneStep } from './phone-step';
+import { AddressFlow } from '@/ui/screens/verify/address-flow';
+import { IdFlow } from '@/ui/screens/verify/id-flow';
+import { PhoneFlow } from '@/ui/screens/verify/phone-flow';
 
 export type HelperCheckDialogData =
   | { step: HelperCheckDialogStep; verification: VerificationSummary }
-  /** Setup has to go somewhere else first (a step before it, or the helper invite): its page. */
+  /** Setup has to go somewhere else first (the helper invite): its page. */
   | { step: HelperCheckDialogStep; elsewhere: OnboardingStep };
 
+export type HelperCheckDialogHandlers = Pick<
+  HelperOnboardingHandlers,
+  'onStartPhone' | 'onConfirmPhone' | 'onSearchAddresses' | 'onSubmitAddressProof' | 'onCheckProgress' | 'onAcceptIdentityNotice' | 'onSubmitIdentityCapture' | 'onStartIdentity' | 'onRefreshStatus'
+>;
+
 /**
- * One check of a verified helper in a dialog over the page it's opened from (2026-11-23, owner: "I hate to redirect to
- * new pages continually … if possible, use dialog"): the phone or the home address, from the verified-helper reminder
- * and the verification checklist. The right code or the sent proof closes it, and the page underneath refreshes (the
- * reminder counts it). Setup's own pages keep their step-to-step flow; the ID check, payouts and the background check
- * hand off to their providers from there.
+ * One check in a dialog over the page it's opened from (2026-11-23, owner: "I hate to redirect to new pages continually
+ * … if possible, use dialog"; 2026-11-27: the ID check too, in the Persona-style flow): the phone, the home address or
+ * the ID, from Verifications, the verified-helper reminder and the verification checklist. Finishing closes it and the
+ * page underneath refreshes.
  */
-export function HelperCheckDialogScreen({ data, handlers }: { data: HelperCheckDialogData; handlers: Pick<HelperOnboardingHandlers, 'onStartPhone' | 'onConfirmPhone' | 'onSearchAddresses' | 'onSubmitAddressProof'> }) {
+export function HelperCheckDialogScreen({ data, handlers }: { data: HelperCheckDialogData; handlers: HelperCheckDialogHandlers }) {
   const steps = useTranslations('helperOnboarding.screen.steps');
   const screen = useTranslations('helperOnboarding.screen');
   const t = useTranslations('shell.reminder');
-  const title = t(`checkTitles.${data.step}`);
   if ('elsewhere' in data) {
     return <>
-      <RouteDialogHeader title={title} description={t('elsewhere')} />
+      <RouteDialogHeader title={t(`checkTitles.${data.step}`)} description={t('elsewhere')} />
       <RouteDialogBody>
         <Link href={routes.app.helperOnboarding(data.elsewhere)} className={buttonVariants({ className: 'w-full sm:w-auto' })}>{screen('continueStep', { step: steps(data.elsewhere) })}<ArrowRight aria-hidden="true" /></Link>
       </RouteDialogBody>
     </>;
   }
-  return <>
-    <RouteDialogHeader title={title} description={t(`checkDescriptions.${data.step}`)} />
-    <RouteDialogBody>
-      {data.step === 'phone'
-        ? <PhoneStep verification={data.verification} handlers={handlers} inDialog />
-        : <AddressStep verification={data.verification} handlers={handlers} inDialog />}
-    </RouteDialogBody>
-  </>;
+  if (data.step === 'phone') return <PhoneFlow variant="dialog" verification={data.verification} handlers={handlers} />;
+  if (data.step === 'address') return <AddressFlow variant="dialog" verification={data.verification} handlers={handlers} />;
+  return <IdFlow variant="dialog" verification={data.verification} handlers={handlers} />;
 }

@@ -156,7 +156,7 @@ describe('the same ID on two accounts', () => {
     expect(flagged!.metadata).toEqual({ captureId: second!.id, otherUserId: FIRST });
 
     // Staff can still approve the photos; the double check waits for the duplicate.
-    expect(await decideIdentityCapture(db, taylor, { captureId: second!.id, decision: 'approve', note: 'License and selfie match.' }, at(1.1))).toEqual({ ok: true, code: 'updated' });
+    expect(await decideIdentityCapture(db, taylor, { captureId: second!.id, decision: 'approve', note: 'License and selfie match.' }, at(1.1), { doubleCheck: true })).toEqual({ ok: true, code: 'updated' });
     const state = await loadOnboardingState(db, SECOND, at(1.1));
     expect(state.identity).toMatchObject({ blocked: 'duplicate_id', captureApproved: true, canStart: false });
     expect(verificationSummary(state, false, null).identity.blocked).toBe('duplicate_id');
@@ -250,7 +250,7 @@ describe('an ID that runs out', () => {
     expect(await submitIdentityCapture(deps, RENEWER, await captureForm(), before(25))).toEqual({ ok: true, code: 'submitted' });
     const fresh = (await capturesOf(RENEWER)).at(-1)!;
     await db.update(identityCaptures).set({ autoCheck: { readable: true, nameMatches: true, isAdult: true, notExpired: true, expiresMonth: 5, expiresYear: 2031, documentType: 'drivers_license', by: 'stub', at: before(25).toISOString() } }).where(eq(identityCaptures.id, fresh.id));
-    expect(await decideIdentityCapture(db, taylor, { captureId: fresh.id, decision: 'approve', note: 'New license; selfie matches.' }, before(24))).toEqual({ ok: true, code: 'updated' });
+    expect(await decideIdentityCapture(db, taylor, { captureId: fresh.id, decision: 'approve', note: 'New license; selfie matches.' }, before(24), { doubleCheck: true })).toEqual({ ok: true, code: 'updated' });
     expect(await bookable(RENEWER, before(24))).toBe(true);
     const start = await startIdentity(db, providers, RENEWER, before(24));
     if (!start.ok) throw new Error('the double check did not start');
@@ -303,7 +303,7 @@ describe('approval waits for the automatic reading (5.18)', () => {
     expect(await submitIdentityCapture(deps, id, await captureForm(), when)).toEqual({ ok: true, code: 'submitted' });
     return (await capturesOf(id)).at(-1)!;
   };
-  const approve = (captureId: string, when: Date, reader: IdDocumentReader | null) => decideIdentityCapture(db, taylor, { captureId, decision: 'approve', note: 'License and selfie match.' }, when, { reading: reading(reader) });
+  const approve = (captureId: string, when: Date, reader: IdDocumentReader | null) => decideIdentityCapture(db, taylor, { captureId, decision: 'approve', note: 'License and selfie match.' }, when, { reading: reading(reader), doubleCheck: true });
   const approvalAudit = async (userId: string) => (await db.select().from(auditLog).where(and(eq(auditLog.targetId, userId), eq(auditLog.action, 'identity_capture.approved'))))[0];
 
   it('without a reader, approves without the reading and the audit log says so', async () => {

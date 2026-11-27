@@ -1,3 +1,4 @@
+import type { ExperienceEntry } from './resume';
 import type { QueryHandler } from './actions';
 import type { CategorySlug, ISODateTime, Photo, TimeZone } from './common';
 import type { AvailabilitySlotView } from './availability';
@@ -61,6 +62,11 @@ export interface HelperProfilePageData {
   tools: string[];
   /** Display names, e.g. "English", "Spanish". */
   languages: string[];
+  /** Skills, the work they enjoy and the work they don't do, and their experience (2026-11-27; often from their resume). */
+  skills?: string[];
+  likes?: string[];
+  excludes?: string[];
+  experience?: ExperienceEntry[];
   services: HelperServiceDetail[];
   /** Newest first, at most 10. The total is `helper.rating.count`. */
   reviews: PublicReviewView[];

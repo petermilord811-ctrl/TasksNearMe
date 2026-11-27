@@ -30,7 +30,7 @@ import { outboxEvents } from '@/platform/outbox/schema';
 /**
  * Persona as the ID check's double check (completion plan 6.2): the inquiry it opens, its signed events
  * through the real recorders (in any order, and twice), the case staff get when it doesn't confirm the
- * photos our team approved, and the photos deleted once both stages are final. Persona itself is a fake
+ * photos our team approved; the photos stay a year after our decision (2026-11-27). Persona itself is a fake
  * fetch; nothing leaves the machine.
  */
 
@@ -167,16 +167,13 @@ describe('Persona, the double check', () => {
     const [profile] = await db.select().from(helperProfiles).where(eq(helperProfiles.userId, APPROVED));
     expect(profile!.idVerifiedAt).not.toBeNull();
 
-    // Both stages are final: the photos go on the timers' next run, long before the 30 days.
+    // Both stages final, the photos stay for our team's review until a year after our decision (owner, 2026-11-27).
     expect(await stored(`identity/fil_${APPROVED}_selfie.bin`)).toBe(true);
     await runVerificationTimers(db, { storage, providers }, minutes(started, 8), { userIds: PEOPLE });
     const capture = await captureOf(APPROVED);
-    expect(capture).toMatchObject({ status: 'approved', frontFileId: null, backFileId: null, selfieFileId: null });
-    expect(capture.filesDeletedAt).not.toBeNull();
-    expect(await stored(`identity/fil_${APPROVED}_selfie.bin`)).toBe(false);
-    expect(await db.select().from(files).where(eq(files.ownerUserId, APPROVED))).toHaveLength(0);
-    const [deleted] = await db.select().from(auditLog).where(and(eq(auditLog.targetId, APPROVED), eq(auditLog.action, 'identity_capture.deleted')));
-    expect(deleted!.metadata).toMatchObject({ captureId: capture.id, after: 'double_check' });
+    expect(capture).toMatchObject({ status: 'approved' });
+    expect(capture.filesDeletedAt).toBeNull();
+    expect(await stored(`identity/fil_${APPROVED}_selfie.bin`)).toBe(true);
   });
 
   it('pauses the helper when Persona declines the ID our team approved, with a case showing both results', async () => {

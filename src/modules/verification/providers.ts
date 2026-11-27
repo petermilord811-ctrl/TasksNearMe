@@ -65,6 +65,18 @@ export function verificationProvidersFor(env: Record<string, string | undefined>
   return { identity: identity ?? dev.identity, payout: payout ?? dev.payout, background: background ?? dev.background };
 }
 
+/**
+ * Whether an ID provider double-checks what our own check approved: only with a real one set up (Persona, or Stripe
+ * Identity, with the other providers production needs). Without one, our own check (its automatic checks, and our
+ * team when they're unsure) is the verification
+ * (owner, 2026-11-27: the license checked deeply on our own server, with open-source technology and no paid services).
+ * Development's stand-in doesn't count: it behaves as production does without keys.
+ */
+export function idDoubleCheckFor(env: Record<string, string | undefined>): boolean {
+  const providers = verificationProvidersFor(env);
+  return providers !== null && providers.identity.provider !== 'dev';
+}
+
 /** Payout accounts on Stripe Connect Express: Stripe's onboarding, coming back to the payout step. */
 export function connectPayouts(connect: StripeConnect, appUrl: string): VerificationProviders['payout'] {
   const back = `${appUrl}${routes.app.helperOnboarding('payout')}`;

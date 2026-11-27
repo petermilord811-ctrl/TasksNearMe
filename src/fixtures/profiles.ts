@@ -1,3 +1,4 @@
+import { samExperience, samPreferences } from './resume';
 import { HELPER_CONTACT_EARNED_MIN, type HelperContactAccess, type HelperContactReveal, type HelperProfilePageData, type NeighborsAnswersView, type PublicReviewView } from '@/contracts';
 import { jordan, lee, sam } from './people';
 
@@ -47,6 +48,11 @@ const samReviews: PublicReviewView[] = [
 ];
 
 export const samProfilePageData: HelperProfilePageData = {
+  // His resume's skills, preferences and experience (2026-11-27; src/fixtures/resume.ts).
+  skills: samPreferences.skills,
+  likes: samPreferences.likes,
+  excludes: samPreferences.excludes,
+  experience: samExperience.experience,
   timeZone: 'America/Chicago',
   helper: sam,
   bio: 'I’ve been assembling furniture and helping neighbors move since 2024. I bring my own drill, bits, and moving straps, and I clean up when I’m done.',

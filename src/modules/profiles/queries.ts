@@ -9,6 +9,7 @@ import { and, asc, count, desc, eq, exists, gt, inArray, isNotNull, max, or, sql
 import type {
   BadgeView,
   CategorySlug,
+  ExperienceEntry,
   NeighborhoodDayCardView,
   HelperProfilePageData,
   HelperReviewTag,
@@ -288,6 +289,9 @@ export async function getHelperProfile(handle: string, database: Db = db, rows: 
     remoteOk: row.profile.remoteOk,
     tools: row.profile.tools,
     languages: row.profile.languages.map((code) => languageNames.of(code) ?? code),
+    // Skills, the work they enjoy and don't do, and their experience (2026-11-27, often from their resume): public and
+    // indexed, so contact details are masked as in reviews.
+    ...publicProfileLists(row.profile),
     services,
     reviews: reviewRows.map(({ review, author, categorySlug }) => ({
       id: review.id,
@@ -308,6 +312,27 @@ export async function getHelperProfile(handle: string, database: Db = db, rows: 
       ...(categorySlug ? { categorySlug: categorySlug as CategorySlug } : {}),
       ...(sample.caption ? { caption: sample.caption } : {}),
     })),
+  };
+}
+
+/** A profile's skills, preferences and experience as the public page shows them: only the lists it has, contact details masked. */
+export function publicProfileLists(profile: { skills: string[]; likes: string[]; excludes: string[]; experience: ExperienceEntry[] }): Pick<HelperProfilePageData, 'skills' | 'likes' | 'excludes' | 'experience'> {
+  const masked = (text: string) => maskContactDetails(text).text;
+  const list = (items: string[]) => items.map(masked).filter((item) => item.trim().length > 0);
+  const skills = list(profile.skills);
+  const likes = list(profile.likes);
+  const excludes = list(profile.excludes);
+  const experience = profile.experience.map((entry) => ({
+    ...entry,
+    title: masked(entry.title),
+    ...(entry.organization ? { organization: masked(entry.organization) } : {}),
+    ...(entry.summary ? { summary: masked(entry.summary) } : {}),
+  }));
+  return {
+    ...(skills.length > 0 ? { skills } : {}),
+    ...(likes.length > 0 ? { likes } : {}),
+    ...(excludes.length > 0 ? { excludes } : {}),
+    ...(experience.length > 0 ? { experience } : {}),
   };
 }
 

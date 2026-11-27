@@ -116,7 +116,7 @@ export async function recordIdentityResult(db: Db, sessionId: string, result: Id
       .orderBy(desc(addressVerifications.createdAt))
       .limit(1);
     if (latest?.status !== 'verified') return false;
-    await tx.update(addressVerifications).set({ status: 'in_review', decidedAt: null, decidedByUserId: null }).where(eq(addressVerifications.id, latest.id));
+    await tx.update(addressVerifications).set({ status: 'in_review', decidedAt: null, decidedByUserId: null, decidedBy: null }).where(eq(addressVerifications.id, latest.id));
     return true;
   });
   if (rechecked) await audit(db, 'address.recheck', row.userId, { reason: 'id_name_differs' });

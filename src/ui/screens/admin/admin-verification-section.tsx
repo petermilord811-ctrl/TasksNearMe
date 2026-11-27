@@ -35,8 +35,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives/field';
 import { Spinner } from '@/ui/primitives/spinner';
 import { Textarea } from '@/ui/primitives/textarea';
-import { addressStatusTones } from '../helper/address-step';
-import { backgroundStatusTones, identityStatusTones, payoutStatusTones } from '../helper/verification-panel';
+import { addressStatusTones, backgroundStatusTones, identityStatusTones, payoutStatusTones } from '@/ui/components/status/verification-tones';
 
 /** The actions with their own buttons on a proof or a capture; the rest are buttons under the section. */
 type OtherAction = Exclude<AdminVerificationActionId, 'review_address' | 'review_identity_capture' | 'view_identity_photos'>;
@@ -50,20 +49,49 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 function AutoCheck({ check }: { check: AddressAutoCheck }) {
   const t = useTranslations('adminVerification.autoCheck');
-  if (!check.readable) return <p className="text-sm text-muted-foreground">{t('unreadable')}</p>;
+  if (!check.readable && !check.checks) return <p className="text-sm text-muted-foreground">{t('unreadable')}</p>;
   const answer = (value: boolean | undefined) => (value === undefined ? t('unknown') : value ? t('yes') : t('no'));
-  return <ul aria-label={t('title')} className="flex flex-wrap gap-2 text-xs">
-    <li className="rounded-full border px-2.5 py-1">{t('name', { answer: answer(check.nameMatches) })}</li>
-    <li className="rounded-full border px-2.5 py-1">{t('address', { answer: answer(check.addressMatches) })}</li>
-    <li className="rounded-full border px-2.5 py-1">{t('recent', { answer: answer(check.recent) })}</li>
-  </ul>;
+  const tone: Record<string, string> = { pass: 'text-success', fail: 'text-destructive', unsure: 'text-warning', skipped: 'text-muted-foreground' };
+  return <>
+    <ul aria-label={t('title')} className="flex flex-wrap gap-2 text-xs">
+      <li className="rounded-full border px-2.5 py-1">{t('name', { answer: answer(check.nameMatches) })}</li>
+      <li className="rounded-full border px-2.5 py-1">{t('address', { answer: answer(check.addressMatches) })}</li>
+      <li className="rounded-full border px-2.5 py-1">{t('recent', { answer: answer(check.recent) })}</li>
+      {check.issuer && <li className="rounded-full border px-2.5 py-1">{t('issuer', { issuer: check.issuer })}</li>}
+      {check.documentDate && <li className="rounded-full border px-2.5 py-1 tabular-nums">{t('documentDate', { date: check.documentDate })}</li>}
+    </ul>
+    {/* The checks our server ran (2026-11-27): the decision, each check in words, the findings behind them. */}
+    {check.checks && <div className="space-y-2 rounded-lg bg-muted/40 p-3 text-sm">
+      {check.decision && <p className="font-medium">{t('decision', { decision: t(`decisions.${check.decision}`) })}</p>}
+      <ul aria-label={t('checksTitle')} className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+        {check.checks.map((item) => <li key={item.key} className="flex items-baseline justify-between gap-2"><span>{t(`checks.${item.key}`)}</span><span className={`shrink-0 font-medium ${tone[item.outcome] ?? ''}`}>{t(`outcomes.${item.outcome}`)}</span></li>)}
+      </ul>
+      {check.signals && check.signals.length > 0 && <div><p className="font-medium">{t('signalsTitle')}</p><ul className="list-disc space-y-0.5 pl-5">{check.signals.map((signal) => <li key={signal}>{t(`signals.${signal}`)}</li>)}</ul></div>}
+    </div>}
+  </>;
+}
+
+/** The automatic checks (2026-11-27): the decision, each check's outcome in words, the findings, the face and liveness scores. */
+function IdChecks({ check }: { check: IdentityAutoCheck }) {
+  const t = useTranslations('adminVerification.capture.autoCheck');
+  if (!check.checks) return null;
+  const tone: Record<string, string> = { pass: 'text-success', fail: 'text-destructive', unsure: 'text-warning', skipped: 'text-muted-foreground' };
+  return <div className="space-y-2 rounded-lg bg-muted/40 p-3 text-sm">
+    {check.decision && <p className="font-medium">{t('decision', { decision: t(`decisions.${check.decision}`) })}</p>}
+    <ul aria-label={t('checksTitle')} className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+      {check.checks.map((item) => <li key={item.key} className="flex items-baseline justify-between gap-2"><span>{t(`checks.${item.key}`)}</span><span className={`shrink-0 font-medium ${tone[item.outcome] ?? ''}`}>{t(`outcomes.${item.outcome}`)}</span></li>)}
+    </ul>
+    {check.face && <p className="tabular-nums">{t('face', { score: check.face.similarity.toFixed(2), matchAt: check.face.matchAt.toFixed(2), below: check.face.mismatchBelow.toFixed(2) })}</p>}
+    {check.liveness !== undefined && <p className="tabular-nums text-muted-foreground">{t('liveness', { score: check.liveness.toFixed(2) })}</p>}
+    {check.signals && check.signals.length > 0 && <div><p className="font-medium">{t('signalsTitle')}</p><ul className="list-disc space-y-0.5 pl-5">{check.signals.map((signal) => <li key={signal}>{t(`signals.${signal}`)}</li>)}</ul></div>}
+  </div>;
 }
 
 function IdAutoCheck({ check }: { check: IdentityAutoCheck }) {
   const t = useTranslations('adminVerification');
-  if (!check.readable) return <p className="text-sm text-muted-foreground">{t('capture.autoCheck.unreadable')}</p>;
+  if (!check.readable) return <><p className="text-sm text-muted-foreground">{t('capture.autoCheck.unreadable')}</p><IdChecks check={check} /></>;
   const answer = (value: boolean | undefined) => (value === undefined ? t('autoCheck.unknown') : value ? t('autoCheck.yes') : t('autoCheck.no'));
-  return <ul aria-label={t('capture.autoCheck.title')} className="flex flex-wrap gap-2 text-xs">
+  return <><ul aria-label={t('capture.autoCheck.title')} className="flex flex-wrap gap-2 text-xs">
     <li className="rounded-full border px-2.5 py-1">{t('capture.autoCheck.name', { answer: answer(check.nameMatches) })}</li>
     <li className="rounded-full border px-2.5 py-1">{t('capture.autoCheck.adult', { answer: answer(check.isAdult) })}</li>
     <li className="rounded-full border px-2.5 py-1">{t('capture.autoCheck.notExpired', { answer: answer(check.notExpired) })}</li>
@@ -72,7 +100,7 @@ function IdAutoCheck({ check }: { check: IdentityAutoCheck }) {
     {check.addressMatches !== undefined && <li className="rounded-full border px-2.5 py-1">{t('capture.autoCheck.address', { answer: answer(check.addressMatches) })}</li>}
     {check.source && <li className="rounded-full border px-2.5 py-1">{t(`capture.autoCheck.source.${check.source}`)}</li>}
     {check.frontAgrees !== undefined && <li className="rounded-full border px-2.5 py-1">{t('capture.autoCheck.frontAgrees', { answer: answer(check.frontAgrees) })}</li>}
-  </ul>;
+  </ul><IdChecks check={check} /></>;
 }
 
 /** Our own ID check's tries (stage 1): what was sent, the automatic reading, the decision, and the photos once opened. */
@@ -100,7 +128,7 @@ function CaptureList({ captures, canView, canReview, revealed, detailsRevealed, 
         <p>{t('capture.prompt', { prompt: t(`capture.prompts.${capture.prompt}`) })}</p>
         {capture.autoCheck && <IdAutoCheck check={capture.autoCheck} />}
         {capture.reading && <p className={capture.reading.state === 'skipped' ? 'font-medium text-warning' : 'text-muted-foreground'}>{capture.reading.state === 'waiting' ? t('capture.reading.waiting', { time: formatDateTime(capture.reading.until) }) : t(`capture.reading.${capture.reading.why}`)}</p>}
-        {capture.decidedAt && <p>{t('capture.decided', { date: formatDateTime(capture.decidedAt), name: capture.decidedBy ?? t('staff') })}</p>}
+        {capture.decidedAt && <p>{capture.decidedByKind === 'auto' ? t('capture.decidedAuto', { date: formatDateTime(capture.decidedAt) }) : t('capture.decided', { date: formatDateTime(capture.decidedAt), name: capture.decidedBy ?? t('staff') })}</p>}
         {capture.rejectionReason && <p>{t('capture.rejectedFor', { reason: t(`capture.rejectionReasons.${capture.rejectionReason}`) })}</p>}
         {capture.note && <p className="break-words text-muted-foreground">{t('capture.note', { note: capture.note })}</p>}
         {capture.duplicateOf && capture.duplicateOf.length > 0 && <p className="font-medium">{t('capture.duplicateOf')}{capture.duplicateOf.map((other, index) => <span key={other.id}>{index > 0 ? ', ' : ''}<Link href={routes.admin.user(other.id)} className="underline underline-offset-4">{other.displayName}</Link></span>)}</p>}
@@ -118,8 +146,8 @@ function CaptureList({ captures, canView, canReview, revealed, detailsRevealed, 
           </div>}
           <p className="text-muted-foreground tabular-nums">{t('capture.reveal.expires', { time: formatDateTime(revealed.result.expiresAt) })}</p>
         </div>}
-        {((canView && capture.photos.length > 0) || (canReview && capture.status === 'submitted')) && <div className="flex flex-wrap gap-2">
-          {canView && hasBarcodeSide(capture) && <Button type="button" variant="outline" size="sm" onClick={() => onDetails(capture)}>{t('capture.details.open')}</Button>}
+        {((canView && (capture.photos.length > 0 || capture.detailsStored)) || (canReview && capture.status === 'submitted')) && <div className="flex flex-wrap gap-2">
+          {canView && (capture.detailsStored || hasBarcodeSide(capture)) && <Button type="button" variant="outline" size="sm" onClick={() => onDetails(capture)}>{t('capture.details.open')}</Button>}
           {canView && capture.photos.length > 0 && <Button type="button" variant="outline" size="sm" onClick={() => onOpen(capture)}>{t('capture.reveal.open')}</Button>}
           {canReview && capture.status === 'submitted' && <Button type="button" size="sm" onClick={() => onReview(capture)}>{t('capture.decide.open')}</Button>}
         </div>}
@@ -205,7 +233,7 @@ export function AdminVerificationSection({ userId, verification, handlers, now, 
             {proof.submittedAt && <p className="tabular-nums"><time dateTime={proof.submittedAt} title={formatRelative(proof.submittedAt, now)}>{t('sentOn', { date: formatDateTime(proof.submittedAt) })}</time></p>}
             {proof.areaName && <p>{t('near', { area: proof.areaName })}</p>}
             {proof.autoCheck && <AutoCheck check={proof.autoCheck} />}
-            {proof.decidedAt && <p>{t('decided', { date: formatDateTime(proof.decidedAt), name: proof.decidedBy ?? t('staff') })}</p>}
+            {proof.decidedAt && <p>{proof.decidedByKind === 'auto' ? t('capture.decidedAuto', { date: formatDateTime(proof.decidedAt) }) : t('decided', { date: formatDateTime(proof.decidedAt), name: proof.decidedBy ?? t('staff') })}</p>}
             {proof.rejectionReason && <p>{t('rejectedFor', { reason: t(`rejectionReasons.${proof.rejectionReason}`) })}</p>}
             {proof.status === 'requested' && <p className="text-muted-foreground">{t('requestedRow')}</p>}
             <p className="text-muted-foreground">{proof.documentAvailable ? t('documentKept') : proof.documentDeletedAt ? t('documentDeleted', { date: formatDate(proof.documentDeletedAt) }) : t('documentNone')}</p>
@@ -344,7 +372,7 @@ function IdDetailsPanel({ details }: { details: IdentityCaptureDetails }) {
   const { name, address, matches } = details;
   const physical = [details.sex && t(`sex.${details.sex}`), details.height && t('height', { height: details.height }), details.eyeColor && t('eyes', { eyes: details.eyeColor })].filter(Boolean).join(' · ');
   return <div className="space-y-3 rounded-lg border border-primary/40 p-3">
-    <p role="status" className="flex items-center gap-2 font-medium text-success"><LockKeyhole aria-hidden="true" className="size-4" />{t('logged')}</p>
+    <p role="status" className="flex items-center gap-2 font-medium text-success"><LockKeyhole aria-hidden="true" className="size-4" />{t(details.stored ? 'loggedStored' : 'logged')}</p>
     <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-[max-content_1fr]">
       <dt className="font-medium">{t('name')}</dt>
       <dd className="break-words">{[name.given, name.middle, name.surname, name.suffix].filter(Boolean).join(' ')} <Match ok={matches.name} yes={t('matches.name.yes')} no={t('matches.name.no')} /></dd>
@@ -356,12 +384,18 @@ function IdDetailsPanel({ details }: { details: IdentityCaptureDetails }) {
       <dt className="font-medium">{t('number')}</dt>
       <dd className="break-all font-mono">{details.documentNumber}</dd>
       <dt className="font-medium">{t('issuer')}</dt>
-      <dd>{t('issuedBy', { type: types(details.documentType), state: details.issuingState })}</dd>
+      <dd>{t('issuedBy', { type: types(details.documentType), state: details.issuingState })}{details.source ? ` · ${t(`source.${details.source}`)}` : ''}</dd>
+      {details.licenseClass && <><dt className="font-medium">{t('licenseClass')}</dt><dd>{details.licenseClass}</dd></>}
+      {details.restrictions && <><dt className="font-medium">{t('restrictions')}</dt><dd>{details.restrictions}</dd></>}
+      {details.endorsements && <><dt className="font-medium">{t('endorsements')}</dt><dd>{details.endorsements}</dd></>}
+      {details.documentDiscriminator && <><dt className="font-medium">{t('discriminator')}</dt><dd className="break-all font-mono">{details.documentDiscriminator}</dd></>}
+      {details.inventoryControl && <><dt className="font-medium">{t('inventory')}</dt><dd className="break-all font-mono">{details.inventoryControl}</dd></>}
+      {details.aamvaVersion !== undefined && <><dt className="font-medium">{t('versionLabel')}</dt><dd className="tabular-nums">{t('version', { version: details.aamvaVersion, jurisdiction: details.jurisdictionVersion ?? 0 })}</dd></>}
       {address && <><dt className="font-medium">{t('address')}</dt>
         <dd className="break-words">{[address.line1, address.line2, `${address.city}, ${address.state} ${address.zip}`].filter(Boolean).join(', ')} <Match ok={matches.address} yes={t('matches.address.yes')} no={t('matches.address.no')} unknown={t('matches.address.none')} /></dd></>}
       {physical && <><dt className="font-medium">{t('physical')}</dt><dd>{physical}</dd></>}
     </dl>
-    <p className="text-muted-foreground">{t('notStored')}</p>
+    <p className="text-muted-foreground">{t(details.stored ? 'stored' : 'notStored')}</p>
   </div>;
 }
 

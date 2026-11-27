@@ -1,10 +1,14 @@
-import { ADDRESS_PROOF_RULES, type IdentityDocumentType } from '@/contracts';
+import { ADDRESS_PROOF_RULES, type IdDocumentDetails, type IdentityDocumentType } from '@/contracts';
 import type { AddressDocumentReader, AddressDocumentReading } from '@/integrations/ai/document-reader';
-import type { IdDocumentReader, IdDocumentReading } from '@/integrations/ai/id-document-reader';
+import type { IdDocumentInput, IdDocumentReader, IdDocumentReading } from '@/integrations/ai/id-document-reader';
 import { AiUnavailableError } from '@/integrations/ai/writer';
 import { parseAamva, type IdBarcodeDetails } from './aamva';
+import { barcodeExtras, judgeBarcode } from './aamva-genuine';
+import { judgeFaces, type FaceJudgement } from './face';
+import { analyzeFaces, FaceEngineError } from './face-engine';
 import { judgeAddressProof, type ProofText } from './address-proof';
-import { barcodeReading } from './back';
+import { firstRevision, inspectPdf, type PdfReaderFacts } from './pdf-forensics';
+import { barcodeReading, frontAgrees } from './back';
 import { EngineFailureError, OverBudgetError, UnreadableDocumentError, withReadSession, type OcrPass, type ReadBudget, type ReadSession } from './engine';
 import { combineFronts, completeFront, readLicenseFront } from './license';
 import { confirmedNames, findPassportZone } from './mrz';
@@ -17,7 +21,9 @@ export { parseAamva, type IdBarcodeDetails } from './aamva';
  * The server's own document readers (owner, 2026-11-21: "for ID check: our own server"; no paid AI). They run
  * here, free, with no outside service and no network call: zxing decodes a license or ID card's barcode,
  * Tesseract reads photos, PDF.js reads a PDF's own text. They answer only what they read with confidence and say
- * unreadable otherwise; staff still decide every case. The job runner calls the readers
+ * unreadable otherwise. Since 2026-11-27 the ID reader also judges whether the license is genuine (aamva-genuine.ts)
+ * and compares the selfie's face with the ID's (face-engine.ts, its own process); the verdict decides the clear cases
+ * and leaves the rest to staff (src/modules/verification/id-verdict.ts). The job runner calls the readers
  * (verification.read_documents); a staff action reads a back's barcode on demand (`readIdBarcode`, about a second).
  * A read takes a second or a few of CPU and up to about 400 MB (a license's back and front), one read at a time
  * per process (engine.ts). Nothing they read is logged or kept beyond the reading they return.
@@ -144,10 +150,63 @@ async function unlessUnreadable<T>(step: () => Promise<T>, unreadable: T): Promi
   }
 }
 
-/** The fields of the barcode in a photo of a card's back, or null when none decodes or it isn't an AAMVA one. */
-async function backBarcode(session: ReadSession, bytes: Buffer, today: Date): Promise<IdBarcodeDetails | null> {
+/** The barcode in a photo of a card's back: its text and fields, or null when none decodes or it isn't an AAMVA one. */
+async function backBarcode(session: ReadSession, bytes: Buffer, today: Date): Promise<{ text: string; details: IdBarcodeDetails } | null> {
   const text = await session.barcode(bytes);
-  return text ? parseAamva(text, today) : null;
+  const details = text ? parseAamva(text, today) : null;
+  return text && details ? { text, details } : null;
+}
+
+/** What staff may read later (encrypted): every field of the barcode, with its class, restrictions and numbers. */
+function barcodeDetails(details: IdBarcodeDetails, text: string): IdDocumentDetails {
+  return {
+    source: 'barcode',
+    documentType: details.documentType,
+    issuingState: details.issuingState,
+    givenNames: details.givenNames,
+    ...(details.middleNames ? { middleNames: details.middleNames } : {}),
+    surname: details.surname,
+    ...(details.suffix ? { suffix: details.suffix } : {}),
+    dateOfBirth: details.dateOfBirth,
+    ...(details.issueDate ? { issueDate: details.issueDate } : {}),
+    expiryDate: details.expiryDate,
+    documentNumber: details.documentNumber,
+    ...(details.address ? { address: details.address } : {}),
+    ...(details.sex ? { sex: details.sex } : {}),
+    ...(details.height ? { height: details.height } : {}),
+    ...(details.eyeColor ? { eyeColor: details.eyeColor } : {}),
+    ...barcodeExtras(text),
+  };
+}
+
+/** A passport's zone or a front's print, as staff may read it later. */
+function printedDetails(reading: IdDocumentReading, source: 'mrz' | 'front'): IdDocumentDetails | undefined {
+  if (!reading.readable) return undefined;
+  const fields = {
+    issuingState: reading.issuingState,
+    givenNames: reading.givenNames,
+    surname: reading.surname,
+    dateOfBirth: reading.dateOfBirth,
+    expiryDate: reading.expiryDate,
+    documentNumber: reading.documentNumber,
+  };
+  return { source, documentType: reading.documentType ?? 'other', ...Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined)) };
+}
+
+/** The face check (its own process): the selfie against the ID's photo, and the selfie's liveness. Undefined when it can't run. */
+async function faceCheck(front: Buffer | null, selfie: IdDocumentInput['selfie'], prompt: IdDocumentInput['prompt']): Promise<FaceJudgement | undefined> {
+  if (!selfie || !IMAGE_TYPES.includes(selfie.contentType)) return undefined;
+  try {
+    const findings = await analyzeFaces({ front: front ? { bytes: front } : null, selfie: { bytes: selfie.bytes } });
+    // A prompt the pose can't show (older tries: a smile, three fingers) leaves the selfie for our team.
+    return judgeFaces(findings, prompt ?? 'smile');
+  } catch (error) {
+    if (error instanceof FaceEngineError) {
+      console.error('[face-check]', error.message);
+      return undefined;
+    }
+    throw error;
+  }
 }
 
 /**
@@ -159,22 +218,40 @@ export function createServerIdReader(options: ServerReaderOptions = {}): IdDocum
   const now = options.now ?? (() => new Date());
   return {
     name: SERVER_READER_NAME,
-    async read({ document, back, declaredType }) {
+    async read({ document, back, declaredType, selfie, prompt }) {
       const passport = declaredType === 'passport';
       const backPhoto = !passport && back && IMAGE_TYPES.includes(back.contentType) ? back : undefined;
       const frontPhoto = IMAGE_TYPES.includes(document.contentType);
       if (!frontPhoto && !backPhoto) return { readable: false };
       const today = now();
-      return guarded(
+      const reading = await guarded(
         () =>
           withReadSession(async (session): Promise<IdDocumentReading> => {
-            const details = backPhoto ? await unlessUnreadable(() => backBarcode(session, backPhoto.bytes, today), null) : null;
+            const barcode = backPhoto ? await unlessUnreadable(() => backBarcode(session, backPhoto.bytes, today), null) : null;
+            // Florida prints the barcode's inventory control number (DCK) as a 1D barcode too: the two must agree.
+            const inventory = barcode && backPhoto && barcode.details.issuingState === 'FL' ? await unlessUnreadable(() => session.linearBarcode(backPhoto.bytes), null) : null;
             const front: IdDocumentReading = frontPhoto ? await unlessUnreadable(() => readFront(session, document.bytes, declaredType, today), { readable: false }) : { readable: false };
-            if (details) return barcodeReading(details, front);
-            return passport || !front.readable ? front : { ...front, source: 'front' };
+            if (barcode) {
+              // The front's state counts only from a front read well enough to agree with the barcode (OCR can misread it).
+              const frontState = front.issuingState && frontAgrees(barcode.details, front) === true ? front.issuingState : undefined;
+              const judged = judgeBarcode({ raw: barcode.text, details: barcode.details, today, ...(frontState ? { frontState } : {}), ...(inventory ? { inventory } : {}) });
+              return { ...barcodeReading(barcode.details, front), genuine: { outcome: judged.outcome, signals: judged.signals }, details: barcodeDetails(barcode.details, barcode.text) };
+            }
+            if (!front.readable) return front;
+            // A passport's zone passed every check digit (readPassport keeps only those); a license read from its print alone is unsure.
+            const zone = front.documentType === 'passport';
+            const details = printedDetails(front, zone ? 'mrz' : 'front');
+            return {
+              ...front,
+              source: zone ? 'mrz' : 'front',
+              genuine: zone ? { outcome: 'pass', signals: ['mrz_check_digits_ok'] } : { outcome: 'unsure', signals: backPhoto ? ['barcode_missing'] : [] },
+              ...(details ? { details } : {}),
+            };
           }, options.budget),
-        { readable: false },
+        { readable: false } as IdDocumentReading,
       );
+      const face = frontPhoto || selfie ? await faceCheck(frontPhoto ? document.bytes : null, selfie, prompt) : undefined;
+      return face ? { ...reading, face } : reading;
     },
   };
 }
@@ -196,10 +273,48 @@ export async function readIdBarcode(back: { bytes: Buffer; contentType: string }
 /** A photographed proof's text: the words read well enough, line by line. */
 function photoText(page: OcrPage): ProofText {
   const lines = page.lines.map((line) => line.words.filter((word) => word.confidence >= PROOF_WORD_CONFIDENCE).map((word) => word.text).join(' ')).filter(Boolean);
-  return { text: lines.join('\n'), confident: page.confidence >= CONFIDENT_PAGE };
+  return { text: lines.join('\n'), confident: page.confidence >= CONFIDENT_PAGE, source: 'photo' };
 }
 
-/** The server's proof-of-address reader: a PDF's own text (a scan without one is unreadable), or OCR of a photo. */
+/** Text compared across a PDF's revisions: whitespace doesn't count. */
+const sameText = (a: string, b: string) => a.replace(/\s+/g, ' ').trim() === b.replace(/\s+/g, ' ').trim();
+
+/**
+ * A PDF proof's text with its markers (pdf-forensics.ts): how it was made, read from its bytes here and by PDF.js in the
+ * reader's process, and for a file saved more than once, whether its first revision's text differs from its last
+ * one's (an update that changed no text, a signature or metadata, is benign). Null for a PDF too long to read.
+ */
+async function pdfProof(session: ReadSession, bytes: Buffer): Promise<ProofText | null> {
+  const structure = inspectPdf(bytes);
+  const read = await session.pdfText(bytes, PDF_LIMITS);
+  if (read.text === null) return null;
+  let revisionTextChanged: boolean | null | undefined;
+  const original = firstRevision(bytes, structure);
+  if (original) {
+    try {
+      const first = await session.pdfText(original, PDF_LIMITS);
+      revisionTextChanged = first.text === null ? null : !sameText(first.text, read.text);
+    } catch (error) {
+      // A first revision that won't open on its own: we can't tell what changed.
+      if (!(error instanceof UnreadableDocumentError)) throw error;
+      revisionTextChanged = null;
+    }
+  }
+  const reader: PdfReaderFacts = {
+    ...read.info,
+    ...(read.annotationKinds ? { annotationKinds: read.annotationKinds } : {}),
+    ...(read.formFields !== undefined ? { formFields: read.formFields } : {}),
+    ...(read.fonts ? { fonts: read.fonts } : {}),
+    ...(read.overlaps !== undefined ? { overlaps: read.overlaps } : {}),
+    ...(revisionTextChanged !== undefined ? { revisionTextChanged } : {}),
+  };
+  return { text: read.text, confident: true, source: 'pdf', pdf: { structure, reader }, ...(read.mailingBlock ? { mailingBlock: read.mailingBlock } : {}) };
+}
+
+/**
+ * The server's proof-of-address reader: a PDF's own text and how the file was made (a scan without text is unreadable),
+ * or OCR of a photo. The reading carries what the automatic decision needs (src/modules/verification/address-verdict.ts).
+ */
 export function createServerAddressReader(options: ServerReaderOptions = {}): AddressDocumentReader {
   return {
     name: SERVER_READER_NAME,
@@ -209,10 +324,7 @@ export function createServerAddressReader(options: ServerReaderOptions = {}): Ad
       if (pdf && document.bytes.length > PDF_MAX_BYTES) return { readable: false };
       return guarded(async (): Promise<AddressDocumentReading> => {
         const proof = await withReadSession(async (session): Promise<ProofText | null> => {
-          if (pdf) {
-            const { text } = await session.pdfText(document.bytes, PDF_LIMITS);
-            return text === null ? null : { text, confident: true };
-          }
+          if (pdf) return pdfProof(session, document.bytes);
           return photoText((await firstPass(session, document.bytes, PSM.AUTO)).page);
         }, options.budget);
         return proof ? judgeAddressProof(proof, expected) : { readable: false };

@@ -8,11 +8,15 @@ import type {
   AddressProofResult,
   AddressSuggestion,
   CategorySlug,
+  CheckProgress,
+  CheckProgressInput,
   IdentityCaptureResult,
   HelperAreaInput,
   HelperProfileInput,
   HelperServicesInput,
   HelperToolsInput,
+  HelperExperienceInput,
+  HelperPreferencesInput,
   OneTimeCodeInput,
   OnboardingStep,
   PhoneInput,
@@ -29,6 +33,8 @@ import { db } from '@/platform/db/client';
 import { consumeRateLimit } from '@/platform/rate-limit';
 import { searchHomeAddresses, submitAddressProof } from './address';
 import { acceptIdentityNotice, submitIdentityCapture } from './capture';
+import { getCheckProgress } from './check-progress';
+import { readDocumentsSoon } from './read-soon';
 import { computeOnboarding } from './progress';
 import {
   addWorkSample,
@@ -39,6 +45,8 @@ import {
   saveHelperProfile,
   saveHelperServices,
   saveHelperTools,
+  saveHelperExperience,
+  saveHelperPreferences,
   setHelperPaused,
   startBackgroundCheck,
   startIdentity,
@@ -79,8 +87,13 @@ async function nextStepAfter(userId: string, saved: OnboardingStep): Promise<str
     return state !== 'skipped' && state !== 'later' && (state !== 'done' || step === 'done');
   });
   const followingState = progress.steps.find((s) => s.step === following)?.state;
-  return routes.app.helperOnboarding(following && followingState !== 'locked' ? following : firstIncomplete);
+  const next = following && followingState !== 'locked' ? following : firstIncomplete;
+  // After the profile's parts, the checks are picked on the Verifications page, in any order (owner, 2026-11-27).
+  return PROFILE_PARTS.includes(next) ? routes.app.helperOnboarding(next) : routes.app.helperVerification();
 }
+
+/** The profile's three parts (plan 9.11): setup goes from one to the next; the checks are the Verifications page's. */
+const PROFILE_PARTS: readonly OnboardingStep[] = ['profile', 'services', 'area'];
 
 async function saved(userId: string, result: ActionResult, step?: OnboardingStep): Promise<ActionResult> {
   if (!result.ok) return result;
@@ -121,14 +134,15 @@ export async function onboardingStartPhone(input: PhoneInput): Promise<ActionRes
   return startPhoneChangeAction(input);
 }
 
-/** Verifies the number, then goes on to the next step. */
+/** Verifies the number; the dialog or page says so and stays (checks are picked in any order, 2026-11-27). */
 export async function onboardingConfirmPhone(input: OneTimeCodeInput): Promise<ActionResult> {
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
   const result = await confirmPhoneChangeAction(input);
   if (!result.ok) return result;
   await syncHelperProfile(db, userId, await requestNow());
-  return { ...result, redirectTo: await nextStepAfter(userId, 'phone') };
+  await refreshHelperPages(userId);
+  return result;
 }
 
 /** The Texas biometric notice, before our own ID check's photos are taken. */
@@ -146,8 +160,17 @@ export async function onboardingSubmitIdentityCapture(form: FormData): Promise<I
   const userId = await signedInUserId();
   if (!userId || !(form instanceof FormData)) return { ok: false, code: 'not_allowed' };
   const result = await submitIdentityCapture({ db, storage: fileStorage, files: verificationFileCipher, secret: livenessSecret }, userId, form, await requestNow());
-  if (result.ok) refresh();
+  // Read at once, so the flow's "Verifying…" screen shows each check as it finishes (not at the job's next minute).
+  if (result.ok) readDocumentsSoon(userId);
   return result;
+}
+
+/** The flows' "Verifying…" screen: where the ID photos or the proof just sent stand (polled every 2 seconds). */
+export async function onboardingCheckProgress(input: CheckProgressInput): Promise<CheckProgress | null> {
+  const userId = await signedInUserId();
+  if (!userId) return null;
+  const kind = input?.kind === 'address' ? 'address' : 'identity';
+  return getCheckProgress(db, userId, kind, await requestNow());
 }
 
 /** The provider's hosted check: the double check once our team approved the photos. */
@@ -184,7 +207,9 @@ export async function onboardingSubmitAddressProof(form: FormData): Promise<Addr
   const result = await submitAddressProof({ db, storage: fileStorage, geocoder: await geocoderForRequest(), cipher: verificationCipher }, userId, form, await requestNow());
   if (!result.ok) return result;
   await refreshHelperPages(userId);
-  return { ...result, redirectTo: await nextStepAfter(userId, 'address') };
+  // Read at once for the flow's "Verifying…" screen; the flow stays open (no next step: checks come in any order).
+  readDocumentsSoon(userId);
+  return result;
 }
 
 export async function onboardingStartPayout(): Promise<ActionResult> {
@@ -240,6 +265,18 @@ export async function editorSaveTools(input: HelperToolsInput): Promise<ActionRe
   const userId = await signedInUserId();
   if (!userId) return { ok: false, code: 'not_allowed' };
   return saved(userId, await saveHelperTools(db, userId, input, await requestNow()));
+}
+
+export async function editorSavePreferences(input: HelperPreferencesInput): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  return saved(userId, await saveHelperPreferences(db, userId, input, await requestNow()));
+}
+
+export async function editorSaveExperience(input: HelperExperienceInput): Promise<ActionResult> {
+  const userId = await signedInUserId();
+  if (!userId) return { ok: false, code: 'not_allowed' };
+  return saved(userId, await saveHelperExperience(db, userId, input, await requestNow()));
 }
 
 export async function editorUploadWorkSample(form: FormData): Promise<WorkSampleUploadResult> {

@@ -1,7 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod';
 import { z } from 'zod';
-import { ADDRESS_DOCUMENT_TYPES, type AddressDocumentType } from '@/contracts';
+import { ADDRESS_DOCUMENT_TYPES, type AddressDocumentType, type AddressSignal, type CheckOutcome } from '@/contracts';
+import type { Issuer } from '@/integrations/ocr/issuers';
 import { createServerAddressReader } from '@/integrations/ocr';
 import { DEFAULT_CLAUDE_MODEL, type ClaudeClient } from './claude';
 import { documentReaderChoice } from './reader-choice';
@@ -25,6 +26,18 @@ export interface AddressDocumentReading {
   addressMatches?: boolean;
   recent?: boolean;
   documentType?: AddressDocumentType | 'other';
+  /**
+   * The server's reader (2026-11-27, the automatic decision, src/modules/verification/address-verdict.ts): who sent it
+   * when it's someone we recognize, its newest date up to the day it was sent (YYYY-MM-DD), where its text came from,
+   * whether that text can be trusted (a PDF's own text, or confident OCR), whether it looks unedited, and the findings
+   * staff see. Never the document's text.
+   */
+  issuer?: Issuer;
+  documentDate?: string;
+  textSource?: 'pdf' | 'photo';
+  confident?: boolean;
+  unedited?: CheckOutcome;
+  signals?: AddressSignal[];
 }
 
 export interface AddressDocumentInput {

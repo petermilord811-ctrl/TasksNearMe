@@ -1,3 +1,4 @@
+import type { ExperienceEntry } from '../../contracts/resume';
 import { boolean, doublePrecision, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import { users } from '../accounts/schema';
 import { areas, categories } from '../markets/schema';
@@ -30,6 +31,12 @@ export const helperProfiles = pgTable('helper_profiles', {
   remoteOk: boolean('remote_ok').notNull().default(false),
   tools: jsonb('tools').$type<string[]>().notNull().default([]),
   languages: jsonb('languages').$type<string[]>().notNull().default(['en']),
+  /** Skills, the work they enjoy and the work they don't do (2026-11-27), shown on the profile; often from their resume. */
+  skills: jsonb('skills').$type<string[]>().notNull().default([]),
+  likes: jsonb('likes').$type<string[]>().notNull().default([]),
+  excludes: jsonb('excludes').$type<string[]>().notNull().default([]),
+  /** Jobs and roles, newest first (ExperienceEntry). */
+  experience: jsonb('experience').$type<ExperienceEntry[]>().notNull().default([]),
   foundingNumber: integer('founding_number'),
   idVerifiedAt: timestamp('id_verified_at', { withTimezone: true, mode: 'string' }),
   backgroundCheckedAt: timestamp('background_checked_at', { withTimezone: true, mode: 'string' }),

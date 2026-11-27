@@ -99,8 +99,9 @@ describe('helper onboarding', () => {
       ),
     ).toEqual({ ok: true, code: 'saved' });
 
-    // Payouts can't start before the ID check.
-    expect(await startPayout(db, providers, userId, now())).toEqual({ ok: false, code: 'not_allowed' });
+    // Any order (owner, 2026-11-27): payouts, the ID and the home address are open before the area is set.
+    const open = Object.fromEntries((await getOnboardingPageData(db, userId, 'done', now()))?.progress.steps.map((s) => [s.step, s.state]) ?? []);
+    expect(open).toMatchObject({ address: 'todo', identity: 'todo', payout: 'todo' });
     expect(await saveHelperArea(db, userId, { areaId: 'area_mueller', serviceRadiusMiles: 5, remoteOk: false }, now())).toEqual({ ok: true, code: 'saved' });
 
     // The ID check waits for a verified phone.
@@ -115,7 +116,7 @@ describe('helper onboarding', () => {
     expect(await submitIdentityCapture(captureDeps, userId, await idPhotos(), now())).toEqual({ ok: true, code: 'submitted' });
     expect(await startIdentity(db, providers, userId, now())).toEqual({ ok: false, code: 'not_allowed' });
     const [photos] = await db.select({ id: identityCaptures.id }).from(identityCaptures).where(eq(identityCaptures.userId, userId));
-    expect(await decideIdentityCapture(db, taylor, { captureId: photos!.id, decision: 'approve', note: 'The selfie matches the passport photo.' }, now())).toEqual({ ok: true, code: 'updated' });
+    expect(await decideIdentityCapture(db, taylor, { captureId: photos!.id, decision: 'approve', note: 'The selfie matches the passport photo.' }, now(), { doubleCheck: true })).toEqual({ ok: true, code: 'updated' });
     expect((await getOnboardingPageData(db, userId, 'identity', now()))?.verification.identity.capture).toMatchObject({ stage: 'approved', canSubmit: false });
     const identity = await startIdentity(db, providers, userId, now());
     expect(identity).toMatchObject({ ok: true, redirectTo: expect.stringContaining('/dev/providers/identity?session=') });
@@ -195,7 +196,7 @@ describe('helper onboarding', () => {
     expect(helping.verified).toBe(false);
     // The photos approved, the double check confirms an ID with another legal name.
     const [photos] = await db.select({ id: identityCaptures.id }).from(identityCaptures).where(eq(identityCaptures.userId, helper));
-    expect(await decideIdentityCapture(db, taylor, { captureId: photos!.id, decision: 'approve', note: 'The selfie matches the passport photo.' }, now())).toEqual({ ok: true, code: 'updated' });
+    expect(await decideIdentityCapture(db, taylor, { captureId: photos!.id, decision: 'approve', note: 'The selfie matches the passport photo.' }, now(), { doubleCheck: true })).toEqual({ ok: true, code: 'updated' });
     expect(await states()).toMatchObject({ address: 'done', payout: 'done' });
     const identity = await startIdentity(db, providers, helper, now());
     expect(await recordIdentityResult(db, param(identity.ok ? identity.redirectTo! : '', 'session'), { status: 'verified', verifiedName: { firstName: 'Elena', lastName: 'Morales' } }, now())).toBe(helper);

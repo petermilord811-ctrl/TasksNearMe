@@ -5,7 +5,17 @@ import { notFound, redirect } from 'next/navigation';
 import { Suspense } from 'react';
 import { isHelperCheckDialogStep, routes } from '@/contracts';
 import { helperInviteFor } from '@/modules/beta/server';
-import { onboardingConfirmPhone, onboardingSearchHomeAddresses, onboardingStartPhone, onboardingSubmitAddressProof } from '@/modules/verification/actions';
+import {
+  onboardingAcceptIdentityNotice,
+  onboardingCheckProgress,
+  onboardingConfirmPhone,
+  onboardingRefreshStatus,
+  onboardingSearchHomeAddresses,
+  onboardingStartIdentity,
+  onboardingStartPhone,
+  onboardingSubmitAddressProof,
+  onboardingSubmitIdentityCapture,
+} from '@/modules/verification/actions';
 import { getOnboardingPageData, onboardingRedirect } from '@/modules/verification/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
@@ -21,10 +31,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * A verified helper's phone or home address check in a dialog over the page (2026-11-23, owner: "I hate to redirect to
- * new pages continually … if possible, use dialog"), from the verified-helper reminder and the verification checklist.
- * Loaded directly, /app/helper/checks/[step] is the onboarding step's page. Never /app/helper/onboarding/[step]: setup's
- * own step-to-step flow stays on its pages.
+ * A helper's phone, home address or ID check in a dialog over the page (2026-11-23, owner: "I hate to redirect to new
+ * pages continually … if possible, use dialog"; 2026-11-27: the ID too, any check in any order), from Verifications, the
+ * verified-helper reminder and the verification checklist. Loaded directly, /app/helper/checks/[step] is the onboarding
+ * step's page, the same flow on a page of its own.
  */
 function HelperCheckDialogPage({ params }: { params: Params }) {
   return (
@@ -40,7 +50,17 @@ async function HelperCheck({ params }: { params: Params }) {
   if (viewer.kind !== 'user') redirect(routes.signIn(routes.app.helperCheck(step)));
   const userId = viewer.user.id;
   const now = await requestNow();
-  const handlers = { onStartPhone: onboardingStartPhone, onConfirmPhone: onboardingConfirmPhone, onSearchAddresses: onboardingSearchHomeAddresses, onSubmitAddressProof: onboardingSubmitAddressProof };
+  const handlers = {
+    onStartPhone: onboardingStartPhone,
+    onConfirmPhone: onboardingConfirmPhone,
+    onSearchAddresses: onboardingSearchHomeAddresses,
+    onSubmitAddressProof: onboardingSubmitAddressProof,
+    onCheckProgress: onboardingCheckProgress,
+    onAcceptIdentityNotice: onboardingAcceptIdentityNotice,
+    onSubmitIdentityCapture: onboardingSubmitIdentityCapture,
+    onStartIdentity: onboardingStartIdentity,
+    onRefreshStatus: onboardingRefreshStatus,
+  };
   // Private beta: setup can wait for a helper invite, which its first page asks for.
   if (await helperInviteFor(db, userId)) return <HelperCheckDialogScreen data={{ step, elsewhere: 'profile' }} handlers={handlers} />;
   // A step that isn't open yet (or isn't offered here): where setup goes first, as on the step's own page.

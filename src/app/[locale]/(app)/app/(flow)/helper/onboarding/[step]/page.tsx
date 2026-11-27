@@ -7,6 +7,7 @@ import { removeProfilePhotoAction, uploadProfilePhotoAction } from '@/modules/ac
 import { draftHelperProfileAction } from '@/modules/assist/actions';
 import {
   onboardingAcceptIdentityNotice,
+  onboardingCheckProgress,
   onboardingConfirmPhone,
   onboardingRefreshStatus,
   onboardingSaveArea,
@@ -80,6 +81,7 @@ async function Onboarding({ params }: Pick<PageProps<'/[locale]/app/helper/onboa
         onStartPayout: onboardingStartPayout,
         onStartBackgroundCheck: onboardingStartBackgroundCheck,
         onRefreshStatus: onboardingRefreshStatus,
+        onCheckProgress: onboardingCheckProgress,
         onSavePushSubscription: savePushSubscriptionAction,
         onUploadPhoto: uploadProfilePhotoAction,
         onRemovePhoto: removeProfilePhotoAction,

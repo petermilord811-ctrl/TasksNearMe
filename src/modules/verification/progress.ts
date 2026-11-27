@@ -25,9 +25,11 @@ import type { PhoneCheck } from '@/modules/accounts/phone-check';
  *   the ID (both stages, its name matched or confirmed), payouts and, when an offered category needs it, the
  *   background check.
  *
- * Order: none among the checks. Once the basics are saved, the home address, phone, ID, payouts and background check
- * each open, in any order. Payouts are needed to be paid, not to be booked: earnings wait for an active account
- * (payments/connect.ts transfers only to one).
+ * Order: none (owner, 2026-11-27: "Verification process is working step by step, not able to pick preferred
+ * verification. change it."). The home address, phone, ID and payouts are open from the start, before the profile, in
+ * any order the helper picks on the Verifications page; the background check opens once the area is set (where the
+ * helper works decides the check's rules). Payouts are needed to be paid, not to be booked: earnings wait for an active
+ * account (payments/connect.ts transfers only to one).
  *
  * The ID step has two stages (owner, 2026-11-13): our own photos and selfie, which our team compares, then
  * the provider's double check; the provider's result is what verifies.
@@ -63,7 +65,7 @@ export interface OnboardingFacts {
 
 export interface OnboardingResult {
   progress: OnboardingProgress;
-  /** The step to suggest next, or `done`: the home address first while helping isn't open, then the rest in order. */
+  /** The step to suggest next (a suggestion only, nothing waits for it), or `done`: the home address first while helping isn't open, then the rest in order. */
   firstIncomplete: OnboardingStep;
   backgroundRequired: boolean;
   /** Every check is done: a verified helper. */
@@ -107,13 +109,13 @@ export function computeOnboarding(facts: OnboardingFacts, viewing?: OnboardingSt
     profile: false,
     services: false,
     area: false,
-    address: !basics,
-    phone: !basics,
-    identity: !basics,
-    payout: !basics,
-    background: !basics,
-    // The last page says what helping opens and what's left for the badge.
-    done: !helping,
+    address: false,
+    phone: false,
+    identity: false,
+    payout: false,
+    background: !done.area,
+    // The Verifications page: always there, it says what helping needs and what's left for the badge.
+    done: false,
   };
   const complete = helping && phoneOk && done.identity && done.payout && done.background;
   done.done = complete;

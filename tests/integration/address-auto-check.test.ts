@@ -1,16 +1,23 @@
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { AddressDocumentReader } from '@/integrations/ai/document-reader';
+import type { AddressDocumentReader, AddressDocumentReading } from '@/integrations/ai/document-reader';
 import { AiUnavailableError } from '@/integrations/ai';
 import type { FileStorage } from '@/integrations/storage';
 import { users } from '@/modules/accounts/schema';
+import { featureFlags } from '@/modules/markets/schema';
 import { files } from '@/modules/tasks/schema';
 import { readPendingDocuments } from '@/modules/verification/auto-check';
 import { addressVerifications } from '@/modules/verification/schema';
+import { auditLog } from '@/platform/audit/schema';
 import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import { createDb } from '@/platform/db/connect';
+import { outboxEvents } from '@/platform/outbox/schema';
 
-/** Proofs of address read once by the automatic reader (completion plan 4.1), on throwaway accounts. */
+/**
+ * Proofs of address read once by the automatic reader (completion plan 4.1), on throwaway accounts, and since
+ * 2026-11-27 decided by its checks where `auto_verification` is on: a clean, confident reading is verified by the system,
+ * one dated over 90 days ago is turned down, everything else waits for staff.
+ */
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
 const cipher = fieldCipherFromEnv();
@@ -25,8 +32,23 @@ const storage: FileStorage = {
   delete: async (key) => void stored.delete(key),
 };
 const answers = { readable: true, nameMatches: true, addressMatches: false, recent: true, documentType: 'utility_bill' as const };
+/** What the server's reader says about a clean PDF statement with every answer yes. */
+const clean: AddressDocumentReading = {
+  readable: true,
+  documentType: 'utility_bill',
+  nameMatches: true,
+  addressMatches: true,
+  recent: true,
+  issuer: { name: 'Austin Energy', kind: 'utility_bill' },
+  documentDate: '2026-11-01',
+  textSource: 'pdf',
+  confident: true,
+  unedited: 'pass',
+  signals: ['issuer_known', 'name_near_address', 'address_in_header'],
+};
 const stub = (read: AddressDocumentReader['read']): AddressDocumentReader => ({ name: 'stub', read: vi.fn(read) });
 const address = JSON.stringify({ line1: '1100 Congress Ave', city: 'Austin', state: 'TX', zip: '78701' });
+const checksOf = (outcomes: Record<string, string>) => ['readable', 'accepted_kind', 'name', 'address', 'recent', 'unedited'].map((key) => ({ key, outcome: outcomes[key] ?? 'unsure' }));
 
 async function addProof(id: string, userId: string, submittedAt: Date, withFile = true) {
   const fileId = `fil_${id}`;
@@ -35,6 +57,7 @@ async function addProof(id: string, userId: string, submittedAt: Date, withFile 
   await db.insert(addressVerifications).values({ id, userId, status: 'in_review', addressCiphertext: cipher.encrypt(address), documentType: 'utility_bill', documentFileId: fileId, submittedAt, createdAt: submittedAt, updatedAt: submittedAt });
 }
 const checkOf = async (id: string) => (await db.select({ autoCheck: addressVerifications.autoCheck }).from(addressVerifications).where(eq(addressVerifications.id, id)))[0]?.autoCheck;
+const proofOf = async (id: string) => (await db.select().from(addressVerifications).where(eq(addressVerifications.id, id)))[0]!;
 
 beforeAll(async () => {
   const [chris] = await db.select().from(users).where(eq(users.id, 'usr_chris'));
@@ -48,6 +71,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await db.delete(auditLog).where(inArray(auditLog.targetId, PEOPLE));
+  await db.delete(outboxEvents).where(inArray(outboxEvents.aggregateId, PEOPLE));
   await db.delete(addressVerifications).where(inArray(addressVerifications.userId, PEOPLE));
   await db.delete(files).where(inArray(files.ownerUserId, PEOPLE));
   await db.delete(users).where(inArray(users.id, PEOPLE));
@@ -58,7 +83,7 @@ describe('reading proofs of address', () => {
   const now = new Date('2026-11-13T15:00:00.000Z');
   const scope = { userIds: PEOPLE };
 
-  it('reads each proof once and keeps only the answers; test accounts get the stand-in', async () => {
+  it('reads each proof once and keeps the answers with their checks; test accounts get the stand-in', async () => {
     const reader = stub(async () => answers);
     expect(await readPendingDocuments(db, { storage, cipher, reader }, now, scope)).toEqual({ read: 2 });
     expect(reader.read).toHaveBeenCalledTimes(1);
@@ -66,8 +91,26 @@ describe('reading proofs of address', () => {
       document: { bytes: Buffer.from('webp'), contentType: 'image/webp' },
       expected: { name: 'Rae Reader', address: '1100 Congress Ave, Austin, TX 78701', declaredType: 'utility_bill', submittedOn: '2026-11-12' },
     });
-    expect(await checkOf('adv_tmp_reader_1')).toEqual({ ...answers, by: 'stub', at: now.toISOString() });
-    expect(await checkOf('adv_tmp_reader_2')).toEqual({ readable: true, documentType: 'utility_bill', by: 'stand-in', at: now.toISOString() });
+    expect(await checkOf('adv_tmp_reader_1')).toEqual({
+      ...answers,
+      checks: checksOf({ readable: 'pass', accepted_kind: 'pass', name: 'pass', address: 'fail', recent: 'pass' }),
+      signals: [],
+      decision: 'review',
+      by: 'stub',
+      at: now.toISOString(),
+    });
+    expect(await checkOf('adv_tmp_reader_2')).toEqual({
+      readable: true,
+      documentType: 'utility_bill',
+      checks: checksOf({ readable: 'pass', accepted_kind: 'pass' }),
+      signals: [],
+      decision: 'review',
+      by: 'stand-in',
+      at: now.toISOString(),
+    });
+    // Both stay with staff.
+    expect((await proofOf('adv_tmp_reader_1')).status).toBe('in_review');
+    expect((await proofOf('adv_tmp_reader_2')).status).toBe('in_review');
     // Read once.
     expect(await readPendingDocuments(db, { storage, cipher, reader }, now, scope)).toEqual({ read: 0 });
   });
@@ -75,17 +118,72 @@ describe('reading proofs of address', () => {
   it("leaves it to staff when the reader can't answer or the document is gone", async () => {
     await addProof('adv_tmp_reader_3', READER, new Date('2026-11-13T10:00:00.000Z'));
     await addProof('adv_tmp_reader_4', READER, new Date('2026-11-13T11:00:00.000Z'), false);
-    const reader = stub(async () => { throw new AiUnavailableError('down'); });
+    const reader = stub(async () => {
+      throw new AiUnavailableError('down');
+    });
     const quiet = vi.spyOn(console, 'error').mockImplementation(() => {});
     expect(await readPendingDocuments(db, { storage, cipher, reader }, now, scope)).toEqual({ read: 2 });
     quiet.mockRestore();
-    expect(await checkOf('adv_tmp_reader_3')).toEqual({ readable: false, by: 'stub (unavailable)', at: now.toISOString() });
-    expect(await checkOf('adv_tmp_reader_4')).toEqual({ readable: false, by: 'stub', at: now.toISOString() });
+    const unread = { readable: false, checks: checksOf({ readable: 'fail' }), signals: [], decision: 'review', at: now.toISOString() };
+    expect(await checkOf('adv_tmp_reader_3')).toEqual({ ...unread, by: 'stub (unavailable)' });
+    expect(await checkOf('adv_tmp_reader_4')).toEqual({ ...unread, by: 'stub' });
   });
 
   it('does nothing without a reader (production without a key)', async () => {
     await addProof('adv_tmp_reader_5', READER, new Date('2026-11-13T12:00:00.000Z'));
     expect(await readPendingDocuments(db, { storage, cipher, reader: null }, now, scope)).toEqual({ read: 0 });
     expect(await checkOf('adv_tmp_reader_5')).toBeNull();
+  });
+});
+
+describe('automatic decisions on proofs of address', () => {
+  const now = new Date('2026-11-13T16:00:00.000Z');
+  /** Reads everything still waiting for READER (earlier tests' proofs too, with the same stub). */
+  const drain = async (reader: AddressDocumentReader) => {
+    while ((await readPendingDocuments(db, { storage, cipher, reader }, now, { userIds: [READER] })).read > 0);
+  };
+
+  it('verifies a clean, confident reading as the system: decided by auto, logged and told', async () => {
+    await addProof('adv_tmp_auto_ok', READER, new Date('2026-11-13T13:00:00.000Z'));
+    await drain(stub(async () => clean));
+    const proof = await proofOf('adv_tmp_auto_ok');
+    expect(proof).toMatchObject({ status: 'verified', decidedBy: 'auto', decidedByUserId: null, rejectionReason: null });
+    expect(proof.decidedAt?.toISOString()).toBe(now.toISOString());
+    expect(proof.autoCheck).toMatchObject({ decision: 'approved', issuer: 'Austin Energy', documentDate: '2026-11-01', signals: clean.signals });
+    const entries = await db.select().from(auditLog).where(and(eq(auditLog.targetId, READER), eq(auditLog.action, 'address.verified')));
+    expect(entries).toContainEqual(expect.objectContaining({ actorRole: 'system', actorId: null, metadata: { verificationId: 'adv_tmp_auto_ok', decidedBy: 'auto' } }));
+    const events = await db.select().from(outboxEvents).where(and(eq(outboxEvents.aggregateId, READER), eq(outboxEvents.type, 'verification.updated')));
+    expect(events.map((event) => event.payload)).toContainEqual({ userId: READER, track: 'address', outcome: 'passed' });
+  });
+
+  it('turns down a document dated more than 90 days before it was sent', async () => {
+    await addProof('adv_tmp_auto_old', READER, new Date('2026-11-13T14:00:00.000Z'));
+    await drain(stub(async () => ({ ...clean, recent: false, documentDate: '2026-06-01' })));
+    expect(await proofOf('adv_tmp_auto_old')).toMatchObject({ status: 'rejected', rejectionReason: 'too_old', decidedBy: 'auto', decidedByUserId: null });
+    const events = await db.select().from(outboxEvents).where(and(eq(outboxEvents.aggregateId, READER), eq(outboxEvents.type, 'verification.updated')));
+    expect(events.map((event) => event.payload)).toContainEqual({ userId: READER, track: 'address', outcome: 'action_needed' });
+  });
+
+  it('waits for staff when automatic decisions are off for the market, keeping what the checks said', async () => {
+    const [person] = await db.select({ marketId: users.homeMarketId }).from(users).where(eq(users.id, READER));
+    await db
+      .insert(featureFlags)
+      .values({ key: 'auto_verification', marketId: person!.marketId, enabled: false, description: 'test' })
+      .onConflictDoUpdate({ target: [featureFlags.key, featureFlags.marketId], set: { enabled: false } });
+    try {
+      await addProof('adv_tmp_auto_off', READER, new Date('2026-11-13T15:00:00.000Z'));
+      await drain(stub(async () => clean));
+      const proof = await proofOf('adv_tmp_auto_off');
+      expect(proof).toMatchObject({ status: 'in_review', decidedBy: null });
+      expect(proof.autoCheck).toMatchObject({ decision: 'approved' });
+    } finally {
+      await db.delete(featureFlags).where(and(eq(featureFlags.key, 'auto_verification'), eq(featureFlags.marketId, person!.marketId)));
+    }
+  });
+
+  it('never decides for a test account, whatever its reading', async () => {
+    await addProof('adv_tmp_auto_test', SEEDLIKE, new Date('2026-11-13T15:30:00.000Z'));
+    await readPendingDocuments(db, { storage, cipher, reader: stub(async () => clean) }, now, { userIds: [SEEDLIKE] });
+    expect(await proofOf('adv_tmp_auto_test')).toMatchObject({ status: 'in_review', decidedBy: null });
   });
 });

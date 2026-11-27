@@ -162,7 +162,7 @@ export function addressLabel(ciphertext: string | null, cipher: FieldCipher | nu
  * Our own ID check (stage 1) as the helper sees it. `secret` keys the selfie's prompt (BETTER_AUTH_SECRET),
  * so the prompt for the next try can't be predicted or changed by reloading.
  */
-export function captureSummary(state: OnboardingState, secret: string): IdentityCaptureSummary {
+export function captureSummary(state: OnboardingState, secret: string, doubleCheck = false): IdentityCaptureSummary {
   const { identity } = state;
   const latest = identity.capture;
   const stage: IdentityCaptureSummary['stage'] = identity.verified ? 'done' : identity.captureApproved ? 'approved' : latest?.status === 'submitted' ? 'in_review' : 'needed';
@@ -172,18 +172,18 @@ export function captureSummary(state: OnboardingState, secret: string): Identity
     ...(latest ? { documentType: latest.documentType as IdentityDocumentType, submittedAt: latest.submittedAt.toISOString() } : {}),
     ...(stage === 'needed' && latest?.status === 'rejected' && latest.rejectionReason ? { rejectionReason: latest.rejectionReason as IdentityCaptureRejectionReason } : {}),
     prompt: livenessPromptFor(state.userId, state.captureRows.length, secret),
+    doubleCheck,
   };
 }
 
 /** What the helper's screens show of each track. `promptSecret` picks the selfie's prompt (helpers' own ID check). */
-export function verificationSummary(state: OnboardingState, backgroundRequired: boolean, cipher: FieldCipher | null, options: { promptSecret?: string } = {}): VerificationSummary {
+export function verificationSummary(state: OnboardingState, backgroundRequired: boolean, cipher: FieldCipher | null, options: { promptSecret?: string; helper?: boolean; doubleCheck?: boolean } = {}): VerificationSummary {
   const { identity, address, background } = state;
   const reason = (value: string | null | undefined) => (value ? (value as AddressRejectionReason) : undefined);
   // The label is the address the status describes (the verified one while a newer proof waits).
   const described = address.verifiedRow ?? address.latest;
   const latestAddress = address.update?.row ?? address.latest;
   const label = addressLabel(state.addressRows.find((row) => row.id === described?.id)?.addressCiphertext ?? null, cipher);
-  const payoutActive = state.facts.payout === 'active';
   return {
     phone: { verified: state.facts.phoneVerified, ...(state.user?.phone ? { last4: state.user.phone.slice(-4) } : {}) },
     identity: {
@@ -196,8 +196,8 @@ export function verificationSummary(state: OnboardingState, backgroundRequired: 
       ...(identity.nameCheck ? { nameCheck: identity.nameCheck } : {}),
       ...(identity.requested ? { requested: identity.requested } : {}),
       ...(identity.renewal ? { renewal: { countsUntil: identity.renewal.countsUntil.toISOString() } } : {}),
-      // Helpers take our own check first; a client's ID check is the provider's alone.
-      ...(state.profile ? { capture: captureSummary(state, options.promptSecret ?? '') } : {}),
+      // Helpers take our own check (from the Verifications page even before their profile); a client's is the provider's alone.
+      ...(state.profile || options.helper ? { capture: captureSummary(state, options.promptSecret ?? '', options.doubleCheck ?? false) } : {}),
     },
     address: {
       status: address.status,
@@ -223,7 +223,8 @@ export function verificationSummary(state: OnboardingState, backgroundRequired: 
       ...(background.invitationExpiresAt ? { invitationExpiresAt: background.invitationExpiresAt.toISOString() } : {}),
       ...(background.adjudication ? { adjudication: background.adjudication } : {}),
       ...(background.disputeUntil ? { disputeUntil: background.disputeUntil.toISOString() } : {}),
-      canStart: backgroundRequired && payoutActive && state.identity.verified && background.canStart,
+      // In any order (owner, 2026-11-27): only where the helper works (the area) is needed first.
+      canStart: backgroundRequired && state.facts.areaSet && background.canStart,
     },
   };
 }

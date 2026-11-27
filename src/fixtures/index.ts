@@ -22,6 +22,8 @@ export * from './profiles';
 export * from './posting';
 export * from './offers';
 export * from './onboarding';
+export * from './verify-flow';
+export * from './resume';
 export * from './helper-work';
 export * from './bookings';
 export * from './earnings';

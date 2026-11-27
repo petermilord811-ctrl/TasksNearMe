@@ -95,33 +95,6 @@ export async function runVerificationTimers(db: Db, deps: VerificationTimerDeps,
     }
   }
 
-  // Both stages final: the double check cleared the ID our team approved, so the photos have done their job.
-  const approvedWithPhotos = await db
-    .select({ id: identityCaptures.id, userId: identityCaptures.userId })
-    .from(identityCaptures)
-    .where(
-      and(
-        ...only(identityCaptures.userId),
-        eq(identityCaptures.status, 'approved'),
-        isNull(identityCaptures.filesDeletedAt),
-        or(isNotNull(identityCaptures.frontFileId), isNotNull(identityCaptures.backFileId), isNotNull(identityCaptures.selfieFileId)),
-      ),
-    )
-    .limit(BATCH);
-  for (const capture of approvedWithPhotos) {
-    const [identityRows, captureRows] = await Promise.all([
-      db.select().from(identityVerifications).where(eq(identityVerifications.userId, capture.userId)),
-      db.select().from(identityCaptures).where(eq(identityCaptures.userId, capture.userId)),
-    ]);
-    // The current check itself passed (a renewal's earlier check counting doesn't make these final).
-    const standing = identityStanding(identityRows, now, captureRows, await userTimeZone(db, capture.userId));
-    if (!standing.verified || !standing.cleared) continue;
-    if (await deleteIdentityCapturePhotos({ db, storage: deps.storage }, capture.id, now)) {
-      idPhotosDeleted += 1;
-      await db.insert(auditLog).values({ id: newId('aud'), actorRole: 'system', action: 'identity_capture.deleted', targetType: 'user', targetId: capture.userId, metadata: { captureId: capture.id, status: 'approved', after: 'double_check' } });
-    }
-  }
-
   // The ID a helper verified with runs out (6.3).
   const idRenewals = await runIdExpiry(db, deps, now, scope, touched);
 
@@ -151,6 +124,8 @@ export async function runVerificationTimers(db: Db, deps: VerificationTimerDeps,
           ...only(identityVerifications.userId),
           isNull(identityVerifications.redactionRequestedAt),
           isNotNull(identityVerifications.providerSessionId),
+          // Our own check's verifications (provider `own`) hold no images at a provider.
+          ne(identityVerifications.provider, 'own'),
           inArray(identityVerifications.status, ['verified', 'requires_input', 'canceled']),
           lte(identityVerifications.updatedAt, new Date(now.getTime() - REDACT_AFTER_DAYS * DAY_MS)),
         ),

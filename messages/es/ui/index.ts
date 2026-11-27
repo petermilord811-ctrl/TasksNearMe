@@ -83,6 +83,7 @@ import helperContact from './helperContact.json';
 import cursor from './cursor.json';
 import timeline from './timeline.json';
 import verification from './verification.json';
+import verifyFlow from './verifyFlow.json';
 import waitlist from './waitlist.json';
 import cities from './cities.json';
 import notFound from './notFound.json';
@@ -97,6 +98,6 @@ import neighborGroups from './neighborGroups.json';
 import teams from './teams.json';
 import accountAge from './accountAge.json';
 
-const uiMessages = { account, actionReasons, actions, availability, bookingComplete, bookingConfirm, bookingHub, bookingSheets, bookings, brand, changes, clients, common, completion, earnings, feedback, findWork, forms, help, helpContact, helperCard, helperOnboarding, helperStanding, badges, helperProfile, helperProfileEditor, helperTask, helpersBrowse, home, inbox, inviteCard, invites, landing, layout, legal, location, money, myOffers, myTasks, notifications, offers, payments, paymentsPage, postTask, posterIdentity, primitives, proposal, publicPages, publicTask, push, receipt, report, reportProblem, review, reviews, rewards, safety, savedHelpers, series, shell, signIn, status, support, supportCase, taskBoard, community, portal, questions, savedSearches, taskCard, taskManage, thread, directMessage, chat, sparks, sparksBadge, helperContact, cursor, timeline, verification, waitlist, cities, beta, plan, notFound, errorPage, ads, peek, taskMap, thanks, neighborhoodDays, family, neighborGroups, teams, accountAge };
+const uiMessages = { account, actionReasons, actions, availability, bookingComplete, bookingConfirm, bookingHub, bookingSheets, bookings, brand, changes, clients, common, completion, earnings, feedback, findWork, forms, help, helpContact, helperCard, helperOnboarding, helperStanding, badges, helperProfile, helperProfileEditor, helperTask, helpersBrowse, home, inbox, inviteCard, invites, landing, layout, legal, location, money, myOffers, myTasks, notifications, offers, payments, paymentsPage, postTask, posterIdentity, primitives, proposal, publicPages, publicTask, push, receipt, report, reportProblem, review, reviews, rewards, safety, savedHelpers, series, shell, signIn, status, support, supportCase, taskBoard, community, portal, questions, savedSearches, taskCard, taskManage, thread, directMessage, chat, sparks, sparksBadge, helperContact, cursor, timeline, verification, verifyFlow, waitlist, cities, beta, plan, notFound, errorPage, ads, peek, taskMap, thanks, neighborhoodDays, family, neighborGroups, teams, accountAge };
 
 export default uiMessages;

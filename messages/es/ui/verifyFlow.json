@@ -1,0 +1,276 @@
+{
+  "frame": {
+    "back": "Atrás",
+    "close": "Cerrar",
+    "progress": "Progreso"
+  },
+  "camera": {
+    "preview": "Cámara",
+    "starting": "Abriendo la cámara…",
+    "take": "Tomar foto",
+    "takeSelfie": "Tomar selfi",
+    "denied": "El acceso a la cámara está desactivado para este sitio. Permítelo en la configuración del navegador o sube una foto.",
+    "unavailable": "Aquí no podemos abrir una cámara. Sube una foto."
+  },
+  "id": {
+    "title": "Verifica tu identificación",
+    "checks": {
+      "label": "Comprobaciones de la identificación",
+      "teamWillLook": "Nuestro equipo lo revisará",
+      "readable": "Fotos nítidas",
+      "machine_readable": "Código de barras leído",
+      "machine_readable_passport": "Código del pasaporte leído",
+      "genuine": "Emitida por un DMV real",
+      "front_matches": "El frente coincide con el código de barras",
+      "name": "El nombre coincide con tu cuenta",
+      "adult": "18 años o más",
+      "not_expired": "No está vencida",
+      "face_match": "Tu selfi coincide con tu identificación",
+      "live": "Selfi en vivo",
+      "unique": "No se usa en otra cuenta"
+    },
+    "intro": {
+      "title": "Verifica tu identidad",
+      "description": "Toma unos 2 minutos.",
+      "idRow": "Una foto de tu identificación",
+      "idHint": "Licencia de conducir, identificación estatal o pasaporte",
+      "selfieRow": "Una selfi rápida",
+      "selfieHint": "Para compararte con tu identificación",
+      "consent": "Acepto la verificación de identificación y selfi.",
+      "consentRequired": "Acepta para continuar.",
+      "howWeUse": "Cómo usamos tus fotos",
+      "start": "Empezar"
+    },
+    "type": {
+      "title": "Elige tu identificación",
+      "description": "Emitida en EE. UU. y vigente.",
+      "drivers_license": "Licencia de conducir",
+      "state_id": "Identificación estatal",
+      "passport": "Pasaporte"
+    },
+    "capture": {
+      "front": {
+        "title": "Frente de tu licencia",
+        "description": "Ponla plana, con las cuatro esquinas dentro del marco."
+      },
+      "frontId": {
+        "title": "Frente de tu identificación",
+        "description": "Ponla plana, con las cuatro esquinas dentro del marco."
+      },
+      "passport": {
+        "title": "La página con foto de tu pasaporte",
+        "description": "Ábrelo plano, con toda la página dentro del marco."
+      },
+      "back": {
+        "title": "Reverso de tu licencia",
+        "description": "Asegúrate de que el código de barras se vea nítido."
+      },
+      "backId": {
+        "title": "Reverso de tu identificación",
+        "description": "Asegúrate de que el código de barras se vea nítido."
+      },
+      "useCamera": "Tomar una foto"
+    },
+    "check": {
+      "title": "Revisa tu foto",
+      "description": "¿Se lee el texto y no hay reflejos?",
+      "selfieTitle": "Revisa tu selfi",
+      "selfieDescription": "¿Se ve toda tu cara?",
+      "alt": {
+        "front": "Tu foto del frente de tu identificación",
+        "back": "Tu foto del reverso de tu identificación",
+        "selfie": "Tu selfi"
+      },
+      "dark": "Se ve oscura. Prueba con más luz.",
+      "blurry": "Se ve borrosa. Quédate quieto y tómala de nuevo.",
+      "use": "Se ve bien",
+      "submit": "Enviar",
+      "sending": "Enviando…",
+      "retake": "Tomar de nuevo"
+    },
+    "selfie": {
+      "title": "Ahora una selfi rápida",
+      "description": "Mira a la cámara con buena luz. Quítate lentes de sol y gorras.",
+      "promptLabel": "En tu selfi",
+      "tip": "La compararemos con la foto de tu identificación.",
+      "open": "Abrir la cámara",
+      "cameraTitle": "Coloca tu cara dentro del óvalo"
+    },
+    "verifying": {
+      "title": "Verificando tu identificación",
+      "description": "Normalmente tarda menos de un minuto.",
+      "done": "Comprobaciones terminadas."
+    },
+    "result": {
+      "verifiedTitle": "Tu identidad está verificada",
+      "verifiedBody": "Tu perfil ahora muestra Identificación verificada.",
+      "approvedTitle": "Fotos aprobadas",
+      "approvedBody": "Un último paso: una verificación doble rápida con nuestro socio de identificación.",
+      "doubleCheck": "Continuar",
+      "reviewTitle": "Casi listo",
+      "reviewBody": "Nuestro equipo le dará un vistazo rápido, normalmente en un día. Te avisaremos.",
+      "rejectedTitle": "No pudimos verificar esta identificación",
+      "slowTitle": "Seguimos revisando",
+      "slowBody": "Te avisaremos en cuanto termine.",
+      "tryAgain": "Intentar de nuevo",
+      "later": "Ahora no",
+      "done": "Listo",
+      "toastVerified": "Identificación verificada",
+      "toastReview": "Identificación enviada para revisión"
+    },
+    "status": {
+      "blocked": {
+        "try_later": "Inténtalo más tarde",
+        "too_many_attempts": "Nuestro equipo se encargará",
+        "under_18": "Los ayudantes deben tener 18 años o más",
+        "double_check_review": "Nuestro equipo lo está revisando",
+        "duplicate_id": "Nuestro equipo lo está revisando"
+      },
+      "nameCheckTitle": "Revisando tu nombre",
+      "nameCheckBody": "El nombre de tu identificación es distinto del de tu cuenta. Nuestro equipo lo está revisando, normalmente en un día.",
+      "verifiedOn": "Verificada el {date}",
+      "doubleCheckTitle": "Verificación doble en curso",
+      "doubleCheckBody": "Termínala con nuestro socio de identificación o vuelve en unos minutos.",
+      "continueDoubleCheck": "Continuar la verificación doble",
+      "checkStatus": "Ver el estado",
+      "newCheck": "Empezar una nueva verificación"
+    }
+  },
+  "address": {
+    "title": "Verifica tu domicilio",
+    "continue": "Continuar",
+    "checks": {
+      "label": "Comprobaciones del documento",
+      "teamWillLook": "Nuestro equipo lo revisará",
+      "readable": "Documento leído",
+      "accepted_kind": "Documento aceptado",
+      "fromIssuer": "De {issuer}",
+      "name": "Tu nombre aparece",
+      "address": "Muestra tu domicilio",
+      "recent": "Con fecha de los últimos 90 días",
+      "unedited": "Sin señales de edición"
+    },
+    "intro": {
+      "title": "Verifica tu domicilio",
+      "description": "Sube una factura o un estado de cuenta reciente con tu nombre y domicilio.",
+      "kindsRow": "Estado de cuenta o factura",
+      "kindsHint": "De servicios, teléfono, internet, contrato de alquiler, seguro o carta del gobierno",
+      "recentRow": "Con fecha de los últimos {days} días",
+      "recentHint": "Un PDF o una foto nítida",
+      "privateRow": "Se mantiene privado",
+      "privateHint": "Los clientes solo ven tu vecindario",
+      "start": "Empezar"
+    },
+    "addressStep": {
+      "title": "Tu domicilio",
+      "description": "Tal como aparece en tu documento."
+    },
+    "kind": {
+      "title": "¿Qué vas a subir?",
+      "description": "Elige el tipo de documento."
+    },
+    "upload": {
+      "title": "Sube tu documento",
+      "titleKind": "Sube tu {kind}",
+      "description": "La página completa, con fecha de los últimos {days} días.",
+      "declaration": "Muestra mi nombre y este domicilio, y tiene fecha de los últimos {days} días.",
+      "submit": "Enviar",
+      "sending": "Enviando…",
+      "drop": "Suelta tu archivo aquí o búscalo",
+      "types": "PDF, JPG, PNG o HEIC, hasta {megabytes} MB",
+      "size": "{size} MB",
+      "change": "Cambiar",
+      "photo": "Tomar una foto"
+    },
+    "verifying": {
+      "title": "Revisando tu documento",
+      "description": "Normalmente tarda menos de un minuto.",
+      "done": "Comprobaciones terminadas."
+    },
+    "result": {
+      "verifiedTitle": "Domicilio verificado",
+      "verifiedBody": "Tu perfil ahora muestra Domicilio verificado. Los clientes nunca ven tu domicilio.",
+      "reviewTitle": "Casi listo",
+      "reviewBody": "Nuestro equipo le dará un vistazo rápido, normalmente en un día. Te avisaremos.",
+      "rejectedTitle": "No pudimos usar este documento",
+      "slowTitle": "Seguimos revisando",
+      "slowBody": "Te avisaremos en cuanto termine.",
+      "tryAgain": "Probar con otro documento",
+      "later": "Ahora no",
+      "done": "Listo",
+      "toastVerified": "Domicilio verificado",
+      "toastReview": "Documento enviado para revisión"
+    },
+    "status": {
+      "verifiedOn": "Verificado el {date}",
+      "moved": "Me mudé",
+      "recheckBody": "El nombre de tu identificación es distinto del de tu cuenta, así que nuestro equipo vuelve a revisar tu domicilio. No tienes que hacer nada."
+    }
+  },
+  "phone": {
+    "title": "Verifica tu teléfono",
+    "description": "Te enviaremos un código de 6 dígitos por mensaje de texto.",
+    "verifiedTitle": "Teléfono verificado"
+  },
+  "hub": {
+    "title": "Verificaciones",
+    "subtitle": "Elige cualquier verificación para empezar. A los ayudantes verificados los reservan más.",
+    "allDone": "Completaste todas las verificaciones.",
+    "progress": "{done} de {total}",
+    "progressLabel": "{done} de {total} verificaciones hechas",
+    "helpingNeeds": "Puedes empezar a ayudar cuando tu domicilio esté verificado.",
+    "providerUnavailable": "Aún no está disponible. Inténtalo más tarde.",
+    "checks": {
+      "identity": {
+        "title": "Identificación",
+        "hint": "Identificación oficial y una selfi"
+      },
+      "address": {
+        "title": "Domicilio",
+        "hint": "Una factura o un estado de cuenta"
+      },
+      "phone": {
+        "title": "Teléfono",
+        "hint": "Un código por mensaje de texto"
+      },
+      "payout": {
+        "title": "Pagos",
+        "hint": "Recibe tus pagos con Stripe"
+      },
+      "background": {
+        "title": "Verificación de antecedentes",
+        "hint": "Para trabajos dentro de casas, con Checkr"
+      }
+    },
+    "statuses": {
+      "verified": "Verificado",
+      "inReview": "En revisión",
+      "oneMoreStep": "Un paso más",
+      "actionNeeded": "Te necesita",
+      "paused": "En pausa",
+      "tryLater": "Más tarde",
+      "ready": "Listo",
+      "inProgress": "En curso",
+      "restricted": "Contacta a soporte",
+      "notNeeded": "No hace falta",
+      "renew": "Renovar"
+    },
+    "actions": {
+      "verify": "Verificar",
+      "view": "Ver",
+      "tryAgain": "Intentar de nuevo",
+      "setUp": "Configurar",
+      "continue": "Continuar",
+      "start": "Empezar",
+      "startAgain": "Empezar de nuevo",
+      "addArea": "Agrega tu zona"
+    },
+    "background": {
+      "title": "Verificación de antecedentes",
+      "description": "La hace Checkr. Darás tus datos y tu consentimiento en su página segura.",
+      "readSummary": "Lee nuestro resumen",
+      "failed": "No pudimos abrir Checkr. Inténtalo en un momento.",
+      "continue": "Continuar a Checkr"
+    }
+  }
+}

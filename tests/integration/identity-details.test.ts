@@ -117,10 +117,12 @@ describe('the reading job with the barcode', () => {
     expect(input.back?.contentType).toBe('image/webp');
     expect(input.back?.bytes.subarray(8, 12).toString('latin1')).toBe('WEBP');
     const [saved] = await db.select().from(identityCaptures).where(eq(identityCaptures.id, real.id));
-    expect(saved!.autoCheck).toEqual({
+    expect(saved!.autoCheck).toMatchObject({
       readable: true, nameMatches: true, isAdult: true, notExpired: true, expiresMonth: 5, expiresYear: 2030, documentType: 'drivers_license',
       addressMatches: true, source: 'barcode', frontAgrees: false, by: 'stub', at: now.toISOString(),
     });
+    // The front disagrees with the barcode: the checks leave it to staff, who are told.
+    expect(saved!.autoCheck!.decision).toBe('review');
     expect(JSON.stringify(saved!.autoCheck)).not.toMatch(/4401|Gainesville|T123|1990/);
     // The test account (example.test) got the stand-in and no email.
     expect(notify).toHaveBeenCalledExactlyOnceWith({ userId: REAL, captureId: real.id, check: saved!.autoCheck });

@@ -33,7 +33,7 @@ describe('the profile’s first page', () => {
     const checklist = within(screen.getByRole('region', { name: 'Your verification' }));
     expect(checklist.getByText('1 of 5 done')).toBeTruthy();
     // In review: a link to check on it; locked steps have none.
-    expect(checklist.getByRole('link', { name: 'Check status: ID check' }).getAttribute('href')).toBe(routes.app.helperOnboarding('identity'));
+    expect(checklist.getByRole('link', { name: 'Check status: ID check' }).getAttribute('href')).toBe(routes.app.helperCheck('identity'));
     expect(checklist.queryByRole('link', { name: /Home address/ })).toBeNull();
   });
 

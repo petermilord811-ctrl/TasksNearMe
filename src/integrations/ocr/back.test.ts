@@ -87,6 +87,7 @@ function session({ ocr = LICENSE_FRONT, barcode = null as string | null | Error 
       return barcode;
     },
     pdfText: async () => ({ pages: 0, text: null }),
+    linearBarcode: async () => null,
   };
   vi.mocked(withReadSession).mockImplementation(async (work) => work(fake));
   return steps;
@@ -103,30 +104,34 @@ describe("the server's ID reader with a card's back", () => {
 
   it('reads the barcode first, then the front only to say whether it agrees', async () => {
     const steps = session({ barcode: text });
-    await expect(reader.read({ document: photo, back: photo, declaredType: 'drivers_license' })).resolves.toEqual({ ...FROM_BARCODE, frontAgrees: true });
+    const read = await reader.read({ document: photo, back: photo, declaredType: 'drivers_license' });
+    expect(read).toMatchObject({ ...FROM_BARCODE, frontAgrees: true });
+    // The barcode judged genuine (2026-11-27), and everything it said kept for staff.
+    expect(read.genuine).toEqual({ outcome: 'pass', signals: [] });
+    expect(read.details).toMatchObject({ source: 'barcode', documentNumber: '12345678', aamvaVersion: 10, inventoryControl: '12345678901234' });
     expect(steps[0]).toBe('barcode');
     expect(steps.slice(1).every((step) => step === 'ocr')).toBe(true);
     // The kind of card comes from the subfile, whatever was declared; a front that didn't read says nothing.
     session({ barcode: aamvaText({ subfiles: [['ID', TEXAS_LICENSE]] }), ocr: BLANK });
-    await expect(reader.read({ document: photo, back: photo, declaredType: 'drivers_license' })).resolves.toEqual({ ...FROM_BARCODE, documentType: 'state_id' });
+    await expect(reader.read({ document: photo, back: photo, declaredType: 'drivers_license' })).resolves.toMatchObject({ ...FROM_BARCODE, documentType: 'state_id' });
     // A front that won't open neither.
     vi.mocked(withReadSession).mockImplementation(async (work) =>
-      work({ recognize: async () => Promise.reject(new UnreadableDocumentError()), barcode: async () => text, pdfText: async () => ({ pages: 0, text: null }) }),
+      work({ recognize: async () => Promise.reject(new UnreadableDocumentError()), barcode: async () => text, linearBarcode: async () => null, pdfText: async () => ({ pages: 0, text: null }) }),
     );
-    await expect(reader.read({ document: photo, back: photo, declaredType: 'state_id' })).resolves.toEqual(FROM_BARCODE);
+    await expect(reader.read({ document: photo, back: photo, declaredType: 'state_id' })).resolves.toMatchObject(FROM_BARCODE);
   });
 
   it("reads the front as before, from the front, when there's no barcode to read", async () => {
     const fromFront = { ...front, readable: true, source: 'front' };
     session({ barcode: null });
-    await expect(reader.read({ document: photo, back: photo, declaredType: 'drivers_license' })).resolves.toEqual(fromFront);
+    await expect(reader.read({ document: photo, back: photo, declaredType: 'drivers_license' })).resolves.toMatchObject(fromFront);
     // A barcode that isn't an AAMVA one, a back that won't open, no back at all.
     session({ barcode: 'M1SAMPLE/ALEX EABC123 LAXJFKAA' });
-    await expect(reader.read({ document: photo, back: photo, declaredType: 'drivers_license' })).resolves.toEqual(fromFront);
+    await expect(reader.read({ document: photo, back: photo, declaredType: 'drivers_license' })).resolves.toMatchObject(fromFront);
     session({ barcode: new UnreadableDocumentError() });
-    await expect(reader.read({ document: photo, back: photo, declaredType: 'drivers_license' })).resolves.toEqual(fromFront);
+    await expect(reader.read({ document: photo, back: photo, declaredType: 'drivers_license' })).resolves.toMatchObject(fromFront);
     const steps = session({ barcode: text });
-    await expect(reader.read({ document: photo, declaredType: 'drivers_license' })).resolves.toEqual(fromFront);
+    await expect(reader.read({ document: photo, declaredType: 'drivers_license' })).resolves.toMatchObject(fromFront);
     expect(steps).not.toContain('barcode');
     // Unreadable stays just that.
     session({ barcode: null, ocr: BLANK });

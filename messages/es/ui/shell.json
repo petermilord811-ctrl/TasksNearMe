@@ -245,7 +245,8 @@
     },
     "checkTitles": {
       "phone": "Verifica tu teléfono",
-      "address": "Verifica tu domicilio"
+      "address": "Verifica tu domicilio",
+      "identity": "Verifica tu identificación"
     },
     "checkDescriptions": {
       "phone": "Un código por mensaje de texto confirma tu número. Los clientes no lo ven, salvo que decidas compartirlo.",

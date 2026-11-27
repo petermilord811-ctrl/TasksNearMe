@@ -1,7 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod';
 import { z } from 'zod';
-import { IDENTITY_DOCUMENT_TYPES, type IdentityDocumentType } from '@/contracts';
+import { IDENTITY_DOCUMENT_TYPES, type CheckOutcome, type IdDocumentDetails, type IdentityDocumentType, type IdSignal, type LivenessPrompt } from '@/contracts';
+import type { FaceJudgement } from '@/integrations/ocr/face';
 import { createServerIdReader } from '@/integrations/ocr';
 import { DEFAULT_CLAUDE_MODEL } from './claude';
 import { documentReaderChoice } from './reader-choice';
@@ -13,8 +14,10 @@ import { AiRefusedError, AiUnavailableError } from './writer';
  * document number, as printed.
  * The app compares them with the account at once and keeps only yes/no answers and the expiry month and
  * year (`deriveIdentityAutoCheck`), plus a keyed hash of the number, state and birth date to spot the same
- * ID on two accounts (6.3); the name, birth date and document number themselves are never stored or logged. No
- * reader is shown the selfie or compares faces: staff do that, and the provider double-checks.
+ * ID on two accounts (6.3). Since 2026-11-27 (owner: "store DL infos and images for further possible manual review")
+ * the server's reader also returns everything it read (`details`, stored encrypted with the photos for staff), whether
+ * the ID is genuine, and the selfie's face against the ID's photo, compared on our own server (face-engine.ts); no other
+ * reader is shown the selfie.
  * The server's own reader reads it by default, everywhere (owner, 2026-11-21: `src/integrations/ocr`, on this
  * server: a US license or state ID's PDF417 barcode on the back first, the AAMVA fields exact, with the front read
  * to check it agrees; otherwise Tesseract on the front, a passport's machine-readable zone with its check digits or a
@@ -37,8 +40,8 @@ export interface IdDocumentReading {
   issuingState?: string;
   /** The license, ID card or passport number, as printed. Read once for a keyed hash, never stored or logged. */
   documentNumber?: string;
-  /** Where the fields came from (the server's reader, for a license or state ID): the barcode on the back, or the front. */
-  source?: 'barcode' | 'front';
+  /** Where the fields came from: the barcode on the back, a passport's machine-readable zone, or the front's print. */
+  source?: 'barcode' | 'mrz' | 'front';
   /** The holder's address, from the barcode. Read, never stored. */
   address?: { line1: string; line2?: string; city: string; state: string; zip: string };
   /**
@@ -46,6 +49,15 @@ export interface IdDocumentReading {
    * number when the front's was read). Undefined when the front didn't read.
    */
   frontAgrees?: boolean;
+  /**
+   * The server's reader (2026-11-27): whether the document is encoded as its issuer encodes it (aamva-genuine.ts: the
+   * barcode's structure, issuer, version, dates and number; a passport's check digits), with the findings behind it.
+   */
+  genuine?: { outcome: CheckOutcome; signals: IdSignal[] };
+  /** The selfie against the ID's photo and the selfie's liveness (face.ts); absent without a selfie or when the face check couldn't run. */
+  face?: FaceJudgement;
+  /** Everything read from the ID, for our team's review (stored encrypted, never shown to the person). */
+  details?: IdDocumentDetails;
 }
 
 export interface IdDocumentInput {
@@ -54,6 +66,9 @@ export interface IdDocumentInput {
   /** The back of a license or state ID (the same kind of photo), where its barcode is; passports have none. */
   back?: { bytes: Buffer; contentType: string };
   declaredType: IdentityDocumentType;
+  /** The live selfie and what it had to show (the server's reader compares its face with the ID's photo). */
+  selfie?: { bytes: Buffer; contentType: string };
+  prompt?: LivenessPrompt;
 }
 
 export interface IdDocumentReader {

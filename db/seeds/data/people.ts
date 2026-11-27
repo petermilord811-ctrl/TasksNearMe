@@ -1,3 +1,4 @@
+import type { ExperienceEntry } from '../../../src/contracts/resume';
 /**
  * Seeded people. Ids, display names and helper data mirror src/fixtures/people.ts so screens built
  * from fixtures match the seeded database. Emails use the reserved .test domain (undeliverable).
@@ -24,6 +25,11 @@ interface SeedHelper {
   serviceRadiusKm?: number;
   remoteOk: boolean;
   tools: string[];
+  /** Skills, the work they enjoy and don't do, and their experience (2026-11-27, "Import from resume"); default none. */
+  skills?: string[];
+  likes?: string[];
+  excludes?: string[];
+  experience?: ExperienceEntry[];
   /** Default ['en'] (the base seed sets languages in profile-extras instead). */
   languages?: string[];
   foundingNumber?: number;
@@ -110,6 +116,14 @@ export const PEOPLE: SeedPerson[] = [
       areaId: 'area_hyde_park',
       remoteOk: false,
       tools: ['Drill', 'Hex keys', 'Level', 'Furniture sliders', 'Dolly'],
+      // As src/fixtures/resume.ts has them (previews and e2e).
+      skills: ['Flat-pack assembly', 'Furniture moving', 'Wall mounting', 'Packing'],
+      likes: ['Big assembly jobs', 'Weekend moves'],
+      excludes: ['Pianos and safes', 'Electrical wiring'],
+      experience: [
+        { title: 'Furniture assembler', organization: 'Hyde Park Home Goods', startYear: 2022, current: true, summary: 'Assemble beds, desks and shelving for delivery customers; about 15 pieces a week.' },
+        { title: 'Mover', organization: 'Two Brothers Moving', startYear: 2019, endYear: 2022, summary: 'Packed, loaded and unloaded trucks for local moves.' },
+      ],
       idVerifiedAt: '2026-01-10T16:00:00.000Z',
       homeAddress: { verifiedAt: '2026-01-11T16:00:00.000Z', line1: '4321 Example Avenue', zip: '78751' },
       backgroundCheckedAt: '2026-01-12T16:00:00.000Z',
@@ -142,6 +156,10 @@ export const PEOPLE: SeedPerson[] = [
       areaId: 'area_windsor_park',
       remoteOk: true,
       tools: ['Drill', 'Laptop toolkit'],
+      skills: ['Wi-Fi setup', 'Printer setup', 'Data backups', 'Laptop cleanup'],
+      likes: ['Patient one-on-one help', 'Remote sessions'],
+      excludes: ['Handling your passwords', 'Phone screen repair'],
+      experience: [{ title: 'IT support specialist', organization: 'Windsor Park Family Clinic', startYear: 2021, current: true, summary: 'Set up laptops, printers and Wi-Fi for a 40-person clinic.' }],
       idVerifiedAt: '2026-06-02T16:00:00.000Z',
       homeAddress: { verifiedAt: '2026-06-02T20:00:00.000Z', line1: '2468 Example Court', zip: '78723' },
       backgroundCheckedAt: '2026-06-05T16:00:00.000Z',

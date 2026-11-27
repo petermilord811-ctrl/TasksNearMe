@@ -13,6 +13,7 @@ import {
   jordanShell,
   mayaShell,
   onboardingAddressStep,
+  onboardingIdentityCapture,
   onboardingPhoneStep,
   portalBlockedData,
   priyaShell,
@@ -81,6 +82,7 @@ export const inPlacePreviews: PreviewEntry[] = [
   dialog('helper-check-phone', shell.reminder.checkTitles.phone, priyaShell, routes.app.bookings(), () => <HelperCheckDialogScreen data={{ step: 'phone', verification: { ...onboardingPhoneStep.verification, phone: { verified: false } } }} handlers={fakeOnboardingHandlers} />),
   dialog('helper-check-address', shell.reminder.checkTitles.address, priyaShell, routes.app.bookings(), () => <HelperCheckDialogScreen data={{ step: 'address', verification: onboardingAddressStep.verification }} handlers={fakeOnboardingHandlers} />),
   dialog('helper-check-elsewhere', shell.reminder.checkTitles.address, priyaShell, routes.app.bookings(), () => <HelperCheckDialogScreen data={{ step: 'address', elsewhere: 'profile' }} handlers={fakeOnboardingHandlers} />),
+  dialog('helper-check-identity', shell.reminder.checkTitles.identity, priyaShell, routes.app.helperVerification(), () => <HelperCheckDialogScreen data={{ step: 'identity', verification: onboardingIdentityCapture.verification }} handlers={fakeOnboardingHandlers} />),
   {
     id: 'screen-portal/verify-phone', group: portal.previews.group, title: community.previews.verifyPhoneDialog, layout: 'fullscreen',
     render: () => <AppShell viewer={mayaShell} handlers={shellHandlers} currentPath={routes.app.community()}>

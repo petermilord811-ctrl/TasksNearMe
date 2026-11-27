@@ -39,6 +39,19 @@ describe('staff review of our ID photos', () => {
     expect(screen.queryByRole('group', { name: copy.actionsLabel })).not.toBeInTheDocument();
   });
 
+  it("shows the automatic checks: the decision, each check's outcome in words, the findings and the scores", () => {
+    show();
+    const first = [...screen.getByRole('list', { name: c.title }).querySelectorAll<HTMLElement>(':scope > li')][0]!;
+    expect(within(first).getByText('Automatic decision: left for staff')).toBeVisible();
+    const checks = within(first).getByRole('list', { name: c.autoCheck.checksTitle });
+    expect(within(checks).getAllByRole('listitem')).toHaveLength(10);
+    expect(checks).toHaveTextContent(`${c.autoCheck.checks.face_match}${c.autoCheck.outcomes.unsure}`);
+    expect(checks).toHaveTextContent(`${c.autoCheck.checks.genuine}${c.autoCheck.outcomes.pass}`);
+    expect(within(first).getByText(c.autoCheck.signals.face_weak_match)).toBeVisible();
+    expect(within(first).getByText(c.autoCheck.signals.number_derivation_ok)).toBeVisible();
+    expect(within(first).getByText('Face similarity 0.39 (same person from 0.45, different below 0.30)')).toBeVisible();
+  });
+
   it('opens the photos only with a reason, then shows them with the prompt and the link time', async () => {
     const onRevealIdentityCapture = vi.fn(async (): Promise<IdentityCaptureRevealResult> => identityCaptureRevealed);
     show(rosaVerification, { onRevealIdentityCapture });

@@ -32,7 +32,7 @@ import { outboxEvents } from '@/platform/outbox/schema';
  * Our own ID check, the first of two stages (completion plan 6.1): the Texas notice first, photos stored
  * re-encoded and encrypted, the automatic reading that keeps only answers, staff review with logged
  * 5-minute links, the attempt limits shared with the provider's check, the double check after approval,
- * and deletion 30 days after the decision.
+ * and deletion a year after the decision (owner, 2026-11-27: kept for our team's review).
  */
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
@@ -92,7 +92,8 @@ async function tryOnce(userId: string, when: Date, reason?: 'document_unreadable
   expect(await submitIdentityCapture(deps, userId, await captureForm('state_id'), when)).toEqual({ ok: true, code: 'submitted' });
   const latest = (await capturesOf(userId)).at(-1)!;
   const decision = reason ? { decision: 'reject' as const, reason } : { decision: 'approve' as const };
-  expect(await decideIdentityCapture(db, taylor, { captureId: latest.id, ...decision, note: 'Compared the ID and the selfie.' }, when)).toEqual({ ok: true, code: 'updated' });
+  // An ID provider double-checks here (Persona or Stripe Identity set up): approval opens it.
+  expect(await decideIdentityCapture(db, taylor, { captureId: latest.id, ...decision, note: 'Compared the ID and the selfie.' }, when, { doubleCheck: true })).toEqual({ ok: true, code: 'updated' });
 }
 
 beforeAll(async () => {
@@ -112,7 +113,7 @@ describe('sending the photos', () => {
     expect(await acceptIdentityNotice(db, MAIN, { consent: false }, at(0))).toEqual({ ok: false, code: 'validation_failed', fieldErrors: { consent: ['must_accept'] } });
     expect(await acceptIdentityNotice(db, MAIN, { consent: true }, at(0), { ip: '203.0.113.9', userAgent: 'test' })).toEqual({ ok: true, code: 'updated' });
     const [consent] = await db.select().from(agreements).where(and(eq(agreements.userId, MAIN), eq(agreements.doc, 'biometric_consent')));
-    expect(consent).toMatchObject({ version: 'draft-0.3', ip: '203.0.113.9' });
+    expect(consent).toMatchObject({ version: 'draft-0.4', ip: '203.0.113.9' });
   });
 
   it('checks the kind of ID and every photo', async () => {
@@ -198,10 +199,13 @@ describe('the automatic reading', () => {
     expect(input.document.bytes.subarray(8, 12).toString('latin1')).toBe('WEBP');
     expect(input.back?.bytes.subarray(8, 12).toString('latin1')).toBe('WEBP');
     const [read] = await capturesOf(READER);
-    expect(read!.autoCheck).toEqual({ readable: true, nameMatches: true, isAdult: true, notExpired: true, expiresMonth: 4, expiresYear: 2029, documentType: 'drivers_license', by: 'stub', at: at(0.1).toISOString() });
+    expect(read!.autoCheck).toMatchObject({ readable: true, nameMatches: true, isAdult: true, notExpired: true, expiresMonth: 4, expiresYear: 2029, documentType: 'drivers_license', by: 'stub', at: at(0.1).toISOString() });
+    // The ten checks (2026-11-27): a stub with no barcode, genuineness or face leaves it to staff.
+    expect(read!.autoCheck!.checks).toHaveLength(10);
+    expect(read!.autoCheck!.decision).toBe('review');
     expect(JSON.stringify(read!.autoCheck)).not.toMatch(/VERA|TESTER|1990|TX/);
     const [main] = await capturesOf(MAIN);
-    expect(main!.autoCheck).toEqual({ readable: true, documentType: 'drivers_license', by: 'stand-in', at: at(0.1).toISOString() });
+    expect(main!.autoCheck).toMatchObject({ readable: true, documentType: 'drivers_license', by: 'stand-in', at: at(0.1).toISOString(), decision: 'review' });
     expect(await readPendingIds(db, { storage, files: fileCipher, reader }, at(0.2), scope)).toBe(0);
   });
 
@@ -213,7 +217,7 @@ describe('the automatic reading', () => {
     const requestOnly = { storage, files: fileCipher, reader: null, testAccountsOnly: true };
     expect(await readPendingIds(db, requestOnly, at(0.2), { userIds: [READER, MAIN] })).toBe(1);
     expect((await capturesOf(READER))[0]!.autoCheck).toBeNull();
-    expect((await capturesOf(MAIN))[0]!.autoCheck).toEqual({ readable: true, documentType: 'drivers_license', by: 'stand-in', at: at(0.2).toISOString() });
+    expect((await capturesOf(MAIN))[0]!.autoCheck).toMatchObject({ readable: true, documentType: 'drivers_license', by: 'stand-in', at: at(0.2).toISOString(), decision: 'review' });
     expect(await readPendingIds(db, { storage, files: fileCipher, reader: stub(async () => { throw new AiUnavailableError('down'); }) }, at(0.2), { userIds: [READER] })).toBe(1);
     quiet.mockRestore();
     expect((await capturesOf(READER))[0]!.autoCheck).toEqual({ readable: false, by: 'stub (unavailable)', at: at(0.2).toISOString() });
@@ -264,14 +268,14 @@ describe('staff review', () => {
     const [decided] = await capturesOf(MAIN);
     expect(decided).toMatchObject({ status: 'rejected', rejectionReason: 'prompt_not_followed', decidedByUserId: 'usr_taylor', staffNote: 'The selfie shows no turn.', decidedAt: at(1) });
     const state = await loadOnboardingState(db, MAIN, at(1));
-    expect(captureSummary(state, secret)).toEqual({ stage: 'needed', canSubmit: true, documentType: 'drivers_license', submittedAt: at(0).toISOString(), rejectionReason: 'prompt_not_followed', prompt: livenessPromptFor(MAIN, 1, secret) });
+    expect(captureSummary(state, secret)).toEqual({ stage: 'needed', canSubmit: true, documentType: 'drivers_license', submittedAt: at(0).toISOString(), rejectionReason: 'prompt_not_followed', prompt: livenessPromptFor(MAIN, 1, secret), doubleCheck: false });
     expect(await submitIdentityCapture(deps, MAIN, await captureForm('passport', ['front', 'selfie']), at(1.1))).toEqual({ ok: true, code: 'submitted' });
     expect((await capturesOf(MAIN))[1]).toMatchObject({ documentType: 'passport', backFileId: null, promptKey: livenessPromptFor(MAIN, 1, secret) });
   });
 
   it('approves the new photos, opens the double check, and the provider verifies the ID', async () => {
     const latest = (await capturesOf(MAIN))[1]!;
-    expect(await decideIdentityCapture(db, taylor, { captureId: latest.id, decision: 'approve', note: 'Passport and selfie match; looked left as asked.' }, at(1.2))).toEqual({ ok: true, code: 'updated' });
+    expect(await decideIdentityCapture(db, taylor, { captureId: latest.id, decision: 'approve', note: 'Passport and selfie match; looked left as asked.' }, at(1.2), { doubleCheck: true })).toEqual({ ok: true, code: 'updated' });
     expect(captureSummary(await loadOnboardingState(db, MAIN, at(1.2)), secret)).toMatchObject({ stage: 'approved', canSubmit: false });
     expect(await submitIdentityCapture(deps, MAIN, await captureForm('passport', ['front', 'selfie']), at(1.2))).toEqual({ ok: false, code: 'not_allowed' });
     // The notice was accepted before the photos, so the double check opens without asking again.
@@ -327,30 +331,30 @@ describe('the limits', () => {
 });
 
 describe('deleting the photos', () => {
-  it('deletes approved photos once the double check clears the ID, the others 30 days after the decision, keeping the status and answers', async () => {
+  it('keeps the photos a year after the decision for our team (owner, 2026-11-27), then deletes them, keeping the status and answers', async () => {
     const before = await capturesOf(MAIN);
     const keys = await db.select({ key: files.storageKey }).from(files).where(and(eq(files.ownerUserId, MAIN), inArray(files.kind, ['id_document', 'id_selfie'])));
     expect(keys).toHaveLength(5);
     const old = await revealIdentityCapture(db, { secret }, taylor, { captureId: before[0]!.id, reason: 'Looking again before deletion.' }, at(20));
     if (!old.ok) throw new Error('reveal failed');
-    // Both stages are final for the approved photos (6.2): they go on the next run. The turned-down ones stay for now.
-    expect((await runVerificationTimers(db, { storage, providers }, at(20), { userIds: PEOPLE })).idPhotosDeleted).toBe(1);
-    expect((await capturesOf(MAIN)).map((row) => [row.status, row.filesDeletedAt === null])).toEqual([['rejected', true], ['approved', false]]);
-    // The first photos were decided on day 1: due by day 31.3.
-    const result = await runVerificationTimers(db, { storage, providers }, at(31.3), { userIds: [MAIN] });
-    expect(result.idPhotosDeleted).toBe(1);
+    // Kept for review: not when both stages are final, nor 30 days on.
+    expect((await runVerificationTimers(db, { storage, providers }, at(20), { userIds: PEOPLE })).idPhotosDeleted).toBe(0);
+    expect((await runVerificationTimers(db, { storage, providers }, at(31.3), { userIds: [MAIN] })).idPhotosDeleted).toBe(0);
+    expect((await capturesOf(MAIN)).every((row) => row.filesDeletedAt === null)).toBe(true);
+    // Decided on days 1 and 1.2: both due a year later.
+    const result = await runVerificationTimers(db, { storage, providers }, at(366.3), { userIds: [MAIN] });
+    expect(result.idPhotosDeleted).toBe(2);
     const after = await capturesOf(MAIN);
     expect(after.map((row) => row.status)).toEqual(['rejected', 'approved']);
-    expect(after.every((row) => row.frontFileId === null && row.backFileId === null && row.selfieFileId === null && row.filesDeletedAt !== null)).toBe(true);
+    expect(after.every((row) => row.frontFileId === null && row.backFileId === null && row.selfieFileId === null && row.detailsCiphertext === null && row.filesDeletedAt !== null)).toBe(true);
     expect(after[0]!.autoCheck).not.toBeNull();
     for (const { key } of keys) expect(await storage.get(key)).toBeNull();
     expect(await db.select().from(files).where(and(eq(files.ownerUserId, MAIN), inArray(files.kind, ['id_document', 'id_selfie'])))).toHaveLength(0);
-    // Links made before stop working, the record stays, and the ID stays verified.
+    // Links made before stop working, the record stays.
     expect(await documentForToken(db, storage, old.photos[0]!.url.split('/').pop()!, taylor, secret, at(20), fileCipher)).toBeNull();
-    const view = await getPersonVerification(db, taylor, MAIN, at(31.3));
+    const view = await getPersonVerification(db, taylor, MAIN, at(366.3));
     expect(view.identity.captures.every((capture) => capture.photos.length === 0 && capture.photosDeletedAt)).toBe(true);
     expect(view.actions).not.toContain('view_identity_photos');
-    expect((await loadOnboardingState(db, MAIN, at(31.3))).identity.cleared).toBe(true);
     const [deleted] = await db.select().from(auditLog).where(and(eq(auditLog.action, 'identity_capture.deleted'), eq(auditLog.targetId, MAIN)));
     expect(deleted?.actorRole).toBe('system');
   });

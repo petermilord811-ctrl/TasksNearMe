@@ -1,3 +1,4 @@
+import { samExperience, samPreferences, samResumeRead } from './resume';
 import type {
   AddressSuggestion,
   CategorySlug,
@@ -78,12 +79,12 @@ function progress(
 }
 
 /** Our own ID check (stage 1): the photos still to take. */
-const captureNeeded: IdentityCaptureSummary = { stage: 'needed', canSubmit: true, prompt: 'look_left' };
+const captureNeeded: IdentityCaptureSummary = { stage: 'needed', canSubmit: true, prompt: 'look_left', doubleCheck: false };
 /** What Priya sent, and when. */
 const sentPhotos = { documentType: 'drivers_license', submittedAt: '2026-11-17T13:00:00.000Z' } as const;
 /** Our team approved the photos: the double check with the provider is next (or under way). */
-const captureApproved: IdentityCaptureSummary = { stage: 'approved', canSubmit: false, ...sentPhotos, prompt: 'smile' };
-const captureDone: IdentityCaptureSummary = { stage: 'done', canSubmit: false, ...sentPhotos, prompt: 'smile' };
+const captureApproved: IdentityCaptureSummary = { stage: 'approved', canSubmit: false, ...sentPhotos, prompt: 'smile', doubleCheck: false };
+const captureDone: IdentityCaptureSummary = { stage: 'done', canSubmit: false, ...sentPhotos, prompt: 'smile', doubleCheck: false };
 
 const notStarted: VerificationSummary = {
   phone: { verified: false },
@@ -279,10 +280,10 @@ const withIdentity = (identity: VerificationSummary['identity']): HelperOnboardi
 export const onboardingIdentityCapture = withIdentity({ status: 'not_started', consentNeeded: false, capture: captureNeeded });
 
 /** Our team turned the photos down (the selfie didn't follow its prompt): a new try, with a new prompt. */
-export const onboardingIdentityCaptureRejected = withIdentity({ status: 'not_started', consentNeeded: false, capture: { ...captureNeeded, ...sentPhotos, rejectionReason: 'prompt_not_followed', prompt: 'tilt_head' } });
+export const onboardingIdentityCaptureRejected = withIdentity({ status: 'not_started', consentNeeded: false, capture: { ...captureNeeded, ...sentPhotos, rejectionReason: 'prompt_not_followed', prompt: 'tilt_head', doubleCheck: false } });
 
 /** The photos were sent: our team is comparing them. */
-export const onboardingIdentityCaptureInReview = withIdentity({ status: 'not_started', consentNeeded: false, capture: { stage: 'in_review', canSubmit: false, ...sentPhotos, prompt: 'smile' } });
+export const onboardingIdentityCaptureInReview = withIdentity({ status: 'not_started', consentNeeded: false, capture: { stage: 'in_review', canSubmit: false, ...sentPhotos, prompt: 'smile', doubleCheck: false } });
 
 /** Our team approved the photos: the double check with our ID partner is next. */
 export const onboardingIdentityCaptureApproved = withIdentity({ status: 'not_started', consentNeeded: false, capture: captureApproved });
@@ -294,7 +295,7 @@ export const onboardingIdentityRetry = withIdentity({ status: 'requires_input', 
 export const onboardingIdentityDoubleCheckReview = withIdentity({ status: 'requires_input', failureReason: 'other', consentNeeded: false, blocked: 'double_check_review', capture: captureApproved });
 
 /** Our team then turned the approved photos down: new photos, with a new prompt. */
-export const onboardingIdentityDoubleCheckRejected = withIdentity({ status: 'requires_input', failureReason: 'other', consentNeeded: false, capture: { ...captureNeeded, ...sentPhotos, rejectionReason: 'double_check_failed', prompt: 'tilt_head' } });
+export const onboardingIdentityDoubleCheckRejected = withIdentity({ status: 'requires_input', failureReason: 'other', consentNeeded: false, capture: { ...captureNeeded, ...sentPhotos, rejectionReason: 'double_check_failed', prompt: 'tilt_head', doubleCheck: false } });
 
 /** The same ID is on another account (6.3): the double check waits for our team. */
 export const onboardingIdentityDuplicateHold = withIdentity({ status: 'not_started', consentNeeded: false, blocked: 'duplicate_id', capture: captureApproved });
@@ -305,11 +306,11 @@ export const onboardingIdentityRenewal = withIdentity({
   consentNeeded: false,
   requested: 'id_expiring',
   renewal: { countsUntil: '2026-12-01T06:00:00.000Z' },
-  capture: { ...captureNeeded, prompt: 'look_up' },
+  capture: { ...captureNeeded, prompt: 'look_up', doubleCheck: false },
 });
 
 /** The month ended before a new check passed: offers are paused until one does. */
-export const onboardingIdentityExpired = withIdentity({ status: 'not_started', consentNeeded: false, requested: 'id_expired', capture: { ...captureNeeded, prompt: 'look_up' } });
+export const onboardingIdentityExpired = withIdentity({ status: 'not_started', consentNeeded: false, requested: 'id_expired', capture: { ...captureNeeded, prompt: 'look_up', doubleCheck: false } });
 
 /** The double check was sent; the provider is still processing. */
 export const onboardingIdentityProcessing = withIdentity({ status: 'processing', consentNeeded: false, capture: captureApproved });
@@ -472,7 +473,7 @@ export const onboardingDone: HelperOnboardingPageData = {
   verification: {
     phone: { verified: true, last4: '0201' },
     // Verified before our own check existed: nothing to capture.
-    identity: { status: 'verified', verifiedAt: '2026-11-10T16:00:00.000Z', consentNeeded: false, capture: { stage: 'done', canSubmit: false, prompt: 'look_up' } },
+    identity: { status: 'verified', verifiedAt: '2026-11-10T16:00:00.000Z', consentNeeded: false, capture: { stage: 'done', canSubmit: false, prompt: 'look_up', doubleCheck: false } },
     address: { ...addressVerified, label: '5678 Example Street, Austin, TX 78702' },
     payout: { status: 'active' },
     background: { status: 'clear', checkedAt: '2026-11-12T16:00:00.000Z', requiredFor: ['furniture-assembly', 'moving-help'], disclosureNeeded: false, validUntil: '2027-11-12T16:00:00.000Z', renewalOpen: false, canStart: false },
@@ -497,7 +498,7 @@ export const onboardingDoneHelping: HelperOnboardingPageData = {
   },
   verification: {
     ...onboardingDone.verification,
-    identity: { status: 'not_started', consentNeeded: false, capture: { stage: 'in_review', canSubmit: false, prompt: 'look_up', documentType: 'drivers_license', submittedAt: '2026-11-22T15:00:00.000Z' } },
+    identity: { status: 'not_started', consentNeeded: false, capture: { stage: 'in_review', canSubmit: false, prompt: 'look_up', doubleCheck: false, documentType: 'drivers_license', submittedAt: '2026-11-22T15:00:00.000Z' } },
     payout: { status: 'not_started' },
     background: { status: 'not_started', requiredFor: ['furniture-assembly', 'moving-help'], disclosureNeeded: true, renewalOpen: false, canStart: true },
   },
@@ -529,14 +530,19 @@ export const samProfileEditorData: HelperProfileEditorData = {
     },
     area: { areaId: 'area_hyde_park', serviceRadiusMiles: 5, remoteOk: false },
     tools: { tools: samProfilePageData.tools },
+    preferences: samPreferences,
+    experience: samExperience,
   },
+  stats: { ratingAverage: 4.9, ratingCount: 27, completedCount: 41 },
+  areaLabel: 'Hyde Park, Austin',
+  resumeAi: true,
   workSamples: samProfilePageData.workSamples,
   maxWorkSamples: 12,
   maxPhotoMegabytes: 10,
   badges: sam.badges,
   verification: {
     phone: { verified: true, last4: '0202' },
-    identity: { status: 'verified', verifiedAt: sam.badges.idVerifiedAt!, consentNeeded: false, capture: { stage: 'done', canSubmit: false, prompt: 'look_right' } },
+    identity: { status: 'verified', verifiedAt: sam.badges.idVerifiedAt!, consentNeeded: false, capture: { stage: 'done', canSubmit: false, prompt: 'look_right', doubleCheck: false } },
     address: { status: 'verified', verifiedAt: '2026-01-11T16:00:00.000Z', label: '4321 Example Avenue, Austin, TX 78751', documentType: 'lease' },
     payout: { status: 'active' },
     background: { status: 'clear', checkedAt: sam.badges.backgroundCheckedAt!, requiredFor: ['furniture-assembly', 'moving-help', 'light-cleaning'], disclosureNeeded: false, validUntil: '2027-01-12T16:00:00.000Z', renewalOpen: false, canStart: false },
@@ -575,6 +581,7 @@ export const fakeOnboardingHandlers: HelperOnboardingHandlers = {
   onStartPayout: () => wait({ ok: true, code: 'updated', redirectTo: '/dev/providers/payout' }),
   onStartBackgroundCheck: () => wait({ ok: true, code: 'updated', redirectTo: '/dev/providers/background' }),
   onRefreshStatus: () => wait({ ok: true, code: 'updated' }),
+  onCheckProgress: () => wait(null),
   onUploadPhoto: () => wait({ ok: true, photo: priyaProfilePhoto }, 700),
   onRemovePhoto: () => wait({ ok: true, code: 'updated' }),
 };
@@ -585,6 +592,10 @@ export const fakeProfileEditorHandlers: HelperProfileEditorHandlers = {
   onSaveServices: () => wait({ ok: true, code: 'saved' }),
   onSaveArea: () => wait({ ok: true, code: 'saved' }),
   onSaveTools: () => wait({ ok: true, code: 'saved' }),
+  onSavePreferences: () => wait({ ok: true, code: 'saved' }),
+  onSaveExperience: () => wait({ ok: true, code: 'saved' }),
+  onReadResume: () => wait(samResumeRead, 1200),
+  onApplyResume: () => wait({ ok: true, code: 'saved' }),
   onUploadWorkSample: () =>
     wait({ ok: true, sample: samProfilePageData.workSamples[0]!, photo: samProfilePageData.workSamples[0]!.photo }, 700),
   onUpdateWorkSample: () => wait({ ok: true, code: 'updated' }),

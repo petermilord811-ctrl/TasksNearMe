@@ -23,16 +23,13 @@ import { startReviewSummaries } from '@/modules/assist/review-summaries-job';
 import { createFileStorage } from '@/integrations/storage';
 import { verificationProvidersFor } from '@/modules/verification/providers';
 import { runVerificationTimers } from '@/modules/verification/timers';
+import { readDocumentsJob } from '@/modules/verification/read-documents';
 import { runWelcomeRewards } from '@/modules/rewards/welcome';
-import { readPendingDocuments } from '@/modules/verification/auto-check';
-import { notifyDecidersOfIdReading } from '@/modules/verification/notify-deciders';
 import { runPrivacyRequests } from '@/modules/privacy/requests';
 import { retentionDue, runRetention } from '@/modules/privacy/retention';
 import { checkrFromEnv } from '@/integrations/checkr';
 import { createEmailProvider } from '@/integrations/email';
-import { documentReaderFromEnv } from '@/integrations/ai/document-reader';
-import { idReaderFromEnv } from '@/integrations/ai/id-document-reader';
-import { byteCipherFromEnv, fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
+import { fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
 import type { Db } from '@/platform/db/connect';
 import { expireEndedTasks } from '@/modules/tasks/expiry';
 import { pruneCacheTags } from '@/platform/cache/prune';
@@ -121,15 +118,9 @@ export const JOBS: Job[] = [
   // Search engines: new or changed public pages to IndexNow, every 15 minutes, on the live site only (src/modules/seo).
   { name: 'seo.indexnow', run: async (_db, now) => { await announceChangedPages(now); } },
   { name: 'earnings.transfers', run: async (db, now) => { const connect = stripeConnectFromEnv(); if (connect) await runScheduledTransfers(db, connect, now); } },
-  // Last: each document takes a few seconds of the server's own OCR, one at a time (src/integrations/ocr). This is
-  // the only place documents are read; requests never are.
-  {
-    name: 'verification.read_documents',
-    run: (db, now) => {
-      const storage = createFileStorage();
-      return readPendingDocuments(db, { storage, cipher: fieldCipherFromEnv(), reader: documentReaderFromEnv(), identity: { storage, files: byteCipherFromEnv(), reader: idReaderFromEnv(), addressCipher: fieldCipherFromEnv(), notify: (notice) => notifyDecidersOfIdReading(db, createEmailProvider(db), notice, (process.env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, '')) } }, now);
-    },
-  },
+  // Last: each document takes a few seconds of the server's own OCR, one at a time (src/integrations/ocr). Documents are
+  // read here, or at once right after someone sends one (read-soon.ts, the same job for that person).
+  { name: 'verification.read_documents', run: (db, now) => readDocumentsJob(db, now) },
 ];
 
 const LOCK_KEY = 72_200_001;

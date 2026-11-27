@@ -20,6 +20,10 @@ import {
   helperToolsInputSchema,
   LANGUAGE_CODES,
   SERVICE_RADIUS_MILES,
+  helperExperienceInputSchema,
+  helperPreferencesInputSchema,
+  type HelperExperienceInput,
+  type HelperPreferencesInput,
 } from '@/contracts';
 import type { FileStorage } from '@/integrations/storage';
 import { recordAgreement, type RequestOrigin } from '@/modules/accounts/agreements';
@@ -41,6 +45,8 @@ import { fieldCipherFromEnv, type FieldCipher } from '@/platform/crypto/field-en
 import { normalizeZip, stateOfZip, tidyCityName } from '@/shared/us-zip';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
+import { ensureDraftProfile, uniqueHandle } from './draft-profile';
+import { idDoubleCheckFor } from './providers';
 import { computeOnboarding } from './progress';
 import { serviceDefaultsFor } from './service-defaults';
 import { loadOnboardingState, syncHelperProfile, verificationSummary, type OnboardingState } from './state';
@@ -84,22 +90,11 @@ function optionalCipher(): FieldCipher | null {
 /** Keys the selfie's prompt in our own ID check (the same secret `submitIdentityCapture` gets). */
 const promptSecret = () => ({ promptSecret: process.env.BETTER_AUTH_SECRET ?? '' });
 
+/** The helper's screens: our own ID check shows even before the profile, and whether a provider double-checks it. */
+const helperSummaryOptions = () => ({ ...promptSecret(), helper: true, doubleCheck: idDoubleCheckFor(process.env) });
+
 
 // ---- Saving the profile ---------------------------------------------------------------------------
-
-async function uniqueHandle(db: Db, firstName: string, lastName: string): Promise<string> {
-  const base = `${firstName}-${lastName.charAt(0)}`
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[^a-z0-9-]+/g, '')
-    .replace(/^-+|-+$/g, '') || 'helper';
-  for (let n = 1; n < 100; n += 1) {
-    const candidate = n === 1 ? base : `${base}-${n}`;
-    const [taken] = await db.select({ id: helperProfiles.userId }).from(helperProfiles).where(eq(helperProfiles.handle, candidate)).limit(1);
-    if (!taken) return candidate;
-  }
-  return `${base}-${Date.now().toString(36)}`;
-}
 
 /**
  * Saves the profile basics. From onboarding (`requireAgreement`), the helper agreement must be accepted
@@ -136,23 +131,6 @@ export async function saveHelperProfile(
   }
   await syncHelperProfile(db, userId, now);
   return { ok: true, code: 'saved' };
-}
-
-/**
- * The draft helper profile, created when the first part of setup is saved (plan 9.11: services and area can come
- * before the headline and about me). A draft is invisible to clients until setup makes it active.
- */
-async function ensureDraftProfile(db: Db, userId: string): Promise<boolean> {
-  const [existing] = await db.select({ userId: helperProfiles.userId }).from(helperProfiles).where(eq(helperProfiles.userId, userId)).limit(1);
-  if (existing) return true;
-  const [user] = await db.select({ firstName: users.firstName, lastName: users.lastName }).from(users).where(eq(users.id, userId)).limit(1);
-  if (!user) return false;
-  await db.insert(helperProfiles).values({ userId, handle: await uniqueHandle(db, user.firstName, user.lastName), status: 'draft' }).onConflictDoNothing();
-  // Starting helper setup is choosing to help (journeys on a phone, J-H3): Home then leads with setup's next step and every
-  // page links back to it. Someone who came from Become a helper through sign-in stayed in client mode, so Home said
-  // "You're all caught up" halfway through their checks. Once, as the draft starts: the mode switch turns it back.
-  await db.update(users).set({ mode: 'helper' }).where(eq(users.id, userId));
-  return true;
 }
 
 async function marketIdOf(db: Db, userId: string): Promise<string | null> {
@@ -242,6 +220,31 @@ export async function saveHelperTools(db: Db, userId: string, input: HelperTools
   if (!parsed.success) return validationFailed(parsed.error);
   await db.update(helperProfiles).set({ tools: parsed.data.tools, updatedAt: now.toISOString() }).where(eq(helperProfiles.userId, userId));
   return { ok: true, code: 'saved' };
+}
+
+/** Skills, the work they enjoy and the work they don't do (2026-11-27): each list replaced as given, duplicates dropped. */
+export async function saveHelperPreferences(db: Db, userId: string, input: HelperPreferencesInput, now: Date): Promise<ActionResult> {
+  const parsed = helperPreferencesInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailed(parsed.error);
+  const unique = (items: string[]) => [...new Map(items.map((item) => [item.toLowerCase(), item] as const)).values()];
+  const [updated] = await db
+    .update(helperProfiles)
+    .set({ skills: unique(parsed.data.skills), likes: unique(parsed.data.likes), excludes: unique(parsed.data.excludes), updatedAt: now.toISOString() })
+    .where(eq(helperProfiles.userId, userId))
+    .returning({ userId: helperProfiles.userId });
+  return updated ? { ok: true, code: 'saved' } : { ok: false, code: 'not_allowed' };
+}
+
+/** The experience section (2026-11-27), newest first as given. */
+export async function saveHelperExperience(db: Db, userId: string, input: HelperExperienceInput, now: Date): Promise<ActionResult> {
+  const parsed = helperExperienceInputSchema.safeParse(input);
+  if (!parsed.success) return validationFailed(parsed.error);
+  const [updated] = await db
+    .update(helperProfiles)
+    .set({ experience: parsed.data.experience, updatedAt: now.toISOString() })
+    .where(eq(helperProfiles.userId, userId))
+    .returning({ userId: helperProfiles.userId });
+  return updated ? { ok: true, code: 'saved' } : { ok: false, code: 'not_allowed' };
 }
 
 /** Paused profiles don't appear in search or receive invites. Resuming recomputes the status. */
@@ -419,7 +422,7 @@ export async function getOnboardingPageData(db: Db, userId: string, step: Onboar
     homeMarket: shared.homeMarket,
     languageOptions: shared.languageOptions,
     values: formValues(state),
-    verification: verificationSummary(state, result.backgroundRequired, optionalCipher(), promptSecret()),
+    verification: verificationSummary(state, result.backgroundRequired, optionalCipher(), helperSummaryOptions()),
     agreementNeeded: !state.facts.agreementAccepted,
     firstPayoutDays: FIRST_PAYOUT_DAYS,
     aiDraftingEnabled: aiWritingSetUp() && flags.ai_drafting === true,
@@ -460,6 +463,14 @@ export async function onboardingRedirect(db: Db, userId: string, step: Onboardin
   return stepState === undefined || stepState === 'locked' || stepState === 'skipped' || stepState === 'later' ? result.firstIncomplete : null;
 }
 
+/** "North Loop, Austin", or the city they help from outside the market's neighborhoods ("Ocala, FL"). */
+function editorAreaLabel(profile: { areaId: string | null; homeCity: string | null; homeState: string | null }, shared: { areas: { id: string; name: string }[]; homeMarket?: { name: string } }): string | undefined {
+  if (profile.homeCity) return [profile.homeCity, profile.homeState].filter(Boolean).join(', ');
+  const area = shared.areas.find((option) => option.id === profile.areaId);
+  if (!area) return undefined;
+  return shared.homeMarket && !area.name.includes(shared.homeMarket.name) ? `${area.name}, ${shared.homeMarket.name}` : area.name;
+}
+
 export async function getProfileEditorData(db: Db, userId: string, now: Date): Promise<HelperProfileEditorData | null> {
   await placeWaitingHelper(db, userId, now);
   const [state, shared, [person]] = await Promise.all([
@@ -477,7 +488,21 @@ export async function getProfileEditorData(db: Db, userId: string, now: Date): P
     areas: shared.areas,
     homeMarket: shared.homeMarket,
     languageOptions: shared.languageOptions,
-    values: { ...formValues(state), tools: { tools: state.profile.tools } },
+    values: {
+      ...formValues(state),
+      tools: { tools: state.profile.tools },
+      preferences: { skills: state.profile.skills, likes: state.profile.likes, excludes: state.profile.excludes },
+      experience: { experience: state.profile.experience },
+    },
+    // AI's suggestions where writing help is on; keyword suggestions otherwise (src/modules/profiles/resume.ts).
+    resumeAi: (await draftingFor(db, userId)).aiDraftingEnabled,
+    // The profile card's line (2026-11-27): where they help, and their rating and jobs once they have some.
+    ...(editorAreaLabel(state.profile, shared) ? { areaLabel: editorAreaLabel(state.profile, shared)! } : {}),
+    stats: {
+      ...(state.profile.ratingAverage !== null ? { ratingAverage: state.profile.ratingAverage } : {}),
+      ratingCount: state.profile.ratingCount,
+      completedCount: state.profile.completedCount,
+    },
     workSamples: await workSampleViews(db, userId),
     maxWorkSamples: MAX_WORK_SAMPLES,
     maxPhotoMegabytes: Math.round(MAX_PHOTO_BYTES / (1024 * 1024)),
@@ -487,7 +512,7 @@ export async function getProfileEditorData(db: Db, userId: string, now: Date): P
       ...(state.profile.addressVerifiedAt ? { addressVerifiedAt: new Date(state.profile.addressVerifiedAt).toISOString() } : {}),
       phoneVerified: state.facts.phoneVerified,
     },
-    verification: verificationSummary(state, result.backgroundRequired, optionalCipher(), promptSecret()),
+    verification: verificationSummary(state, result.backgroundRequired, optionalCipher(), helperSummaryOptions()),
     paused: state.profile.status === 'paused',
     // As the public page decides (profiles/queries getHelperProfile): only an active profile has one.
     publicProfile: state.profile.status === 'active',

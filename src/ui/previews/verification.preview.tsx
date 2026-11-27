@@ -16,7 +16,6 @@ import {
   fakeHandler,
   fakeOnboardingHandlers,
   fakePosterIdentityHandlers,
-  homeAddressSuggestions,
   leeVerification,
   mayaShell,
   morganStaff,
@@ -60,7 +59,6 @@ import {
 import { AdminUserContent } from '@/ui/screens/admin/admin-user-screen';
 import { AdminVerificationSection } from '@/ui/screens/admin/admin-verification-section';
 import { AdminVerificationsScreen } from '@/ui/screens/admin/admin-verifications-screen';
-import { AddressStep } from '@/ui/screens/helper/address-step';
 import { HelperOnboardingScreen } from '@/ui/screens/helper/helper-onboarding-screen';
 import { PhoneStep } from '@/ui/screens/helper/phone-step';
 import { AdminShell } from '@/ui/shells/admin-shell';
@@ -129,8 +127,6 @@ export const verificationPreviews: PreviewEntry[] = [
   onboarding('identity-under-18', o.identityUnder18, onboardingIdentityUnder18),
   onboarding('identity-requested', o.identityRequested, onboardingIdentityRequested),
   onboarding('address', o.address, onboardingAddressStep),
-  step('address-search', o.addressSearch, routes.app.helperOnboarding('address'), <AddressStep verification={onboardingAddressStep.verification} handlers={fakeOnboardingHandlers} initialSuggestions={homeAddressSuggestions} />),
-  step('address-errors', o.addressErrors, routes.app.helperOnboarding('address'), <AddressStep verification={onboardingAddressStep.verification} handlers={fakeOnboardingHandlers} initialErrors={{ placeId: 'not_supported', documentType: 'required', file: 'invalid', declaration: 'must_accept' }} />),
   onboarding('address-in-review', o.addressInReview, onboardingAddressInReview),
   onboarding('address-rejected', o.addressRejected, onboardingAddressRejected),
   onboarding('address-verified', o.addressVerified, onboardingAddressVerified),

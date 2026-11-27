@@ -19,12 +19,14 @@ import { Spinner } from '@/ui/primitives/spinner';
  * account page's phone change; a number that's already verified shows as done. `inDialog` (2026-11-23): the check opened
  * over the page from the verified-helper reminder, under the dialog's own title; the right code closes it there.
  */
-export function PhoneStep({ verification, handlers, initialSentTo, inDialog = false }: {
+export function PhoneStep({ verification, handlers, initialSentTo, inDialog = false, compact = false }: {
   verification: VerificationSummary;
   handlers: Pick<HelperOnboardingHandlers, 'onStartPhone' | 'onConfirmPhone'>;
   /** Previews: start on the code step for this number. */
   initialSentTo?: string;
   inDialog?: boolean;
+  /** Inside a verification flow (2026-11-27): the flow's heading says what it is, so no explanation or privacy lines. */
+  compact?: boolean;
 }) {
   const t = useTranslations('verification.phoneStep');
   const [sentTo, setSentTo] = useState(initialSentTo);
@@ -40,14 +42,14 @@ export function PhoneStep({ verification, handlers, initialSentTo, inDialog = fa
       <p className="flex items-start gap-2 rounded-lg bg-badge-success p-3 text-badge-success-foreground"><CheckCircle2 aria-hidden="true" className="mt-0.5 size-5 shrink-0" />{t('verified', { last4: verification.phone.last4 ?? '' })}</p>
       <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setChanging(true)}>{t('change')}</Button>
     </div> : <>
-      <p className="text-sm leading-6 text-muted-foreground">{t('explanation')}</p>
+      {!compact && <p className="text-sm leading-6 text-muted-foreground">{t('explanation')}</p>}
       {sentTo ? <CodeForm
         sentTo={sentTo}
         onVerify={handlers.onConfirmPhone}
         onResend={() => handlers.onStartPhone({ phone: sentTo })}
         onBack={() => setSentTo(undefined)}
       /> : <NumberForm initial="" onSend={handlers.onStartPhone} onSent={setSentTo} />}
-      <p className="flex items-start gap-2 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('privacy')}</p>
+      {!compact && <p className="flex items-start gap-2 text-sm text-muted-foreground"><Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" />{t('privacy')}</p>}
     </>}
   </section>;
 }

@@ -19,8 +19,10 @@ import type {
   AdminVerificationsPageData,
   BackgroundAdjudication,
   CategorySlug,
+  IdDocumentDetails,
   IdentityAutoCheck,
   IdentityCaptureDecisionInput,
+  IdentityCaptureDetails,
   IdentityCapturePhoto,
   IdentityCaptureRejectionReason,
   IdentityCaptureRevealInput,
@@ -62,6 +64,7 @@ import type { ByteCipher, FieldCipher } from '@/platform/crypto/field-encryption
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { openIdPhoto, readPendingIds, type IdReadingDeps } from './auto-check';
+import { applyCaptureDecision } from './capture-decision';
 import { compareIdDetails, homeAddressOf, type PostalAddress } from './id-details';
 import { captureFileIds, IDENTITY_FILE_KINDS } from './capture';
 import type { VerificationProviders } from './providers';
@@ -101,6 +104,11 @@ function autoCheckView(stored: StoredAddressAutoCheck | null): AddressAutoCheck 
     ...(stored.addressMatches !== undefined ? { addressMatches: stored.addressMatches } : {}),
     ...(stored.recent !== undefined ? { recent: stored.recent } : {}),
     ...(stored.documentType ? { documentType: stored.documentType as AddressDocumentType | 'other' } : {}),
+    ...(stored.issuer ? { issuer: stored.issuer } : {}),
+    ...(stored.documentDate ? { documentDate: stored.documentDate } : {}),
+    ...(stored.checks ? { checks: stored.checks } : {}),
+    ...(stored.signals && stored.signals.length > 0 ? { signals: stored.signals } : {}),
+    ...(stored.decision ? { decision: stored.decision } : {}),
   };
 }
 
@@ -116,6 +124,11 @@ function identityAutoCheckView(stored: StoredIdentityAutoCheck | null): Identity
     ...(stored.addressMatches !== undefined ? { addressMatches: stored.addressMatches } : {}),
     ...(stored.source ? { source: stored.source } : {}),
     ...(stored.frontAgrees !== undefined ? { frontAgrees: stored.frontAgrees } : {}),
+    ...(stored.checks ? { checks: stored.checks } : {}),
+    ...(stored.signals ? { signals: stored.signals } : {}),
+    ...(stored.face ? { face: stored.face } : {}),
+    ...(stored.liveness !== undefined ? { liveness: stored.liveness } : {}),
+    ...(stored.decision ? { decision: stored.decision } : {}),
   };
 }
 
@@ -355,6 +368,8 @@ export async function getPersonVerification(db: Db, staff: StaffActor, userId: s
       ...(row.filesDeletedAt ? { photosDeletedAt: row.filesDeletedAt.toISOString() } : {}),
       ...(row.decidedAt ? { decidedAt: row.decidedAt.toISOString() } : {}),
       ...(decidedBy ? { decidedBy } : {}),
+      ...(row.decidedBy === 'auto' || row.decidedBy === 'staff' ? { decidedByKind: row.decidedBy } : {}),
+      ...(row.detailsCiphertext ? { detailsStored: true } : {}),
       ...(row.rejectionReason ? { rejectionReason: row.rejectionReason as IdentityCaptureRejectionReason } : {}),
       ...(row.staffNote ? { note: row.staffNote } : {}),
       ...(duplicateOf?.length ? { duplicateOf } : {}),
@@ -375,6 +390,7 @@ export async function getPersonVerification(db: Db, staff: StaffActor, userId: s
       ...(row.documentDeletedAt ? { documentDeletedAt: row.documentDeletedAt.toISOString() } : {}),
       ...(row.decidedAt ? { decidedAt: row.decidedAt.toISOString() } : {}),
       ...(decidedBy ? { decidedBy } : {}),
+      ...(row.decidedBy === 'auto' || row.decidedBy === 'staff' ? { decidedByKind: row.decidedBy } : {}),
       ...(row.rejectionReason ? { rejectionReason: row.rejectionReason as AddressRejectionReason } : {}),
       ...(autoCheck ? { autoCheck } : {}),
     };
@@ -467,6 +483,7 @@ export async function decideAddress(db: Db, staff: StaffActor, input: AddressDec
       status: decision === 'approve' ? 'verified' : 'rejected',
       decidedAt: now,
       decidedByUserId: staff.id,
+      decidedBy: 'staff',
       rejectionReason: decision === 'reject' ? (reason ?? 'other') : null,
       updatedAt: now,
     })
@@ -482,9 +499,10 @@ export async function decideAddress(db: Db, staff: StaffActor, input: AddressDec
 }
 
 /**
- * Approves or rejects the ID photos in review (our own check, stage 1). Approval opens the provider's
- * double check for the helper; a rejection gives them the reason (never the note), and they can try
- * again within the limits (an `under_18` rejection closes helper setup until staff allow new tries).
+ * Approves or rejects the ID photos in review (our own check, stage 1). Approval verifies the ID where no ID provider
+ * double-checks (2026-11-27), else opens the provider's double check; a rejection gives them the reason (never the
+ * note), and they can try again within the limits (an `under_18` rejection closes helper setup until staff allow new
+ * tries).
  *
  * Approval waits for the automatic reading (5.18), which also hashes the ID to find it on other accounts: with
  * `reading` it reads the photos now if the job hasn't yet (the staff actions only test accounts' photos, with the
@@ -515,7 +533,7 @@ export async function decideIdentityCapture(
   staff: StaffActor,
   input: IdentityCaptureDecisionInput,
   now: Date,
-  options: { reading?: IdReadingDeps | null; readerOn?: boolean } = {},
+  options: { reading?: IdReadingDeps | null; readerOn?: boolean; doubleCheck?: boolean } = {},
 ): Promise<ActionResult> {
   if (!canDecideVerification(staff)) return { ok: false, code: 'not_allowed' };
   const parsed = identityCaptureDecisionInputSchema.safeParse(input);
@@ -537,29 +555,16 @@ export async function decideIdentityCapture(
     if (reading?.state === 'waiting') return { ok: false, code: 'not_ready' };
     if (reading?.state === 'skipped') withoutReading = reading.why;
   }
-  const updated = await db
-    .update(identityCaptures)
-    .set({
-      status: decision === 'approve' ? 'approved' : 'rejected',
-      rejectionReason: decision === 'reject' ? (reason ?? 'other') : null,
-      decidedAt: now,
-      decidedByUserId: staff.id,
-      staffNote: note,
-      updatedAt: now,
-    })
-    // Never on one's own account: another staff member decides (sweep 2026-11-20, security review).
-    .where(and(eq(identityCaptures.id, captureId), eq(identityCaptures.status, 'submitted'), ne(identityCaptures.userId, staff.id)))
-    .returning({ userId: identityCaptures.userId });
-  const userId = updated[0]?.userId;
-  if (!userId) return { ok: false, code: 'not_allowed' };
-  await audit(db, staff, decision === 'approve' ? 'identity_capture.approved' : 'identity_capture.rejected', userId, note, {
+  // The same path as the automatic decision (capture-decision.ts): without an ID provider's double check, our team's
+  // approval verifies the ID.
+  const decided = await applyCaptureDecision(db, { captureId, decision, ...(reason ? { reason } : {}), note, decider: { kind: 'staff', userId: staff.id } }, now, options.doubleCheck === undefined ? {} : { doubleCheck: options.doubleCheck });
+  if (!decided) return { ok: false, code: 'not_allowed' };
+  await audit(db, staff, decision === 'approve' ? 'identity_capture.approved' : 'identity_capture.rejected', decided.userId, note, {
     captureId,
     ...(decision === 'reject' && reason ? { reason } : {}),
     ...(withoutReading ? { withoutReading, remark: APPROVED_WITHOUT_READING } : {}),
+    ...(decided.verified ? { verified: 'own' } : {}),
   });
-  // Either way the helper has something to do: the double check, or new photos.
-  await emitVerificationEvent(db, userId, 'identity', 'action_needed');
-  await syncHelperProfile(db, userId, now);
   return { ok: true, code: 'updated' };
 }
 
@@ -809,9 +814,17 @@ export async function revealIdentityDetails(
   const { capture } = row;
   // Staff never open their own verification documents (as with the photos and the proofs of address).
   if (capture.userId === staff.id) return { ok: false, code: 'not_allowed' };
+  const home = await homeAddressOf(db, deps.addressCipher, capture.userId);
+  const timeZone = (await marketTimeZones(db, [row.homeMarketId])).get(row.homeMarketId)!;
+  // What the automatic reading stored (2026-11-27), for any kind of ID; older captures read the barcode again below.
+  const stored = storedDetails(capture.detailsCiphertext, deps.addressCipher);
+  if (stored) {
+    const { age, matches } = compareIdDetails(stored, row, home, now, timeZone);
+    await audit(db, staff, 'identity_capture.details_viewed', capture.userId, parsed.data.reason, { captureId: capture.id, stored: true });
+    return { ok: true, details: { ...captureDetailsView(stored, age, matches), stored: true } };
+  }
   if (capture.documentType === 'passport') return { ok: false, code: 'no_barcode' };
   if (!capture.backFileId) return { ok: false, code: capture.filesDeletedAt ? 'not_found' : 'no_barcode' };
-  const home = await homeAddressOf(db, deps.addressCipher, capture.userId);
   let details: IdBarcodeDetails | null;
   if (isReservedEmailAddress(row.email)) {
     details = standInDetails(row, home, now);
@@ -826,7 +839,6 @@ export async function revealIdentityDetails(
     }
   }
   if (!details) return { ok: false, code: 'no_barcode' };
-  const timeZone = (await marketTimeZones(db, [row.homeMarketId])).get(row.homeMarketId)!;
   const { age, matches } = compareIdDetails(details, row, home, now, timeZone);
   // Who, why and which capture; never what it said.
   await audit(db, staff, 'identity_capture.details_viewed', capture.userId, parsed.data.reason, { captureId: capture.id });
@@ -847,6 +859,52 @@ export async function revealIdentityDetails(
       ...(details.eyeColor ? { eyeColor: details.eyeColor } : {}),
       matches,
     },
+  };
+}
+
+/** The stored details (IdDocumentDetails, encrypted), when they hold a name, birth date, expiry and number to show. */
+function storedDetails(ciphertext: string | null, cipher: FieldCipher | null): (IdDocumentDetails & { givenNames: string; surname: string; dateOfBirth: string; expiryDate: string; documentNumber: string }) | null {
+  if (!ciphertext || !cipher) return null;
+  try {
+    const details = JSON.parse(cipher.decrypt(ciphertext)) as IdDocumentDetails;
+    if (!details.givenNames || !details.surname || !details.dateOfBirth || !details.expiryDate || !details.documentNumber) return null;
+    return details as IdDocumentDetails & { givenNames: string; surname: string; dateOfBirth: string; expiryDate: string; documentNumber: string };
+  } catch {
+    return null;
+  }
+}
+
+/** The staff view of stored details. */
+function captureDetailsView(
+  details: IdDocumentDetails & { givenNames: string; surname: string; dateOfBirth: string; expiryDate: string; documentNumber: string },
+  age: number | undefined,
+  matches: IdentityCaptureDetails['matches'],
+): IdentityCaptureDetails {
+  const extras = {
+    licenseClass: details.licenseClass,
+    restrictions: details.restrictions,
+    endorsements: details.endorsements,
+    documentDiscriminator: details.documentDiscriminator,
+    inventoryControl: details.inventoryControl,
+    aamvaVersion: details.aamvaVersion,
+    jurisdictionVersion: details.jurisdictionVersion,
+  };
+  return {
+    documentType: details.documentType,
+    source: details.source,
+    issuingState: details.issuingState ?? '',
+    name: { given: details.givenNames, surname: details.surname, ...(details.middleNames ? { middle: details.middleNames } : {}), ...(details.suffix ? { suffix: details.suffix } : {}) },
+    dateOfBirth: details.dateOfBirth,
+    age: age ?? 0,
+    expiryDate: details.expiryDate,
+    ...(details.issueDate ? { issueDate: details.issueDate } : {}),
+    documentNumber: details.documentNumber,
+    ...(details.address ? { address: details.address } : {}),
+    ...(details.sex ? { sex: details.sex } : {}),
+    ...(details.height ? { height: details.height } : {}),
+    ...(details.eyeColor ? { eyeColor: details.eyeColor } : {}),
+    ...Object.fromEntries(Object.entries(extras).filter(([, value]) => value !== undefined)),
+    matches,
   };
 }
 

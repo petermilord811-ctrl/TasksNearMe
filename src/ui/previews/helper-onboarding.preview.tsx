@@ -1,8 +1,6 @@
-import { useTranslations } from 'next-intl';
-import { ACTION_ERROR_CODES, BACKGROUND_CHECK_STATUSES, IDENTITY_STATUSES, PAYOUT_ACCOUNT_STATUSES, routes, type AppShellHandlers, type HelperOnboardingHandlers, type HelperOnboardingPageData, type PreviewEntry } from '@/contracts';
-import { fakeHandler, fakeOnboardingHandlers, onboardingAreaDallas, onboardingAreaElsewhere, onboardingAreaStep, onboardingDoneHelping, onboardingIdentityCaptureApproved, onboardingBackgroundNotStarted, onboardingBackgroundPending, onboardingDone, onboardingIdentityProcessing, onboardingIdentityRetry, onboardingIdentityStep, onboardingPayoutActionNeeded, onboardingPayoutStep, onboardingProfileStep, onboardingServicesStep, onboardingSetupAbout, onboardingSetupAboutExamples, onboardingSetupAboutPhoto, onboardingSetupServicesChosen, priyaShell, samProfileDraft } from '@/fixtures';
+import { BACKGROUND_CHECK_STATUSES, IDENTITY_STATUSES, PAYOUT_ACCOUNT_STATUSES, routes, type AppShellHandlers, type HelperOnboardingHandlers, type HelperOnboardingPageData, type PreviewEntry } from '@/contracts';
+import { fakeHandler, fakeOnboardingHandlers, onboardingAreaDallas, onboardingAreaElsewhere, onboardingAreaStep, onboardingDoneHelping, onboardingBackgroundNotStarted, onboardingBackgroundPending, onboardingDone, onboardingIdentityProcessing, onboardingIdentityRetry, onboardingIdentityStep, onboardingPayoutActionNeeded, onboardingPayoutStep, onboardingProfileStep, onboardingServicesStep, onboardingSetupAbout, onboardingSetupAboutExamples, onboardingSetupAboutPhoto, onboardingSetupServicesChosen, priyaShell, samProfileDraft } from '@/fixtures';
 import { HelperOnboardingScreen } from '@/ui/screens/helper/helper-onboarding-screen';
-import { VerificationPanel } from '@/ui/screens/helper/verification-panel';
 import { AppShell } from '@/ui/shells/app-shell';
 import { ClickOnLoad } from './click-on-load';
 import copy from '../../../messages/en/ui/helperOnboarding.json';
@@ -14,10 +12,6 @@ function preview(variant: string, title: string, data: HelperOnboardingPageData,
   return { id: `screen-helper-onboarding/${variant}`, title, group: copy.screen.previews.group, layout: 'fullscreen', render: () => <AppShell viewer={priyaShell} handlers={shellHandlers} currentPath={routes.app.helperOnboarding(data.step)} layout="flow">{options.click ? <ClickOnLoad label={options.click}>{screen}</ClickOnLoad> : screen}</AppShell> };
 }
 
-function ProviderErrors() {
-  const t = useTranslations('helperOnboarding');
-  return <main className="mx-auto max-w-reading space-y-6 px-gutter py-8"><h1 className="text-2xl font-bold">{t('screen.previews.errors')}</h1><p>{t('screen.previews.errorHint')}</p>{ACTION_ERROR_CODES.map((code) => <VerificationPanel key={code} track="identity" verification={onboardingIdentityCaptureApproved.verification} categories={onboardingIdentityStep.categories} bookableCategories={[]} initialResult={{ ok: false, code }} handlers={{ ...fakeOnboardingHandlers, onStartIdentity: fakeHandler({ ok: false, code }, 1800) }} />)}</main>;
-}
 
 const nextPart = (part: keyof typeof copy.setup.parts) => copy.setup.next.replace('{part}', copy.setup.parts[part]);
 
@@ -46,10 +40,9 @@ export const helperOnboardingPreviews: PreviewEntry[] = [
   preview('background-pending', copy.screen.previews.backgroundPending, onboardingBackgroundPending),
   preview('done', copy.screen.steps.done, onboardingDone),
   // The provider's double check (stage 2): our own photos are approved until it verifies.
-  ...IDENTITY_STATUSES.filter((status) => status === 'verified' || status === 'canceled').map((status) => preview(`identity-${status}`, verificationCopy.statuses.identity[status], { ...onboardingIdentityStep, verification: { ...onboardingIdentityStep.verification, identity: { ...onboardingDone.verification.identity, status, ...(status === 'verified' ? {} : { capture: { stage: 'approved', canSubmit: false, prompt: 'smile' } }) } } })),
+  ...IDENTITY_STATUSES.filter((status) => status === 'verified' || status === 'canceled').map((status) => preview(`identity-${status}`, verificationCopy.statuses.identity[status], { ...onboardingIdentityStep, verification: { ...onboardingIdentityStep.verification, identity: { ...onboardingDone.verification.identity, status, ...(status === 'verified' ? {} : { capture: { stage: 'approved', canSubmit: false, prompt: 'smile', doubleCheck: true } }) } } })),
   ...PAYOUT_ACCOUNT_STATUSES.filter((status) => status === 'active' || status === 'pending' || status === 'restricted').map((status) => preview(`payout-${status}`, verificationCopy.statuses.payout[status], { ...onboardingPayoutStep, verification: { ...onboardingPayoutStep.verification, payout: { status } } })),
   ...BACKGROUND_CHECK_STATUSES.filter((status) => status !== 'not_started' && status !== 'pending').map((status) => preview(`background-${status.replaceAll('_', '-')}`, verificationCopy.statuses.background[status], { ...onboardingBackgroundNotStarted, verification: { ...onboardingBackgroundNotStarted.verification, background: { ...onboardingDone.verification.background, status, requiredFor: status === 'not_required' ? [] : onboardingBackgroundNotStarted.verification.background.requiredFor } } })),
   preview('done-not-bookable', copy.screen.previews.donePending, { ...onboardingIdentityStep, step: 'done' }),
   preview('area-remote', copy.screen.previews.remote, { ...onboardingAreaStep, values: { ...onboardingAreaStep.values, services: { services: [{ categorySlug: 'computer-help', pricingType: 'fixed', fromPriceCents: 4000, description: '' }] } } }),
-  { id: 'helper-verification/action-errors', title: copy.screen.previews.errors, group: copy.screen.previews.group, layout: 'fullscreen', render: () => <ProviderErrors /> },
 ];

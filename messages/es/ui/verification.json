@@ -194,7 +194,7 @@
     "submit": "Enviar para revisión",
     "sending": "Enviando…",
     "sent": "Enviado. Lo revisaremos y te avisaremos.",
-    "privacy": "Solo nuestro equipo de confianza y seguridad abre el documento, y cada vez que lo ve queda registrado. Antes, un lector automatizado en nuestros propios servidores revisa por ellos el nombre, la dirección y la fecha; solo conservamos sus respuestas de sí o no. Eliminamos el documento 30 días después de revisarlo.",
+    "privacy": "Solo nuestro equipo de confianza y seguridad abre el documento, y cada vista queda registrada. Lo borramos 30 días después de nuestra decisión.",
     "moving": "¿Te mudaste? Envía un nuevo comprobante",
     "requested": "Nuestro equipo pidió un nuevo comprobante de tu domicilio. Envíalo abajo; tus ofertas están en pausa hasta que se apruebe.",
     "inReview": "Estamos revisando tu documento. Suele tardar uno o dos días, y mientras tanto puedes configurar tus pagos.",
@@ -275,7 +275,7 @@
     },
     "notice": {
       "title": "Antes de tomar tus fotos",
-      "body": "Para comprobar que eres la persona de tu identificación, tomamos fotos de tu identificación y una selfie que sigue una instrucción, y nuestro equipo de confianza y seguridad compara tu cara con la foto de la identificación. Después, nuestro socio de identidad, Persona, verifica por segunda vez tu identificación y una selfie usando la geometría facial, un identificador biométrico. Las fotos se usan solo para verificar tu identidad. Guardamos las nuestras cifradas hasta que terminen las dos verificaciones y las borramos a más tardar 30 días después de nuestra decisión; le pedimos a Persona que borre las suyas 30 días después de su resultado. Te pedimos tu consentimiento antes.",
+      "body": "Para comprobar que eres la persona de tu identificación, tomamos fotos de tu identificación y una selfie en vivo que sigue una instrucción. Un programa en nuestros propios servidores revisa la identificación y su código de barras, y compara la cara de tu selfie con la foto de tu identificación usando la geometría facial, un identificador biométrico; nuestro equipo de confianza y seguridad también puede revisarlas. Si un socio de identidad verifica tu identificación por segunda vez, hace lo mismo. Guardamos cifrados las fotos y los datos leídos de tu identificación, los usamos solo para verificar tu identidad, revisar tu verificación y prevenir fraudes, y los borramos a más tardar un año después de nuestra decisión (de inmediato si eliminas tu cuenta). Te pedimos tu consentimiento antes.",
       "checkbox": "Acepto la verificación de identidad y selfie descrita aquí.",
       "required": "Acepta la verificación de identidad y selfie para tomar tus fotos.",
       "continue": "Continuar"
@@ -371,7 +371,7 @@
       "duplicate_id": "Esta identificación ya se usa en otra cuenta. Contacta a soporte si crees que es un error.",
       "other": "No pudimos aceptar estas fotos. Tómalas de nuevo o contacta a soporte si sigue pasando."
     },
-    "privacy": "Solo nuestro equipo de confianza y seguridad ve tus fotos, y cada vista queda registrada. Un lector automático en nuestros propios servidores lee para ellos el nombre, las fechas y el número del frente de tu identificación; guardamos solo sus respuestas de sí o no, nunca tu nombre, tu fecha de nacimiento ni tu número de identificación, además de un código de un solo sentido hecho con el número, el estado emisor y la fecha de nacimiento, que no permite recuperarlos, solo para detectar la misma identificación en dos cuentas. Tus fotos se guardan cifradas y se borran a más tardar 30 días después de nuestra decisión.",
+    "privacy": "Solo nuestro equipo de confianza y seguridad puede abrir tus fotos y los datos leídos de tu identificación, y cada vista queda registrada. Se guardan cifrados y se borran a más tardar un año después de nuestra decisión.",
     "errors": {
       "photo": {
         "required": "Primero toma esta foto.",

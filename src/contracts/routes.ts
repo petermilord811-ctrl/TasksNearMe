@@ -39,11 +39,11 @@ export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 
 /**
  * The checks done in a dialog over the page they're opened from (2026-11-23, owner: "I hate to redirect to new pages
- * continually … if possible, use dialog"): the phone and the home address, from the verified-helper reminder and the
- * verification checklist (`routes.app.helperCheck`). Their onboarding pages stay for setup's own step-to-step flow; the
- * ID check, payouts and the background check hand off to their providers from those pages.
+ * continually … if possible, use dialog"): the phone, the home address and, since 2026-11-27, our own ID check, from the
+ * Verifications page, the verified-helper reminder and the verification checklist (`routes.app.helperCheck`). Loaded
+ * directly, each is its onboarding page. Payouts and the background check hand off to their providers.
  */
-export const HELPER_CHECK_DIALOG_STEPS = ['phone', 'address'] as const;
+export const HELPER_CHECK_DIALOG_STEPS = ['phone', 'address', 'identity'] as const;
 export type HelperCheckDialogStep = (typeof HELPER_CHECK_DIALOG_STEPS)[number];
 
 export function isHelperCheckDialogStep(step: string): step is HelperCheckDialogStep {
@@ -311,6 +311,12 @@ export const routes = {
      */
     helperCheck: (step: OnboardingStep) => (isHelperCheckDialogStep(step) ? `/app/helper/checks/${step}` : `/app/helper/onboarding/${step}`),
     helperProfile: () => '/app/helper/profile',
+    /**
+     * Verifications (owner, 2026-11-27: "not able to pick preferred verification. change it."): every check on one page,
+     * picked in any order. The phone, home address and ID open in a dialog over it (`helperCheck`); payouts and the
+     * background check hand off to their providers.
+     */
+    helperVerification: () => '/app/helper/verification',
     /** Regular visits (blueprint 03 §7). */
     series: (seriesId: string) => `/app/series/${enc(seriesId)}`,
   },

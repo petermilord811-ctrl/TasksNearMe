@@ -1,5 +1,5 @@
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
-import { BadgeCheck, Cake, Flag, Hammer, Laptop, Leaf, MapPin, MessageCircle, MessagesSquare, Package, Sparkles, Star, ThumbsUp, type LucideIcon } from 'lucide-react';
+import { BadgeCheck, Ban, Briefcase, Cake, Flag, Hammer, Laptop, Leaf, MapPin, MessageCircle, MessagesSquare, Package, Sparkles, Star, ThumbsUp, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 import type { CategorySlug, HelperContactAccess, HelperContactReveal, HelperProfilePageData, HelperServiceDetail, ISODateTime, RevealHelperContactHandler } from '@/contracts';
@@ -231,7 +231,14 @@ export function HelperProfileScreen({ data, now, contact, onRevealContact, initi
         <ProfileSection id="helper-services-heading" title={t('services')}>
           <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card">{data.services.map((service) => <ServiceRow key={service.categorySlug} service={service} />)}</ul>
         </ProfileSection>
-        {/* 4d's slot (2026-11-27): skills, "Work I enjoy" and "Work I don't do" (data.skills, data.likes, data.excludes), as a <ProfileSection>. */}
+        {/* Skills and work preferences (2026-11-27, often from the helper's resume): what they're good at, enjoy and don't do. */}
+        {((data.skills?.length ?? 0) + (data.likes?.length ?? 0) + (data.excludes?.length ?? 0)) > 0 && <ProfileSection id="helper-skills-heading" title={t('lists.skills')}>
+          {data.skills && data.skills.length > 0 && <ul className="flex flex-wrap gap-2">{data.skills.map((item) => <li key={item} className="rounded-full bg-foreground/[0.06] px-3 py-1.5 text-sm">{item}</li>)}</ul>}
+          {((data.likes?.length ?? 0) > 0 || (data.excludes?.length ?? 0) > 0) && <div className="grid gap-4 sm:grid-cols-2">
+            {data.likes && data.likes.length > 0 && <div className="space-y-2"><h3 className="flex items-center gap-1.5 text-sm font-semibold"><ThumbsUp aria-hidden="true" className="size-4 text-success" />{t('lists.likes')}</h3><ul className="flex flex-wrap gap-2">{data.likes.map((item) => <li key={item} className="rounded-full bg-success/12 px-3 py-1.5 text-sm">{item}</li>)}</ul></div>}
+            {data.excludes && data.excludes.length > 0 && <div className="space-y-2"><h3 className="flex items-center gap-1.5 text-sm font-semibold"><Ban aria-hidden="true" className="size-4 text-muted-foreground" />{t('lists.excludes')}</h3><ul className="flex flex-wrap gap-2">{data.excludes.map((item) => <li key={item} className="rounded-full bg-foreground/[0.04] px-3 py-1.5 text-sm text-muted-foreground">{item}</li>)}</ul></div>}
+          </div>}
+        </ProfileSection>}
 
         {data.slots && data.slots.length > 0 && <AvailabilitySlotList slots={data.slots} handle={helper.handle} />}
         {data.neighborhoodDays && data.neighborhoodDays.length > 0 && <NeighborhoodDayList days={data.neighborhoodDays} title={days('title')} intro={days('intro')} headingId="profile-neighborhood-days" />}
@@ -252,7 +259,18 @@ export function HelperProfileScreen({ data, now, contact, onRevealContact, initi
         {data.bio && <ProfileSection id="helper-about-heading" title={t('about', { name: helper.displayName })}>
           <ExpandableText text={data.bio} lines={5} className="max-w-reading leading-7" />
         </ProfileSection>}
-        {/* 4d's slot (2026-11-27): experience (data.experience), as a <ProfileSection>. */}
+        {/* Experience (2026-11-27, often from the helper's resume), newest first. */}
+        {data.experience && data.experience.length > 0 && <ProfileSection id="helper-experience-heading" title={t('lists.experience')}>
+          <ol className="space-y-4">{data.experience.map((entry, index) => <li key={index} className="flex gap-4">
+            <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-foreground/[0.05] text-foreground/70"><Briefcase className="size-5" /></span>
+            <span className="min-w-0">
+              <span className="block font-medium">{entry.title}</span>
+              {entry.organization && <span className="block text-sm">{entry.organization}</span>}
+              {(entry.startYear !== undefined || entry.current || entry.endYear !== undefined) && <span className="block text-sm text-muted-foreground tabular-nums">{entry.startYear ?? ''}{entry.startYear !== undefined ? '–' : ''}{entry.current ? t('lists.present') : (entry.endYear ?? '')}</span>}
+              {entry.summary && <span className="mt-1 block text-sm leading-6 text-muted-foreground">{entry.summary}</span>}
+            </span>
+          </li>)}</ol>
+        </ProfileSection>}
 
         {data.workSamples.length > 0 && <ProfileSection id="helper-work-heading" title={t('workSamples')}>
           <WorkSampleGallery samples={data.workSamples} />

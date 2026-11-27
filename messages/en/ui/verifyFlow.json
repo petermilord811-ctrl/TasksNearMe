@@ -1,0 +1,276 @@
+{
+  "frame": {
+    "back": "Back",
+    "close": "Close",
+    "progress": "Progress"
+  },
+  "camera": {
+    "preview": "Camera",
+    "starting": "Opening the camera…",
+    "take": "Take photo",
+    "takeSelfie": "Take selfie",
+    "denied": "Camera access is off for this site. Allow it in your browser's settings, or upload a photo.",
+    "unavailable": "We can't open a camera here. Upload a photo instead."
+  },
+  "id": {
+    "title": "Verify your ID",
+    "checks": {
+      "label": "ID checks",
+      "teamWillLook": "Our team will look",
+      "readable": "Photos are clear",
+      "machine_readable": "Barcode read",
+      "machine_readable_passport": "Passport code read",
+      "genuine": "Issued by a real DMV",
+      "front_matches": "Front matches the barcode",
+      "name": "Name matches your account",
+      "adult": "18 or older",
+      "not_expired": "Not expired",
+      "face_match": "Selfie matches your ID",
+      "live": "Live selfie",
+      "unique": "Not used on another account"
+    },
+    "intro": {
+      "title": "Verify your identity",
+      "description": "It takes about 2 minutes.",
+      "idRow": "A photo of your ID",
+      "idHint": "Driver's license, state ID or passport",
+      "selfieRow": "A quick selfie",
+      "selfieHint": "To match you with your ID",
+      "consent": "I agree to the ID and selfie check.",
+      "consentRequired": "Agree to continue.",
+      "howWeUse": "How we use your photos",
+      "start": "Start"
+    },
+    "type": {
+      "title": "Choose your ID",
+      "description": "Issued in the US and not expired.",
+      "drivers_license": "Driver's license",
+      "state_id": "State ID card",
+      "passport": "Passport"
+    },
+    "capture": {
+      "front": {
+        "title": "Front of your license",
+        "description": "Lay it flat, all four corners in the frame."
+      },
+      "frontId": {
+        "title": "Front of your ID card",
+        "description": "Lay it flat, all four corners in the frame."
+      },
+      "passport": {
+        "title": "Your passport's photo page",
+        "description": "Open it flat, the whole page in the frame."
+      },
+      "back": {
+        "title": "Back of your license",
+        "description": "Make sure the barcode is sharp."
+      },
+      "backId": {
+        "title": "Back of your ID card",
+        "description": "Make sure the barcode is sharp."
+      },
+      "useCamera": "Take a photo"
+    },
+    "check": {
+      "title": "Check your photo",
+      "description": "Is the text readable, with no glare?",
+      "selfieTitle": "Check your selfie",
+      "selfieDescription": "Is your whole face in view?",
+      "alt": {
+        "front": "Your photo of the front of your ID",
+        "back": "Your photo of the back of your ID",
+        "selfie": "Your selfie"
+      },
+      "dark": "It looks dark. Try brighter light.",
+      "blurry": "It looks blurry. Hold still and retake it.",
+      "use": "Looks good",
+      "submit": "Submit",
+      "sending": "Sending…",
+      "retake": "Retake"
+    },
+    "selfie": {
+      "title": "Now a quick selfie",
+      "description": "Face the camera in good light. Take off sunglasses and hats.",
+      "promptLabel": "In your selfie",
+      "tip": "We'll compare it with the photo on your ID.",
+      "open": "Open camera",
+      "cameraTitle": "Fit your face in the oval"
+    },
+    "verifying": {
+      "title": "Verifying your ID",
+      "description": "This usually takes under a minute.",
+      "done": "Checks finished."
+    },
+    "result": {
+      "verifiedTitle": "You're verified",
+      "verifiedBody": "Your profile now shows ID verified.",
+      "approvedTitle": "Photos approved",
+      "approvedBody": "One last step: a quick double check with our ID partner.",
+      "doubleCheck": "Continue",
+      "reviewTitle": "Almost done",
+      "reviewBody": "Our team is taking a quick look, usually within a day. We'll let you know.",
+      "rejectedTitle": "We couldn't verify this ID",
+      "slowTitle": "Still checking",
+      "slowBody": "We'll let you know as soon as it's done.",
+      "tryAgain": "Try again",
+      "later": "Not now",
+      "done": "Done",
+      "toastVerified": "ID verified",
+      "toastReview": "ID sent for review"
+    },
+    "status": {
+      "blocked": {
+        "try_later": "Try again later",
+        "too_many_attempts": "Our team will take it from here",
+        "under_18": "Helpers need to be 18 or older",
+        "double_check_review": "Our team is taking a look",
+        "duplicate_id": "Our team is taking a look"
+      },
+      "nameCheckTitle": "Checking your name",
+      "nameCheckBody": "The name on your ID differs from your account's. Our team is checking it, usually within a day.",
+      "verifiedOn": "Verified on {date}",
+      "doubleCheckTitle": "Double check in progress",
+      "doubleCheckBody": "Finish it with our ID partner, or check back in a few minutes.",
+      "continueDoubleCheck": "Continue the double check",
+      "checkStatus": "Check status",
+      "newCheck": "Start a new check"
+    }
+  },
+  "address": {
+    "title": "Verify your home address",
+    "continue": "Continue",
+    "checks": {
+      "label": "Document checks",
+      "teamWillLook": "Our team will look",
+      "readable": "Document read",
+      "accepted_kind": "Accepted document",
+      "fromIssuer": "From {issuer}",
+      "name": "Your name is on it",
+      "address": "Shows your address",
+      "recent": "Dated in the last 90 days",
+      "unedited": "No signs of editing"
+    },
+    "intro": {
+      "title": "Verify your home address",
+      "description": "Upload a recent bill or statement with your name and address.",
+      "kindsRow": "Bank statement or bill",
+      "kindsHint": "Utility, phone, internet, lease, insurance or government letter",
+      "recentRow": "Dated in the last {days} days",
+      "recentHint": "A PDF or a clear photo",
+      "privateRow": "Kept private",
+      "privateHint": "Clients only see your neighborhood",
+      "start": "Start"
+    },
+    "addressStep": {
+      "title": "Your home address",
+      "description": "As it appears on your document."
+    },
+    "kind": {
+      "title": "What will you upload?",
+      "description": "Pick the kind of document."
+    },
+    "upload": {
+      "title": "Upload your document",
+      "titleKind": "Upload your {kind}",
+      "description": "The whole page, dated in the last {days} days.",
+      "declaration": "It shows my name and this address, and it's dated in the last {days} days.",
+      "submit": "Submit",
+      "sending": "Sending…",
+      "drop": "Drop your file here, or browse",
+      "types": "PDF, JPG, PNG or HEIC, up to {megabytes} MB",
+      "size": "{size} MB",
+      "change": "Change",
+      "photo": "Take a photo"
+    },
+    "verifying": {
+      "title": "Checking your document",
+      "description": "This usually takes under a minute.",
+      "done": "Checks finished."
+    },
+    "result": {
+      "verifiedTitle": "Address verified",
+      "verifiedBody": "Your profile now shows Address verified. Clients never see your address.",
+      "reviewTitle": "Almost done",
+      "reviewBody": "Our team is taking a quick look, usually within a day. We'll let you know.",
+      "rejectedTitle": "We couldn't use this document",
+      "slowTitle": "Still checking",
+      "slowBody": "We'll let you know as soon as it's done.",
+      "tryAgain": "Try another document",
+      "later": "Not now",
+      "done": "Done",
+      "toastVerified": "Address verified",
+      "toastReview": "Document sent for review"
+    },
+    "status": {
+      "verifiedOn": "Verified on {date}",
+      "moved": "I've moved",
+      "recheckBody": "The name on your ID differs from your account's, so our team is checking your address again. Nothing to do."
+    }
+  },
+  "phone": {
+    "title": "Verify your phone",
+    "description": "We'll text you a 6-digit code.",
+    "verifiedTitle": "Phone verified"
+  },
+  "hub": {
+    "title": "Verifications",
+    "subtitle": "Pick any check to start. Verified helpers get booked more.",
+    "allDone": "You're a verified helper.",
+    "progress": "{done} of {total}",
+    "progressLabel": "{done} of {total} checks done",
+    "helpingNeeds": "You can start helping once your home address is verified.",
+    "providerUnavailable": "Not available yet. Try again later.",
+    "checks": {
+      "identity": {
+        "title": "ID",
+        "hint": "Government ID and a selfie"
+      },
+      "address": {
+        "title": "Home address",
+        "hint": "A bill or bank statement"
+      },
+      "phone": {
+        "title": "Phone",
+        "hint": "A texted code"
+      },
+      "payout": {
+        "title": "Payouts",
+        "hint": "Get paid with Stripe"
+      },
+      "background": {
+        "title": "Background check",
+        "hint": "For in-home work, with Checkr"
+      }
+    },
+    "statuses": {
+      "verified": "Verified",
+      "inReview": "In review",
+      "oneMoreStep": "One more step",
+      "actionNeeded": "Needs you",
+      "paused": "Paused",
+      "tryLater": "Try later",
+      "ready": "Ready",
+      "inProgress": "In progress",
+      "restricted": "Contact support",
+      "notNeeded": "Not needed",
+      "renew": "Renew"
+    },
+    "actions": {
+      "verify": "Verify",
+      "view": "View",
+      "tryAgain": "Try again",
+      "setUp": "Set up",
+      "continue": "Continue",
+      "start": "Start",
+      "startAgain": "Start again",
+      "addArea": "Add your area"
+    },
+    "background": {
+      "title": "Background check",
+      "description": "Checkr runs it. You'll give your details and consent on their secure page.",
+      "readSummary": "Read our summary",
+      "failed": "We couldn't open Checkr. Try again in a moment.",
+      "continue": "Continue to Checkr"
+    }
+  }
+}
