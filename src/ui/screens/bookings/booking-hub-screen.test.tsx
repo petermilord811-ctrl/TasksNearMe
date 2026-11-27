@@ -20,7 +20,7 @@ import {
   deskBookingPosterTipAvailable, deskBookingPosterTipped, fakeBookingTipHandlers,
   yardVisitScheduledHelper, yardVisitScheduledPoster, deletedAccountShown,
 } from '@/fixtures';
-import { formatDate, formatDateTime, formatMoney, formatMonthYear, formatTime, formatTimeRange } from '@/shared/format';
+import { formatDate, formatDateTime, formatMoney, formatTime, formatTimeRange } from '@/shared/format';
 import messages from '../../../../messages/en/ui';
 import esMessages from '../../../../messages/es/ui';
 import { BookingHubScreen } from './booking-hub-screen';
@@ -295,7 +295,8 @@ describe('BookingHubScreen privacy and supplied data', () => {
     const { container } = mount(deskBookingHelperConfirmed);
     expect(screen.getByRole('heading', { name: deskBookingHelperConfirmed.poster.displayName })).toBeVisible();
     expect(container.textContent).toContain(deskBookingHelperConfirmed.poster.initials);
-    expect(container.textContent).toContain(formatMonthYear(deskBookingHelperConfirmed.poster.memberSince, 'en', 'America/Chicago'));
+    // Reddit-style account age (2026-11-27): Maya joined Sep 4, two months before the booking's Nov 17.
+    expect(screen.getByText('Account age: 2 months')).toBeInTheDocument();
     expect(screen.getByText('Phone verified')).toBeVisible();
   });
 

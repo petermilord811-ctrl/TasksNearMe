@@ -21,7 +21,7 @@ export async function GET(_request: Request, { params }: RouteContext<'/api/peek
   const limited = await consumeRateLimit(db, `peek:${viewer.user.id}`, PEEK_RATE_LIMIT, now);
   if (!limited.ok) return Response.json({ error: 'rate_limited', retryAt: limited.retryAt.toISOString() }, { status: 429, headers: NO_STORE });
   const { handle } = await params;
-  const data: HelperPeekData | null = await getHelperPeek(db, viewer.user.id, String(handle).toLowerCase().slice(0, 80), await requestRows());
+  const data: HelperPeekData | null = await getHelperPeek(db, viewer.user.id, String(handle).toLowerCase().slice(0, 80), await requestRows(), now);
   if (!data) return Response.json({ error: 'not_found' }, { status: 404, headers: NO_STORE });
   return Response.json(data, { headers: NO_STORE });
 }

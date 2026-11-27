@@ -2,11 +2,12 @@
 
 import { useState, type MouseEvent, type ReactNode } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { ArrowLeft, Bookmark, BookmarkCheck, Check, Clock3, ExternalLink, Hammer, Languages, Laptop, Leaf, MapPin, MessageCircle, MessagesSquare, Package, RotateCcw, Sparkles, ThumbsUp, TriangleAlert, type LucideIcon } from 'lucide-react';
+import { ArrowLeft, Bookmark, BookmarkCheck, CalendarDays, Check, Clock3, ExternalLink, Hammer, Languages, Laptop, Leaf, MapPin, MessageCircle, MessagesSquare, Package, RotateCcw, Sparkles, ThumbsUp, TriangleAlert, type LucideIcon } from 'lucide-react';
 import { routes, type CategorySlug, type HelperPeekData, type HelperServiceDetail, type HelpPeekData, type LegalPeekData, type PeekData, type PeekTarget } from '@/contracts';
 import { formatHours, formatMoney } from '@/shared/format';
 import { peekHref } from '@/shared/peek-links';
 import { ContentBlocks } from '@/ui/components/content/content-blocks';
+import { AccountAgeLine } from '@/ui/components/people/account-age';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { NeighborsAnswers } from '@/ui/components/people/neighbors-answers';
 import { RatingStars } from '@/ui/components/people/rating-stars';
@@ -80,7 +81,6 @@ function HelperPeek({ data, onToggleSaved }: { data: HelperPeekData; onToggleSav
   const t = useTranslations('helperProfile');
   const peek = useTranslations('peek');
   const thanks = useTranslations('thanks.profile');
-  const { formatMonthYear } = useFormat();
   const { profile, self } = data;
   const { helper } = profile;
   const [bioOpen, setBioOpen] = useState(false);
@@ -103,10 +103,11 @@ function HelperPeek({ data, onToggleSaved }: { data: HelperPeekData; onToggleSav
         {helper.recommendedBy !== undefined && <li className="inline-flex items-center gap-1.5"><ThumbsUp aria-hidden="true" className="size-4 text-primary" />{t('recommendedBy', { count: helper.recommendedBy })}</li>}
         {profile.neighborsAnswers && <li className="inline-flex items-center gap-1.5"><MessagesSquare aria-hidden="true" className="size-4 text-primary" />{t('neighborsHelped', { count: profile.neighborsAnswers.helpedCount })}</li>}
         {helper.responseTime !== undefined && <li className="inline-flex items-center gap-1.5"><Clock3 aria-hidden="true" className="size-4 text-muted-foreground" />{t('responseTime', { range: helper.responseTime })}</li>}
+        {/* Reddit-style account age (owner, 2026-11-27), counted to the request's time. */}
+        <li className="inline-flex items-center gap-1.5"><CalendarDays aria-hidden="true" className="size-4 text-muted-foreground" /><AccountAgeLine since={helper.memberSince} now={data.now} /></li>
       </ul>
       <VerificationBadges badges={helper.badges} compact />
       {profile.sparks && <SparksBadge sparks={profile.sparks} />}
-      <p className="text-sm text-muted-foreground">{t('memberSince', { date: formatMonthYear(helper.memberSince) })}</p>
     </div>
     {profile.bio && <section aria-label={t('about', { name: helper.displayName })} className="space-y-2">
       <h3 className={sectionTitle}>{t('about', { name: helper.displayName })}</h3>

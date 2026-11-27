@@ -7,6 +7,7 @@ import { routes } from '@/contracts/routes';
 import { formatHours, formatMoney } from '@/shared/format';
 import { useFormat } from '@/ui/lib/format';
 import { VerificationBadges } from '@/ui/components/people/verification-badges';
+import { AccountAgeLine } from '@/ui/components/people/account-age';
 
 export interface PublicTaskCardProps {
   task: TaskPublicView;
@@ -25,7 +26,7 @@ const categoryIcons: Record<CategorySlug, LucideIcon> = {
 };
 
 export function PublicTaskCard({ task, now, headingLevel = 3, href = routes.publicTask(task.slug), footer }: PublicTaskCardProps) {
-  const { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTimeRange, dayKey } = useFormat();
+  const { formatDate, formatDateTime, formatRelative, formatTimeRange, dayKey } = useFormat();
   const t = useTranslations('taskCard');
   const Heading = headingLevel === 2 ? 'h2' : 'h3';
   const CategoryIcon = categoryIcons[task.categorySlug];
@@ -75,7 +76,7 @@ export function PublicTaskCard({ task, now, headingLevel = 3, href = routes.publ
         </p>
         <div className="mt-4 space-y-2 border-t border-foreground/[0.07] pt-4 dark:border-white/[0.06]">
           <p className="text-sm font-semibold">{task.poster.displayName}</p>
-          <p className="text-sm tabular-nums text-muted-foreground">{t('memberSince', { date: formatMonthYear(task.poster.memberSince) })}</p>
+          <p className="text-sm text-muted-foreground"><AccountAgeLine since={task.poster.memberSince} now={now} /></p>
           {task.poster.phoneVerified && <VerificationBadges badges={{ phoneVerified: task.poster.phoneVerified }} compact />}
         </div>
       </div>

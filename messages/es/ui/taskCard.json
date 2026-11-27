@@ -12,7 +12,6 @@
   "hourlyBudget": "{rate}/h, hasta {cap}",
   "offers": "{count, plural, =0 {Aún sin ofertas} one {# oferta} other {# ofertas}}",
   "posted": "Publicada {relative}",
-  "memberSince": "Miembro desde {date}",
   "preview": {
     "group": "Tarjetas públicas de tareas",
     "desk": "Armado de muebles en Mueller",

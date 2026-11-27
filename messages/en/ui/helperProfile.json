@@ -2,7 +2,6 @@
   "travelRadius": "Travels up to about {miles, plural, one {# mile} other {# miles}} from {area}",
   "remoteOk": "Remote OK",
   "requestBooking": "Request {name}",
-  "memberSince": "Member since {date}",
   "completed": "{count, plural, one {# task completed} other {# tasks completed}}",
   "responseTime": "{range, select, hour {Usually replies within an hour} few_hours {Usually replies within a few hours} other {Usually replies within a day}}",
   "foundingHelper": "Founding helper #{number, number}",
@@ -18,7 +17,6 @@
   "reviews": "Reviews",
   "recentReviews": "Showing the {shown, number} most recent of {total, plural, one {# review} other {# reviews}}",
   "noReviews": "No reviews yet",
-  "noReviewsDescription": "Reviews from clients appear here after completed tasks.",
   "categories": {
     "furniture-assembly": "Furniture assembly",
     "moving-help": "Moving help",
@@ -37,7 +35,8 @@
     "contactRevealed": "Jordan · contact details shown",
     "contactLocked": "Jordan · contact details locked",
     "answers": "Sam · answers on Neighbors",
-    "reviewSummary": "Sam · what neighbors say (AI summary)"
+    "reviewSummary": "Sam · what neighbors say (AI summary)",
+    "cakeDay": "Sam · cake day"
   },
   "recommendedBy": "{count, plural, one {Recommended by # neighbor} other {Recommended by # neighbors}}",
   "message": "Message {name}",
@@ -51,5 +50,14 @@
   "reviewSummary": {
     "title": "What neighbors say",
     "caption": "Summarized with AI from {count, plural, one {# review} other {# reviews}}. Read them below."
-  }
+  },
+  "stats": {
+    "rating": "Rating",
+    "reviews": "{count, plural, one {# review} other {# reviews}}",
+    "tasksDone": "Tasks done",
+    "response": "Response",
+    "responseValue": "{range, select, hour {< 1 h} few_hours {< 4 h} other {< 1 d}}"
+  },
+  "details": "Details",
+  "sparks": "Sparks"
 }

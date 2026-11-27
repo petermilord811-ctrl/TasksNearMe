@@ -1,4 +1,5 @@
 import type { ActionHandler } from './actions';
+import type { ISODateTime } from './common';
 import type { HelpArticleData, HelpCenterData, LegalDocData } from './content';
 import type { HelperProfilePageData } from './profiles';
 import type { LegalDoc } from './routes';
@@ -23,6 +24,8 @@ export interface HelperPeekData {
   saved: boolean;
   /** It's the viewer's own profile: no Message, Request or Save. */
   self: boolean;
+  /** The request's time, for the account age (2026-11-27). */
+  now: ISODateTime;
 }
 
 /** `GET /api/peek/help?locale=` (the center) and `/api/peek/help/[slug]?locale=` (an article); 404: no such article. */

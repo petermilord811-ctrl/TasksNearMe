@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { routes, type ActionResult, type AppShellHandlers, type AvailabilityHandlers, type NeighborhoodDayCardView, type PortalHandlers, type PreviewEntry, type RequestHelperHandlers } from '@/contracts';
-import {
+import { PROFILE_NOW,
   fakeHandler,
   fakeRequestHelperHandlers,
   helpersBrowseWithDayData,
@@ -72,6 +72,6 @@ export const neighborhoodDayPreviews: PreviewEntry[] = [
   app('screen-helpers-browse/neighborhood-day', p.browse, routes.app.helpers(helpersBrowseWithDayData.query), <HelpersBrowseScreen data={helpersBrowseWithDayData} handlers={{ onToggleSaved: fakeHandler({ ok: true, code: 'updated' }) }} />),
   {
     id: 'screen-helper-profile/neighborhood-days', group: p.group, title: p.profile, layout: 'fullscreen',
-    render: () => <PublicShell viewer={publicViewer} currentPath={routes.helperProfile(jordanProfileWithDaysData.helper.handle)}><HelperProfileScreen data={jordanProfileWithDaysData} /></PublicShell>,
+    render: () => <PublicShell viewer={publicViewer} currentPath={routes.helperProfile(jordanProfileWithDaysData.helper.handle)}><HelperProfileScreen data={jordanProfileWithDaysData} now={PROFILE_NOW} /></PublicShell>,
   },
 ];

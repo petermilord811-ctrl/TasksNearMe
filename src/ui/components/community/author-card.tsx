@@ -2,15 +2,15 @@
 
 import { ArrowRight, BadgeCheck, MapPin, MessageCircle, MessageCircleReply, Star, ThumbsUp, Wrench } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { CommunityAuthor } from '@/contracts';
+import type { CommunityAuthor, ISODateTime } from '@/contracts';
 import { routes } from '@/contracts/routes';
 import { AchievementBadge } from '@/ui/components/people/achievement-badges';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { SparksBadge } from '@/ui/components/people/sparks-badge';
-import { useFormat } from '@/ui/lib/format';
 import { LocaleLink as Link } from '@/ui/lib/locale-link';
 import { cn } from '@/ui/lib/utils';
 import { buttonVariants } from '@/ui/primitives/button';
+import { AccountAgeLine } from '@/ui/components/people/account-age';
 
 export const roleTone: Record<CommunityAuthor['role'], string> = {
   helper: 'bg-badge-brand text-badge-brand-foreground',
@@ -24,10 +24,9 @@ export const roleTone: Record<CommunityAuthor['role'], string> = {
  * their rating, tasks done, how many neighbors recommend them, how fast they reply, their top badges, and their
  * profile and Request.
  */
-export function AuthorCardContent({ author }: { author: CommunityAuthor }) {
+export function AuthorCardContent({ author, now }: { author: CommunityAuthor; /** The page's time, for the account age. */ now: ISODateTime }) {
   const t = useTranslations('community');
   const helperCopy = useTranslations('helperCard');
-  const { formatMonthYear } = useFormat();
   const card = author.card;
   if (!card) return null;
   const helper = card.helper;
@@ -54,7 +53,7 @@ export function AuthorCardContent({ author }: { author: CommunityAuthor }) {
       {helper && <li className="flex items-center gap-2 tabular-nums"><Wrench aria-hidden="true" className="size-3.5 shrink-0" />{t('authorCard.tasksDone', { count: helper.completedCount })}</li>}
       {helper && <li className="flex items-center gap-2 tabular-nums"><ThumbsUp aria-hidden="true" className="size-3.5 shrink-0" />{t('authorCard.recommendedBy', { count: helper.recommendedBy })}</li>}
       {helper?.responseTime && <li className="flex items-center gap-2"><MessageCircleReply aria-hidden="true" className="size-3.5 shrink-0" />{helperCopy('responseTime', { range: helper.responseTime })}</li>}
-      <li className="tabular-nums">{t('authorCard.memberSince', { date: formatMonthYear(card.memberSince) })}</li>
+      <li><AccountAgeLine since={card.memberSince} now={now} /></li>
     </ul>
     {card.sparks && <SparksBadge sparks={card.sparks} compact />}
     {helper && helper.badges.length > 0 && <div className="space-y-1.5">

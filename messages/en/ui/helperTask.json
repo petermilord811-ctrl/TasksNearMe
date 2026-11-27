@@ -58,7 +58,6 @@
   "allowance": "Expense allowance",
   "noAllowance": "No expense allowance included.",
   "posterTitle": "About the client",
-  "memberSince": "Member since {date}",
   "privacy": "You'll see the exact address after the booking is confirmed.",
   "blockedTitle": "Before you send an offer",
   "finishSetup": "Verify your address",

@@ -70,6 +70,6 @@ export function AuthorLine({ author, at, now, size = 'md', edited, href }: {
         <button type="button" tabIndex={-1} aria-hidden="true" onClick={() => setOpen(true)} className="shrink-0 rounded-full transition-transform duration-150 motion-safe:hover:scale-105">{avatar}</button>,
       )}
     </PopoverAnchor>
-    <PopoverContent align="start" className="w-80 p-4"><AuthorCardContent author={author} /></PopoverContent>
+    <PopoverContent align="start" className="w-80 p-4"><AuthorCardContent author={author} now={now} /></PopoverContent>
   </Popover>;
 }

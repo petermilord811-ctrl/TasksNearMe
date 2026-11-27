@@ -207,7 +207,6 @@
   },
   "authorCard": {
     "open": "About {name}",
-    "memberSince": "Member since {date}",
     "rating": "{average} ({count, plural, one {# review} other {# reviews}})",
     "tasksDone": "{count, plural, =0 {No tasks done yet} one {# task done} other {# tasks done}}",
     "recommendedBy": "{count, plural, =0 {No recommendations yet} one {Recommended by # neighbor} other {Recommended by # neighbors}}",

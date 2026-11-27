@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { routes, type AppShellHandlers, type BookingView, type CommunityNewPostHandlers, type CommunityPostHandlers, type PreviewEntry, type ReviewHandlers, type TaskDraftInput } from '@/contracts';
-import {
+import { PROFILE_NOW,
   ADMIN_NOW, adminCaseSummary, adminCaseSummaryResult, alexStaff, bookingChecklistResult, communityAnswerResult, communityNewPostPageData,
   communityPhotos, communityPolishResult, communityPostAnswerDraftData, deskBookingHelperPrepMade, deskBookingPosterPrep, deskBookingPosterPrepMade,
   deskBookingPosterPrepStale, deskDraft, deskReviewByClientData, disputeAdminCaseData, fakeAdminCaseHandlers, fakeBookingHubHandlers,
@@ -140,7 +140,7 @@ export const aiAssistPreviews: PreviewEntry[] = [
 
   {
     id: 'screen-helper-profile/review-summary', group: profileCopy.preview.group, title: profileCopy.preview.reviewSummary, layout: 'fullscreen',
-    render: () => <PublicShell viewer={publicViewer} currentPath={routes.helperProfile(samProfileWithSummaryData.helper.handle)}><HelperProfileScreen data={samProfileWithSummaryData} /></PublicShell>,
+    render: () => <PublicShell viewer={publicViewer} currentPath={routes.helperProfile(samProfileWithSummaryData.helper.handle)}><HelperProfileScreen data={samProfileWithSummaryData} now={PROFILE_NOW} /></PublicShell>,
   },
 
   {

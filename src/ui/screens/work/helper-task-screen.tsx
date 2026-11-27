@@ -16,6 +16,7 @@ import { RichText } from '@/ui/components/rich-text/rich-text';
 import { TaskPhotoCarousel } from '@/ui/components/tasks/task-photo-carousel';
 import { TaskSpec } from '@/ui/components/tasks/task-spec';
 import { HelperOffer } from './helper-offer';
+import { AccountAgeLine } from '@/ui/components/people/account-age';
 
 export interface HelperTaskScreenProps {
   data: HelperTaskView;
@@ -72,7 +73,7 @@ function TaskKind({ data, now }: { data: HelperTaskView; now: ISODateTime }) {
 
 /** What decides an offer, the photos, the task in the client's words, the area, the client, then the offer. */
 function HelperTaskBody({ data, handlers, now, initialRevising, initialResult, liveMap = true, map }: HelperTaskScreenProps) {
-  const { formatDate, formatMonthYear, formatTimeRange, dayKey } = useFormat();
+  const { formatDate, formatTimeRange, dayKey } = useFormat();
   const t = useTranslations('helperTask');
   const report = useTranslations('report');
   const card = useTranslations('taskCard');
@@ -116,7 +117,7 @@ function HelperTaskBody({ data, handlers, now, initialRevising, initialResult, l
     </section>
     <section aria-labelledby="helper-task-client" className="space-y-4 rounded-[1.375rem] border border-foreground/[0.07] bg-card p-card shadow-card dark:border-white/[0.06]">
       <h2 id="helper-task-client" className="font-display text-lg font-semibold">{t('posterTitle')}</h2>
-      <div className="flex items-center gap-3"><InitialsAvatar initials={task.poster.initials} /><div><p className="font-semibold">{task.poster.displayName}</p><p className="text-sm tabular-nums text-muted-foreground">{t('memberSince', { date: formatMonthYear(task.poster.memberSince) })}</p></div></div>
+      <div className="flex items-center gap-3"><InitialsAvatar initials={task.poster.initials} /><div><p className="font-semibold">{task.poster.displayName}</p><p className="text-sm text-muted-foreground"><AccountAgeLine since={task.poster.memberSince} now={now} /></p></div></div>
       {task.poster.phoneVerified && <VerificationBadges badges={{ phoneVerified: task.poster.phoneVerified }} />}
     </section>
     {/* Offer insights (Pro, 2026-11-23): how many offers and their price range; without Pro, what it would show. */}

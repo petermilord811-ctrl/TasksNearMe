@@ -28,7 +28,9 @@ describe('PublicTaskCard', () => {
     expect(screen.getByText('Sat, Nov 21 · 10:00 am–1:00 pm')).toBeInTheDocument();
     expect(screen.getByText('3 offers')).toBeInTheDocument();
     expect(screen.getByText('Maya R.')).toBeInTheDocument();
-    expect(screen.getByText('Member since Sep 2026')).toBeInTheDocument();
+    // Reddit-style account age (2026-11-27): Maya joined Sep 4, so 2 months by Nov 17.
+    expect(screen.getByText('Account age: 2 months')).toBeInTheDocument();
+    expect(screen.getByTitle('Joined Sep 4, 2026')).toHaveTextContent('Account age 2 mo');
     expect(screen.getByRole('button', { name: 'Phone verified' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: deskPublicTask.title })).toHaveAttribute('href', routes.publicTask(deskPublicTask.slug));
     expect(screen.queryByText(/Example Lane/)).not.toBeInTheDocument();

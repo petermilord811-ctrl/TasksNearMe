@@ -8,6 +8,7 @@ import { helperProfileIndexable, KEEP_OUT_OF_SEARCH } from '@/modules/seo/indexa
 import { helperProfileNode } from '@/modules/seo/structured-data';
 import { requestRows } from '@/platform/auth/audience';
 import { getViewer } from '@/platform/auth/viewer';
+import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
 import { revealHelperContactAction } from '@/modules/profiles/actions';
 import { getHelperContactAccess } from '@/modules/profiles/contact-sharing';
@@ -68,8 +69,9 @@ async function HelperProfile({ handle }: { handle: string }) {
   // The contact details the helper shares with top Sparks levels (2026-11-24): worked out for this viewer, never
   // cached with the profile; the details themselves come only from "Show".
   const viewer = await getViewer();
-  const contact = await getHelperContactAccess(db, viewer.kind === 'user' ? viewer.user.id : null, data.helper.id);
-  return <MarketTime timeZone={data.timeZone}><HelperProfileScreen data={data} {...(contact ? { contact, onRevealContact: revealHelperContactAction } : {})} /></MarketTime>;
+  const [contact, now] = await Promise.all([getHelperContactAccess(db, viewer.kind === 'user' ? viewer.user.id : null, data.helper.id), requestNow()]);
+  // The account age counts to the request's time (the test clock moves it in e2e), never the cached profile's.
+  return <MarketTime timeZone={data.timeZone}><HelperProfileScreen data={data} now={now.toISOString()} {...(contact ? { contact, onRevealContact: revealHelperContactAction } : {})} /></MarketTime>;
 }
 
 export default withClientMessages('[locale]/(public)/helpers/[handle]/page.tsx', HelperProfilePage);

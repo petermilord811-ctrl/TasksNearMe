@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useLocale } from 'next-intl';
 import { MARKET_TIME_ZONE, type ISODateTime, type TimeZone } from '@/contracts/common';
 import { DEFAULT_LOCALE, isAppLocale, type AppLocale } from '@/contracts/locale';
-import { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTime, formatTimeRange, marketDayKey, timeZoneName } from '@/shared/format';
+import { formatCalendarDate, formatDate, formatDateTime, formatMonthYear, formatRelative, formatTime, formatTimeRange, marketDayKey, timeZoneName } from '@/shared/format';
 import { requestTimeZone } from '@/shared/format/request-zone';
 
 type When = ISODateTime | Date;
@@ -17,6 +17,8 @@ export interface Formatters {
   timeZone: TimeZone;
   formatDate(value: When, options?: { withYear?: boolean }): string;
   formatMonthYear(value: When): string;
+  /** "May 20, 2024": a day with its year, no weekday. */
+  formatCalendarDate(value: When): string;
   formatTime(value: When): string;
   formatDateTime(value: When): string;
   formatTimeRange(start: When, end: When): string;
@@ -38,6 +40,7 @@ export function formattersFor(locale: AppLocale, timeZone: TimeZone = MARKET_TIM
       timeZone,
       formatDate: (value, options = {}) => formatDate(value, { ...options, locale, timeZone }),
       formatMonthYear: (value) => formatMonthYear(value, locale, timeZone),
+      formatCalendarDate: (value) => formatCalendarDate(value, locale, timeZone),
       formatTime: (value) => formatTime(value, locale, timeZone),
       formatDateTime: (value) => formatDateTime(value, locale, timeZone),
       formatTimeRange: (start, end) => formatTimeRange(start, end, locale, timeZone),

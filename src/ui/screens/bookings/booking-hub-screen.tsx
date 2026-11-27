@@ -35,6 +35,7 @@ import { ThanksPanelView } from '@/ui/components/thanks/thank-you-note';
 import { FamilyCard } from '@/ui/components/family/followers-dialog';
 import { TeamPanel } from '@/ui/components/teams/team-panel';
 import { BookingPrepCard, type BookingPrepPreview } from '@/ui/components/bookings/booking-prep-card';
+import { AccountAgeLine } from '@/ui/components/people/account-age';
 
 export interface BookingHubScreenProps {
   data: BookingView;
@@ -144,7 +145,7 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
   scheduledPreview?: ScheduledPaymentPreviewState;
   prepPreview?: BookingPrepPreview;
 }) {
-  const { formatDate, formatDateTime, formatMonthYear, formatTime, formatTimeRange } = useFormat();
+  const { formatDate, formatDateTime, formatTime, formatTimeRange } = useFormat();
   const t = useTranslations('bookingHub');
   // The other person in the page's own words when their account was deleted (J-PR15).
   const shown = useShownPerson();
@@ -243,7 +244,7 @@ export function BookingHubContent({ data, handlers, sheets, tip, scheduledPaymen
           <InitialsAvatar initials={poster.initials} photo={data.poster.photo} />
           <div className="min-w-0 space-y-1">
             <h3 className="break-words font-heading text-[17px]/6 font-semibold">{poster.displayName}</h3>
-            <p className="text-sm text-muted-foreground">{t('memberSince', { date: formatMonthYear(data.poster.memberSince) })}</p>
+            <p className="text-sm text-muted-foreground"><AccountAgeLine since={data.poster.memberSince} now={now} /></p>
           </div>
         </div>
         <VerificationBadges badges={{ phoneVerified: data.poster.phoneVerified }} compact />

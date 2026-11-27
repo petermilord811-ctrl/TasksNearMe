@@ -3,6 +3,11 @@ import { jordan, lee, sam } from './people';
 
 /** Public helper profiles (`/helpers/[handle]`). Images are placeholders in /public/samples. */
 
+/** The request's time the profile previews count account ages to: Sam (joined May 20, 2024) is 2 y. */
+export const PROFILE_NOW = '2026-11-17T15:00:00.000Z';
+/** Sam's second anniversary (May 20 in Austin): his cake day. */
+export const SAM_CAKE_DAY_NOW = '2026-05-20T17:00:00.000Z';
+
 const samReviews: PublicReviewView[] = [
   {
     id: 'rev_1',

@@ -207,7 +207,6 @@
   },
   "authorCard": {
     "open": "Sobre {name}",
-    "memberSince": "En TasksNearMe desde {date}",
     "rating": "{average} ({count, plural, one {# reseña} other {# reseñas}})",
     "tasksDone": "{count, plural, =0 {Todavía sin tareas completadas} one {# tarea completada} other {# tareas completadas}}",
     "recommendedBy": "{count, plural, =0 {Todavía sin recomendaciones} one {# recomendación de vecinos} other {# recomendaciones de vecinos}}",

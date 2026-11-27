@@ -11,6 +11,7 @@ import { DEFAULT_LOCALE, INTL_LOCALES, type AppLocale } from '@/contracts/locale
  * from `useFormat()` (src/ui/lib/format.ts).
  *   formatDate        → "Sat, Nov 21"                      es: "sáb, 21 de nov"
  *   formatMonthYear   → "Nov 2026"                         es: "nov 2026"
+ *   formatCalendarDate → "May 20, 2024"                    es: "20 may 2024"
  *   formatTime        → "10:30 am"                         es: "10:30 a.m."
  *   formatDateTime    → "Sat, Nov 21 · 10:30 am"           es: "sáb, 21 de nov · 10:30 a.m."
  *   formatTimeRange   → "10:00 am–1:00 pm" (same day) or "Sat, Nov 21 · 10:00 pm–Sun, Nov 22 · 1:00 am"
@@ -22,6 +23,7 @@ const FORMATTERS = new Map<string, {
   date: Intl.DateTimeFormat;
   dateWithYear: Intl.DateTimeFormat;
   monthYear: Intl.DateTimeFormat;
+  calendarDate: Intl.DateTimeFormat;
   time: Intl.DateTimeFormat;
   relative: Intl.RelativeTimeFormat;
 }>();
@@ -36,6 +38,7 @@ function formattersOf(locale: AppLocale, timeZone: TimeZone = MARKET_TIME_ZONE) 
       date: new Intl.DateTimeFormat(tag, { timeZone, weekday: 'short', month: 'short', day: 'numeric' }),
       dateWithYear: new Intl.DateTimeFormat(tag, { timeZone, weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
       monthYear: new Intl.DateTimeFormat(tag, { timeZone, month: 'short', year: 'numeric' }),
+      calendarDate: new Intl.DateTimeFormat(tag, { timeZone, month: 'short', day: 'numeric', year: 'numeric' }),
       time: new Intl.DateTimeFormat(tag, { timeZone, hour: 'numeric', minute: '2-digit', hour12: true }),
       relative: new Intl.RelativeTimeFormat(tag, { numeric: 'auto' }),
     };
@@ -92,6 +95,11 @@ export function formatDate(value: ISODateTime | Date, options: { withYear?: bool
 /** Month and year in the market's time zone, e.g. "Nov 2026" (verification badges, member-since). */
 export function formatMonthYear(value: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE, timeZone?: TimeZone): string {
   return formattersOf(locale, timeZone).monthYear.format(toDate(value));
+}
+
+/** A day with its year and no weekday, in the market's time zone, e.g. "May 20, 2024" (the day someone joined). */
+export function formatCalendarDate(value: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE, timeZone?: TimeZone): string {
+  return formattersOf(locale, timeZone).calendarDate.format(toDate(value));
 }
 
 export function formatTime(value: ISODateTime | Date, locale: AppLocale = DEFAULT_LOCALE, timeZone?: TimeZone): string {

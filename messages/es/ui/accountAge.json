@@ -1,0 +1,8 @@
+{
+  "label": "Antigüedad",
+  "value": "{unit, select, year {{count, plural, one {# año} other {# años}}} month {{count, plural, one {# mes} other {# meses}}} other {{count, plural, =0 {Nuevo} one {# día} other {# días}}}}",
+  "spoken": "{unit, select, year {{count, plural, one {# año} other {# años}}} month {{count, plural, one {# mes} other {# meses}}} other {{count, plural, =0 {menos de un día} one {# día} other {# días}}}}",
+  "joined": "Se unió el {date}",
+  "cakeDay": "Aniversario",
+  "cakeDayToday": "Hoy es su aniversario: {years, plural, one {# año} other {# años}} en TasksNearMe"
+}

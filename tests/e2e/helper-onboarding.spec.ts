@@ -208,7 +208,8 @@ test('a new helper finishes onboarding, staff verify the ID photos and the home 
   const response = await page.goto(`/helpers/${helper.handle}`);
   expect(response?.status()).toBe(200);
   await expect(page.getByRole('heading', { level: 1, name: helper.displayName })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Address verified/ })).toBeVisible();
+  // The profile's verified line (2026-11-27): "Verified: ID · Background · Address · Phone", each word explained on tap.
+  await expect(page.getByRole('list', { name: 'Verification badges' }).getByRole('button', { name: 'Address', exact: true })).toBeVisible();
   await expect(page.getByText('1234 Example Lane')).toHaveCount(0);
 });
 

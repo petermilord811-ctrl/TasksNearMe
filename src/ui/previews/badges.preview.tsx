@@ -1,5 +1,5 @@
 import { routes, type AppShellHandlers, type PreviewEntry } from '@/contracts';
-import { adminBadgeRows, ADMIN_NOW, adminUserJordanData, fakeAccountHandlers, fakeAdminUserHandlers, fakeHandler, jordanWithBadges, morganStaff, mayaAccountData, mayaShell, noOwnBadges, publicViewer, samOwnBadges, samProfileWithBadges, samWithBadges } from '@/fixtures';
+import { PROFILE_NOW, adminBadgeRows, ADMIN_NOW, adminUserJordanData, fakeAccountHandlers, fakeAdminUserHandlers, fakeHandler, jordanWithBadges, morganStaff, mayaAccountData, mayaShell, noOwnBadges, publicViewer, samOwnBadges, samProfileWithBadges, samWithBadges } from '@/fixtures';
 import { HelperCard } from '@/ui/components/people/helper-card';
 import { AccountScreen } from '@/ui/screens/account/account-screen';
 import { AdminUserScreen } from '@/ui/screens/admin';
@@ -17,7 +17,7 @@ const shellHandlers: AppShellHandlers = { onModeChange: fakeHandler({ ok: true, 
 export const badgesPreviews: PreviewEntry[] = [
   {
     id: 'screen-helper-profile/badges', title: p.profile, group: p.group, layout: 'fullscreen',
-    render: () => <PublicShell viewer={publicViewer} currentPath={routes.helperProfile(samProfileWithBadges.helper.handle)}><HelperProfileScreen data={samProfileWithBadges} /></PublicShell>,
+    render: () => <PublicShell viewer={publicViewer} currentPath={routes.helperProfile(samProfileWithBadges.helper.handle)}><HelperProfileScreen data={samProfileWithBadges} now={PROFILE_NOW} /></PublicShell>,
   },
   {
     id: 'helper-card/badges', title: p.cards, group: p.group,

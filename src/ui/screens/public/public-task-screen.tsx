@@ -18,6 +18,7 @@ import { TaskSpec } from '@/ui/components/tasks/task-spec';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbSeparator } from '@/ui/primitives/breadcrumb';
 import { buttonVariants } from '@/ui/primitives/button';
 import { categoryIcons } from './marketing-sections';
+import { AccountAgeLine } from '@/ui/components/people/account-age';
 
 export interface PublicTaskScreenProps {
   data: PublicTaskPageData;
@@ -40,7 +41,7 @@ const headingClass = 'font-display text-lg leading-7 font-semibold tracking-[-0.
  * photos there are, and how to see the rest.
  */
 export function PublicTaskScreen({ data, now, liveMap = true, map }: PublicTaskScreenProps) {
-  const { formatDate, formatDateTime, formatMonthYear, formatRelative, formatTimeRange, dayKey } = useFormat();
+  const { formatDate, formatDateTime, formatRelative, formatTimeRange, dayKey } = useFormat();
   const t = useTranslations('publicTask');
   const report = useTranslations('report');
   const categoryName = useTranslations('helperCard.categories');
@@ -158,7 +159,7 @@ export function PublicTaskScreen({ data, now, liveMap = true, map }: PublicTaskS
           <h2 id="task-poster" className={headingClass}>{t('posterTitle')}</h2>
           <div className="flex items-center gap-3">
             <span className="rounded-full p-0.5 shadow-[0_0_0_1px_color-mix(in_oklab,var(--primary)_14%,transparent)]"><InitialsAvatar initials={task.poster.initials} /></span>
-            <div className="min-w-0"><p className="font-semibold">{task.poster.displayName}</p><p className="text-sm text-muted-foreground tabular-nums">{t('memberSince', { date: formatMonthYear(task.poster.memberSince) })}</p></div>
+            <div className="min-w-0"><p className="font-semibold">{task.poster.displayName}</p><p className="text-sm text-muted-foreground"><AccountAgeLine since={task.poster.memberSince} now={now} /></p></div>
           </div>
           {task.poster.phoneVerified && <VerificationBadges badges={{ phoneVerified: task.poster.phoneVerified }} />}
           {task.poster.ratingAsClient && <div className="space-y-2"><p className="text-sm text-muted-foreground">{t('clientRating')}</p><RatingStars rating={task.poster.ratingAsClient} /></div>}

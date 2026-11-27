@@ -12,7 +12,6 @@
   "hourlyBudget": "{rate}/h, up to {cap}",
   "offers": "{count, plural, =0 {No offers yet} one {# offer} other {# offers}}",
   "posted": "Posted {relative}",
-  "memberSince": "Member since {date}",
   "preview": {
     "group": "Public task cards",
     "desk": "Furniture assembly in Mueller",

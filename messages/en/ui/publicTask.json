@@ -10,7 +10,6 @@
   "posted": "Posted {relative}",
   "about": "About this task",
   "posterTitle": "Posted by",
-  "memberSince": "Member since {date}",
   "clientRating": "Rating as a client",
   "privacy": "You'll see the exact address after the booking is confirmed.",
   "remotePrivacy": "Exact addresses go only to the booked helper. Remote tasks don't need an address.",

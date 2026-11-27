@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { NextIntlClientProvider } from 'next-intl';
-import { samNeighborsAnswers, samProfilePageData, samProfileWithAnswersData } from '@/fixtures';
+import { PROFILE_NOW, samNeighborsAnswers, samProfilePageData, samProfileWithAnswersData } from '@/fixtures';
 import messages from '../../../../messages/en/ui';
 import { HelperProfileScreen } from '@/ui/screens/public/helper-profile-screen';
 import { NeighborsAnswers } from './neighbors-answers';
@@ -23,11 +23,11 @@ describe('NeighborsAnswers', () => {
   });
 
   it('shows on the profile with "Helped 4 neighbors on Neighbors", and not before anyone marked one', () => {
-    wrap(<HelperProfileScreen data={samProfileWithAnswersData} />);
+    wrap(<HelperProfileScreen data={samProfileWithAnswersData} now={PROFILE_NOW} />);
     expect(screen.getByText('Helped 4 neighbors on Neighbors')).toBeDefined();
     expect(screen.getByRole('heading', { name: 'Answers on Neighbors' })).toBeDefined();
     cleanup();
-    wrap(<HelperProfileScreen data={samProfilePageData} />);
+    wrap(<HelperProfileScreen data={samProfilePageData} now={PROFILE_NOW} />);
     expect(screen.queryByText(/on Neighbors$/)).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Answers on Neighbors' })).toBeNull();
   });

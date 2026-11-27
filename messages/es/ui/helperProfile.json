@@ -2,7 +2,6 @@
   "travelRadius": "Se desplaza hasta unas {miles, plural, one {# milla} other {# millas}} desde {area}",
   "remoteOk": "Acepta trabajo remoto",
   "requestBooking": "Solicitar a {name}",
-  "memberSince": "Miembro desde {date}",
   "completed": "{count, plural, one {# tarea completada} other {# tareas completadas}}",
   "responseTime": "{range, select, hour {Suele responder en menos de una hora} few_hours {Suele responder en unas horas} other {Suele responder en un día}}",
   "foundingHelper": "Ayudante fundador n.º {number, number}",
@@ -18,7 +17,6 @@
   "reviews": "Reseñas",
   "recentReviews": "Mostrando las {shown, number} más recientes de {total, plural, one {# reseña} other {# reseñas}}",
   "noReviews": "Aún sin reseñas",
-  "noReviewsDescription": "Las reseñas de los clientes aparecen aquí después de las tareas completadas.",
   "categories": {
     "furniture-assembly": "Armado de muebles",
     "moving-help": "Ayuda con mudanzas",
@@ -37,7 +35,8 @@
     "contactRevealed": "Jordan · datos de contacto visibles",
     "contactLocked": "Jordan · datos de contacto bloqueados",
     "answers": "Sam · respuestas en Vecinos",
-    "reviewSummary": "Sam · lo que dicen los vecinos (resumen con IA)"
+    "reviewSummary": "Sam · lo que dicen los vecinos (resumen con IA)",
+    "cakeDay": "Sam · aniversario"
   },
   "recommendedBy": "{count, plural, one {# recomendación de vecinos} other {# recomendaciones de vecinos}}",
   "message": "Escribirle a {name}",
@@ -51,5 +50,14 @@
   "reviewSummary": {
     "title": "Lo que dicen los vecinos",
     "caption": "Resumido con IA de {count, plural, one {# reseña} other {# reseñas}}. Léelas abajo."
-  }
+  },
+  "stats": {
+    "rating": "Calificación",
+    "reviews": "{count, plural, one {# reseña} other {# reseñas}}",
+    "tasksDone": "Tareas hechas",
+    "response": "Respuesta",
+    "responseValue": "{range, select, hour {< 1 h} few_hours {< 4 h} other {< 1 d}}"
+  },
+  "details": "Detalles",
+  "sparks": "Sparks"
 }

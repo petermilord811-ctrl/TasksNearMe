@@ -1,5 +1,5 @@
 import { routes, type HelperContactAccess, type HelperContactReveal, type HelperProfilePageData, type PreviewEntry } from '@/contracts';
-import { helperContactLockedAccess, helperContactRevealAccess, helperContactRevealData, jordanProfilePageData, jordanProfileWithSlotsData, leeProfilePageData, publicViewer, samProfilePageData, samProfilePhoto, samProfileWithAnswersData } from '@/fixtures';
+import { PROFILE_NOW, SAM_CAKE_DAY_NOW, helperContactLockedAccess, helperContactRevealAccess, helperContactRevealData, jordanProfilePageData, jordanProfileWithSlotsData, leeProfilePageData, publicViewer, samProfilePageData, samProfilePhoto, samProfileWithAnswersData } from '@/fixtures';
 import { HelperProfileScreen } from '@/ui/screens/public/helper-profile-screen';
 import { PublicShell } from '@/ui/shells/public-shell';
 import copy from '../../../messages/en/ui/helperProfile.json';
@@ -10,14 +10,14 @@ const revealContact = async (): Promise<HelperContactReveal> => {
   return helperContactRevealData;
 };
 
-function profile(id: string, title: string, data: HelperProfilePageData, contact?: { access: HelperContactAccess; revealed?: HelperContactReveal }): PreviewEntry {
+function profile(id: string, title: string, data: HelperProfilePageData, contact?: { access: HelperContactAccess; revealed?: HelperContactReveal }, now: string = PROFILE_NOW): PreviewEntry {
   return {
     id,
     title,
     group: copy.preview.group,
     layout: 'fullscreen',
     render: () => <PublicShell viewer={publicViewer} currentPath={routes.helperProfile(data.helper.handle)}>
-      <HelperProfileScreen data={data} {...(contact ? { contact: contact.access, onRevealContact: revealContact, ...(contact.revealed ? { initialContactReveal: contact.revealed } : {}) } : {})} />
+      <HelperProfileScreen data={data} now={now} {...(contact ? { contact: contact.access, onRevealContact: revealContact, ...(contact.revealed ? { initialContactReveal: contact.revealed } : {}) } : {})} />
     </PublicShell>,
   };
 }
@@ -33,4 +33,6 @@ export const helperProfilePreviews: PreviewEntry[] = [
   profile('screen-helper-profile/contact-locked', copy.preview.contactLocked, jordanProfileWithSlotsData, { access: helperContactLockedAccess }),
   // "Helped 4 neighbors on Neighbors" and their answers (2026-11-24).
   profile('screen-helper-profile/answers', copy.preview.answers, samProfileWithAnswersData),
+  // Two years to the day since Sam joined: the cake beside his account age (owner, 2026-11-27: "as Reddit").
+  profile('screen-helper-profile/cake-day', copy.preview.cakeDay, samProfilePageData, undefined, SAM_CAKE_DAY_NOW),
 ];

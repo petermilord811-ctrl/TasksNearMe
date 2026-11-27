@@ -51,13 +51,13 @@ afterAll(async () => {
 
 describe('a helper’s peek', () => {
   it('is their public profile with Save’s state, and your own profile marked as yours', async () => {
-    const before = await getHelperPeek(db, readerId, 'sam-k', 'all');
+    const before = await getHelperPeek(db, readerId, 'sam-k', 'all', new Date());
     expect(before?.profile.helper.handle).toBe('sam-k');
     expect(before).toMatchObject({ saved: false, self: false });
     await db.insert(savedHelpers).values({ userId: readerId, helperUserId: before!.profile.helper.id });
-    expect((await getHelperPeek(db, readerId, 'sam-k', 'all'))?.saved).toBe(true);
-    expect(await getHelperPeek(db, before!.profile.helper.id, 'sam-k', 'all')).toMatchObject({ saved: false, self: true });
-    expect(await getHelperPeek(db, readerId, 'no-such-helper', 'all')).toBeNull();
+    expect((await getHelperPeek(db, readerId, 'sam-k', 'all', new Date()))?.saved).toBe(true);
+    expect(await getHelperPeek(db, before!.profile.helper.id, 'sam-k', 'all', new Date())).toMatchObject({ saved: false, self: true });
+    expect(await getHelperPeek(db, readerId, 'no-such-helper', 'all', new Date())).toBeNull();
   });
 
   it('loads for signed-in people only, never from a cache, and says when there’s no such helper', async () => {
@@ -72,6 +72,8 @@ describe('a helper’s peek', () => {
     const body = (await found.json()) as HelperPeekData;
     expect(body.profile.helper.handle).toBe('sam-k');
     expect(body.self).toBe(false);
+    // The request's time, for the account age.
+    expect(Number.isNaN(Date.parse(body.now))).toBe(false);
 
     const missing = await peekHelper(new Request('http://localhost/api/peek/helpers/no-such-helper'), context({ handle: 'no-such-helper' }));
     expect(missing.status).toBe(404);
