@@ -107,6 +107,9 @@ test('a helper’s photo shows in the editor, the header and on their public pro
   const helper = testInfo.project.name === 'app-mobile' ? { email: 'lee@example.test', name: 'Lee M.', handle: 'lee-m' } : { email: 'sam@example.test', name: 'Sam K.', handle: 'sam-k' };
   await devSignIn(page, helper.email);
   await page.goto('/app/helper/profile');
+  // The photo opens in a dialog from the profile card's avatar (2026-11-27, the LinkedIn-style profile).
+  const photoDialog = page.getByRole('dialog', { name: 'Profile photo' });
+  await untilShown(photoDialog, () => page.getByRole('button', { name: 'Change profile photo' }).click());
   // A photo left by an interrupted run goes first.
   const leftover = page.getByRole('button', { name: 'Remove photo' });
   if (await leftover.isVisible()) {
@@ -116,6 +119,9 @@ test('a helper’s photo shows in the editor, the header and on their public pro
   const visitor = await browser.newContext();
   try {
     const src = await choosePhoto(page, 'Add a photo', helper.name, { r: 200, g: 140, b: 80 });
+    // The page under the dialog (the header with it) reads again once the dialog closes.
+    await page.keyboard.press('Escape');
+    await expect(photoDialog).toBeHidden();
     await expect(headerPhoto(page, helper.name)).toHaveAttribute('src', new RegExp(`${src.replace('?', '\\?')}$`));
 
     // Anyone sees it on the public profile (its cached page refreshes).
@@ -125,13 +131,15 @@ test('a helper’s photo shows in the editor, the header and on their public pro
     await expect(shown).toHaveAttribute('src', new RegExp(`${src.replace('?', '\\?')}$`));
     await expect.poll(() => shown.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
 
+    await untilShown(photoDialog, () => page.getByRole('button', { name: 'Change profile photo' }).click());
     await page.getByRole('button', { name: 'Remove photo' }).click();
     await expect(page.getByText(/Your photo was removed/)).toBeVisible();
     await profile.reload();
     await expect(profile.getByRole('img', { name: `Profile photo of ${helper.name}` })).toHaveCount(0);
     expect((await visitor.request.get(src)).status()).toBe(404);
   } finally {
-    // Leave the seeded helper as it was.
+    // Leave the seeded helper as it was (the photo's controls are in its dialog).
+    if (!(await photoDialog.isVisible().catch(() => false))) await page.getByRole('button', { name: 'Change profile photo' }).click().catch(() => undefined);
     if (await page.getByRole('button', { name: 'Remove photo' }).isVisible().catch(() => false)) {
       await page.getByRole('button', { name: 'Remove photo' }).click();
       await expect(page.getByText(/Your photo was removed/)).toBeVisible();

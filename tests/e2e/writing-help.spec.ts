@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { devSignIn } from './support/sign-in';
+import { devSignIn, untilShown } from './support/sign-in';
 
 /**
  * Writing help (UI-048): "Rewrite with AI" in the posting description field, and "Write it for me" on a helper's profile
@@ -36,20 +36,24 @@ test("a helper drafts their profile from a few words; Undo and leaving the page 
   test.skip(testInfo.project.name !== 'app-mobile', 'read-only; one project is enough');
   await devSignIn(page, 'jordan@example.test');
   await page.goto('/app/helper/profile');
-  const headline = page.getByLabel('Headline');
+  // The intro form opens in a dialog from the About section's pencil (2026-11-27, the LinkedIn-style profile).
+  const intro = page.getByRole('dialog', { name: 'Edit your intro' });
+  await untilShown(intro, () => page.getByRole('button', { name: 'Edit About' }).click());
+  const headline = intro.getByLabel('Headline');
   await expect(headline).toBeVisible();
   const saved = await headline.inputValue();
 
-  await page.getByLabel('A few words about you (optional)').fill('Patient and tidy. I always bring a level.');
-  await page.getByRole('button', { name: 'Draft my profile' }).click();
-  await expect(page.getByText('Drafted with AI.')).toBeVisible();
-  await expect(page.getByLabel('About you', { exact: true })).toHaveValue(/Patient and tidy\. I always bring a level\./);
+  await intro.getByLabel('A few words about you (optional)').fill('Patient and tidy. I always bring a level.');
+  await intro.getByRole('button', { name: 'Draft my profile' }).click();
+  await expect(intro.getByText('Drafted with AI.')).toBeVisible();
+  await expect(intro.getByLabel('About you', { exact: true })).toHaveValue(/Patient and tidy\. I always bring a level\./);
   await expect(headline).not.toHaveValue(saved);
 
-  await page.getByRole('button', { name: 'Undo' }).click();
+  await intro.getByRole('button', { name: 'Undo' }).click();
   await expect(headline).toHaveValue(saved);
   await page.reload();
-  await expect(page.getByLabel('Headline')).toHaveValue(saved);
+  await untilShown(intro, () => page.getByRole('button', { name: 'Edit About' }).click());
+  await expect(intro.getByLabel('Headline')).toHaveValue(saved);
 });
 
 test('a helper drafts the message on their offer', async ({ page }, testInfo) => {
