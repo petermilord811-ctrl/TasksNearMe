@@ -70,4 +70,11 @@ describe('telling staff a reading is ready', () => {
     expect(text).toContain('https://tasksnearme.com/admin/users/usr_rosa');
     expect(readingEmailText({ readable: true, nameMatches: false, by: 'server:ocr', at }, 'x')).toContain('Address matches the home address on file: no address to compare');
   });
+
+  it('leads with the ID\'s fraud score when there is one (owner, 2026-11-27: "show fraud score to me")', () => {
+    const check = { readable: true, nameMatches: true, by: 'server:ocr', at };
+    const text = readingEmailText(check, 'x', { score: 65, level: 'high', factors: [{ key: 'id_face_mismatch', points: 50 }, { key: 'id_barcode_doubtful', points: 15 }] });
+    expect(text.split('\n')[0]).toBe('Fraud score: 65 of 100 (high). The reasons are on the person page.');
+    expect(readingEmailText(check, 'x')).not.toContain('Fraud score');
+  });
 });

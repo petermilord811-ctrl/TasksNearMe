@@ -253,7 +253,8 @@
       "inProgress": "In progress",
       "restricted": "Contact support",
       "notNeeded": "Not needed",
-      "renew": "Renew"
+      "renew": "Renew",
+      "notAvailable": "Not available yet"
     },
     "actions": {
       "verify": "Verify",

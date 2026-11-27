@@ -1,7 +1,7 @@
 import 'server-only';
 import { createFakeGeocoder, createGeocoder } from '@/integrations/geocoding';
 import { byteCipherFromEnv, fieldCipherFromEnv } from '@/platform/crypto/field-encryption';
-import { verificationProvidersFor } from './providers';
+import { backgroundProviderFor, payoutProviderFor, verificationProvidersFor } from './providers';
 import { devHelpersOn } from '@/shared/dev-helpers';
 
 /**
@@ -10,6 +10,10 @@ import { devHelpersOn } from '@/shared/dev-helpers';
  * so the provider steps can't start there yet.
  */
 export const verificationProviders = verificationProvidersFor(process.env);
+/** Stripe Connect (or development's stand-in), whatever the other providers: null until the Stripe keys are set. */
+export const payoutProvider = payoutProviderFor(process.env);
+/** Checkr (or development's stand-in), whatever the other providers: null until its keys are set. */
+export const backgroundProvider = backgroundProviderFor(process.env);
 
 /** Home address search and confirmation: Mapbox with `MAPBOX_TOKEN`, the sample addresses otherwise. */
 export const homeGeocoder = createGeocoder();

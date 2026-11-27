@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { BadgeCheck, Check, ChevronRight, CircleDollarSign, Clock, House, ShieldCheck, Smartphone, TriangleAlert } from 'lucide-react';
@@ -22,7 +22,7 @@ import { Spinner } from '@/ui/primitives/spinner';
 
 export type HubCheck = 'identity' | 'address' | 'phone' | 'payout' | 'background';
 
-type Handlers = Pick<HelperOnboardingHandlers, 'onStartPayout' | 'onStartBackgroundCheck'>;
+type Handlers = Pick<HelperOnboardingHandlers, 'onStartPayout' | 'onStartBackgroundCheck'> & Partial<Pick<HelperOnboardingHandlers, 'onRefreshStatus'>>;
 
 /** What a row says and does. `action`: a dialog link, a provider start, or nothing (done, waiting). */
 interface RowView {
@@ -77,6 +77,10 @@ export function hubRows(data: HelperOnboardingPageData): RowView[] {
         break;
       case 'payout': {
         const payout = v.payout.status;
+        if (v.payout.unavailable) {
+          status = { tone: 'neutral', key: 'notAvailable' };
+          break;
+        }
         if (payout === 'active') status = { tone: 'success', key: 'ready' };
         else if (payout === 'pending') status = { tone: 'info', key: 'inProgress' };
         else if (payout === 'requirements_due') status = { tone: 'warning', key: 'actionNeeded' };
@@ -88,6 +92,10 @@ export function hubRows(data: HelperOnboardingPageData): RowView[] {
         const b = v.background;
         if (state === 'skipped') status = { tone: 'neutral', key: 'notNeeded' };
         else if (done) status = { tone: 'success', key: 'verified' };
+        else if (b.unavailable && b.status === 'not_started') {
+          status = { tone: 'neutral', key: 'notAvailable' };
+          break;
+        }
         else if (b.status === 'invited' || b.status === 'pending') status = { tone: 'info', key: 'inProgress' };
         else if (b.status === 'consider' || b.adjudication === 'pre_adverse') status = { tone: 'info', key: 'inReview' };
         else if (b.status === 'suspended' || b.adjudication === 'post_adverse') status = { tone: 'warning', key: 'paused' };
@@ -105,6 +113,15 @@ export function hubRows(data: HelperOnboardingPageData): RowView[] {
 export function VerificationHub({ data, handlers }: { data: HelperOnboardingPageData; handlers: Handlers }) {
   const t = useTranslations('verifyFlow.hub');
   const rows = hubRows(data);
+  // Back from Stripe: a payout account still being set up is read again from Stripe once (its webhook can lag).
+  const payoutStatus = data.verification.payout.status;
+  const refreshStatus = handlers.onRefreshStatus;
+  const asked = useRef(false);
+  useEffect(() => {
+    if (asked.current || !refreshStatus || (payoutStatus !== 'pending' && payoutStatus !== 'requirements_due')) return;
+    asked.current = true;
+    void refreshStatus().catch(() => undefined);
+  }, [payoutStatus, refreshStatus]);
   const counted = rows.filter((row) => !(row.check === 'background' && row.status?.key === 'notNeeded'));
   const doneCount = counted.filter((row) => row.done).length;
   const verified = data.progress.verified === true || (counted.length > 0 && doneCount === counted.length);

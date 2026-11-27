@@ -16,7 +16,7 @@ import { AdminRewardList } from './admin-reward-list';
 import { AdminVerificationSection } from './admin-verification-section';
 import { AdminUserControls, type AdminUserPreviewState } from './admin-user-controls';
 import { AdminHelperBadge, AdminUserRoles } from './admin-user-summary';
-import { AdminSignIns } from './admin-sign-ins';
+import { AdminDetectedIps, AdminFraudSummary } from './admin-fraud';
 import { AdminBackLink, adminCard, adminH2, adminMoneyTd, adminNote, adminPanel, adminSection, adminTableFrame, adminTd, adminTh, adminTr } from './admin-ui';
 import { cn } from '@/ui/lib/utils';
 
@@ -80,9 +80,10 @@ export function AdminUserContent({ data, handlers, now, ...previewState }: Admin
       <p className="text-sm text-muted-foreground">{t('suspension.by', { name: data.suspension.byDisplayName })}</p>
       <p className="text-sm tabular-nums text-muted-foreground"><time dateTime={data.suspension.at} title={formatRelative(data.suspension.at, now)}>{t('suspension.at', { date: formatDateTime(data.suspension.at) })}</time></p>
     </section>}
+    {data.fraud && <AdminFraudSummary view={data.fraud} />}
     <AdminUserControls key={user.id} data={data} handlers={handlers} {...previewState} />
     <AdminVerificationSection userId={user.id} verification={data.verification} handlers={handlers} now={now} />
-    {data.signIns && <AdminSignIns rows={data.signIns} now={now} />}
+    {data.fraud && <AdminDetectedIps view={data.fraud} now={now} />}
     <section aria-label={t('bookings')} className="space-y-3">
       <h2 className={adminH2}>{t('bookings')}</h2>
       {data.bookings.length === 0 ? <p className={adminNote}>{t('noBookings')}</p> : <>

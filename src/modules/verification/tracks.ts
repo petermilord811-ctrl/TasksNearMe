@@ -168,7 +168,7 @@ export async function requestIdentityAfterNameChange(
 
 // ---- Payouts --------------------------------------------------------------------------------------
 
-export async function startPayout(db: Db, providers: VerificationProviders, userId: string, now: Date): Promise<ActionResult> {
+export async function startPayout(db: Db, providers: Pick<VerificationProviders, 'payout'>, userId: string, now: Date): Promise<ActionResult> {
   const state = await loadOnboardingState(db, userId, now);
   const step = computeOnboarding(state.facts).progress.steps.find((s) => s.step === 'payout');
   if (!step || step.state === 'locked') return { ok: false, code: 'not_allowed' };
@@ -186,7 +186,7 @@ export async function startPayout(db: Db, providers: VerificationProviders, user
 }
 
 /** After the provider's onboarding (or "Check status"): its account state, read again. Webhooks do the same. */
-export async function syncPayoutStatus(db: Db, providers: VerificationProviders, userId: string, now: Date): Promise<void> {
+export async function syncPayoutStatus(db: Db, providers: Pick<VerificationProviders, 'payout'>, userId: string, now: Date): Promise<void> {
   const [account] = await db.select().from(payoutAccounts).where(eq(payoutAccounts.userId, userId)).limit(1);
   if (!account || account.provider !== providers.payout.provider || !providers.payout.status) return;
   const status = await providers.payout.status(account.providerAccountId);
@@ -223,7 +223,7 @@ export async function recordPayoutStatus(db: Db, userId: string, status: PayoutA
  */
 export async function startBackgroundCheck(
   db: Db,
-  providers: VerificationProviders,
+  providers: Pick<VerificationProviders, 'background'>,
   userId: string,
   now: Date,
   options: { acknowledged?: boolean; origin?: RequestOrigin } = {},

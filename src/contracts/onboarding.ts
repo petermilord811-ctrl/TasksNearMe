@@ -423,9 +423,15 @@ export interface VerificationSummary {
     /** In review again because the ID's legal name differs from the account's: nothing for the helper to do. */
     recheck?: 'name_differs';
   };
-  payout: { status: PayoutAccountStatus };
+  payout: {
+    status: PayoutAccountStatus;
+    /** Payouts can't be set up here yet: no payout provider is set up (the row says "Not available yet"). */
+    unavailable?: boolean;
+  };
   background: {
     status: BackgroundCheckStatus;
+    /** Background checks can't start here yet: no background-check provider is set up (in-home categories wait). */
+    unavailable?: boolean;
     checkedAt?: ISODateTime;
     /** In-home categories the helper offers, which need the check. */
     requiredFor: CategorySlug[];

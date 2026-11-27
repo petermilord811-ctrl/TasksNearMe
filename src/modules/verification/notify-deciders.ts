@@ -4,6 +4,7 @@ import type { EmailProvider } from '@/integrations/email';
 import { staffRoles, users } from '@/modules/accounts/schema';
 import type { Db } from '@/platform/db/connect';
 import type { StoredIdentityAutoCheck } from './schema';
+import type { FraudScore } from '@/contracts';
 
 /**
  * Tells the staff who decide ID checks that a reading is ready, and how it compared with the account (owner,
@@ -19,6 +20,8 @@ export interface IdReadingNotice {
   userId: string;
   captureId: string;
   check: StoredIdentityAutoCheck;
+  /** The ID's fraud score (owner, 2026-11-27: "show fraud score to me"); the reasons are on the person page. */
+  fraud?: FraudScore;
 }
 
 const yesNo = (value: boolean | undefined, unknown = 'not read') => (value === undefined ? unknown : value ? 'yes' : 'no');
@@ -36,8 +39,9 @@ export function readingVerdict(check: StoredIdentityAutoCheck): string {
   return off.length === 0 ? 'everything read matches' : `check: ${off.join(', ')}`;
 }
 
-/** The email's lines: the answers only. */
-export function readingEmailText(check: StoredIdentityAutoCheck, link: string): string {
+/** The email's lines: the fraud score and the answers only. */
+export function readingEmailText(check: StoredIdentityAutoCheck, link: string, fraud?: FraudScore): string {
+  const score = fraud ? [`Fraud score: ${fraud.score} of 100 (${fraud.level}). The reasons are on the person page.`, ''] : [];
   const lines = !check.readable
     ? ["The automatic reading couldn't read this ID. Open the photos to check it yourself."]
     : [
@@ -48,7 +52,7 @@ export function readingEmailText(check: StoredIdentityAutoCheck, link: string): 
         `Not expired: ${yesNo(check.notExpired)}`,
         ...(check.frontAgrees !== undefined ? [`Front and barcode agree: ${yesNo(check.frontAgrees)}`] : []),
       ];
-  return [...lines, '', `Review it (the details and photos open with a logged reason): ${link}`].join('\n');
+  return [...score, ...lines, '', `Review it (the details and photos open with a logged reason): ${link}`].join('\n');
 }
 
 export async function notifyDecidersOfIdReading(db: Db, email: EmailProvider, notice: IdReadingNotice, appUrl: string): Promise<number> {
@@ -59,8 +63,8 @@ export async function notifyDecidersOfIdReading(db: Db, email: EmailProvider, no
     // A suspended or banned staff member gets nothing, and nobody hears about their own reading.
     .where(and(inArray(staffRoles.role, DECIDER_ROLES), isNotNull(users.email), eq(users.status, 'active'), ne(users.id, notice.userId)));
   const link = `${appUrl.replace(/\/$/, '')}${routes.admin.user(notice.userId)}`;
-  const subject = `ID ready for review: ${readingVerdict(notice.check)}`;
-  const text = readingEmailText(notice.check, link);
+  const subject = `ID ready for review${notice.fraud ? ` (fraud ${notice.fraud.score}, ${notice.fraud.level})` : ''}: ${readingVerdict(notice.check)}`;
+  const text = readingEmailText(notice.check, link, notice.fraud);
   let sent = 0;
   for (const { email: to } of staff) {
     if (!to) continue;

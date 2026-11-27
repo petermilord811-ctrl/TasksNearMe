@@ -27,7 +27,10 @@ const nextConfig: NextConfig = {
       './node_modules/tesseract.js/package.json',
       './node_modules/tesseract.js/src/**',
       './node_modules/tesseract.js-core/package.json',
-      './node_modules/tesseract.js-core/tesseract-core-*lstm.{js,wasm}',
+      // Every core build, not only the LSTM ones: tesseract.js 7's worker hands getCore its `lstmOnly` flag where getCore
+      // expects the engine mode, so it always loads a non-LSTM core (relaxed SIMD, SIMD or plain, by the CPU). Without
+      // these the reader process failed at its first OCR pass in production (2026-11-27), while development had them.
+      './node_modules/tesseract.js-core/tesseract-core*.{js,wasm}',
       './node_modules/@tesseract.js-data/eng/4.0.0_best_int/**',
       './node_modules/{regenerator-runtime,is-url,wasm-feature-detect,bmp-js}/**',
       './node_modules/zxing-wasm/package.json',

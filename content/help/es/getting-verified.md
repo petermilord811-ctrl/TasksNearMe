@@ -10,7 +10,7 @@ Antes de que puedas enviar ofertas, revisamos dónde vives. Las demás verificac
 ## Lo que abre la ayuda
 
 1. **Tu perfil**: tus servicios, precios y la zona que cubres, y el acuerdo de ayudantes.
-2. **Domicilio**: un documento reciente (de los últimos 90 días) con tu nombre y tu dirección, que revisa nuestro equipo de confianza y seguridad. Los clientes solo ven tu vecindario.
+2. **Domicilio**: un documento reciente (de los últimos 90 días) con tu nombre y tu dirección, que revisa nuestro sistema. Si no pasa, envía otro; si ese tampoco pasa, nuestro equipo de confianza y seguridad revisa los dos. Los clientes solo ven tu vecindario.
 3. **Verificación de antecedentes**: solo para categorías dentro del hogar, como armado de muebles y limpieza ligera.
 
 Puedes enviar ofertas y recibir reservas cuando terminas tu perfil y tu domicilio. Las categorías que requieren verificación de antecedentes se abren cuando se aprueba.
@@ -24,7 +24,7 @@ Puedes enviar ofertas y recibir reservas cuando terminas tu perfil y tu domicili
 ## Sobre tu identificación
 
 - Una identificación solo puede verificar una cuenta.
-- Tus fotos de identificación se guardan cifradas y se borran en cuanto terminan las dos verificaciones, y nunca se guardan más de 30 días después de nuestra decisión.
+- Tus fotos de identificación y los datos que leemos de ella se guardan cifrados y se borran a más tardar un año después de nuestra decisión. Tu comprobante de domicilio se guarda mientras tu cuenta esté abierta, para compararlo con otro más adelante. Los dos se borran si borras tu cuenta.
 - Tu verificación cuenta hasta el final del mes en que vence tu identificación. Te avisamos 30 días antes para que te verifiques de nuevo con una identificación vigente.
 
 > [!info] Las insignias muestran qué se revisó y cuándo. No garantizan la calidad del trabajo; para eso están las reseñas.

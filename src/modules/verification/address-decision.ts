@@ -17,11 +17,11 @@ import { emitVerificationEvent, syncHelperProfile } from './state';
  * follow. Only a proof still in review changes, so a staff decision that came first stands.
  */
 
-/** The `auto_verification` flag for the person's home market (on by default; staff switch it off on the config page). */
+/** The `auto_verification_address` flag for the person's home market (on by default; staff switch it off on the config page). */
 export async function autoVerificationOn(db: Db, userId: string): Promise<boolean> {
   const [person] = await db.select({ marketId: users.homeMarketId }).from(users).where(eq(users.id, userId)).limit(1);
   if (!person?.marketId) return false;
-  return (await getFlags(person.marketId, db)).auto_verification === true;
+  return (await getFlags(person.marketId, db)).auto_verification_address === true;
 }
 
 export async function applyAddressAutoDecision(

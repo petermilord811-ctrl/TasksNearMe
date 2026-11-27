@@ -5,6 +5,7 @@ import { ADMIN_VERIFICATION_QUEUES, routes, type AdminVerificationsPageData, typ
 import { useFormat } from '@/ui/lib/format';
 import { InitialsAvatar } from '@/ui/components/people/initials-avatar';
 import { cn } from '@/ui/lib/utils';
+import { FraudBadge } from './admin-fraud';
 
 /**
  * `/admin/verifications`: proofs of address to review, ID photos to compare and other ID checks waiting
@@ -37,6 +38,7 @@ export function AdminVerificationsScreen({ data, now }: { data: AdminVerificatio
           <span className="block text-sm">{home(`documentTypes.${row.documentType}`)}{row.areaName ? ` · ${t('near', { area: row.areaName })}` : ''}</span>
           <span className="block text-sm text-muted-foreground">{t('queues.sent')} {when(row.submittedAt)}</span>
           {row.autoCheck && <span className="block text-sm text-muted-foreground">{row.autoCheck.readable && row.autoCheck.nameMatches && row.autoCheck.addressMatches && row.autoCheck.recent ? t('queues.autoAllMatch') : t('queues.autoCheckFlag')}</span>}
+          {row.fraud && <span className="mt-1 block"><FraudBadge fraud={row.fraud} /></span>}
         </span>
         <ArrowUpRight aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />
       </Link></li>)}
@@ -50,6 +52,7 @@ export function AdminVerificationsScreen({ data, now }: { data: AdminVerificatio
           {row.doubleCheck && <span className="block text-sm text-muted-foreground">{t('queues.doubleCheckDetail', { approved: formatDateTime(row.doubleCheck.approvedAt), outcome: t(`providerOutcomes.${row.doubleCheck.providerOutcome ?? 'other'}`) })}</span>}
           {row.capture?.reading && <span className="block text-sm text-muted-foreground">{row.capture.reading.state === 'waiting' ? t('queues.idReadingPending') : t('queues.idReadingSkipped')}</span>}
           {row.capture?.autoCheck && <span className="block text-sm text-muted-foreground">{row.capture.autoCheck.readable && row.capture.autoCheck.nameMatches && row.capture.autoCheck.isAdult && row.capture.autoCheck.notExpired ? t('queues.idAutoAllMatch') : t('queues.idAutoCheckFlag')}</span>}
+          {row.capture?.fraud && <span className="mt-1 block"><FraudBadge fraud={row.capture.fraud} /></span>}
         </span>
         <ArrowUpRight aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />
       </Link></li>)}

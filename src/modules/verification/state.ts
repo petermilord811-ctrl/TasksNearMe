@@ -177,7 +177,12 @@ export function captureSummary(state: OnboardingState, secret: string, doubleChe
 }
 
 /** What the helper's screens show of each track. `promptSecret` picks the selfie's prompt (helpers' own ID check). */
-export function verificationSummary(state: OnboardingState, backgroundRequired: boolean, cipher: FieldCipher | null, options: { promptSecret?: string; helper?: boolean; doubleCheck?: boolean } = {}): VerificationSummary {
+export function verificationSummary(
+  state: OnboardingState,
+  backgroundRequired: boolean,
+  cipher: FieldCipher | null,
+  options: { promptSecret?: string; helper?: boolean; doubleCheck?: boolean; payoutsOn?: boolean; backgroundChecksOn?: boolean } = {},
+): VerificationSummary {
   const { identity, address, background } = state;
   const reason = (value: string | null | undefined) => (value ? (value as AddressRejectionReason) : undefined);
   // The label is the address the status describes (the verified one while a newer proof waits).
@@ -212,9 +217,11 @@ export function verificationSummary(state: OnboardingState, backgroundRequired: 
         ? { update: { status: address.update.status, ...(reason(address.update.row.rejectionReason) ? { rejectionReason: reason(address.update.row.rejectionReason) } : {}) } }
         : {}),
     },
-    payout: { status: state.facts.payout },
+    // Without a provider (2026-11-27), an account that was never started can't be: "Not available yet".
+    payout: { status: state.facts.payout, ...(options.payoutsOn === false && state.facts.payout === 'not_started' ? { unavailable: true } : {}) },
     background: {
       status: backgroundRequired ? background.status : 'not_required',
+      ...(options.backgroundChecksOn === false && backgroundRequired ? { unavailable: true } : {}),
       ...(background.eligible && background.eligibleRow?.completedAt ? { checkedAt: background.eligibleRow.completedAt.toISOString() } : {}),
       requiredFor: state.facts.services.filter((s) => s.requiresBackgroundCheck).map((s) => s.categorySlug),
       disclosureNeeded: state.agreements.bg_check_disclosure === undefined,
@@ -224,7 +231,7 @@ export function verificationSummary(state: OnboardingState, backgroundRequired: 
       ...(background.adjudication ? { adjudication: background.adjudication } : {}),
       ...(background.disputeUntil ? { disputeUntil: background.disputeUntil.toISOString() } : {}),
       // In any order (owner, 2026-11-27): only where the helper works (the area) is needed first.
-      canStart: backgroundRequired && state.facts.areaSet && background.canStart,
+      canStart: backgroundRequired && state.facts.areaSet && background.canStart && options.backgroundChecksOn !== false,
     },
   };
 }

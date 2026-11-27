@@ -11,7 +11,7 @@ Before you can send offers, we check where you live. The other checks make you a
 ## What opens helping
 
 1. **Your profile**: your services, prices, and the area you cover, and the helper agreement.
-2. **Home address**: a recent document (from the last 90 days) with your name and address, which our trust and safety team checks. Clients only ever see your neighborhood.
+2. **Home address**: a recent document (from the last 90 days) with your name and address, which our system checks. If it doesn't pass, send another one; if that one doesn't pass either, our trust and safety team looks at both. Clients only ever see your neighborhood.
 3. **Background check**: only for in-home categories, such as furniture assembly and light cleaning.
 
 You can send offers and be booked once your profile and home address are done. Categories that need a background check open when it clears.
@@ -25,7 +25,7 @@ You can send offers and be booked once your profile and home address are done. C
 ## About your ID
 
 - One ID can verify only one account.
-- Your ID photos are stored encrypted and deleted as soon as both checks are done, and never kept more than 30 days after our decision.
+- Your ID photos and the details read from your ID are stored encrypted and deleted no later than one year after our decision. Your proof of address is kept while your account is open, so we can compare it with a later one. Both are deleted if you delete your account.
 - Your check counts until the end of the month your ID expires. We remind you 30 days before, so you can verify again with a current ID.
 
 > [!info] Badges show what was checked and when. They don't guarantee work quality; that's what reviews are for.

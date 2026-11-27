@@ -15,6 +15,7 @@ import { socialStandIn } from '@/integrations/oauth/stand-in';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { createLocaleSyncHook, requestLocaleOf, withRequestLocale } from './locale';
+import { createSignInRecorder } from '@/modules/accounts/sign-in-history';
 import { noteCodeNotSent } from './code-delivery';
 
 /** Accounts that can't sign in (src/modules/accounts/sign-in/steps.ts keeps the same list). */
@@ -43,6 +44,8 @@ export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
   const nextCookiePlugins = options.nextCookies === false ? [] : [nextCookies()];
   const keys = socialProviderKeys();
   const standIn = standInSocialProviders();
+  const recordSignIn = createSignInRecorder(db);
+  const syncLocale = createLocaleSyncHook(db);
 
   return betterAuth({
     appName: 'TasksNearMe',
@@ -111,8 +114,12 @@ export function createAuth(db: Db, options: { nextCookies?: boolean } = {}) {
             const [person] = await db.select({ status: users.status }).from(users).where(eq(users.id, session.userId)).limit(1);
             if (person && BLOCKED_ACCOUNT_STATUSES.has(person.status)) return false;
           },
-          // Signing in, the device switches to the account's language.
-          after: createLocaleSyncHook(db),
+          // Every sign-in is kept a year with its address (sign-in-history.ts); then the device switches to the
+          // account's language.
+          async after(session, ctx) {
+            await recordSignIn(session, ctx);
+            await syncLocale(session, ctx);
+          },
         },
       },
     },

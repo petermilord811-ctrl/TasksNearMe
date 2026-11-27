@@ -144,6 +144,28 @@ export const sessions = pgTable(
   (t) => [index('sessions_user_idx').on(t.userId)],
 );
 
+/**
+ * Every sign-in, kept a year (owner, 2026-11-27: "show all detected ips"): a session goes when the person signs out,
+ * so the address of an older sign-in was lost with it. Recorded by the `session.create` hook (sign-in-history.ts);
+ * `session_id` finds the session while it lasts (no reference: sessions are deleted).
+ */
+export const signInEvents = pgTable(
+  'sign_in_events',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    sessionId: text('session_id'),
+    ip: text('ip'),
+    userAgent: text('user_agent'),
+    /** How they signed in: email_code | phone_code | google | microsoft | passkey | other. */
+    method: text('method'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('sign_in_events_user_idx').on(t.userId, t.createdAt), index('sign_in_events_ip_idx').on(t.ip)],
+);
+
 export const accounts = pgTable(
   'accounts',
   {

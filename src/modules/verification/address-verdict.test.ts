@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AddressDocumentReading } from '@/integrations/ai/document-reader';
-import { addressVerdict } from './address-verdict';
+import { addressAutoOutcome, addressVerdict, missReason } from './address-verdict';
 
 const clean: AddressDocumentReading = {
   readable: true,
@@ -68,5 +68,32 @@ describe('the automatic decision on a proof of address', () => {
   it("leaves test accounts' stand-in reading to staff", () => {
     expect(addressVerdict({ readable: true, documentType: 'utility_bill' })).toMatchObject({ decision: 'review' });
     expect(outcomes({ readable: true, documentType: 'utility_bill' })).toEqual({ readable: 'pass', accepted_kind: 'pass', name: 'unsure', address: 'unsure', recent: 'unsure', unedited: 'unsure' });
+  });
+});
+
+describe('the owner\'s rule for a proof that misses (2026-11-27)', () => {
+  it('turns the first miss down so the person sends another, and sends the second to our team', () => {
+    const edited = addressVerdict({ ...clean, unedited: 'fail' });
+    expect(edited.decision).toBe('review');
+    expect(addressAutoOutcome(edited, 0)).toEqual({ decision: 'rejected', rejectionReason: 'suspicious' });
+    expect(addressAutoOutcome(edited, 1)).toEqual({ decision: 'review' });
+    expect(addressAutoOutcome(edited, 3)).toEqual({ decision: 'review' });
+  });
+
+  it('approves a clean proof whatever came before, and keeps a too-old reason', () => {
+    expect(addressAutoOutcome(addressVerdict(clean), 2)).toEqual({ decision: 'approved' });
+    const old = addressVerdict({ ...clean, recent: false });
+    expect(addressAutoOutcome(old, 0)).toEqual({ decision: 'rejected', rejectionReason: 'too_old' });
+    expect(addressAutoOutcome(old, 1)).toEqual({ decision: 'review' });
+  });
+
+  it('names the miss by its most telling check', () => {
+    const reason = (reading: AddressDocumentReading) => missReason(addressVerdict(reading).checks);
+    expect(reason({ ...clean, unedited: 'fail', nameMatches: false })).toBe('suspicious');
+    expect(reason({ ...clean, nameMatches: false, addressMatches: false })).toBe('name_mismatch');
+    expect(reason({ ...clean, addressMatches: false })).toBe('address_mismatch');
+    expect(reason({ ...clean, documentType: 'other' })).toBe('not_accepted');
+    expect(reason({ readable: false })).toBe('unreadable');
+    expect(reason({ ...clean, unedited: 'unsure' })).toBe('unreadable');
   });
 });

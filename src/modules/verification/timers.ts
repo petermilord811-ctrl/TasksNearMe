@@ -10,13 +10,13 @@ import { captureFileIds, deleteIdentityCapturePhotos } from './capture';
 import { computeOnboarding } from './progress';
 import type { VerificationProviders } from './providers';
 import { addressVerifications, backgroundChecks, identityCaptures, identityVerifications } from './schema';
-import { addressDocumentDue, ADDRESS_RULES, BACKGROUND_RULES, backgroundNoticeDue, capturePhotosDue, IDENTITY_CAPTURE_RULES, IDENTITY_RULES, identityStanding, idExpiryNoticeDue } from './standing';
+import { BACKGROUND_RULES, backgroundNoticeDue, capturePhotosDue, IDENTITY_CAPTURE_RULES, IDENTITY_RULES, identityStanding, idExpiryNoticeDue } from './standing';
 import { emitVerificationEvent, loadOnboardingState, syncHelperProfile } from './state';
 
 /**
  * Verification timers (the job runner, every minute; each step is idempotent):
- * - proof-of-address documents are deleted 30 days after the decision (withdrawn ones, and a deleted
- *   account's, at once);
+ * - proof-of-address documents are kept for our team's review (owner, 2026-11-27: "save document always"), and a
+ *   deleted account's go at once;
  * - the ID photos of our own check are deleted once both stages are final (the double check cleared the ID
  *   our team approved), and at the latest 30 days after the stage-1 decision, whether approved or rejected
  *   (canceled ones, and a deleted account's, at once);
@@ -44,23 +44,21 @@ export async function runVerificationTimers(db: Db, deps: VerificationTimerDeps,
   const touched = new Set<string>();
   const only = (column: Parameters<typeof inArray>[0]) => (scope.userIds ? [inArray(column, [...scope.userIds])] : []);
 
-  // Documents past their retention, and a deleted account's at once (account deletion removes them
-  // itself; this is the backstop).
+  // A deleted account's documents (account deletion removes them itself; this is the backstop).
   const withDocuments = await db
-    .select({ row: addressVerifications, accountStatus: users.status })
+    .select({ row: addressVerifications })
     .from(addressVerifications)
     .innerJoin(users, eq(users.id, addressVerifications.userId))
     .where(
       and(
         ...only(addressVerifications.userId),
         isNotNull(addressVerifications.documentFileId),
-        or(eq(addressVerifications.status, 'withdrawn'), eq(users.status, 'deleted'), lte(addressVerifications.decidedAt, new Date(now.getTime() - ADDRESS_RULES.documentRetentionDays * DAY_MS))),
+        eq(users.status, 'deleted'),
       ),
     )
     .limit(BATCH);
   let documentsDeleted = 0;
-  for (const { row, accountStatus } of withDocuments) {
-    if (accountStatus !== 'deleted' && !addressDocumentDue(row, now)) continue;
+  for (const { row } of withDocuments) {
     if (await deleteAddressDocument({ db, storage: deps.storage }, row.id, now)) {
       documentsDeleted += 1;
       await db.insert(auditLog).values({ id: newId('aud'), actorRole: 'system', action: 'address_proof.deleted', targetType: 'user', targetId: row.userId, metadata: { verificationId: row.id } });

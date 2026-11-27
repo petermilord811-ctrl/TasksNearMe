@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { verificationProvidersFor } from './providers';
+import { backgroundProviderFor, idDoubleCheckFor, payoutProviderFor, verificationProvidersFor } from './providers';
 
 const persona = { PERSONA_API_KEY: 'persona_sandbox_key', PERSONA_INQUIRY_TEMPLATE_ID: 'itmpl_test', PERSONA_WEBHOOK_SECRET: 'wbhsec_test' };
 const stripe = { STRIPE_SECRET_KEY: 'sk_test_key', STRIPE_PUBLISHABLE_KEY: 'pk_test_key' };
@@ -26,5 +26,24 @@ describe('the ID provider (completion plan 6.2)', () => {
     expect(verificationProvidersFor({ NODE_ENV: 'production', ...stripe, ...checkr })?.identity.provider).toBe('stripe_identity');
     expect(verificationProvidersFor({ NODE_ENV: 'production', ...persona, ...stripe, ...checkr })?.identity.provider).toBe('persona');
     expect(verificationProvidersFor({ NODE_ENV: 'production', ...persona, ...checkr })).toBeNull();
+  });
+});
+
+describe('payouts and background checks on their own (2026-11-27)', () => {
+  it('opens payouts with the Stripe keys alone in production, without opening the ID double check', () => {
+    expect(payoutProviderFor({ NODE_ENV: 'production', ...stripe })?.provider).toBe('stripe');
+    expect(payoutProviderFor({ NODE_ENV: 'production' })).toBeNull();
+    expect(verificationProvidersFor({ NODE_ENV: 'production', ...stripe })).toBeNull();
+    expect(idDoubleCheckFor({ NODE_ENV: 'production', ...stripe })).toBe(false);
+  });
+
+  it('opens background checks with Checkr alone in production', () => {
+    expect(backgroundProviderFor({ NODE_ENV: 'production', ...checkr })).not.toBeNull();
+    expect(backgroundProviderFor({ NODE_ENV: 'production', ...stripe })).toBeNull();
+  });
+
+  it('uses the stand-ins outside production', () => {
+    expect(payoutProviderFor({ NODE_ENV: 'development' })?.provider).toBe('dev');
+    expect(backgroundProviderFor({ NODE_ENV: 'development' })?.provider).toBe('dev');
   });
 });

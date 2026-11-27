@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { RewardActionId } from './action-ids';
 import type { ActionHandler, FieldErrorCode } from './actions';
 import type { AdminCaseRow } from './admin';
+import type { AdminFraudView } from './admin-fraud';
 import type { AdminPersonVerification, AdminVerificationHandlers } from './admin-verification';
 import type { NotificationChannel, NotificationType } from './account';
 import type { Cents, ISODateTime, StaffRole } from './common';
@@ -152,27 +153,6 @@ export interface AdminIpLocation {
  */
 export type AdminIpLookup = { status: 'found'; location: AdminIpLocation } | { status: 'private' } | { status: 'unavailable'; reason: 'limit' | 'failed' };
 
-/** A browser the person is signed in on. Sign-ins go when the person signs out, or a day after they expire. */
-export interface AdminSignInRow {
-  id: string;
-  /** When this sign-in started. */
-  at: ISODateTime;
-  expiresAt: ISODateTime;
-  /** Past `expiresAt` (it goes a day later). */
-  expired?: boolean;
-  /** Named from the user agent; a part that couldn't be named is absent. */
-  device: { browser?: string; os?: string };
-  /** The user agent as the browser sent it. */
-  userAgent?: string;
-  ip?: string;
-  /** ipinfo.io's answer for `ip`; absent without an address. */
-  lookup?: AdminIpLookup;
-  /** ipinfo.io's own page for the address; absent for private ones. */
-  ipinfoUrl?: string;
-  /** The sign-in made when the account was created. */
-  signUp?: boolean;
-}
-
 /** `routes.admin.user(userId)`. */
 export interface AdminUserPageData {
   user: AdminUserRow & { phone?: { last4: string; verified: boolean } };
@@ -198,10 +178,11 @@ export interface AdminUserPageData {
   /** Suspend, ban (two reviewers) or reinstate the whole account (completion plan 5.14). */
   account?: AdminAccountView;
   /**
-   * Trust and safety, support leads and admins: the person's sign-ins, newest first (up to 10, plus the sign-up's
-   * while it lasts), each address looked up on ipinfo.io. Absent for other staff.
+   * Trust and safety, support leads and admins: the person's fraud score, each area's, and every address they used
+   * (sign-ins kept a year, agreements, other actions), each looked up on ipinfo.io and scored (owner, 2026-11-27).
+   * Absent for other staff.
    */
-  signIns?: AdminSignInRow[];
+  fraud?: AdminFraudView;
 }
 
 /**

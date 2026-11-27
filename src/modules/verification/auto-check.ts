@@ -15,7 +15,8 @@ import type { AddressDocumentType, IdentityDocumentType, LivenessPrompt } from '
 import { SERVER_READER_NAME } from '@/integrations/ocr';
 import { featureFlags } from '@/modules/markets/schema';
 import { applyAddressAutoDecision, autoVerificationOn } from './address-decision';
-import { addressVerdict } from './address-verdict';
+import { identityFraud } from '@/shared/fraud/score';
+import { addressAutoOutcome, addressVerdict } from './address-verdict';
 import { identityDocumentHash, identityDocumentHasherFromEnv } from './document-hash';
 import { addressVerifications, identityCaptures, type StoredAddressAutoCheck, type StoredIdentityAutoCheck } from './schema';
 import { applyCaptureDecision } from './capture-decision';
@@ -151,8 +152,13 @@ async function readPendingProofs(
         by = `${reader.name} (unavailable)`;
       }
     }
-    // The checks and what they decide (address-verdict.ts), kept with the answers; never the document's text.
+    // The checks and what they decide (address-verdict.ts), kept with the answers; never the document's text. Where
+    // automatic decisions are on, a miss is turned down so the person sends another, and a second miss goes to our team.
     const verdict = addressVerdict(reading);
+    // A reader that failed (or a missing file) isn't the person's miss: our team reads it instead.
+    const readerFailed = !file || !bytes || by !== reader.name;
+    const automatic = !testAccount && !readerFailed && (await autoVerificationOn(db, proof.userId));
+    const outcome = automatic ? addressAutoOutcome(verdict, await earlierAutoMisses(db, proof.userId, proof.createdAt)) : ({ decision: 'review' } as const);
     const check: StoredAddressAutoCheck = {
       readable: reading.readable,
       ...(reading.nameMatches !== undefined ? { nameMatches: reading.nameMatches } : {}),
@@ -163,7 +169,8 @@ async function readPendingProofs(
       ...(reading.documentDate ? { documentDate: reading.documentDate } : {}),
       checks: verdict.checks,
       signals: reading.signals ?? [],
-      decision: verdict.decision,
+      // What was applied; with automatic decisions off, what the checks alone said.
+      decision: automatic ? outcome.decision : verdict.decision,
       by,
       at: now.toISOString(),
     };
@@ -172,10 +179,8 @@ async function readPendingProofs(
       .set({ autoCheck: check, updatedAt: now })
       .where(and(eq(addressVerifications.id, proof.id), isNull(addressVerifications.autoCheck)))
       .returning({ id: addressVerifications.id });
-    // Applied at once where automatic decisions are on (`auto_verification`); test accounts always wait for staff.
-    if (saved && !testAccount && verdict.decision !== 'review' && (await autoVerificationOn(db, proof.userId))) {
-      await applyAddressAutoDecision(db, { id: proof.id, userId: proof.userId }, verdict.decision === 'approved' ? { decision: 'approved' } : { decision: 'rejected', rejectionReason: verdict.rejectionReason ?? 'too_old' }, now);
-    }
+    // Applied at once (`auto_verification_address`); test accounts always wait for staff.
+    if (saved && outcome.decision !== 'review') await applyAddressAutoDecision(db, { id: proof.id, userId: proof.userId }, outcome, now);
     read += 1;
   });
   return read;
@@ -185,7 +190,8 @@ async function readPendingProofs(
  * Each ID in review, read once (2026-11-27: checked deeply on our own server): the server's reader reads the barcode or
  * the passport's zone and the front, judges whether the ID is genuine (aamva-genuine.ts) and compares the selfie's face
  * with the ID's photo (face-engine.ts). The verdict (id-verdict.ts) runs the ten checks; with automatic decisions on
- * (the `auto_verification` flag for the person's home market), a clean reading approves the photos at once (and, where
+ * (the `auto_verification_id` flag for the person's home market; off since 2026-11-27, owner: "For ID check, as for
+ * now, request default double check on team"), a clean reading approves the photos at once (and, where
  * no ID provider double-checks, verifies the ID: capture-decision.ts), an ID read by machine that's expired or of someone
  * under 18 is turned down with that reason, and anything else waits for our team, who are emailed. What was read from
  * the ID (names, birth date, number, address, dates, class…) is kept with the photos, encrypted (`details_ciphertext`),
@@ -294,7 +300,19 @@ export async function readPendingIds(db: Db, deps: IdReadingDeps, now: Date, sco
     // Our team decides: the staff who decide ID checks hear the reading is ready (never for test accounts).
     if (deps.notify && !testAccount) {
       try {
-        await deps.notify({ userId: capture.userId, captureId: capture.id, check });
+        // The ID's fraud score goes with it (owner, 2026-11-27: "show fraud score to me").
+        const rejectedBefore = (
+          await db
+            .select({ id: identityCaptures.id })
+            .from(identityCaptures)
+            .where(and(eq(identityCaptures.userId, capture.userId), eq(identityCaptures.status, 'rejected')))
+        ).length;
+        const fraud = identityFraud({
+          autoCheck: { readable: check.readable, nameMatches: check.nameMatches, isAdult: check.isAdult, notExpired: check.notExpired, frontAgrees: check.frontAgrees, checks: check.checks, signals: check.signals },
+          duplicate: other !== null,
+          rejectedBefore,
+        });
+        await deps.notify({ userId: capture.userId, captureId: capture.id, check, ...(fraud ? { fraud } : {}) });
       } catch (error) {
         // The reading is saved and shows in the queue; a failed email never undoes it.
         console.error('[id-reader] notifying staff failed:', error instanceof Error ? error.name : 'error');
@@ -315,12 +333,31 @@ async function otherAccountWith(db: Db, documentHash: string, userId: string): P
   return other?.userId ?? null;
 }
 
-/** Whether automatic decisions are on for a market: its own `auto_verification` flag, else the global one (off when neither). */
+/**
+ * Proofs of address this person had turned down automatically since their last verified one, staff decision or staff
+ * request, among those sent before `before` (the owner's rule: one automatic miss, then our team).
+ */
+async function earlierAutoMisses(db: Db, userId: string, before: Date): Promise<number> {
+  const rows = await db
+    .select({ status: addressVerifications.status, decidedBy: addressVerifications.decidedBy, createdAt: addressVerifications.createdAt })
+    .from(addressVerifications)
+    .where(eq(addressVerifications.userId, userId))
+    .orderBy(asc(addressVerifications.createdAt));
+  let misses = 0;
+  for (const row of rows) {
+    if (row.createdAt.getTime() >= before.getTime()) break;
+    if (row.status === 'verified' || row.status === 'requested' || row.decidedBy === 'staff') misses = 0;
+    else if (row.status === 'rejected' && row.decidedBy === 'auto') misses += 1;
+  }
+  return misses;
+}
+
+/** Whether automatic ID decisions are on for a market: its own `auto_verification_id` flag, else the global one (off when neither). */
 async function autoVerificationInMarket(db: Db, marketId: string): Promise<boolean> {
   const rows = await db
     .select({ marketId: featureFlags.marketId, enabled: featureFlags.enabled })
     .from(featureFlags)
-    .where(and(eq(featureFlags.key, 'auto_verification'), inArray(featureFlags.marketId, ['global', marketId])));
+    .where(and(eq(featureFlags.key, 'auto_verification_id'), inArray(featureFlags.marketId, ['global', marketId])));
   return (rows.find((row) => row.marketId === marketId) ?? rows.find((row) => row.marketId === 'global'))?.enabled === true;
 }
 

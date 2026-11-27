@@ -50,6 +50,7 @@ export * from './neighbor-groups';
 export * from './rebook';
 export * from './series';
 export * from './admin-people';
+export * from './admin-fraud';
 export * from './admin-verification';
 export * from './admin-support-tools';
 export * from './analytics';

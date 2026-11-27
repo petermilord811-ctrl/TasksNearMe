@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, or } from 'drizzle-orm';
 import { createTranslator } from 'next-intl';
 import { localeOrDefault } from '@/contracts';
 import { messagesFor, perLocale } from '@/i18n/catalog';
-import { accounts, agreements, passkeys, sessions, usernames, users } from '@/modules/accounts/schema';
+import { accounts, agreements, passkeys, sessions, signInEvents, usernames, users } from '@/modules/accounts/schema';
 import { availabilityPosts, neighborhoodDays } from '@/modules/availability/schema';
 import { bookings } from '@/modules/bookings/schema';
 import { earnings, payouts } from '@/modules/earnings/schema';
@@ -151,6 +151,8 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
   // Where they're signed in, their passkeys and the devices that get their notifications (J-PR7): no token or key.
   const sessionRows = await db.select({ ip: sessions.ipAddress, browser: sessions.userAgent, createdAt: sessions.createdAt, expiresAt: sessions.expiresAt }).from(sessions).where(eq(sessions.userId, userId)).orderBy(asc(sessions.createdAt));
   const passkeyRows = await db.select({ name: passkeys.name, deviceType: passkeys.deviceType, backedUp: passkeys.backedUp, createdAt: passkeys.createdAt }).from(passkeys).where(eq(passkeys.userId, userId)).orderBy(asc(passkeys.createdAt));
+  // Every sign-in of the last year (kept for fraud checks, 2026-11-27).
+  const signInRows = await db.select({ ip: signInEvents.ip, browser: signInEvents.userAgent, method: signInEvents.method, at: signInEvents.createdAt }).from(signInEvents).where(eq(signInEvents.userId, userId)).orderBy(asc(signInEvents.createdAt));
   const pushRows = await db.select({ browser: pushSubscriptions.userAgent, createdAt: pushSubscriptions.createdAt, lastSentAt: pushSubscriptions.lastSentAt }).from(pushSubscriptions).where(eq(pushSubscriptions.userId, userId)).orderBy(asc(pushSubscriptions.createdAt));
 
   // ---- Helping ----
@@ -289,6 +291,7 @@ export async function buildDataExport(db: Db, cipher: FieldCipher, userId: strin
     },
     quietHours: quietRow ? { enabled: quietRow.enabled, startsAt: quietRow.startsAt, endsAt: quietRow.endsAt, updatedAt: iso(quietRow.updatedAt) } : null,
     signedIn: sessionRows.map((row) => ({ browser: row.browser, ip: row.ip, since: iso(row.createdAt), until: iso(row.expiresAt) })),
+    signInHistory: signInRows.map((row) => ({ at: iso(row.at), ip: row.ip, browser: row.browser, method: row.method })),
     passkeys: passkeyRows.map((row) => ({ name: row.name, device: row.deviceType, backedUp: row.backedUp, addedAt: iso(row.createdAt) })),
     notificationDevices: pushRows.map((row) => ({ browser: row.browser, addedAt: iso(row.createdAt), lastSentAt: iso(row.lastSentAt) })),
     agreements: agreementRows.map((row) => ({ document: row.doc, version: row.version, acceptedAt: iso(row.acceptedAt), ip: row.ip, browser: row.userAgent })),

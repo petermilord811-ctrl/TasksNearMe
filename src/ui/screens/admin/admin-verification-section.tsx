@@ -36,6 +36,7 @@ import { Field, FieldDescription, FieldError, FieldLabel } from '@/ui/primitives
 import { Spinner } from '@/ui/primitives/spinner';
 import { Textarea } from '@/ui/primitives/textarea';
 import { addressStatusTones, backgroundStatusTones, identityStatusTones, payoutStatusTones } from '@/ui/components/status/verification-tones';
+import { FraudScoreLine } from './admin-fraud';
 
 /** The actions with their own buttons on a proof or a capture; the rest are buttons under the section. */
 type OtherAction = Exclude<AdminVerificationActionId, 'review_address' | 'review_identity_capture' | 'view_identity_photos'>;
@@ -126,6 +127,7 @@ function CaptureList({ captures, canView, canReview, revealed, detailsRevealed, 
         <div className="flex flex-wrap items-center gap-2"><StatusBadge tone={identityCaptureTones[capture.status]} label={t(`capture.statuses.${capture.status}`)} /><span className="text-sm">{t(`capture.documentTypes.${capture.documentType}`)}</span></div>
         <p className="tabular-nums"><time dateTime={capture.submittedAt} title={formatRelative(capture.submittedAt, now)}>{t('capture.sentOn', { date: formatDateTime(capture.submittedAt) })}</time></p>
         <p>{t('capture.prompt', { prompt: t(`capture.prompts.${capture.prompt}`) })}</p>
+        {capture.fraud && <FraudScoreLine fraud={capture.fraud} />}
         {capture.autoCheck && <IdAutoCheck check={capture.autoCheck} />}
         {capture.reading && <p className={capture.reading.state === 'skipped' ? 'font-medium text-warning' : 'text-muted-foreground'}>{capture.reading.state === 'waiting' ? t('capture.reading.waiting', { time: formatDateTime(capture.reading.until) }) : t(`capture.reading.${capture.reading.why}`)}</p>}
         {capture.decidedAt && <p>{capture.decidedByKind === 'auto' ? t('capture.decidedAuto', { date: formatDateTime(capture.decidedAt) }) : t('capture.decided', { date: formatDateTime(capture.decidedAt), name: capture.decidedBy ?? t('staff') })}</p>}
@@ -232,6 +234,7 @@ export function AdminVerificationSection({ userId, verification, handlers, now, 
             <div className="flex flex-wrap items-center gap-2"><StatusBadge tone={addressStatusTones[proof.status]} label={home(`statuses.${proof.status}`)} />{proof.documentType && <span className="text-sm">{home(`documentTypes.${proof.documentType}`)}</span>}</div>
             {proof.submittedAt && <p className="tabular-nums"><time dateTime={proof.submittedAt} title={formatRelative(proof.submittedAt, now)}>{t('sentOn', { date: formatDateTime(proof.submittedAt) })}</time></p>}
             {proof.areaName && <p>{t('near', { area: proof.areaName })}</p>}
+            {proof.fraud && <FraudScoreLine fraud={proof.fraud} />}
             {proof.autoCheck && <AutoCheck check={proof.autoCheck} />}
             {proof.decidedAt && <p>{proof.decidedByKind === 'auto' ? t('capture.decidedAuto', { date: formatDateTime(proof.decidedAt) }) : t('decided', { date: formatDateTime(proof.decidedAt), name: proof.decidedBy ?? t('staff') })}</p>}
             {proof.rejectionReason && <p>{t('rejectedFor', { reason: t(`rejectionReasons.${proof.rejectionReason}`) })}</p>}

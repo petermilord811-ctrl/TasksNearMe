@@ -67,9 +67,11 @@ export const BACKGROUND_RULES = {
   disputeDays: 7,
 } as const;
 
+/**
+ * Proof-of-address documents are kept while the account is open (owner, 2026-11-27: "save document always", for our
+ * team's review of a later try) and deleted with it (timers.ts).
+ */
 export const ADDRESS_RULES = {
-  /** Documents are deleted this long after the decision. */
-  documentRetentionDays: 30,
   /** Staff aim to decide within this long. */
   responseTargetHours: 48,
 } as const;
@@ -478,13 +480,6 @@ export function addressStanding(rows: readonly AddressRow[]): AddressStanding {
     ...(pending === 'rejected' && reason(latest) ? { rejectionReason: reason(latest) } : {}),
     canSubmit: pending === 'rejected',
   };
-}
-
-/** Whether a decided proof's document is due for deletion. */
-export function addressDocumentDue(row: { documentFileId: string | null; decidedAt: Date | null; status: string }, now: Date): boolean {
-  if (!row.documentFileId) return false;
-  if (row.status === 'withdrawn') return true;
-  return row.decidedAt !== null && now.getTime() - row.decidedAt.getTime() >= ADDRESS_RULES.documentRetentionDays * DAY_MS;
 }
 
 // ---- Background -----------------------------------------------------------------------------------

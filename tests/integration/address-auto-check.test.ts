@@ -15,15 +15,18 @@ import { outboxEvents } from '@/platform/outbox/schema';
 
 /**
  * Proofs of address read once by the automatic reader (completion plan 4.1), on throwaway accounts, and since
- * 2026-11-27 decided by its checks where `auto_verification` is on: a clean, confident reading is verified by the system,
- * one dated over 90 days ago is turned down, everything else waits for staff.
+ * 2026-11-27 decided by its checks where `auto_verification_address` is on (owner: "For home address check, no need to
+ * double check on my end. Just request another verification, if fraud. if that is also failed, request human review"):
+ * a clean, confident reading is verified by the system; a miss is turned down so the person sends another, and a second
+ * miss waits for staff. A reader that couldn't read it leaves it to staff. Documents are kept.
  */
 
 const { db, pool } = createDb(process.env.TEST_DATABASE_URL ?? '', { max: 3 });
 const cipher = fieldCipherFromEnv();
 const READER = 'usr_tmp_reader_real';
 const SEEDLIKE = 'usr_tmp_reader_test';
-const PEOPLE = [READER, SEEDLIKE];
+const RETRY = 'usr_tmp_reader_retry';
+const PEOPLE = [READER, SEEDLIKE, RETRY];
 const stored = new Map<string, Buffer>();
 const storage: FileStorage = {
   name: 'memory',
@@ -65,6 +68,7 @@ beforeAll(async () => {
     // Not a reserved domain, so the configured reader is used (nothing is sent anywhere in this test).
     { ...chris!, id: READER, email: 'tmp-reader@qa.tasksnearme-test.net', name: 'Rae R.', firstName: 'Rae', lastName: 'Reader', phone: '+15125550481' },
     { ...chris!, id: SEEDLIKE, email: 'tmp-reader@example.test', name: 'Sam R.', firstName: 'Sam', lastName: 'Reader', phone: '+15125550482' },
+    { ...chris!, id: RETRY, email: 'tmp-reader-retry@qa.tasksnearme-test.net', name: 'Rio R.', firstName: 'Rio', lastName: 'Retry', phone: '+15125550483' },
   ]);
   await addProof('adv_tmp_reader_1', READER, new Date('2026-11-12T15:00:00.000Z'));
   await addProof('adv_tmp_reader_2', SEEDLIKE, new Date('2026-11-12T16:00:00.000Z'));
@@ -91,11 +95,12 @@ describe('reading proofs of address', () => {
       document: { bytes: Buffer.from('webp'), contentType: 'image/webp' },
       expected: { name: 'Rae Reader', address: '1100 Congress Ave, Austin, TX 78701', declaredType: 'utility_bill', submittedOn: '2026-11-12' },
     });
+    // The address differs: a first miss, turned down so the person sends another.
     expect(await checkOf('adv_tmp_reader_1')).toEqual({
       ...answers,
       checks: checksOf({ readable: 'pass', accepted_kind: 'pass', name: 'pass', address: 'fail', recent: 'pass' }),
       signals: [],
-      decision: 'review',
+      decision: 'rejected',
       by: 'stub',
       at: now.toISOString(),
     });
@@ -108,8 +113,8 @@ describe('reading proofs of address', () => {
       by: 'stand-in',
       at: now.toISOString(),
     });
-    // Both stay with staff.
-    expect((await proofOf('adv_tmp_reader_1')).status).toBe('in_review');
+    expect(await proofOf('adv_tmp_reader_1')).toMatchObject({ status: 'rejected', rejectionReason: 'address_mismatch', decidedBy: 'auto' });
+    // The test account's stays with staff.
     expect((await proofOf('adv_tmp_reader_2')).status).toBe('in_review');
     // Read once.
     expect(await readPendingDocuments(db, { storage, cipher, reader }, now, scope)).toEqual({ read: 0 });
@@ -168,7 +173,7 @@ describe('automatic decisions on proofs of address', () => {
     const [person] = await db.select({ marketId: users.homeMarketId }).from(users).where(eq(users.id, READER));
     await db
       .insert(featureFlags)
-      .values({ key: 'auto_verification', marketId: person!.marketId, enabled: false, description: 'test' })
+      .values({ key: 'auto_verification_address', marketId: person!.marketId, enabled: false, description: 'test' })
       .onConflictDoUpdate({ target: [featureFlags.key, featureFlags.marketId], set: { enabled: false } });
     try {
       await addProof('adv_tmp_auto_off', READER, new Date('2026-11-13T15:00:00.000Z'));
@@ -177,8 +182,35 @@ describe('automatic decisions on proofs of address', () => {
       expect(proof).toMatchObject({ status: 'in_review', decidedBy: null });
       expect(proof.autoCheck).toMatchObject({ decision: 'approved' });
     } finally {
-      await db.delete(featureFlags).where(and(eq(featureFlags.key, 'auto_verification'), eq(featureFlags.marketId, person!.marketId)));
+      await db.delete(featureFlags).where(and(eq(featureFlags.key, 'auto_verification_address'), eq(featureFlags.marketId, person!.marketId)));
     }
+  });
+
+  it('turns the first miss down, sends the second to staff, and starts over after a staff decision; documents stay', async () => {
+    const edited = stub(async () => ({ ...clean, unedited: 'fail' as const, signals: ['pdf_text_overlay' as const] }));
+    const once = (id: string, minute: number) => addProof(id, RETRY, new Date(`2026-11-13T15:${String(minute).padStart(2, '0')}:00.000Z`));
+    const readRetry = () => readPendingDocuments(db, { storage, cipher, reader: edited }, now, { userIds: [RETRY] });
+
+    await once('adv_tmp_retry_1', 10);
+    await readRetry();
+    expect(await proofOf('adv_tmp_retry_1')).toMatchObject({ status: 'rejected', rejectionReason: 'suspicious', decidedBy: 'auto' });
+
+    await once('adv_tmp_retry_2', 20);
+    await readRetry();
+    const second = await proofOf('adv_tmp_retry_2');
+    expect(second).toMatchObject({ status: 'in_review', decidedBy: null });
+    expect(second.autoCheck).toMatchObject({ decision: 'review' });
+
+    // Staff turn the second down themselves: the next miss is a first one again.
+    await db.update(addressVerifications).set({ status: 'rejected', decidedBy: 'staff', rejectionReason: 'suspicious', decidedAt: now }).where(eq(addressVerifications.id, 'adv_tmp_retry_2'));
+    await once('adv_tmp_retry_3', 30);
+    await readRetry();
+    expect(await proofOf('adv_tmp_retry_3')).toMatchObject({ status: 'rejected', decidedBy: 'auto' });
+
+    // "Save document always": every document is still stored.
+    const proofs = await db.select().from(addressVerifications).where(eq(addressVerifications.userId, RETRY));
+    expect(proofs).toHaveLength(3);
+    expect(proofs.every((proof) => proof.documentFileId !== null && proof.documentDeletedAt === null)).toBe(true);
   });
 
   it('never decides for a test account, whatever its reading', async () => {

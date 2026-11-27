@@ -46,7 +46,7 @@ test('people: an agent finds a helper without the suspend action; trust and safe
 
 const IPHONE_SAFARI = 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.1 Mobile/15E148 Safari/604.1';
 
-test('people: trust and safety sees where a person signs in from (ipinfo.io); an agent does not', async ({ page }, testInfo) => {
+test('people: trust and safety sees the fraud score and every address with its own (ipinfo.io); an agent does not', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'app-desktop', 'adds a sign-in row; one project is enough');
   test.setTimeout(150_000);
   // A documentation address: the e2e build answers it itself (Gainesville; integrations/ipinfo), so nothing reaches ipinfo.io.
@@ -54,17 +54,23 @@ test('people: trust and safety sees where a person signs in from (ipinfo.io); an
   try {
     await staffSignIn(page, 'taylor@example.test');
     await page.goto('/admin/users/usr_sam');
-    const signIns = page.getByRole('region', { name: 'Sign-ins' });
-    await expect(signIns).toBeVisible({ timeout: 30_000 });
-    const row = signIns.getByRole('listitem').filter({ hasText: '203.0.113.24' });
+    const fraud = page.getByRole('region', { name: 'Fraud score', exact: true });
+    await expect(fraud).toBeVisible({ timeout: 30_000 });
+    await expect(fraud.getByRole('heading', { name: 'IP addresses', level: 3 })).toBeVisible();
+    const signIns = page.getByRole('region', { name: 'Sign-ins and IP addresses' });
+    await expect(signIns).toBeVisible();
+    const row = signIns.getByRole('listitem').filter({ hasText: '203.0.113.24' }).first();
     await expect(row.getByText('Gainesville, Florida, United States')).toBeVisible();
     await expect(row.getByText('AS7922 Comcast Cable Communications, LLC')).toBeVisible();
     await expect(row.getByText(/Safari on iPhone/)).toBeVisible();
+    await expect(row.getByText(/^Fraud \d+ · (Low|Medium|High)$/).first()).toBeVisible();
+    await expect(row.getByText('Home or office network')).toBeVisible();
 
     await staffSignIn(page, 'alex@example.test');
     await page.goto('/admin/users/usr_sam');
     await expect(page.getByText('Helper status').first()).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole('region', { name: 'Sign-ins' })).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Sign-ins and IP addresses' })).toHaveCount(0);
+    await expect(page.getByRole('region', { name: 'Fraud score', exact: true })).toHaveCount(0);
   } finally {
     await removeSignIn(signIn);
   }

@@ -51,7 +51,9 @@ export interface VerificationProviders {
 
 /**
  * The app's providers. Outside production: a built adapter wherever its keys are set (test keys), the
- * stand-in otherwise. In production: none until every adapter exists (payouts need Stripe Connect).
+ * stand-in otherwise. In production: none until every adapter exists, so the ID provider's double check only starts
+ * once all three are set up (owner, 2026-11-27: our team double-checks IDs for now). Payouts and background checks
+ * don't wait for that: `payoutProviderFor` and `backgroundProviderFor`.
  */
 export function verificationProvidersFor(env: Record<string, string | undefined>): VerificationProviders | null {
   // Persona first (the owner's choice for the double check), then Stripe Identity.
@@ -75,6 +77,24 @@ export function verificationProvidersFor(env: Record<string, string | undefined>
 export function idDoubleCheckFor(env: Record<string, string | undefined>): boolean {
   const providers = verificationProvidersFor(env);
   return providers !== null && providers.identity.provider !== 'dev';
+}
+
+/**
+ * Payouts on their own (owner, 2026-11-27: "Payout setup and background check is still pending"): Stripe Connect as soon
+ * as the Stripe keys are set, without waiting for the ID and background providers; development's stand-in without keys.
+ * Null: payouts can't be set up here yet (the Verifications page says so).
+ */
+export function payoutProviderFor(env: Record<string, string | undefined>): VerificationProviders['payout'] | null {
+  const connect = stripeConnectFromEnv(env);
+  if (connect) return connectPayouts(connect, (env.APP_URL ?? 'http://localhost:3000').replace(/\/$/, ''));
+  return devHelpersOn(env) ? createDevVerificationProviders().payout : null;
+}
+
+/** Background checks on their own: Checkr as soon as its keys are set; development's stand-in without them. Null: not available yet. */
+export function backgroundProviderFor(env: Record<string, string | undefined>): VerificationProviders['background'] | null {
+  const checkr = checkrFromEnv(env);
+  if (checkr) return checkr;
+  return devHelpersOn(env) ? createDevVerificationProviders().background : null;
 }
 
 /** Payout accounts on Stripe Connect Express: Stripe's onboarding, coming back to the payout step. */

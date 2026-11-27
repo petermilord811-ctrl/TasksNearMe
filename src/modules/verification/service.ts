@@ -46,7 +46,7 @@ import { normalizeZip, stateOfZip, tidyCityName } from '@/shared/us-zip';
 import type { Db } from '@/platform/db/connect';
 import { newId } from '@/platform/db/ids';
 import { ensureDraftProfile, uniqueHandle } from './draft-profile';
-import { idDoubleCheckFor } from './providers';
+import { backgroundProviderFor, idDoubleCheckFor, payoutProviderFor } from './providers';
 import { computeOnboarding } from './progress';
 import { serviceDefaultsFor } from './service-defaults';
 import { loadOnboardingState, syncHelperProfile, verificationSummary, type OnboardingState } from './state';
@@ -91,7 +91,14 @@ function optionalCipher(): FieldCipher | null {
 const promptSecret = () => ({ promptSecret: process.env.BETTER_AUTH_SECRET ?? '' });
 
 /** The helper's screens: our own ID check shows even before the profile, and whether a provider double-checks it. */
-const helperSummaryOptions = () => ({ ...promptSecret(), helper: true, doubleCheck: idDoubleCheckFor(process.env) });
+const helperSummaryOptions = () => ({
+  ...promptSecret(),
+  helper: true,
+  doubleCheck: idDoubleCheckFor(process.env),
+  // Each provider on its own (2026-11-27): a check without one says "Not available yet" instead of failing.
+  payoutsOn: payoutProviderFor(process.env) !== null,
+  backgroundChecksOn: backgroundProviderFor(process.env) !== null,
+});
 
 
 // ---- Saving the profile ---------------------------------------------------------------------------

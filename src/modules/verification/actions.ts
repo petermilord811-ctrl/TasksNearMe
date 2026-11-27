@@ -55,7 +55,7 @@ import {
   syncHelperProfile,
   updateWorkSample,
 } from './service';
-import { homeGeocoder, livenessSecret, sampleHomeGeocoder, verificationCipher, verificationFileCipher, verificationProviders } from './server';
+import { backgroundProvider, homeGeocoder, livenessSecret, payoutProvider, sampleHomeGeocoder, verificationCipher, verificationFileCipher, verificationProviders } from './server';
 import { startPosterIdentity } from './poster-identity';
 import { requestNow } from '@/platform/clock';
 import { helperInviteFor } from '@/modules/beta/server';
@@ -212,24 +212,26 @@ export async function onboardingSubmitAddressProof(form: FormData): Promise<Addr
   return result;
 }
 
+/** Stripe's onboarding for payouts: on wherever the Stripe keys are set, whatever the other providers (2026-11-27). */
 export async function onboardingStartPayout(): Promise<ActionResult> {
   const userId = await signedInUserId();
-  if (!userId || !verificationProviders) return { ok: false, code: 'not_allowed' };
-  return startPayout(db, verificationProviders, userId, await requestNow());
+  if (!userId || !payoutProvider) return { ok: false, code: 'not_allowed' };
+  return startPayout(db, { payout: payoutProvider }, userId, await requestNow());
 }
 
+/** Checkr's invitation: on wherever its keys are set, whatever the other providers (2026-11-27). */
 export async function onboardingStartBackgroundCheck(input: { acknowledged?: boolean } = {}): Promise<ActionResult> {
   const userId = await signedInUserId();
-  if (!userId || !verificationProviders) return { ok: false, code: 'not_allowed' };
+  if (!userId || !backgroundProvider) return { ok: false, code: 'not_allowed' };
   const origin = originFromHeaders(await headers());
-  return startBackgroundCheck(db, verificationProviders, userId, await requestNow(), { acknowledged: input?.acknowledged === true, origin });
+  return startBackgroundCheck(db, { background: backgroundProvider }, userId, await requestNow(), { acknowledged: input?.acknowledged === true, origin });
 }
 
 /** Provider statuses arrive by webhook; this just re-renders with the latest. */
 export async function onboardingRefreshStatus(): Promise<ActionResult> {
   // The payout account's state from Stripe (webhooks can lag a return from its onboarding).
   const userId = await signedInUserId();
-  if (userId && verificationProviders) await syncPayoutStatus(db, verificationProviders, userId, await requestNow());
+  if (userId && payoutProvider) await syncPayoutStatus(db, { payout: payoutProvider }, userId, await requestNow());
   refresh();
   return { ok: true, code: 'updated' };
 }

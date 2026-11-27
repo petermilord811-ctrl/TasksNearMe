@@ -15,6 +15,7 @@ import type {
 } from './onboarding';
 import { ADDRESS_REJECTION_REASONS, IDENTITY_CAPTURE_REJECTION_REASONS } from './onboarding';
 import type { PersonSummary } from './people';
+import type { FraudScore } from './admin-fraud';
 import type {
   AddressVerificationStatus,
   BackgroundAdjudication,
@@ -72,6 +73,8 @@ export interface AdminAddressReviewRow {
   /** The neighborhood nearest the address ("Mueller"); the list never shows the address itself. */
   areaName?: string;
   autoCheck?: AddressAutoCheck;
+  /** Its fraud score: the reading's findings and earlier proofs turned down (2026-11-27). */
+  fraud?: FraudScore;
   /** Waiting longer than the 2-day response target. */
   overdue: boolean;
 }
@@ -125,7 +128,7 @@ export interface AdminIdentityReviewRow {
   /** Tries since the last reset (photos and provider checks). */
   attempts: number;
   /** With `capture`. `overdue`: waiting longer than the 2-day response target. */
-  capture?: { documentType: IdentityDocumentType; autoCheck?: IdentityAutoCheck; overdue: boolean; reading?: IdentityReadingState };
+  capture?: { documentType: IdentityDocumentType; autoCheck?: IdentityAutoCheck; overdue: boolean; reading?: IdentityReadingState; fraud?: FraudScore };
   /** With `double_check`: both results, our approval and the provider's. */
   doubleCheck?: { approvedAt: ISODateTime; providerOutcome?: IdentityProviderOutcome; endedAt: ISODateTime };
   /** With `duplicate_id`: the other accounts whose ID photos carry the same ID (never the ID itself). */
@@ -162,7 +165,7 @@ export interface AdminAddressProofView {
   submittedAt?: ISODateTime;
   documentType?: AddressDocumentType;
   areaName?: string;
-  /** The document is still stored (it's deleted 30 days after the decision). */
+  /** The document is still stored (kept for our team's review until the account is deleted, owner 2026-11-27). */
   documentAvailable: boolean;
   documentDeletedAt?: ISODateTime;
   decidedAt?: ISODateTime;
@@ -171,6 +174,8 @@ export interface AdminAddressProofView {
   decidedByKind?: 'auto' | 'staff';
   rejectionReason?: AddressRejectionReason;
   autoCheck?: AddressAutoCheck;
+  /** Its fraud score: the reading's findings and earlier proofs turned down (2026-11-27). */
+  fraud?: FraudScore;
 }
 
 /** One try at our own ID check, as staff see it on the person page (the photos only through `onRevealIdentityCapture`). */
@@ -212,6 +217,11 @@ export interface AdminIdentityCaptureView {
    */
   duplicateOf?: PersonSummary[];
   duplicateClearedAt?: ISODateTime;
+  /**
+   * Its fraud score (owner, 2026-11-27: "For ID check, as for now, request default double check on team. and show fraud
+   * score to me"): the ten checks' findings, the same ID elsewhere, and earlier photos turned down. Absent until read.
+   */
+  fraud?: FraudScore;
 }
 
 export const ADMIN_VERIFICATION_ACTIONS = [

@@ -74,6 +74,14 @@ export const verifyFlowPreviews: PreviewEntry[] = [
   hub('in-progress', 'Verifications: some done, the ID with our team', onboardingDoneHelping),
   hub('all-done', 'Verifications: all done', onboardingDone),
   hub('background-dialog', 'Verifications: the background check summary', onboardingDoneHelping, copy.hub.actions.start),
+  hub('not-available', 'Verifications: no payout or background-check provider set up yet', {
+    ...onboardingDoneHelping,
+    verification: {
+      ...onboardingDoneHelping.verification,
+      payout: { status: 'not_started', unavailable: true },
+      background: { ...onboardingDoneHelping.verification.background, unavailable: true, canStart: false },
+    },
+  }),
 
   // The ID flow, screen by screen.
   id('intro-consent', 'ID: intro with consent', onboardingIdentityStep.verification),

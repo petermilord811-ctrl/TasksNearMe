@@ -5,7 +5,7 @@ import { Suspense } from 'react';
 import { routes } from '@/contracts';
 import { appPageMetadata } from '@/i18n/metadata';
 import { helperInviteFor } from '@/modules/beta/server';
-import { onboardingStartBackgroundCheck, onboardingStartPayout } from '@/modules/verification/actions';
+import { onboardingRefreshStatus, onboardingStartBackgroundCheck, onboardingStartPayout } from '@/modules/verification/actions';
 import { getOnboardingPageData } from '@/modules/verification/service';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
@@ -37,7 +37,7 @@ async function Verifications() {
   if (await helperInviteFor(db, viewer.user.id)) redirect(routes.app.helperOnboarding());
   const data = await getOnboardingPageData(db, viewer.user.id, 'done', await requestNow());
   if (!data) notFound();
-  return <VerificationHub data={data} handlers={{ onStartPayout: onboardingStartPayout, onStartBackgroundCheck: onboardingStartBackgroundCheck }} />;
+  return <VerificationHub data={data} handlers={{ onStartPayout: onboardingStartPayout, onStartBackgroundCheck: onboardingStartBackgroundCheck, onRefreshStatus: onboardingRefreshStatus }} />;
 }
 
 export default withClientMessages('[locale]/(app)/app/(main)/helper/verification/page.tsx', HelperVerificationPage);

@@ -198,30 +198,6 @@
     "team_lead_canceled": "Team up: lead's booking canceled",
     "team_partner_left": "Team up: partner's booking canceled"
   },
-  "signIns": {
-    "title": "Sign-ins",
-    "hint": "The browsers this person is signed in on, and where each address is according to ipinfo.io. It's approximate: a phone network or a VPN can place someone far from where they are.",
-    "none": "No sign-ins to show. They go when the person signs out, or a day after they expire.",
-    "signUp": "Sign-up",
-    "expired": "Expired",
-    "anonymous": "VPN or proxy",
-    "hosting": "Data center",
-    "placeUnknown": "Location unknown",
-    "privateAddress": "Private or local network",
-    "noAddress": "No address recorded",
-    "unavailable": "Location unavailable",
-    "unavailableReasons": {
-      "limit": "ipinfo.io's free lookups are used up for now. Try again in a few minutes.",
-      "failed": "ipinfo.io didn't answer. Try again in a minute."
-    },
-    "addressLine": "<ip>{address}</ip> · {device}",
-    "device": "{browser} on {os}",
-    "deviceUnknown": "Unknown browser",
-    "hostname": "Host name: {hostname}",
-    "ipinfoLink": "Details on ipinfo.io",
-    "opensInNewTab": "opens in a new tab",
-    "browserDetails": "Browser details"
-  },
   "previews": {
     "group": "Admin · person details",
     "helper": "Person · active helper",
@@ -236,8 +212,8 @@
     "unknown": "Person · unexpected error",
     "previewReason": "Review the linked account activity before restoring this helper.",
     "strikeDialog": "Person · reverse a strike",
-    "signIns": "Person · sign-ins with locations",
-    "signInsEmpty": "Person · no sign-ins"
+    "fraud": "Person · fraud score and IP addresses",
+    "fraudNoAddresses": "Person · fraud score, no addresses recorded"
   },
   "badges": "Badges",
   "badgesHint": "Earned from completed, paid bookings. Revoke one earned unfairly: it's hidden everywhere until restored.",

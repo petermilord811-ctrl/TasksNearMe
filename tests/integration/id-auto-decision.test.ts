@@ -12,6 +12,7 @@ import { users } from '@/modules/accounts/schema';
 import { categories, featureFlags } from '@/modules/markets/schema';
 import { helperProfiles, helperServices } from '@/modules/profiles/schema';
 import { readPendingIds } from '@/modules/verification/auto-check';
+import type { IdReadingNotice } from '@/modules/verification/notify-deciders';
 import { acceptIdentityNotice, submitIdentityCapture } from '@/modules/verification/capture';
 import { createDevVerificationProviders } from '@/modules/verification/providers';
 import { identityCaptures, identityVerifications, type StoredIdentityAutoCheck } from '@/modules/verification/schema';
@@ -49,7 +50,11 @@ const DOUBLE = 'usr_ad_double';
 const EXPIRED = 'usr_ad_expired';
 const DOUBTFUL = 'usr_ad_doubtful';
 const FLAG_OFF = 'usr_ad_flag_off';
-const PEOPLE = [CLEAN, DOUBLE, EXPIRED, DOUBTFUL, FLAG_OFF];
+const TEAM = 'usr_ad_team';
+const PEOPLE = [CLEAN, DOUBLE, EXPIRED, DOUBTFUL, FLAG_OFF, TEAM];
+/** Automatic ID decisions are off by default since 2026-11-27 (our team double-checks every ID): Austin's own flag turns them on here. */
+const autoIdDecisions = (enabled: boolean) =>
+  db.insert(featureFlags).values({ key: 'auto_verification_id', marketId: 'mkt_austin', enabled, description: 'test' }).onConflictDoUpdate({ target: [featureFlags.key, featureFlags.marketId], set: { enabled } });
 const t0 = new Date('2026-11-27T15:00:00.000Z');
 const at = (days: number) => new Date(t0.getTime() + days * DAY);
 
@@ -94,7 +99,7 @@ function reading(number: string, changes: Partial<IdDocumentReading> = {}): IdDo
   };
 }
 const reader = (answer: IdDocumentReading): IdDocumentReader => ({ name: 'stub', read: async () => answer });
-const read = (id: string, answer: IdDocumentReading, extra: { doubleCheck?: boolean; notify?: () => Promise<unknown> } = {}) =>
+const read = (id: string, answer: IdDocumentReading, extra: { doubleCheck?: boolean; notify?: (notice: IdReadingNotice) => Promise<unknown> } = {}) =>
   readPendingIds(db, { storage, files: fileCipher, reader: reader(answer), hasher, detailsCipher: fieldCipher, doubleCheck: extra.doubleCheck ?? false, ...(extra.notify ? { notify: extra.notify } : {}) }, at(0.01), { userIds: [id] });
 const captureOf = async (id: string) => (await db.select().from(identityCaptures).where(eq(identityCaptures.userId, id)).orderBy(asc(identityCaptures.createdAt))).at(-1)!;
 const ownRows = (id: string) => db.select().from(identityVerifications).where(and(eq(identityVerifications.userId, id), eq(identityVerifications.provider, 'own')));
@@ -106,9 +111,11 @@ const identityEvents = async (id: string) =>
 beforeAll(async () => {
   await fs.rm(root, { recursive: true, force: true });
   for (const id of PEOPLE) await helper(id);
+  await autoIdDecisions(true);
 });
 
 afterAll(async () => {
+  await db.delete(featureFlags).where(and(eq(featureFlags.key, 'auto_verification_id'), eq(featureFlags.marketId, 'mkt_austin')));
   await db.delete(outboxEvents).where(inArray(outboxEvents.aggregateId, PEOPLE));
   await pool.end();
   await fs.rm(root, { recursive: true, force: true });
@@ -186,7 +193,7 @@ describe('a doubtful reading', () => {
 
   it('with automatic decisions off for the market, a clean reading waits for staff too', async () => {
     // The market's own flag wins over the global one.
-    await db.insert(featureFlags).values({ key: 'auto_verification', marketId: 'mkt_austin', enabled: false, description: 'test' }).onConflictDoUpdate({ target: [featureFlags.key, featureFlags.marketId], set: { enabled: false } });
+    await autoIdDecisions(false);
     try {
       await sent(FLAG_OFF);
       await read(FLAG_OFF, reading('T236000000005'));
@@ -195,7 +202,23 @@ describe('a doubtful reading', () => {
       expect((waiting.autoCheck as StoredIdentityAutoCheck).decision).toBe('review');
       expect((waiting.autoCheck as StoredIdentityAutoCheck).checks!.every((item) => item.outcome === 'pass')).toBe(true);
     } finally {
-      await db.delete(featureFlags).where(and(eq(featureFlags.key, 'auto_verification'), eq(featureFlags.marketId, 'mkt_austin')));
+      await autoIdDecisions(true);
+    }
+  });
+
+  it('by default our team double-checks every ID, and hears its fraud score (owner, 2026-11-27)', async () => {
+    await db.delete(featureFlags).where(and(eq(featureFlags.key, 'auto_verification_id'), eq(featureFlags.marketId, 'mkt_austin')));
+    try {
+      await sent(TEAM);
+      const notify = vi.fn(async (notice: IdReadingNotice) => notice);
+      await read(TEAM, reading('T236000000006'), { notify });
+      const waiting = await captureOf(TEAM);
+      expect(waiting.status).toBe('submitted');
+      expect((waiting.autoCheck as StoredIdentityAutoCheck).decision).toBe('review');
+      expect((waiting.autoCheck as StoredIdentityAutoCheck).checks!.every((item) => item.outcome === 'pass')).toBe(true);
+      expect(notify).toHaveBeenCalledWith(expect.objectContaining({ userId: TEAM, fraud: { score: 0, level: 'low', factors: [] } }));
+    } finally {
+      await autoIdDecisions(true);
     }
   });
 });

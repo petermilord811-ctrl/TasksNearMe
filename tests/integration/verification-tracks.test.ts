@@ -195,18 +195,16 @@ describe('proof of address', () => {
     ]));
   });
 
-  it('deletes documents 30 days after the decision, keeping the status', async () => {
+  it('keeps documents after the decision for our team (owner, 2026-11-27: "save document always")', async () => {
     const before = await db.select().from(addressVerifications).where(eq(addressVerifications.userId, id));
     const keys = await db.select({ key: files.storageKey }).from(files).where(inArray(files.id, before.map((row) => row.documentFileId).filter((value): value is string => value !== null)));
     expect(keys).toHaveLength(2);
-    await runVerificationTimers(db, { storage, providers }, at(20), { userIds: PEOPLE });
-    expect((await db.select().from(addressVerifications).where(eq(addressVerifications.userId, id))).every((row) => row.documentFileId !== null)).toBe(true);
-    const result = await runVerificationTimers(db, { storage, providers }, at(35), { userIds: PEOPLE });
-    expect(result.documentsDeleted).toBe(2);
+    const result = await runVerificationTimers(db, { storage, providers }, at(40), { userIds: PEOPLE });
+    expect(result.documentsDeleted).toBe(0);
     const after = await db.select().from(addressVerifications).where(eq(addressVerifications.userId, id));
-    expect(after.every((row) => row.documentFileId === null && row.documentDeletedAt !== null)).toBe(true);
+    expect(after.every((row) => row.documentFileId !== null && row.documentDeletedAt === null)).toBe(true);
     expect(after.map((row) => row.status).sort()).toEqual(['rejected', 'verified']);
-    for (const { key } of keys) expect(await storage.get(key)).toBeNull();
+    for (const { key } of keys) expect(await storage.get(key)).not.toBeNull();
     expect((await loadOnboardingState(db, id, at(35))).address.verified).toBe(true);
   });
 

@@ -37,6 +37,7 @@ import type {
   StaffRole,
   VerificationActionInput,
 } from '@/contracts';
+import { addressFraud, identityFraud } from '@/shared/fraud/score';
 import {
   ADMIN_VERIFICATION_QUEUES,
   addressDecisionInputSchema,
@@ -132,6 +133,20 @@ function identityAutoCheckView(stored: StoredIdentityAutoCheck | null): Identity
   };
 }
 
+/**
+ * A try's fraud score (owner, 2026-11-27: "show fraud score to me"): its reading, the same ID on another account (until
+ * staff clear it), and the person's earlier photos turned down. Absent before its reading.
+ */
+function captureFraud(
+  row: { createdAt: Date; duplicateOfUserId: string | null; duplicateClearedAt: Date | null },
+  theirs: readonly { createdAt: Date; status: string }[],
+  autoCheck: IdentityAutoCheck | undefined,
+) {
+  if (!autoCheck) return undefined;
+  const rejectedBefore = theirs.filter((other) => other.status === 'rejected' && other.createdAt < row.createdAt).length;
+  return identityFraud({ autoCheck, duplicate: row.duplicateOfUserId !== null && row.duplicateClearedAt === null, rejectedBefore }) ?? undefined;
+}
+
 const PHOTO_COLUMN: Record<IdentityCapturePhoto, 'frontFileId' | 'backFileId' | 'selfieFileId'> = { front: 'frontFileId', back: 'backFileId', selfie: 'selfieFileId' };
 const photosOf = (row: Record<'frontFileId' | 'backFileId' | 'selfieFileId', string | null>) => IDENTITY_CAPTURE_PHOTOS.filter((kind) => row[PHOTO_COLUMN[kind]] !== null);
 
@@ -175,11 +190,20 @@ async function addressQueue(db: Db, now: Date) {
     .where(eq(addressVerifications.status, 'in_review'))
     .orderBy(asc(addressVerifications.submittedAt))
     .limit(QUEUE_LIMIT);
-  const names = await areaNames(db, rows.map((row) => row.proof.areaId));
+  const [names, rejected] = await Promise.all([
+    areaNames(db, rows.map((row) => row.proof.areaId)),
+    rows.length
+      ? db
+          .select({ userId: addressVerifications.userId, createdAt: addressVerifications.createdAt })
+          .from(addressVerifications)
+          .where(and(inArray(addressVerifications.userId, [...new Set(rows.map((row) => row.proof.userId))]), eq(addressVerifications.status, 'rejected')))
+      : [],
+  ]);
   return rows.map(({ proof, user }) => {
     const submittedAt = proof.submittedAt ?? proof.createdAt;
     const autoCheck = autoCheckView(proof.autoCheck);
     const areaName = proof.areaId ? names.get(proof.areaId) : undefined;
+    const fraud = addressFraud({ autoCheck, rejectedBefore: rejected.filter((row) => row.userId === proof.userId && row.createdAt < proof.createdAt).length });
     return {
       id: proof.id,
       person: personSummaryOf(user),
@@ -187,6 +211,7 @@ async function addressQueue(db: Db, now: Date) {
       documentType: (proof.documentType ?? 'utility_bill') as AddressDocumentType,
       ...(areaName ? { areaName } : {}),
       ...(autoCheck ? { autoCheck } : {}),
+      ...(fraud ? { fraud } : {}),
       overdue: now.getTime() - submittedAt.getTime() > ADDRESS_RULES.responseTargetHours * HOUR_MS,
     };
   });
@@ -242,6 +267,7 @@ async function identityQueue(db: Db, now: Date, readerOn = aiReadingSetUp(), dec
       // Who else holds the same ID is for the capture deciders only (5.18); everyone else sees that there is one.
       const others = deciding && flagged.documentHash ? ((await othersWithSameId(db, [flagged.documentHash], person.id)).get(flagged.documentHash) ?? []) : [];
       const autoCheck = identityAutoCheckView(flagged.autoCheck);
+      const fraud = captureFraud(flagged, theirs, autoCheck);
       out.push({
         id: flagged.id,
         person: personSummaryOf(person),
@@ -249,7 +275,7 @@ async function identityQueue(db: Db, now: Date, readerOn = aiReadingSetUp(), dec
         at: flagged.submittedAt.toISOString(),
         attempts: standing.attempts,
         ...(flagged.status === 'submitted'
-          ? { capture: { documentType: flagged.documentType as IdentityDocumentType, ...(autoCheck ? { autoCheck } : {}), overdue: now.getTime() - flagged.submittedAt.getTime() > IDENTITY_CAPTURE_RULES.responseTargetHours * HOUR_MS } }
+          ? { capture: { documentType: flagged.documentType as IdentityDocumentType, ...(autoCheck ? { autoCheck } : {}), overdue: now.getTime() - flagged.submittedAt.getTime() > IDENTITY_CAPTURE_RULES.responseTargetHours * HOUR_MS, ...(fraud ? { fraud } : {}) } }
           : {}),
         duplicate: { others },
       });
@@ -258,13 +284,14 @@ async function identityQueue(db: Db, now: Date, readerOn = aiReadingSetUp(), dec
     if (waiting) {
       const autoCheck = identityAutoCheckView(waiting.autoCheck);
       const reading = identityReadingState(waiting, readerOn, now);
+      const fraud = captureFraud(waiting, theirs, autoCheck);
       out.push({
         id: waiting.id,
         person: personSummaryOf(person),
         kind: 'capture',
         at: waiting.submittedAt.toISOString(),
         attempts: standing.attempts,
-        capture: { documentType: waiting.documentType as IdentityDocumentType, ...(autoCheck ? { autoCheck } : {}), overdue: now.getTime() - waiting.submittedAt.getTime() > IDENTITY_CAPTURE_RULES.responseTargetHours * HOUR_MS, ...(reading ? { reading } : {}) },
+        capture: { documentType: waiting.documentType as IdentityDocumentType, ...(autoCheck ? { autoCheck } : {}), overdue: now.getTime() - waiting.submittedAt.getTime() > IDENTITY_CAPTURE_RULES.responseTargetHours * HOUR_MS, ...(reading ? { reading } : {}), ...(fraud ? { fraud } : {}) },
       });
       continue;
     }
@@ -356,6 +383,7 @@ export async function getPersonVerification(db: Db, staff: StaffActor, userId: s
     const reading = identityReadingState(row, readerOn, now);
     const decidedBy = deciders.find((person) => person.id === row.decidedByUserId)?.name;
     const duplicateOf = row.duplicateOfUserId && row.documentHash ? sameId.get(row.documentHash) : undefined;
+    const fraud = captureFraud(row, state.captureRows, autoCheck);
     return {
       id: row.id,
       status: row.status as IdentityCaptureStatus,
@@ -374,10 +402,12 @@ export async function getPersonVerification(db: Db, staff: StaffActor, userId: s
       ...(row.staffNote ? { note: row.staffNote } : {}),
       ...(duplicateOf?.length ? { duplicateOf } : {}),
       ...(row.duplicateClearedAt ? { duplicateClearedAt: row.duplicateClearedAt.toISOString() } : {}),
+      ...(fraud ? { fraud } : {}),
     };
   });
   const proofs: AdminAddressProofView[] = proofRows.map((row) => {
     const autoCheck = autoCheckView(row.autoCheck);
+    const fraud = addressFraud({ autoCheck, rejectedBefore: state.addressRows.filter((other) => other.status === 'rejected' && other.createdAt < row.createdAt).length });
     const decidedBy = deciders.find((person) => person.id === row.decidedByUserId)?.name;
     const areaName = row.areaId ? names.get(row.areaId) : undefined;
     return {
@@ -393,6 +423,7 @@ export async function getPersonVerification(db: Db, staff: StaffActor, userId: s
       ...(row.decidedBy === 'auto' || row.decidedBy === 'staff' ? { decidedByKind: row.decidedBy } : {}),
       ...(row.rejectionReason ? { rejectionReason: row.rejectionReason as AddressRejectionReason } : {}),
       ...(autoCheck ? { autoCheck } : {}),
+      ...(fraud ? { fraud } : {}),
     };
   });
 
@@ -569,7 +600,17 @@ export async function decideIdentityCapture(
 }
 
 /** The other staff actions on a person's verification (src/contracts/admin-verification.ts). */
-export async function verificationAction(db: Db, providers: VerificationProviders | null, staff: StaffActor, input: VerificationActionInput, now: Date): Promise<ActionResult> {
+/**
+ * `providers`: the ID provider where the double check is set up, and the background-check provider on its own (Checkr
+ * can be set up without the others, 2026-11-27).
+ */
+export async function verificationAction(
+  db: Db,
+  providers: { identity?: VerificationProviders['identity'] | null; background?: VerificationProviders['background'] | null } | null,
+  staff: StaffActor,
+  input: VerificationActionInput,
+  now: Date,
+): Promise<ActionResult> {
   if (!canDecideVerification(staff)) return { ok: false, code: 'not_allowed' };
   const parsed = verificationActionInputSchema.safeParse(input);
   if (!parsed.success) return validationFailed(parsed.error);
@@ -602,7 +643,7 @@ export async function verificationAction(db: Db, providers: VerificationProvider
       await db.insert(identityVerifications).values({
         id: newId('idv'),
         userId,
-        provider: providers?.identity.provider ?? 'dev',
+        provider: providers?.identity?.provider ?? 'dev',
         providerSessionId: null,
         status: 'not_started',
         requestedReason: action === 'request_identity' ? 'staff_request' : 'allow_retry',
@@ -656,7 +697,7 @@ export async function verificationAction(db: Db, providers: VerificationProvider
     case 'engage_background': {
       // After a pre-adverse notice, the provider's scheduled final notice must not go.
       const [adverse] = await db.select({ adjudication: backgroundChecks.adjudication, ref: backgroundChecks.adverseActionRef }).from(backgroundChecks).where(eq(backgroundChecks.id, latestBackground!.id)).limit(1);
-      if (adverse?.adjudication === 'pre_adverse' && adverse.ref && providers?.background.cancelAdverseAction) await providers.background.cancelAdverseAction(adverse.ref);
+      if (adverse?.adjudication === 'pre_adverse' && adverse.ref && providers?.background?.cancelAdverseAction) await providers.background.cancelAdverseAction(adverse.ref);
       await db
         .update(backgroundChecks)
         .set({
@@ -671,7 +712,7 @@ export async function verificationAction(db: Db, providers: VerificationProvider
       break;
     }
     case 'pre_adverse_background':
-      if (!providers || !latestBackground!.providerRef) return { ok: false, code: 'not_allowed' };
+      if (!providers?.background || !latestBackground!.providerRef) return { ok: false, code: 'not_allowed' };
       const adverseActionRef = await providers.background.preAdverseAction(latestBackground!.providerRef);
       await db
         .update(backgroundChecks)
@@ -680,7 +721,7 @@ export async function verificationAction(db: Db, providers: VerificationProvider
       await emitVerificationEvent(db, userId, 'background', 'action_needed');
       break;
     case 'post_adverse_background':
-      if (!providers || !latestBackground!.providerRef) return { ok: false, code: 'not_allowed' };
+      if (!providers?.background || !latestBackground!.providerRef) return { ok: false, code: 'not_allowed' };
       await providers.background.postAdverseAction(latestBackground!.providerRef);
       await db
         .update(backgroundChecks)

@@ -21,7 +21,7 @@ import { staffActorOf } from '@/modules/support/staff';
 import { getViewer } from '@/platform/auth/viewer';
 import { requestNow } from '@/platform/clock';
 import { db } from '@/platform/db/client';
-import { verificationCipher, verificationProviders } from './server';
+import { backgroundProvider, verificationCipher, verificationProviders } from './server';
 import type { IdReadingDeps } from './auto-check';
 import { canDecideVerification, decideAddress, decideIdentityCapture, readCaptureNow, revealAddressProof, revealIdentityCapture, revealIdentityDetails, verificationAction } from './staff';
 
@@ -93,7 +93,7 @@ export async function decideIdentityCaptureAction(input: IdentityCaptureDecision
 export async function verificationStaffAction(input: VerificationActionInput): Promise<ActionResult> {
   const staff = await signedInStaff();
   if (!staff) return { ok: false, code: 'not_allowed' };
-  const result = await verificationAction(db, verificationProviders, staff, input, await requestNow());
+  const result = await verificationAction(db, { identity: verificationProviders?.identity ?? null, background: backgroundProvider }, staff, input, await requestNow());
   if (result.ok) refresh();
   return result;
 }

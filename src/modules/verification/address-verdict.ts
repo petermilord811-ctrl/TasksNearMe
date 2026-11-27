@@ -56,3 +56,30 @@ export function addressVerdict(reading: AddressDocumentReading): AddressVerdict 
   if (trusted && checks.every((check) => check.outcome === 'pass')) return { checks, decision: 'approved' };
   return { checks, decision: 'review' };
 }
+
+/** The reason a person reads when a proof that didn't pass is turned down: the most telling check that didn't pass. */
+export function missReason(checks: readonly CheckItem<AddressCheckKey>[]): AddressRejectionReason {
+  const failed = (key: AddressCheckKey) => checks.some((check) => check.key === key && check.outcome === 'fail');
+  if (failed('unedited')) return 'suspicious';
+  if (failed('recent')) return 'too_old';
+  if (failed('name')) return 'name_mismatch';
+  if (failed('address')) return 'address_mismatch';
+  if (failed('accepted_kind')) return 'not_accepted';
+  // Unreadable, or not sure of something: a clearer photo or the PDF itself.
+  return 'unreadable';
+}
+
+export type AddressAutoOutcome = { decision: 'approved' } | { decision: 'rejected'; rejectionReason: AddressRejectionReason } | { decision: 'review' };
+
+/**
+ * The owner's rule for proofs of address (2026-11-27: "no need to double check on my end. Just request another
+ * verification, if fraud. if that is also failed, request human review"): a proof that passes every check is verified at
+ * once; one that doesn't is turned down at once with its reason, so the person sends another; when the next one doesn't
+ * pass either (`earlierMisses`: proofs turned down automatically since the last verified one, staff decision or staff
+ * request), our team decides. Pure.
+ */
+export function addressAutoOutcome(verdict: AddressVerdict, earlierMisses: number): AddressAutoOutcome {
+  if (verdict.decision === 'approved') return { decision: 'approved' };
+  if (earlierMisses >= 1) return { decision: 'review' };
+  return { decision: 'rejected', rejectionReason: verdict.rejectionReason ?? missReason(verdict.checks) };
+}

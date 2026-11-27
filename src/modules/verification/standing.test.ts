@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  addressDocumentDue,
   addressStanding,
   backgroundNoticeDue,
   backgroundStanding,
@@ -359,14 +358,6 @@ describe('address standing', () => {
 
   it('ignores withdrawn proofs', () => {
     expect(addressStanding([addressRow({ status: 'withdrawn' })]).status).toBe('not_started');
-  });
-
-  it('deletes documents 30 days after the decision, and withdrawn ones right away', () => {
-    expect(addressDocumentDue({ documentFileId: 'fil', decidedAt: ago(30), status: 'verified' }, now)).toBe(true);
-    expect(addressDocumentDue({ documentFileId: 'fil', decidedAt: ago(29), status: 'rejected' }, now)).toBe(false);
-    expect(addressDocumentDue({ documentFileId: 'fil', decidedAt: null, status: 'in_review' }, now)).toBe(false);
-    expect(addressDocumentDue({ documentFileId: 'fil', decidedAt: null, status: 'withdrawn' }, now)).toBe(true);
-    expect(addressDocumentDue({ documentFileId: null, decidedAt: ago(90), status: 'verified' }, now)).toBe(false);
   });
 });
 

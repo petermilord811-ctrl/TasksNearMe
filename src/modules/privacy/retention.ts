@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNull, lt, ne, sql } from 'drizzle-orm';
 import type { FileStorage } from '@/integrations/storage';
 import { pruneContactReverts } from '@/modules/accounts/contact-revert';
+import { sweepSignInEvents } from '@/modules/accounts/sign-in-history';
 import { sessions, verifications } from '@/modules/accounts/schema';
 import { bookingCompletionPhotos, bookingExpenses } from '@/modules/bookings/schema';
 import { communityEdits, neighborGroupMessages } from '@/modules/community/schema';
@@ -292,6 +293,7 @@ export async function runRetention(db: Db, deps: RetentionDeps, now: Date) {
     taskPhotos: await sweepTaskPhotos(db, deps, now),
     deletedAccountAddresses: await sweepDeletedAccountAddresses(db, now),
     audit: await sweepAudit(db, now),
+    signIns: await sweepSignInEvents(db, now),
     expired: await sweepExpired(db, now),
   };
 }

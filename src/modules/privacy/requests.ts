@@ -8,7 +8,7 @@ import { and, asc, desc, eq, inArray, isNotNull, isNull, lte, ne, notInArray, or
 import { DATA_EXPORT_DAYS, DELETION_GRACE_DAYS, localeOrDefault, type AccountPrivacyView, type ActionResult, type DeletionBlocker } from '@/contracts';
 import { isReservedEmailAddress, type EmailProvider } from '@/integrations/email';
 import type { FileStorage } from '@/integrations/storage';
-import { accounts, contactChangeReverts, passkeys, phoneVerifications, sessions, staffAuthenticators, staffRoles, usernames, users, verifications } from '@/modules/accounts/schema';
+import { accounts, contactChangeReverts, passkeys, phoneVerifications, sessions, signInEvents, staffAuthenticators, staffRoles, usernames, users, verifications } from '@/modules/accounts/schema';
 import { availabilityPosts, neighborhoodDays } from '@/modules/availability/schema';
 import { bookingSeries, bookings } from '@/modules/bookings/schema';
 import { earnings, payouts } from '@/modules/earnings/schema';
@@ -381,6 +381,8 @@ export async function anonymizeAccount(db: Db, deps: PrivacyJobDeps, userId: str
       })
       .where(eq(users.id, userId));
     await tx.delete(sessions).where(eq(sessions.userId, userId));
+    // Their sign-in history (kept a year for fraud checks, 2026-11-27) goes with the account.
+    await tx.delete(signInEvents).where(eq(signInEvents.userId, userId));
     await tx.delete(accounts).where(eq(accounts.userId, userId));
     await tx.delete(passkeys).where(eq(passkeys.userId, userId));
     await tx.delete(verifications).where(eq(verifications.identifier, user.email));

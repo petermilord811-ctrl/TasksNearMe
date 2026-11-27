@@ -7,6 +7,7 @@ import type {
   IdentityDetailsRevealResult,
   PersonSummary,
 } from '@/contracts';
+import { addressFraud, identityFraud } from '@/shared/fraud/score';
 
 /** Staff verification reviews (src/contracts/admin-verification.ts): the queues and a person's section. */
 
@@ -46,8 +47,13 @@ const idChecksForStaff: IdentityAutoCheck = {
   decision: 'review',
 };
 
+/** Each reading's fraud score, as the app scores it (shared/fraud): Rosa's uncertain face and pose after a try turned down. */
+const rosaFraud = identityFraud({ autoCheck: idChecksForStaff, rejectedBefore: 1 })!;
+const omarFraud = identityFraud({ autoCheck: idFlags })!;
+const allMatchFraud = identityFraud({ autoCheck: idAllMatch })!;
+
 /** Our own ID check's tries as staff see them (stage 1). */
-const rosaInReview: AdminIdentityCaptureView = { id: 'idc_rosa', status: 'submitted', documentType: 'drivers_license', submittedAt: '2026-11-19T18:20:00.000Z', prompt: 'look_left', autoCheck: idChecksForStaff, photos: ['front', 'back', 'selfie'], detailsStored: true };
+const rosaInReview: AdminIdentityCaptureView = { id: 'idc_rosa', status: 'submitted', documentType: 'drivers_license', submittedAt: '2026-11-19T18:20:00.000Z', prompt: 'look_left', autoCheck: idChecksForStaff, photos: ['front', 'back', 'selfie'], detailsStored: true, fraud: rosaFraud };
 const rosaTurnedDown: AdminIdentityCaptureView = {
   id: 'idc_rosa_first',
   status: 'rejected',
@@ -102,6 +108,7 @@ export const adminVerificationsAddressData: AdminVerificationsPageData = {
       documentType: 'utility_bill',
       areaName: 'Mueller',
       autoCheck: { readable: true, nameMatches: true, addressMatches: true, recent: true, documentType: 'utility_bill' },
+      fraud: addressFraud({ autoCheck: { readable: true, nameMatches: true, addressMatches: true, recent: true }, rejectedBefore: 1 })!,
       overdue: true,
     },
     { id: 'adr_rosa', person: rosa, submittedAt: '2026-11-19T20:30:00.000Z', documentType: 'bank_statement', areaName: 'Hyde Park', overdue: false },
@@ -116,10 +123,10 @@ export const adminVerificationsIdentityData: AdminVerificationsPageData = {
   queue: 'identity',
   address: [],
   identity: [
-    { id: 'idc_omar', person: omar, kind: 'capture', at: '2026-11-18T09:30:00.000Z', attempts: 1, capture: { documentType: 'state_id', autoCheck: idFlags, overdue: true } },
+    { id: 'idc_omar', person: omar, kind: 'capture', at: '2026-11-18T09:30:00.000Z', attempts: 1, capture: { documentType: 'state_id', autoCheck: idFlags, overdue: true, fraud: omarFraud } },
     { id: 'idv_devon', person: devon, kind: 'name_check', at: '2026-11-18T14:00:00.000Z', attempts: 1 },
     { id: 'idv_lee', person: lee, kind: 'too_many_attempts', at: '2026-11-19T17:10:00.000Z', attempts: 5 },
-    { id: 'idc_rosa', person: rosa, kind: 'capture', at: '2026-11-19T18:20:00.000Z', attempts: 2, capture: { documentType: 'drivers_license', autoCheck: idAllMatch, overdue: false } },
+    { id: 'idc_rosa', person: rosa, kind: 'capture', at: '2026-11-19T18:20:00.000Z', attempts: 2, capture: { documentType: 'drivers_license', autoCheck: idAllMatch, overdue: false, fraud: allMatchFraud } },
     { id: 'idv_ana', person: ana, kind: 'double_check', at: '2026-11-19T21:05:00.000Z', attempts: 2, doubleCheck: { approvedAt: '2026-11-19T16:30:00.000Z', providerOutcome: 'declined', endedAt: '2026-11-19T21:05:00.000Z' } },
     { id: 'idc_kai', person: kai, kind: 'duplicate_id', at: '2026-11-20T09:00:00.000Z', attempts: 1, duplicate: { others: [lee] } },
   ],
@@ -243,7 +250,7 @@ export const rosaReadOnlyVerification: AdminPersonVerification = { ...rosaVerifi
  * Photos in review not read automatically yet (5.18): approving reads them first; after `until`, or with no
  * reader set up, approval goes ahead without the duplicate-ID check.
  */
-const { autoCheck: _read, ...rosaUnread } = rosaInReview;
+const { autoCheck: _read, fraud: _score, ...rosaUnread } = rosaInReview;
 const rosaNotRead: AdminIdentityCaptureView = { ...rosaUnread, reading: { state: 'waiting', until: '2026-11-19T18:35:00.000Z' } };
 export const rosaReadingWaitingVerification: AdminPersonVerification = { ...rosaVerification, identity: { ...rosaVerification.identity, captures: [rosaNotRead, rosaTurnedDown] } };
 export const rosaReadingSkippedVerification: AdminPersonVerification = {

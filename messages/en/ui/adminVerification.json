@@ -50,7 +50,7 @@
   "staff": "staff",
   "rejectedFor": "Turned down: {reason}",
   "requestedRow": "Staff asked for a new proof.",
-  "documentKept": "Document stored (deleted 30 days after the decision).",
+  "documentKept": "Document stored (kept until the account is deleted).",
   "documentDeleted": "Document deleted on {date}.",
   "documentNone": "No document.",
   "actionsLabel": "Verification actions",

@@ -253,7 +253,8 @@
       "inProgress": "En curso",
       "restricted": "Contacta a soporte",
       "notNeeded": "No hace falta",
-      "renew": "Renovar"
+      "renew": "Renovar",
+      "notAvailable": "Aún no disponible"
     },
     "actions": {
       "verify": "Verificar",

@@ -125,7 +125,8 @@ describe('the reading job with the barcode', () => {
     expect(saved!.autoCheck!.decision).toBe('review');
     expect(JSON.stringify(saved!.autoCheck)).not.toMatch(/4401|Gainesville|T123|1990/);
     // The test account (example.test) got the stand-in and no email.
-    expect(notify).toHaveBeenCalledExactlyOnceWith({ userId: REAL, captureId: real.id, check: saved!.autoCheck });
+    // With the ID's fraud score (owner, 2026-11-27: "show fraud score to me").
+    expect(notify).toHaveBeenCalledExactlyOnceWith({ userId: REAL, captureId: real.id, check: saved!.autoCheck, fraud: expect.objectContaining({ score: 75, level: 'high' }) });
   });
 });
 

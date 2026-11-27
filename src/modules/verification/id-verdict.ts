@@ -12,7 +12,8 @@ import type { IdDocumentReading } from '@/integrations/ai/id-document-reader';
  *   print): under 18 (`under_18`) or expired (`expired`);
  * - `review` for everything else: our team decides, with the checks and their findings beside the photos.
  *
- * With automatic decisions off (the `auto_verification` flag), the checks are kept and everything goes to review.
+ * With automatic decisions off (the `auto_verification_id` flag; off by default since 2026-11-27: our team double-checks
+ * every ID), the checks are kept and everything goes to review, with the ID's fraud score (shared/fraud/score.ts).
  */
 
 export interface IdVerdictInput {
